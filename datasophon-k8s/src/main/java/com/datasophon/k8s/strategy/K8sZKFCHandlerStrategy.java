@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,50 +84,148 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                                         .get();
 
                                         if (hdfsSiteConfigMap != null && hdfsSiteConfigMap.getData() != null) {
-                                                // 获取NameNode ID
-                                                String nameserviceId = K8sUtil.getConfigValueFromConfigMap(
-                                                                hdfsSiteConfigMap, "hdfs-site.xml",
-                                                                "dfs.ha.nameservices");
+                                                // 获取hdfs-site.xml中所有配置项
+                                                Map<String, String> allHdfsProperties = K8sUtil
+                                                                .getAllPropertiesFromConfigMap(
+                                                                                hdfsSiteConfigMap, "hdfs-site.xml");
 
+                                                // 提取nameservice ID
+                                                String nameserviceId = allHdfsProperties.get("dfs.ha.nameservices");
                                                 if (nameserviceId != null) {
-                                                        String namenodeKey = "dfs.ha.namenodes." + nameserviceId;
-                                                        String namenodes = K8sUtil.getConfigValueFromConfigMap(
-                                                                        hdfsSiteConfigMap, "hdfs-site.xml",
-                                                                        namenodeKey);
+                                                        logger.info("找到NameService ID: {}", nameserviceId);
+                                                        envVars.put("NAMESERVICE_ID", nameserviceId);
 
+                                                        // 获取该nameservice下的所有namenode ID
+                                                        String namenodes = allHdfsProperties
+                                                                        .get("dfs.ha.namenodes." + nameserviceId);
                                                         if (namenodes != null && !namenodes.isEmpty()) {
-                                                                // 取第一个NameNode ID
-                                                                String namenodeId = namenodes.split(",")[0].trim();
-                                                                envVars.put("NAMENODE_ID", namenodeId);
-                                                                logger.info("设置NAMENODE_ID={}", namenodeId);
+                                                                logger.info("找到NameNode列表: {}", namenodes);
+
+                                                                // 解析namenode ID列表
+                                                                String[] namenodeIdArray = namenodes.split(",");
+
+                                                                // 收集所有namenode的地址信息
+                                                                Map<String, String> namenodeAddresses = new HashMap<>();
+                                                                for (String namenodeId : namenodeIdArray) {
+                                                                        namenodeId = namenodeId.trim();
+                                                                        String addressKey = "dfs.namenode.rpc-address."
+                                                                                        +
+                                                                                        nameserviceId + "."
+                                                                                        + namenodeId;
+                                                                        String address = allHdfsProperties
+                                                                                        .get(addressKey);
+
+                                                                        if (address != null) {
+                                                                                namenodeAddresses.put(namenodeId,
+                                                                                                address);
+                                                                                logger.info("NameNode ID {} 地址: {}",
+                                                                                                namenodeId, address);
+                                                                        }
+                                                                }
+
+                                                                // 构建一个JSON格式的字符串，包含所有namenode ID和地址的映射
+                                                                StringBuilder namenodeInfoJson = new StringBuilder("{");
+                                                                int count = 0;
+                                                                for (Map.Entry<String, String> entry : namenodeAddresses
+                                                                                .entrySet()) {
+                                                                        if (count > 0)
+                                                                                namenodeInfoJson.append(",");
+                                                                        namenodeInfoJson.append("\"")
+                                                                                        .append(entry.getKey())
+                                                                                        .append("\":")
+                                                                                        .append("\"")
+                                                                                        .append(entry.getValue())
+                                                                                        .append("\"");
+                                                                        count++;
+                                                                }
+                                                                namenodeInfoJson.append("}");
+
+                                                                // 设置所有NameNode地址信息（JSON格式）
+                                                                envVars.put("NAMENODE_INFO",
+                                                                                namenodeInfoJson.toString());
+
+                                                                // 同时提供逗号分隔的地址列表（向后兼容）
+                                                                envVars.put("NAMENODE_ADDRESSES",
+                                                                                String.join(",", namenodeAddresses
+                                                                                                .values()));
+
+                                                                // 默认使用第一个NameNode ID
+                                                                envVars.put("NAMENODE_ID", namenodeIdArray[0].trim());
+                                                                logger.info("设置默认NAMENODE_ID={}",
+                                                                                namenodeIdArray[0].trim());
+
+                                                                // 同时设置所有可能的NameNode ID，让初始化容器决定使用哪个
+                                                                envVars.put("NAMENODE_IDS", String.join(",",
+                                                                                Arrays.asList(namenodeIdArray)));
                                                         } else {
                                                                 envVars.put("NAMENODE_ID", "nn1");
                                                                 logger.warn("未找到NameNode ID配置，使用默认值'nn1'");
                                                         }
+                                                } else {
+                                                        // 如果没有HA配置，尝试直接查找所有dfs.namenode.rpc-address开头的配置
+                                                        Map<String, String> namenodeAddresses = new HashMap<>();
+                                                        Map<String, String> namenodeIds = new HashMap<>();
 
-                                                        // 获取NameNode地址
-                                                        List<String> nnAddresses = new ArrayList<>();
-                                                        for (String nn : namenodes.split(",")) {
-                                                                nn = nn.trim();
-                                                                String addressKey = "dfs.namenode.rpc-address."
-                                                                                + nameserviceId + "." + nn;
-                                                                String address = K8sUtil.getConfigValueFromConfigMap(
-                                                                                hdfsSiteConfigMap, "hdfs-site.xml",
-                                                                                addressKey);
+                                                        for (Map.Entry<String, String> entry : allHdfsProperties
+                                                                        .entrySet()) {
+                                                                String key = entry.getKey();
+                                                                String value = entry.getValue();
 
-                                                                if (address != null) {
-                                                                        nnAddresses.add(address);
+                                                                if (key.startsWith("dfs.namenode.rpc-address.")) {
+                                                                        // 从键名中提取NameNode ID
+                                                                        String[] parts = key.split("\\.");
+                                                                        if (parts.length >= 5) {
+                                                                                String ns = parts[3];
+                                                                                String nnId = parts[4];
+
+                                                                                namenodeAddresses.put(nnId, value);
+                                                                                namenodeIds.put(value, nnId);
+
+                                                                                logger.info("找到NameNode: {}({}), 地址: {}",
+                                                                                                nnId, ns, value);
+                                                                        }
                                                                 }
                                                         }
 
-                                                        if (!nnAddresses.isEmpty()) {
+                                                        if (!namenodeAddresses.isEmpty()) {
+                                                                // 构建JSON格式的NameNode信息
+                                                                StringBuilder namenodeInfoJson = new StringBuilder("{");
+                                                                int count = 0;
+                                                                for (Map.Entry<String, String> entry : namenodeAddresses
+                                                                                .entrySet()) {
+                                                                        if (count > 0)
+                                                                                namenodeInfoJson.append(",");
+                                                                        namenodeInfoJson.append("\"")
+                                                                                        .append(entry.getKey())
+                                                                                        .append("\":")
+                                                                                        .append("\"")
+                                                                                        .append(entry.getValue())
+                                                                                        .append("\"");
+                                                                        count++;
+                                                                }
+                                                                namenodeInfoJson.append("}");
+
+                                                                envVars.put("NAMENODE_INFO",
+                                                                                namenodeInfoJson.toString());
                                                                 envVars.put("NAMENODE_ADDRESSES",
-                                                                                String.join(",", nnAddresses));
+                                                                                String.join(",", namenodeAddresses
+                                                                                                .values()));
+
+                                                                // 设置所有可能的NameNode ID
+                                                                envVars.put("NAMENODE_IDS",
+                                                                                String.join(",", namenodeAddresses
+                                                                                                .keySet()));
+
+                                                                // 默认使用第一个ID
+                                                                String firstId = namenodeAddresses.keySet().iterator()
+                                                                                .next();
+                                                                envVars.put("NAMENODE_ID", firstId);
+                                                                logger.info("设置默认NAMENODE_ID={}", firstId);
+                                                        } else {
+                                                                // 如果没有HA配置，使用默认值
+                                                                envVars.put("NAMENODE_ID", "nn1");
+                                                                logger.warn("未找到NameNode地址配置，使用默认NAMENODE_ID='nn1'");
                                                         }
-                                                } else {
-                                                        // 如果没有HA配置，尝试使用默认值
-                                                        envVars.put("NAMENODE_ID", "nn1");
-                                                        logger.warn("未找到NameService ID配置，使用默认NAMENODE_ID='nn1'");
                                                 }
                                         } else {
                                                 logger.warn("未找到namenode-hdfs-site-xml ConfigMap");
@@ -148,18 +247,26 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
                                 // 修改zkfc命令，添加namenode ID参数
                                 String updatedCmd = workPath + "/bin/hdfs zkfc -formatZK";
-                                if (envVars.containsKey("NAMENODE_ID")) {
-                                        String namenodeId = envVars.get("NAMENODE_ID");
-                                        // 设置多个环境变量以确保namenode ID被正确识别
-                                        updatedCmd = "export NAMENODE_ID=" + namenodeId + " && " +
-                                                        "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=" + namenodeId
-                                                        + "\" && " +
-                                                        "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=" + namenodeId
-                                                        + "\" && " +
-                                                        "echo \"使用NAMENODE_ID=" + namenodeId + "\" && " +
-                                                        updatedCmd;
-                                        logger.info("更新命令添加namenode ID: {}", updatedCmd);
-                                }
+                                // 使用初始化容器生成的配置文件
+                                updatedCmd = "if [ -f /tmp/active_namenode_id ]; then\n" +
+                                                "  echo \"使用初始化容器确定的NameNode ID\"\n" +
+                                                "  . /tmp/active_namenode_id\n" +
+                                                "  echo \"NAMENODE_ID=$NAMENODE_ID\"\n" +
+                                                "  echo \"HADOOP_OPTS=$HADOOP_OPTS\"\n" +
+                                                "  echo \"HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS\"\n" +
+                                                "elif [ -n \"$NAMENODE_ID\" ]; then\n" +
+                                                "  echo \"使用环境变量中的NAMENODE_ID=$NAMENODE_ID\"\n" +
+                                                "  export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"\n" +
+                                                "  export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"\n" +
+                                                "else\n" +
+                                                "  echo \"未找到NameNode ID，使用默认值'nn1'\"\n" +
+                                                "  export NAMENODE_ID=nn1\n" +
+                                                "  export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=nn1\"\n" +
+                                                "  export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=nn1\"\n" +
+                                                "fi\n\n" +
+                                                "echo \"准备执行ZKFC格式化，使用NAMENODE_ID=$NAMENODE_ID\"\n" +
+                                                updatedCmd;
+                                logger.info("更新命令添加namenode ID: {}", updatedCmd);
 
                                 // 添加检查ZooKeeper和NameNode就绪状态的初始化容器
                                 List<String> initContainers = new ArrayList<>();
@@ -255,8 +362,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                 return String.join("\n",
                                 "echo \"正在检查ZooKeeper集群就绪状态...\"",
                                 "# 显示环境变量信息",
-                                "echo \"NAMENODE_ID=$NAMENODE_ID\"",
-                                "echo \"HADOOP_OPTS=$HADOOP_OPTS\"",
+                                "echo \"ZOOKEEPER_SERVERS=$ZOOKEEPER_SERVERS\"",
                                 "",
                                 "# 使用环境变量中的ZooKeeper服务器列表",
                                 "if [ -n \"$ZOOKEEPER_SERVERS\" ]; then",
@@ -307,21 +413,39 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                 "echo \"正在检查NameNode就绪状态...\"",
                                 "# 显示环境变量信息",
                                 "echo \"NAMENODE_ID=$NAMENODE_ID\"",
+                                "echo \"NAMENODE_IDS=$NAMENODE_IDS\"",
+                                "echo \"NAMENODE_INFO=$NAMENODE_INFO\"",
                                 "echo \"HADOOP_OPTS=$HADOOP_OPTS\"",
                                 "",
-                                "# 设置HADOOP_OPTS环境变量",
-                                "if [ -n \"$NAMENODE_ID\" ]; then",
-                                "  export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"",
-                                "  echo \"设置HADOOP_OPTS=$HADOOP_OPTS\"",
-                                "fi",
-                                "",
-                                "# 使用环境变量中的NameNode地址",
-                                "if [ -n \"$NAMENODE_ADDRESSES\" ]; then",
-                                "  echo \"使用环境变量中的NameNode地址: $NAMENODE_ADDRESSES\"",
-                                "  NN_ENDPOINTS=$(echo $NAMENODE_ADDRESSES | tr ',' ' ')",
+                                "# 从环境变量中解析NameNode信息",
+                                "if [ -n \"$NAMENODE_INFO\" ]; then",
+                                "  echo \"使用环境变量中的NameNode信息: $NAMENODE_INFO\"",
+                                "  # 提取所有NameNode ID和地址",
+                                "  if [ -n \"$NAMENODE_IDS\" ]; then",
+                                "    AVAILABLE_IDS=$NAMENODE_IDS",
+                                "  else",
+                                "    # 如果没有NAMENODE_IDS，则尝试从NAMENODE_INFO中提取",
+                                "    # 假设格式是 {\"nn1\":\"host1:port\",\"nn2\":\"host2:port\"}",
+                                "    AVAILABLE_IDS=$(echo $NAMENODE_INFO | sed 's/{//g' | sed 's/}//g' | awk -F: '{print $1}' | sed 's/\"//g')",
+                                "  fi",
+                                "  echo \"可用的NameNode IDs: $AVAILABLE_IDS\"",
+                                "  ",
+                                "  # 使用逗号分隔的地址列表",
+                                "  if [ -n \"$NAMENODE_ADDRESSES\" ]; then",
+                                "    NN_ENDPOINTS=$NAMENODE_ADDRESSES",
+                                "  else",
+                                "    # 如果没有NAMENODE_ADDRESSES，则尝试从NAMENODE_INFO中提取",
+                                "    NN_ENDPOINTS=$(echo $NAMENODE_INFO | sed 's/{//g' | sed 's/}//g' | awk -F: '{print $2}' | sed 's/\"//g' | sed 's/,/ /g')",
+                                "  fi",
                                 "else",
-                                "  echo \"错误: 环境变量NAMENODE_ADDRESSES未设置\"",
-                                "  exit 1",
+                                "  # 使用环境变量中的NameNode地址",
+                                "  if [ -n \"$NAMENODE_ADDRESSES\" ]; then",
+                                "    echo \"使用环境变量中的NameNode地址: $NAMENODE_ADDRESSES\"",
+                                "    NN_ENDPOINTS=$(echo $NAMENODE_ADDRESSES | tr ',' ' ')",
+                                "  else",
+                                "    echo \"错误: 环境变量NAMENODE_ADDRESSES和NAMENODE_INFO均未设置\"",
+                                "    exit 1",
+                                "  fi",
                                 "fi",
                                 "",
                                 "echo \"检测到的NameNode端点: $NN_ENDPOINTS\"",
@@ -330,46 +454,79 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                 "RETRIES=0",
                                 "MAX_RETRIES=90",
                                 "SUCCESS=0",
+                                "ACTIVE_NAMENODE_ID=\"\"",
+                                "",
+                                "# 将NameNode ID列表放入变量，以便后面使用cut命令提取",
+                                "IDS_LIST=$NAMENODE_IDS",
                                 "",
                                 "while [ $RETRIES -lt $MAX_RETRIES ] && [ $SUCCESS -eq 0 ]; do",
                                 "  # 检查配置中指定的端点",
+                                "  COUNT=0",
                                 "  for ENDPOINT in $NN_ENDPOINTS; do",
+                                "    # 去除多余的引号",
+                                "    ENDPOINT=$(echo $ENDPOINT | sed 's/\"//g')",
                                 "    NN_HOST=$(echo $ENDPOINT | cut -d':' -f1)",
                                 "    NN_PORT=$(echo $ENDPOINT | cut -d':' -f2 || echo \"8020\")",
-                                "    echo \"检查NameNode配置端点: $NN_HOST:$NN_PORT\"",
+                                "    ",
+                                "    echo \"检查NameNode端点: $NN_HOST:$NN_PORT\"",
                                 "    ",
                                 "    if nc -z $NN_HOST $NN_PORT 2>/dev/null; then",
                                 "      echo \"NameNode $NN_HOST:$NN_PORT 端口已开放\"",
                                 "      SUCCESS=1",
+                                "      ",
+                                "      # 找到对应的NameNode ID",
+                                "      if [ -n \"$NAMENODE_IDS\" ]; then",
+                                "        # 按位置获取ID（基于COUNT值）",
+                                "        # 计算要提取的字段位置",
+                                "        FIELD_POS=$((COUNT+1))",
+                                "        # 使用cut命令从逗号分隔列表中提取指定位置的ID",
+                                "        ACTIVE_NAMENODE_ID=$(echo $IDS_LIST | tr ',' ' ' | awk '{print $'$FIELD_POS'}')",
+                                "        ",
+                                "        # 如果未获取到ID，使用第一个ID或默认值",
+                                "        if [ -z \"$ACTIVE_NAMENODE_ID\" ]; then",
+                                "          ACTIVE_NAMENODE_ID=$(echo $IDS_LIST | cut -d',' -f1 || echo \"nn1\")",
+                                "        fi",
+                                "      else",
+                                "        # 没有ID列表，使用默认ID",
+                                "        ACTIVE_NAMENODE_ID=${NAMENODE_ID:-nn1}",
+                                "      fi",
+                                "      ",
+                                "      echo \"找到活动的NameNode: ID=$ACTIVE_NAMENODE_ID, 地址=$NN_HOST:$NN_PORT\"",
                                 "      break",
                                 "    fi",
+                                "    COUNT=$((COUNT+1))",
                                 "  done",
                                 "",
-                                "  # 如果上面的检查失败，尝试检查默认的8020端口",
+                                "  # 如果没有找到可用的NameNode，检查Web UI端口",
                                 "  if [ $SUCCESS -eq 0 ]; then",
+                                "    COUNT=0",
                                 "    for ENDPOINT in $NN_ENDPOINTS; do",
-                                "      NN_HOST=$(echo $ENDPOINT | cut -d':' -f1)",
-                                "      echo \"检查NameNode默认端口: $NN_HOST:8020\"",
-                                "      ",
-                                "      if nc -z $NN_HOST 8020 2>/dev/null; then",
-                                "        echo \"NameNode $NN_HOST:8020 默认端口已开放\"",
-                                "        SUCCESS=1",
-                                "        break",
-                                "      fi",
-                                "    done",
-                                "  fi",
-                                "",
-                                "  # 检查Web UI端口",
-                                "  if [ $SUCCESS -eq 0 ]; then",
-                                "    for ENDPOINT in $NN_ENDPOINTS; do",
+                                "      ENDPOINT=$(echo $ENDPOINT | sed 's/\"//g')",
                                 "      NN_HOST=$(echo $ENDPOINT | cut -d':' -f1)",
                                 "      echo \"检查NameNode Web UI端口: $NN_HOST:9870\"",
                                 "      ",
                                 "      if nc -z $NN_HOST 9870 2>/dev/null; then",
                                 "        echo \"NameNode $NN_HOST:9870 Web UI端口已开放\"",
                                 "        SUCCESS=1",
+                                "        ",
+                                "        # 找到对应的NameNode ID",
+                                "        if [ -n \"$NAMENODE_IDS\" ]; then",
+                                "          # 按位置获取ID（基于COUNT值）",
+                                "          FIELD_POS=$((COUNT+1))",
+                                "          ACTIVE_NAMENODE_ID=$(echo $IDS_LIST | tr ',' ' ' | awk '{print $'$FIELD_POS'}')",
+                                "          ",
+                                "          # 如果未获取到ID，使用第一个ID或默认值",
+                                "          if [ -z \"$ACTIVE_NAMENODE_ID\" ]; then",
+                                "            ACTIVE_NAMENODE_ID=$(echo $IDS_LIST | cut -d',' -f1 || echo \"nn1\")",
+                                "          fi",
+                                "        else",
+                                "          ACTIVE_NAMENODE_ID=${NAMENODE_ID:-nn1}",
+                                "        fi",
+                                "        ",
+                                "        echo \"找到活动的NameNode: ID=$ACTIVE_NAMENODE_ID, 地址=$NN_HOST:9870 (Web UI)\"",
                                 "        break",
                                 "      fi",
+                                "      COUNT=$((COUNT+1))",
                                 "    done",
                                 "  fi",
                                 "",
@@ -381,10 +538,22 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                 "done",
                                 "",
                                 "if [ $SUCCESS -eq 1 ]; then",
-                                "  echo \"NameNode就绪检查完成\"",
+                                "  echo \"找到就绪的NameNode, ID=$ACTIVE_NAMENODE_ID\"",
+                                "  # 设置环境变量给主容器使用",
+                                "  echo \"export NAMENODE_ID=$ACTIVE_NAMENODE_ID\" > /tmp/active_namenode_id",
+                                "  echo \"export HADOOP_OPTS=\\\"-Ddfs.ha.namenode.id=$ACTIVE_NAMENODE_ID\\\"\" >> /tmp/active_namenode_id",
+                                "  echo \"export HDFS_NAMENODE_OPTS=\\\"-Ddfs.ha.namenode.id=$ACTIVE_NAMENODE_ID\\\"\" >> /tmp/active_namenode_id",
+                                "  chmod 755 /tmp/active_namenode_id",
+                                "  echo \"NameNode就绪检查完成，将使用ID: $ACTIVE_NAMENODE_ID\"",
                                 "  exit 0",
                                 "else",
                                 "  echo \"错误: 在最大重试次数后未检测到就绪的NameNode\"",
+                                "  # 使用默认NameNode ID",
+                                "  echo \"将使用默认NameNode ID: ${NAMENODE_ID:-nn1}\"",
+                                "  echo \"export NAMENODE_ID=${NAMENODE_ID:-nn1}\" > /tmp/active_namenode_id",
+                                "  echo \"export HADOOP_OPTS=\\\"-Ddfs.ha.namenode.id=${NAMENODE_ID:-nn1}\\\"\" >> /tmp/active_namenode_id",
+                                "  echo \"export HDFS_NAMENODE_OPTS=\\\"-Ddfs.ha.namenode.id=${NAMENODE_ID:-nn1}\\\"\" >> /tmp/active_namenode_id",
+                                "  chmod 755 /tmp/active_namenode_id",
                                 "  exit 1",
                                 "fi");
         }
