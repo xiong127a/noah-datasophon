@@ -93,29 +93,33 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             // 处理NameNode HA相关配置
             switch (name) {
                 case "dfs.namenode.rpc-address.nameservice1.nn1": {
-                    // NameNode1 RPC地址使用简化的StatefulSet DNS名称
-                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + ":8020";
+                    // NameNode1 RPC地址使用完整的FQDN格式
+                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "dfs.namenode.rpc-address.nameservice1.nn2": {
-                    // NameNode2 RPC地址使用简化的StatefulSet DNS名称
-                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + ":8020";
+                    // NameNode2 RPC地址使用完整的FQDN格式
+                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn1": {
-                    // NameNode1 HTTP地址使用简化的StatefulSet DNS名称
-                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + ":9870";
+                    // NameNode1 HTTP地址使用完整的FQDN格式
+                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn2": {
-                    // NameNode2 HTTP地址使用简化的StatefulSet DNS名称
-                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + ":9870";
+                    // NameNode2 HTTP地址使用完整的FQDN格式
+                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
@@ -141,14 +145,16 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 }
                 // 处理ZooKeeper地址 - ha.zookeeper.quorum
                 case "ha.zookeeper.quorum": {
-                    // 构建ZooKeeper服务地址列表，使用简化的StatefulSet DNS名称
+                    // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
                     for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
                         if (i > 0) {
                             zkServers.append(",");
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
-                                .append(".").append(ZOOKEEPER_SERVICE).append(":2181");
+                                .append(".").append(ZOOKEEPER_SERVICE).append(".")
+                                .append(NAMESPACE).append(".")
+                                .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -156,31 +162,33 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 }
                 // 处理ZooKeeper地址 - hadoop.zk.address
                 case "hadoop.zk.address": {
-                    // 构建ZooKeeper服务地址列表，使用简化的StatefulSet DNS名称
+                    // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
                     for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
                         if (i > 0) {
                             zkServers.append(",");
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
-                                .append(".").append(ZOOKEEPER_SERVICE).append(":2181");
+                                .append(".").append(ZOOKEEPER_SERVICE).append(".")
+                                .append(NAMESPACE).append(".")
+                                .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                // 处理DataNode数据传输地址 - 使用服务名而非具体Pod
+                // 处理DataNode数据传输地址 - 使用完整的FQDN格式
                 case "dfs.datanode.address": {
-                    // 使用DataNode服务的简化DNS名称
-                    String newValue = DATANODE_SERVICE + "." + DATANODE_SERVICE + ":1026";
+                    // 使用DataNode服务的完整FQDN
+                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1026";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                // 处理DataNode HTTP地址
+                // 处理DataNode HTTP地址 - 使用完整的FQDN格式
                 case "dfs.datanode.http.address": {
-                    // 使用DataNode服务的简化DNS名称
-                    String newValue = DATANODE_SERVICE + "." + DATANODE_SERVICE + ":1025";
+                    // 使用DataNode服务的完整FQDN
+                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1025";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
@@ -188,6 +196,6 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             }
         }
 
-        logger.info("HDFS NameNode配置更新完成，已适配Kubernetes服务，JournalNode使用完整FQDN");
+        logger.info("HDFS NameNode配置更新完成，已适配Kubernetes服务，所有服务地址均使用完整FQDN格式");
     }
 }
