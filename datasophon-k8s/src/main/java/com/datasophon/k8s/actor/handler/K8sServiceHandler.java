@@ -696,6 +696,9 @@ public class K8sServiceHandler {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
+        if (StrUtil.equalsIgnoreCase(serviceRoleFullName, "hdfs-namenode")) {
+            return currentCount > 0;
+        }
         return currentCount.equals(nodeCount);
     }
 
