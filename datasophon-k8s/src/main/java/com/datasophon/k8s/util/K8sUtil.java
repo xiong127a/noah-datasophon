@@ -20,8 +20,14 @@ import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import lombok.extern.slf4j.Slf4j;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -33,12 +39,24 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.xml.sax.SAXException;
 
 @Slf4j
 public class K8sUtil {
@@ -618,9 +636,14 @@ public class K8sUtil {
                 .endSpec()
                 .build();
 
+        // 保存Job YAML到本地文件
+        saveJobYaml(job);
+
         // 提交Job
         client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
-        log.info("Job {} 已创建", name);
+
+        // 添加彩色日志输出
+        ColorLogUtils.printResourceCreated("Job", name, namespace);
     }
 
     /**
@@ -774,6 +797,132 @@ public class K8sUtil {
             }
         }
         return mountList;
+    }
+
+    /**
+     * 从ConfigMap中提取配置项的值
+     * 
+     * @param configMap ConfigMap对象
+     * @param fileName  配置文件名称（如core-site.xml）
+     * @param key       配置项键名
+     * @return 配置项的值，如果不存在则返回null
+     */
+    public static String getConfigValueFromConfigMap(ConfigMap configMap, String fileName, String key) {
+        if (configMap == null || configMap.getData() == null || !configMap.getData().containsKey(fileName)) {
+            log.warn("ConfigMap中不存在文件: {}", fileName);
+            return null;
+        }
+
+        String fileContent = configMap.getData().get(fileName);
+        if (fileContent == null || fileContent.isEmpty()) {
+            log.warn("ConfigMap中的文件内容为空: {}", fileName);
+            return null;
+        }
+
+        // 根据文件类型选择不同的解析方法
+        if (fileName.endsWith(".xml")) {
+            return getPropertyFromXmlString(fileContent, key);
+        } else if (fileName.endsWith(".properties")) {
+            return getPropertyFromPropertiesString(fileContent, key);
+        } else {
+            log.warn("不支持解析的文件类型: {}", fileName);
+            return null;
+        }
+    }
+
+    /**
+     * 从ConfigMap中获取多个键的值
+     * 
+     * @param client        Kubernetes客户端
+     * @param namespace     命名空间
+     * @param configMapName ConfigMap名称
+     * @param fileName      配置文件名称
+     * @param keys          要获取的键列表
+     * @return 键值映射
+     */
+    public static Map<String, String> getConfigValuesFromConfigMap(
+            KubernetesClient client, String namespace,
+            String configMapName, String fileName,
+            String... keys) {
+        Map<String, String> values = new HashMap<>();
+
+        ConfigMap configMap = client.configMaps()
+                .inNamespace(namespace)
+                .withName(configMapName)
+                .get();
+
+        if (configMap == null) {
+            log.warn("未找到ConfigMap: {}", configMapName);
+            return values;
+        }
+
+        for (String key : keys) {
+            String value = getConfigValueFromConfigMap(configMap, fileName, key);
+            if (value != null) {
+                values.put(key, value);
+                log.info("从ConfigMap {} 的文件 {} 中获取配置项: {} = {}",
+                        configMapName, fileName, key, value);
+            }
+        }
+
+        return values;
+    }
+
+    /**
+     * 从XML字符串中获取指定属性的值
+     * 
+     * @param xmlContent   XML内容字符串
+     * @param propertyName 属性名
+     * @return 属性值，如果不存在则返回null
+     */
+    public static String getPropertyFromXmlString(String xmlContent, String propertyName) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            // 禁用外部实体引用，防止XXE攻击
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xmlContent.getBytes()));
+            doc.getDocumentElement().normalize();
+
+            NodeList propertyList = doc.getElementsByTagName("property");
+            for (int i = 0; i < propertyList.getLength(); i++) {
+                Element property = (Element) propertyList.item(i);
+                NodeList nameNodes = property.getElementsByTagName("name");
+                if (nameNodes.getLength() > 0) {
+                    String name = nameNodes.item(0).getTextContent();
+                    if (propertyName.equals(name)) {
+                        NodeList valueNodes = property.getElementsByTagName("value");
+                        if (valueNodes.getLength() > 0) {
+                            return valueNodes.item(0).getTextContent();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析XML字符串时出错: {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
+     * 从properties格式的字符串中获取指定键的值
+     * 
+     * @param propertiesContent properties格式的内容字符串
+     * @param key               要查找的键
+     * @return 键对应的值，如果不存在则返回null
+     */
+    public static String getPropertyFromPropertiesString(String propertiesContent, String key) {
+        try {
+            java.util.Properties props = new java.util.Properties();
+            props.load(new ByteArrayInputStream(propertiesContent.getBytes()));
+            return props.getProperty(key);
+        } catch (Exception e) {
+            log.error("解析Properties字符串时出错: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
 }
