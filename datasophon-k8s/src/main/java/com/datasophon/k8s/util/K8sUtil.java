@@ -11,7 +11,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
-import io.fabric8.kubernetes.api.model.batch.v1.JobSpec;
+import io.fabric8.kubernetes.api.model.batch.v1.JobCondition;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -34,10 +34,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -399,22 +399,24 @@ public class K8sUtil {
     }
 
     /**
-     * 运行一个带有初始化容器的Kubernetes Job，使用指定的初始化容器镜像
+     * 运行一个带有初始化容器和环境变量的Kubernetes Job
      * 
-     * @param namespace      Kubernetes命名空间
-     * @param name           Job名称
-     * @param client         Kubernetes客户端
-     * @param volumeMounts   卷挂载配置
-     * @param image          主容器镜像
-     * @param cmd            容器执行的命令
-     * @param hostname       主机名
-     * @param initContainers 初始化容器执行的命令列表
-     * @param initImage      初始化容器使用的镜像
+     * @param namespace          Kubernetes命名空间
+     * @param name               Job名称
+     * @param client             Kubernetes客户端
+     * @param volumeMounts       卷挂载配置
+     * @param image              容器镜像
+     * @param cmd                容器执行的命令
+     * @param hostname           主机名
+     * @param initContainers     初始化容器执行的命令列表
+     * @param initContainerNames 初始化容器名称列表
+     * @param initImage          初始化容器使用的镜像
+     * @param envVars            环境变量映射
      * @throws Exception 执行过程中可能出现的异常
      */
-    public static void runJobWithInitContainers(String namespace, String name, KubernetesClient client,
+    public static void runJobWithInitContainersAndEnv(String namespace, String name, KubernetesClient client,
             VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname, List<String> initContainers,
-            String initImage) throws Exception {
+            List<String> initContainerNames, String initImage, Map<String, String> envVars) throws Exception {
         // 删除已存在的job
         log.debug("删除已存在的job(如果有), job名称: " + name);
         client.batch().v1().jobs()
@@ -428,9 +430,9 @@ public class K8sUtil {
         // 等待旧Job和相关Pod删除完成
         waitForDeleteJob(namespace, name, client, timeout, startTime);
 
-        // 提交一个包含初始化容器的新Job
-        submitJobWithInitContainers(namespace, name, client, volumeMounts, image, cmd, hostname, initContainers,
-                initImage);
+        // 提交一个包含初始化容器和环境变量的新Job
+        submitJobWithInitContainersAndEnv(namespace, name, client, volumeMounts, image, cmd, hostname, initContainers,
+                initContainerNames, initImage, envVars);
 
         long waitPodTimeout = 300; // Pod等待超时时间（秒）
         long waitPodStartTime = System.currentTimeMillis();
@@ -446,34 +448,32 @@ public class K8sUtil {
         AtomicBoolean isJobEndSuccess = new AtomicBoolean(false);
         Watcher<Job> watcher = new Watcher<Job>() {
             @Override
-            public void eventReceived(Action action, Job job) {
-                if (action == Action.ADDED || action == Action.MODIFIED) {
-                    JobStatus status = job.getStatus();
-                    if (status != null) {
-                        boolean isJobSuccessful = status.getSucceeded() != null && status.getSucceeded() > 0;
-                        boolean isJobFailed = status.getFailed() != null && status.getFailed() > 0;
-
-                        if (isJobSuccessful) {
+            public void eventReceived(Action action, Job resource) {
+                if (resource.getStatus() != null && resource.getStatus().getConditions() != null) {
+                    for (JobCondition condition : resource.getStatus().getConditions()) {
+                        if ("Complete".equals(condition.getType()) && "True".equals(condition.getStatus())) {
+                            log.info("Job执行成功");
                             isJobEndSuccess.set(true);
                             jobCompletionLatch.countDown();
-                        } else if (isJobFailed) {
+                            return;
+                        } else if ("Failed".equals(condition.getType()) && "True".equals(condition.getStatus())) {
+                            log.error("Job执行失败: {}", condition.getMessage());
                             isJobEndSuccess.set(false);
                             jobCompletionLatch.countDown();
+                            return;
                         }
                     }
                 }
             }
 
             @Override
-            public void onClose(WatcherException cause) {
-                log.info("Watcher关闭");
-                if (cause != null) {
-                    log.error(cause.getMessage(), cause);
+            public void onClose(WatcherException e) {
+                if (e != null) {
+                    log.error("Watcher关闭异常: {}", e.getMessage(), e);
                 }
             }
         };
 
-        // 输出Pod运行日志，直到Job完成
         try (Watch watch = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
@@ -511,124 +511,116 @@ public class K8sUtil {
     }
 
     /**
-     * 提交一个包含初始化容器的Job
+     * 提交一个包含初始化容器和环境变量的Job
      * 
-     * @param namespace      Kubernetes命名空间
-     * @param name           Job名称
-     * @param client         Kubernetes客户端
-     * @param volumeMounts   卷挂载配置
-     * @param image          容器镜像
-     * @param cmd            容器执行的命令
-     * @param hostname       主机名
-     * @param initContainers 初始化容器执行的命令列表
-     * @param initImage      初始化容器使用的镜像
+     * @param namespace          Kubernetes命名空间
+     * @param name               Job名称
+     * @param client             Kubernetes客户端
+     * @param volumeMounts       卷挂载配置
+     * @param image              容器镜像
+     * @param cmd                容器执行的命令
+     * @param hostname           主机名
+     * @param initContainers     初始化容器执行的命令列表
+     * @param initContainerNames 初始化容器名称列表
+     * @param initImage          初始化容器使用的镜像
+     * @param envVars            环境变量映射
      */
-    private static void submitJobWithInitContainers(String namespace, String name, KubernetesClient client,
+    private static void submitJobWithInitContainersAndEnv(String namespace, String name, KubernetesClient client,
             VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname, List<String> initContainers,
-            String initImage) {
-        // 创建卷对象
-        Function<VolumeMountDTO, Volume> volumeFunction = volumeMount -> {
-            String volumeName = volumeMount.getVolumeName();
-            String hostPath = volumeMount.getHostPath();
+            List<String> initContainerNames, String initImage, Map<String, String> envVars) {
+        log.info("提交带有命名初始化容器和环境变量的Job: {}", name);
 
-            if (volumeName.startsWith("configmap-")) {
-                // 处理ConfigMap卷
-                return new VolumeBuilder()
-                        .withName(volumeName)
-                        .withNewConfigMap()
-                        .withName(hostPath)
-                        .endConfigMap()
-                        .build();
-            } else {
-                // 处理常规hostPath卷
-                return new VolumeBuilder()
-                        .withName(volumeName)
-                        .withNewHostPath()
-                        .withPath(hostPath)
-                        .endHostPath()
-                        .build();
-            }
-        };
-
-        // 创建卷挂载对象
-        Function<VolumeMountDTO, VolumeMount> volumeMountFunction = volumeMountDTO -> new VolumeMountBuilder()
-                .withName(volumeMountDTO.getVolumeName())
-                .withMountPath(volumeMountDTO.getContainerPath())
-                .build();
-
-        // 转换卷和卷挂载配置
-        List<Volume> volumes = volumeMounts == null ? Collections.emptyList()
-                : Arrays.stream(volumeMounts).map(volumeFunction).collect(Collectors.toList());
-        List<VolumeMount> containerMounts = volumeMounts == null ? Collections.emptyList()
-                : Arrays.stream(volumeMounts).map(volumeMountFunction).collect(Collectors.toList());
-
-        // 创建主容器
-        Container container = new ContainerBuilder()
-                .withName(name)
-                .withImage(image)
-                .withCommand("sh", "-c", cmd)
-                .withVolumeMounts(containerMounts)
-                .build();
-
-        // 创建初始化容器列表
-        List<Container> initContainersList = new ArrayList<>();
-        if (initContainers != null && !initContainers.isEmpty()) {
-            int index = 0;
-            for (String initCmd : initContainers) {
-                Container initContainer = new ContainerBuilder()
-                        .withName("init-" + index++)
-                        .withImage(initImage) // 使用指定的初始化容器镜像
-                        .withCommand("sh", "-c", initCmd)
-                        .withVolumeMounts(containerMounts)
-                        .build();
-                initContainersList.add(initContainer);
+        // 创建环境变量列表
+        List<EnvVar> envVarList = new ArrayList<>();
+        if (envVars != null && !envVars.isEmpty()) {
+            for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                envVarList.add(new EnvVarBuilder()
+                        .withName(entry.getKey())
+                        .withValue(entry.getValue())
+                        .build());
             }
         }
 
-        // 创建Pod规格
-        PodSpec podSpec = new PodSpec();
-        podSpec.setRestartPolicy("Never");
-        podSpec.setVolumes(volumes);
-        podSpec.setContainers(Collections.singletonList(container));
+        // 创建Job的Pod模板
+        PodTemplateSpec podTemplateSpec = new PodTemplateSpecBuilder()
+                .withNewSpec()
+                .withRestartPolicy("Never")
+                .withNodeSelector(Collections.singletonMap("kubernetes.io/hostname", hostname))
+                .withContainers(new ContainerBuilder()
+                        .withName(name)
+                        .withImage(image)
+                        .withCommand("sh", "-c", cmd)
+                        .withVolumeMounts(convertVolumeMounts(volumeMounts))
+                        .withEnv(envVarList) // 添加环境变量到主容器
+                        .build())
+                .endSpec()
+                .build();
 
         // 添加初始化容器
-        if (!initContainersList.isEmpty()) {
-            podSpec.setInitContainers(initContainersList);
+        List<Container> initContainersList = new ArrayList<>();
+        for (int i = 0; i < initContainers.size(); i++) {
+            String containerName = i < initContainerNames.size() ? initContainerNames.get(i) : "init-container-" + i;
+            String containerScript = initContainers.get(i);
+
+            // 使用YAML的多行字符串格式，确保脚本正确换行
+            Container container = new ContainerBuilder()
+                    .withName(containerName)
+                    .withImage(initImage)
+                    .withCommand("sh", "-c", containerScript)
+                    .withVolumeMounts(convertVolumeMounts(volumeMounts))
+                    .withEnv(envVarList) // 添加环境变量到初始化容器
+                    .build();
+
+            initContainersList.add(container);
         }
 
-        // 添加节点选择器
-        if (StrUtil.isNotBlank(hostname)) {
-            podSpec.setNodeSelector(Collections.singletonMap("kubernetes.io/hostname", hostname));
+        // 设置初始化容器
+        podTemplateSpec.getSpec().setInitContainers(initContainersList);
+
+        // 添加卷
+        List<Volume> volumes = new ArrayList<>();
+        if (volumeMounts != null) {
+            for (VolumeMountDTO volumeMount : volumeMounts) {
+                String volumeName = volumeMount.getVolumeName();
+                String hostPath = volumeMount.getHostPath();
+
+                if (volumeName.startsWith("configmap-")) {
+                    // 处理ConfigMap卷
+                    volumes.add(new VolumeBuilder()
+                            .withName(volumeName)
+                            .withNewConfigMap()
+                            .withName(hostPath)
+                            .endConfigMap()
+                            .build());
+                } else {
+                    // 处理常规hostPath卷
+                    volumes.add(new VolumeBuilder()
+                            .withName(volumeName)
+                            .withNewHostPath()
+                            .withPath(hostPath)
+                            .endHostPath()
+                            .build());
+                }
+            }
         }
-
-        // 创建Pod模板
-        PodTemplateSpec podTemplateSpec = new PodTemplateSpec();
-        podTemplateSpec.setSpec(podSpec);
-
-        // 创建Job规格
-        io.fabric8.kubernetes.api.model.batch.v1.JobSpec jobSpec = new io.fabric8.kubernetes.api.model.batch.v1.JobSpec();
-        jobSpec.setTemplate(podTemplateSpec);
-        jobSpec.setBackoffLimit(0);
-        jobSpec.setTtlSecondsAfterFinished(300);
-
-        // 创建Job元数据
-        ObjectMeta metadata = new ObjectMeta();
-        metadata.setName(name);
-        metadata.setNamespace(namespace);
+        podTemplateSpec.getSpec().setVolumes(volumes);
 
         // 创建Job
-        Job job = new Job();
-        job.setMetadata(metadata);
-        job.setSpec(jobSpec);
-
-        // 保存Job YAML到本地文件
-        saveJobYaml(job);
+        Job job = new JobBuilder()
+                .withNewMetadata()
+                .withName(name)
+                .withNamespace(namespace)
+                .endMetadata()
+                .withNewSpec()
+                .withBackoffLimit(0)
+                .withTtlSecondsAfterFinished(300)
+                .withTemplate(podTemplateSpec)
+                .endSpec()
+                .build();
 
         // 提交Job
         client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
-
-        // 添加彩色日志输出
-        ColorLogUtils.printResourceCreated("Job", name, namespace);
+        log.info("Job {} 已创建", name);
     }
 
     /**
