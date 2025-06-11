@@ -89,7 +89,7 @@ spec:
         - name: wait-for-journalnodes
           image: "${dockerBusyboxImage}"
           command:
-            - "/bin/bash"
+            - "/bin/sh"
             - "-c"
             - |
               echo "等待JournalNode服务就绪..."
@@ -150,7 +150,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           args:
-            - "/bin/bash"
+            - "/bin/sh"
             - "-c"
             - |
               if [ ! -d ${namenodeDir}/current ]; then
