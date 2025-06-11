@@ -158,21 +158,20 @@ public class HostCheckActor extends UntypedActor {
               String depType = clusterInfo.getDepType();
               if (Constants.K8S_MODE.equals(depType)) {
                 try {
-                  // 在K8S模式下直接使用系统ping命令检查主机
-                  String pingCmd = "ping -c 1 -W 3 " + host.getHostname();
-                  Process process = Runtime.getRuntime().exec(pingCmd);
-                  int exitValue = process.waitFor();
+                  // 使用Java原生的isReachable方法替代系统ping命令
+                  java.net.InetAddress address = java.net.InetAddress.getByName(host.getHostname());
+                  boolean reachable = address.isReachable(3000); // 3000毫秒超时
 
-                  if (exitValue == 0) {
-                    logger.info("ping host: {} success in K8S mode", host.getHostname());
+                  if (reachable) {
+                    logger.info("检查主机连通性: {} 成功 (K8S模式)", host.getHostname());
                     checkedHost.setHostState(HostState.RUNNING);
                     checkedHost.setManaged(MANAGED.YES);
                   } else {
-                    logger.warn("ping host: {} fail in K8S mode", host.getHostname());
+                    logger.warn("检查主机连通性: {} 失败 (K8S模式)", host.getHostname());
                     checkedHost.setHostState(HostState.OFFLINE);
                   }
                 } catch (Exception e) {
-                  logger.warn("K8S mode ping host: {} error, cause: {}", host.getHostname(), e.getMessage());
+                  logger.warn("K8S模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
                   checkedHost.setHostState(HostState.OFFLINE);
                 }
                 continue; // 跳过下面的pingActor检测
