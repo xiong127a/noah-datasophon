@@ -594,7 +594,9 @@ public class K8sServiceHandler {
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
-
+        if(StrUtil.equalsIgnoreCase(serviceRoleFullName,"hdfs-namenode")){
+            return;
+        }
         updateField(yamlData, "spec.replicas", replicas + 1);
 
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
