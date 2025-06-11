@@ -103,11 +103,11 @@ spec:
               </#if>
               echo "JournalNode端点: $JOURNAL_ENDPOINTS"
               
-              # 解析JournalNode端点列表
-              IFS=';' read -ra NODES <<< "$JOURNAL_ENDPOINTS"
-              
-              # 等待每个JournalNode就绪
-              for NODE in "${r"${NODES[@]}"}"; do
+              # 使用ash兼容的方式分割字符串
+              OLD_IFS="$IFS"
+              IFS=";"
+              for NODE in $JOURNAL_ENDPOINTS; do
+                IFS="$OLD_IFS"
                 HOST=$(echo $NODE | cut -d':' -f1)
                 PORT=$(echo $NODE | cut -d':' -f2)
                 echo "正在检查JournalNode: $HOST:$PORT"
@@ -133,11 +133,13 @@ spec:
                   echo "错误: JournalNode $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪"
                   exit 1
                 fi
+                IFS=";"
               done
+              IFS="$OLD_IFS"
               
               echo "所有JournalNode服务已就绪，可以继续初始化NameNode"
         - name: namenode-format
-          image: "${dockerBusyboxImage}"
+          image: "${dockerImage}"
           env:
             - name: USER
               value: ${runAs}
