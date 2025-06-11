@@ -29,7 +29,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
         @Override
         public ExecResult handler(K8sServiceRoleOperateCommand command) {
-
+                String user = command.getRunAs().getUser();
                 ExecResult startResult = new ExecResult();
                 K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
                                 command.getServiceRoleName());
@@ -245,10 +245,8 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                         logger.warn("未从ConfigMap中获取到任何环境变量");
                                 }
 
-                                // 修改zkfc命令，添加namenode ID参数
-                                String updatedCmd = workPath + "/bin/hdfs zkfc -formatZK";
-                                // 使用初始化容器生成的配置文件
-                                updatedCmd = "if [ -f /tmp/active_namenode_id ]; then\n" +
+                                // 找到zkfc format 命令，修改其以确保正确传递NameNode ID
+                                String zkfcFormatCommand = "if [ -f /tmp/active_namenode_id ]; then\n" +
                                                 "  echo \"使用初始化容器确定的NameNode ID\"\n" +
                                                 "  . /tmp/active_namenode_id\n" +
                                                 "  echo \"NAMENODE_ID=$NAMENODE_ID\"\n" +
@@ -265,8 +263,9 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                                 "  export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=nn1\"\n" +
                                                 "fi\n\n" +
                                                 "echo \"准备执行ZKFC格式化，使用NAMENODE_ID=$NAMENODE_ID\"\n" +
-                                                updatedCmd;
-                                logger.info("更新命令添加namenode ID: {}", updatedCmd);
+                                                "su - " + user
+                                                + " -c \"export NAMENODE_ID=$NAMENODE_ID && export HADOOP_OPTS=\\\"$HADOOP_OPTS\\\" && export HDFS_NAMENODE_OPTS=\\\"$HDFS_NAMENODE_OPTS\\\" && "
+                                                + jobCmd + "\"";
 
                                 // 添加检查ZooKeeper和NameNode就绪状态的初始化容器
                                 List<String> initContainers = new ArrayList<>();
@@ -286,7 +285,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                                 kubeClient,
                                                 volumeMounts,
                                                 DockerImageUtils.getString(command.getServiceName()),
-                                                updatedCmd,
+                                                zkfcFormatCommand,
                                                 command.getHostname(),
                                                 initContainers,
                                                 initContainerNames,
