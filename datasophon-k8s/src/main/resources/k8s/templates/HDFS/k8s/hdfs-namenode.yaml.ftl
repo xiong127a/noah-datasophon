@@ -86,8 +86,58 @@ spec:
             - name: namenode-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+        - name: wait-for-journalnodes
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "等待JournalNode服务就绪..."
+              
+              # 获取JournalNode服务端点
+              <#if dfs_namenode_shared_edits_dir??>
+              JOURNAL_ENDPOINTS=$(echo "${dfs_namenode_shared_edits_dir}" | sed -r 's|qjournal://([^/]+)/.*|\1|g')
+              <#else>
+              echo "警告: dfs.namenode.shared.edits.dir 未定义，使用默认值"
+              JOURNAL_ENDPOINTS="journalnode-0.journalnode.default.svc.cluster.local:8485;journalnode-1.journalnode.default.svc.cluster.local:8485;journalnode-2.journalnode.default.svc.cluster.local:8485"
+              </#if>
+              echo "JournalNode端点: $JOURNAL_ENDPOINTS"
+              
+              # 解析JournalNode端点列表
+              IFS=';' read -ra NODES <<< "$JOURNAL_ENDPOINTS"
+              
+              # 等待每个JournalNode就绪
+              for NODE in "${r"${NODES[@]}"}"; do
+                HOST=$(echo $NODE | cut -d':' -f1)
+                PORT=$(echo $NODE | cut -d':' -f2)
+                echo "正在检查JournalNode: $HOST:$PORT"
+                
+                # 重试计数器
+                RETRIES=0
+                MAX_RETRIES=90
+                
+                # 循环尝试连接JournalNode
+                while [ $RETRIES -lt $MAX_RETRIES ]; do
+                  if nc -z $HOST $PORT; then
+                    echo "JournalNode $HOST:$PORT 已就绪"
+                    break
+                  else
+                    echo "JournalNode $HOST:$PORT 未就绪，等待重试... ($((RETRIES+1))/$MAX_RETRIES)"
+                    RETRIES=$((RETRIES+1))
+                    sleep 2
+                  fi
+                done
+                
+                # 检查是否达到最大重试次数
+                if [ $RETRIES -eq $MAX_RETRIES ]; then
+                  echo "错误: JournalNode $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪"
+                  exit 1
+                fi
+              done
+              
+              echo "所有JournalNode服务已就绪，可以继续初始化NameNode"
         - name: namenode-format
-          image: "${dockerImage}"
+          image: "${dockerBusyboxImage}"
           env:
             - name: USER
               value: ${runAs}
