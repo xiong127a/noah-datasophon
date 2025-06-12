@@ -242,7 +242,9 @@ public class K8sYamlDeploymentHandler {
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
             String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile) {
-        Map<String, String> paramMap = MapUtil.newHashMap();
+        Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
+                .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
+                        (existing, replacement) -> replacement));
         paramMap.put("${user}", runAs.getUser());
         paramMap.put("${hostname}", "$(hostname)");
         logFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
