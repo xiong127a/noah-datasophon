@@ -49,7 +49,6 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
         k8SGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
         k8SGenerateDeploymentYamlCommand.setLogFile(serviceRoleInfo.getLogFile());
         k8SGenerateDeploymentYamlCommand.setCommandType(serviceRoleInfo.getCommandType());
-        k8SGenerateDeploymentYamlCommand.setSlave(serviceRoleInfo.isSlave());
 
         k8SGenerateDeploymentYamlCommand.setMasterHost(Objects.nonNull(serviceRoleInfo.getMasterHost())?serviceRoleInfo.getMasterHost():serviceRoleInfo.getHostname());
         if (Objects.nonNull(serviceRoleInfo.getRunAs())) {

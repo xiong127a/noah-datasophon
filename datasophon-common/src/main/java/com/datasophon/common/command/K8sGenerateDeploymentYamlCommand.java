@@ -50,8 +50,6 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
 
     private CommandType commandType;
 
-    private boolean isSlave = false;
-
 
     public K8sGenerateDeploymentYamlCommand() {
         this.enableKerberos = false;

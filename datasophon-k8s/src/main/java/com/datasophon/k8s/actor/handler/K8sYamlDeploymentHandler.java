@@ -171,7 +171,7 @@ public class K8sYamlDeploymentHandler {
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
                                 ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
                                 String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
-                                boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType, boolean isSlave) {
+                                boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -192,7 +192,7 @@ public class K8sYamlDeploymentHandler {
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome,
                     volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin,
-                    logFile, commandType, isSlave);
+                    logFile, commandType);
 
             Template template = generateTemplate();
 
@@ -242,7 +242,7 @@ public class K8sYamlDeploymentHandler {
     private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
                                                    ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
                                                    Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
-                                                   String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile, CommandType commandType, boolean isSlave) {
+                                                   String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile, CommandType commandType) {
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
                         (existing, replacement) -> replacement));
@@ -278,9 +278,9 @@ public class K8sYamlDeploymentHandler {
         data.put("masterHost", masterHost);
         data.put("runAsUser", runAs.getUser());
         data.put("runAsGroup", runAs.getGroup());
-        if (!isSlave && CommandType.INSTALL_SERVICE.equals(commandType)) {
+        if (CommandType.INSTALL_SERVICE.equals(commandType)) {
             // 设置首次安装的首台机器标识
-            data.put("isFirstInstall", true);
+            data.put("isInstall", true);
         }
         data.put("startCommand",
                 startRunner != null
