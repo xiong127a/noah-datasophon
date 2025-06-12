@@ -54,7 +54,7 @@
       "externalLink": {
         "name": "Grafana Ui",
         "label": "Grafana Ui",
-        "url": "http://${host}:3000"
+        "url": "http://${hostname}:3000"
       }
     }
   ],

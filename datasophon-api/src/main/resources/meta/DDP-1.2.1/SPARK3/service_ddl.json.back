@@ -13,7 +13,7 @@
       "label": "SparkClient3",
       "roleType": "client",
       "cardinality": "1+",
-      "logFile": "logs/hadoop-${user}-datanode-${host}.log"
+      "logFile": "logs/hadoop-${user}-datanode-${hostname}.log"
     }
   ],
   "configWriter": {

@@ -83,7 +83,7 @@
         "user": "postgres",
         "group": "postgres"
       },
-      "logFile": "postgres_exporter/logs/postgresql-${host}.out",
+      "logFile": "postgres_exporter/logs/postgresql-${hostname}.out",
       "startRunner": {
         "timeout": "60",
         "program": "postgres_exporter/control_postgresql_exporter.sh",

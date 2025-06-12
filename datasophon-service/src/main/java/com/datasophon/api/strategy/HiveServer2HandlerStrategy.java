@@ -166,7 +166,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             String hiveServer2Port = String.valueOf(configMap.getOrDefault("hive.server2.thrift.port", "10000"));
 
             // 如果配置中找不到主机名，使用HiveServer2实例的主机名
-            if (StrUtil.isBlank(hiveServer2Host) || "${host}".equals(hiveServer2Host)) {
+            if (StrUtil.isBlank(hiveServer2Host) || "${hostname}".equals(hiveServer2Host)) {
                 if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
                     hiveServer2Host = hiveServer2Hosts.get(0);
                 } else {
@@ -250,9 +250,9 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                         "hive.server2.authentication.kerberos.principal",
                         "hive/" + hiveServer2Host + "@HADOOP.COM"));
 
-                // 替换principal中的${host}为实际主机名
-                if (principal.contains("${host}")) {
-                    principal = principal.replace("${host}", hiveServer2Host);
+                // 替换principal中的${hostname}为实际主机名
+                if (principal.contains("${hostname}")) {
+                    principal = principal.replace("${hostname}", hiveServer2Host);
                 }
 
                 jdbcUrl += ";principal=" + principal + ";auth=kerberos";

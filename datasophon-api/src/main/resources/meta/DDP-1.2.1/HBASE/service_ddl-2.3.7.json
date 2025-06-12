@@ -18,7 +18,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hbase-hbase-master-${host}.log",
+      "logFile": "logs/hbase-hbase-master-${hostname}.log",
       "jmxPort": 16100,
       "startRunner": {
         "timeout": "60",
@@ -55,7 +55,7 @@
       "externalLink": {
         "name": "HbaseMaster Ui",
         "label": "HbaseMaster Ui",
-        "url": "http://${host}:16010"
+        "url": "http://${hostname}:16010"
       }
     },
     {
@@ -67,7 +67,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hbase-hbase-regionserver-${host}.log",
+      "logFile": "logs/hbase-hbase-regionserver-${hostname}.log",
       "jmxPort": 16101,
       "startRunner": {
         "timeout": "60",
@@ -375,10 +375,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },
     {
       "name": "hbaseSecurity",

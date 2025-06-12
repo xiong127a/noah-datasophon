@@ -58,7 +58,7 @@
       "label": "EsExporter",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "elasticsearch-exporter/logs/es_exporter-${host}.out",
+      "logFile": "elasticsearch-exporter/logs/es_exporter-${hostname}.out",
       "jmxPort": 9114,
       "sortNum": 2,
       "startRunner": {
@@ -156,7 +156,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },
     {
       "name": "node.master",
@@ -178,7 +178,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },
     {
       "name": "http.port",

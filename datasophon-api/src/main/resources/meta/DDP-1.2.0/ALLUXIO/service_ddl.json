@@ -46,7 +46,7 @@
       "externalLink": {
         "name": "master Ui",
         "label": "master Ui",
-        "url": "http://${host}:19999"
+        "url": "http://${hostname}:19999"
       }
     },
     {

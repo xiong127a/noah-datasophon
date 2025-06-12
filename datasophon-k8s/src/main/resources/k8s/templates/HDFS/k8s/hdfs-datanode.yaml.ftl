@@ -11,15 +11,6 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  volumeClaimTemplates:
-    - metadata:
-        name: datanode-data
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: ${storage_classes}
-        resources:
-          requests:
-            storage: ${storage}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -51,12 +42,12 @@ spec:
             - "-c"
             - |
               echo "Creating HDFS user if not exists..."
-              if ! id ${runAs} &>/dev/null; then
-                addgroup -g 1000 ${runAs}
-                adduser -u 1000 -G ${runAs} -h /home/${runAs} -D ${runAs}
-                echo "User ${runAs} created."
+              if ! id ${runAsUser} &>/dev/null; then
+                addgroup -g 1000 ${runAsUser}
+                adduser -u 1000 -G ${runAsUser} -h /home/${runAsUser} -D ${runAsUser}
+                echo "User ${runAsUser} created."
               else
-                echo "User ${runAs} already exists."
+                echo "User ${runAsUser} already exists."
               fi
           securityContext:
             runAsUser: 0  # 以root用户运行
@@ -89,7 +80,7 @@ spec:
       containers:
         - env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
@@ -186,6 +177,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: datanode-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

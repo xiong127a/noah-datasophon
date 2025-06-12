@@ -192,7 +192,7 @@ public class ProcessUtils {
                     logger.info("web ui already exists");
                 } else {
                     Map<String, String> globalVariables = GlobalVariables.get(clusterInfo.getId());
-                    globalVariables.put("${host}", serviceRoleInfo.getHostname());
+                    globalVariables.put("${hostname}", serviceRoleInfo.getHostname());
                     String url = PlaceholderUtils.replacePlaceholders(externalLink.getUrl(), globalVariables,
                             Constants.REGEX_VARIABLE);
                     ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
@@ -201,7 +201,7 @@ public class ProcessUtils {
                     webuis.setServiceRoleInstanceId(roleInstance.getId());
                     webuis.setName(externalLink.getName() + "(" + serviceRoleInfo.getHostname() + ")");
                     webuisService.save(webuis);
-                    globalVariables.remove("${host}");
+                    globalVariables.remove("${hostname}");
                 }
 
             }

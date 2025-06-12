@@ -11,16 +11,7 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  # 使用与NameNode相同的挂载方式
-  volumeClaimTemplates:
-    - metadata:
-        name: namenode-data  # 与NameNode使用相同的PVC名称
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: ${storage_classes}
-        resources:
-          requests:
-            storage: 1Gi
+  # 删除volumeClaimTemplates，使用共享PVC
   strategy:
     type: "RollingUpdate"
     rollingUpdate:
@@ -36,6 +27,8 @@ spec:
         podConflictName: "${serviceRoleFullName}"
       annotations:
         serviceInstanceName: "${serviceName}"
+        # 添加注释，用于创建对应的无头服务
+        service.kubernetes.io/headless: "true"
     spec:
       affinity:
         podAntiAffinity:
@@ -59,7 +52,6 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
-
         - name: set-config-permissions
           image: "${dockerBusyboxImage}"
           command:
@@ -78,6 +70,33 @@ spec:
               mountPath: "${item.value}"
               subPath: "${item.fileName}"
             </#list>
+        - name: extract-pod-index
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Extracting POD_INDEX from POD_NAME..."
+              POD_NAME=$POD_NAME
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              echo "POD_NAME: $POD_NAME, POD_INDEX: $POD_INDEX"
+              
+              # 将POD_INDEX写入环境变量文件
+              echo "export POD_INDEX=$POD_INDEX" > /etc/profile.d/pod_index.sh
+              chmod +x /etc/profile.d/pod_index.sh
+              
+              # 为了传递给主容器，我们还将创建一个临时文件
+              echo "export POD_INDEX=$POD_INDEX" > /tmp/pod_index_env
+              echo "export NAMENODE_TARGET=hdfs-namenode-$POD_INDEX" >> /tmp/pod_index_env
+              chmod 755 /tmp/pod_index_env
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          securityContext:
+            runAsUser: 0
+            privileged: true
         - name: wait-for-namenode
           image: "${dockerBusyboxImage}"
           command:
@@ -149,12 +168,12 @@ spec:
                     chmod 755 /tmp/namenode_env
                     
                     # 将环境变量写入到用户的.bash_profile中
-                    mkdir -p /home/${runAs}
-                    echo "export NAMENODE_ID=\"$NAMENODE_ID\"" > /home/${runAs}/.bash_profile
-                    echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAs}/.bash_profile
-                    echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAs}/.bash_profile
-                    chown ${runAs}:${runAs} /home/${runAs}/.bash_profile
-                    chmod 644 /home/${runAs}/.bash_profile
+                    mkdir -p /home/${runAsUser}
+                    echo "export NAMENODE_ID=\"$NAMENODE_ID\"" > /home/${runAsUser}/.bash_profile
+                    echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAsUser}/.bash_profile
+                    echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAsUser}/.bash_profile
+                    chown ${runAsUser}:${runAsUser} /home/${runAsUser}/.bash_profile
+                    chmod 644 /home/${runAsUser}/.bash_profile
                     exit 0
                   fi
                 fi
@@ -190,13 +209,10 @@ spec:
               mountPath: "${item.value}"
               subPath: "${item.fileName}"
             </#list>
-            # 使用PVC挂载NameNode数据目录
-            - name: namenode-data
-              mountPath: ${namenodeDir}
       containers:
         - env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
@@ -209,6 +225,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: NAMENODE_DATA_DIR
               value: ${namenodeDir}
           image: "${dockerImage}"
@@ -230,12 +250,54 @@ spec:
           </#list>
           </#if>
           </#if>
+          # 添加ZKFC服务端口
+          - containerPort: 8019
+            name: zkfc
           command:
             - "/bin/bash"
             - "-c"
             - |
               echo "ZKFC 启动中..."
-              echo "使用NameNode数据目录: $NAMENODE_DATA_DIR"
+              
+              # 从临时文件加载POD_INDEX
+              if [ -f /tmp/pod_index_env ]; then
+                source /tmp/pod_index_env
+                echo "已加载POD_INDEX=$POD_INDEX，目标NameNode: $NAMENODE_TARGET"
+              else
+                # 直接从Pod名称中提取索引
+                POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+                NAMENODE_TARGET="hdfs-namenode-$POD_INDEX"
+                echo "未找到环境变量文件，计算得到POD_INDEX=$POD_INDEX，目标NameNode: $NAMENODE_TARGET"
+              fi
+              
+              # 设置NameNode ID
+              if [ "$POD_INDEX" == "0" ]; then
+                NAMENODE_ID="nn1"
+              else
+                NAMENODE_ID="nn2"
+              fi
+              echo "根据索引设置NAMENODE_ID=$NAMENODE_ID"
+              
+              # 创建软链接，确保${namenodeDir}可用
+              echo "创建从PVC挂载到NameNode数据目录的软链接..."
+              mkdir -p $(dirname ${namenodeDir})
+              if [ -d "/mnt/datasophon/hdfs-namenode-$POD_INDEX" ]; then
+                echo "找到目标目录: /mnt/datasophon/hdfs-namenode-$POD_INDEX，创建软链接到${namenodeDir}"
+                ln -sf /mnt/datasophon/hdfs-namenode-$POD_INDEX ${namenodeDir}
+              else
+                echo "找不到/mnt/datasophon/hdfs-namenode-$POD_INDEX目录，尝试查找其他可能的路径"
+                TARGET_DIR=$(find /mnt -path "*/datasophon/hdfs-namenode-$POD_INDEX" 2>/dev/null | head -1)
+                if [ -n "$TARGET_DIR" ]; then
+                  echo "找到NameNode目录: $TARGET_DIR，创建软链接到${namenodeDir}"
+                  ln -sf "$TARGET_DIR" ${namenodeDir}
+                else
+                  echo "无法找到合适的NameNode目录，尝试链接/mnt/namenode-0"
+                  ln -sf /mnt/namenode-0 ${namenodeDir}
+                fi
+              fi
+              echo "创建软链接完成，检查指向: $(readlink -f ${namenodeDir})"
+              
+              echo "使用NameNode数据目录: ${namenodeDir}"
               
               # 检查NameNode数据目录，确保ZKFC可以找到正确的NameNode ID
               echo "检查NameNode数据目录: ${namenodeDir}"
@@ -246,6 +308,10 @@ spec:
               else
                 echo "警告: 未找到NameNode VERSION文件，但ZKFC会自动处理"
               fi
+              
+              # 输出ZKFC和NameNode的ID关系，用于调试
+              echo "当前ZKFC POD: $POD_NAME, 索引: $POD_INDEX, 将使用NameNode ID: $NAMENODE_ID"
+              echo "通过软链接访问的NameNode数据目录: ${namenodeDir} -> $(readlink -f ${namenodeDir})"
               
               # 直接执行启动命令
               echo "执行启动命令: ${startCommand}"
@@ -279,13 +345,19 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-            # 使用PVC挂载NameNode数据目录
+            # 使用对应的NameNode数据目录路径
             - name: namenode-data
-              mountPath: ${namenodeDir}
+              mountPath: ${mount_path}
+              # 使用包含具体序号的表达式
+              subPathExpr: $(POD_NAMESPACE)/hdfs-namenode-$(POD_INDEX)
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        # 使用hdfs-namenode的PVC
+        - name: namenode-data
+          persistentVolumeClaim:
+            claimName: "hdfs-namenode-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
@@ -294,19 +366,3 @@ spec:
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
----
-# 为StatefulSet创建一个无头服务
-apiVersion: v1
-kind: Service
-metadata:
-  name: "${serviceRoleFullName}"
-  namespace: ${namespace}
-  labels:
-    app: "${serviceRoleFullName}"
-spec:
-  ports:
-  - port: 8019
-    name: zkfc
-  clusterIP: None
-  selector:
-    app: "${serviceRoleFullName}"

@@ -151,7 +151,7 @@
             "value": " ",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "xpack.monitoring.elasticsearch.sniffing",

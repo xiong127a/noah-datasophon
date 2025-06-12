@@ -13,7 +13,7 @@
       "label": "NoahJobServer",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "standalone-server/logs/standalone-server-${host}.out",
+      "logFile": "standalone-server/logs/standalone-server-${hostname}.out",
       "jmxPort": 12367,
       "startRunner": {
         "timeout": "60",
@@ -301,7 +301,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${host}/"
+      "defaultValue": "http://${hostname}/"
     },{
       "name": "hdfs.root.user",
       "label": "hdfs.root.user",
@@ -321,7 +321,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${host}/noah"
+      "defaultValue": "http://${hostname}/noah"
     },{
       "name": "resource.manager.httpaddress.port",
       "label": "resource.manager.httpaddress.port",

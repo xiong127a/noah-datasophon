@@ -410,10 +410,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "SASL_PLAINTEXT://${host}:9092",
+      "value": "SASL_PLAINTEXT://${hostname}:9092",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT://${host}:9092"
+      "defaultValue": "SASL_PLAINTEXT://${hostname}:9092"
     },
     {
       "name": "listeners",
@@ -423,10 +423,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "SASL_PLAINTEXT://${host}:9092",
+      "value": "SASL_PLAINTEXT://${hostname}:9092",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT://${host}:9092"
+      "defaultValue": "SASL_PLAINTEXT://${hostname}:9092"
     },
     {
       "name": "security.inter.broker.protocol",
@@ -527,10 +527,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },
     {
       "name": "kafkaRealm",

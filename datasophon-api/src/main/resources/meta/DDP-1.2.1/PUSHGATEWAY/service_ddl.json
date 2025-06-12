@@ -20,7 +20,7 @@
         "user": "root",
         "group": "root"
       },
-      "logFile": "logs/pushgateway-${host}.out",
+      "logFile": "logs/pushgateway-${hostname}.out",
       "startRunner": {
         "timeout": "60",
         "program": "control_pushgateway.sh",
@@ -48,7 +48,7 @@
       "externalLink": {
         "name": "Prometheus Ui",
         "label": "Prometheus Ui",
-        "url": "http://${host}:9091"
+        "url": "http://${hostname}:9091"
       }
     }
   ],

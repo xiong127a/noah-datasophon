@@ -130,7 +130,7 @@ public class FreemarkerUtils {
             try {
                 String hostName = InetAddress.getLocalHost().getHostName();
                 String ip = NetUtil.getIpByHost(hostName);
-                paramMap.put("${host}", hostName);
+                paramMap.put("${hostname}", hostName);
                 paramMap.put("${ip}", ip);
                 paramMap.put("${user}", "root");
             } catch (Exception e) {
@@ -215,7 +215,7 @@ public class FreemarkerUtils {
         try {
             String hostName = InetAddress.getLocalHost().getHostName();
             String ip = NetUtil.getIpByHost(hostName);
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
         } catch (Exception e) {
@@ -461,7 +461,7 @@ public class FreemarkerUtils {
         try {
             String hostName = InetAddress.getLocalHost().getHostName();
             String ip = NetUtil.getIpByHost(hostName);
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
         } catch (Exception e) {

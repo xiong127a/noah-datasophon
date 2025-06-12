@@ -14,7 +14,7 @@ hazelcast:
         member-list:
 <#list itemList as item>
     <#list item.value?split(",") as host>
-          - ${host}
+          - ${hostname}
     </#list>
 </#list>
     port:

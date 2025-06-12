@@ -79,7 +79,7 @@ public class ConfigureServiceHandler {
             String hostName = InetAddress.getLocalHost().getHostName();
             String ip = NetUtil.getIpByHost(hostName);
             HashMap<String, String> paramMap = new HashMap<>();
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");

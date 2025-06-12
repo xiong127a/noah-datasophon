@@ -457,7 +457,7 @@ YARN公开JMX指标，可用于高级监控：
 ## 日志管理
 
 ### 日志目录结构
-- **本地日志**：`${HADOOP_LOG_DIR}/yarn-${USER}-${COMPONENT}-${HOST}.log`
+- **本地日志**：`${HADOOP_LOG_DIR}/yarn-${USER}-${COMPONENT}-${hostname}.log`
 - **应用日志**：`${yarn.nodemanager.log-dirs}/application_${appid}/container_${contid}/`
 - **聚合日志**：`${yarn.nodemanager.remote-app-log-dir}/${user}/logs/application_${appid}/`
 

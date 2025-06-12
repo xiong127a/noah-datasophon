@@ -20,7 +20,7 @@
         "group": "hadoop"
       },
       "sortNum": 1,
-      "logFile": "logs/hadoop-yarn-resourcemanager-${host}.log",
+      "logFile": "logs/hadoop-yarn-resourcemanager-${hostname}.log",
       "jmxPort": 9323,
       "startRunner": {
         "timeout": "60",
@@ -57,7 +57,7 @@
       "externalLink": {
         "name": "ResourceManager UI",
         "label": "ResourceManager UI",
-        "url": "http://${host}:8088/ui2"
+        "url": "http://${hostname}:8088/ui2"
       }
     },
     {
@@ -70,7 +70,7 @@
         "group": "hadoop"
       },
       "sortNum": 3,
-      "logFile": "logs/hadoop-yarn-nodemanager-${host}.log",
+      "logFile": "logs/hadoop-yarn-nodemanager-${hostname}.log",
       "jmxPort": 9324,
       "startRunner": {
         "timeout": "60",
@@ -107,7 +107,7 @@
         "group": "hadoop"
       },
       "sortNum": 2,
-      "logFile": "logs/hadoop-mapred-historyserver-${host}.log",
+      "logFile": "logs/hadoop-mapred-historyserver-${hostname}.log",
       "jmxPort": 9325,
       "startRunner": {
         "timeout": "60",
@@ -152,7 +152,7 @@
         "group": "hadoop"
       },
       "sortNum": 4,
-      "logFile": "logs/hadoop-yarn-timelineserver-${host}.log",
+      "logFile": "logs/hadoop-yarn-timelineserver-${hostname}.log",
       "startRunner": {
         "timeout": "60",
         "program": "control_hadoop.sh",

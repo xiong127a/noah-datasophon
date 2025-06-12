@@ -11,15 +11,6 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  volumeClaimTemplates:
-    - metadata:
-        name: namenode-data
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: ${storage_classes}
-        resources:
-          requests:
-            storage: ${storage}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -216,7 +207,7 @@ spec:
           image: "${dockerImage}"
           env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -273,8 +264,8 @@ spec:
               echo "当前用户: $(id)"
               echo "数据目录权限: $(ls -ld ${namenodeDir})"
               echo "可创建文件测试:"
-              su - ${runAs} -c "touch ${namenodeDir}/test_write_permission && echo \"✓ 写入测试成功\" || echo \"✗ 写入测试失败\""
-              su - ${runAs} -c "rm -f ${namenodeDir}/test_write_permission"
+              su - ${runAsUser} -c "touch ${namenodeDir}/test_write_permission && echo \"✓ 写入测试成功\" || echo \"✗ 写入测试失败\""
+              su - ${runAsUser} -c "rm -f ${namenodeDir}/test_write_permission"
               
               # 确保以hdfs用户运行NameNode格式化命令
               
@@ -284,8 +275,8 @@ spec:
                 if [ ! -d ${namenodeDir}/current ]; then
                   echo "格式化主NameNode (nn1)..."
                   set -x  # 启用命令跟踪，便于调试
-                  # 使用${runAs}用户执行格式化命令
-                  su - ${runAs} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
+                  # 使用${runAsUser}用户执行格式化命令
+                  su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
                   FORMAT_RESULT=$?
                   echo "format结果: $FORMAT_RESULT"
                   set +x  # 关闭命令跟踪
@@ -297,8 +288,8 @@ spec:
                 if [ ! -d ${namenodeDir}/current ]; then
                   echo "同步备用NameNode (nn2) 元数据..."
                   set -x  # 启用命令跟踪，便于调试
-                  # 使用${runAs}用户执行bootstrapStandby命令
-                  su - ${runAs} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
+                  # 使用${runAsUser}用户执行bootstrapStandby命令
+                  su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
                   BOOTSTRAP_RESULT=$?
                   echo "bootstrapStandby结果: $BOOTSTRAP_RESULT"
                   set +x  # 关闭命令跟踪
@@ -310,10 +301,10 @@ spec:
               # 格式化后检查
               echo "========== 格式化/同步后检查 =========="
               echo "数据目录内容:"
-              su - ${runAs} -c "ls -la ${namenodeDir}/"
+              su - ${runAsUser} -c "ls -la ${namenodeDir}/"
               if [ -d ${namenodeDir}/current ]; then
                 echo "current目录创建成功，内容:"
-                su - ${runAs} -c "ls -la ${namenodeDir}/current/"
+                su - ${runAsUser} -c "ls -la ${namenodeDir}/current/"
               else
                 echo "警告: current目录未创建"
               fi
@@ -331,7 +322,7 @@ spec:
       containers:
         - env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
@@ -395,7 +386,7 @@ spec:
                   echo "ssl-server.xml not found. Copying from template...";
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
-                su - ${runAs} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
+                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
               else
                 echo "Kerberos is not enabled.";
               fi
@@ -444,6 +435,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: namenode-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

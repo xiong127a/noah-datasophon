@@ -45,7 +45,7 @@ public class LogActor extends UntypedActor {
             HashMap<String, String> paramMap = new HashMap<>();
             String hostName = InetAddress.getLocalHost().getHostName();
             paramMap.put("${user}", "root");
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             String logFileName =
                     PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap, Constants.REGEX_VARIABLE);
 

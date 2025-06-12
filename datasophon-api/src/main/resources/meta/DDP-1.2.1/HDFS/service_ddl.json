@@ -20,7 +20,7 @@
       },
       "cardinality": "1+",
       "sortNum": 1,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-journalnode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-journalnode-${hostname}.log",
       "jmxPort": 27003,
       "startRunner": {
         "timeout": "60",
@@ -57,7 +57,7 @@
       },
       "cardinality": "1+",
       "sortNum": 2,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-namenode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-namenode-${hostname}.log",
       "jmxPort": "27001",
       "startRunner": {
         "timeout": "60",
@@ -94,7 +94,7 @@
       "externalLink": {
         "name": "NameNode Ui",
         "label": "NameNode Ui",
-        "url": "http://${host}:9870"
+        "url": "http://${hostname}:9870"
       }
     },
     {
@@ -107,7 +107,7 @@
       },
       "cardinality": "1+",
       "sortNum": 5,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${hostname}.log",
       "jmxPort": "27002",
       "startRunner": {
         "timeout": "60",
@@ -144,7 +144,7 @@
       },
       "cardinality": "1+",
       "sortNum": 3,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-zkfc-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-zkfc-${hostname}.log",
       "jmxPort": 27004,
       "startRunner": {
         "timeout": "60",
@@ -181,7 +181,7 @@
       },
       "cardinality": "1+",
       "sortNum": 7,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${hostname}.log",
       "jmxPort": "",
       "startRunner": {
         "timeout": "60",
@@ -1537,15 +1537,15 @@
     {
       "name": "httpfs.hadoop.authentication.kerberos.principal",
       "label": "HttpFS Kerberos主体",
-      "description": "HttpFS服务使用的Kerberos主体名称，用于访问Kerberos保护的HDFS。通常为HTTP主体，格式为HTTP/${host}@REALM，其中${host}会被替换为实际主机名。",
+      "description": "HttpFS服务使用的Kerberos主体名称，用于访问Kerberos保护的HDFS。通常为HTTP主体，格式为HTTP/${hostname}@REALM，其中${hostname}会被替换为实际主机名。",
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "HTTP/${host}@${realm}",
+      "value": "HTTP/${hostname}@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "HTTP/${host}@${realm}",
+      "defaultValue": "HTTP/${hostname}@${realm}",
       "configCategory": "file",
       "configGroup": "httpfs-site",
       "configLevel": "advanced"

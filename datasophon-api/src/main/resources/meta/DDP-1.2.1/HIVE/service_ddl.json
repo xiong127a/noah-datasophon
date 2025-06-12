@@ -55,7 +55,7 @@
       "externalLink": {
         "name": "HiveServer2 UI",
         "label": "HiveServer2 UI",
-        "url": "http://${host}:10002"
+        "url": "http://${hostname}:10002"
       }
     },
     {
@@ -477,10 +477,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "hive/${host}@${realm}",
+      "value": "hive/${hostname}@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hive/${host}@${realm}"
+      "defaultValue": "hive/${hostname}@${realm}"
     },
     {
       "name": "hive.server2.authentication.kerberos.keytab",
@@ -590,10 +590,10 @@
       "description": "",
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },{
       "name": "hive.server2.thrift.port",
       "label": "hiveserver2 thrift端口",

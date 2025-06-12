@@ -42,7 +42,7 @@ public class K8sLogActor extends UntypedActor {
             K8sGetLogCommand command = (K8sGetLogCommand) msg;
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${user}", "root");
-            paramMap.put("${host}", command.getHostname());
+            paramMap.put("${hostname}", command.getHostname());
             String logFileName =
                     PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap, Constants.REGEX_VARIABLE);
 

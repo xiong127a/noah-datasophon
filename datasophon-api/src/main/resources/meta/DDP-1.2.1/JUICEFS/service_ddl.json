@@ -15,7 +15,7 @@
             "label": "JuiceFSClient",
             "roleType": "client",
             "cardinality": "1+",
-            "logFile": "logs/juicefs-${host}.log"
+            "logFile": "logs/juicefs-${hostname}.log"
         }
     ],
     "configWriter": {
