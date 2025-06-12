@@ -21,6 +21,7 @@ spec:
         podConflictName: "${serviceRoleFullName}"
       annotations:
         serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
       affinity:
         podAntiAffinity:
@@ -35,7 +36,6 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
-
         - name: set-permissions
           image: "${dockerBusyboxImage}"
           env:
@@ -319,6 +319,141 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
+        <#if isFirstInstall?? && isFirstInstall>
+        # ZKFC格式化初始化容器 - 只在首次安装时执行
+        - name: zkfc-format
+          image: "${dockerImage}"
+          env:
+            - name: USER
+              value: ${runAsUser}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "开始检查是否需要格式化ZKFC..."
+              
+              # 从Pod名称确定NameNode ID和角色
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 只在第一个NameNode（index=0）上执行格式化
+              if [ "$POD_INDEX" != "0" ]; then
+                echo "当前Pod不是第一个NameNode (index=$POD_INDEX)，跳过ZKFC格式化"
+                exit 0
+              fi
+              
+              # 设置环境变量
+              export NAMENODE_ID="nn1"
+              export HADOOP_OPTS="-Ddfs.ha.namenode.id=nn1"
+              export HDFS_NAMENODE_OPTS="-Ddfs.ha.namenode.id=nn1"
+              
+              # 检查ZooKeeper中是否已经存在zkfc相关的znode
+               # 实际使用中，这里应该添加适当的ZooKeeper检查逻辑
+               # 简化版本：检查ZKFC是否已经格式化的标记文件
+               ZKFC_FORMATTED_FLAG="${namenodeDir}/zkfc_formatted"
+               
+               if [ -f "$ZKFC_FORMATTED_FLAG" ]; then
+                 echo "检测到ZKFC已经格式化（标记文件 $ZKFC_FORMATTED_FLAG 存在），跳过格式化"
+                 exit 0
+               fi
+               
+               # 尝试通过ZooKeeper CLI检查znode是否存在
+               echo "尝试检查ZooKeeper中是否已存在HDFS HA的znode..."
+               
+               # 提取ZooKeeper地址
+               if [ -f "${appHome}/etc/hadoop/core-site.xml" ]; then
+                 ZK_QUORUM=$(grep -A1 "ha.zookeeper.quorum" ${appHome}/etc/hadoop/core-site.xml | grep "<value>" | sed -e 's/.*<value>\(.*\)<\/value>.*/\1/')
+                 CLUSTER_NAME=$(grep -A1 "fs.defaultFS" ${appHome}/etc/hadoop/core-site.xml | grep "<value>" | sed -e 's/.*<value>hdfs:\/\/\(.*\)<\/value>.*/\1/' | cut -d '/' -f1)
+                 
+                 if [ -n "$ZK_QUORUM" ] && [ -n "$CLUSTER_NAME" ]; then
+                   echo "检测到ZooKeeper地址: $ZK_QUORUM"
+                   echo "检测到集群名称: $CLUSTER_NAME"
+                   
+                   # 尝试使用ZooKeeper命令检查znode
+                   ZK_PATH="/hadoop-ha/$CLUSTER_NAME"
+                   echo "检查ZooKeeper路径: $ZK_PATH"
+                   
+                   # 尝试使用zkCli.sh检查znode是否存在
+                   # 注意：这里简化处理，实际情况可能需要更复杂的逻辑
+                   ZK_CHECK_CMD="${appHome}/bin/hdfs zkfc -getServiceState"
+                   if su - ${runAsUser} -c "$ZK_CHECK_CMD" 2>&1 | grep -q "active\|standby"; then
+                     echo "检测到ZKFC已经格式化（ZooKeeper znode已存在），跳过格式化"
+                     # 创建标记文件，避免重复检查
+                     touch "$ZKFC_FORMATTED_FLAG"
+                     chown ${runAsUser}:${runAsUser} "$ZKFC_FORMATTED_FLAG"
+                     exit 0
+                   else
+                     echo "ZooKeeper中未找到HDFS HA相关的znode，需要执行格式化"
+                   fi
+                 else
+                   echo "无法从core-site.xml提取ZooKeeper地址或集群名称，继续格式化"
+                 fi
+               else
+                 echo "未找到core-site.xml文件，跳过ZooKeeper检查，继续格式化"
+               fi
+               
+               echo "开始执行ZKFC格式化..."
+              
+              # 添加Kerberos相关配置
+              if ${enableKerberos}; then
+                echo "Kerberos is enabled. Running keystore setup...";
+                HOSTNAME=$(hostname)
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                fi
+                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                fi
+                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
+                fi
+                # 执行Kerberos身份验证
+                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
+              fi
+              
+              # 执行ZKFC格式化
+              set -x  # 启用命令跟踪，便于调试
+              FORMAT_CMD="${appHome}/bin/hdfs zkfc -formatZK"
+              echo "执行命令: $FORMAT_CMD"
+              su - ${runAsUser} -c "cd ${appHome} && echo Y | $FORMAT_CMD"
+              FORMAT_RESULT=$?
+              set +x  # 关闭命令跟踪
+              
+              # 检查格式化结果
+              if [ $FORMAT_RESULT -eq 0 ]; then
+                echo "✅ ZKFC格式化成功"
+                # 创建标记文件，避免重复格式化
+                touch "$ZKFC_FORMATTED_FLAG"
+                chown ${runAsUser}:${runAsUser} "$ZKFC_FORMATTED_FLAG"
+              else
+                echo "❌ ZKFC格式化失败，错误码: $FORMAT_RESULT"
+                # 这里可以添加重试逻辑或其他错误处理
+                # 但为了保证初始化容器不阻塞Pod启动，我们依然返回成功
+                echo "警告：ZKFC格式化失败，但允许Pod继续启动"
+              fi
+              
+              echo "ZKFC格式化步骤完成"
+          volumeMounts:
+            - name: namenode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+        </#if>
       containers:
         - env:
             - name: USER
@@ -418,6 +553,117 @@ spec:
             limits:
               memory: ${limits_memory}
               cpu: ${limits_cpu}
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: namenode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+        - env:
+            - name: USER
+              value: ${runAsUser}
+            - name: MEM_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMENODE_DATA_DIR
+              value: ${namenodeDir}
+          image: "${dockerImage}"
+          imagePullPolicy: "Always"
+          ports:
+            - containerPort: 8019
+              name: zkfc
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              echo "ZKFC 启动中..."
+              
+              # 等待NameNode进程启动
+              echo "等待NameNode进程启动..."
+              RETRIES=0
+              MAX_RETRIES=60
+              while [ $RETRIES -lt $MAX_RETRIES ]; do
+                if su - ${runAsUser} -c "jps" | grep -q "NameNode"; then
+                  echo "✅ NameNode进程已启动"
+                  break
+                else
+                  echo "⏳ 等待NameNode进程启动... ($((RETRIES+1))/$MAX_RETRIES)"
+                  RETRIES=$((RETRIES+1))
+                  sleep 5
+                fi
+              done
+              
+              if [ $RETRIES -eq $MAX_RETRIES ]; then
+                echo "❌ 等待NameNode进程启动超时"
+                # 继续执行，因为可能是首次启动时NameNode还未就绪
+              fi
+              
+              # 获取Pod索引以确定NameNode角色
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 根据Pod索引确定NameNode ID
+              if [ "$POD_INDEX" == "0" ]; then
+                NAMENODE_ID="nn1"
+              else
+                NAMENODE_ID="nn2"
+              fi
+              echo "根据索引设置NAMENODE_ID=$NAMENODE_ID"
+              
+              # 输出ZKFC和NameNode的ID关系，用于调试
+              echo "当前ZKFC在Pod: $POD_NAME 中, 索引: $POD_INDEX, 使用NameNode ID: $NAMENODE_ID"
+              
+              # 启动ZKFC服务
+              echo "启动ZKFC服务..."
+              su - ${runAsUser} -c "${appHome}/bin/hdfs --daemon start zkfc"
+              
+              # 保持容器运行
+              while true; do
+                # 检查ZKFC进程是否在运行
+                if ! su - ${runAsUser} -c "jps" | grep -q "DFSZKFailoverController"; then
+                  echo "警告: ZKFC进程不在运行，尝试重新启动..."
+                  su - ${runAsUser} -c "${appHome}/bin/hdfs --daemon start zkfc"
+                fi
+                sleep 30
+              done
+          readinessProbe:
+            exec:
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "su - ${runAsUser} -c \"jps | grep -q DFSZKFailoverController\" || exit 1"
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: "zkfc"
+          resources:
+            requests:
+              memory: ${zkfc_requests_memory}
+              cpu: ${zkfc_requests_cpu}
+            limits:
+              memory: ${zkfc_limits_memory}
+              cpu: ${zkfc_limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:

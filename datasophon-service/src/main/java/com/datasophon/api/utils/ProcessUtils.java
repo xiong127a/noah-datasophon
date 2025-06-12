@@ -616,17 +616,30 @@ public class ProcessUtils {
             serviceConfigureHandler.setNext(serviceStartHandler);
             execResult = serviceInstallHandler.handlerRequest(serviceRoleInfo);
         } else {
+//            serviceRoleInfo.setCommandType(CommandType.INSTALL_SERVICE);
+            // 在K8S环境中使用责任链模式实现服务安装流程
+            // 责任链模式允许请求依次经过多个处理器，每个处理器负责一个特定的安装步骤
+            // 这种设计提高了代码的模块化程度，便于维护和扩展
+
+            // 1. 创建服务安装处理器 - 负责服务组件的初始安装准备工作
             K8sServiceInstallHandler k8sServiceInstallHandler = new K8sServiceInstallHandler();
+            // 2. 创建服务配置处理器 - 负责生成和应用服务的配置文件
             K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+            // 3. 创建K8S部署YAML处理器 - 负责生成Kubernetes部署所需的YAML文件
+
             K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
+            // 4. 创建主机标签处理器 - 为Kubernetes节点添加相应的标签，确保Pod被调度到正确的节点
             K8sHostTagHandler k8SHostTagHandler = new K8sHostTagHandler();
+            // 5. 创建服务启动处理器 - 负责启动已配置的服务
             K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
 
-            k8sServiceInstallHandler.setNext(k8sServiceConfigureHandler);
-            k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
-            k8sDeploymentYamlHandler.setNext(k8SHostTagHandler);
-            k8SHostTagHandler.setNext(k8sServiceStartHandler);
+            // 构建责任链，确定处理器的执行顺序
+            k8sServiceInstallHandler.setNext(k8sServiceConfigureHandler); // 安装完成后进行配置
+            k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler); // 配置完成后生成YAML
+            k8sDeploymentYamlHandler.setNext(k8SHostTagHandler); // YAML生成后设置主机标签
+            k8SHostTagHandler.setNext(k8sServiceStartHandler); // 标签设置后启动服务
 
+            // 从责任链的第一个处理器开始执行请求，服务角色信息会依次通过所有处理器
             execResult = k8sServiceInstallHandler.handlerRequest(serviceRoleInfo);
         }
         return execResult;

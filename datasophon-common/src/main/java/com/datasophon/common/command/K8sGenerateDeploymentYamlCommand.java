@@ -1,5 +1,6 @@
 package com.datasophon.common.command;
 
+import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
@@ -46,6 +47,11 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
     private Boolean enableKerberos;
 
     private Boolean enableRangerPlugin;
+
+    private CommandType commandType;
+
+    private boolean isSlave = false;
+
 
     public K8sGenerateDeploymentYamlCommand() {
         this.enableKerberos = false;

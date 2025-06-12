@@ -29,7 +29,9 @@ public class K8sYamlDeploymentActor extends UntypedActor {
                     command.getServiceRoleName(),
                     command.getMasterHost(),
                     command.getEnableKerberos(),
-                    command.getEnableRangerPlugin()
+                    command.getEnableRangerPlugin(),
+                    command.getCommandType(),
+                    command.isSlave()
             );
             getSender().tell(startResult, getSelf());
             logger.info("{} configure k8s yaml file result {}", command.getServiceRoleName(),
