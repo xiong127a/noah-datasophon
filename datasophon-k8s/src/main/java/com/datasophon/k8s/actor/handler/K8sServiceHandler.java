@@ -931,6 +931,27 @@ public class K8sServiceHandler {
             // 保存PVC的YAML文件到本地
             savePvcYaml(pvc);
 
+            // 检查PVC是否已存在
+            PersistentVolumeClaim existingPvc = client.persistentVolumeClaims()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .withName(pvcName)
+                    .get();
+
+            if (existingPvc != null) {
+                // PVC已存在，记录日志并跳过创建
+                logger.info("PVC已存在：{}，跳过创建", pvcName);
+
+                // 在日志中添加提示信息
+                ColorLogUtils.printWarning(
+                        "PersistentVolumeClaim " + pvcName + " 已存在，跳过创建");
+
+                // 将PVC名称和挂载路径存储在缓存中，以便后续使用
+                CacheUtils.put(serviceRoleFullName + "_PVC_NAME", pvcName);
+                CacheUtils.put(serviceRoleFullName + "_MOUNT_PATH", mountPath);
+
+                return;
+            }
+
             // 在Kubernetes集群上创建PVC
             PersistentVolumeClaim createdPvc = client.persistentVolumeClaims()
                     .inNamespace(Constant.K8S_NAMESPACE)
