@@ -584,8 +584,8 @@ export default {
         'limits_memory': '内存限制',
         'limits_cpu': 'CPU限制',
         'storage_classes': '存储类',
-        'mountPath': '挂载路径',
-        'storage': '存储容量',
+        'mount_path': '挂载路径',
+        'storage_size': '存储容量',
         // Add more mappings as needed
       },
     };

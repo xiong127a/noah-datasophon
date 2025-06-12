@@ -357,7 +357,7 @@
         "includeParams": [
           "storage_classes",
           "mount_path",
-          "storage"
+          "storage_size"
         ]
       },
       {
@@ -1690,7 +1690,7 @@
       "configLevel": "advanced"
     },
     {
-      "name": "storage",
+      "name": "storage_size",
       "label": "存储大小",
       "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
       "configType": "k8s",

@@ -19,7 +19,7 @@ spec:
         storageClassName: ${storage_classes}
         resources:
           requests:
-            storage: ${storage}
+            storage: ${storage_size}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
