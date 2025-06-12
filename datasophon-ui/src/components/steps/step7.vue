@@ -25,8 +25,8 @@
  * @FilePath: \ddh-ui\src\components\steps\step7.vue
 -->
 <template>
-  <div class="steps7 steps">
-    <div class="service-config-container">
+  <div class="steps7 steps" style="width: 100%;">
+    <div class="service-config-container" style="width: 100%;">
       <div class="steps-title flex-bewteen-container" style="margin-top: -5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 2px 0;">
         <div style="display: flex; align-items: center;">
           <span>配置参数</span>
@@ -1148,7 +1148,6 @@ export default {
   min-height: 0; /* 允许容器缩小 */
   max-height: calc(100vh - 310px); /* 调整最大高度，确保内容不会溢出 */
   overflow-y: auto; /* 启用垂直滚动 */
-  overflow-x: hidden;
   position: relative;
   box-sizing: border-box;
   padding-bottom: 20px; /* 增加底部间距 */
@@ -1183,9 +1182,8 @@ export default {
   width: 100%;
   height: auto;
   max-height: none; /* 移除最大高度限制，由父容器控制 */
-    display: flex;
+  display: flex;
   flex-direction: column;
-  overflow: visible;
   box-sizing: border-box;
   padding-bottom: 10px;
 }
@@ -1196,9 +1194,8 @@ export default {
   width: 100%;
   height: auto;
   background-color: #fff;
-    position: relative;
+  position: relative;
   box-sizing: border-box;
-  overflow: visible;
   
   &.hidden {
     display: none;
@@ -1212,7 +1209,6 @@ export default {
     padding: 0 8px;
     padding-bottom: 40px; /* 增加底部内边距 */
     box-sizing: border-box;
-    overflow: visible;
     }
 
   /* 底部空白区域，提供额外空间 */
@@ -1358,16 +1354,23 @@ export default {
   margin-bottom: 14px;
   max-width: 100%;
   width: 100%;
+  display: flex;
+  flex-wrap: wrap;
   
   .ant-form-item-label {
+    width: 30%;
     max-width: 30%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding-right: 8px;
+    box-sizing: border-box;
   }
   
   .ant-form-item-control-wrapper {
+    width: 70%;
     max-width: 70%;
+    flex: 1;
   }
   
   /* 输入控件宽度适应容器 */
@@ -1412,6 +1415,8 @@ export default {
   background-color: #f5f7fa;
   border-radius: 0 0 4px 4px;
   padding: 12px;
+  width: auto;
+  min-width: 100%;
 }
 
 /* 添加面板标题文本样式 */
@@ -1488,7 +1493,12 @@ export default {
 
 /* 确保单位输入框样式与图片一致 */
 .content-wrapper /deep/ .input-with-unit {
+  display: flex;
+  width: 100%;
+  
   .ant-input {
+    flex: 1;
+    min-width: 0; /* 确保输入框可以缩小 */
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
@@ -1498,9 +1508,10 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 70px;
+    min-width: 40px; /* 减小最小宽度 */
+    max-width: 70px; /* 添加最大宽度 */
     height: 32px;
-    padding: 0 11px;
+    padding: 0 8px; /* 减小内边距 */
     color: rgba(0, 0, 0, 0.65);
     font-size: 14px;
     text-align: center;
@@ -1508,6 +1519,9 @@ export default {
     border: 1px solid #d9d9d9;
     border-left: none;
     border-radius: 0 4px 4px 0;
+    white-space: nowrap; /* 防止单位文本换行 */
+    overflow: hidden; /* 隐藏溢出的文本 */
+    text-overflow: ellipsis; /* 显示省略号 */
   }
   
   &:hover .input-unit-suffix {
@@ -1655,6 +1669,8 @@ export default {
   background: #f9fafb;
   border-radius: 4px;
   border: 1px solid #ebedf0;
+  width: auto;
+  min-width: 100%;
   
   .kubernetes-tabs-header {
     font-size: 16px;
@@ -1772,6 +1788,8 @@ export default {
   margin-bottom: 24px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: auto;
+  min-width: 100%;
 }
 
 .kubernetes-tabs-header {
@@ -1827,6 +1845,45 @@ export default {
 /deep/ .ant-btn-dashed.ant-btn-sm:hover {
   border-color: #40a9ff;
   color: #40a9ff;
+}
+
+/* 添加媒体查询以处理不同的屏幕尺寸和缩放级别 */
+@media screen and (max-width: 1200px) {
+  /deep/ .ant-form-item {
+    .ant-form-item-label {
+      width: 40%;
+      max-width: 40%;
+    }
+    
+    .ant-form-item-control-wrapper {
+      width: 60%;
+      max-width: 60%;
+    }
+  }
+}
+
+@media screen and (max-width: 992px) {
+  /deep/ .ant-form-item {
+    .ant-form-item-label {
+      width: 100%;
+      max-width: 100%;
+      text-align: left;
+    }
+    
+    .ant-form-item-control-wrapper {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+  
+  .kubernetes-config-section,
+  .group-kubernetes-section {
+    padding: 12px 8px;
+  }
+  
+  .panel-content {
+    padding: 10px 6px;
+  }
 }
 </style>
 

@@ -292,25 +292,58 @@ export default {
 <style lang="less" scoped>
 .steps-rf {
   height: 100%;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   flex-direction: column;
+  box-sizing: border-box;
+  
+  .steps-rf-container {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 确保容器可以缩小 */
+    box-sizing: border-box;
+    padding: 0 20px; /* 添加一些内边距，避免内容太靠边 */
+  }
+  
   .footer {
     // margin: 0 32px 0 auto;
     // margin: 0 32px 0 0;
     // margin: 0 auto;
-    width: 1300px;
+    width: 100%;
     height: 64px;
     background: rgba(242, 244, 247, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
+    box-sizing: border-box;
+    padding: 0 20px; /* 与内容区域保持一致的内边距 */
     button {
       width: 86px;
     }
     /deep/
       .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
       padding-left: 20px;
+    }
+  }
+  
+  /* 添加媒体查询以处理不同的屏幕尺寸 */
+  @media screen and (max-width: 1300px) {
+    .footer {
+      padding: 0 16px;
+    }
+  }
+  
+  /* 确保所有步骤组件都能正确适应容器 */
+  /deep/ .steps {
+    width: 100%;
+    box-sizing: border-box;
+    
+    /* 在小屏幕上保持一致的布局 */
+    @media screen and (max-width: 992px) {
+      min-width: max-content; /* 确保内容可以完全显示 */
     }
   }
 }

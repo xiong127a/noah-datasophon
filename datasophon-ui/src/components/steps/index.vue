@@ -124,8 +124,11 @@ export default {
 .steps-container {
   display: flex;
   height: 860px;
+  width: 100%;
+  box-sizing: border-box;
   .lf {
     width: 216px;
+    flex-shrink: 0; /* 防止左侧收缩 */
     border-right: 1px solid #e3e4e6;
     padding: 32px 20px;
     /deep/ .ant-steps-vertical > .ant-steps-item > .ant-steps-item-container > .ant-steps-item-tail {
@@ -176,7 +179,10 @@ export default {
   }
   .rf {
     flex: 1;
+    width: calc(100% - 216px); /* 明确设置宽度为剩余空间 */
     padding: 32px 0 32px 30px;
+    box-sizing: border-box;
+    display: flex; /* 使其内容可以flex布局 */
   }
 }
 </style>
