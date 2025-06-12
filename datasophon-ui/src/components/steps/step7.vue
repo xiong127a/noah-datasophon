@@ -87,7 +87,7 @@
                         <a-textarea
                           :value="subGroup.templateContent"
                           :auto-size="{ minRows: 3, maxRows: 10 }"
-                          readonly
+                          read-only
                           class="template-content-textarea"
                         />
                       </div>
@@ -140,7 +140,7 @@
                               <a-textarea
                                 :value="subGroup.templateContent"
                                 :auto-size="{ minRows: 3, maxRows: 10 }"
-                                readonly
+                                read-only
                                 class="template-content-textarea"
                               />
                             </div>
@@ -161,7 +161,7 @@
                         <a-textarea
                           :value="group.templateContent"
                           :auto-size="{ minRows: 3, maxRows: 10 }"
-                          readonly
+                          read-only
                           class="template-content-textarea"
                         />
                       </div>
