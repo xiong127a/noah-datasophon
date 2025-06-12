@@ -15,6 +15,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceConfigVolume;
 import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.FileUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
@@ -69,7 +70,7 @@ public class K8sYamlDeploymentHandler {
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
                         (existing, replacement) -> replacement));
         paramMap.put("${user}", "root");
-        paramMap.put("${host}", hostname);
+        paramMap.put("${hostname}", "$(hostname)");
         String logFileName = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
 
         try {
@@ -85,7 +86,7 @@ public class K8sYamlDeploymentHandler {
 
             List<String> needService = Arrays.asList("TRINO", "PRESTO", "NEBULAGRAPH");
 
-            if (needService.contains(serviceName) || logFile.contains("${host}")) {
+            if (needService.contains(serviceName) || logFile.contains("${hostname}")) {
                 // 挂载日志目录
                 int lastSlashIndex = logStr.lastIndexOf('/');
                 logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
@@ -189,7 +190,8 @@ public class K8sYamlDeploymentHandler {
             volumeEnableKerberosConfig(volumeConfigMapSet, appHome, serviceRoleName, enableKerberos);
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome,
-                    volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin);
+                    volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin,
+                    logFile);
 
             Template template = generateTemplate();
 
@@ -239,7 +241,14 @@ public class K8sYamlDeploymentHandler {
     private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
-            String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin) {
+            String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile) {
+        Map<String, String> paramMap = MapUtil.newHashMap();
+        paramMap.put("${user}", runAs.getUser());
+        paramMap.put("${hostname}", "$(hostname)");
+        logFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
+
+        String logFilePath = FileUtils.concatPath(appHome, logFile);
+
         // 在这里处理configFileMap中的配置值，添加单位
         for (List<ServiceConfig> configs : configFileMap.values()) {
             for (ServiceConfig config : configs) {
@@ -268,9 +277,9 @@ public class K8sYamlDeploymentHandler {
         data.put("runAsGroup", runAs.getGroup());
         data.put("startCommand",
                 startRunner != null
-                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'", runAs.getUser(), appHome,
-                                startRunner.getProgram(), String.join(" ", startRunner.getArgs()))
-                        : "tail -f /dev/null");
+                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f %s'", runAs.getUser(), appHome,
+                                startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
+                        : "tail -f " + logFilePath);
         data.put("statusCommand",
                 statusRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome,
