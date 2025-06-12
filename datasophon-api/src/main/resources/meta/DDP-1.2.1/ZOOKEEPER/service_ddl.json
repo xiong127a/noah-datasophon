@@ -314,7 +314,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data/log",
+      "defaultValue": "/data/zookeeper/log",
       "configCategory": "file",
       "configGroup": "zoo.cfg",
       "configLevel": "advanced"

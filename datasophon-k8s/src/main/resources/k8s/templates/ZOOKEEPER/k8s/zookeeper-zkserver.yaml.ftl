@@ -11,15 +11,6 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  volumeClaimTemplates:
-    - metadata:
-        name: nfs-pvc
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: ${storage_classes}
-        resources:
-          requests:
-            storage: ${storage_size}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
@@ -141,6 +132,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: nfs-pvc
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

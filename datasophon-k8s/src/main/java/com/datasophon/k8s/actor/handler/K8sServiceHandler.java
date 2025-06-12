@@ -16,15 +16,7 @@ import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.IntOrString;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.ServiceBuilder;
-import io.fabric8.kubernetes.api.model.ServicePort;
-import io.fabric8.kubernetes.api.model.ServiceSpec;
-import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
+import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -53,7 +45,6 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.datasophon.common.Constants.DATASOPHON;
 import static com.datasophon.common.Constants.DEPLOYMENT;
 import static com.datasophon.common.Constants.K8S_CLUSTERIP_MAPPING;
 import static com.datasophon.common.Constants.K8S_CLUSTER_IP;
@@ -148,7 +139,7 @@ public class K8sServiceHandler {
 
     /**
      * 生成服务配置的核心方法
-     * 
+     *
      * @param configFileMap 配置文件映射
      * @return 服务端口列表
      */
@@ -156,10 +147,26 @@ public class K8sServiceHandler {
         // 初始化返回列表
         ArrayList<ServicePort> servicePorts = new ArrayList<>();
 
+        // 防御性检查
+        if (configFileMap == null || configFileMap.isEmpty()) {
+            logger.warn("收到空的配置映射");
+            return servicePorts;
+        }
+
         // 1. 获取配置项列表
-        List<ServiceConfig> svcConfigs = getSvcConfigs(configFileMap);
-        if (svcConfigs == null) {
-            return servicePorts; // 返回空列表
+        List<ServiceConfig> svcConfigs = null;
+        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
+            Generators generator = entry.getKey();
+            if (generator != null && K8S_SVC_CONF.equals(generator.getFilename())) {
+                svcConfigs = entry.getValue();
+                break;
+            }
+        }
+
+        // 验证是否找到配置
+        if (svcConfigs == null || svcConfigs.isEmpty()) {
+            logger.warn("未找到{}配置生成器", K8S_SVC_CONF);
+            return servicePorts;
         }
 
         // 2. 处理NodePort端口映射
@@ -183,7 +190,7 @@ public class K8sServiceHandler {
 
     /**
      * 获取服务配置项列表
-     * 
+     *
      * @param configFileMap 配置文件映射
      * @return 配置项列表，如果未找到则返回null
      */
@@ -220,7 +227,7 @@ public class K8sServiceHandler {
 
     /**
      * 处理端口映射配置
-     * 
+     *
      * @param svcConfigs   配置项列表
      * @param configName   配置项名称
      * @param servicePorts 结果集，解析的端口将添加到此列表
@@ -242,12 +249,14 @@ public class K8sServiceHandler {
         // 1. 查找指定配置
         ServiceConfig mappingConfig = findServiceConfig(svcConfigs, configName);
         if (mappingConfig == null || mappingConfig.getValue() == null) {
+            logger.info("未找到配置项：{}", configName);
             return;
         }
 
         // 2. 解析端口映射
         List<Map<String, String>> portMappings = parsePortMappings(mappingConfig);
-        if (portMappings == null) {
+        if (portMappings == null || portMappings.isEmpty()) {
+            logger.info("配置项{}中没有有效的端口映射", configName);
             return;
         }
 
@@ -257,66 +266,84 @@ public class K8sServiceHandler {
 
         for (Map<String, String> mapping : portMappings) {
             for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                // 尝试解析端口值
+                int port;
                 try {
-                    // 解析端口值
-                    int port = Integer.parseInt(entry.getKey());
-
-                    // 验证端口范围
-                    if (!VALID_PORT_RANGE.containsInteger(port)) {
-                        logger.warn("Invalid port {} in configuration {}, skipping",
-                                port, configName);
-                        continue;
-                    }
-
-                    // 如果是NodePort类型，我们允许重复的端口，因为它们会映射到不同的NodePort
-                    // 如果是ClusterIP类型，则需要检查是否已经处理过相同的端口
-                    if (!isNodePort && processedPorts.contains(port)) {
-                        logger.info("跳过重复的ClusterIP端口配置: {}", port);
-                        continue;
-                    }
-
-                    // 记录已处理的端口
-                    if (!isNodePort) {
-                        processedPorts.add(port);
-                    }
-
-                    // 创建端口对象
-                    ServicePort servicePort = new ServicePort();
-                    servicePort.setPort(port);
-                    servicePort.setTargetPort(new IntOrString(port));
-                    servicePort.setName(portType + "-" + index++);
-
-                    // 对于NodePort类型，设置NodePort值
-                    if (isNodePort) {
-                        int nodePort = Integer.parseInt(entry.getValue());
-
-                        // 验证NodePort范围
-                        if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
-                            logger.warn("Invalid NodePort {} in configuration {}, using random port",
-                                    nodePort, configName);
-                        } else {
-                            servicePort.setNodePort(nodePort);
-                        }
-                    }
-
-                    // 添加到结果列表
-                    servicePorts.add(servicePort);
+                    port = Integer.parseInt(entry.getKey());
                 } catch (NumberFormatException e) {
-                    logger.error("Failed to parse port mapping [{}:{}]: {}",
-                            entry.getKey(), entry.getValue(), e.getMessage());
+                    logger.error("无法解析端口映射 [{}:{}]: {}", entry.getKey(), entry.getValue(), e.getMessage());
+                    continue;
                 }
+
+                // 验证端口范围
+                if (!VALID_PORT_RANGE.containsInteger(port)) {
+                    logger.warn("配置{}中的端口{}无效，已跳过", configName, port);
+                    continue;
+                }
+
+                // 如果是ClusterIP类型，检查是否已处理过相同的端口
+                if (!isNodePort && processedPorts.contains(port)) {
+                    logger.info("跳过重复的ClusterIP端口配置: {}", port);
+                    continue;
+                }
+
+                // 记录已处理的端口
+                if (!isNodePort) {
+                    processedPorts.add(port);
+                }
+
+                // 创建端口对象
+                ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, isNodePort,
+                        VALID_NODEPORT_RANGE);
+
+                // 添加到结果列表
+                servicePorts.add(servicePort);
             }
         }
     }
 
     /**
+     * 创建服务端口对象
+     */
+    private ServicePort createServicePort(int port, String nodePortValue, String portType, int index,
+            boolean isNodePort, IntRange validNodePortRange) {
+        ServicePort servicePort = new ServicePort();
+        servicePort.setPort(port);
+        servicePort.setTargetPort(new IntOrString(port));
+        servicePort.setName(portType + "-" + index);
+
+        // 对于NodePort类型，设置NodePort值
+        if (isNodePort) {
+            try {
+                int nodePort = Integer.parseInt(nodePortValue);
+
+                // 验证NodePort范围
+                if (!validNodePortRange.containsInteger(nodePort)) {
+                    logger.warn("NodePort值{}无效，将使用随机端口", nodePort);
+                } else {
+                    servicePort.setNodePort(nodePort);
+                }
+            } catch (NumberFormatException e) {
+                logger.error("无法解析NodePort值 {}: {}", nodePortValue, e.getMessage());
+            }
+        }
+
+        return servicePort;
+    }
+
+    /**
      * 在配置列表中查找指定名称的配置
-     * 
+     *
      * @param configs    配置列表
      * @param configName 要查找的配置名
      * @return 找到的配置，未找到时返回null
      */
     private ServiceConfig findServiceConfig(List<ServiceConfig> configs, String configName) {
+        if (configs == null || configs.isEmpty()) {
+            return null;
+        }
+
+        // 直接遍历查找匹配的配置
         for (ServiceConfig config : configs) {
             if (configName.equals(config.getName())) {
                 return config;
@@ -327,47 +354,64 @@ public class K8sServiceHandler {
 
     /**
      * 解析端口映射配置
-     * 
+     *
      * @param config 包含端口映射的配置项
      * @return 解析后的端口映射列表，解析失败时返回null
      */
     private List<Map<String, String>> parsePortMappings(ServiceConfig config) {
-        Gson gson = new Gson();
-        Type listType = new TypeToken<List<Map<String, String>>>() {
-        }.getType();
+        if (config == null || config.getValue() == null) {
+            logger.warn("配置项为空，无法解析端口映射");
+            return null;
+        }
 
         try {
-            return gson.fromJson(config.getValue().toString(), listType);
+            Gson gson = new Gson();
+            Type listType = new TypeToken<List<Map<String, String>>>() {
+            }.getType();
+            List<Map<String, String>> result = gson.fromJson(config.getValue().toString(), listType);
+
+            if (result == null || result.isEmpty()) {
+                logger.warn("配置项{}中没有有效的端口映射", config.getName());
+            }
+
+            return result;
         } catch (Exception e) {
-            logger.error("Failed to parse port mappings for {}: {}",
-                    config.getName(), e.getMessage());
+            logger.error("解析{}的端口映射时失败: {}", config.getName(), e.getMessage());
             return null;
         }
     }
 
+    /**
+     * 处理服务创建
+     * 
+     * @param servicePorts 服务端口列表
+     * @param kind         资源类型
+     * @param client       Kubernetes客户端
+     */
     private void handleNewSvc(ArrayList<ServicePort> servicePorts,
             String kind,
             KubernetesClient client) {
         if (servicePorts == null || servicePorts.isEmpty()) {
+            logger.info("没有需要创建的服务端口");
             return;
         }
 
+        // 分离基础服务端口和NodePort服务端口
         List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
         List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
 
         // 跟踪已添加的ClusterIP端口，防止重复
         List<Integer> addedClusterPorts = new ArrayList<>();
 
-        // 使用Range来表示有效的端口范围
-
+        // 处理所有端口
         for (ServicePort originalPort : servicePorts) {
-            // 检查是否已经添加过相同的ClusterIP端口
+            // 处理基础端口
             if (!addedClusterPorts.contains(originalPort.getPort())) {
                 // 创建基础服务端口副本
                 ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
                 basePort.setNodePort(null); // 基础服务不使用NodePort
 
-                // 不管是StatefulSet还是Deployment，都添加到基础端口集合
+                // 添加到基础端口集合
                 basePorts.add(basePort);
 
                 // 记录已添加的端口
@@ -409,7 +453,7 @@ public class K8sServiceHandler {
                 .withNewMetadata()
                 .withName(serviceRoleFullName)
                 .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                .withNamespace(DATASOPHON)
+                .withNamespace(Constant.K8S_NAMESPACE)
                 .endMetadata()
                 .withSpec(spec)
                 .build();
@@ -433,7 +477,7 @@ public class K8sServiceHandler {
                 .withNewMetadata()
                 .withName(serviceRoleFullName)
                 .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                .withNamespace(DATASOPHON)
+                .withNamespace(Constant.K8S_NAMESPACE)
                 .endMetadata()
                 .withSpec(spec)
                 .build();
@@ -444,13 +488,13 @@ public class K8sServiceHandler {
         executeServiceCreation(client, service);
     }
 
-    // 创建 NodePort Service（通用）
+    /**
+     * 创建NodePort服务（通用）
+     */
     private void createNodePortServices(List<ServicePort> ports, KubernetesClient client) {
         // 定义NodePort的有效范围常量
         final int MIN_NODEPORT = 30000;
         final int MAX_NODEPORT = 32767;
-
-        // 创建NodePort有效范围对象
         final IntRange VALID_NODEPORT_RANGE = new IntRange(MIN_NODEPORT, MAX_NODEPORT);
 
         // 跟踪已添加的NodePort端口，防止重复
@@ -458,25 +502,27 @@ public class K8sServiceHandler {
 
         for (ServicePort port : ports) {
             // 确保NodePort在有效范围（30000-32767）
-            if (port.getNodePort() != null) {
-                Integer nodePort = port.getNodePort();
-
-                // 检查是否已经添加过相同的NodePort
-                if (addedNodePorts.contains(nodePort)) {
-                    logger.info("跳过重复的NodePort: {}", nodePort);
-                    continue;
-                }
-
-                // 使用Range检查端口是否在有效范围内
-                if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
-                    logger.warn("Invalid NodePort {} for {}, using random port",
-                            port.getNodePort(), serviceRoleFullName);
-                    port.setNodePort(null);
-                } else {
-                    // 记录已添加的NodePort
-                    addedNodePorts.add(nodePort);
-                }
+            Integer nodePort = port.getNodePort();
+            if (nodePort == null) {
+                continue; // 跳过没有NodePort的端口
             }
+
+            // 检查是否已经添加过相同的NodePort
+            if (addedNodePorts.contains(nodePort)) {
+                logger.info("跳过重复的NodePort: {}", nodePort);
+                continue;
+            }
+
+            // 检查端口是否在有效范围内
+            if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
+                logger.warn("无效的NodePort值 {} 用于 {}，将使用随机端口", nodePort, serviceRoleFullName);
+                port.setNodePort(null);
+            } else {
+                // 记录已添加的NodePort
+                addedNodePorts.add(nodePort);
+            }
+
+            // 创建服务规范
             ServiceSpecBuilder specBuilder = new ServiceSpecBuilder()
                     .withType(K8S_NODE_PORT)
                     .withSelector(Collections.singletonMap("app", serviceRoleFullName))
@@ -486,11 +532,12 @@ public class K8sServiceHandler {
             // 动态生成服务名称
             String serviceName = serviceRoleFullName + "-nodeport-" + port.getPort();
 
+            // 创建服务对象
             Service service = new ServiceBuilder()
                     .withNewMetadata()
                     .withName(serviceName)
                     .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                    .withNamespace(DATASOPHON)
+                    .withNamespace(Constant.K8S_NAMESPACE)
                     .endMetadata()
                     .withSpec(specBuilder.build())
                     .build();
@@ -498,16 +545,22 @@ public class K8sServiceHandler {
             // 保存YAML文件到本地
             saveServiceYaml(service, "nodeport");
 
+            // 在集群上创建服务
             executeServiceCreation(client, service);
         }
     }
 
-    // 统一执行服务操作
+    /**
+     * 统一执行服务创建
+     * 
+     * @param client  Kubernetes客户端
+     * @param service 要创建的服务
+     */
     private void executeServiceCreation(KubernetesClient client, Service service) {
         try {
             // 创建Service
             client.services().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(service);
-            logger.info("创建Service成功: {}", service.getMetadata().getName());
+            logger.info("成功创建服务: {}", service.getMetadata().getName());
 
             // 添加彩色日志输出
             ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.K8S_NAMESPACE);
@@ -516,8 +569,8 @@ public class K8sServiceHandler {
             String serviceType = service.getSpec().getType();
             saveServiceYaml(service, serviceType);
         } catch (Exception e) {
-            logger.error("创建Service失败: {}", e.getMessage(), e);
-            ColorLogUtils.printError("创建Service " + service.getMetadata().getName() + " 失败: " + e.getMessage());
+            logger.error("创建服务失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("创建服务 " + service.getMetadata().getName() + " 失败: " + e.getMessage());
         }
     }
 
@@ -561,8 +614,14 @@ public class K8sServiceHandler {
         } else {
             addProcessStatus();
             if (isFinalNode()) {
+                // 生成服务配置和创建共享PVC
                 ArrayList<ServicePort> ServicePorts = generateSvcConfig(configFileMap);
                 handleNewSvc(ServicePorts, resourceKind, client);
+
+                // 创建共享PVC
+                handlePvc(client, configFileMap);
+
+                // 直接使用原始YAML创建资源，不修改挂载配置
                 handleNewResource(client, yamlInputStream, resource);
             }
         }
@@ -594,7 +653,7 @@ public class K8sServiceHandler {
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
-        if(StrUtil.equalsIgnoreCase(serviceRoleFullName,"hdfs-namenode")){
+        if (StrUtil.equalsIgnoreCase(serviceRoleFullName, "hdfs-namenode")) {
             return;
         }
         updateField(yamlData, "spec.replicas", replicas + 1);
@@ -731,6 +790,33 @@ public class K8sServiceHandler {
         }
     }
 
+    // 保存PVC的YAML配置到本地文件
+    private void savePvcYaml(PersistentVolumeClaim pvc) {
+        try {
+            // 创建保存目录，使用Paths.get正确处理路径拼接
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "k8sDep",
+                    "volumes");
+            File dir = dirPath.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成文件名，使用Paths.get拼接路径
+            Path filePath = Paths.get(dirPath.toString(),
+                    pvc.getMetadata().getName() + ".yaml");
+
+            // 使用K8s客户端序列化为YAML
+            String yamlContent = KubeUtil.getKubernetesYaml(pvc);
+
+            // 写入文件
+            Files.write(filePath, yamlContent.getBytes());
+
+            logger.info("保存PVC YAML文件成功: {}", filePath);
+        } catch (Exception e) {
+            logger.error("保存PVC YAML文件失败: {}", e.getMessage(), e);
+        }
+    }
+
     // 保存ConfigMap的YAML配置到本地文件
     public static void saveConfigMapYaml(ConfigMap configMap) {
         try {
@@ -755,6 +841,118 @@ public class K8sServiceHandler {
             LoggerFactory.getLogger(K8sServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
         } catch (Exception e) {
             LoggerFactory.getLogger(K8sServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 为服务角色创建PersistentVolumeClaim
+     *
+     * @param client Kubernetes客户端
+     */
+    private void handlePvc(KubernetesClient client, Map<Generators, List<ServiceConfig>> configFileMap) {
+        try {
+            // 在配置映射中寻找PVC配置生成器
+            Generators pvcConfigGenerator = null;
+            for (Generators key : configFileMap.keySet()) {
+                if (StrUtil.equals(key.getFilename(), "kubernetes.config.persistent-volume-claims")) {
+                    pvcConfigGenerator = key;
+                    break; // 找到配置后立即退出循环
+                }
+            }
+
+            // 如果找不到配置生成器，则抛出异常
+            if (pvcConfigGenerator == null) {
+                String errorMsg = String.format("找不到服务%s的PVC配置生成器", serviceRoleFullName);
+                logger.error(errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+
+            // 获取配置列表
+            List<ServiceConfig> serviceConfigs = configFileMap.get(pvcConfigGenerator);
+            String storageClassName = null;
+            String storageSize = null;
+            String mountPath = null;
+
+            // 从配置中提取值（使用变量简化配置名称判断）
+            String storageClassKey = serviceRoleName.toLowerCase() + "_storage_classes";
+            String storageSizeKey = serviceRoleName.toLowerCase() + "_storage_size";
+            String mountPathKey = serviceRoleName.toLowerCase() + "_mount_path";
+
+            // 遍历配置查找所需值
+            for (ServiceConfig serviceConfig : serviceConfigs) {
+                String configName = serviceConfig.getName();
+
+                if (storageClassName == null && StrUtil.equalsIgnoreCase(configName, storageClassKey)) {
+                    storageClassName = serviceConfig.getValue().toString();
+                } else if (storageSize == null && StrUtil.equalsIgnoreCase(configName, storageSizeKey)) {
+                    storageSize = serviceConfig.getValue().toString();
+                } else if (mountPath == null && StrUtil.equalsIgnoreCase(configName, mountPathKey)) {
+                    mountPath = serviceConfig.getValue().toString();
+                }
+
+                // 如果所有值都已找到，提前结束循环
+                if (storageClassName != null && storageSize != null && mountPath != null) {
+                    break;
+                }
+            }
+
+            // 验证所需配置值
+            if (storageClassName == null || storageSize == null || mountPath == null) {
+                String errorMsg = String.format("服务%s缺少必要的PVC配置。存储类=%s，存储大小=%s，挂载路径=%s",
+                        serviceRoleFullName, storageClassName, storageSize, mountPath);
+                logger.error(errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+
+            // 记录创建信息
+            logger.info("正在创建PVC，存储类：{}，存储大小：{}，挂载路径：{}",
+                    storageClassName, storageSize, mountPath);
+
+            // PVC名称: serviceRoleFullName-pvc (同一个Deployment/StatefulSet的所有pod共享)
+            String pvcName = serviceRoleFullName + "-pvc";
+
+            // 构建PVC对象
+            PersistentVolumeClaim pvc = new PersistentVolumeClaimBuilder()
+                    .withNewMetadata()
+                    .withName(pvcName)
+                    .withNamespace(Constant.K8S_NAMESPACE)
+                    .withLabels(Collections.singletonMap("app", serviceRoleFullName))
+                    .endMetadata()
+                    .withNewSpec()
+                    .withAccessModes(Collections.singletonList("ReadWriteMany")) // 使用ReadWriteMany实现共享访问
+                    .withNewResources()
+                    .withRequests(Collections.singletonMap("storage", new Quantity(storageSize)))
+                    .endResources()
+                    // 应用存储类名称
+                    .withStorageClassName(storageClassName)
+                    .endSpec()
+                    .build();
+
+            // 保存PVC的YAML文件到本地
+            savePvcYaml(pvc);
+
+            // 在Kubernetes集群上创建PVC
+            PersistentVolumeClaim createdPvc = client.persistentVolumeClaims()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .createOrReplace(pvc);
+
+            // 在日志中添加有关共享PVC方法的说明
+            logger.info("已创建共享PVC：{}。Pod将挂载子路径：{}/[pod名称]",
+                    createdPvc.getMetadata().getName(), Constant.K8S_NAMESPACE);
+
+            // 添加彩色日志输出
+            ColorLogUtils.printResourceCreated(
+                    "PersistentVolumeClaim",
+                    createdPvc.getMetadata().getName(),
+                    Constant.K8S_NAMESPACE);
+
+            // 将PVC名称和挂载路径存储在缓存中，以便后续使用
+            CacheUtils.put(serviceRoleFullName + "_PVC_NAME", pvcName);
+            CacheUtils.put(serviceRoleFullName + "_MOUNT_PATH", mountPath);
+
+        } catch (Exception e) {
+            logger.error("创建PVC失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("创建PVC失败: " + e.getMessage());
         }
     }
 
