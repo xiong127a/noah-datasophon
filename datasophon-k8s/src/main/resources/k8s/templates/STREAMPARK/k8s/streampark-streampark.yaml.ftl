@@ -43,7 +43,7 @@ spec:
             - name: "ZOOCFGDIR"
               value: "/opt/datasophon/zookeeper-3.5.10/conf"
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:

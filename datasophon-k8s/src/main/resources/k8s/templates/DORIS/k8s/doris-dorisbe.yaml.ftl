@@ -49,7 +49,7 @@ spec:
               echo "vm.max_map_count=2000000" >> /etc/sysctl.conf && sysctl -p && ${startCommand}
           env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:

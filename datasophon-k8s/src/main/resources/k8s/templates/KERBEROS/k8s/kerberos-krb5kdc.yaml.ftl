@@ -63,7 +63,7 @@ spec:
             - "/bin/bash /opt/datasophon/kerberos-1.15.1/create_kdb.sh && ${startCommand}"
           env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:

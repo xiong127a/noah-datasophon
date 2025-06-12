@@ -264,7 +264,8 @@ public class K8sYamlDeploymentHandler {
         data.put("enableRangerPlugin", enableRangerPlugin.toString());
         data.put("appHome", appHome);
         data.put("masterHost", masterHost);
-        data.put("runAs", runAs.getUser());
+        data.put("runAsUser", runAs.getUser());
+        data.put("runAsGroup", runAs.getGroup());
         data.put("startCommand",
                 startRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'", runAs.getUser(), appHome,
@@ -437,7 +438,7 @@ public class K8sYamlDeploymentHandler {
 
     /**
      * 加载配置到缓存并处理Kubernetes特定配置
-     * 
+     *
      * @param configFileMap   配置文件映射
      * @param serviceRoleName 服务角色名称
      */

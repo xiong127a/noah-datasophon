@@ -65,7 +65,7 @@ spec:
       containers:
         - env:
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:

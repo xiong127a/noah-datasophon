@@ -44,7 +44,7 @@ spec:
             - name: "ES_JAVA_HOME"
               value: "/opt/datasophon/elasticsearch-7.16.2/jdk"
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:

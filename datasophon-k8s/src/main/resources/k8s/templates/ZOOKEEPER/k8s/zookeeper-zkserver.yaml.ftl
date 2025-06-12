@@ -73,7 +73,7 @@ spec:
             - name: ZOO_DATA_DIR
               value: ${dataDir}
             - name: USER
-              value: ${runAs}
+              value: ${runAsUser}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
