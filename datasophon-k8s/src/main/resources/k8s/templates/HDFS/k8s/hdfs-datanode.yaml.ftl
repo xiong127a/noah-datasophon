@@ -35,23 +35,6 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
-        - name: create-user
-          image: "${dockerBusyboxImage}"
-          command:
-            - "/bin/sh"
-            - "-c"
-            - |
-              echo "Creating HDFS user if not exists..."
-              if ! id ${runAsUser} &>/dev/null; then
-                addgroup -g 1000 ${runAsUser}
-                adduser -u 1000 -G ${runAsUser} -h /home/${runAsUser} -D ${runAsUser}
-                echo "User ${runAsUser} created."
-              else
-                echo "User ${runAsUser} already exists."
-              fi
-          securityContext:
-            runAsUser: 0  # 以root用户运行
-            privileged: true
         - name: set-permissions
           image: "${dockerBusyboxImage}"
           env:
