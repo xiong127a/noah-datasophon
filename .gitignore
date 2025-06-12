@@ -63,3 +63,4 @@ node/
 /datasophon-worker/src/main/resources/rebel-remote.xml
 /datasophon-ui/.yarn/
 /k8sDep/
+/.cursor/
