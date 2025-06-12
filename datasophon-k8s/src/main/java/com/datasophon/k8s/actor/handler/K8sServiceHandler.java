@@ -145,7 +145,7 @@ public class K8sServiceHandler {
         execResult.setExecResult(true);
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
-        if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("flinkoperator")) {
+        if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
             String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl apply -f " + yamlFile);
             execResult.setExecResult(!s.equals(Constants.FAILED));
             logger.info("start operator: {}", s);
@@ -636,7 +636,7 @@ public class K8sServiceHandler {
             return execResult;
         } else {
             logger.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
-            if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("flinkoperator")) {
+            if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
                 String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl delete -f " + yamlFile);
                 logger.info("stop operator: {}", s);
                 execResult.setExecResult(true);

@@ -22,6 +22,7 @@ data:
     parallelism.default: 1
     kubernetes.operator.health.probe.enabled: true
     kubernetes.operator.health.probe.port: 8085
+    kubernetes.operator.webhook.enabled: false
   
   flink-conf.yaml: |+
     taskmanager.numberOfTaskSlots: 1
@@ -145,6 +146,8 @@ spec:
             - containerPort: 8085
               name: health-port
           env:
+            - name: WEBHOOK_ENABLED
+              value: "false"
             - name: OPERATOR_NAMESPACE
               valueFrom:
                 fieldRef:
