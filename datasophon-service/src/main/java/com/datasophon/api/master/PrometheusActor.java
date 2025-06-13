@@ -28,11 +28,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
 import com.datasophon.api.load.ServiceRoleJmxMap;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
-import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -153,8 +152,8 @@ public class PrometheusActor extends UntypedActor {
             serviceRoleInfo.setParentName("PROMETHEUS");
             serviceRoleInfo.setConfigFileMap(configFileMap);
             serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
-            serviceRoleInfo.setClusterId(prometheusInstance.getClusterId());
             if (Objects.nonNull(prometheusInstance)) {
+                serviceRoleInfo.setClusterId(prometheusInstance.getClusterId());
                 serviceRoleInfo.setHostname(prometheusInstance.getHostname());
                 reloadPrometheusConfig(prometheusInstance, isK8s, serviceRoleInfo);
             }
