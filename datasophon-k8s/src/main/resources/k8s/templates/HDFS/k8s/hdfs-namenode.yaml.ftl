@@ -36,7 +36,7 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
-        - name: set-permissions
+        - name: prepare-dirs-and-permissions
           image: "${dockerBusyboxImage}"
           env:
             - name: POD_NAME
@@ -51,9 +51,26 @@ spec:
             - "/bin/sh"
             - "-c"
             - |
-              echo "Setting permissions for NameNode PVC mount path..."
+              echo "========== 开始准备NameNode数据目录和权限 =========="
+              
+              # 1. 设置PVC挂载路径权限
+              echo "设置PVC挂载路径权限..."
               chmod -R 777 ${mount_path}
-              echo "Permissions set successfully"
+              
+              # 2. 准备NameNode数据目录
+              echo "目标数据目录: ${namenodeDir}"
+              mkdir -p ${namenodeDir}
+              
+              # 3. 设置权限
+              echo "设置目录权限和所有权..."
+              chmod -R 777 ${namenodeDir}
+              chown -R ${runAsUser}:${runAsGroup} ${namenodeDir}  # 使用变量代替硬编码的用户和组
+              
+              # 4. 验证
+              echo "验证目录和权限:"
+              ls -la ${namenodeDir}
+              
+              echo "========== 完成数据目录和权限设置 =========="
           securityContext:
             runAsUser: 0  # 以root用户运行
             privileged: true
@@ -61,121 +78,157 @@ spec:
             - name: namenode-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
-        - name: prepare-dirs
+        - name: wait-for-zookeeper
           image: "${dockerBusyboxImage}"
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           command:
             - "/bin/sh"
             - "-c"
             - |
-              echo "========== 开始准备NameNode数据目录 =========="
-              echo "当前工作目录: $(pwd)"
-              echo "系统信息: $(uname -a)"
-              echo "容器环境变量: $(env | sort)"
-              echo "目标数据目录: ${namenodeDir}"
+              # 定义颜色和图标
+              RED='\033[0;31m'
+              GREEN='\033[0;32m'
+              YELLOW='\033[1;33m'
+              BLUE='\033[0;34m'
+              NC='\033[0m' # No Color
+              CHECK_MARK="✅"
+              WARNING="⚠️"
+              ERROR="❌"
+              INFO="ℹ️"
+              PROGRESS="🔄"
               
-              # 检查父目录结构
-              echo "父目录结构:"
-              mkdir -p $(dirname ${namenodeDir})
-              ls -la $(dirname ${namenodeDir})
+              echo -e "$BLUE$INFO 开始检查ZooKeeper集群状态...$NC"
               
-              # 确保数据目录存在
-              echo "正在创建数据目录: ${namenodeDir}"
-              mkdir -p ${namenodeDir}
-              MKDIR_STATUS=$?
-              echo "数据目录创建状态: $MKDIR_STATUS"
+              # 使用从配置中获取的ZooKeeper地址
+              <#if zkQuorum??>
+              ZK_QUORUM="${zkQuorum}"
+              <#else>
+              echo -e "$RED$ERROR 错误: 配置中未提供ZooKeeper地址(ha.zookeeper.quorum)，无法继续$NC"
+              exit 1
+              </#if>
               
-              # 检查目录是否成功创建
-              if [ -d "${namenodeDir}" ]; then
-                echo "✓ 数据目录已成功创建"
+              echo -e "$BLUE$INFO ZooKeeper地址: $ZK_QUORUM$NC"
+              
+              # 分割ZooKeeper地址并检查每个实例
+              OLD_IFS="$IFS"
+              IFS=","
+              ZK_AVAILABLE=0
+              ZK_TOTAL=0
+              
+              for ZK_SERVER in $ZK_QUORUM; do
+                IFS="$OLD_IFS"
+                ZK_TOTAL=$((ZK_TOTAL+1))
+                IFS=","
+              done
+              IFS="$OLD_IFS"
+              
+              # 计算所需的最小存活数量（过半）
+              MIN_AVAILABLE=$(( (ZK_TOTAL + 1) / 2 ))
+              echo -e "$BLUE$INFO 需要至少 $MIN_AVAILABLE 个ZooKeeper实例可用（总实例数: $ZK_TOTAL）$NC"
+              
+              # 检查每个ZooKeeper实例
+              IFS=","
+              for ZK_SERVER in $ZK_QUORUM; do
+                IFS="$OLD_IFS"
+                HOST=$(echo $ZK_SERVER | cut -d':' -f1)
+                PORT=$(echo $ZK_SERVER | cut -d':' -f2)
+                if [ -z "$PORT" ]; then
+                  PORT=2181  # 默认ZooKeeper端口
+                fi
+                
+                echo -e "$BLUE$INFO 正在检查ZooKeeper服务: $HOST:$PORT$NC"
+                
+                # 重试计数器
+                RETRIES=0
+                MAX_RETRIES=60
+                
+                # 循环尝试连接ZooKeeper
+                while [ $RETRIES -lt $MAX_RETRIES ]; do
+                  if nc -z -w 2 $HOST $PORT; then
+                    echo -e "$GREEN$CHECK_MARK ZooKeeper服务 $HOST:$PORT 已就绪$NC"
+                    ZK_AVAILABLE=$((ZK_AVAILABLE+1))
+                    break
+                  else
+                    echo -e "$YELLOW$PROGRESS ZooKeeper服务 $HOST:$PORT 未就绪，等待重试... ($((RETRIES+1))/$MAX_RETRIES)$NC"
+                    RETRIES=$((RETRIES+1))
+                    sleep 2
+                  fi
+                done
+                
+                # 检查是否达到最大重试次数
+                if [ $RETRIES -eq $MAX_RETRIES ]; then
+                  echo -e "$RED$WARNING ZooKeeper服务 $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪$NC"
+                fi
+              done
+              
+              # 检查是否有足够的ZooKeeper实例可用
+              echo -e "$BLUE$INFO ZooKeeper可用性: $ZK_AVAILABLE/$ZK_TOTAL$NC"
+              if [ $ZK_AVAILABLE -lt $MIN_AVAILABLE ]; then
+                echo -e "$RED$ERROR 错误: 可用的ZooKeeper实例数量($ZK_AVAILABLE)小于所需的最小数量($MIN_AVAILABLE)，无法继续初始化HDFS$NC"
+                exit 1
               else
-                echo "✗ 数据目录创建失败，错误码: $MKDIR_STATUS"
-                echo "尝试诊断问题:"
-                mount | grep -i "${mount_path}"
-                df -h | grep -i "${mount_path}"
+                echo -e "$GREEN$CHECK_MARK ZooKeeper集群状态正常，继续初始化HDFS$NC"
               fi
-              
-              # 设置宽松的权限，确保所有人都能读写
-              echo "正在设置目录权限为777: ${namenodeDir}"
-              chmod -R 777 ${namenodeDir}
-              CHMOD_STATUS=$?
-              echo "权限设置状态: $CHMOD_STATUS"
-              
-              # 检查权限设置结果
-              ls -la ${namenodeDir}
-              
-              # 使用数字UID/GID设置所有权，根据Dockerfile中的定义
-              echo "正在设置目录所有者为UID 2001, GID 2001 (hdfs:hadoop)"
-              chown -R 2001:2001 ${namenodeDir}
-              CHOWN_STATUS=$?
-              echo "所有者更改状态: $CHOWN_STATUS"
-              
-              # 验证所有权更改
-              echo "验证目录所有权:"
-              ls -la ${namenodeDir}
-              stat ${namenodeDir}
-              
-              # 检查数据目录情况
-              echo "数据目录详细信息:"
-              ls -la ${namenodeDir}
-              echo "目录空间使用情况:"
-              df -h ${namenodeDir}
-              echo "目录inode使用情况:"
-              df -i ${namenodeDir}
-              echo "目录权限和属性详情:"
-              stat ${namenodeDir}
-              
-              # 检查目录内容
-              echo "目录内容计数:"
-              find ${namenodeDir} -type f | wc -l
-              
-              # 检查系统资源状态
-              echo "系统内存使用情况:"
-              free -h || echo "free命令不可用"
-              echo "系统磁盘使用情况:"
-              df -h
-              
-              echo "========== 完成数据目录准备 =========="
-          securityContext:
-            runAsUser: 0  # 以root用户运行
-            privileged: true
           volumeMounts:
-            - name: namenode-data
-              mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
         - name: wait-for-journalnodes
           image: "${dockerBusyboxImage}"
           command:
             - "/bin/sh"
             - "-c"
             - |
-              echo "等待JournalNode服务就绪..."
+              # 定义颜色和图标
+              RED='\033[0;31m'
+              GREEN='\033[0;32m'
+              YELLOW='\033[1;33m'
+              BLUE='\033[0;34m'
+              NC='\033[0m' # No Color
+              CHECK_MARK="✅"
+              WARNING="⚠️"
+              ERROR="❌"
+              INFO="ℹ️"
+              PROGRESS="🔄"
+              
+              echo -e "$BLUE$INFO 开始检查JournalNode集群状态...$NC"
               
               # 获取JournalNode服务端点
               <#if dfs_namenode_shared_edits_dir??>
               JOURNAL_ENDPOINTS=$(echo "${dfs_namenode_shared_edits_dir}" | sed -r 's|qjournal://([^/]+)/.*|\1|g')
               <#else>
-              echo "警告: dfs.namenode.shared.edits.dir 未定义，使用默认值"
+              echo -e "$YELLOW$WARNING dfs.namenode.shared.edits.dir 未定义，使用默认值$NC"
               JOURNAL_ENDPOINTS="journalnode-0.journalnode.default.svc.cluster.local:8485;journalnode-1.journalnode.default.svc.cluster.local:8485;journalnode-2.journalnode.default.svc.cluster.local:8485"
               </#if>
-              echo "JournalNode端点: $JOURNAL_ENDPOINTS"
+              echo -e "$BLUE$INFO JournalNode端点: $JOURNAL_ENDPOINTS$NC"
               
               # 使用ash兼容的方式分割字符串
               OLD_IFS="$IFS"
+              IFS=";"
+              JOURNAL_AVAILABLE=0
+              JOURNAL_TOTAL=0
+              
+              for NODE in $JOURNAL_ENDPOINTS; do
+                IFS="$OLD_IFS"
+                JOURNAL_TOTAL=$((JOURNAL_TOTAL+1))
+                IFS=";"
+              done
+              IFS="$OLD_IFS"
+              
+              # 计算所需的最小存活数量（过半）
+              MIN_AVAILABLE=$(( (JOURNAL_TOTAL + 1) / 2 ))
+              echo -e "$BLUE$INFO 需要至少 $MIN_AVAILABLE 个JournalNode实例可用（总实例数: $JOURNAL_TOTAL）$NC"
+              
+              # 检查每个JournalNode实例
               IFS=";"
               for NODE in $JOURNAL_ENDPOINTS; do
                 IFS="$OLD_IFS"
                 HOST=$(echo $NODE | cut -d':' -f1)
                 PORT=$(echo $NODE | cut -d':' -f2)
-                echo "正在检查JournalNode: $HOST:$PORT"
+                echo -e "$BLUE$INFO 正在检查JournalNode: $HOST:$PORT$NC"
                 
                 # 重试计数器
                 RETRIES=0
@@ -184,10 +237,11 @@ spec:
                 # 循环尝试连接JournalNode
                 while [ $RETRIES -lt $MAX_RETRIES ]; do
                   if nc -z $HOST $PORT; then
-                    echo "JournalNode $HOST:$PORT 已就绪"
+                    echo -e "$GREEN$CHECK_MARK JournalNode $HOST:$PORT 已就绪$NC"
+                    JOURNAL_AVAILABLE=$((JOURNAL_AVAILABLE+1))
                     break
                   else
-                    echo "JournalNode $HOST:$PORT 未就绪，等待重试... ($((RETRIES+1))/$MAX_RETRIES)"
+                    echo -e "$YELLOW$PROGRESS JournalNode $HOST:$PORT 未就绪，等待重试... ($((RETRIES+1))/$MAX_RETRIES)$NC"
                     RETRIES=$((RETRIES+1))
                     sleep 2
                   fi
@@ -195,14 +249,20 @@ spec:
                 
                 # 检查是否达到最大重试次数
                 if [ $RETRIES -eq $MAX_RETRIES ]; then
-                  echo "错误: JournalNode $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪"
-                  exit 1
+                  echo -e "$RED$WARNING JournalNode $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪$NC"
                 fi
-                IFS=";"
               done
-              IFS="$OLD_IFS"
               
-              echo "所有JournalNode服务已就绪，可以继续初始化NameNode"
+              # 检查是否有足够的JournalNode实例可用
+              echo -e "$BLUE$INFO JournalNode可用性: $JOURNAL_AVAILABLE/$JOURNAL_TOTAL$NC"
+              if [ $JOURNAL_AVAILABLE -lt $MIN_AVAILABLE ]; then
+                echo -e "$RED$ERROR 错误: 可用的JournalNode实例数量($JOURNAL_AVAILABLE)小于所需的最小数量($MIN_AVAILABLE)，无法继续初始化NameNode$NC"
+                exit 1
+              else
+                echo -e "$GREEN$CHECK_MARK JournalNode集群状态正常，继续初始化NameNode$NC"
+              fi
+        <#if isInstall?? && isInstall>
+        # NameNode格式化/同步初始化容器 - 只在首次安装时执行
         - name: namenode-format
           image: "${dockerImage}"
           env:
@@ -216,10 +276,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-          args:
+          command:
             - "/bin/bash"
             - "-c"
             - |
+              echo "========== 开始NameNode格式化/同步操作 =========="
+              
               # 从Pod名称确定NameNode ID和角色
               POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
               
@@ -227,87 +289,87 @@ spec:
               if [ "$POD_INDEX" == "0" ]; then
                 NAMENODE_ID="nn1"
                 NAMENODE_ROLE="active"
+                echo "当前Pod是第一个NameNode (index=$POD_INDEX)，角色: $NAMENODE_ROLE"
+                
+                # 设置Kerberos（如果启用）
+                if ${enableKerberos}; then
+                  echo "设置Kerberos..."
+                  HOSTNAME=$(hostname)
+                  if [ ! -f /etc/security/keytab/keystore ]; then
+                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
+                    cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
+                    cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
+                  fi
+                fi
+                
+                # 设置Ranger插件（如果启用）
+                if ${enableRangerPlugin}; then
+                  echo "设置Ranger插件..."
+                  cd ${appHome}/ranger-hdfs-plugin && \
+                  sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
+                fi
+                
+                # 执行NameNode格式化
+                echo "格式化主NameNode (nn1)..."
+                set -x  # 启用命令跟踪，便于调试
+                su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
+                FORMAT_RESULT=$?
+                set +x  # 关闭命令跟踪
+                
+                if [ $FORMAT_RESULT -eq 0 ]; then
+                  echo "✅ NameNode格式化成功"
+                else
+                  echo "❌ NameNode格式化失败，错误码: $FORMAT_RESULT"
+                  echo "警告：格式化失败，但允许Pod继续启动"
+                fi
               else
                 NAMENODE_ID="nn2"
                 NAMENODE_ROLE="standby"
-              fi
-              
-              echo "NameNode ID: $NAMENODE_ID, 角色: $NAMENODE_ROLE"
-              
-              if ${enableKerberos}; then
-                echo "Kerberos is enabled. Running keystore setup...";
-                if [ ! -f /etc/security/keytab/keystore ]; then
+                echo "当前Pod是备用NameNode (index=$POD_INDEX)，角色: $NAMENODE_ROLE"
+                
+                # 设置Kerberos（如果启用）
+                if ${enableKerberos}; then
+                  echo "设置Kerberos..."
                   HOSTNAME=$(hostname)
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  if [ ! -f /etc/security/keytab/keystore ]; then
+                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
+                    cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
+                    cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
+                  fi
                 fi
-                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
-                  echo "ssl-client.xml not found. Copying from template...";
-                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                
+                # 设置Ranger插件（如果启用）
+                if ${enableRangerPlugin}; then
+                  echo "设置Ranger插件..."
+                  cd ${appHome}/ranger-hdfs-plugin && \
+                  sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
                 fi
-                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
-                  echo "ssl-server.xml not found. Copying from template...";
-                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
-                fi
-              else
-                echo "Kerberos is not enabled. Skipping Kerberos setup.";
-              fi
-              if ${enableRangerPlugin}; then
-                echo "Ranger plugin is enabled. Performing Ranger setup...";
-                cd ${appHome}/ranger-hdfs-plugin && \
-                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
-              else
-                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
-              fi
-              
-              # 在格式化之前检查数据目录权限
-              echo "========== 格式化前检查 =========="
-              echo "当前用户: $(id)"
-              echo "数据目录权限: $(ls -ld ${namenodeDir})"
-              echo "可创建文件测试:"
-              su - ${runAsUser} -c "touch ${namenodeDir}/test_write_permission && echo \"✓ 写入测试成功\" || echo \"✗ 写入测试失败\""
-              su - ${runAsUser} -c "rm -f ${namenodeDir}/test_write_permission"
-              
-              # 确保以hdfs用户运行NameNode格式化命令
-              
-              # 根据角色和目录状态执行不同操作
-              if [ "$NAMENODE_ROLE" == "active" ]; then
-                # 第一个NameNode (active)
-                if [ ! -d ${namenodeDir}/current ]; then
-                  echo "格式化主NameNode (nn1)..."
-                  set -x  # 启用命令跟踪，便于调试
-                  # 使用${runAsUser}用户执行格式化命令
-                  su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
-                  FORMAT_RESULT=$?
-                  echo "format结果: $FORMAT_RESULT"
-                  set +x  # 关闭命令跟踪
+                
+                # 执行备用NameNode同步
+                echo "同步备用NameNode (nn2) 元数据..."
+                set -x  # 启用命令跟踪，便于调试
+                su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
+                BOOTSTRAP_RESULT=$?
+                set +x  # 关闭命令跟踪
+                
+                if [ $BOOTSTRAP_RESULT -eq 0 ]; then
+                  echo "✅ 备用NameNode同步成功"
                 else
-                  echo "主NameNode (nn1) 已格式化，跳过格式化步骤"
-                fi
-              else
-                # 其他NameNode (standby)
-                if [ ! -d ${namenodeDir}/current ]; then
-                  echo "同步备用NameNode (nn2) 元数据..."
-                  set -x  # 启用命令跟踪，便于调试
-                  # 使用${runAsUser}用户执行bootstrapStandby命令
-                  su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
-                  BOOTSTRAP_RESULT=$?
-                  echo "bootstrapStandby结果: $BOOTSTRAP_RESULT"
-                  set +x  # 关闭命令跟踪
-                else
-                  echo "备用NameNode (nn2) 已同步，跳过同步步骤"
+                  echo "❌ 备用NameNode同步失败，错误码: $BOOTSTRAP_RESULT"
+                  echo "警告：同步失败，但允许Pod继续启动"
                 fi
               fi
               
-              # 格式化后检查
-              echo "========== 格式化/同步后检查 =========="
-              echo "数据目录内容:"
-              su - ${runAsUser} -c "ls -la ${namenodeDir}/"
-              if [ -d ${namenodeDir}/current ]; then
-                echo "current目录创建成功，内容:"
-                su - ${runAsUser} -c "ls -la ${namenodeDir}/current/"
-              else
-                echo "警告: current目录未创建"
-              fi
+              echo "========== 完成NameNode格式化/同步操作 =========="
+        </#if>
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
@@ -319,8 +381,9 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-        <#if isFirstInstall?? && isFirstInstall>
-        # ZKFC格式化初始化容器 - 只在首次安装时执行
+        <#if isInstall?? && isInstall>
+        # ZKFC格式化初始化容器 - 只在首次安装且是第一个NameNode(index=0)时执行
+        # 注意：Pod索引检查在容器内部进行
         - name: zkfc-format
           image: "${dockerImage}"
           env:
@@ -345,7 +408,7 @@ spec:
               
               # 只在第一个NameNode（index=0）上执行格式化
               if [ "$POD_INDEX" != "0" ]; then
-                echo "当前Pod不是第一个NameNode (index=$POD_INDEX)，跳过ZKFC格式化"
+                echo -e "$BLUE$INFO 当前Pod不是第一个NameNode (index=$POD_INDEX)，跳过ZKFC格式化$NC"
                 exit 0
               fi
               
@@ -354,66 +417,29 @@ spec:
               export HADOOP_OPTS="-Ddfs.ha.namenode.id=nn1"
               export HDFS_NAMENODE_OPTS="-Ddfs.ha.namenode.id=nn1"
               
-              # 检查ZooKeeper中是否已经存在zkfc相关的znode
-               # 实际使用中，这里应该添加适当的ZooKeeper检查逻辑
-               # 简化版本：检查ZKFC是否已经格式化的标记文件
-               ZKFC_FORMATTED_FLAG="${namenodeDir}/zkfc_formatted"
-               
-               if [ -f "$ZKFC_FORMATTED_FLAG" ]; then
-                 echo "检测到ZKFC已经格式化（标记文件 $ZKFC_FORMATTED_FLAG 存在），跳过格式化"
-                 exit 0
-               fi
-               
-               # 尝试通过ZooKeeper CLI检查znode是否存在
-               echo "尝试检查ZooKeeper中是否已存在HDFS HA的znode..."
-               
-               # 提取ZooKeeper地址
-               if [ -f "${appHome}/etc/hadoop/core-site.xml" ]; then
-                 ZK_QUORUM=$(grep -A1 "ha.zookeeper.quorum" ${appHome}/etc/hadoop/core-site.xml | grep "<value>" | sed -e 's/.*<value>\(.*\)<\/value>.*/\1/')
-                 CLUSTER_NAME=$(grep -A1 "fs.defaultFS" ${appHome}/etc/hadoop/core-site.xml | grep "<value>" | sed -e 's/.*<value>hdfs:\/\/\(.*\)<\/value>.*/\1/' | cut -d '/' -f1)
-                 
-                 if [ -n "$ZK_QUORUM" ] && [ -n "$CLUSTER_NAME" ]; then
-                   echo "检测到ZooKeeper地址: $ZK_QUORUM"
-                   echo "检测到集群名称: $CLUSTER_NAME"
-                   
-                   # 尝试使用ZooKeeper命令检查znode
-                   ZK_PATH="/hadoop-ha/$CLUSTER_NAME"
-                   echo "检查ZooKeeper路径: $ZK_PATH"
-                   
-                   # 尝试使用zkCli.sh检查znode是否存在
-                   # 注意：这里简化处理，实际情况可能需要更复杂的逻辑
-                   ZK_CHECK_CMD="${appHome}/bin/hdfs zkfc -getServiceState"
-                   if su - ${runAsUser} -c "$ZK_CHECK_CMD" 2>&1 | grep -q "active\|standby"; then
-                     echo "检测到ZKFC已经格式化（ZooKeeper znode已存在），跳过格式化"
-                     # 创建标记文件，避免重复检查
-                     touch "$ZKFC_FORMATTED_FLAG"
-                     chown ${runAsUser}:${runAsUser} "$ZKFC_FORMATTED_FLAG"
-                     exit 0
-                   else
-                     echo "ZooKeeper中未找到HDFS HA相关的znode，需要执行格式化"
-                   fi
-                 else
-                   echo "无法从core-site.xml提取ZooKeeper地址或集群名称，继续格式化"
-                 fi
-               else
-                 echo "未找到core-site.xml文件，跳过ZooKeeper检查，继续格式化"
-               fi
-               
-               echo "开始执行ZKFC格式化..."
+              # 检查是否是首次安装
+              <#if isInstall?? && isInstall>
+              echo -e "$BLUE$INFO 检测到首次安装，将执行ZKFC格式化$NC"
+              <#else>
+              echo -e "$YELLOW$WARNING 非首次安装，跳过ZKFC格式化$NC"
+              exit 0
+              </#if>
+              
+              echo -e "$BLUE$INFO 开始执行ZKFC格式化...$NC"
               
               # 添加Kerberos相关配置
               if ${enableKerberos}; then
-                echo "Kerberos is enabled. Running keystore setup...";
+                echo -e "$BLUE$INFO Kerberos已启用，设置Kerberos配置...$NC";
                 HOSTNAME=$(hostname)
                 if [ ! -f /etc/security/keytab/keystore ]; then
                   cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
-                  echo "ssl-client.xml not found. Copying from template...";
+                  echo -e "$BLUE$INFO ssl-client.xml不存在，从模板复制...$NC";
                   cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
-                  echo "ssl-server.xml not found. Copying from template...";
+                  echo -e "$BLUE$INFO ssl-server.xml不存在，从模板复制...$NC";
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
                 # 执行Kerberos身份验证
@@ -422,26 +448,24 @@ spec:
               
               # 执行ZKFC格式化
               set -x  # 启用命令跟踪，便于调试
-              FORMAT_CMD="${appHome}/bin/hdfs zkfc -formatZK"
-              echo "执行命令: $FORMAT_CMD"
-              su - ${runAsUser} -c "cd ${appHome} && echo Y | $FORMAT_CMD"
+              FORMAT_CMD="${appHome}/bin/hdfs zkfc -formatZK -force"
+              echo -e "$BLUE$INFO 执行命令: $FORMAT_CMD$NC"
+              # 使用 -force 参数强制格式化，避免交互式提示
+              su - ${runAsUser} -c "cd ${appHome} && $FORMAT_CMD"
               FORMAT_RESULT=$?
               set +x  # 关闭命令跟踪
               
               # 检查格式化结果
               if [ $FORMAT_RESULT -eq 0 ]; then
-                echo "✅ ZKFC格式化成功"
-                # 创建标记文件，避免重复格式化
-                touch "$ZKFC_FORMATTED_FLAG"
-                chown ${runAsUser}:${runAsUser} "$ZKFC_FORMATTED_FLAG"
+                echo -e "$GREEN$CHECK_MARK ZKFC格式化成功$NC"
               else
-                echo "❌ ZKFC格式化失败，错误码: $FORMAT_RESULT"
+                echo -e "$RED$ERROR ZKFC格式化失败，错误码: $FORMAT_RESULT$NC"
                 # 这里可以添加重试逻辑或其他错误处理
                 # 但为了保证初始化容器不阻塞Pod启动，我们依然返回成功
-                echo "警告：ZKFC格式化失败，但允许Pod继续启动"
+                echo -e "$YELLOW$WARNING ZKFC格式化失败，但允许Pod继续启动$NC"
               fi
               
-              echo "ZKFC格式化步骤完成"
+              echo -e "$BLUE$INFO ZKFC格式化步骤完成$NC"
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
@@ -598,25 +622,10 @@ spec:
             - |
               echo "ZKFC 启动中..."
               
-              # 等待NameNode进程启动
-              echo "等待NameNode进程启动..."
+              # 等待NameNode服务就绪
+              echo -e "$BLUE$INFO 等待NameNode服务就绪...$NC"
               RETRIES=0
               MAX_RETRIES=60
-              while [ $RETRIES -lt $MAX_RETRIES ]; do
-                if su - ${runAsUser} -c "jps" | grep -q "NameNode"; then
-                  echo "✅ NameNode进程已启动"
-                  break
-                else
-                  echo "⏳ 等待NameNode进程启动... ($((RETRIES+1))/$MAX_RETRIES)"
-                  RETRIES=$((RETRIES+1))
-                  sleep 5
-                fi
-              done
-              
-              if [ $RETRIES -eq $MAX_RETRIES ]; then
-                echo "❌ 等待NameNode进程启动超时"
-                # 继续执行，因为可能是首次启动时NameNode还未就绪
-              fi
               
               # 获取Pod索引以确定NameNode角色
               POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
@@ -627,30 +636,62 @@ spec:
               else
                 NAMENODE_ID="nn2"
               fi
-              echo "根据索引设置NAMENODE_ID=$NAMENODE_ID"
+              echo -e "$BLUE$INFO 根据索引设置NAMENODE_ID=$NAMENODE_ID$NC"
+              
+              # 获取本地主机名
+              HOSTNAME=$(hostname)
+              
+              # 使用Hadoop命令检测NameNode是否就绪
+              while [ $RETRIES -lt $MAX_RETRIES ]; do
+                # 尝试使用hdfs haadmin命令检测NameNode状态
+                NN_STATE=$(su - ${runAsUser} -c "${appHome}/bin/hdfs haadmin -getServiceState $NAMENODE_ID 2>/dev/null" || echo "ERROR")
+                
+                # 根据返回的状态进行处理
+                case "$NN_STATE" in
+                  "active")
+                    echo -e "$GREEN$CHECK_MARK NameNode状态: active (活跃状态)$NC"
+                    break
+                    ;;
+                  "standby")
+                    echo -e "$GREEN$CHECK_MARK NameNode状态: standby (备用状态)$NC"
+                    break
+                    ;;
+                  "initializing")
+                    echo -e "$YELLOW$PROGRESS NameNode状态: initializing (初始化中)，继续等待...$NC"
+                    ;;
+                  "stopping")
+                    echo -e "$RED$WARNING NameNode状态: stopping (正在停止)，继续等待...$NC"
+                    ;;
+                  "ERROR"|*)
+                    echo -e "$YELLOW$PROGRESS 无法获取NameNode状态，可能正在启动中... ($((RETRIES+1))/$MAX_RETRIES)$NC"
+                    ;;
+                esac
+                
+                # 如果状态不是active或standby，继续等待
+                if [ "$NN_STATE" != "active" ] && [ "$NN_STATE" != "standby" ]; then
+                  RETRIES=$((RETRIES+1))
+                  sleep 5
+                fi
+              done
+              
+              if [ $RETRIES -eq $MAX_RETRIES ]; then
+                echo -e "$RED$WARNING 等待NameNode服务启动超时，但仍将尝试启动ZKFC$NC"
+                echo -e "$BLUE$INFO 最后检测到的NameNode状态: $NN_STATE$NC"
+                # 继续执行，因为可能是首次启动时NameNode还未就绪
+              fi
               
               # 输出ZKFC和NameNode的ID关系，用于调试
-              echo "当前ZKFC在Pod: $POD_NAME 中, 索引: $POD_INDEX, 使用NameNode ID: $NAMENODE_ID"
+              echo -e "$BLUE$INFO 当前ZKFC在Pod: $POD_NAME 中, 索引: $POD_INDEX, 使用NameNode ID: $NAMENODE_ID$NC"
               
               # 启动ZKFC服务
-              echo "启动ZKFC服务..."
-              su - ${runAsUser} -c "${appHome}/bin/hdfs --daemon start zkfc"
-              
-              # 保持容器运行
-              while true; do
-                # 检查ZKFC进程是否在运行
-                if ! su - ${runAsUser} -c "jps" | grep -q "DFSZKFailoverController"; then
-                  echo "警告: ZKFC进程不在运行，尝试重新启动..."
-                  su - ${runAsUser} -c "${appHome}/bin/hdfs --daemon start zkfc"
-                fi
-                sleep 30
-              done
+              echo -e "$BLUE$INFO 启动ZKFC服务...$NC"
+              ${zkfc_0_startCommand}
           readinessProbe:
             exec:
               command:
                 - "/bin/bash"
                 - "-c"
-                - "su - ${runAsUser} -c \"jps | grep -q DFSZKFailoverController\" || exit 1"
+                - "${zkfc_0_statusCommand}"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
