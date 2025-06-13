@@ -476,8 +476,6 @@ public class K8sYamlDeploymentHandler {
 
                 // 处理Kubernetes配置，条件更具体
                 if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
-                    k8sConfigMap.put(config.getName(), config.getValue());
-                    // 移除前缀后，独立存储一份
                     if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
                         String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
                         k8sConfigMap.put(keyWithoutPrefix, config.getValue());
