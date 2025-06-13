@@ -40,6 +40,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -244,8 +245,8 @@ public class K8sServiceHandler {
         final IntRange VALID_PORT_RANGE = new IntRange(1, 65535);
         final IntRange VALID_NODEPORT_RANGE = new IntRange(30000, 32767);
 
-        // 跟踪已处理的端口，避免添加重复端口
-        List<Integer> processedPorts = new ArrayList<>();
+        // 用于ClusterIP的重复端口检查
+        List<Integer> processedClusterPorts = new ArrayList<>();
 
         // 1. 查找指定配置
         ServiceConfig mappingConfig = findServiceConfig(svcConfigs, configName);
@@ -282,23 +283,35 @@ public class K8sServiceHandler {
                     continue;
                 }
 
-                // 如果是ClusterIP类型，检查是否已处理过相同的端口
-                if (!isNodePort && processedPorts.contains(port)) {
-                    logger.info("跳过重复的ClusterIP端口配置: {}", port);
-                    continue;
-                }
-
-                // 记录已处理的端口
+                // 对于ClusterIP类型，检查重复端口
                 if (!isNodePort) {
-                    processedPorts.add(port);
+                    if (processedClusterPorts.contains(port)) {
+                        logger.info("跳过重复的ClusterIP端口配置: {}", port);
+                        continue;
+                    }
+                    processedClusterPorts.add(port);
                 }
 
-                // 创建端口对象
-                ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, isNodePort,
-                        VALID_NODEPORT_RANGE);
-
-                // 添加到结果列表
-                servicePorts.add(servicePort);
+                // 处理NodePort的多个值
+                if (isNodePort) {
+                    int[] nodePorts = StrUtil.splitToInt(entry.getValue(), ',');
+                    for (int nodePort : nodePorts) {
+                        if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
+                            logger.warn("NodePort值{}无效，已跳过", nodePort);
+                            continue;
+                        }
+                        // 为每个NodePort值创建独立的ServicePort
+                        ServicePort servicePort = createServicePort(port, String.valueOf(nodePort), portType, index++,
+                                isNodePort,
+                                VALID_NODEPORT_RANGE);
+                        servicePorts.add(servicePort);
+                    }
+                } else {
+                    // 创建ClusterIP的ServicePort
+                    ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, isNodePort,
+                            VALID_NODEPORT_RANGE);
+                    servicePorts.add(servicePort);
+                }
             }
         }
     }
@@ -498,8 +511,17 @@ public class K8sServiceHandler {
         final int MAX_NODEPORT = 32767;
         final IntRange VALID_NODEPORT_RANGE = new IntRange(MIN_NODEPORT, MAX_NODEPORT);
 
-        // 跟踪已添加的NodePort端口，防止重复
-        List<Integer> addedNodePorts = new ArrayList<>();
+        // 统计每个容器端口对应的NodePort数量
+        Map<Integer, Integer> portToNodePortCountMap = new HashMap<>();
+        for (ServicePort port : ports) {
+            if (port.getNodePort() != null) {
+                int containerPort = port.getPort();
+                portToNodePortCountMap.put(containerPort, portToNodePortCountMap.getOrDefault(containerPort, 0) + 1);
+            }
+        }
+
+        // 用于生成pod索引
+        Map<Integer, Integer> portToPodIndexMap = new HashMap<>();
 
         for (ServicePort port : ports) {
             // 确保NodePort在有效范围（30000-32767）
@@ -508,30 +530,45 @@ public class K8sServiceHandler {
                 continue; // 跳过没有NodePort的端口
             }
 
-            // 检查是否已经添加过相同的NodePort
-            if (addedNodePorts.contains(nodePort)) {
-                logger.info("跳过重复的NodePort: {}", nodePort);
-                continue;
-            }
-
             // 检查端口是否在有效范围内
             if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
                 logger.warn("无效的NodePort值 {} 用于 {}，将使用随机端口", nodePort, serviceRoleFullName);
                 port.setNodePort(null);
-            } else {
-                // 记录已添加的NodePort
-                addedNodePorts.add(nodePort);
             }
+
+            // 获取容器端口对应的NodePort数量
+            int containerPort = port.getPort();
+            int nodePortCount = portToNodePortCountMap.getOrDefault(containerPort, 0);
 
             // 创建服务规范
             ServiceSpecBuilder specBuilder = new ServiceSpecBuilder()
                     .withType(K8S_NODE_PORT)
-                    .withSelector(Collections.singletonMap("app", serviceRoleFullName))
                     .withPorts(port)
                     .withPublishNotReadyAddresses();
 
+            // 根据NodePort数量决定选择器策略
+            if (nodePortCount > 1) {
+                // 多个NodePort映射到同一个容器端口，每个NodePort选择一个特定的pod
+                // 获取当前端口的pod索引，并递增
+                int podIndex = portToPodIndexMap.getOrDefault(containerPort, 0);
+                portToPodIndexMap.put(containerPort, podIndex + 1);
+
+                // 构建完整的pod名称
+                String podName = serviceRoleFullName + "-" + podIndex;
+
+                // 使用statefulset.kubernetes.io/pod-name标签选择特定pod
+                specBuilder.withSelector(Collections.singletonMap("statefulset.kubernetes.io/pod-name", podName));
+
+                logger.info("为容器端口 {} 的NodePort {} 绑定到特定pod: {}",
+                        containerPort, nodePort, podName);
+            } else {
+                // 单个NodePort映射，选择所有pod
+                specBuilder.withSelector(Collections.singletonMap("app", serviceRoleFullName));
+                logger.info("为容器端口 {} 的NodePort {} 创建通用pod选择器", containerPort, nodePort);
+            }
+
             // 动态生成服务名称
-            String serviceName = serviceRoleFullName + "-nodeport-" + port.getPort();
+            String serviceName = serviceRoleFullName + "-nodeport-" + port.getPort() + "-" + nodePort;
 
             // 创建服务对象
             Service service = new ServiceBuilder()

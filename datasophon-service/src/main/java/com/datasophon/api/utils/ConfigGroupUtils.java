@@ -164,7 +164,7 @@ public class ConfigGroupUtils {
      * @return 处理后的配置列表
      */
     public static List<ServiceConfig> preprocessKubernetesConfigs(List<ServiceConfig> list, String frameCode,
-                                                                  String serviceName) {
+            String serviceName) {
         if (list == null || list.isEmpty()) {
             return list;
         }
@@ -272,7 +272,7 @@ public class ConfigGroupUtils {
      * @param processedConfigs 处理后的配置列表
      */
     private static void processPortConfigs(Map<String, ServiceConfig> portConfigs,
-                                           List<ServiceConfig> processedConfigs) {
+            List<ServiceConfig> processedConfigs) {
         // 遍历所有端口配置
         for (ServiceConfig portConfig : portConfigs.values()) {
             String bindRole = portConfig.getBindRole();
@@ -350,8 +350,16 @@ public class ConfigGroupUtils {
             boolean found = false;
             for (Map<String, String> mapping : portMappings) {
                 if (mapping.containsKey(port)) {
-                    // 更新已存在的端口映射
-                    mapping.put(port, mappedPort);
+                    // 获取现有的映射值
+                    String existingValue = mapping.get(port);
+                    // 如果新值不在现有值中，则追加
+                    if (!existingValue.contains(mappedPort)) {
+                        // 使用逗号分隔追加新的NodePort值
+                        mapping.put(port, existingValue + "," + mappedPort);
+                        logger.info("Appended new NodePort {} to existing mapping for port {}", mappedPort, port);
+                    } else {
+                        logger.info("NodePort {} already exists for port {}, skipping", mappedPort, port);
+                    }
                     found = true;
                     break;
                 }
@@ -362,6 +370,7 @@ public class ConfigGroupUtils {
                 Map<String, String> newMapping = new HashMap<>();
                 newMapping.put(port, mappedPort);
                 portMappings.add(newMapping);
+                logger.info("Added new port mapping: {} -> {}", port, mappedPort);
             }
 
             // 更新配置值
@@ -486,7 +495,7 @@ public class ConfigGroupUtils {
      * @return 目标角色集合
      */
     private static Set<String> getTargetRolesForConfigType(Map<String, Set<String>> configFileToRolesMap,
-                                                           String configType) {
+            String configType) {
         Set<String> result = new HashSet<>();
 
         // 完整的configGroup
@@ -547,7 +556,7 @@ public class ConfigGroupUtils {
     /**
      * 将配置项按配置组分组
      *
-     * @param list        配置项列表
+     * @param list 配置项列表
      * @return 按配置组分组后的映射
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list) {
@@ -696,7 +705,7 @@ public class ConfigGroupUtils {
      * @param clusterId     集群ID
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
+            ClusterServiceRoleGroupConfig config, Integer clusterId) {
 
         // 1. 解析配置文件JSON
         Map<JSONObject, JSONArray> originalConfigMap = parseConfigJson(config.getConfigFileJson());
