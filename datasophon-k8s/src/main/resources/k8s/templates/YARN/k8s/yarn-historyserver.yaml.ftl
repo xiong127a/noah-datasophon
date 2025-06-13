@@ -1,20 +1,16 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -25,6 +21,7 @@ spec:
         podConflictName: "${serviceRoleFullName}"
       annotations:
         serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
       affinity:
         podAntiAffinity:
@@ -61,7 +58,7 @@ spec:
             runAsUser: 0  # 以root用户运行
             privileged: true
           volumeMounts:
-            - name: historyserver-data
+            - name: yarn-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       containers:
@@ -123,7 +120,7 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            - name: historyserver-data
+            - name: yarn-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
@@ -137,7 +134,7 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: historyserver-data
+        - name: yarn-data
           persistentVolumeClaim:
             claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>

@@ -61,6 +61,104 @@ spec:
             - name: yarn-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+        - name: wait-for-zookeeper
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 定义颜色和图标
+              RED='\033[0;31m'
+              GREEN='\033[0;32m'
+              YELLOW='\033[1;33m'
+              BLUE='\033[0;34m'
+              NC='\033[0m' # No Color
+              CHECK_MARK="✅"
+              WARNING="⚠️"
+              ERROR="❌"
+              INFO="ℹ️"
+              PROGRESS="🔄"
+              
+              echo -e "$BLUE$INFO 开始检查ZooKeeper集群状态...$NC"
+              
+              # 使用从配置中获取的ZooKeeper地址
+              <#if yarn_resourcemanager_zk_address??>
+              ZK_QUORUM="${yarn_resourcemanager_zk_address}"
+              <#else>
+              echo -e "$RED$ERROR 错误: 配置中未提供ZooKeeper地址(yarn.resourcemanager.zk-address)，无法继续$NC"
+              exit 1
+              </#if>
+              
+              echo -e "$BLUE$INFO ZooKeeper地址: $ZK_QUORUM$NC"
+              
+              # 分割ZooKeeper地址并检查每个实例
+              OLD_IFS="$IFS"
+              IFS=","
+              ZK_AVAILABLE=0
+              ZK_TOTAL=0
+              
+              for ZK_SERVER in $ZK_QUORUM; do
+                IFS="$OLD_IFS"
+                ZK_TOTAL=$((ZK_TOTAL+1))
+                IFS=","
+              done
+              IFS="$OLD_IFS"
+              
+              # 计算所需的最小存活数量（过半）
+              MIN_AVAILABLE=$(( (ZK_TOTAL + 1) / 2 ))
+              echo -e "$BLUE$INFO 需要至少 $MIN_AVAILABLE 个ZooKeeper实例可用（总实例数: $ZK_TOTAL）$NC"
+              
+              # 检查每个ZooKeeper实例
+              IFS=","
+              for ZK_SERVER in $ZK_QUORUM; do
+                IFS="$OLD_IFS"
+                HOST=$(echo $ZK_SERVER | cut -d':' -f1)
+                PORT=$(echo $ZK_SERVER | cut -d':' -f2)
+                if [ -z "$PORT" ]; then
+                  PORT=2181  # 默认ZooKeeper端口
+                fi
+                
+                echo -e "$BLUE$INFO 正在检查ZooKeeper服务: $HOST:$PORT$NC"
+                
+                # 重试计数器
+                RETRIES=0
+                MAX_RETRIES=60
+                
+                # 循环尝试连接ZooKeeper
+                while [ $RETRIES -lt $MAX_RETRIES ]; do
+                  if nc -z -w 2 $HOST $PORT; then
+                    echo -e "$GREEN$CHECK_MARK ZooKeeper服务 $HOST:$PORT 已就绪$NC"
+                    ZK_AVAILABLE=$((ZK_AVAILABLE+1))
+                    break
+                  else
+                    echo -e "$YELLOW$PROGRESS ZooKeeper服务 $HOST:$PORT 未就绪，等待重试... ($((RETRIES+1))/$MAX_RETRIES)$NC"
+                    RETRIES=$((RETRIES+1))
+                    sleep 2
+                  fi
+                done
+                
+                # 检查是否达到最大重试次数
+                if [ $RETRIES -eq $MAX_RETRIES ]; then
+                  echo -e "$RED$WARNING ZooKeeper服务 $HOST:$PORT 在$MAX_RETRIES次尝试后仍未就绪$NC"
+                fi
+              done
+              
+              # 检查是否有足够的ZooKeeper实例可用
+              echo -e "$BLUE$INFO ZooKeeper可用性: $ZK_AVAILABLE/$ZK_TOTAL$NC"
+              if [ $ZK_AVAILABLE -lt $MIN_AVAILABLE ]; then
+                echo -e "$RED$ERROR 错误: 可用的ZooKeeper实例数量($ZK_AVAILABLE)小于所需的最小数量($MIN_AVAILABLE)，无法继续初始化ResourceManager$NC"
+                exit 1
+              else
+                echo -e "$GREEN$CHECK_MARK ZooKeeper集群状态正常，继续初始化ResourceManager$NC"
+              fi
+          volumeMounts:
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
       containers:
         - env:
             - name: USER

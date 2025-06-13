@@ -38,10 +38,11 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             // 存在 tez 则创建软连接
             final String tezHomePath = Constants.INSTALL_PATH + Constants.SLASH + "tez";
-            if (K8sMinaUtils.checkPathExists(hostname, tezHomePath)) {
-                K8sMinaUtils.execCmdWithResult(hostname,
-                        "ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath + "/etc/hadoop/tez-site.xml");
-            }
+            // if (K8sMinaUtils.checkPathExists(hostname, tezHomePath)) {
+            // K8sMinaUtils.execCmdWithResult(hostname,
+            // "ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath +
+            // "/etc/hadoop/tez-site.xml");
+            // }
         }
         return serviceHandler.start(command);
     }
@@ -59,7 +60,6 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
         final String RESOURCEMANAGER_SERVICE = "yarn-resourcemanager";
         final String HISTORYSERVER_SERVICE = "yarn-historyserver";
         final String TIMELINESERVER_SERVICE = "yarn-timelineserver";
-        final String NODEMANAGER_SERVICE = "yarn-nodemanager";
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
         // 命名空间
         final String NAMESPACE = "datasophon";
@@ -71,10 +71,10 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
             String name = config.getName();
             Object value = config.getValue();
 
-            // 处理ResourceManager HA相关配置
+            // 处理ResourceManager相关配置
             switch (name) {
                 case "yarn.resourcemanager.hostname.rm1": {
-                    // ResourceManager1 地址使用完整的FQDN格式
+                    // ResourceManager1主机名使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN;
                     config.setValue(newValue);
@@ -82,31 +82,31 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                     break;
                 }
                 case "yarn.resourcemanager.hostname.rm2": {
-                    // ResourceManager2 地址使用完整的FQDN格式
+                    // ResourceManager2主机名使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.webapp.address.rm1": {
-                    // ResourceManager1 Web地址使用完整的FQDN格式
+                case "yarn.resourcemanager.address.rm1": {
+                    // ResourceManager1地址使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8088";
+                            + CLUSTER_DOMAIN + ":8032";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.webapp.address.rm2": {
-                    // ResourceManager2 Web地址使用完整的FQDN格式
+                case "yarn.resourcemanager.address.rm2": {
+                    // ResourceManager2地址使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8088";
+                            + CLUSTER_DOMAIN + ":8032";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "yarn.resourcemanager.scheduler.address.rm1": {
-                    // ResourceManager1 调度器地址
+                    // ResourceManager1调度器地址使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":8030";
                     config.setValue(newValue);
@@ -114,7 +114,7 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                     break;
                 }
                 case "yarn.resourcemanager.scheduler.address.rm2": {
-                    // ResourceManager2 调度器地址
+                    // ResourceManager2调度器地址使用完整的FQDN格式
                     String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":8030";
                     config.setValue(newValue);
@@ -137,18 +137,18 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.admin.address.rm1": {
-                    // ResourceManager1 管理地址
+                case "yarn.resourcemanager.webapp.address.rm1": {
+                    // ResourceManager1 Web地址
                     String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8033";
+                            + CLUSTER_DOMAIN + ":8088";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.admin.address.rm2": {
-                    // ResourceManager2 管理地址
+                case "yarn.resourcemanager.webapp.address.rm2": {
+                    // ResourceManager2 Web地址
                     String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8033";
+                            + CLUSTER_DOMAIN + ":8088";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
@@ -171,38 +171,62 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                 }
                 case "yarn.log.server.url": {
                     // HistoryServer日志服务URL
-                    String newValue = "http://" + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":19888/jobhistory/logs";
+                    String newValue = "http://" + HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "."
+                            + NAMESPACE
+                            + "." + CLUSTER_DOMAIN + ":19888/jobhistory/logs";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "yarn.timeline-service.hostname": {
                     // TimelineServer主机名
-                    String newValue = TIMELINESERVER_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN;
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.webapp.https.address.rm1": {
-                    // ResourceManager1 HTTPS Web地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8090";
+                case "yarn.timeline-service.address": {
+                    // TimelineServer地址
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":10200";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                case "yarn.resourcemanager.webapp.https.address.rm2": {
-                    // ResourceManager2 HTTPS Web地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
-                            + CLUSTER_DOMAIN + ":8090";
+                case "yarn.timeline-service.webapp.address": {
+                    // TimelineServer Web地址
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8188";
                     config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.timeline-service.webapp.https.address": {
+                    // TimelineServer HTTPS Web地址
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8190";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.timeline-service.bind-host": {
+                    // TimelineServer绑定主机
+                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.timeline-service.address.application.history.bind-host": {
+                    // ApplicationHistoryService绑定主机
+                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
             }
         }
 
-        logger.info("YARN ResourceManager配置更新完成，已适配Kubernetes服务，所有服务地址均使用完整FQDN格式");
+        logger.info("YARN ResourceManager配置更新完成，已适配Kubernetes服务");
     }
 }
