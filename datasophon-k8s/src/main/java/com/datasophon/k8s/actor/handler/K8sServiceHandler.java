@@ -749,8 +749,6 @@ public class K8sServiceHandler {
         logger.info("已启动的Pod列表: {}", podNames);
 
         CacheUtils.put(serviceRoleFullName + "_" + Constant.POD_NAME, podNames);
-
-        logger.info(resource.getLog());
     }
 
     private void handleException(ExecResult execResult, String message, Exception e) {

@@ -615,7 +615,7 @@ spec:
           imagePullPolicy: "Always"
           ports:
             - containerPort: 8019
-              name: zkfc
+              name: hdfs-zkfc
           command:
             - "/bin/bash"
             - "-c"
@@ -697,7 +697,7 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
-          name: "zkfc"
+          name: "hdfs-zkfc"
           resources:
             requests:
               memory: ${requests_memory}
