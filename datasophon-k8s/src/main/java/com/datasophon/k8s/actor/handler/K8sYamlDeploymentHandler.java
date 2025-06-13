@@ -478,6 +478,11 @@ public class K8sYamlDeploymentHandler {
                 if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
                     if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
                         String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+                        if(StrUtil.endWith(keyWithoutPrefix, "_port_mappings")){
+                            if(ObjUtil.isNull(config.getValue())){
+                                continue;
+                            }
+                        }
                         k8sConfigMap.put(keyWithoutPrefix, config.getValue());
                     }
                 }
