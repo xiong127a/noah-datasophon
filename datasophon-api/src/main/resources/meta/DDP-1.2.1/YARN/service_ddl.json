@@ -666,7 +666,7 @@
       "configType": "ha",
       "required": true,
       "type": "switch",
-      "value": "",
+      "value": "true",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true,
