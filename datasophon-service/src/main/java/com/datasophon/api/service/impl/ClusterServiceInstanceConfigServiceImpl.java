@@ -71,7 +71,7 @@ public class ClusterServiceInstanceConfigServiceImpl
 
                         // 使用服务名称进行分组排序
                         Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils
-                                        .groupByConfigTargetRoleOrCommon(serviceName,serviceConfigs);
+                                        .groupByConfigTargetRoleOrCommon(serviceConfigs);
                         return Result.success(roleToConfigMap);
                 }
                 return Result.success();

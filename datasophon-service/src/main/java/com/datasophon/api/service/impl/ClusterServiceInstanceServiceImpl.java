@@ -227,7 +227,7 @@ public class ClusterServiceInstanceServiceImpl
      */
     private boolean isKubernetesConfig(ServiceConfig config) {
         return config != null && config.getConfigGroup() != null &&
-                config.getConfigGroup().startsWith("kubernetes.config.");
+                config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX);
     }
 
     /**
@@ -250,7 +250,7 @@ public class ClusterServiceInstanceServiceImpl
      * 从Kubernetes配置组获取角色名称
      */
     private String getKubernetesRole(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -265,7 +265,7 @@ public class ClusterServiceInstanceServiceImpl
      * 从Kubernetes配置组获取子组名称
      */
     private String getKubernetesSubgroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -376,7 +376,7 @@ public class ClusterServiceInstanceServiceImpl
                 if (parts.length >= 3) {
                     String role = parts[0];
                     String subgroup = parts[1];
-                    groupName = "kubernetes.config." + subgroup + "." + role;
+                    groupName = Constants.K8S_CONFIG_PREFIX + subgroup + "." + role;
                 } else {
                     // 如果键格式异常，使用configGroup
                     groupName = configA_item.getConfigGroup();
@@ -388,7 +388,7 @@ public class ClusterServiceInstanceServiceImpl
                 if (parts.length >= 3) {
                     String role = parts[0];
                     String subgroup = parts[1];
-                    groupName = "kubernetes.config." + subgroup + "." + role;
+                    groupName = Constants.K8S_CONFIG_PREFIX + subgroup + "." + role;
                 } else {
                     // 如果键格式异常，使用configGroup
                     groupName = configB_item.getConfigGroup();

@@ -82,7 +82,7 @@ public class K8sConfigureServiceHandler {
             logger.info("Start to configure service role {}", serviceRoleName);
             for (Generators generators : configFileMap.keySet()) {
                 List<ServiceConfig> configs = configFileMap.get(generators);
-                if (StrUtil.endWith(generators.getFilename(), Constants.K8S_CONFIG_SUFFIX)) {
+                if (StrUtil.startWith(generators.getFilename(), Constants.K8S_CONFIG_PREFIX)) {
                     continue;
                 }
 
@@ -197,19 +197,17 @@ public class K8sConfigureServiceHandler {
                         K8sFreeMakerUtils.generateConfigFile(
                                 generators,
                                 configs,
-                                serviceRoleName,
-                                path,
-                                kubeConfig);
+                                path
+                                );
                     } else {
                         K8sFreeMakerUtils.generateConfigFile(
                                 generators,
                                 configs,
-                                serviceRoleName,
-                                kubeConfig,serviceRoleFullName);
+                                serviceRoleName,serviceRoleFullName);
                     }
                 } else if (!generators.getFilename().endsWith(SH)) {
-                    String configMapName = generateConfigMapName(serviceRoleName,generators);
-                    createConfigMap(configMapName, "", kubeConfig, generators.getFilename(),serviceRoleFullName);
+                    String configMapName = generateConfigMapName(serviceRoleFullName,generators);
+                    K8sFreeMakerUtils.cacheConfigMap(configMapName, "", generators.getFilename(),serviceRoleFullName);
                 }
 
                 execResult.setExecOut("configure success");

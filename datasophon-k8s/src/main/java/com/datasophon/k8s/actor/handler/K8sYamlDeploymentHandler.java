@@ -146,7 +146,7 @@ public class K8sYamlDeploymentHandler {
     public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath,
                               boolean containsHost) {
 
-        String configMapName = generateConfigMapName(generators);
+        String configMapName = K8sFreeMakerUtils.generateConfigMapName(serviceRoleFullName,generators);
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
         configMapName = configMapName.replace('.', '-');
@@ -163,7 +163,7 @@ public class K8sYamlDeploymentHandler {
         fileConfig.setFileName(filename);
 
         // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
-        if (BooleanUtil.isFalse(StrUtil.endWith(filename, Constants.K8S_CONFIG_SUFFIX))) {
+        if (BooleanUtil.isFalse(StrUtil.startWith(filename, Constants.K8S_CONFIG_PREFIX))) {
             volumePathSet.add(fileConfig);
         }
     }
@@ -193,7 +193,11 @@ public class K8sYamlDeploymentHandler {
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome,
                     volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin,
                     logFile, commandType);
-
+            if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
+                // ZKFC作为NameNode Pod的Sidecar容器部署
+                logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不生成k8s yaml文件");
+                return execResult;
+            }
             Template template = generateTemplate();
 
             String yamlFilePath = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
@@ -305,6 +309,9 @@ public class K8sYamlDeploymentHandler {
         populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "journalnodeDir");
 
         populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "dfs_namenode_shared_edits_dir");
+
+        // 提取ZooKeeper地址
+        populateDataWithConfig(configFileMap, "ha.zookeeper.quorum", "zkQuorum");
 
         populateDataWithConfig(configFileMap, "dataDir", "dataDir");
 
@@ -468,21 +475,15 @@ public class K8sYamlDeploymentHandler {
                 CONFIG_CACHE.put(config.getName(), config);
 
                 // 处理Kubernetes配置，条件更具体
-                if (StrUtil.startWith(config.getConfigGroup(), "kubernetes.config.") &&
-                        config.getName().startsWith(rolePrefixPattern)) {
-                    // 移除前缀后，独立存储一份
-                    String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+                if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
                     k8sConfigMap.put(config.getName(), config.getValue());
-                    k8sConfigMap.put(keyWithoutPrefix, config.getValue());
+                    // 移除前缀后，独立存储一份
+                    if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
+                        String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+                        k8sConfigMap.put(keyWithoutPrefix, config.getValue());
+                    }
                 }
             }
         }
-    }
-
-    public String generateConfigMapName(Generators generators) {
-        if (serviceRoleName == null || generators == null) {
-            throw new IllegalArgumentException("serviceRoleName and generators must not be null");
-        }
-        return serviceRoleName.toLowerCase() + "-" + generators.getFilename();
     }
 }

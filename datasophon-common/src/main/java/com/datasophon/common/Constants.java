@@ -132,7 +132,7 @@ public final class Constants {
         public static final String K8S_CLUSTER_IP = "ClusterIp";
         public static final String K8S_NODE_PORT = "NodePort";
 
-        public static final String K8S_CONFIG_SUFFIX = ".k8s";
+        public static final String K8S_CONFIG_PREFIX = "kubernetes.config.";
 
         public static final String K8S_NODEPORT_MAPPING = "node_port_mappings";
         public static final String K8S_CLUSTERIP_MAPPING = "cluster_port_mappings";

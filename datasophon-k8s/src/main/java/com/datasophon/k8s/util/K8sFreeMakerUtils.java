@@ -18,12 +18,13 @@
 package com.datasophon.k8s.util;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.constants.Constant;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.FileTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
@@ -34,6 +35,8 @@ import freemarker.template.TemplateException;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -44,20 +47,29 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @UtilityClass
 @Slf4j
 public class K8sFreeMakerUtils {
 
+    @Getter
+    @Setter
+    private static Map<String, Map<String, ConfigMap>> configMapCache = new HashMap<>();
+
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
 
     public static void generateConfigFile(Generators generators,
-            List<ServiceConfig> configs,
-            String serviceRoleName,
-            String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
-        generateConfigFile(generators, configs, serviceRoleName, null, kubeConfig, serviceRoleFullName);
+                                          List<ServiceConfig> configs,
+                                           String serviceRoleFullName) throws IOException, TemplateException {
+        generateConfigFile(generators, configs, null, serviceRoleFullName);
     }
 
     /**
@@ -65,17 +77,14 @@ public class K8sFreeMakerUtils {
      *
      * @param generators      生成器对象，包含模板配置信息
      * @param configs         服务配置列表，包含需要渲染到模板中的配置项
-     * @param serviceRoleName 服务角色名称，用于生成ConfigMap名称
      * @param extPath         附加模板路径，用于加载额外的模板文件
      * @throws IOException       当模板加载或写入过程中发生I/O错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
 
     public static void generateConfigFile(Generators generators,
-            List<ServiceConfig> configs,
-            String serviceRoleName,
-            String extPath,
-            String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
+                                          List<ServiceConfig> configs,
+                                          String extPath, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
@@ -117,8 +126,8 @@ public class K8sFreeMakerUtils {
         logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
         data.put("itemList", configs);
         // 3.产生输出
-        String configMapName = generateConfigMapName(serviceRoleName, generators);
-        writeToConfigMap(template, data, configMapName, generators.getFilename(), kubeConfig, serviceRoleFullName);
+        String configMapName = generateConfigMapName(serviceRoleFullName, generators);
+        writeToConfigMap(template, data, configMapName, generators.getFilename(), serviceRoleFullName);
     }
 
     /**
@@ -156,7 +165,7 @@ public class K8sFreeMakerUtils {
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
     public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName,
-            String fileName, String kubeConfig, String serviceRoleFullName)
+                                        String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
         // 使用 StringWriter 合并模板和数据
         StringWriter stringWriter = new StringWriter();
@@ -167,7 +176,7 @@ public class K8sFreeMakerUtils {
         // 获取生成的内容
         String generatedContent = unixNewlineWriter.target.toString();
         // 将内容创建为 ConfigMap
-        createConfigMap(configMapName, generatedContent, kubeConfig, fileName, serviceRoleFullName);
+        cacheConfigMap(configMapName, generatedContent, fileName, serviceRoleFullName);
     }
 
     /**
@@ -176,46 +185,11 @@ public class K8sFreeMakerUtils {
      * @param configMapName    ConfigMap 的名称
      * @param generatedContent 渲染后的配置内容
      */
-    public static void createConfigMap(String configMapName, String generatedContent, String kubeConfig,
-            String fileName, String serviceRoleFullName) {
-        if (StrUtil.endWith(fileName, Constants.K8S_CONFIG_SUFFIX)) {
+    public static void cacheConfigMap(String configMapName, String generatedContent,
+                                      String fileName, String serviceRoleFullName) {
+        if (StrUtil.startWith(fileName, Constants.K8S_CONFIG_PREFIX)) {
             return;
         }
-        // 获取 Kubernetes 客户端
-        KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-
-        // 先检查是否存在同名ConfigMap，如果存在则删除
-        try {
-            ConfigMap existingConfigMap = client.configMaps()
-                    .inNamespace(Constant.K8S_NAMESPACE)
-                    .withName(configMapName)
-                    .get();
-
-            if (existingConfigMap != null) {
-                log.info("删除已存在的ConfigMap: {} 在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
-                boolean deleted = !client.configMaps()
-                        .inNamespace(Constant.K8S_NAMESPACE)
-                        .withName(configMapName)
-                        .delete()
-                        .isEmpty();
-
-                if (deleted) {
-                    log.info("成功删除ConfigMap: {}", configMapName);
-
-                    // 等待短暂时间确保删除操作完成
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                } else {
-                    log.warn("无法删除ConfigMap: {}, 将尝试覆盖", configMapName);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("检查/删除ConfigMap时出错: {}, 将继续创建新的ConfigMap", e.getMessage());
-        }
-
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
@@ -235,30 +209,44 @@ public class K8sFreeMakerUtils {
         // 将渲染后的内容加入到 ConfigMap 的 data 中
         configMap.setData(Collections.singletonMap(fileName, generatedContent));
 
-        // 保存ConfigMap YAML到本地
-        K8sServiceHandler.saveConfigMapYaml(configMap);
-
-        // 创建新的 ConfigMap
-        try {
-            // 使用 createOrReplace 创建或替换ConfigMap
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(configMap);
-            log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
-
-            // 添加彩色日志输出
-            ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.K8S_NAMESPACE);
-        } catch (Exception e) {
-            log.error("创建ConfigMap时出错: {}", e.getMessage());
-            ColorLogUtils.printError("创建ConfigMap " + configMapName + " 失败：" + e.getMessage());
-            throw new RuntimeException("创建ConfigMap时出错: " + e.getMessage());
+        Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
+        if (ObjectUtil.isNull(cache)) {
+            cache = new HashMap<>();
         }
+        cache.put(configMapName, configMap);
+        configMapCache.put(serviceRoleFullName, cache);
+    }
+
+    public static void createConfigMap(String serviceRoleFullName, KubernetesClient client) {
+        Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
+        Set<String> keySet = cache.keySet();
+        for (String configMapName : keySet) {
+            ConfigMap configMap = cache.get(configMapName);
+            // 保存ConfigMap YAML到本地
+            K8sServiceHandler.saveConfigMapYaml(configMap);
+            // 创建新的 ConfigMap
+            try {
+                // 使用 createOrReplace 创建或替换ConfigMap
+                client.configMaps().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(configMap);
+                log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
+
+                // 添加彩色日志输出
+                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.K8S_NAMESPACE);
+            } catch (Exception e) {
+                log.error("创建ConfigMap时出错: {}", e.getMessage());
+                ColorLogUtils.printError("创建ConfigMap " + configMapName + " 失败：" + e.getMessage());
+                throw new RuntimeException("创建ConfigMap时出错: " + e.getMessage());
+            }
+        }
+        configMapCache.remove(serviceRoleFullName);
     }
 
     // 获取或创建缓存客户端[8](@ref)
 
-    public static String generateConfigMapName(String serviceRoleName, Generators generators) {
-        if (serviceRoleName == null || generators == null) {
-            throw new IllegalArgumentException("serviceRoleName and generators must not be null");
+    public static String generateConfigMapName(String serviceRoleFullName, Generators generators) {
+        if (serviceRoleFullName == null || generators == null) {
+            throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
         }
-        return serviceRoleName.toLowerCase() + "-" + generators.getFilename().replace('.', '-');
+        return serviceRoleFullName.toLowerCase() + "-" + generators.getFilename().replace('.', '-');
     }
 }

@@ -13,6 +13,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.ColorLogUtils;
 import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.K8sFreeMakerUtils;
 import com.datasophon.k8s.util.KubeUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -614,7 +615,18 @@ public class K8sServiceHandler {
         } else {
             addProcessStatus();
             if (isFinalNode()) {
-                // 生成服务配置和创建共享PVC
+                if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
+                    // ZKFC作为NameNode Pod的Sidecar容器部署
+                    logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不创建资源");
+                    return;
+                }
+
+                // 确保ConfigMap在其他资源之前创建
+                logger.info("开始创建ConfigMap...");
+
+                handleConfigMap(client, serviceRoleFullName);
+
+                // 生成服务配置和创建服务
                 ArrayList<ServicePort> ServicePorts = generateSvcConfig(configFileMap);
                 handleNewSvc(ServicePorts, resourceKind, client);
 
@@ -625,6 +637,10 @@ public class K8sServiceHandler {
                 handleNewResource(client, yamlInputStream, resource);
             }
         }
+    }
+
+    private void handleConfigMap(KubernetesClient client, String serviceRoleFullName) {
+        K8sFreeMakerUtils.createConfigMap(serviceRoleFullName, client);
     }
 
     private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
@@ -653,9 +669,6 @@ public class K8sServiceHandler {
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
-        if (StrUtil.equalsIgnoreCase(serviceRoleFullName, "hdfs-namenode")) {
-            return;
-        }
         updateField(yamlData, "spec.replicas", replicas + 1);
 
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
@@ -757,9 +770,6 @@ public class K8sServiceHandler {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
-        if (StrUtil.equalsIgnoreCase(serviceRoleFullName, "hdfs-namenode")) {
-            return currentCount > 0;
-        }
         return currentCount.equals(nodeCount);
     }
 

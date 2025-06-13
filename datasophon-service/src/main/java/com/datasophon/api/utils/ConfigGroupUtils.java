@@ -13,6 +13,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import org.slf4j.Logger;
@@ -134,7 +135,7 @@ public class ConfigGroupUtils {
 
                 // 只处理K8S配置
                 String configGroup = paramJson.getString("configGroup");
-                if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+                if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
                     // 将JSON转为ServiceConfig对象
                     ServiceConfig config = paramJson.toJavaObject(ServiceConfig.class);
 
@@ -193,7 +194,7 @@ public class ConfigGroupUtils {
         // 4. 获取非K8S配置和端口配置
         for (ServiceConfig config : list) {
             // 只处理非K8S配置，K8S配置将使用从服务定义中获取的原始配置
-            if (config.getConfigGroup() == null || !config.getConfigGroup().startsWith("kubernetes.config.")) {
+            if (config.getConfigGroup() == null || !config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
                 // 检查是否有端口绑定相关的配置
                 if (config.getBindRole() != null && config.getPortNumber() != null) {
                     // 使用配置名称作为键，存储端口配置
@@ -212,7 +213,7 @@ public class ConfigGroupUtils {
             k8sConfigsByType = new HashMap<>();
             for (ServiceConfig config : list) {
                 String configGroup = config.getConfigGroup();
-                if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+                if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
                     String k8sConfigType = extractK8sConfigType(configGroup);
                     k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
                 }
@@ -242,7 +243,7 @@ public class ConfigGroupUtils {
                     copy.setConfigTargetRoles(roleName);
 
                     // 设置角色特定的configGroup
-                    copy.setConfigGroup("kubernetes.config." + k8sConfigType + "." + roleName);
+                    copy.setConfigGroup(Constants.K8S_CONFIG_PREFIX + k8sConfigType + "." + roleName);
 
                     // 添加角色前缀到name
                     addRolePrefixToName(copy, roleName);
@@ -426,7 +427,7 @@ public class ConfigGroupUtils {
                 String configTargetRoles = generator.getString("configTargetRoles");
 
                 // 检查是否有K8S相关的配置文件
-                if (filename != null && filename.toLowerCase().startsWith("kubernetes.config.")) {
+                if (filename != null && filename.toLowerCase().startsWith(Constants.K8S_CONFIG_PREFIX)) {
                     Set<String> roles = new HashSet<>();
                     // 解析角色列表
                     if (StrUtil.isNotBlank(configTargetRoles)) {
@@ -450,7 +451,7 @@ public class ConfigGroupUtils {
                     String configGroup = parameter.getString("configGroup");
 
                     // 如果configGroup以kubernetes.config.开头，查找对应的filename
-                    if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+                    if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
                         // 查找匹配的filename（就是configGroup完全一致的filename）
                         Set<String> roles = filenameToRolesMap.get(configGroup);
 
@@ -489,7 +490,7 @@ public class ConfigGroupUtils {
         Set<String> result = new HashSet<>();
 
         // 完整的configGroup
-        String fullConfigGroup = "kubernetes.config." + configType;
+        String fullConfigGroup = Constants.K8S_CONFIG_PREFIX + configType;
 
         // 1. 优先尝试完全匹配
         if (configFileToRolesMap.containsKey(fullConfigGroup)) {
@@ -546,12 +547,10 @@ public class ConfigGroupUtils {
     /**
      * 将配置项按配置组分组
      *
-     * @param serviceName 服务名称
      * @param list        配置项列表
      * @return 按配置组分组后的映射
      */
-    public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
-                                                                                   List<ServiceConfig> list) {
+    public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list) {
         // 先处理所有配置项的模板内容
         if (list != null) {
             for (ServiceConfig config : list) {
@@ -577,7 +576,7 @@ public class ConfigGroupUtils {
                 String groupKey = GENERAL;
 
                 // 处理kubernetes.config类型的配置组
-                if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith("kubernetes.config.")) {
+                if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
                     // 特殊处理kubernetes配置，使用完整的configGroup作为键
                     groupKey = configGroup;
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
@@ -677,7 +676,7 @@ public class ConfigGroupUtils {
      * @return 提取的角色名，如果无法提取则返回null
      */
     private static String extractRoleFromK8sConfigGroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -853,7 +852,7 @@ public class ConfigGroupUtils {
 
             for (ServiceConfig serviceConfig : originalConfigs) {
                 if (serviceConfig.getConfigGroup() != null
-                        && serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
+                        && serviceConfig.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
                     k8sConfigs.add(serviceConfig);
                 } else {
                     otherConfigs.add(serviceConfig);
@@ -929,7 +928,7 @@ public class ConfigGroupUtils {
                 ServiceConfig newConfig = ObjectUtil.cloneByStream(config);
 
                 // 设置角色特定的configGroup
-                newConfig.setConfigGroup("kubernetes.config." + k8sConfigType + "." + roleName);
+                newConfig.setConfigGroup(Constants.K8S_CONFIG_PREFIX + k8sConfigType + "." + roleName);
 
                 // 添加角色前缀到name
                 addRolePrefixToName(newConfig, roleName);
@@ -960,7 +959,7 @@ public class ConfigGroupUtils {
         for (JSONObject generatorJson : originalMap.keySet()) {
             Generators generator = generatorJson.toJavaObject(Generators.class);
             if (generator.getFilename() != null &&
-                    generator.getFilename().equals("kubernetes.config." + k8sConfigType)) {
+                    generator.getFilename().equals(Constants.K8S_CONFIG_PREFIX + k8sConfigType)) {
                 originalGenerator = generator;
                 break;
             }
@@ -1049,7 +1048,7 @@ public class ConfigGroupUtils {
         }
 
         // 如果配置组是Kubernetes相关的，添加角色前缀
-        if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
             String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
             return normRoleName + "_" + configName;

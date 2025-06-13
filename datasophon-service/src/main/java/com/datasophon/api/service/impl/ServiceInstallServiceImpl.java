@@ -178,7 +178,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
         }
 
-        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(serviceName,
+        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(
                 list);
         return Result.success(roleToConfigMap);
     }
@@ -210,7 +210,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
             // 处理Kubernetes配置项，添加角色前缀
             if (serviceConfig.getConfigGroup() != null
-                    && serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
+                    && serviceConfig.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
                 // 从配置组名称中提取角色名
                 String extractedRoleName = getKubernetesRole(serviceConfig.getConfigGroup());
                 if (extractedRoleName != null) {
@@ -898,7 +898,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      */
     private boolean isKubernetesConfig(ServiceConfig config) {
         return config != null && config.getConfigGroup() != null &&
-                config.getConfigGroup().startsWith("kubernetes.config.");
+                config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX);
     }
 
     /**
@@ -907,7 +907,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * "persistentVolumeClaims"
      */
     private String getKubernetesSubgroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -924,7 +924,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * "ZkServer"
      */
     private String getKubernetesRole(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -1110,47 +1110,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         return sb.toString();
-    }
-
-    /**
-     * 创建ServiceConfig的深拷贝
-     * 
-     * @param source 源配置对象
-     * @return 克隆的配置对象
-     */
-    private ServiceConfig cloneServiceConfig(ServiceConfig source) {
-        ServiceConfig target = new ServiceConfig();
-        // 复制基本字段
-        target.setName(source.getName());
-        target.setValue(source.getValue());
-        target.setLabel(source.getLabel());
-        target.setDescription(source.getDescription());
-        target.setRequired(source.isRequired());
-        target.setType(source.getType());
-        target.setConfigurableInWizard(source.isConfigurableInWizard());
-        target.setDefaultValue(source.getDefaultValue());
-        target.setMinValue(source.getMinValue());
-        target.setMaxValue(source.getMaxValue());
-        target.setUnit(source.getUnit());
-        target.setHidden(source.isHidden());
-        target.setSelectValue(source.getSelectValue() != null ? new ArrayList<>(source.getSelectValue()) : null);
-        target.setConfigType(source.getConfigType());
-        target.setConfigWithKerberos(source.isConfigWithKerberos());
-        target.setConfigWithRack(source.isConfigWithRack());
-        target.setConfigWithHA(source.isConfigWithHA());
-        target.setSeparator(source.getSeparator());
-        target.setOpen(source.getOpen());
-        target.setClose(source.getClose());
-        target.setConfigCategory(source.getConfigCategory());
-        target.setConfigGroup(source.getConfigGroup());
-        target.setConfigLevel(source.getConfigLevel());
-        target.setTemplateName(source.getTemplateName());
-        target.setTemplateContent(source.getTemplateContent());
-        target.setDisplayName(source.getDisplayName());
-        target.setHeightMultiple(source.getHeightMultiple());
-        target.setServiceName(source.getServiceName());
-        // configTargetRoles 需要在调用处单独设置
-        return target;
     }
 
 }
