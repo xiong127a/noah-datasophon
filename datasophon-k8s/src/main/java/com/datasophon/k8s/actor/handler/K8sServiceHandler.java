@@ -14,6 +14,7 @@ import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.ColorLogUtils;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.K8sFreeMakerUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import com.datasophon.k8s.util.KubeUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -54,6 +55,7 @@ import static com.datasophon.common.Constants.K8S_NODEPORT_MAPPING;
 import static com.datasophon.common.Constants.K8S_NODE_PORT;
 import static com.datasophon.common.Constants.K8S_SVC_CONF;
 import static com.datasophon.common.Constants.STATEFULSET;
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
 public class K8sServiceHandler {
@@ -70,6 +72,32 @@ public class K8sServiceHandler {
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
+    }
+
+    // 保存ConfigMap的YAML配置到本地文件
+    public static void saveConfigMapYaml(ConfigMap configMap) {
+        try {
+            // 创建保存目录，使用Paths.get正确处理路径拼接
+            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "configmaps");
+            File dir = dirPath.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成文件名，使用Paths.get拼接路径
+            Path filePath = Paths.get(dirPath.toString(),
+                    configMap.getMetadata().getName() + ".yaml");
+
+            // 使用K8s客户端序列化为YAML
+            String yamlContent = KubeUtil.getKubernetesYaml(configMap);
+
+            // 写入文件
+            Files.write(filePath, yamlContent.getBytes());
+
+            LoggerFactory.getLogger(K8sServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
+        } catch (Exception e) {
+            LoggerFactory.getLogger(K8sServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
+        }
     }
 
     // 更新指定字段的值
@@ -113,8 +141,14 @@ public class K8sServiceHandler {
         execResult.setExecResult(true);
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
+        if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
+            String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl apply -f " + yamlFile);
+            execResult.setExecResult(!s.equals(Constants.FAILED));
+            logger.info("start operator: {}", s);
+            return execResult;
+        }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+             InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
 
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
@@ -353,11 +387,6 @@ public class K8sServiceHandler {
      * @return 找到的配置，未找到时返回null
      */
     private ServiceConfig findServiceConfig(List<ServiceConfig> configs, String configName) {
-        if (configs == null || configs.isEmpty()) {
-            return null;
-        }
-
-        // 直接遍历查找匹配的配置
         for (ServiceConfig config : configs) {
             if (configName.equals(config.getName())) {
                 return config;
@@ -397,7 +426,7 @@ public class K8sServiceHandler {
 
     /**
      * 处理服务创建
-     * 
+     *
      * @param servicePorts 服务端口列表
      * @param kind         资源类型
      * @param client       Kubernetes客户端
@@ -590,7 +619,7 @@ public class K8sServiceHandler {
 
     /**
      * 统一执行服务创建
-     * 
+     *
      * @param client  Kubernetes客户端
      * @param service 要创建的服务
      */
@@ -772,8 +801,14 @@ public class K8sServiceHandler {
             return execResult;
         } else {
             logger.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
+            if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
+                String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl delete -f " + yamlFile);
+                logger.info("stop operator: {}", s);
+                execResult.setExecResult(true);
+                return execResult;
+            }
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-                    FileInputStream fis = new FileInputStream(yamlFileObj)) {
+                 FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
                         .inNamespace(Constant.K8S_NAMESPACE)
                         .delete();
@@ -812,8 +847,7 @@ public class K8sServiceHandler {
     private void saveServiceYaml(Service service, String serviceType) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "k8sDep",
-                    "servers");
+            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "servers");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
                 dir.mkdirs();

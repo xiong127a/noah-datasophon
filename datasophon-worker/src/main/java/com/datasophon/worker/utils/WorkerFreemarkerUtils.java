@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 /**
  * Worker扩展版Freemarker工具类
@@ -42,7 +43,8 @@ public class WorkerFreemarkerUtils {
     private static final Logger logger = LoggerFactory.getLogger(WorkerFreemarkerUtils.class);
 
     // Master主机地址
-    private static final String MASTER_HOST = PropertyUtils.getString("masterHost", "localhost");
+    private static final String MASTER_HOST = PropertyUtils.getString(GetMasterHost().get(0), "localhost");
+
 
     /**
      * 设置ActorSystem实例，在Worker启动时调用

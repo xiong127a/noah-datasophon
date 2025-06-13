@@ -1,6 +1,7 @@
 package com.datasophon.k8s.util;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
@@ -16,14 +17,13 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.fabric8.kubernetes.client.dsl.ScalableResource;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,13 +31,15 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class K8sUtil {
 
-    public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, String hostname,
-            List<String> commands) {
+
+
+    public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, String hostname, List<String> commands) {
         List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
         ExecResult execResult = new ExecResult();
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
@@ -65,7 +67,8 @@ public class K8sUtil {
                             .withName(podName)
                             .writingOutput(outputStream)
                             .writingError(errorStream)
-                            .exec(commands.toArray(new String[0]))) {
+                            .exec(commands.toArray(new String[0]))
+                    ) {
                         int exitCode = exec.exitCode().get();
                         String out = IoUtil.toStr(outputStream, Charset.defaultCharset());
                         String error = IoUtil.toStr(errorStream, Charset.defaultCharset());
@@ -96,8 +99,8 @@ public class K8sUtil {
         return execResult;
     }
 
-    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname,
-            String cmd) {
+
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname, String cmd) {
         List<String> commands = handlerCommand(cmd);
 
         // 调用公共的 executeCommand 方法
@@ -109,8 +112,7 @@ public class K8sUtil {
         return Arrays.asList("sh", "-c", cmd);
     }
 
-    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname,
-            ExecuteCmdCommand cmdCommand) {
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname, ExecuteCmdCommand cmdCommand) {
         // 获取 ExecuteCmdCommand 中的命令列表
         List<String> commands = cmdCommand.getCommands();
         if (CollUtil.isNotEmpty(commands)) {
@@ -126,21 +128,21 @@ public class K8sUtil {
         return executeCommand(namespace, client, image, hostname, commands);
     }
 
-    public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig,
-            ExecuteCmdCommand cmdCommand) {
+
+    public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig, ExecuteCmdCommand cmdCommand) {
         KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(kubeConfig);
         return runCmd(Constants.DATASOPHON,
                 kubeClient,
                 (roleInstanceEntity.getServiceName() + "-" + roleInstanceEntity.getServiceRoleName()).toLowerCase(),
                 roleInstanceEntity.getHostname(),
-                cmdCommand);
+                cmdCommand
+        );
     }
 
-    public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts,
-            String image, String cmd, String hostname) throws Exception {
+    public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname) throws Exception {
         // delete job
         log.debug("delete job if need ,job name: " + name);
-        client.batch().v1().jobs()
+        List<StatusDetails> statusDetailsList = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();
@@ -154,12 +156,13 @@ public class K8sUtil {
         // 提交一个新的 Job
         submitJob(namespace, name, client, volumeMounts, image, cmd, hostname);
 
+
         long waitPodTimeout = 300; // Timeout in seconds
         long waitPodStartTime = System.currentTimeMillis();
 
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
-        String podName;
-        podName = waitForCreatePodOfJob(namespace, name, client, waitPodStartTime, waitPodTimeout);
+        String podName = "";
+        podName = waitForCreatePodOfJob(namespace, name, client, podName, waitPodStartTime, waitPodTimeout);
         log.debug("Pod name: " + podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
@@ -195,21 +198,21 @@ public class K8sUtil {
                 }
             }
 
+
         };
 
         // 使用 LogWatch 输出 Pod 的运行日志，直到 Job 完成
-        try (Watch ignored = client.batch().v1().jobs()
+        try (Watch watch = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
-                .watch(watcher);
-                LogWatch logWatch = client.pods()
-                        .inNamespace(namespace)
-                        .withName(podName)
-                        .watchLog()) {
+                .watch(watcher); LogWatch logWatch = client.pods()
+                .inNamespace(namespace)
+                .withName(podName)
+                .watchLog()) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    log.info("p> " + line); // You can replace this with your desired logging mechanism
+                    log.info("p> " + line);  // You can replace this with your desired logging mechanism
                 }
             } catch (IOException e) {
                 log.error(e.getMessage(), e);
@@ -234,21 +237,17 @@ public class K8sUtil {
         }
     }
 
-    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client,
-                                                long waitPodStartTime, long waitPodTimeout) {
+    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client, String podName, long waitPodStartTime, long waitPodTimeout) {
         // 循环等待创建pod成功
-        String podName;
         while (true) {
             // 需要考虑，有可能pod还没创建出来
-            // 正在创建也不行
-            // {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"container
-            // \"init\" in pod \"init-flinkdir-hdfs-6c9r5\" is waiting to start:
-            // ContainerCreating","reason":"BadRequest","code":400}
+            //  正在创建也不行 {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"container \"init\" in pod \"init-flinkdir-hdfs-6c9r5\" is waiting to start: ContainerCreating","reason":"BadRequest","code":400}
             // Get the pod name associated with the job
             List<Pod> pods = client.pods()
                     .inNamespace(namespace)
                     .withLabel("job-name", jobName)
                     .list().getItems();
+
 
             if (!pods.isEmpty()) {
                 Pod pod = pods.get(0);
@@ -262,6 +261,7 @@ public class K8sUtil {
                     break;
                 }
             }
+
 
             // Check timeout
             long elapsedTime = System.currentTimeMillis() - waitPodStartTime;
@@ -279,8 +279,8 @@ public class K8sUtil {
         return podName;
     }
 
-    private static void waitForDeleteJob(String namespace, String jobName, KubernetesClient client, long timeout,
-            long startTime) {
+    private static void waitForDeleteJob(String namespace, String jobName, KubernetesClient client, long timeout, long startTime) {
+
 
         // 循环等待删除成功
         while (true) {
@@ -299,6 +299,7 @@ public class K8sUtil {
                 return;
             }
 
+
             // Check timeout
             long elapsedTime = System.currentTimeMillis() - startTime;
             if (TimeUnit.MILLISECONDS.toSeconds(elapsedTime) > timeout) {
@@ -314,51 +315,32 @@ public class K8sUtil {
         }
     }
 
-    private static void submitJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts,
-            String image, String cmd, String hostname) {
-        List<Volume> volumeList = Arrays.stream(volumeMounts).map(volumeMount -> {
-            // 判断是否是ConfigMap类型
-            if (volumeMount.getVolumeName().startsWith("configmap-")) {
-                // ConfigMap类型的卷，此时hostPath字段存储ConfigMap名称
-                String configMapName = volumeMount.getHostPath();
-                return new VolumeBuilder()
-                        .withName(volumeMount.getVolumeName())
-                        .withConfigMap(new ConfigMapVolumeSourceBuilder()
-                                .withName(configMapName)
-                                .build())
-                        .build();
-            } else {
-                // 原有的HostPath类型
+    private static void submitJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname) {
+        List<Volume> volumeList = Arrays.stream(volumeMounts).map(new Function<VolumeMountDTO, Volume>() {
+            @Override
+            public Volume apply(VolumeMountDTO volumeMount) {
+                // 1. 定义 HostPathVolumeSource
                 HostPathVolumeSource hostPathVolume = new HostPathVolumeSourceBuilder()
                         .withPath(volumeMount.getHostPath())
                         .build();
 
                 return new VolumeBuilder()
                         .withName(volumeMount.getVolumeName())
-                        .withHostPath(hostPathVolume) // 本地目录
+                        .withHostPath(hostPathVolume) //本地目录
                         .build();
             }
         }).collect(Collectors.toList());
 
-        List<VolumeMount> mountList = Arrays.stream(volumeMounts).map(volumeMountDTO -> {
-            String volumeName = volumeMountDTO.getVolumeName();
-            if (volumeName.startsWith("configmap-")) {
-                // 对于ConfigMap类型的卷，需要设置subPath为文件名
-                String containerPath = volumeMountDTO.getContainerPath();
-                String fileName = containerPath.substring(containerPath.lastIndexOf("/") + 1);
-                return new VolumeMountBuilder()
-                        .withName(volumeName)
-                        .withMountPath(containerPath)
-                        .withSubPath(fileName) // 使用文件名作为subPath
-                        .build();
-            } else {
-                // 原有的普通卷挂载
+        List<VolumeMount> mountList = Arrays.stream(volumeMounts).map(new Function<VolumeMountDTO, VolumeMount>() {
+            @Override
+            public VolumeMount apply(VolumeMountDTO volumeMountDTO) {
                 return new VolumeMountBuilder()
                         .withName(volumeMountDTO.getVolumeName())
                         .withMountPath(volumeMountDTO.getContainerPath())
                         .build();
             }
         }).collect(Collectors.toList());
+
 
         Container container = new ContainerBuilder()
                 .withName("init")
@@ -387,9 +369,103 @@ public class K8sUtil {
         client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .resource(job).create();
-
-        // 添加彩色日志输出
-        ColorLogUtils.printResourceCreated("Job", name, namespace);
     }
 
+    /**
+     * 上传文件到指定 Pod 容器中。
+     *
+     * @param client     KubernetesClient 实例
+     * @param namespace  Pod 所在的命名空间
+     * @param image 指定的 Deployment 名称
+     * @param hostname   Pod 所在的 hostname
+     * @param localFilePath 本地文件路径
+     * @param remoteFilePath 远程文件路径
+     * @return 上传结果
+     */
+    public static boolean uploadFileToPod(KubernetesClient client, String namespace, String image, String hostname, String localFilePath, String remoteFilePath) {
+        try {
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
+            Pod targetPod = null;
+
+            for (Pod pod : pods) {
+                if (pod.getStatus().getHostIP().equals(hostname)) {
+                    targetPod = pod;
+                    break;
+                }
+            }
+
+            if (targetPod == null) {
+                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for image " + image);
+            }
+
+            String podName = targetPod.getMetadata().getName();
+            log.debug("Uploading file to Pod: " + podName + " on host: " + hostname);
+
+            // 读取本地文件
+            byte[] fileContent = FileUtil.readBytes(localFilePath);
+
+            // 上传文件到 Pod
+            client.pods().inNamespace(namespace).withName(podName)
+                    .file(remoteFilePath)
+                    .upload(new ByteArrayInputStream(fileContent));
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("File upload failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * 获取可伸缩资源（StatefulSet）
+     * @param client Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @return 可伸缩资源对象
+     */
+    public static ScalableResource<?> getScalableResource(KubernetesClient client,
+                                                          String namespace,
+                                                          String statefulSetName) {
+        return client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(statefulSetName);
+    }
+
+    /**
+     * 统一伸缩 StatefulSet 方法
+     * @param client Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @param replicas 目标副本数
+     */
+    public static void scaleStatefulSet(KubernetesClient client,
+                                        String namespace,
+                                        String statefulSetName,
+                                        int replicas) {
+        getScalableResource(client, namespace, statefulSetName).scale(replicas);
+    }
+
+    /**
+     * 统一伸缩 StatefulSet 方法（增加定时伸缩策略参数）
+     * @param kubeConfig Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @param replicas 目标副本数
+     * @param schedulePolicy 定时策略描述（新增参数）
+     */
+    public static void scaleStatefulSet(String kubeConfig,
+                                        String namespace,
+                                        String statefulSetName,
+                                        int replicas,
+                                        String schedulePolicy) {
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            ScalableResource<?> resource = getScalableResource(client, namespace, statefulSetName);
+            if (resource != null) {
+                log.info("Scaling {} to {} replicas with policy: {}", statefulSetName, replicas, schedulePolicy);
+                resource.scale(replicas);
+            }
+        }
+
+    }
 }

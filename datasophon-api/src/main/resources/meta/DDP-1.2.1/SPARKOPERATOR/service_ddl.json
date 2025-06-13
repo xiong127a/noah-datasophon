@@ -1,0 +1,27 @@
+{
+  "name": "SparkOperator",
+  "label": "SparkOperator",
+  "description": "Spark Kubernetes Operator",
+  "version": "1.2.14",
+  "sortNum": 48,
+  "dependencies":[],
+  "packageName": "spark-operator-1.2.14.tar.gz",
+  "decompressPackageName": "spark-operator",
+  "runAs":"root",
+  "roles": [
+    {
+      "name": "SparkOperator",
+      "label": "SparkOperator",
+      "roleType": "master",
+      "sortNum": 1,
+      "cardinality": "1",
+      "logFile": "logs/spark.log"
+    }
+  ],
+  "configWriter": {
+    "generators": [
+    ]
+  },
+  "parameters": [
+  ]
+}
