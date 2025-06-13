@@ -1,4 +1,4 @@
-package com.datasophon.api.utils;
+package com.datasophon.common.utils;
 
 import cn.hutool.core.io.FileUtil;
 import lombok.experimental.UtilityClass;

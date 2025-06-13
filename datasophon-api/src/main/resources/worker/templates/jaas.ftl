@@ -4,7 +4,7 @@ Server {
  keyTab="/etc/security/keytab/zkserver.service.keytab"
  storeKey=true
  useTicketCache=false
- principal="zookeeper/${hostname}@${zkRealm}";
+ principal="zookeeper/${host}@${zkRealm}";
 };
 Client {
  com.sun.security.auth.module.Krb5LoginModule required

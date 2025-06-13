@@ -24,7 +24,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.TemplatePathUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ConnectionInfo;

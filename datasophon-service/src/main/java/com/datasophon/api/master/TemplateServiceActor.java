@@ -18,7 +18,7 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
-import com.datasophon.api.utils.TemplatePathUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.model.TemplateRequestMessage;
 import com.datasophon.common.model.TemplateResponseMessage;
 import lombok.extern.slf4j.Slf4j;
