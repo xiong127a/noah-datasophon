@@ -46,6 +46,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
@@ -72,7 +80,7 @@ spec:
               ${startCommand}
           readinessProbe:
             tcpSocket:
-              port: 8485
+              port: 8188
             failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -81,34 +89,36 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
+            - name: timelineserver-data
+              mountPath: /yarn-timeline-data
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
             </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
-            - mountPath: "/data/tmp/hadoop"
-              name: "hadooptmp"
+            - name: "timezone"
+              mountPath: "/etc/localtime"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list itemList as item>
-        - hostPath:
-            path: "${item.value}"
-          name: "${item.name}"
+        - name: timelineserver-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
         </#list>
-        - hostPath:
+        - name: "timezone"
+          hostPath:
             path: "/etc/localtime"
-          name: "timezone"
-        - hostPath:
-            path: "/data/tmp/hadoop"
-          name: "hadooptmp"

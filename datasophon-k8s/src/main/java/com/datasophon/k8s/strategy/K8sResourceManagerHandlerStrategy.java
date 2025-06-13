@@ -7,9 +7,11 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.common.model.ServiceConfig;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
 public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -18,9 +20,11 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
     }
 
     @Override
-    public ExecResult handler(K8sServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException, IOException {
+    public ExecResult handler(K8sServiceRoleOperateCommand command)
+            throws SQLException, ClassNotFoundException, IOException {
         ExecResult startResult = new ExecResult();
-        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         String hostname = command.getHostname();
         String jobCmd = "";
@@ -35,9 +39,170 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
             // 存在 tez 则创建软连接
             final String tezHomePath = Constants.INSTALL_PATH + Constants.SLASH + "tez";
             if (K8sMinaUtils.checkPathExists(hostname, tezHomePath)) {
-                K8sMinaUtils.execCmdWithResult(hostname, "ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath + "/etc/hadoop/tez-site.xml");
+                K8sMinaUtils.execCmdWithResult(hostname,
+                        "ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath + "/etc/hadoop/tez-site.xml");
             }
         }
         return serviceHandler.start(command);
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        if (list == null || list.isEmpty()) {
+            logger.warn("配置列表为空，无法更新服务配置");
+            return;
+        }
+
+        logger.info("开始更新YARN ResourceManager配置，适配Kubernetes服务...");
+
+        // 定义服务名常量
+        final String RESOURCEMANAGER_SERVICE = "yarn-resourcemanager";
+        final String HISTORYSERVER_SERVICE = "yarn-historyserver";
+        final String TIMELINESERVER_SERVICE = "yarn-timelineserver";
+        final String NODEMANAGER_SERVICE = "yarn-nodemanager";
+        final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
+        // 命名空间
+        final String NAMESPACE = "datasophon";
+        // 集群域名后缀
+        final String CLUSTER_DOMAIN = "svc.cluster.local";
+
+        // 遍历所有配置
+        for (ServiceConfig config : list) {
+            String name = config.getName();
+            Object value = config.getValue();
+
+            // 处理ResourceManager HA相关配置
+            switch (name) {
+                case "yarn.resourcemanager.hostname.rm1": {
+                    // ResourceManager1 地址使用完整的FQDN格式
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN;
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.hostname.rm2": {
+                    // ResourceManager2 地址使用完整的FQDN格式
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN;
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.webapp.address.rm1": {
+                    // ResourceManager1 Web地址使用完整的FQDN格式
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8088";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.webapp.address.rm2": {
+                    // ResourceManager2 Web地址使用完整的FQDN格式
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8088";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.scheduler.address.rm1": {
+                    // ResourceManager1 调度器地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8030";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.scheduler.address.rm2": {
+                    // ResourceManager2 调度器地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8030";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.resource-tracker.address.rm1": {
+                    // ResourceManager1 资源跟踪地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8031";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.resource-tracker.address.rm2": {
+                    // ResourceManager2 资源跟踪地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8031";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.admin.address.rm1": {
+                    // ResourceManager1 管理地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8033";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.admin.address.rm2": {
+                    // ResourceManager2 管理地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8033";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.zk-address": {
+                    // ZooKeeper地址列表
+                    StringBuilder zkServers = new StringBuilder();
+                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                        if (i > 0) {
+                            zkServers.append(",");
+                        }
+                        zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
+                                .append(".").append(ZOOKEEPER_SERVICE).append(".")
+                                .append(NAMESPACE).append(".")
+                                .append(CLUSTER_DOMAIN).append(":2181");
+                    }
+                    config.setValue(zkServers.toString());
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.log.server.url": {
+                    // HistoryServer日志服务URL
+                    String newValue = "http://" + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":19888/jobhistory/logs";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.timeline-service.hostname": {
+                    // TimelineServer主机名
+                    String newValue = TIMELINESERVER_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN;
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.webapp.https.address.rm1": {
+                    // ResourceManager1 HTTPS Web地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8090";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "yarn.resourcemanager.webapp.https.address.rm2": {
+                    // ResourceManager2 HTTPS Web地址
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":8090";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+            }
+        }
+
+        logger.info("YARN ResourceManager配置更新完成，已适配Kubernetes服务，所有服务地址均使用完整FQDN格式");
     }
 }

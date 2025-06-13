@@ -38,6 +38,32 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: set-permissions
+          image: "${dockerBusyboxImage}"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting permissions for HistoryServer PVC mount path..."
+              chmod -R 777 ${mount_path}
+              echo "Permissions set successfully"
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+          volumeMounts:
+            - name: historyserver-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -46,6 +72,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
@@ -72,7 +106,7 @@ spec:
               ${startCommand}
           readinessProbe:
             tcpSocket:
-              port: 8485
+              port: 19888
             failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -81,18 +115,17 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
+            - name: historyserver-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -104,15 +137,13 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: historyserver-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:

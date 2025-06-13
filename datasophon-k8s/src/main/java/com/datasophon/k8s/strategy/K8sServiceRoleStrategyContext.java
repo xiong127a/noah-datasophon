@@ -49,6 +49,7 @@ public class K8sServiceRoleStrategyContext {
         //TODO 添加其他组件
         map.put("ZOOKEEPER", new K8sZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
         map.put("HDFS", new K8sNameNodeHandlerStrategy("HDFS", "NameNode"));
+        map.put("YARN", new K8sResourceManagerHandlerStrategy("YARN", "ResourceManager"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

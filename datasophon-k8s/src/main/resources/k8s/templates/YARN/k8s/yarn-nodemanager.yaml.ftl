@@ -1,20 +1,16 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -25,6 +21,7 @@ spec:
         podConflictName: "${serviceRoleFullName}"
       annotations:
         serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
       affinity:
         podAntiAffinity:
@@ -38,6 +35,35 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: set-permissions
+          image: "${dockerBusyboxImage}"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting permissions for NodeManager PVC mount path..."
+              mkdir -p ${mount_path}/nm
+              mkdir -p ${mount_path}/nm/userlogs
+              mkdir -p ${mount_path}/mapred/local
+              chmod -R 777 ${mount_path}
+              echo "Permissions set successfully"
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+          volumeMounts:
+            - name: nodemanager-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -46,6 +72,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
@@ -75,7 +109,7 @@ spec:
               ${startCommand}
           readinessProbe:
             tcpSocket:
-              port: 8485
+              port: 45454
             failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -84,18 +118,26 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
+            - name: nodemanager-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            - name: nodemanager-data
+              mountPath: /data/nm
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/nm
+            - name: nodemanager-data
+              mountPath: /data/nm/userlogs
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/nm/userlogs
+            - name: nodemanager-data
+              mountPath: /data/mapred/local
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/mapred/local
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -107,15 +149,13 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: nodemanager-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:
