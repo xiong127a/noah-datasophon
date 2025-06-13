@@ -42,7 +42,8 @@ public class K8sInstallServiceHandler {
     public ExecResult install(InstallServiceRoleCommand command) throws IOException {
         ExecResult execResult = new ExecResult();
         try {
-            execResult.setExecResult(createConfDir(command.getDecompressPackageName(), command.getRunAs(), command.getHostName()));
+//            execResult.setExecResult(createConfDir(command.getDecompressPackageName(), command.getRunAs(), command.getHostName()));
+            execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecOut(e.getMessage());
             e.printStackTrace();

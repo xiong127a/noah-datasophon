@@ -106,7 +106,7 @@ public class K8sConfigureServiceHandler {
                         }
                     }
                     if (Constants.PATH.equals(config.getConfigType())) {
-                        createPath(config, runAs, hostName);
+//                        createPath(config, runAs, hostName);
                     }
                     if (Constants.MV_PATH.equals(config.getConfigType())) {
                         movePath(config, runAs, hostName);
@@ -191,20 +191,20 @@ public class K8sConfigureServiceHandler {
                 if (!configs.isEmpty()) {
                     // extra app, package: META, templates
                     String path = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/templates";
-                    if (K8sMinaUtils.checkPathExists(hostName, path) && K8sMinaUtils.isDirectory(hostName, path)) {
-                        // 3rd app, load ext templates
-                        logger.info("Add ext app template path: {} to loader path.", path);
-                        K8sFreeMakerUtils.generateConfigFile(
-                                generators,
-                                configs,
-                                path
-                                );
-                    } else {
+//                    if (K8sMinaUtils.checkPathExists(hostName, path) && K8sMinaUtils.isDirectory(hostName, path)) {
+//                        // 3rd app, load ext templates
+//                        logger.info("Add ext app template path: {} to loader path.", path);
+//                        K8sFreeMakerUtils.generateConfigFile(
+//                                generators,
+//                                configs,
+//                                path
+//                                );
+//                    } else {
                         K8sFreeMakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 serviceRoleName,serviceRoleFullName);
-                    }
+//                    }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String configMapName = generateConfigMapName(serviceRoleFullName,generators);
                     K8sFreeMakerUtils.cacheConfigMap(configMapName, "", generators.getFilename(),serviceRoleFullName);

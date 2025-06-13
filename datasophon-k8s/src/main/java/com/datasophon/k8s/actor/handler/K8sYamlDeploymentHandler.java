@@ -81,9 +81,9 @@ public class K8sYamlDeploymentHandler {
                 logStr = appHome + Constants.SLASH + logFileName;
             }
 
-            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
-                K8sMinaUtils.checkParentPath(hostname, logStr);
-            }
+//            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+//                K8sMinaUtils.checkParentPath(hostname, logStr);
+//            }
 
             List<String> needService = Arrays.asList("TRINO", "PRESTO", "NEBULAGRAPH");
 
@@ -95,8 +95,8 @@ public class K8sYamlDeploymentHandler {
                 K8sMinaUtils.createFile(hostname, logStr);
             }
 
-            K8sMinaUtils.execCmdWithResult(hostname,
-                    String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
+//            K8sMinaUtils.execCmdWithResult(hostname,
+//                    String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
             addConfigFile(volumePathSet, "logs", logStr);
         } catch (Exception e) {
             logger.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
