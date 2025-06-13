@@ -1,7 +1,6 @@
 package com.datasophon.k8s.util;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
@@ -17,13 +16,15 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
-import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.dsl.ScalableResource;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -142,7 +142,7 @@ public class K8sUtil {
     public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname) throws Exception {
         // delete job
         log.debug("delete job if need ,job name: " + name);
-        List<StatusDetails> statusDetailsList = client.batch().v1().jobs()
+        client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();
@@ -161,8 +161,8 @@ public class K8sUtil {
         long waitPodStartTime = System.currentTimeMillis();
 
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
-        String podName = "";
-        podName = waitForCreatePodOfJob(namespace, name, client, podName, waitPodStartTime, waitPodTimeout);
+        String podName;
+        podName = waitForCreatePodOfJob(namespace, name, client, waitPodStartTime, waitPodTimeout);
         log.debug("Pod name: " + podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
@@ -202,7 +202,7 @@ public class K8sUtil {
         };
 
         // 使用 LogWatch 输出 Pod 的运行日志，直到 Job 完成
-        try (Watch watch = client.batch().v1().jobs()
+        try (Watch ignored = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
                 .watch(watcher); LogWatch logWatch = client.pods()
@@ -237,8 +237,9 @@ public class K8sUtil {
         }
     }
 
-    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client, String podName, long waitPodStartTime, long waitPodTimeout) {
+    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client, long waitPodStartTime, long waitPodTimeout) {
         // 循环等待创建pod成功
+        String podName;
         while (true) {
             // 需要考虑，有可能pod还没创建出来
             //  正在创建也不行 {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"container \"init\" in pod \"init-flinkdir-hdfs-6c9r5\" is waiting to start: ContainerCreating","reason":"BadRequest","code":400}
@@ -316,30 +317,22 @@ public class K8sUtil {
     }
 
     private static void submitJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname) {
-        List<Volume> volumeList = Arrays.stream(volumeMounts).map(new Function<VolumeMountDTO, Volume>() {
-            @Override
-            public Volume apply(VolumeMountDTO volumeMount) {
-                // 1. 定义 HostPathVolumeSource
-                HostPathVolumeSource hostPathVolume = new HostPathVolumeSourceBuilder()
-                        .withPath(volumeMount.getHostPath())
-                        .build();
+        List<Volume> volumeList = Arrays.stream(volumeMounts).map(volumeMount -> {
+            // 1. 定义 HostPathVolumeSource
+            HostPathVolumeSource hostPathVolume = new HostPathVolumeSourceBuilder()
+                    .withPath(volumeMount.getHostPath())
+                    .build();
 
-                return new VolumeBuilder()
-                        .withName(volumeMount.getVolumeName())
-                        .withHostPath(hostPathVolume) //本地目录
-                        .build();
-            }
+            return new VolumeBuilder()
+                    .withName(volumeMount.getVolumeName())
+                    .withHostPath(hostPathVolume) //本地目录
+                    .build();
         }).collect(Collectors.toList());
 
-        List<VolumeMount> mountList = Arrays.stream(volumeMounts).map(new Function<VolumeMountDTO, VolumeMount>() {
-            @Override
-            public VolumeMount apply(VolumeMountDTO volumeMountDTO) {
-                return new VolumeMountBuilder()
-                        .withName(volumeMountDTO.getVolumeName())
-                        .withMountPath(volumeMountDTO.getContainerPath())
-                        .build();
-            }
-        }).collect(Collectors.toList());
+        List<VolumeMount> mountList = Arrays.stream(volumeMounts).map(volumeMountDTO -> new VolumeMountBuilder()
+                .withName(volumeMountDTO.getVolumeName())
+                .withMountPath(volumeMountDTO.getContainerPath())
+                .build()).collect(Collectors.toList());
 
 
         Container container = new ContainerBuilder()
@@ -372,52 +365,6 @@ public class K8sUtil {
     }
 
     /**
-     * 上传文件到指定 Pod 容器中。
-     *
-     * @param client     KubernetesClient 实例
-     * @param namespace  Pod 所在的命名空间
-     * @param image 指定的 Deployment 名称
-     * @param hostname   Pod 所在的 hostname
-     * @param localFilePath 本地文件路径
-     * @param remoteFilePath 远程文件路径
-     * @return 上传结果
-     */
-    public static boolean uploadFileToPod(KubernetesClient client, String namespace, String image, String hostname, String localFilePath, String remoteFilePath) {
-        try {
-            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
-            Pod targetPod = null;
-
-            for (Pod pod : pods) {
-                if (pod.getStatus().getHostIP().equals(hostname)) {
-                    targetPod = pod;
-                    break;
-                }
-            }
-
-            if (targetPod == null) {
-                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for image " + image);
-            }
-
-            String podName = targetPod.getMetadata().getName();
-            log.debug("Uploading file to Pod: " + podName + " on host: " + hostname);
-
-            // 读取本地文件
-            byte[] fileContent = FileUtil.readBytes(localFilePath);
-
-            // 上传文件到 Pod
-            client.pods().inNamespace(namespace).withName(podName)
-                    .file(remoteFilePath)
-                    .upload(new ByteArrayInputStream(fileContent));
-
-            return true;
-
-        } catch (Exception e) {
-            log.error("File upload failed", e);
-            return false;
-        }
-    }
-
-    /**
      * 获取可伸缩资源（StatefulSet）
      * @param client Kubernetes客户端
      * @param namespace 命名空间
@@ -430,20 +377,6 @@ public class K8sUtil {
         return client.apps().statefulSets()
                 .inNamespace(namespace)
                 .withName(statefulSetName);
-    }
-
-    /**
-     * 统一伸缩 StatefulSet 方法
-     * @param client Kubernetes客户端
-     * @param namespace 命名空间
-     * @param statefulSetName StatefulSet名称
-     * @param replicas 目标副本数
-     */
-    public static void scaleStatefulSet(KubernetesClient client,
-                                        String namespace,
-                                        String statefulSetName,
-                                        int replicas) {
-        getScalableResource(client, namespace, statefulSetName).scale(replicas);
     }
 
     /**
