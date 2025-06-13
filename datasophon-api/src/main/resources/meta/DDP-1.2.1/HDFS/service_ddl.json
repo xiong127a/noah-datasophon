@@ -352,7 +352,7 @@
         "filename": "kubernetes.config.persistent-volume-claims",
         "fileDescription": "HDFS Kubernetes存储配置，定义持久卷存储类和挂载路径",
         "configFormat": "properties",
-        "configTargetRoles": "NameNode,DataNode,JournalNode,ZKFC,HttpFs",
+        "configTargetRoles": "NameNode,DataNode,JournalNode,HttpFs",
         "outputDirectory": "",
         "includeParams": [
           "storage_classes",
@@ -364,7 +364,7 @@
         "filename": "kubernetes.config.services",
         "fileDescription": "HDFS Kubernetes网络服务配置，定义端口",
         "configFormat": "properties",
-        "configTargetRoles": "NameNode,DataNode,JournalNode,ZKFC,HttpFs",
+        "configTargetRoles": "NameNode,DataNode,JournalNode,HttpFs",
         "outputDirectory": "",
         "includeParams": [
           "node_port_mappings",
@@ -375,7 +375,7 @@
         "filename": "kubernetes.config.resources",
         "fileDescription": "cpu、memory系统资源",
         "configFormat": "properties",
-        "configTargetRoles": "NameNode,DataNode,JournalNode,ZKFC,HttpFs",
+        "configTargetRoles": "NameNode,DataNode,JournalNode,HttpFs",
         "outputDirectory": "",
         "includeParams": [
           "requests_memory",

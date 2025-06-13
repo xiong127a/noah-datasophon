@@ -685,13 +685,13 @@ spec:
               
               # 启动ZKFC服务
               echo -e "$BLUE$INFO 启动ZKFC服务...$NC"
-              ${zkfc_0_startCommand}
+              su ${runAsUser} -c "${appHome}/control_hadoop.sh start zkfc && tail -f ${appHome}/logs/hadoop-hdfs-zkfc-$(hostname).log"
           readinessProbe:
             exec:
               command:
                 - "/bin/bash"
                 - "-c"
-                - "${zkfc_0_statusCommand}"
+                - "su ${runAsUser} -c '${appHome}/control_hadoop.sh status zkfc'"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -700,11 +700,11 @@ spec:
           name: "zkfc"
           resources:
             requests:
-              memory: ${zkfc_requests_memory}
-              cpu: ${zkfc_requests_cpu}
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: ${zkfc_limits_memory}
-              cpu: ${zkfc_limits_cpu}
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
