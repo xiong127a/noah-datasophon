@@ -39,26 +39,6 @@
 datasophon-k8s/src/main/java/com/datasophon/k8s/strategy/K8s[组件名]HandlerStrategy.java
 ```
 
-#### 修正内容
-1. **Kerberos日志信息修正**
-   - 确保日志中显示正确的组件名称
-   - 示例：将"hive keytab"修正为"kafka keytab"
-
-2. **Keytab文件处理**
-   - 验证keytab文件路径正确性
-   - 确保下载逻辑符合组件要求
-
-#### 代码示例
-```java
-if (command.getEnableKerberos()) {
-    logger.info("start to get [组件名] keytab file");
-    String hostname = command.getHostname();
-    K8sKerberosUtils.createKeytabDir(hostname);
-    if (!K8sMinaUtils.checkPathExists(hostname,"/etc/security/keytab/[组件名].service.keytab")) {
-        K8sKerberosUtils.downloadKeytabFromMaster(hostname,"[组件名]/" + hostname, "[组件名].service.keytab");
-    }
-}
-```
 
 ### 2. K8S参数完全对标HDFS
 
