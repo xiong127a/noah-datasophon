@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 public class K8sUtil {
 
 
-
     public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, String hostname, List<String> commands) {
         List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
         ExecResult execResult = new ExecResult();
@@ -366,8 +365,9 @@ public class K8sUtil {
 
     /**
      * 获取可伸缩资源（StatefulSet）
-     * @param client Kubernetes客户端
-     * @param namespace 命名空间
+     *
+     * @param client          Kubernetes客户端
+     * @param namespace       命名空间
      * @param statefulSetName StatefulSet名称
      * @return 可伸缩资源对象
      */
@@ -381,11 +381,12 @@ public class K8sUtil {
 
     /**
      * 统一伸缩 StatefulSet 方法（增加定时伸缩策略参数）
-     * @param kubeConfig Kubernetes客户端
-     * @param namespace 命名空间
+     *
+     * @param kubeConfig      Kubernetes客户端
+     * @param namespace       命名空间
      * @param statefulSetName StatefulSet名称
-     * @param replicas 目标副本数
-     * @param schedulePolicy 定时策略描述（新增参数）
+     * @param replicas        目标副本数
+     * @param schedulePolicy  定时策略描述（新增参数）
      */
     public static void scaleStatefulSet(String kubeConfig,
                                         String namespace,
@@ -401,4 +402,90 @@ public class K8sUtil {
         }
 
     }
+
+    /**
+     * 读取容器日志（返回值改为ExecResult类型）
+     *
+     * @param namespace 命名空间
+     * @param client    Kubernetes客户端
+     * @param image     应用标签
+     * @param hostname  节点主机名
+     * @param tailLines 日志行数
+     * @return ExecResult 包含执行状态和日志内容
+     */
+    public static ExecResult getContainerLog(String namespace,
+                                         KubernetesClient client,
+                                         String image,
+                                         String hostname,
+                                         int tailLines) {
+        //long startTime = System.currentTimeMillis();
+        //log.info("Getting container log - namespace: {}, image: {}, hostname: {}, tailLines: {}",
+                //namespace, image, hostname, tailLines);
+        
+        ExecResult execResult = new ExecResult();  // 创建返回对象
+        try {
+            // 通过标签和节点名定位Pod
+            List<Pod> pods = client.pods()
+                    .inNamespace(namespace)
+                    .withLabel("app", image)
+                    .list()
+                    .getItems();
+            
+            log.debug("Found {} pods with label 'app={}'", pods.size(), image);
+
+            // 过滤出指定节点上的Pod
+            Pod targetPod = null;
+            for (Pod pod : pods) {
+                if (pod.getSpec() != null &&
+                        hostname.equals(pod.getSpec().getNodeName())) {
+                    targetPod = pod;
+                    break;
+                }
+            }
+
+            if (targetPod == null) {
+                String errorMsg = "No pod found for image: " + image + " on host: " + hostname;
+                log.warn(errorMsg);
+                // 设置失败状态和错误信息
+                execResult.setExecResult(false);
+                execResult.setExecOut(errorMsg);
+                return execResult;
+            }
+
+            String podName = targetPod.getMetadata().getName();
+            //log.debug("Target pod found: {} on node {}", podName, hostname);
+
+            // 获取日志内容
+            int actualLines = tailLines >= 0 ? tailLines : Integer.MAX_VALUE;
+            //log.debug("Fetching {} lines of log from pod: {}, container: {}", actualLines, podName, image);
+            
+            String logContent = client.pods()
+                    .inNamespace(namespace)
+                    .withName(podName)
+                    .inContainer(image)
+                    .tailingLines(actualLines)
+                    .getLog();
+            
+            log.info("Successfully got {} lines of log from pod: {}", 
+                    actualLines == Integer.MAX_VALUE ? "all" : actualLines, podName);
+            execResult.setExecResult(true);  // 标记执行成功
+            execResult.setExecOut(logContent);  // 日志内容存入execOut
+            return execResult;
+        } catch (Exception e) {
+            String errorMsg = String.format(
+                    "Get container log error - namespace: %s, image: %s, hostname: %s",
+                    namespace, image, hostname);
+            log.error(errorMsg, e);
+            // 设置异常状态和错误详情
+            execResult.setExecResult(false);
+            execResult.setExecOut(errorMsg + ": " + e.getMessage());
+            return execResult;
+        } finally {
+            //long duration = System.currentTimeMillis() - startTime;
+            //log.debug("getContainerLog executed in {} ms", duration);
+        }
+    }
+
+
+
 }

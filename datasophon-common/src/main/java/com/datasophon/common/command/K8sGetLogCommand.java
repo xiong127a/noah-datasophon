@@ -30,4 +30,7 @@ public class K8sGetLogCommand implements Serializable {
 
     private String hostname;
 
+    private String kubeConfig;
+
+    private String serviceRoleFullName;
 }

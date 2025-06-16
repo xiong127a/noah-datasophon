@@ -25,6 +25,9 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,31 +43,24 @@ public class K8sLogActor extends UntypedActor {
         if (msg instanceof K8sGetLogCommand) {
             logger.info("get query log command");
             K8sGetLogCommand command = (K8sGetLogCommand) msg;
-            HashMap<String, String> paramMap = new HashMap<>();
-            paramMap.put("${user}", "root");
-            paramMap.put("${hostname}", "$(hostname)");
-            String logFileName =
-                    PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap, Constants.REGEX_VARIABLE);
 
-            ExecResult execResult = new ExecResult();
-            String logStr = "can not find log file";
-            try {
-                if (logFileName.startsWith(StrUtil.SLASH) && K8sMinaUtils.checkPathExists(command.getHostname(), logFileName)) {
-                    logStr = K8sMinaUtils.readLastRows(command.getHostname(), logFileName, Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-                } else if (K8sMinaUtils.checkPathExists(command.getHostname(),
-                        Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + Constants.SLASH + logFileName)) {
-                    logStr = K8sMinaUtils
-                            .readLastRows(command.getHostname(),
-                                    Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + Constants.SLASH + logFileName,
-                                    Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-                }
+            ExecResult logResult = new ExecResult();
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+                logResult = K8sUtil.getContainerLog(
+                        Constants.DATASOPHON,
+                        kubeClient,
+                        command.getServiceRoleFullName(),
+                        command.getHostname(),
+                        PropertyUtils.getInt("rows")
+                );
+                getSender().tell(logResult, getSelf());
             } catch (Exception e) {
-                logger.error("get log error");
+                logger.error("Get container log error: ", e);
+                logResult.setExecResult(false);
+                logResult.setExecErrOut("Failed to get container log: " + e.getMessage());
+                getSender().tell(logResult, getSelf());
             }
 
-            execResult.setExecResult(true);
-            execResult.setExecOut(logStr);
-            getSender().tell(execResult, getSelf());
         } else {
             unhandled(msg);
         }
