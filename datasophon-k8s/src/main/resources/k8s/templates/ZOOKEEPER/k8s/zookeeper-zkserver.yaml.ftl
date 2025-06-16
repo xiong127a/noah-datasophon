@@ -36,14 +36,14 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: ZOO_DATA_DIR
-              value: ${dataDir}
+              value: ${zk_data_dir}
           command:
             - /bin/sh
             - -c
             - |-
-              mkdir -p ${dataDir}
+              mkdir -p ${zk_data_dir}
               MY_ID=${r"${HOSTNAME##*-}"}
-              echo $((MY_ID + 1)) > ${dataDir}/myid
+              echo $((MY_ID + 1)) > ${zk_data_dir}/myid
           volumeMounts:
             - name: nfs-pvc
               mountPath: ${mount_path}
@@ -71,7 +71,7 @@ spec:
             - name: ZOOCFGDIR
               value: "/opt/datasophon/zookeeper-3.5.10/conf"
             - name: ZOO_DATA_DIR
-              value: ${dataDir}
+              value: ${zk_data_dir}
             - name: USER
               value: ${runAsUser}
             - name: MEM_LIMIT
