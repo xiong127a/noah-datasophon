@@ -147,6 +147,12 @@ public class K8sServiceHandler {
             logger.info("start operator: {}", s);
             return execResult;
         }
+
+        if(StrUtil.equalsIgnoreCase(serviceRoleFullName,"hdfs-zkfc")){
+            execResult.setExecResult(true);
+            logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不加载k8s yaml文件");
+            return execResult;
+        }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
              InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
 
