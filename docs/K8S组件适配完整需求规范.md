@@ -617,6 +617,35 @@ initContainers:
 - **资源配置**: 不能有默认值，必须参数化
 - **初始化容器**: 根据依赖关系添加相应检查
 
+## Kafka适配经验教训
+
+在Kafka组件的K8S适配过程中，我们总结了以下关键经验和注意事项，这些可以帮助后续组件适配更加顺利：
+
+### 1. 参数配置一致性
+- **标签文本必须精确一致**：Kafka最初使用了"K8S存储类"等标签，与HDFS的"存储类名称"不一致，这需要严格对照HDFS进行修正
+- **描述文本不可简化**：Kafka最初的描述文本过于简化，缺少了HDFS中包含的详细说明和最佳实践建议
+- **默认值格式统一**：资源配置的默认值必须与HDFS保持相同格式，如"2"而非"2Gi"
+
+### 2. unit字段的重要性
+- **单位分离原则**：Kafka最初将单位合并在value中（如"2Gi"），正确做法是将数值和单位分开，由程序合成
+- **处理单位的规则**：K8sYamlDeploymentHandler.java中会自动将value和unit拼接，无需在参数中预先拼接
+- **常见错误**：存储大小、内存请求值、内存限制值是最容易出现unit字段问题的参数
+
+### 3. configLevel字段缺失问题
+- **必需的配置级别**：Kafka最初缺少了configLevel="advanced"字段，这会影响UI展示和配置分类
+- **保持完整性**：确保每个K8S参数都包含configCategory、configGroup和configLevel字段
+
+### 4. FreeMarker模板中的变量处理
+- **带点变量的特殊处理**：对于带点的配置名（如log.dirs），需要在K8sYamlDeploymentHandler.java中通过populateDataWithConfig方法进行特殊处理
+- **变量命名转换**：将log.dirs转换为kafka_log_dirs，以便在FreeMarker模板中正确引用
+
+### 5. 模板文件问题
+- **StatefulSet vs Deployment**：对于有状态服务如Kafka，应使用StatefulSet而非Deployment
+- **PVC配置替代hostPath**：必须使用PVC持久卷配置替代hostPath方式，以支持K8S的动态存储分配
+- **初始化容器的实现**：对于需要特殊初始化的组件，必须添加适当的初始化容器
+
+这些经验教训为后续组件的K8S适配提供了重要参考。严格遵循这些规范，将大大减少适配过程中的问题和错误。
+
 ## 验证清单
 
 ### 配置文件验证
