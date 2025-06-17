@@ -289,10 +289,10 @@ public class K8sYamlDeploymentHandler {
         }
         data.put("startCommand",
                 startRunner != null
-                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail --retry -f %s'", runAs.getUser(),
+                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail -F -f %s'", runAs.getUser(),
                                 appHome,
                                 startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
-                        : "tail --retry -f " + logFilePath);
+                        : "tail -F -f " + logFilePath);
         data.put("statusCommand",
                 statusRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome,
