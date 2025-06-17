@@ -55,6 +55,7 @@ import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.k8s.actor.K8sLogActor;
+import com.datasophon.k8s.util.CommonUtil;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,7 +199,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             logger.info("logFile is {}", logFile);
         }
         logger.info("start to get {} log from {}", serviceRole.getServiceRoleName(), roleInstance.getHostname());
-
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstance.getClusterId());
         Future<Object> logFuture;
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
         if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
@@ -206,6 +207,8 @@ public class ClusterServiceRoleInstanceServiceImpl
             k8sCommand.setLogFile(logFile);
             k8sCommand.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
             k8sCommand.setHostname(roleInstance.getHostname());
+            k8sCommand.setKubeConfig(kubeConfig);
+            k8sCommand.setServiceRoleFullName(CommonUtil.generateServiceRoleFullName(roleInstance.getServiceName(), roleInstance.getServiceRoleName()));
             ActorRef k8sLog =
                     ActorUtils.getLocalActor(K8sLogActor.class, ActorUtils.getActorRefName(K8sLogActor.class));
             logFuture = Patterns.ask(k8sLog, k8sCommand, timeout);
