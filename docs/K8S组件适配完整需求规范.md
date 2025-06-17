@@ -273,16 +273,36 @@ datasophon-api/src/main/resources/meta/DDP-1.2.1/[组件名]/service_ddl.json
 
 - **角色参数分组**:
   - `configGroup="[角色名]"`: 如"KafkaBroker"、"NameNode"等
+  - **重要规则**: 角色名必须是在`roles`数组中定义的有效角色名
 
 - **文件参数分组**:
   - `configGroup="[配置文件名]"`: 如"server"、"core-site"等
+  - **重要规则**: 配置文件名必须是在`configWriter.generators`数组中定义的有效文件名（不含扩展名）
 
 #### 4.3 配置级别（configLevel）
 - `configLevel="advanced"`: 高级配置
 - `configLevel="custom"`: 自定义配置
 
+#### 4.4 配置分组映射规则
+为确保配置参数的正确分组，必须遵循以下映射规则：
+
+1. **如果`configCategory="file"`**:
+   - `configGroup`必须是`configWriter.generators`数组中定义的有效文件名
+   - 例如：如果参数属于"server.properties"文件，则`configGroup`应为"server"
+
+2. **如果`configCategory="role"`**:
+   - `configGroup`必须是`roles`数组中定义的有效角色名
+   - 例如：如果参数与"KafkaBroker"角色相关，则`configGroup`应为"KafkaBroker"
+
+3. **如果`configCategory="k8s"`**:
+   - `configGroup`必须是以下三种之一：
+     - `kubernetes.config.persistent-volume-claims`
+     - `kubernetes.config.services`
+     - `kubernetes.config.resources`
+
 #### 配置分组示例
 ```json
+// 文件配置示例
 {
   "name": "num.partitions",
   "label": "默认分区数",
@@ -294,6 +314,58 @@ datasophon-api/src/main/resources/meta/DDP-1.2.1/[组件名]/service_ddl.json
   "configurableInWizard": true,
   "hidden": false,
   "defaultValue": "3",
+  "configCategory": "file",
+  "configGroup": "server",
+  "configLevel": "advanced"
+}
+
+// 角色配置示例
+{
+  "name": "kafkaHeapSize",
+  "label": "Kafka堆内存大小",
+  "description": "Kafka Broker进程的JVM堆内存大小",
+  "configType": "map",
+  "required": true,
+  "type": "input",
+  "value": "6",
+  "unit": "GB",
+  "configurableInWizard": true,
+  "hidden": false,
+  "defaultValue": "6",
+  "configCategory": "role",
+  "configGroup": "KafkaBroker",
+  "configLevel": "advanced"
+}
+
+// K8S配置示例
+{
+  "name": "requests_memory",
+  "label": "内存请求值",
+  "description": "容器启动时保证分配的最小内存量",
+  "configType": "k8s",
+  "required": false,
+  "type": "input",
+  "value": "2",
+  "unit": "Gi",
+  "configurableInWizard": true,
+  "hidden": false,
+  "defaultValue": "2",
+  "configCategory": "k8s",
+  "configGroup": "kubernetes.config.resources",
+  "configLevel": "advanced"
+}
+
+// 安全相关配置示例（注意configCategory仍为"file"）
+{
+  "name": "enableKerberos",
+  "label": "开启Kerberos认证",
+  "description": "开启Kerberos认证",
+  "required": false,
+  "type": "switch",
+  "value": false,
+  "configurableInWizard": true,
+  "hidden": false,
+  "defaultValue": false,
   "configCategory": "file",
   "configGroup": "server",
   "configLevel": "advanced"
