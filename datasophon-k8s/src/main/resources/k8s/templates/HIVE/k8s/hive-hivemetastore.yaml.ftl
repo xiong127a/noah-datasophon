@@ -1,17 +1,19 @@
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: "apps/v1"
+kind: "StatefulSet"
 metadata:
-  name: ${serviceRoleFullName}
-  namespace: ${namespace}
   labels:
-    app: ${serviceRoleFullName}
+    name: "${serviceRoleFullName}"
+  name: "${serviceRoleFullName}"
+  namespace: ${namespace}
 spec:
-  serviceName: ${serviceRoleFullName}
+  serviceName: "${serviceRoleFullName}"
+  replicas: ${roleNodeCnt}
   podManagementPolicy: Parallel
-  replicas: ${replicas}
   selector:
     matchLabels:
-      app: ${serviceRoleFullName}
+      app: "${serviceRoleFullName}"
+  minReadySeconds: 5
+  revisionHistoryLimit: 10
   template:
     metadata:
       labels:
@@ -56,7 +58,7 @@ spec:
               
               # 循环等待，最多等待300秒
               for i in $(seq 1 60); do
-                (echo > /dev/tcp/$HOST/$PORT) >/dev/null 2>&1
+                nc -z -w 3 $HOST $PORT >/dev/null 2>&1
                 if [ $? -eq 0 ]; then
                   echo -e "$GREEN$CHECK_MARK $HOST:$PORT 连接成功!$NC"
                   break

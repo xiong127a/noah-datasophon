@@ -1,17 +1,19 @@
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: "apps/v1"
+kind: "StatefulSet"
 metadata:
-  name: ${serviceRoleFullName}
-  namespace: ${namespace}
   labels:
-    app: ${serviceRoleFullName}
+    name: "${serviceRoleFullName}"
+  name: "${serviceRoleFullName}"
+  namespace: ${namespace}
 spec:
-  podManagementPolicy: Parallel
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: ${serviceRoleFullName}
-  serviceName: ${serviceRoleFullName}
+      app: "${serviceRoleFullName}"
+  minReadySeconds: 5
+  revisionHistoryLimit: 10
   template:
     metadata:
       labels:

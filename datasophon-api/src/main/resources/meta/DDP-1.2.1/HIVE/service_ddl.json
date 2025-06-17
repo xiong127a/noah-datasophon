@@ -238,8 +238,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "com.mysql.jdbc.Driver",
-      "configCategory": "file",
-      "configGroup": "hive-site",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
     },
     {
@@ -252,8 +252,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "hive",
-      "configCategory": "file",
-      "configGroup": "hive-site",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
     },
     {
@@ -266,8 +266,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "hive",
-      "configCategory": "file",
-      "configGroup": "hive-site",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
     },
     {
@@ -280,8 +280,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "jdbc:mysql://${apiHost}:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
-      "configCategory": "file",
-      "configGroup": "hive-site",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
     },
     {
@@ -514,7 +514,10 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "yarn",
-      "selectValue" : ["local", "classic", "yarn"]
+      "selectValue" : ["local", "classic", "yarn"],
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.execution.engine",
@@ -526,7 +529,10 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "mr",
-      "selectValue" : ["mr", "tez", "spark"]
+      "selectValue" : ["mr", "tez", "spark"],
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.tez.container.size",
@@ -539,7 +545,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": 1024
+      "defaultValue": 1024,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.files.umask.value",
@@ -550,7 +559,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "0002"
+      "defaultValue": "0002",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.tez.wm.am.registry.timeout",
@@ -563,7 +575,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": 30000
+      "defaultValue": 30000,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "tez.lib.uris",
@@ -574,7 +589,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${fs.defaultFS}/user/tez/tez.tar.gz"
+      "defaultValue": "${fs.defaultFS}/user/tez/tez.tar.gz",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.mapfiles",
@@ -586,7 +604,10 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.mapredfiles",
@@ -598,7 +619,10 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.size.per.task",
@@ -610,7 +634,10 @@
       "value": "268435456",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "268435456"
+      "defaultValue": "268435456",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.smallfiles.avgsize",
@@ -622,7 +649,10 @@
       "value": "104857600",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "104857600"
+      "defaultValue": "104857600",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.exec.submit.local.task.via.child",
@@ -634,7 +664,10 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "iceberg.engine.hive.enabled",
@@ -646,7 +679,10 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.authentication",
@@ -868,8 +904,8 @@
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": "${HADOOP_HOME}",
-      "configCategory": "role",
-      "configGroup": "HiveMetaStore",
+      "configCategory": "file",
+      "configGroup": "hive-env",
       "configLevel": "advanced"
     },
     {
@@ -930,7 +966,7 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "",
+      "defaultValue": [],
       "configCategory": "file",
       "configGroup": "hive-site",
       "configLevel": "custom"
@@ -960,7 +996,10 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.client.socket.timeout",
@@ -972,7 +1011,10 @@
       "value": "30000",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "30000"
+      "defaultValue": "30000",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.stats.autogather",
