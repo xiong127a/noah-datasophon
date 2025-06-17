@@ -58,17 +58,17 @@ spec:
               chmod -R 777 ${mount_path}
               
               # 2. 准备NameNode数据目录
-              echo "目标数据目录: ${namenodeDir}"
-              mkdir -p ${namenodeDir}
+              echo "目标数据目录: ${nn_name_dir}"
+              mkdir -p ${nn_name_dir}
               
               # 3. 设置权限
               echo "设置目录权限和所有权..."
-              chmod -R 777 ${namenodeDir}
-              chown -R ${runAsUser}:${runAsGroup} ${namenodeDir}  # 使用变量代替硬编码的用户和组
+              chmod -R 777 ${nn_name_dir}
+              chown -R ${runAsUser}:${runAsGroup} ${nn_name_dir}  # 使用变量代替硬编码的用户和组
               
               # 4. 验证
               echo "验证目录和权限:"
-              ls -la ${namenodeDir}
+              ls -la ${nn_name_dir}
               
               echo "========== 完成数据目录和权限设置 =========="
           securityContext:
@@ -610,7 +610,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: NAMENODE_DATA_DIR
-              value: ${namenodeDir}
+              value: ${nn_name_dir}
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           ports:

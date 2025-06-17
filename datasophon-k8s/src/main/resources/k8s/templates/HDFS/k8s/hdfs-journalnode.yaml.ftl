@@ -123,9 +123,9 @@ spec:
                 echo "Kerberos is not enabled. Skipping Kerberos setup.";
               fi
               # 如果JournalNode目录不在持久卷中，则创建
-              if [ ! -d ${journalnodeDir} ]; then
-                mkdir -p ${journalnodeDir}
-                chown -R ${runAsUser}:${runAsGroup} ${journalnodeDir}
+              if [ ! -d ${jn_node_dir} ]; then
+                mkdir -p ${jn_node_dir}
+                chown -R ${runAsUser}:${runAsGroup} ${jn_node_dir}
               fi
               ${startCommand}
           readinessProbe:

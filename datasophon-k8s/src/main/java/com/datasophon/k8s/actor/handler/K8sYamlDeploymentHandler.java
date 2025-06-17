@@ -311,7 +311,7 @@ public class K8sYamlDeploymentHandler {
             populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
             populateDataWithConfig(configFileMap, "dfs.namenode.checkpoint.dir", "snn_checkpoint_dir");
             populateDataWithConfig(configFileMap, "dfs.datanode.data.dir", "dn_data_dir");
-            populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "journalnodeDir");
+            populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "jn_node_dir");
             populateDataWithConfig(configFileMap, "ha.zookeeper.quorum", "zkQuorum");
         }
         if ("KAFKA".equals(serviceName)) {
