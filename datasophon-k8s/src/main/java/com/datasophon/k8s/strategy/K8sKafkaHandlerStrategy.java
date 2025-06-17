@@ -57,7 +57,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
         logger.info("开始更新Kafka配置，适配Kubernetes服务...");
 
         // 处理Kafka NodePort特殊绑定
-        processNodePortMappings(clusterId,list);
+        processNodePortMappings(clusterId, list);
 
         // 定义服务名常量
         final String KAFKA_EFAK_SERVICE = "kafka-efak";
@@ -116,6 +116,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
 
                     // 使用NodePort方式暴露给外部客户端访问
                     // 格式为 K8S宿主机IP:NodePort，这里使用占位符，将在Pod启动时替换为实际IP
+                    // 保留9092端口，在Pod启动时会根据实际NodePort进行替换
                     String newValue = protocol + "://${hostname}:9092";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());

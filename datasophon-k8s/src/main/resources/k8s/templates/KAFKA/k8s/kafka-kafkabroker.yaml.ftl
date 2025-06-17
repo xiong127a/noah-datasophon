@@ -287,7 +287,17 @@ spec:
                 
                 # 替换占位符并复制到目标位置
                 echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 替换配置文件中的占位符...$<#noparse>NC</#noparse>"
-                cat "$<#noparse>TMP_CONF_FILE</#noparse>" | sed "s/\$<#noparse>(hostname)</#noparse>/$<#noparse>NODE_IP</#noparse>/g" | sed "s/:9092/:$<#noparse>SELECTED_PORT</#noparse>/g" > "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                # 先复制原始文件
+                cat "$<#noparse>TMP_CONF_FILE</#noparse>" > "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                
+                # 替换hostname
+                sed -i "s/\$<#noparse>(hostname)</#noparse>/$<#noparse>NODE_IP</#noparse>/g" "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                
+                # 只替换advertised.listeners中的端口
+                if grep -q "advertised.listeners" "$<#noparse>TARGET_CONF_FILE</#noparse>"; then
+                  echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 替换advertised.listeners中的端口...$<#noparse>NC</#noparse>"
+                  sed -i "s/\(advertised.listeners=.*\):9092/\1:$<#noparse>SELECTED_PORT</#noparse>/g" "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                fi
                 
                 # 检查advertised.listeners是否存在，如果不存在则添加
                 if ! grep -q "advertised.listeners" "$<#noparse>TARGET_CONF_FILE</#noparse>"; then

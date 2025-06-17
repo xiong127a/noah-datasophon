@@ -189,22 +189,12 @@ public class K8sAbstractHandlerStrategy {
                         config.setValue(resultArray);
                         logger.info("生成节点端口映射: {} -> {}", config.getName(), resultArray.toString());
                     } else {
-                        // 如果没有成功解析任何端口映射，使用默认值
-                        JSONArray defaultArray = new JSONArray();
-                        JSONObject defaultMapping = new JSONObject();
-                        defaultMapping.set("9092", generatePortMappings(baseNodePort, nodeCount));
-                        defaultArray.add(defaultMapping);
-
-                        config.setValue(defaultArray);
-                        logger.info("未能解析任何有效的端口映射，使用默认值: {} -> {}",
-                                config.getName(), defaultArray.toString());
+                        // 如果没有成功解析任何端口映射，保留原始配置
+                        logger.info("未能解析任何有效的端口映射，保留原始配置: {}", config.getName());
                     }
                     break;
                 } catch (Exception e) {
-                    logger.warn("解析配置[{}]的端口映射失败，使用默认值: {}", config.getName(), baseNodePort, e);
-                    String defaultMappings = generatePortMappings(baseNodePort, nodeCount);
-                    config.setValue(defaultMappings);
-                    logger.info("使用默认端口映射: {} -> {}", config.getName(), defaultMappings);
+                    logger.warn("解析配置[{}]的端口映射失败，保留原始配置", config.getName(), e);
                 }
             }
         }
