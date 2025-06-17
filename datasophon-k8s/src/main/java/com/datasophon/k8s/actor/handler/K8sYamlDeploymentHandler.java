@@ -22,7 +22,6 @@ import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.DockerImageUtils;
 import com.datasophon.k8s.util.K8sFreeMakerUtils;
-import com.datasophon.k8s.util.K8sMinaUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -92,7 +91,7 @@ public class K8sYamlDeploymentHandler {
                 int lastSlashIndex = logStr.lastIndexOf('/');
                 logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
             } else {
-                K8sMinaUtils.createFile(hostname, logStr);
+                // K8sMinaUtils.createFile(hostname, logStr);
             }
 
             // K8sMinaUtils.execCmdWithResult(hostname,
@@ -290,9 +289,10 @@ public class K8sYamlDeploymentHandler {
         }
         data.put("startCommand",
                 startRunner != null
-                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f %s'", runAs.getUser(), appHome,
+                        ? String.format("su - %s -c 'cd %s && sh %s %s && tail --retry -f %s'", runAs.getUser(),
+                                appHome,
                                 startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
-                        : "tail -f " + logFilePath);
+                        : "tail --retry -f " + logFilePath);
         data.put("statusCommand",
                 statusRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome,
@@ -305,20 +305,25 @@ public class K8sYamlDeploymentHandler {
             loadConfigToCache(configFileMap, serviceRoleName);
         }
 
-        // 获取 journalNodeDir 和 nameNodeDir
-        populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "namenodeDir");
-
-        populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "journalnodeDir");
-
-        populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "dfs_namenode_shared_edits_dir");
-
-        // 提取ZooKeeper地址
-        populateDataWithConfig(configFileMap, "ha.zookeeper.quorum", "zkQuorum");
-
-        // 提取YARN ResourceManager的ZooKeeper地址
-        populateDataWithConfig(configFileMap, "yarn.resourcemanager.zk-address", "yarn_resourcemanager_zk_address");
-
-        populateDataWithConfig(configFileMap, "dataDir", "dataDir");
+        // 处理有点的参数
+        if ("HDFS".equals(serviceName)) {
+            populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "nn_name_dir");
+            populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
+            populateDataWithConfig(configFileMap, "dfs.namenode.checkpoint.dir", "snn_checkpoint_dir");
+            populateDataWithConfig(configFileMap, "dfs.datanode.data.dir", "dn_data_dir");
+            populateDataWithConfig(configFileMap, "ha.zookeeper.quorum", "zkQuorum");
+        }
+        if ("KAFKA".equals(serviceName)) {
+            populateDataWithConfig(configFileMap, "log.dirs", "kafka_log_dirs");
+            populateDataWithConfig(configFileMap, "zookeeper.connect", "zookeeper_connect");
+            populateDataWithConfig(configFileMap, "cluster1.zk.list", "cluster1ZkList");
+        }
+        if ("YARN".equals(serviceName)) {
+            populateDataWithConfig(configFileMap, "yarn.resourcemanager.zk-address", "yarn_resourcemanager_zk_address");
+        }
+        if ("ZOOKEEPER".equals(serviceName)) {
+            populateDataWithConfig(configFileMap, "dataDir", "zk_data_dir");
+        }
 
         data.putAll(k8sConfigMap);
         CONFIG_CACHE.clear();
@@ -400,6 +405,56 @@ public class K8sYamlDeploymentHandler {
             addConfigFile(volumePathSet, "openldap-data", "/var/lib/openldap/");
             addConfigFile(volumePathSet, "openldap-conf", "/etc/openldap/slapd.d");
         }
+        // Kafka特殊处理ConfigMap挂载
+        if ("KAFKA".equals(serviceName)) {
+            // 查找server.properties的配置卷
+            for (ServiceConfigVolume configVolume : volumeConfigMapSet) {
+                String fileName = configVolume.getFileName();
+                if ("server.properties".equals(fileName)) {
+                    // 修改其挂载路径到一个临时文件，便于主容器处理
+                    String originalPath = (String) configVolume.getValue();
+                    String tempPath = "/tmp/kafka-config";
+
+                    // 添加路径映射到数据中，供模板使用
+                    if (!data.containsKey("kafkaConfigTempDir")) {
+                        data.put("kafkaConfigTempDir", tempPath);
+                    }
+                    if (!data.containsKey("kafkaConfigTargetDir")) {
+                        data.put("kafkaConfigTargetDir", originalPath.substring(0, originalPath.lastIndexOf('/')));
+                    }
+
+                    // 修改挂载路径到临时文件
+                    configVolume.setValue(tempPath);
+                    break;
+                }
+            }
+
+            // 根据角色过滤挂载的ConfigMap，确保角色特定的配置文件只挂载到对应角色
+            Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
+            while (iterator.hasNext()) {
+                ServiceConfigVolume configVolume = iterator.next();
+                String mountPath = (String) configVolume.getValue();
+                String fileName = configVolume.getFileName();
+
+                // EFAK相关配置文件只挂载到EFAK服务
+                if ("KafkaBroker".equals(serviceRoleName) &&
+                        (mountPath.contains("/efak/conf/") ||
+                                "system-config.properties".equals(fileName) ||
+                                "system-config.properties.example".equals(fileName))) {
+                    logger.info("移除KafkaBroker中的EFAK配置文件挂载: {}", mountPath);
+                    iterator.remove();
+                }
+
+                // Kafka Broker相关配置文件只挂载到Kafka Broker服务
+                if ("efak".equals(serviceRoleName) &&
+                        (mountPath.contains("/config/server.properties") ||
+                                "server.properties".equals(fileName))) {
+                    logger.info("移除EFAK中的Kafka Broker配置文件挂载: {}", mountPath);
+                    iterator.remove();
+                }
+            }
+        }
+
         // redis数据目录
         if ("REDIS".equals(serviceName)) {
             addConfigFile(volumePathSet, "redis-cluster", appHome + "/cluster/");

@@ -50,6 +50,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("ZOOKEEPER", new K8sZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
         map.put("HDFS", new K8sNameNodeHandlerStrategy("HDFS", "NameNode"));
         map.put("YARN", new K8sResourceManagerHandlerStrategy("YARN", "ResourceManager"));
+        map.put("KAFKA", new K8sKafkaHandlerStrategy("KAFKA", "KafkaBroker"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {
