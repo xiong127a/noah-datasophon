@@ -6,9 +6,12 @@ import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
+
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,102 +71,162 @@ public class K8sScaleServiceHandler {
 
     public ExecResult scaleService(String kubeConfig, K8sScaleType scaleType) {
         ExecResult execResult = new ExecResult();
-
+        String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            switch (scaleType) {
-                case SCALE_UP:
-                    scaleUp(client);
-                    break;
-                case SCALE_DOWN:
-                    scaleDown(client);
-                    break;
-                default:
-                    break;
+            Map<String, Object> yamlData = loadYamlData(yamlFile);
+            String kind = (String) yamlData.get("kind");
+            logger.info("Detected resource kind: {}", kind);
+            
+            // 根据资源类型调用不同的扩缩容逻辑
+            if ("Deployment".equals(kind)) {
+                logger.info("Scaling Deployment: {}", serviceRoleFullName);
+                scaleDeployment(client, scaleType);
+            } else if ("StatefulSet".equals(kind)) {
+                logger.info("Scaling StatefulSet: {}", serviceRoleFullName);
+                scaleStatefulSet(client, scaleType);
+            } else {
+                String errorMsg = "Unsupported resource kind: " + kind;
+                logger.error(errorMsg);
+                throw new UnsupportedOperationException(errorMsg);
             }
             execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
-            logger.error("{} {} error!", serviceRoleName, scaleType.name(), e);
+            logger.error("{} {} error! Reason: {}", serviceRoleName, scaleType.name(), e.getMessage(), e);
         }
         return execResult;
     }
 
-    private synchronized void scaleUp(KubernetesClient client) throws IOException {
-        String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
-
-        // 获取当前Deployment
-        RollableScalableResource<Deployment> resource = client.apps()
-                .deployments()
-                .inNamespace(Constant.K8S_NAMESPACE)
-                .withName(serviceRoleFullName);
-
-        Deployment existingDeployment = resource.get();
-        if (existingDeployment == null) {
-            logger.error("Deployment {} 不存在", serviceRoleFullName);
-            return;
+    // 抽象Deployment扩缩容逻辑
+    private void scaleDeployment(KubernetesClient client, K8sScaleType scaleType) {
+        switch (scaleType) {
+            case SCALE_UP:
+                scaleResourceUp(client, client.apps().deployments(), "Deployment");
+                break;
+            case SCALE_DOWN:
+                scaleResourceDown(client, client.apps().deployments(), "Deployment");
+                break;
+            default:
+                logger.warn("Unsupported scale type: {}", scaleType);
         }
-
-        Integer replicas = existingDeployment.getSpec().getReplicas();
-        if (replicas == null) {
-            replicas = 0;
-        }
-        logger.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
-
-        // 加载和更新 YAML 文件
-        Yaml yaml = new Yaml();
-        Map<String, Object> yamlData;
-
-        try (InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
-            yamlData = yaml.load(yamlInputStream);
-        }
-
-        // 更新 replicas 字段
-        updateField(yamlData, "spec.replicas", replicas + 1);
-
-        // 将更新后的 YAML 应用到 Kubernetes
-        try (InputStream updatedYamlInputStream = new ByteArrayInputStream(yaml.dump(yamlData).getBytes())) {
-            client.load(updatedYamlInputStream).createOrReplace();
-        }
-        logger.info("scale up deployment 为: {}", replicas + 1);
     }
 
-    private synchronized void scaleDown(KubernetesClient client) {
-        RollableScalableResource<Deployment> resource =
-                client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
+    private void scaleStatefulSet(KubernetesClient client, K8sScaleType scaleType) {
+        switch (scaleType) {
+            case SCALE_UP:
+                scaleResourceUp(client, client.apps().statefulSets(), "StatefulSet");
+                break;
+            case SCALE_DOWN:
+                scaleResourceDown(client, client.apps().statefulSets(), "StatefulSet");
+                break;
+            default:
+                logger.warn("Unsupported scale type: {}", scaleType);
+        }
+    }
 
-        if (resource == null || resource.get() == null) {
-            logger.warn("Deployment {} 在命名空间 {} 中不存在，无法缩容", serviceRoleFullName, Constant.K8S_NAMESPACE);
+    // 重构扩容方法 - 统一使用scale接口
+    private synchronized <T> void scaleResourceUp(
+            KubernetesClient client, 
+            MixedOperation<T, ?, RollableScalableResource<T>> resourceApi, 
+            String resourceType) {
+    
+    RollableScalableResource<T> resource = resourceApi
+        .inNamespace(Constant.K8S_NAMESPACE)
+        .withName(serviceRoleFullName);
+
+    T existingResource = resource.get();
+    if (existingResource == null) {
+        logger.error("{} {} does not exist", resourceType, serviceRoleFullName);
+        return;
+    }
+
+    // 获取当前副本数
+    Integer replicas = getReplicas(existingResource);
+    if (replicas == null) replicas = 0;
+    logger.info("Current {}: {} Replicas: {}", resourceType, serviceRoleFullName, replicas);
+
+    int newReplicas = replicas + 1;
+    logger.info("Scaling up {} to: {}", resourceType, newReplicas);
+    
+    int maxRetries = 3;
+    for (int retry = 0; retry < maxRetries; retry++) {
+        try {
+            resource.scale(newReplicas);
+            logger.info("Successfully scaled up {} to {}", resourceType, newReplicas);
+            return;
+        } catch (KubernetesClientException e) {
+            if (e.getCode() == 409) { // 冲突错误
+                logger.warn("Scale conflict detected, retrying... ({}/{})", retry + 1, maxRetries);
+                if (retry == maxRetries - 1) throw e;
+            } else {
+                throw e;
+            }
+        }
+    }
+}
+
+    // 通用缩容方法（支持Deployment/StatefulSet）
+    private synchronized <T> void scaleResourceDown(
+            KubernetesClient client, 
+            MixedOperation<T, ?, RollableScalableResource<T>> resourceApi, 
+            String resourceType) {
+    
+    RollableScalableResource<T> resource = resourceApi
+        .inNamespace(Constant.K8S_NAMESPACE)
+        .withName(serviceRoleFullName);
+
+        T existingResource = resource.get();
+        if (existingResource == null ) {
+            logger.warn("{} {} does not exist, cannot scale down", resourceType, serviceRoleFullName);
             return;
         }
 
-        Integer replicas = resource.get().getSpec().getReplicas();
-        logger.info("当前 deployment: {} Spec Replicas: {}", serviceRoleFullName, replicas);
+        // 通过反射获取副本数
+        Integer replicas = getReplicas(existingResource);
+        logger.info("Current {}: {} Replicas: {}", resourceType, serviceRoleFullName, replicas);
 
         if (replicas != null && replicas > 0) {
-            int count = replicas - 1;
-            logger.info("缩容 deployment 为: {}", count);
+            int newReplicas = replicas - 1;
+            logger.info("Scaling down {} to: {}", resourceType, newReplicas);
+            
             int maxRetries = 3;
-            int retries = 0;
-            boolean updated = false;
-
-            while (!updated && retries < maxRetries) {
+            for (int retry = 0; retry < maxRetries; retry++) {
                 try {
-                    resource.scale(count);
-                    updated = true; // 更新成功
+                    resource.scale(newReplicas);
+                    logger.info("Successfully scaled down {} to {}", resourceType, newReplicas);
+                    return;
                 } catch (KubernetesClientException e) {
-                    if (e.getCode() == 409) { // 处理冲突
-                        retries++;
-                        if (retries >= maxRetries) {
-                            throw e; // 达到最大重试次数，抛出异常
-                        }
+                    if (e.getCode() == 409) { // 冲突错误
+                        logger.warn("Scale conflict detected, retrying... ({}/{})", retry + 1, maxRetries);
+                        if (retry == maxRetries - 1) throw e;
                     } else {
-                        throw e; // 抛出其他异常
+                        throw e;
                     }
                 }
             }
-
         }
     }
 
+    // 通过反射获取副本数（兼容Deployment/StatefulSet）
+    private <T> Integer getReplicas(T resource) {
+        try {
+            if (resource instanceof Deployment) {
+                return ((Deployment) resource).getSpec().getReplicas();
+            } else if (resource instanceof StatefulSet) {
+                return ((StatefulSet) resource).getSpec().getReplicas();
+            }
+        } catch (Exception e) {
+            logger.error("Failed to get replicas: {}", e.getMessage());
+        }
+        return null;
+    }
 
+    private Map<String, Object> loadYamlData(String yamlFile) {
+        try (InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+            Yaml yaml = new Yaml();
+            return yaml.load(yamlInputStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

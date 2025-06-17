@@ -29,29 +29,13 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.datasophon.api.k8s.handler.K8sDeploymentYamlHandler;
-import com.datasophon.api.k8s.handler.K8sHostCancelTagHandler;
-import com.datasophon.api.k8s.handler.K8sHostTagHandler;
-import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
-import com.datasophon.api.k8s.handler.K8sServiceInstallHandler;
-import com.datasophon.api.k8s.handler.K8sServiceRoleStopHandler;
-import com.datasophon.api.k8s.handler.K8sServiceScaleDownHandler;
-import com.datasophon.api.k8s.handler.K8sServiceScaleUpHandler;
-import com.datasophon.api.k8s.handler.K8sServiceStartHandler;
+import com.datasophon.api.k8s.handler.*;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.CancelCommandMap;
-import com.datasophon.api.master.MasterServiceActor;
-import com.datasophon.api.master.ServiceCommandActor;
-import com.datasophon.api.master.ServiceExecuteResultActor;
-import com.datasophon.api.master.handler.service.ServiceConfigureAsyncHandler;
-import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
-import com.datasophon.api.master.handler.service.ServiceHandler;
-import com.datasophon.api.master.handler.service.ServiceInstallHandler;
-import com.datasophon.api.master.handler.service.ServiceStartHandler;
-import com.datasophon.api.master.handler.service.ServiceStopHandler;
+import com.datasophon.api.master.*;
+import com.datasophon.api.master.handler.service.*;
 import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
@@ -62,28 +46,16 @@ import com.datasophon.common.command.FileOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
-import com.datasophon.common.model.DAGGraph;
-import com.datasophon.common.model.ExternalLink;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceExecuteResultMessage;
-import com.datasophon.common.model.ServiceNode;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.model.StartWorkerMessage;
-import com.datasophon.common.model.UpdateCommandHostMessage;
+import com.datasophon.common.model.*;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.*;
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.CommandState;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.RoleType;
-import com.datasophon.dao.enums.ServiceRoleState;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.dao.enums.*;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,15 +66,7 @@ import scala.concurrent.duration.FiniteDuration;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -187,22 +151,71 @@ public class ProcessUtils {
 
             if (Objects.nonNull(serviceRoleInfo.getExternalLink())) {
                 ExternalLink externalLink = serviceRoleInfo.getExternalLink();
+                Map<String, String> globalVariables = GlobalVariables.get(clusterInfo.getId());
+                globalVariables.put("${hostname}", serviceRoleInfo.getHostname());
+                String url = PlaceholderUtils.replacePlaceholders(externalLink.getUrl(), globalVariables,
+                        Constants.REGEX_VARIABLE);
+                Integer port = extractPortFromUrl(url);
+
                 ClusterServiceRoleInstanceWebuis webui = webuisService.getRoleInstanceWebUi(roleInstance.getId());
                 if (Objects.nonNull(webui)) {
                     logger.info("web ui already exists");
                 } else {
-                    Map<String, String> globalVariables = GlobalVariables.get(clusterInfo.getId());
-                    globalVariables.put("${hostname}", serviceRoleInfo.getHostname());
-                    String url = PlaceholderUtils.replacePlaceholders(externalLink.getUrl(), globalVariables,
-                            Constants.REGEX_VARIABLE);
-                    ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
-                    webuis.setWebUrl(url);
-                    webuis.setServiceInstanceId(clusterServiceInstance.getId());
-                    webuis.setServiceRoleInstanceId(roleInstance.getId());
-                    webuis.setName(externalLink.getName() + "(" + serviceRoleInfo.getHostname() + ")");
-                    webuisService.save(webuis);
+                    boolean foundPortMapping = false;
+
+                    // 遍历配置映射查找端口映射
+                    for (Map.Entry<Generators, List<ServiceConfig>> entry : serviceRoleInfo.getConfigFileMap().entrySet()) {
+                        if (CollUtil.isEmpty(entry.getValue())) {
+                            continue;
+                        }
+
+                        for (ServiceConfig serviceConfig : entry.getValue()) {
+                            if (!serviceConfig.getName().endsWith("node_port_mappings")) {
+                                continue;
+                            }
+                            List<Map<String, String>>  portMappings = (List<Map<String, String>>) serviceConfig.getValue();
+
+                            for (Map<String, String> portMapping : portMappings) {
+                                String mappedPorts = portMapping.get(port);
+                                if (mappedPorts == null) {
+                                    continue;
+                                }
+
+                                for (String mappedPort : mappedPorts.split(",")) {
+                                    ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
+
+                                    // 替换URL端口
+                                    webuis.setWebUrl(mappedPort != null ?
+                                            replacePortInUrl(url, mappedPort) : url);
+
+                                    webuis.setServiceInstanceId(clusterServiceInstance.getId());
+                                    webuis.setServiceRoleInstanceId(roleInstance.getId());
+                                    webuis.setName(String.format("%s(%s)",
+                                            externalLink.getName(),
+                                            serviceRoleInfo.getHostname()));
+
+                                    webuisService.save(webuis);
+                                }
+                            }
+                            foundPortMapping = true;
+                        }
+                    }
+
+                    // 如果没有找到端口映射，保存原始URL
+                    if (!foundPortMapping) {
+                        ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
+                        webuis.setWebUrl(url);
+                        webuis.setServiceInstanceId(clusterServiceInstance.getId());
+                        webuis.setServiceRoleInstanceId(roleInstance.getId());
+                        webuis.setName(String.format("%s(%s)",
+                                externalLink.getName(),
+                                serviceRoleInfo.getHostname()));
+                        webuisService.save(webuis);
+                    }
+
                     globalVariables.remove("${hostname}");
                 }
+
 
             }
         }
@@ -210,7 +223,7 @@ public class ProcessUtils {
     }
 
     public static void saveHostInstallInfo(StartWorkerMessage message, String clusterCode,
-            ClusterHostService clusterHostService) {
+                                           ClusterHostService clusterHostService) {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         ClusterHostDO clusterHostDO = new ClusterHostDO();
         BeanUtil.copyProperties(message, clusterHostDO);
@@ -266,7 +279,7 @@ public class ProcessUtils {
     }
 
     public static void tellCommandActorResult(String serviceName, ExecuteServiceRoleCommand executeServiceRoleCommand,
-            ServiceExecuteState state) {
+                                              ServiceExecuteState state) {
         ActorRef serviceExecuteResultActor = ActorUtils.getLocalActor(ServiceExecuteResultActor.class,
                 ActorUtils.getActorRefName(ServiceExecuteResultActor.class));
 
@@ -288,7 +301,7 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandHostCommandEntity handleCommandResult(String hostCommandId, Boolean execResult,
-            String execOut) {
+                                                                             String execOut) {
         ClusterServiceCommandHostCommandService service = SpringTool.getApplicationContext()
                 .getBean(ClusterServiceCommandHostCommandService.class);
 
@@ -319,7 +332,7 @@ public class ProcessUtils {
 
         ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
         ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                1L, TimeUnit.SECONDS),
+                        1L, TimeUnit.SECONDS),
                 commandActor, message,
                 ActorUtils.actorSystem.dispatcher(),
                 ActorRef.noSender());
@@ -357,7 +370,7 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandEntity generateCommandEntity(Integer clusterId, CommandType commandType,
-            String serviceName) {
+                                                                    String serviceName) {
         ClusterServiceCommandEntity commandEntity = new ClusterServiceCommandEntity();
         String commandId = IdUtil.simpleUUID();
         commandEntity.setCommandId(commandId);
@@ -387,10 +400,10 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(CommandType commandType,
-            String commandId,
-            String serviceRoleName,
-            RoleType serviceRoleType,
-            ClusterServiceCommandHostEntity commandHost) {
+                                                                                          String commandId,
+                                                                                          String serviceRoleName,
+                                                                                          RoleType serviceRoleType,
+                                                                                          ClusterServiceCommandHostEntity commandHost) {
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
         String hostCommandId = IdUtil.simpleUUID();
         hostCommand.setHostCommandId(hostCommandId);
@@ -409,7 +422,7 @@ public class ProcessUtils {
     }
 
     public static void updateServiceRoleState(CommandType commandType, String serviceRoleName, String hostname,
-            Integer clusterId, ServiceRoleState serviceRoleState) {
+                                              Integer clusterId, ServiceRoleState serviceRoleState) {
         ClusterServiceRoleInstanceService serviceRoleInstanceService = SpringTool.getApplicationContext()
                 .getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceRoleInstanceEntity serviceRole = serviceRoleInstanceService.getOneServiceRole(serviceRoleName,
@@ -426,7 +439,7 @@ public class ProcessUtils {
      * 保存到变量表和全局变量缓存
      */
     public static void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
-            String variableName, String value) {
+                                               String variableName, String value) {
         ClusterVariableService variableService = SpringTool.getApplicationContext()
                 .getBean(ClusterVariableService.class);
         ClusterVariable clusterVariable = variableService.getVariableByVariableName(variableName, clusterId);
@@ -446,7 +459,7 @@ public class ProcessUtils {
     }
 
     public static void hdfsEcMethond(Integer serviceInstanceId, ClusterServiceRoleInstanceService roleInstanceService,
-            TreeSet<String> list, String type, String roleName) throws Exception {
+                                     TreeSet<String> list, String type, String roleName) throws Exception {
 
         List<ClusterServiceRoleInstanceEntity> namenodes = roleInstanceService.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
@@ -496,7 +509,7 @@ public class ProcessUtils {
             logger.info("create {} actor",
                     clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
             ActorUtils.actorSystem.actorOf(Props.create(MasterServiceActor.class)
-                    .withDispatcher("my-forkjoin-dispatcher"),
+                            .withDispatcher("my-forkjoin-dispatcher"),
                     clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
         }
     }
@@ -646,8 +659,8 @@ public class ProcessUtils {
     }
 
     public static ExecResult configServiceRoleInstance(ClusterInfoEntity clusterInfo,
-            Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
+                                                       Map<Generators, List<ServiceConfig>> configFileMap,
+                                                       ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(roleInstanceEntity.getServiceRoleName());
         serviceRoleInfo.setParentName(roleInstanceEntity.getServiceName());
@@ -660,9 +673,9 @@ public class ProcessUtils {
     }
 
     public static void asyncConfigServiceRoleInstance(ClusterInfoEntity clusterInfo,
-            Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            OnComplete<Object> onComplete) {
+                                                      Map<Generators, List<ServiceConfig>> configFileMap,
+                                                      ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                      OnComplete<Object> onComplete) {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(roleInstanceEntity.getServiceRoleName());
         serviceRoleInfo.setParentName(roleInstanceEntity.getServiceName());
@@ -680,7 +693,7 @@ public class ProcessUtils {
      * @Description: 生成configFileMap
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleGroupConfig config, Integer clusterId) {
+                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
         ConfigGroupUtils.generateConfigFileMap(configFileMap, config, clusterId);
     }
 
@@ -759,7 +772,7 @@ public class ProcessUtils {
     }
 
     public static void syncUserToHosts(List<ClusterHostDO> hostList, String username, String mainGroup,
-            String otherGroup, String operate) {
+                                       String otherGroup, String operate) {
         for (ClusterHostDO hostEntity : hostList) {
             ActorRef execCmdActor = ActorUtils.getRemoteActor(hostEntity.getHostname(), "executeCmdActor");
             ExecuteCmdCommand command = new ExecuteCmdCommand();
@@ -801,7 +814,7 @@ public class ProcessUtils {
     }
 
     public static void saveAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity, String alertTargetName,
-            AlertLevel alertLevel, String alertAdvice) {
+                                 AlertLevel alertLevel, String alertAdvice) {
         ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
                 .getBean(ClusterServiceRoleInstanceService.class);
         ClusterAlertHistoryService alertHistoryService = SpringTool.getApplicationContext()
@@ -890,5 +903,29 @@ public class ProcessUtils {
         }
 
         return "";
+    }
+
+    public static Integer extractPortFromUrl(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            return uri.getPort() == -1 ? null : uri.getPort();
+        } catch (Exception e) {
+            logger.error("Failed to extract port from URL: {}", url, e);
+            return null;
+        }
+    }
+
+    public static String replacePortInUrl(String url, String newPort) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String newUrl = url.replace(
+                    ":" + uri.getPort(),
+                    ":" + newPort
+            );
+            return newUrl;
+        } catch (Exception e) {
+            logger.error("Failed to replace port in URL: {}", url, e);
+            return url; // 返回原始URL如果替换失败
+        }
     }
 }
