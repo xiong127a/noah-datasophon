@@ -186,7 +186,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
 
-            volumeHadoopConfig(volumePathSet);
+            volumeHadoopConfig(volumeConfigMapSet);
 
             volumeEnableKerberosConfig(volumeConfigMapSet, appHome, serviceRoleName, enableKerberos);
 
@@ -483,7 +483,7 @@ public class K8sYamlDeploymentHandler {
 
     }
 
-    private void volumeHadoopConfig(Set<ServiceConfigVolume> volumePathSet) {
+    private void volumeHadoopConfig(Set<ServiceConfigVolume> volumeConfigMapSet) {
         List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER",
                 "HUE", "ALLUXIO", "TEZ", "ZEPPELIN");
         if (needHadoopService.contains(serviceName)) {
@@ -495,12 +495,19 @@ public class K8sYamlDeploymentHandler {
             int config = 1;
             for (String conf : hadoopConf) {
                 // 检查是否已经存在相同的配置
-                boolean exists = volumePathSet.stream()
+                boolean exists = volumeConfigMapSet.stream()
                         .anyMatch(existingConfig -> existingConfig.getValue().equals(conf));
 
                 // 仅当不存在相同配置时才添加
                 if (!exists) {
-                    addConfigFile(volumePathSet, "hadoopconfig" + config++, conf);
+                    String fileName = conf.substring(conf.lastIndexOf('/') + 1);
+                    String configName= "hdfs-namenode-" + fileName.replace(".","-");
+
+                    ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+                    fileConfig.setName(configName);
+                    fileConfig.setValue(conf);
+                    fileConfig.setFileName(fileName);
+                    volumeConfigMapSet.add(fileConfig);
                 }
             }
         }
