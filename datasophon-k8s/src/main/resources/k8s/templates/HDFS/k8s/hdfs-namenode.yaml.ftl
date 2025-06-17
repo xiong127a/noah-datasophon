@@ -197,8 +197,8 @@ spec:
               echo -e "$BLUE$INFO 开始检查JournalNode集群状态...$NC"
               
               # 获取JournalNode服务端点
-              <#if dfs_namenode_shared_edits_dir??>
-              JOURNAL_ENDPOINTS=$(echo "${dfs_namenode_shared_edits_dir}" | sed -r 's|qjournal://([^/]+)/.*|\1|g')
+              <#if nn_shared_edits_dir??>
+              JOURNAL_ENDPOINTS=$(echo "${nn_shared_edits_dir}" | sed -r 's|qjournal://([^/]+)/.*|\1|g')
               <#else>
               echo -e "$YELLOW$WARNING dfs.namenode.shared.edits.dir 未定义，使用默认值$NC"
               JOURNAL_ENDPOINTS="journalnode-0.journalnode.default.svc.cluster.local:8485;journalnode-1.journalnode.default.svc.cluster.local:8485;journalnode-2.journalnode.default.svc.cluster.local:8485"
