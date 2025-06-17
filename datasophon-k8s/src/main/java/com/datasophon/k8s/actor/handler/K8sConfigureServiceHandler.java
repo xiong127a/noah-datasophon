@@ -76,7 +76,8 @@ public class K8sConfigureServiceHandler {
 
         try {
             HashMap<String, String> paramMap = new HashMap<>();
-            paramMap.put("${hostname}", "{{HOST}}");
+            paramMap.put("${hostname}", "$(hostname)");
+            paramMap.put("${host}", "{{HOST}}");
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);

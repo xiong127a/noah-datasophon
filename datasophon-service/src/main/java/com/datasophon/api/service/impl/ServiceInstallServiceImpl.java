@@ -205,6 +205,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         FrameServiceEntity frameServiceEntity = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
 
+        //TODO 检查是否为重复逻辑
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
 
@@ -381,6 +382,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         CacheUtils.put(
                 clusterInfo.getClusterCode()
+                        + UNDERLINE
+                        + SERVICE_ROLE_HOST_MAPPING,
+                map);
+        CacheUtils.put(
+                clusterInfo.getId()
                         + UNDERLINE
                         + SERVICE_ROLE_HOST_MAPPING,
                 map);
