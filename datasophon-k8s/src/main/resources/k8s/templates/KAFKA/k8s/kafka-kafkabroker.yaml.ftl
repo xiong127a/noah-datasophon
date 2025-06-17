@@ -321,11 +321,9 @@ spec:
               else
                 echo -e "$<#noparse>RED</#noparse> 错误: 找不到配置文件: $<#noparse>TMP_CONF_FILE</#noparse>$<#noparse>NC</#noparse>"
                 
-                # 保持容器运行以便调试
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 保持容器运行，可以使用kubectl exec进入容器调试$<#noparse>NC</#noparse>"
-                while true; do
-                  sleep 3600
-                done
+                # 退出容器，让Kubernetes重启它
+                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 配置文件不存在，退出容器$<#noparse>NC</#noparse>"
+                exit 1
               fi
           env:
             - name: USER
