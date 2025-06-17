@@ -38,42 +38,6 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
-      initContainers:
-        - name: create-user
-          image: "${dockerBusyboxImage}"
-          command:
-            - "/bin/sh"
-            - "-c"
-            - |
-              echo "Creating HDFS user if not exists..."
-              if ! id ${runAsUser} &>/dev/null; then
-                addgroup -g 1000 ${runAsUser}
-                adduser -u 1000 -G ${runAsUser} -h /home/${runAsUser} -D ${runAsUser}
-                echo "User ${runAsUser} created."
-              else
-                echo "User ${runAsUser} already exists."
-              fi
-          securityContext:
-            runAsUser: 0  # 以root用户运行
-            privileged: true
-        - name: set-config-permissions
-          image: "${dockerBusyboxImage}"
-          command:
-            - "/bin/sh"
-            - "-c"
-            - |
-              echo "Setting permissions for Hadoop config directory..."
-              chmod -R 777 ${appHome}/etc/hadoop/
-              echo "Permissions set successfully"
-          securityContext:
-            runAsUser: 0  # 以root用户运行
-            privileged: true
-          volumeMounts:
-            <#list volumeConfigMapSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-              subPath: "${item.fileName}"
-            </#list>
       containers:
         - env:
             - name: USER
