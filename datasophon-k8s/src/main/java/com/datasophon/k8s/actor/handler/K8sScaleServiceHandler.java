@@ -11,13 +11,11 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
-
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -72,6 +70,12 @@ public class K8sScaleServiceHandler {
     public ExecResult scaleService(String kubeConfig, K8sScaleType scaleType) {
         ExecResult execResult = new ExecResult();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
+        if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
+            // ZKFC作为NameNode Pod的Sidecar容器部署
+            execResult.setExecResult(true);
+            logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不加载yaml文件");
+            return execResult;
+        }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
