@@ -423,7 +423,10 @@
       "value": "SASL_PLAINTEXT",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
+      "defaultValue": "SASL_PLAINTEXT",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "default.replication.factor",
@@ -630,7 +633,10 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "advertised.listeners",
@@ -694,7 +700,10 @@
       "value": "SASL_PLAINTEXT",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
+      "defaultValue": "SASL_PLAINTEXT",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.mechanism.inter.broker.protocol",
@@ -707,7 +716,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.enabled.mechanisms",
@@ -720,7 +732,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.kerberos.service.name",
@@ -733,7 +748,10 @@
       "value": "kafka",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "kafka"
+      "defaultValue": "kafka",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "javaSecurityKrb5Conf",
@@ -746,7 +764,10 @@
       "value": "/etc/krb5.conf",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "/etc/krb5.conf"
+      "defaultValue": "/etc/krb5.conf",
+      "configCategory": "file",
+      "configGroup": "kafka-run-class",
+      "configLevel": "advanced"
     },
     {
       "name": "javaSecurityAuthLoginConfig",
@@ -759,7 +780,10 @@
       "value": "${KAFKA_HOME}/config/kafka-jaas.conf",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${KAFKA_HOME}/config/kafka-jaas.conf"
+      "defaultValue": "${KAFKA_HOME}/config/kafka-jaas.conf",
+      "configCategory": "file",
+      "configGroup": "kafka-run-class",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaHome",
@@ -772,7 +796,10 @@
       "value": "${KAFKA_HOME}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${KAFKA_HOME}"
+      "defaultValue": "${KAFKA_HOME}",
+      "configCategory": "file",
+      "configGroup": "kafka-topics",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaHost",
@@ -785,7 +812,10 @@
       "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${hostname}"
+      "defaultValue": "${hostname}",
+      "configCategory": "file",
+      "configGroup": "kafka-jaas",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaRealm",
@@ -798,7 +828,10 @@
       "value": "${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${realm}"
+      "defaultValue": "${realm}",
+      "configCategory": "file",
+      "configGroup": "kafka-jaas",
+      "configLevel": "advanced"
     },
     {
       "name": "saslMechanism",
@@ -811,7 +844,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "kbServiceName",
@@ -824,7 +860,10 @@
       "value": "kafka",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "kafka"
+      "defaultValue": "kafka",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "JMX_PORT",
@@ -871,7 +910,10 @@
       "value": "cluster1",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "cluster1"
+      "defaultValue": "cluster1",
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
       "name": "cluster1.zk.list",
@@ -883,7 +925,10 @@
       "value": "${zkUrls}/kafka",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${zkUrls}/kafka"
+      "defaultValue": "${zkUrls}/kafka",
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
       "name": "cluster1.zk.acl.enable",
@@ -894,7 +939,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.schema",
@@ -906,7 +954,10 @@
        "value": "digest",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "digest"
+       "defaultValue": "digest",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.username",
@@ -918,7 +969,10 @@
        "value": "test",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "test"
+       "defaultValue": "test",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.password",
@@ -930,7 +984,10 @@
        "value": "test123",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "test123"
+       "defaultValue": "test123",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.efak.broker.size",
@@ -941,7 +998,10 @@
        "value": "20",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "20"
+       "defaultValue": "20",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "kafka.zk.limit.size",
@@ -952,7 +1012,10 @@
        "value": "16",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "16"
+       "defaultValue": "16",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "efak.webui.port",
@@ -981,7 +1044,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.cluster.mode.status",
@@ -993,7 +1059,10 @@
         "value": "master",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "master"
+        "defaultValue": "master",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.worknode.master.host",
@@ -1005,7 +1074,10 @@
         "value": "localhost",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "localhost"
+        "defaultValue": "localhost",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.worknode.port",
@@ -1017,7 +1089,10 @@
         "value": "8085",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "8085"
+        "defaultValue": "8085",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
 {
         "name": "cluster1.efak.jmx.acl",
@@ -1028,7 +1103,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.user",
@@ -1040,7 +1118,10 @@
         "value": "keadmin",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin"
+        "defaultValue": "keadmin",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.password",
@@ -1052,7 +1133,10 @@
         "value": "keadmin123",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin123"
+        "defaultValue": "keadmin123",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.ssl",
@@ -1064,7 +1148,10 @@
         "value": "false",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "false"
+        "defaultValue": "false",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.truststore.location",
@@ -1076,7 +1163,10 @@
         "value": "/data/ssl/certificates/kafka.truststore",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "/data/ssl/certificates/kafka.truststore"
+        "defaultValue": "/data/ssl/certificates/kafka.truststore",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.truststore.password",
@@ -1088,7 +1178,10 @@
         "value": "ke123456",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "ke123456"
+        "defaultValue": "ke123456",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.offset.storage",
@@ -1103,7 +1196,10 @@
         "selectValue": [
             "kafka",
             "zk"
-        ]
+        ],
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.uri",
@@ -1114,7 +1210,10 @@
         "value": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi"
+        "defaultValue": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.metrics.charts",
@@ -1125,7 +1224,10 @@
         "value": "true",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": true
+        "defaultValue": true,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.metrics.retain",
@@ -1136,7 +1238,10 @@
         "value": "15",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "15"
+        "defaultValue": "15",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.sql.topic.records.max",
@@ -1147,7 +1252,10 @@
         "value": "5000",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "5000"
+        "defaultValue": "5000",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.sql.topic.preview.records.max",
@@ -1158,7 +1266,10 @@
         "value": "10",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "10"
+        "defaultValue": "10",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.topic.token",
@@ -1169,7 +1280,10 @@
         "value": "keadmin",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin"
+        "defaultValue": "keadmin",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.enable",
@@ -1180,7 +1294,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.protocol",
@@ -1192,7 +1309,10 @@
         "value": "${securityProtocol}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${securityProtocol}"
+        "defaultValue": "${securityProtocol}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.mechanism",
@@ -1204,7 +1324,10 @@
         "value": "${saslMechanism}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${saslMechanism}"
+        "defaultValue": "${saslMechanism}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.jaas.config",
@@ -1216,7 +1339,10 @@
         "value": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";"
+        "defaultValue": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.client.id",
@@ -1228,7 +1354,10 @@
         "value": "${hostname}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${hostname}"
+        "defaultValue": "${hostname}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.blacklist.topics",
@@ -1239,7 +1368,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": ""
+        "defaultValue": "",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.cgroup.enable",
@@ -1250,7 +1382,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
 {
         "name": "cluster1.efak.sasl.cgroup.topics",
@@ -1261,7 +1396,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": ""
+        "defaultValue": "",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.driver",
@@ -1272,7 +1410,10 @@
         "value": "com.mysql.cj.jdbc.Driver",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "com.mysql.cj.jdbc.Driver"
+        "defaultValue": "com.mysql.cj.jdbc.Driver",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.url",
@@ -1283,7 +1424,10 @@
         "value": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull"
+        "defaultValue": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.username",
@@ -1294,7 +1438,10 @@
         "value": "root",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "root"
+        "defaultValue": "root",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.password",
@@ -1305,7 +1452,10 @@
         "value": "123456",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "123456"
+        "defaultValue": "123456",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
       "name": "custom.system-config.properties",
