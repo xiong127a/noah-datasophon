@@ -28,12 +28,12 @@ public class K8sHostTagHandler extends ServiceHandler {
         k8SGenerateHostTagCommand.setServiceName(serviceRoleInfo.getParentName());
         k8SGenerateHostTagCommand.setServiceRoleName(serviceRoleInfo.getName());
         k8SGenerateHostTagCommand.setTagOperation(K8sHostTagOperation.ADD_TAG);
-
+        Integer clusterId = serviceRoleInfo.getClusterId();
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         k8SGenerateHostTagCommand.setKubeConfig(kubeConfig);
-
+        k8SGenerateHostTagCommand.setClusterId(clusterId);
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sTagHostActor.class, ActorUtils.getActorRefName(K8sTagHostActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));

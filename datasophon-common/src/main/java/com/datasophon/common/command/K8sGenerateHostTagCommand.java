@@ -17,6 +17,7 @@ public class K8sGenerateHostTagCommand implements Serializable {
     private String serviceRoleName;
 
     private String hostName;
+    private Integer clusterId;
 
     private K8sHostTagOperation  tagOperation;
 }

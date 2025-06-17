@@ -28,10 +28,11 @@ public class K8sHostCancelTagHandler extends ServiceHandler {
         k8SGenerateHostTagCommand.setServiceName(serviceRoleInfo.getParentName());
         k8SGenerateHostTagCommand.setServiceRoleName(serviceRoleInfo.getName());
         k8SGenerateHostTagCommand.setTagOperation(K8sHostTagOperation.CANCEL_TAG);
-
+        Integer clusterId = serviceRoleInfo.getClusterId();
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+        k8SGenerateHostTagCommand.setClusterId(clusterId);
         k8SGenerateHostTagCommand.setKubeConfig(kubeConfig);
 
         ActorRef actorRef =

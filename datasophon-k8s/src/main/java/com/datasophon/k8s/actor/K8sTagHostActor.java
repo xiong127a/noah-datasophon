@@ -19,6 +19,7 @@ public class K8sTagHostActor extends UntypedActor {
             logger.info("start add service tag {}", command.getServiceRoleName());
             K8sTagHostHandler serviceHandler = new K8sTagHostHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.operateTag(
+                    command.getClusterId(),
                     command.getHostName(),
                     command.getKubeConfig(),
                     command.getTagOperation()
