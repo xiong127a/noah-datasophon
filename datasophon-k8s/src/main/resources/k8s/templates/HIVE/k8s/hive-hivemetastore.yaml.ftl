@@ -3,12 +3,15 @@ kind: StatefulSet
 metadata:
   name: ${serviceRoleFullName}
   namespace: ${namespace}
+  labels:
+    app: ${serviceRoleFullName}
 spec:
-  replicas: ${roleNodeCnt}
+  serviceName: ${serviceRoleFullName}
+  podManagementPolicy: Parallel
+  replicas: ${replicas}
   selector:
     matchLabels:
       app: ${serviceRoleFullName}
-  serviceName: ${serviceRoleFullName}
   template:
     metadata:
       labels:

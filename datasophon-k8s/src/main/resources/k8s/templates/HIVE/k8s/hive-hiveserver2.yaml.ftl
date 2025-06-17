@@ -3,7 +3,10 @@ kind: StatefulSet
 metadata:
   name: ${serviceRoleFullName}
   namespace: ${namespace}
+  labels:
+    app: ${serviceRoleFullName}
 spec:
+  podManagementPolicy: Parallel
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
