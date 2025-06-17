@@ -64,7 +64,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname,
-            String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
+                                  String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
@@ -104,7 +104,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, String configFileName,
-            String configFilePath) {
+                                     String configFilePath) {
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
         configFileName = configFileName.replace('.', '-');
@@ -144,7 +144,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath,
-            boolean containsHost) {
+                              boolean containsHost) {
 
         String configMapName = K8sFreeMakerUtils.generateConfigMapName(serviceRoleFullName, generators);
         // 创建新的 ServiceConfigVolume 对象
@@ -169,9 +169,9 @@ public class K8sYamlDeploymentHandler {
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
-            ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
-            String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
-            boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
+                                ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
+                                String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
+                                boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -213,7 +213,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumeConfigMapSet, String appHome,
-            String serviceRoleName, boolean enableKerberos) {
+                                            String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             addConfigFile(volumeConfigMapSet, "keytab", "/etc/security/keytab/");
             addConfigFile(volumeConfigMapSet, "krd5conf", "/etc/krb5.conf");
@@ -237,17 +237,17 @@ public class K8sYamlDeploymentHandler {
     private Template generateTemplate() throws IOException {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 使用方括号语法替代后，不再需要特别设置命名约定
-        config.setTemplateLoader(new MultiTemplateLoader(new TemplateLoader[] { new ClassTemplateLoader(
+        config.setTemplateLoader(new MultiTemplateLoader(new TemplateLoader[]{new ClassTemplateLoader(
                 K8sFreeMakerUtils.class,
-                "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s") }));
+                "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s")}));
         return config.getTemplate(serviceRoleFullName + ".yaml.ftl");
     }
 
     private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
-            ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
-            Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
-            String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
-            CommandType commandType) {
+                                                   ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
+                                                   Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
+                                                   String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
+                                                   CommandType commandType) {
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
                         (existing, replacement) -> replacement));
@@ -290,13 +290,13 @@ public class K8sYamlDeploymentHandler {
         data.put("startCommand",
                 startRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s && tail -F -f %s'", runAs.getUser(),
-                                appHome,
-                                startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
+                        appHome,
+                        startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
                         : "tail -F -f " + logFilePath);
         data.put("statusCommand",
                 statusRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome,
-                                statusRunner.getProgram(), String.join(" ", statusRunner.getArgs()))
+                        statusRunner.getProgram(), String.join(" ", statusRunner.getArgs()))
                         : "exit 0");
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
@@ -333,8 +333,8 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome,
-            Set<ServiceConfigVolume> volumePathSet, String serviceRoleName,
-            Set<ServiceConfigVolume> volumeConfigMapSet) {
+                              Set<ServiceConfigVolume> volumePathSet, String serviceRoleName,
+                              Set<ServiceConfigVolume> volumeConfigMapSet) {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
@@ -492,7 +492,7 @@ public class K8sYamlDeploymentHandler {
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh",
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/mapred-site.xml",
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/yarn-site.xml");
-            int config = 1;
+
             for (String conf : hadoopConf) {
                 // 检查是否已经存在相同的配置
                 boolean exists = volumeConfigMapSet.stream()
@@ -500,8 +500,13 @@ public class K8sYamlDeploymentHandler {
 
                 // 仅当不存在相同配置时才添加
                 if (!exists) {
+                    String hadoopRole = "hdfs-namenode";
+                    if (conf.contains("yarn") || conf.contains("mapred")) {
+                        hadoopRole = "yarn-resourcemanager";
+                    }
+
                     String fileName = conf.substring(conf.lastIndexOf('/') + 1);
-                    String configName= "hdfs-namenode-" + fileName.replace(".","-");
+                    String configName = hadoopRole + "-" + fileName.replace(".", "-");
 
                     ServiceConfigVolume fileConfig = new ServiceConfigVolume();
                     fileConfig.setName(configName);
@@ -515,7 +520,7 @@ public class K8sYamlDeploymentHandler {
 
     // 提取出一个通用方法，用于从配置中提取目录
     private void populateDataWithConfig(Map<Generators, List<ServiceConfig>> configFileMap, String configName,
-            String targetDataKey) {
+                                        String targetDataKey) {
         ServiceConfig serviceConfig = CONFIG_CACHE.get(configName);
         if (ObjUtil.isNull(serviceConfig)) {
             return;
