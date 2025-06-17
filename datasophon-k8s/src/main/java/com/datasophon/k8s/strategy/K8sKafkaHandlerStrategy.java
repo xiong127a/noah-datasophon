@@ -62,10 +62,6 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
         // 定义服务名常量
         final String KAFKA_EFAK_SERVICE = "kafka-efak";
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
-        // 命名空间
-        final String NAMESPACE = "datasophon";
-        // 集群域名后缀
-        final String CLUSTER_DOMAIN = "svc.cluster.local";
 
         // 当前服务角色名称
 

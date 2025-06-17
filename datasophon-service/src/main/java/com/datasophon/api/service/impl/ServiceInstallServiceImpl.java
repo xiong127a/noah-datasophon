@@ -171,8 +171,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         String depType = clusterInfoEntity.getDepType();
         if (Constants.K8S_MODE.equals(depType)) {
             // 获取Kubernetes服务角色处理类
-            K8sServiceRoleStrategy k8sServiceRoleStrategy =
-                    K8sServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
+            K8sServiceRoleStrategy k8sServiceRoleStrategy = K8sServiceRoleStrategyContext
+                    .getServiceRoleHandler(serviceName);
             if (Objects.nonNull(k8sServiceRoleStrategy)) {
                 k8sServiceRoleStrategy.getConfig(clusterId, list);
             }
@@ -205,7 +205,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         FrameServiceEntity frameServiceEntity = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
 
-        //TODO 检查是否为重复逻辑
+        // TODO 检查是否为重复逻辑
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
 
@@ -348,7 +348,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+                                                HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -379,6 +379,15 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 serviceRoleHandler.handler(clusterId, serviceRoleHostMapping.getHosts());
             }
         }
+
+        // 缓存zookeeper节点数量
+        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = clusterServiceRoleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ZkServer");
+        int zkNodeCount = CollUtil.size(zookeeperNodes);
+        String zkNodeCountKey = "zookeeper_node_count";
+        CacheUtils.put(clusterId + UNDERLINE + zkNodeCountKey, zkNodeCount);
+        logger.info("已缓存 Zookeeper 节点数量: {}，集群ID: {}", zkNodeCount, clusterId);
+
 
         CacheUtils.put(
                 clusterInfo.getClusterCode()
@@ -479,7 +488,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
 
         try (FileInputStream inputStream = new FileInputStream(file);
-                OutputStream out = response.getOutputStream()) {
+             OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = inputStream.read(buffer)) != -1) {
@@ -821,7 +830,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param username        用户名
      */
     private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId,
-            Integer userId, String username, String description) {
+                                       Integer userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
@@ -955,7 +964,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     /**
      * 生成修改内容的描述
-     * 
+     *
      * @param originalConfigs 原始配置
      * @param newConfigs      新配置
      * @return 修改内容的描述

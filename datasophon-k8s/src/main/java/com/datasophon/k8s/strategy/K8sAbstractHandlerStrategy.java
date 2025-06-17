@@ -30,6 +30,9 @@ public class K8sAbstractHandlerStrategy {
 
     public String serviceRoleFullName;
 
+    public final String NAMESPACE = "datasophon";
+    public final String CLUSTER_DOMAIN = "svc.cluster.local";
+
     public Logger logger;
 
     public K8sAbstractHandlerStrategy(String serviceName, String serviceRoleName) {

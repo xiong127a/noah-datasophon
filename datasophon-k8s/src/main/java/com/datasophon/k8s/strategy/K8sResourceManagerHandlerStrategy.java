@@ -61,10 +61,6 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
         final String HISTORYSERVER_SERVICE = "yarn-historyserver";
         final String TIMELINESERVER_SERVICE = "yarn-timelineserver";
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
-        // 命名空间
-        final String NAMESPACE = "datasophon";
-        // 集群域名后缀
-        final String CLUSTER_DOMAIN = "svc.cluster.local";
 
         // 遍历所有配置
         for (ServiceConfig config : list) {

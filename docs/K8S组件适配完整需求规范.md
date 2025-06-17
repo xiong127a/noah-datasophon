@@ -39,6 +39,71 @@
 datasophon-k8s/src/main/java/com/datasophon/k8s/strategy/K8s[组件名]HandlerStrategy.java
 ```
 
+### 1.1 策略类getConfig方法实现
+
+#### 目的
+在Kubernetes环境中，服务间的通信不应依赖于具体的Pod IP或主机名，而应使用稳定、统一的服务发现机制，即Kubernetes Service的DNS名称。`getConfig`方法的核心目的就是在平台的配置生成阶段，动态地将配置文件中的服务地址（如`hive.metastore.uris`）修改为K8S内部的服务名，从而实现云原生的服务发现。
+
+#### 重要性
+这是实现K8S内部组件间正确通信的**关键步骤**。如果缺失此步骤，组件可能会因为无法解析依赖服务的地址而启动失败。
+
+#### 实现模式
+框架在生成配置文件前，会调用对应服务角色的`HandlerStrategy`中的`getConfig(Integer clusterId, List<ServiceConfig> list)`方法。该方法通过直接修改传入的`List<ServiceConfig>`对象，来实现对配置项的动态更新。
+
+**重要说明: 单一策略模式**
+值得注意的是，`K8sServiceRoleStrategyContext` 通常会将一个服务（例如 "HIVE"）整体映射到一个主策略类（例如 `K8sHiveServer2HandlerStrategy`）。这意味着这个单一策略类中的`getConfig`方法需要负责处理该服务下**所有角色**的配置动态修改逻辑。这解释了为什么我们不需要为`HiveMetaStore`等从属角色创建单独的策略文件，所有逻辑都应集中在服务的总策略类中。
+
+#### 代码范例
+以下是`K8sHiveServer2HandlerStrategy.java`中的标准实现，用于动态修改Hive Metastore的服务地址。
+
+```java
+package com.datasophon.k8s.strategy;
+
+import com.datasophon.common.command.K8sServiceRoleOperateCommand;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.utils.ExecResult;
+import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
+public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
+
+    public K8sHiveServer2HandlerStrategy(String serviceName, String serviceRoleName) {
+        super(serviceName, serviceRoleName);
+    }
+
+    @Override
+    public ExecResult handler(K8sServiceRoleOperateCommand command) throws IOException {
+        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        // 旧的、手动的HDFS目录检查和Kerberos处理逻辑在此处被移除，
+        // 因为这些功能现在由initContainer和更通用的K8s配置流程处理。
+        return serviceHandler.start(command);
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        if (Objects.isNull(list) || list.isEmpty()) {
+            logger.warn("配置列表为空，无法更新HiveMetaStore服务地址");
+            return;
+        }
+
+        logger.info("开始更新Hive配置，适配Kubernetes服务...");
+
+        for (ServiceConfig config : list) {
+            if ("hive.metastore.uris".equals(config.getName())) {
+                // 将metastore的地址硬编码为K8S内部的service名称
+                String k8sMetastoreUris = "thrift://hive-hivemetastore:9083";
+                logger.info("检测到hive.metastore.uris，将值从 {} 更新为 K8S 服务地址 {}", config.getValue(), k8sMetastoreUris);
+                config.setValue(k8sMetastoreUris);
+                break; // 找到并修改后即可退出循环
+            }
+        }
+        logger.info("Hive配置更新完成，已适配Kubernetes服务发现");
+    }
+}
+```
 
 ### 2. K8S参数完全对标HDFS
 

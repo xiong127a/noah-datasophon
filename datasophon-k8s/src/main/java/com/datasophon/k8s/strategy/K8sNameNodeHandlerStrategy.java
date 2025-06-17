@@ -1,5 +1,6 @@
 package com.datasophon.k8s.strategy;
 
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
@@ -9,6 +10,9 @@ import com.datasophon.k8s.util.K8sMinaUtils;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+
+import static com.datasophon.common.Constants.UNDERLINE;
 
 public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -59,9 +63,20 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-        if (list == null || list.isEmpty()) {
-            logger.warn("配置列表为空，无法更新服务配置");
+        if (list.isEmpty()) {
             return;
+        }
+
+        // 动态获取ZK节点数量 - 直接从缓存获取，不再使用备用逻辑
+        int zkNodeCount = 0;
+        String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
+        Object zkCountObj = CacheUtils.get(zkNodeCountKey);
+
+        if (Objects.nonNull(zkCountObj)) {
+            zkNodeCount = (Integer) zkCountObj;
+            logger.info("从缓存 zookeeper_node_count 中获取到ZK节点数量为: {}", zkNodeCount);
+        } else {
+            logger.warn("缓存中未找到 ZK 节点数 (key: {}), ZK quorum 将为空。", zkNodeCountKey);
         }
 
         logger.info("开始更新HDFS NameNode配置，适配Kubernetes服务...");
@@ -71,10 +86,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
         final String JOURNALNODE_SERVICE = "hdfs-journalnode";
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
         final String DATANODE_SERVICE = "hdfs-datanode";
-        // 命名空间
-        final String NAMESPACE = "datasophon";
-        // 集群域名后缀
-        final String CLUSTER_DOMAIN = "svc.cluster.local";
+
 
         // 当前服务角色名称
         String serviceRoleName = "";
@@ -147,7 +159,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 case "ha.zookeeper.quorum": {
                     // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
-                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                    for (int i = 0; i < zkNodeCount; i++) {
                         if (i > 0) {
                             zkServers.append(",");
                         }
@@ -164,7 +176,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 case "hadoop.zk.address": {
                     // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
-                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                    for (int i = 0; i < zkNodeCount; i++) {
                         if (i > 0) {
                             zkServers.append(",");
                         }
@@ -190,6 +202,12 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     // 使用DataNode服务的完整FQDN
                     String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1025";
                     config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "dfs.nameservices": {
+                    String clusterName = CacheUtils.getString("cluster_name");
+                    config.setValue(clusterName);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }

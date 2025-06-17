@@ -325,6 +325,10 @@ public class K8sYamlDeploymentHandler {
         if ("ZOOKEEPER".equals(serviceName)) {
             populateDataWithConfig(configFileMap, "dataDir", "zk_data_dir");
         }
+        if ("HIVE".equals(serviceName)) {
+            populateDataWithConfig(configFileMap, "hive.metastore.uris", "metastore_uris");
+            populateDataWithConfig(configFileMap, "javax.jdo.option.ConnectionURL", "db_connection_url");
+        }
 
         data.putAll(k8sConfigMap);
         CONFIG_CACHE.clear();
