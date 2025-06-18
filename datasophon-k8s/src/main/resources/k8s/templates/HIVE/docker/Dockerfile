@@ -5,18 +5,12 @@ FROM harbor.norintech.com/bdp/centos7:java-1.8.0-openjdk AS builder
 
 # 设置工作目录
 WORKDIR /opt/datasophon
-
 # --- 在单个RUN指令中完成所有下载、解压和清理操作 ---
 RUN \
-    # 安装构建工具
-    echo "====> 安装构建工具..." && \
-    yum install -y wget tar && \
-    yum clean all && \
-    \
     # 下载软件包
     echo "====> 下载软件包..." && \
-    wget -q http://192.168.1.30/BDP/packages/1.2.1/hadoop-3.3.3.tar.gz && \
-    wget -q http://192.168.1.30/BDP/packages/1.2.1/hive-3.1.0.tar.gz && \
+    curl -L -s -o hadoop-3.3.3.tar.gz http://192.168.1.30/BDP/packages/1.2.1/hadoop-3.3.3.tar.gz && \
+    curl -L -s -o hive-3.1.0.tar.gz http://192.168.1.30/BDP/packages/1.2.1/hive-3.1.0.tar.gz && \
     \
     # 解压
     echo "====> 解压软件包..." && \
@@ -56,7 +50,7 @@ COPY --from=builder /opt/datasophon/hive-3.1.0 /opt/datasophon/hive-3.1.0
 RUN \
     # 安装运行时依赖
     echo "====> 正在安装运行时依赖..." && \
-    yum install -y mysql libxml2 && \
+    yum install -y mysql libxml2 which && \
     yum clean all && \
     \
     # 创建用户和组

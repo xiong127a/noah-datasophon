@@ -17,7 +17,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hiveserver2.log",
+      "logFile": "logs/hiveserver2.out",
       "jmxPort": 11000,
       "sortNum": 2,
       "startRunner": {
@@ -67,7 +67,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hivemetastore.log",
+      "logFile": "logs/hivemetastore.out",
       "jmxPort": 12000,
       "sortNum": 1,
       "startRunner": {
@@ -999,7 +999,9 @@
       "defaultValue": "",
       "configCategory": "file",
       "configGroup": "hive-env",
-      "configLevel": "custom"
+      "configLevel": "custom",
+      "templateName": "hive-env.ftl",
+      "displayName": "hive-env template"
     },
     {
       "name": "hive.security.authorization.enabled",

@@ -69,7 +69,8 @@ spec:
               </#if>
 
               echo -e "$INFO 目标Metastore地址: $HOST_PORTS"
-
+              
+              success=0
               for host_port in $HOST_PORTS; do
                 host=$(echo $host_port | cut -d: -f1)
                 port=$(echo $host_port | cut -d: -f2)
@@ -80,19 +81,26 @@ spec:
                   nc -z -w 3 $host $port >/dev/null 2>&1
                   if [ $? -eq 0 ]; then
                     echo -e "$GREEN$CHECK_MARK $host:$port 连接成功!$NC"
+                    success=1
                     break
                   else
                     echo -e "$YELLOW ... 第 $i 次尝试, $host:$port 仍在等待中...$NC"
                     sleep 5
                   fi
                   if [ $i -eq 60 ]; then
-                    echo -e "$RED$ERROR 错误: 等待 $host:$port 超时 (300秒)，请检查Metastore服务状态!$NC"
-                    exit 1
+                    echo -e "$YELLOW$INFO 警告: 等待 $host:$port 超时 (300秒)，此节点可能不可用$NC"
+                    break
                   fi
                 done
               done
-
-              echo -e "$BLUE$INFO 所有HiveMetaStore服务均已准备就绪!$NC"
+              
+              if [ $success -eq 1 ]; then
+                echo -e "$GREEN$CHECK_MARK 至少有一个HiveMetaStore服务已准备就绪，可以继续启动!$NC"
+                exit 0
+              else
+                echo -e "$RED$ERROR 错误: 所有HiveMetaStore服务均无法连接，无法启动HiveServer2!$NC"
+                exit 1
+              fi
       containers:
         - name: ${serviceRoleFullName}
           image: ${dockerImage}
