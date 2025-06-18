@@ -94,63 +94,99 @@ spec:
               
               echo -e "$BLUE$INFO 数据库已准备就绪!$NC"
         <#if isInstall?? && isInstall>
-        - name: hive-schema-init
-          image: "${dockerImage}"
+        # InitContainer 2: Use a database lock to elect a leader for schema initialization.
+        - name: initialize-schema-with-db-lock
+          image: "${dockerImage}" # Use the main hive image
           imagePullPolicy: Always
           env:
             - name: USER
               value: ${runAsUser}
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           command:
-            - "/bin/bash"
+            - "/bin/sh"
             - "-c"
             - |
+              # 将FreeMarker变量赋值给Shell变量
+              _APP_HOME="${appHome}"
+              _RUN_AS_USER="${runAsUser}"
+              <#noparse>
               # 定义颜色和图标
-              RED='\033[0;31m'
-              GREEN='\033[0;32m'
-              YELLOW='\033[1;33m'
-              BLUE='\033[0;34m'
-              NC='\033[0m'
-              CHECK_MARK="✅"
-              ERROR="❌"
-              INFO="ℹ️"
+              NC='\033[0m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; INFO="ℹ️"; ERROR="❌"; CHECK_MARK="✅"
 
-              echo -e "$BLUE$INFO [Hive Metastore] 启动 Schema 初始化检查...$NC"
-              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              echo -e "$BLUE$INFO 开始使用数据库锁进行Schema初始化...$NC"
 
-              # 只有 leader pod (index 0) 才执行初始化
-              if [ "$POD_INDEX" != "0" ]; then
-                echo -e "$INFO 当前 Pod ($POD_NAME) 不是 leader, 跳过 schema 初始化。$NC"
-                exit 0
+              # hive-site.xml的实际路径是 `$_APP_HOME/conf/hive-site.xml`
+              CONFIG_FILE="$_APP_HOME/conf/hive-site.xml"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                echo -e "$ERROR 致命错误: 在 $CONFIG_FILE 未找到Hive配置文件$NC"
+                exit 1
               fi
 
-              echo -e "$INFO 当前 Pod ($POD_NAME) 是 leader, 准备执行 schema 初始化...$NC"
+              # 使用xmllint安全地从hive-site.xml中提取数据库参数
+              DB_URL=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionURL']/value)" $CONFIG_FILE)
+              DB_USER=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionUserName']/value)" $CONFIG_FILE)
+              DB_PASS=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionPassword']/value)" $CONFIG_FILE)
+              DB_TYPE=$(echo "$DB_URL" | awk -F':' '{print $2}')
 
-              # 从JDBC URL中提取数据库类型 (e.g., jdbc:mysql://... -> mysql)
-              DB_TYPE=$(echo "${db_connection_url}" | awk -F':' '{print $2}')
-              if [ -z "$DB_TYPE" ]; then
-                  echo -e "$RED$ERROR 无法从 JDBC URL '${db_connection_url}' 中解析数据库类型。$NC"
+              # 解析DB_URL以获取主机、端口和数据库名
+              HOST=$(echo $DB_URL | sed -n 's/.*:\/\/\([^:\/]*\).*/\1/p')
+              PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+              DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p' | sed 's/;//g')
+
+              if [ -z "$HOST" ] || [ -z "$PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
+                  echo -e "$ERROR 致命错误: 无法从 $CONFIG_FILE 解析所有必需的数据库连接信息$NC"
                   exit 1
               fi
-              echo -e "$INFO 检测到数据库类型为: $DB_TYPE$NC"
+              
+              echo -e "$INFO 已解析数据库连接: mysql -h $HOST -P $PORT -u $DB_USER -D $DB_NAME$NC"
 
-              echo -e "$INFO 执行初始化命令: schematool -dbType $DB_TYPE -initSchema$NC"
-              set -x # for debugging
-              su - ${runAsUser} -c "${appHome}/bin/schematool -dbType $DB_TYPE -initSchema"
-              INIT_RESULT=$?
-              set +x
+              LOCK_TABLE="ddp_hive_init_lock"
+              LOCK_KEY="hive_metastore_schema_init"
 
-              if [ $INIT_RESULT -eq 0 ]; then
-                echo -e "$GREEN$CHECK_MARK [Hive Metastore] Schema 初始化成功。$NC"
+              echo -e "$BLUE$INFO 尝试创建锁表 '$LOCK_TABLE' (如果不存在)...$NC"
+              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "CREATE TABLE IF NOT EXISTS ${LOCK_TABLE} (lock_key VARCHAR(255) PRIMARY KEY, status VARCHAR(50), pod_name VARCHAR(255), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);"
+              
+              echo -e "$BLUE$INFO Pod ($HOSTNAME) 正在尝试获取初始化锁...$NC"
+              # 尝试插入记录以获取锁
+              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT INTO ${LOCK_TABLE} (lock_key, status, pod_name) VALUES ('${LOCK_KEY}', 'initializing', '$HOSTNAME');"
+              
+              # 检查插入是否成功
+              if [ $? -eq 0 ]; then
+                # 成功获取锁，执行初始化
+                echo -e "$GREEN$CHECK_MARK 锁已被 $HOSTNAME 获取。开始执行Schema初始化...$NC"
+                
+                su - $_RUN_AS_USER -c "$_APP_HOME/bin/schematool -dbType $DB_TYPE -initSchema"
+                if [ $? -eq 0 ]; then
+                    echo -e "$GREEN$CHECK_MARK Schema初始化成功完成。$NC"
+                else
+                    # 即便命令失败，也可能是因为已经初始化过，这通常是可接受的
+                    echo -e "$YELLOW 警告: schematool 命令执行失败。这可能是因为Schema已经初始化。此状态可以接受。$NC"
+                fi
+                
+                # 更新状态，通知其他等待的Pod
+                echo -e "$BLUE$INFO 正在更新锁状态以通知所有Pod初始化已完成...$NC"
+                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "UPDATE ${LOCK_TABLE} SET status = 'complete' WHERE lock_key = '${LOCK_KEY}';"
+                echo -e "$GREEN$CHECK_MARK 初始化过程已结束。$NC"
+                exit 0
               else
-                echo -e "$YELLOW WARNING: schematool 命令退出，代码: $INIT_RESULT. 这可能是因为 schema 已存在，通常是安全的。$NC"
-              fi
+                # 未能获取锁，进入等待状态
+                echo -e "$YELLOW$INFO 未能获取锁。可能有其他Pod正在进行初始化。将进入等待状态...$NC"
+                
+                # 循环检查锁状态
+                for i in $(seq 1 120); do
+                  STATUS=$(mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM ${LOCK_TABLE} WHERE lock_key = '${LOCK_KEY}';")
+                  if [ "$STATUS" == "complete" ]; then
+                    echo -e "$GREEN$CHECK_MARK 检测到 'complete' 状态。Schema已就绪。$NC"
+                    exit 0
+                  fi
+                  echo -e "$YELLOW ... 正在等待 'complete' 状态 (尝试次数 $i/120)...$NC"
+                  sleep 5
+                done
 
-              echo -e "$BLUE$INFO [Hive Metastore] Schema 初始化步骤完成。$NC"
-              exit 0
+                echo -e "$ERROR 致命错误: 等待Schema初始化完成超时。$NC"
+                exit 1
+              fi
+              </#noparse>
           volumeMounts:
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
