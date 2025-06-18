@@ -17,7 +17,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hiveserver2.out",
+      "logFile": "logs/hiveserver2.log",
       "jmxPort": 11000,
       "sortNum": 2,
       "startRunner": {
@@ -67,7 +67,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/hivemetastore.out",
+      "logFile": "logs/hivemetastore.log",
       "jmxPort": 12000,
       "sortNum": 1,
       "startRunner": {
@@ -160,7 +160,8 @@
           "hive.security.authorization.enabled",
           "hive.metastore.client.socket.timeout",
           "hive.stats.autogather",
-          "hive.server2.active.passive.ha.enable"
+          "hive.server2.active.passive.ha.enable",
+          "hive.metastore.thrift.bind.host"
         ]
       },
       {
@@ -280,6 +281,20 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "jdbc:mysql://${apiHost}:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "hive.metastore.thrift.bind.host",
+      "label": "Metastore服务地址",
+      "description": "Hive Metastore Thrift服务绑定的主机名。在Kubernetes环境中，通常设置为0.0.0.0以监听Pod内的所有网络接口。",
+      "required": true,
+      "type": "input",
+      "value": "0.0.0.0",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "0.0.0.0",
       "configCategory": "role",
       "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
@@ -840,10 +855,10 @@
       "description": "hive.server2.thrift.bind.host",
       "required": true,
       "type": "input",
-      "value": "${hostname}",
+      "value": "0.0.0.0",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${hostname}",
+      "defaultValue": "0.0.0.0",
       "configCategory": "file",
       "configGroup": "hive-site",
       "configLevel": "advanced"

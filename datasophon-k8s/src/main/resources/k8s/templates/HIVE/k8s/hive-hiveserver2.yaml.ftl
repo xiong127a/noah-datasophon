@@ -17,11 +17,31 @@ spec:
   template:
     metadata:
       labels:
-        app: ${serviceRoleFullName}
+        name: "${serviceRoleFullName}"
+        app: "${serviceRoleFullName}"
+        podConflictName: "${serviceRoleFullName}"
+      annotations:
+        serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  name: "${serviceRoleFullName}"
+                  podConflictName: "${serviceRoleFullName}"
+              namespaces:
+                - "${namespace}"
+              topologyKey: "kubernetes.io/hostname"
+      hostPID: false
+      hostNetwork: false
       initContainers:
         - name: wait-for-metastore
           image: "${dockerBusyboxImage}"
+          imagePullPolicy: Always
           command:
             - "/bin/sh"
             - "-c"
@@ -57,7 +77,7 @@ spec:
                 
                 # 循环等待，最多等待300秒
                 for i in $(seq 1 60); do
-                  (echo > /dev/tcp/$host/$port) >/dev/null 2>&1
+                  nc -z -w 3 $host $port >/dev/null 2>&1
                   if [ $? -eq 0 ]; then
                     echo -e "$GREEN$CHECK_MARK $host:$port 连接成功!$NC"
                     break
@@ -76,6 +96,7 @@ spec:
       containers:
         - name: ${serviceRoleFullName}
           image: ${dockerImage}
+          imagePullPolicy: Always
           env:
             - name: POD_NAME
               valueFrom:

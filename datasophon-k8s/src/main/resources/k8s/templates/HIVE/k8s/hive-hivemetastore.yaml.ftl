@@ -8,6 +8,7 @@ metadata:
 spec:
   serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
@@ -16,11 +17,31 @@ spec:
   template:
     metadata:
       labels:
-        app: ${serviceRoleFullName}
+        name: "${serviceRoleFullName}"
+        app: "${serviceRoleFullName}"
+        podConflictName: "${serviceRoleFullName}"
+      annotations:
+        serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  name: "${serviceRoleFullName}"
+                  podConflictName: "${serviceRoleFullName}"
+              namespaces:
+                - "${namespace}"
+              topologyKey: "kubernetes.io/hostname"
+      hostPID: false
+      hostNetwork: false
       initContainers:
         - name: wait-for-db
           image: "${dockerBusyboxImage}"
+          imagePullPolicy: Always
           command:
             - "/bin/sh"
             - "-c"
@@ -75,6 +96,7 @@ spec:
         <#if isInstall?? && isInstall>
         - name: hive-schema-init
           image: "${dockerImage}"
+          imagePullPolicy: Always
           env:
             - name: USER
               value: ${runAsUser}
@@ -141,6 +163,7 @@ spec:
       containers:
         - name: ${serviceRoleFullName}
           image: ${dockerImage}
+          imagePullPolicy: Always
           env:
             - name: POD_NAME
               valueFrom:
