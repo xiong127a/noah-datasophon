@@ -23,9 +23,13 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.common.cache.CacheUtils;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+
+import static com.datasophon.common.Constants.UNDERLINE;
 
 public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -54,6 +58,19 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
             logger.warn("配置列表为空，无法更新服务配置");
             return;
         }
+
+        // 动态获取ZK节点数量 - 直接从缓存获取
+        int zkNodeCount = 0;
+        String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
+        Object zkCountObj = CacheUtils.get(zkNodeCountKey);
+
+        if (Objects.nonNull(zkCountObj)) {
+            zkNodeCount = (Integer) zkCountObj;
+            logger.info("从缓存 zookeeper_node_count 中获取到ZK节点数量为: {}", zkNodeCount);
+        } else {
+            logger.warn("缓存中未找到 ZK 节点数 (key: {}), ZK quorum 将为空。", zkNodeCountKey);
+        }
+
         logger.info("开始更新Kafka配置，适配Kubernetes服务...");
 
         // 处理Kafka NodePort特殊绑定
@@ -75,7 +92,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                 case "zookeeper.connect": {
                     // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
-                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                    for (int i = 0; i < zkNodeCount; i++) { // 使用动态获取的zkNodeCount
                         if (i > 0) {
                             zkServers.append(",");
                         }
@@ -92,7 +109,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                 case "cluster1.zk.list": {
                     // EFAK连接的ZooKeeper服务地址列表，使用完整的FQDN格式
                     StringBuilder zkServers = new StringBuilder();
-                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                    for (int i = 0; i < zkNodeCount; i++) { // 使用动态获取的zkNodeCount
                         if (i > 0) {
                             zkServers.append(",");
                         }
