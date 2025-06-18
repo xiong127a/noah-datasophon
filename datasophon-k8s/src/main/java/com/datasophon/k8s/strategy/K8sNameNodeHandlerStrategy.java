@@ -7,11 +7,14 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
+import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
 import static com.datasophon.common.Constants.UNDERLINE;
 
 public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
@@ -79,6 +82,23 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             logger.warn("缓存中未找到 ZK 节点数 (key: {}), ZK quorum 将为空。", zkNodeCountKey);
         }
 
+        // 动态获取JournalNode节点数量
+        int jnNodeCount = 0;
+        final String serviceRoleHostMappingKey = clusterId + UNDERLINE + SERVICE_ROLE_HOST_MAPPING;
+        Object mappingObj = CacheUtils.get(serviceRoleHostMappingKey);
+        if (Objects.nonNull(mappingObj)) {
+            JSONObject mapping = JSONUtil.parseObj(mappingObj);
+            String roleName = "JournalNode";
+            if (mapping.containsKey(roleName)) {
+                jnNodeCount = mapping.getJSONArray(roleName).size();
+                logger.info("从 {} 中获取到 {} 节点数量为: {}", serviceRoleHostMappingKey, roleName, jnNodeCount);
+            } else {
+                logger.warn("在 {} 中未找到 {} 角色", serviceRoleHostMappingKey, roleName);
+            }
+        } else {
+            logger.warn("缓存中未找到 {}", serviceRoleHostMappingKey);
+        }
+
         logger.info("开始更新HDFS NameNode配置，适配Kubernetes服务...");
 
         // 定义服务名常量
@@ -86,7 +106,6 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
         final String JOURNALNODE_SERVICE = "hdfs-journalnode";
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
         final String DATANODE_SERVICE = "hdfs-datanode";
-
 
         // 当前服务角色名称
         String serviceRoleName = "";
@@ -105,7 +124,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             // 处理NameNode HA相关配置
             switch (name) {
                 case "dfs.namenode.rpc-address.nameservice1.nn1": {
-                    // NameNode1 RPC地址使用完整的FQDN格式
+                    // NameNode1 RPC地址使用pod-0的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
@@ -113,7 +132,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     break;
                 }
                 case "dfs.namenode.rpc-address.nameservice1.nn2": {
-                    // NameNode2 RPC地址使用完整的FQDN格式
+                    // NameNode2 RPC地址使用pod-1的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
@@ -121,7 +140,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn1": {
-                    // NameNode1 HTTP地址使用完整的FQDN格式
+                    // NameNode1 HTTP地址使用pod-0的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
@@ -129,7 +148,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn2": {
-                    // NameNode2 HTTP地址使用完整的FQDN格式
+                    // NameNode2 HTTP地址使用pod-1的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
@@ -137,11 +156,10 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     break;
                 }
                 case "dfs.namenode.shared.edits.dir": {
-                    // NameNode共享编辑目录，使用完整的FQDN格式以确保Java DNS解析
-                    StringBuilder newValue = new StringBuilder();
-                    // 构建形如：qjournal://hdfs-journalnode-0.hdfs-journalnode.datasophon.svc.cluster.local:8485;...
-                    newValue.append("qjournal://");
-                    for (int i = 0; i < 3; i++) { // 假设3个JournalNode节点
+                    // NameNode共享编辑目录，使用JournalNode各个Pod的FQDN列表
+                    StringBuilder newValue = new StringBuilder("qjournal://");
+                    // 使用动态获取的JournalNode节点数量
+                    for (int i = 0; i < jnNodeCount; i++) {
                         if (i > 0) {
                             newValue.append(";");
                         }
@@ -157,7 +175,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 }
                 // 处理ZooKeeper地址 - ha.zookeeper.quorum
                 case "ha.zookeeper.quorum": {
-                    // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
+                    // 构建ZooKeeper服务地址列表，使用各个Pod的FQDN
                     StringBuilder zkServers = new StringBuilder();
                     for (int i = 0; i < zkNodeCount; i++) {
                         if (i > 0) {
@@ -174,7 +192,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 }
                 // 处理ZooKeeper地址 - hadoop.zk.address
                 case "hadoop.zk.address": {
-                    // 构建ZooKeeper服务地址列表，使用完整的FQDN格式
+                    // 构建ZooKeeper服务地址列表，使用各个Pod的FQDN
                     StringBuilder zkServers = new StringBuilder();
                     for (int i = 0; i < zkNodeCount; i++) {
                         if (i > 0) {
@@ -189,22 +207,9 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                // 处理DataNode数据传输地址 - 使用完整的FQDN格式
-                case "dfs.datanode.address": {
-                    // 使用DataNode服务的完整FQDN
-                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1026";
-                    config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
-                }
-                // 处理DataNode HTTP地址 - 使用完整的FQDN格式
-                case "dfs.datanode.http.address": {
-                    // 使用DataNode服务的完整FQDN
-                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1025";
-                    config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
-                }
+                // DataNode 相关地址不在此处配置，因为它们由DataNode自行向NameNode注册
+                // case "dfs.datanode.address": ...
+                // case "dfs.datanode.http.address": ...
                 case "dfs.nameservices": {
                     String clusterName = CacheUtils.getString("cluster_name");
                     config.setValue(clusterName);
@@ -214,6 +219,6 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             }
         }
 
-        logger.info("HDFS NameNode配置更新完成，已适配Kubernetes服务，所有服务地址均使用完整FQDN格式");
+        logger.info("HDFS NameNode配置更新完成，已适配Kubernetes服务，所有服务地址均使用独立的Pod FQDN格式");
     }
 }
