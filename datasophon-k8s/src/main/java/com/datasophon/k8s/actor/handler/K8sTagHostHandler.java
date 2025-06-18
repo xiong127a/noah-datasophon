@@ -195,8 +195,9 @@ public class K8sTagHostHandler {
             }
             System.out.println(ANSI_CYAN + "ℹ️ 期望的标签主机列表: " + expectedLabeledHosts + ANSI_RESET);
 
-            // 2. 获取所有节点
+            // 2. 获取集群中的所有节点，进行全面检查
             NodeList allNodes = client.nodes().list();
+            System.out.println(ANSI_BLUE + "🔍 正在全面检查集群中的 " + allNodes.getItems().size() + " 个节点..." + ANSI_RESET);
 
             // 3. 遍历所有节点，同步标签状态
             for (Node node : allNodes.getItems()) {
@@ -216,11 +217,9 @@ public class K8sTagHostHandler {
                     addTag(nodeName, client);
                     System.out.println(ANSI_GREEN + "✅ 成功为节点 " + nodeName + " 添加标签" + ANSI_RESET);
                 }
-                // Case 3: 状态正确 (有标签且应该有) -> 打印日志，跳过
-                else if (hasLabel && shouldHaveLabel) {
-                    System.out.println(ANSI_CYAN + "ℹ️ 节点 " + nodeName + " 标签状态正确，跳过" + ANSI_RESET);
-                }
             }
+            System.out.println(ANSI_CYAN + "ℹ️ 所有节点检查完毕。" + ANSI_RESET);
+
         } catch (Exception e) {
             System.out.println(ANSI_RED + "❌ 标签同步过程中发生错误: " + e.getMessage() + ANSI_RESET);
             logger.error("Error during label synchronization: {}", e.getMessage(), e);
