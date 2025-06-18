@@ -1,6 +1,7 @@
 package com.datasophon.k8s.strategy;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
@@ -8,10 +9,15 @@ import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
 import com.datasophon.common.model.ServiceConfig;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
+
+import static com.datasophon.common.Constants.UNDERLINE;
 
 public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -52,6 +58,18 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
         if (list == null || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新服务配置");
             return;
+        }
+
+        // 动态获取ZK节点数量
+        int zkNodeCount = 0;
+        String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
+        Object zkCountObj = CacheUtils.get(zkNodeCountKey);
+
+        if (Objects.nonNull(zkCountObj)) {
+            zkNodeCount = (Integer) zkCountObj;
+            logger.info("从缓存 zookeeper_node_count 中获取到ZK节点数量为: {}", zkNodeCount);
+        } else {
+            logger.warn("缓存中未找到 ZK 节点数 (key: {}), ZK quorum 将为空。", zkNodeCountKey);
         }
 
         logger.info("开始更新YARN ResourceManager配置，适配Kubernetes服务...");
@@ -152,7 +170,7 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                 case "yarn.resourcemanager.zk-address": {
                     // ZooKeeper地址列表
                     StringBuilder zkServers = new StringBuilder();
-                    for (int i = 0; i < 3; i++) { // 假设3个ZooKeeper节点
+                    for (int i = 0; i < zkNodeCount; i++) {
                         if (i > 0) {
                             zkServers.append(",");
                         }
@@ -162,6 +180,22 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "mapreduce.jobhistory.address": {
+                    // JobHistoryServer RPC地址
+                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":10020";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "mapreduce.jobhistory.webapp.address": {
+                    // JobHistoryServer Web UI地址
+                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":19888";
+                    config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }

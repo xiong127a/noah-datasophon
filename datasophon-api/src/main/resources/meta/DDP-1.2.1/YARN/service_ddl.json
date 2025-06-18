@@ -282,6 +282,7 @@
           "mapreduce.jobhistory.principal",
           "mapreduce.cluster.local.dir",
           "mapreduce.framework.name",
+          "mapreduce.jobhistory.address",
           "custom.mapred.site.xml"
         ]
       },
@@ -1568,6 +1569,23 @@
       "defaultValue": "0.0.0.0",
       "configCategory": "role",
       "configGroup": "TimelineServer",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mapreduce.jobhistory.address",
+      "label": "JobHistory服务地址",
+      "description": "JobHistory服务的RPC地址，客户端通过此地址获取已完成作业的信息",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${historyserverHost}:10020",
+      "bindRole": "HistoryServer",
+      "serviceType": "ClusterIP",
+      "portNumber": "10020",
+      "configCategory": "role",
+      "configGroup": "HistoryServer",
       "configLevel": "advanced"
     }
   ]
