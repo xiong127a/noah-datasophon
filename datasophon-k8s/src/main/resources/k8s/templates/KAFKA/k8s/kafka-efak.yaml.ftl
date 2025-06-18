@@ -27,6 +27,8 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -346,8 +348,6 @@ spec:
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         <#list volumeConfigMapSet as item>

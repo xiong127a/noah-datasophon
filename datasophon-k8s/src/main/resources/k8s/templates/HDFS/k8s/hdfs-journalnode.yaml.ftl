@@ -28,6 +28,8 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -157,8 +159,6 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         - name: journalnode-data

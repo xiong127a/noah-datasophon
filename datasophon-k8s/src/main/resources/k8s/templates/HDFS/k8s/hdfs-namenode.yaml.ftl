@@ -23,6 +23,8 @@ spec:
         serviceInstanceName: "${serviceName}"
         service.kubernetes.io/headless: "true"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -718,8 +720,6 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         - name: namenode-data
