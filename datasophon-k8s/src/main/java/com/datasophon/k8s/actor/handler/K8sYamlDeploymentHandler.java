@@ -135,9 +135,9 @@ public class K8sYamlDeploymentHandler {
         String configFilePath;
         if (outputDirectory.startsWith(Constants.SLASH)) {
             // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
-            configFilePath = String.join(Constants.SLASH, outputDirectory, generators.getFilename());
+            configFilePath = FileUtils.concatPath(outputDirectory, generators.getFilename());
         } else {
-            configFilePath = String.join(Constants.SLASH, appHome, outputDirectory, generators.getFilename());
+            configFilePath = FileUtils.concatPath(appHome, outputDirectory, generators.getFilename());
         }
 
         return configFilePath;
@@ -362,7 +362,7 @@ public class K8sYamlDeploymentHandler {
                     addConfigFile(volumeConfigMapSet, generators, configFilePath, containsHost);
                 }
             } else {
-                configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
+                configFilePath = FileUtils.concatPath(appHome, generators.getFilename());
                 addConfigFile(volumeConfigMapSet, generators, configFilePath, containsHost);
             }
 
