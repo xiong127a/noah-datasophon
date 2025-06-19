@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -78,6 +78,8 @@ spec:
               else
                 echo "Ranger plugin is not enabled. Skipping Ranger setup.";
               fi
+              chown -R ${runAsUser}:${runAsGroup} ${appHome}
+              cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:

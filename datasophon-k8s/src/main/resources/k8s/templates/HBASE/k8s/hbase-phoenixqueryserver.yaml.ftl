@@ -78,6 +78,8 @@ spec:
               else
                 echo "Ranger plugin is not enabled. Skipping Ranger setup.";
               fi
+              chown -R ${runAsUser}:${runAsGroup} ${appHome}
+              cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:

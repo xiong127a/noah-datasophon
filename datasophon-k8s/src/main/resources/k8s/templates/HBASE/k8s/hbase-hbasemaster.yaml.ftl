@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -48,36 +48,42 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           imagePullPolicy: "Always"
+          <#if node_port_mappings?? || cluster_port_mappings??>
+          ports:
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           command:
             - "/bin/bash"
             - "-c"
             - |
               if ${enableKerberos}; then
-                  echo "Kerberos is enabled. Running keystore setup...";
-                if [ ! -f /etc/security/keytab/keystore ]; then
-                  HOSTNAME=$(hostname)
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
-                fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
-                  echo "ssl-client.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
-                fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
-                  echo "ssl-server.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
-                fi
-              else
-                echo "Kerberos is not enabled. Skipping Kerberos setup.";
+                echo "Kerberos is enabled. Running keystore setup...";
+                HOSTNAME=$(hostname)
+                cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
               fi
               if ${enableRangerPlugin}; then
                 echo "Ranger plugin is enabled. Performing Ranger setup...";
-                cp /opt/datasophon/hadoop-3.3.3/share/hadoop/common/lib/jackson-mapper-asl-1.9.13.jar /opt/datasophon/hbase-2.2.7/lib
-                cp /opt/datasophon/hadoop-3.3.3/ranger-hdfs-plugin/lib/ranger-hdfs-plugin-impl/httpcore-nio-4.4.6.jar /opt/datasophon/hbase-2.2.7/lib
                 cd ${appHome}/ranger-hbase-plugin && \
                 sh ${appHome}/ranger-hbase-plugin/enable-hbase-plugin.sh
-              else
-                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
               fi
+              cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
+              HOST_IP=$(hostname -I | awk '{print $1}')
+              sed -i "s/{{IP}}/$HOST_IP/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:
@@ -93,18 +99,16 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
+            - name: hbase-data
+              mountPath: ${mount_path}
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -116,15 +120,13 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: hbase-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:

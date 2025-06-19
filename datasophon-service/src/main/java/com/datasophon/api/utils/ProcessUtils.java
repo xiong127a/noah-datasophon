@@ -158,6 +158,7 @@ public class ProcessUtils {
                 Integer port = extractPortFromUrl(url);
 
                 ClusterServiceRoleInstanceWebuis webui = webuisService.getRoleInstanceWebUi(roleInstance.getId());
+                List<ClusterServiceRoleInstanceWebuis> clusterServiceRoleInstanceWebuis = webuisService.listWebUisByServiceInstanceId(clusterServiceInstance.getId());
                 if (Objects.nonNull(webui)) {
                     logger.info("web ui already exists");
                 } else {
@@ -182,6 +183,12 @@ public class ProcessUtils {
                                 }
 
                                 for (String mappedPort : mappedPorts.split(",")) {
+                                    for (ClusterServiceRoleInstanceWebuis clusterServiceRoleInstanceWebui : clusterServiceRoleInstanceWebuis) {
+                                        if (clusterServiceRoleInstanceWebui.getWebUrl().contains(mappedPort)) {
+                                            logger.info("web ui already exists");
+                                            return;
+                                        }
+                                    }
                                     ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
 
                                     // 替换URL端口
