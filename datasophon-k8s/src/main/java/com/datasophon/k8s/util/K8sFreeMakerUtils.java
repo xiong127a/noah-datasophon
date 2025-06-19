@@ -203,7 +203,7 @@ public class K8sFreeMakerUtils {
             }
             labels.put("app", serviceRoleFullName);
         }
-        if (generatedContent.contains("{{HOST}}")) {
+        if (generatedContent.contains("{{HOST}}")||generatedContent.contains("{{IP}}")) {
             fileName += ".example";
         }
         // 将渲染后的内容加入到 ConfigMap 的 data 中

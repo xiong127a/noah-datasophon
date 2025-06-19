@@ -52,6 +52,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("YARN", new K8sResourceManagerHandlerStrategy("YARN", "ResourceManager"));
         map.put("KAFKA", new K8sKafkaHandlerStrategy("KAFKA", "KafkaBroker"));
         map.put("HIVE", new K8sHiveServer2HandlerStrategy("HIVE", "HiveServer2"));
+        map.put("HBASE", new K8sHbaseHandlerStrategy("HBASE", "HbaseMaster"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

@@ -4,15 +4,14 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceRoleType;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.K8sKerberosUtils;
-import com.datasophon.k8s.util.K8sMinaUtils;
-import com.datasophon.k8s.util.K8sUtil;
-import com.datasophon.k8s.util.KubeUtil;
+import com.datasophon.k8s.util.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
+import java.util.List;
 
 public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -64,6 +63,31 @@ public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implemen
 
         startResult = serviceHandler.start(command);
         return startResult;
+
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+
+        for (ServiceConfig config : list) {
+            String name = config.getName();
+            if (name != null && name.equals("hbase.zookeeper.quorum")) {
+                try {
+                    String value = (String) config.getValue();// 获取当前配置值
+                    String[] split = value.split(",");
+                    String newValue = "";
+                    for (int i = 0; i < split.length; i++){
+                        newValue+= "zookeeper-zkserver-" + i + ".zookeeper-zkserver.datasophon.svc.cluster.local:2181,";
+                    }
+                     config.setValue(newValue.substring(0, newValue.length() - 1)); // 去掉最后一个逗号
+                } catch (Exception e) {
+                    // 忽略错误
+                }
+            }
+        }
 
     }
 }

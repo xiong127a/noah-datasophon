@@ -155,7 +155,7 @@ public class K8sYamlDeploymentHandler {
         String filename = generators.getFilename();
         if (containsHost) {
             filename += ".example";
-            configFilePath += ".example";
+            configFilePath+= ".example";
         }
 
         // 设置文件路径
@@ -346,7 +346,8 @@ public class K8sYamlDeploymentHandler {
                 return;
             }
             boolean containsHost = entry.getValue().stream()
-                    .anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}"));
+                    .anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}")||
+                            serviceConfig.getValue().equals("{{IP}}"));
 
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();

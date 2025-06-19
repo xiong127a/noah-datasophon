@@ -133,7 +133,8 @@ public class K8sTagHostHandler {
         if (targetHosts == null) {
             execResult = new ExecResult();
             System.out.println(ANSI_RED + "❌ 无法获取集群 " + clusterId + " 的服务角色主机映射信息" + ANSI_RESET);
-            execResult.setExecErrOut("Failed to get service role host mapping for cluster " + clusterId);
+            execResult.setExecErrOut("Failed to retrieve service role host mapping configuration for cluster " + clusterId + 
+            ", service role: " + serviceRoleName + ". Please check if the service role is properly configured.");
             execResult.setExecResult(false);
             return execResult;
         }
