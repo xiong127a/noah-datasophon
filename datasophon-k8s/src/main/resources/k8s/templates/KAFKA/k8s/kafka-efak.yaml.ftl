@@ -124,7 +124,9 @@ spec:
               exit 1
               </#if>
 
-              echo -e "$BLUE$INFO ZooKeeper地址: $ZK_CONNECT$NC"
+              # 提取ZooKeeper地址（去掉znode路径）
+              ZK_QUORUM=$(echo "$ZK_CONNECT" | sed 's|/.*||g')
+              echo -e "$BLUE$INFO ZooKeeper地址: $ZK_QUORUM$NC"
 
               # 分割ZooKeeper地址并检查每个实例
               OLD_IFS="$IFS"
@@ -132,7 +134,7 @@ spec:
               ZK_AVAILABLE=0
               ZK_TOTAL=0
 
-              for ZK_SERVER in $ZK_CONNECT; do
+              for ZK_SERVER in $ZK_QUORUM; do
                 IFS="$OLD_IFS"
                 ZK_TOTAL=$((ZK_TOTAL+1))
                 IFS=","
@@ -145,7 +147,7 @@ spec:
 
               # 检查每个ZooKeeper实例
               IFS=","
-              for ZK_SERVER in $ZK_CONNECT; do
+              for ZK_SERVER in $ZK_QUORUM; do
                 IFS="$OLD_IFS"
                 HOST=$(echo $ZK_SERVER | cut -d':' -f1)
                 PORT=$(echo $ZK_SERVER | cut -d':' -f2)
@@ -171,6 +173,12 @@ spec:
                     sleep 2
                   fi
                 done
+
+                # 如果已有足够 ZK 实例，则提前退出
+                if [ $ZK_AVAILABLE -ge $MIN_AVAILABLE ]; then
+                  echo -e "$GREEN$CHECK_MARK 已有足够数量($ZK_AVAILABLE/$ZK_TOTAL)的ZooKeeper实例可用，提前结束检查$NC"
+                  break
+                fi
 
                 # 检查是否达到最大重试次数
                 if [ $RETRIES -eq $MAX_RETRIES ]; then

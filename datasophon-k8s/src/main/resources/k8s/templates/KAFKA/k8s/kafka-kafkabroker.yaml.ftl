@@ -208,6 +208,8 @@ spec:
               name: clusterport-${item?index + 1}
           </#list>
           </#if>
+            - containerPort: ${JMX_PORT}
+              name: jmx
           command:
             - "/bin/bash"
             - "-c"
@@ -215,119 +217,60 @@ spec:
               # 定义颜色和图标
               RED='\033[0;31m'
               GREEN='\033[0;32m'
-              BLUE='\033[0;34m'
+              BLUE='\033[1;34m'
               NC='\033[0m' # No Color
               CHECK_MARK="✅"
               INFO="ℹ️"
 
               echo -e "$BLUE$INFO 开始初始化Kafka配置文件...$NC"
               
-              <#if kafkaConfigTempDir?? && kafkaConfigTargetDir??>
-              # 挂载配置的临时目录和目标目录
-              TMP_CONF_FILE="${kafkaConfigTempDir}"
-              TARGET_CONF_DIR="${kafkaConfigTargetDir}"
-              <#else>
-              # 使用默认路径
-              TMP_CONF_FILE="/tmp/kafka-config"
-              TARGET_CONF_DIR="/opt/datasophon/kafka-2.4.1/config"
-              </#if>
+              HOSTNAME=$(hostname -f)
               
-              # 创建目标配置目录
-              mkdir -p $TARGET_CONF_DIR
+              # 配置文件路径
+              SOURCE_CONF_DIR="/opt/datasophon/datasophon-config/KAFKA/config"
+              TARGET_CONF_DIR="${appHome}/config"
+              SOURCE_CONF_FILE="${kafkaConfigTempDir}"
+              TARGET_CONF_FILE="${kafkaConfigTargetDir}/server.properties"
               
-              # 获取主机名和节点IP
-              HOSTNAME=$<#noparse>(hostname -f)</#noparse>
-              NODE_IP=$<#noparse>NODE_IP_ADDRESS</#noparse>
+              echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
               
-              # 获取Pod索引从POD_NAME中提取
-              POD_INDEX=$<#noparse>(echo $POD_NAME | awk -F'-' '{print $NF}')</#noparse>
-              echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 当前Pod索引: $<#noparse>POD_INDEX</#noparse>$<#noparse>NC</#noparse>"
-              
-              <#if node_port_mappings??>
-              <#-- 定义变量来存储提取的端口映射 -->
-              <#assign kafka_port_mappings = "">
-              <#-- 遍历node_port_mappings数组查找key为9092的项 -->
-              <#list node_port_mappings as item>
-                <#if item?keys?seq_contains("9092")>
-                  <#assign kafka_port_mappings = item["9092"]>
-                </#if>
-              </#list>
-              
-
-              
-              # 解析端口映射
-              NODE_PORT_MAPPINGS="${kafka_port_mappings}"
-              echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 可用端口映射: $<#noparse>NODE_PORT_MAPPINGS</#noparse>$<#noparse>NC</#noparse>"
-              
-              # 将端口映射分割为数组
-              IFS=',' read -ra PORT_ARRAY <<< "$<#noparse>NODE_PORT_MAPPINGS</#noparse>"
-              
-              # 根据Pod索引选择对应的端口
-              PORT_ARRAY_LENGTH=$<#noparse>(echo ${PORT_ARRAY[@]} | wc -w)</#noparse>
-              if [ $<#noparse>POD_INDEX</#noparse> -lt $<#noparse>PORT_ARRAY_LENGTH</#noparse> ]; then
-                SELECTED_PORT=$<#noparse>{PORT_ARRAY[$POD_INDEX]}</#noparse>
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 根据Pod索引选择端口: $<#noparse>SELECTED_PORT</#noparse>$<#noparse>NC</#noparse>"
-              else
-                SELECTED_PORT=$<#noparse>{PORT_ARRAY[0]}</#noparse>
-                echo -e "$<#noparse>YELLOW</#noparse> 警告: Pod索引超出端口映射范围，使用第一个端口: $<#noparse>SELECTED_PORT</#noparse>$<#noparse>NC</#noparse>"
-              fi
-              <#else>
-              # 使用默认端口
-              SELECTED_PORT="9092"
-              echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 使用默认端口: $<#noparse>SELECTED_PORT</#noparse>$<#noparse>NC</#noparse>"
-              </#if>
-              
-              echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 当前主机名: $<#noparse>HOSTNAME</#noparse>$<#noparse>NC</#noparse>"
-              echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> K8S节点IP: $<#noparse>NODE_IP</#noparse>$<#noparse>NC</#noparse>"
-              
-              # 检查临时配置文件
-              if [ -f "$<#noparse>TMP_CONF_FILE</#noparse>" ]; then
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 找到配置文件: $<#noparse>TMP_CONF_FILE</#noparse>$<#noparse>NC</#noparse>"
+              # 创建并准备配置
+              if [ -f "$SOURCE_CONF_FILE" ]; then
+                echo -e "$BLUE$INFO 找到源配置文件，开始准备最终配置..."
                 
-                # 创建目标配置文件
-                TARGET_CONF_FILE="$<#noparse>TARGET_CONF_DIR</#noparse>/server.properties"
+                # 确保目标目录存在
+                mkdir -p "$TARGET_CONF_DIR"
                 
-                # 替换占位符并复制到目标位置
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 替换配置文件中的占位符...$<#noparse>NC</#noparse>"
-                # 先复制原始文件
-                cat "$<#noparse>TMP_CONF_FILE</#noparse>" > "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                # 复制并替换占位符
+                cat "$SOURCE_CONF_FILE" > "$TARGET_CONF_FILE"
                 
-                # 替换hostname
-                sed -i "s/\$<#noparse>(hostname)</#noparse>/$<#noparse>NODE_IP</#noparse>/g" "$<#noparse>TARGET_CONF_FILE</#noparse>"
-                
-                # 只替换advertised.listeners中的端口
-                if grep -q "advertised.listeners" "$<#noparse>TARGET_CONF_FILE</#noparse>"; then
-                  echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 替换advertised.listeners中的端口...$<#noparse>NC</#noparse>"
-                  sed -i "s/\(advertised.listeners=.*\):9092/\1:$<#noparse>SELECTED_PORT</#noparse>/g" "$<#noparse>TARGET_CONF_FILE</#noparse>"
-                fi
-                
-                # 检查advertised.listeners是否存在，如果不存在则添加
-                if ! grep -q "advertised.listeners" "$<#noparse>TARGET_CONF_FILE</#noparse>"; then
-                  echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> advertised.listeners配置不存在，添加默认配置...$<#noparse>NC</#noparse>"
-                  echo "advertised.listeners=PLAINTEXT://$<#noparse>NODE_IP</#noparse>:$<#noparse>SELECTED_PORT</#noparse>" >> "$<#noparse>TARGET_CONF_FILE</#noparse>"
-                fi
+                # 替换hostname占位符为Pod的FQDN
+                sed -i "s/\$(hostname)/$HOSTNAME/g" "$TARGET_CONF_FILE"
                 
                 # 验证文件创建成功
-                if [ -f "$<#noparse>TARGET_CONF_FILE</#noparse>" ]; then
-                  echo -e "$<#noparse>GREEN</#noparse>$<#noparse>CHECK_MARK</#noparse> 成功创建配置文件: $<#noparse>TARGET_CONF_FILE</#noparse>$<#noparse>NC</#noparse>"
+                if [ -f "$TARGET_CONF_FILE" ]; then
+                  echo -e "$GREEN$CHECK_MARK 成功创建配置文件: $TARGET_CONF_FILE$NC"
                   
-                  echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 显示关键配置:$<#noparse>NC</#noparse>"
-                  grep -E "advertised.listeners|listeners|zookeeper.connect" "$<#noparse>TARGET_CONF_FILE</#noparse>"
+                  echo -e "$BLUE$INFO 显示关键配置:$NC"
+                  grep -E "advertised.listeners|listeners|zookeeper.connect" "$TARGET_CONF_FILE"
                 else
-                  echo -e "$<#noparse>RED</#noparse> 错误: 无法创建配置文件: $<#noparse>TARGET_CONF_FILE</#noparse>$<#noparse>NC</#noparse>"
+                  echo -e "$RED 错误: 无法创建配置文件 $TARGET_CONF_FILE$NC"
+                  exit 1
                 fi
-                
-                # 启动Kafka服务
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 启动Kafka服务...$<#noparse>NC</#noparse>"
-                ${startCommand}
               else
-                echo -e "$<#noparse>RED</#noparse> 错误: 找不到配置文件: $<#noparse>TMP_CONF_FILE</#noparse>$<#noparse>NC</#noparse>"
-                
-                # 退出容器，让Kubernetes重启它
-                echo -e "$<#noparse>BLUE</#noparse>$<#noparse>INFO</#noparse> 配置文件不存在，退出容器$<#noparse>NC</#noparse>"
-                exit 1
+                echo -e "$YELLOW 警告: 源配置文件 $SOURCE_CONF_FILE 不存在，Kafka将使用默认配置$NC"
               fi
+
+              # 设置JMX RMI的主机名，以便远程访问
+              # 注意：JMX_PORT 和其他JMX参数已通过环境变量注入
+              export KAFKA_OPTS="$KAFKA_OPTS -Djava.rmi.server.hostname=$HOSTNAME"
+              
+              # 启动Kafka服务
+              echo -e "$BLUE$INFO 启动Kafka服务...$NC"
+              ${startCommand}
           env:
+            - name: JMX_PORT
+              value: ${JMX_PORT}
             - name: USER
               value: ${runAsUser}
             - name: MEM_LIMIT

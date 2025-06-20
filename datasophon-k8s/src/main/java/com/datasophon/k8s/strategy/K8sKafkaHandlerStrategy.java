@@ -74,7 +74,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
         logger.info("开始更新Kafka配置，适配Kubernetes服务...");
 
         // 处理Kafka NodePort特殊绑定
-        processNodePortMappings(clusterId, list);
+//        processNodePortMappings(clusterId, list);
 
         // 定义服务名常量
         final String KAFKA_EFAK_SERVICE = "kafka-efak";
@@ -118,6 +118,7 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                                 .append(NAMESPACE).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
+                    zkServers.append("/kafka");
                     config.setValue(zkServers.toString());
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
