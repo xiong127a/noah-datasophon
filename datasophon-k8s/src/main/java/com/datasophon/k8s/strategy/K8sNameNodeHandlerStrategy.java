@@ -207,9 +207,22 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
-                // DataNode 相关地址不在此处配置，因为它们由DataNode自行向NameNode注册
-                // case "dfs.datanode.address": ...
-                // case "dfs.datanode.http.address": ...
+                // 处理DataNode数据传输地址 - 使用完整的FQDN格式
+                case "dfs.datanode.address": {
+                    // 使用DataNode服务的完整FQDN
+                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1026";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                // 处理DataNode HTTP地址 - 使用完整的FQDN格式
+                case "dfs.datanode.http.address": {
+                    // 使用DataNode服务的完整FQDN
+                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1025";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
                 case "dfs.nameservices": {
                     String clusterName = CacheUtils.getString("cluster_name");
                     config.setValue(clusterName);

@@ -318,7 +318,7 @@ spec:
                 # 执行NameNode格式化
                 echo "格式化主NameNode (nn1)..."
                 set -x  # 启用命令跟踪，便于调试
-                su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
+                su - ${runAsUser} -c "${appHome}/bin/hdfs namenode -format -nonInteractive -force smhadoop"
                 FORMAT_RESULT=$?
                 set +x  # 关闭命令跟踪
                 
@@ -358,7 +358,7 @@ spec:
                 # 执行备用NameNode同步
                 echo "同步备用NameNode (nn2) 元数据..."
                 set -x  # 启用命令跟踪，便于调试
-                su - ${runAsUser} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
+                su - ${runAsUser} -c "${appHome}/bin/hdfs namenode -bootstrapStandby -nonInteractive -force"
                 BOOTSTRAP_RESULT=$?
                 set +x  # 关闭命令跟踪
                 
