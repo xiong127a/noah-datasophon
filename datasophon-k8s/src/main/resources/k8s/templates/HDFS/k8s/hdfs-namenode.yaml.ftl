@@ -264,12 +264,14 @@ spec:
                 echo -e "$GREEN$CHECK_MARK JournalNode集群状态正常，继续初始化NameNode$NC"
               fi
         <#if isInstall?? && isInstall>
-        # NameNode格式化/同步初始化容器 - 只在首次安装时执行
+        # NameNode格式化/同步初始化容器 - 每次启动时都会检查，确保幂等性
         - name: namenode-format
           image: "${dockerImage}"
           env:
             - name: USER
               value: ${runAsUser}
+            - name: NN_NAME_DIR
+              value: ${nn_name_dir}
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -282,7 +284,15 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "========== 开始NameNode格式化/同步操作 =========="
+              echo "========== 开始NameNode格式化/同步检查 =========="
+              
+              # 检查NameNode是否已经格式化
+              if [ -f "${NN_NAME_DIR}/current/VERSION" ]; then
+                echo "✅ NameNode数据目录已存在，跳过格式化/同步。"
+                exit 0
+              fi
+              
+              echo "ℹ️ NameNode数据目录不存在，开始执行首次初始化..."
               
               # 从Pod名称确定NameNode ID和角色
               POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
@@ -318,7 +328,7 @@ spec:
                 # 执行NameNode格式化
                 echo "格式化主NameNode (nn1)..."
                 set -x  # 启用命令跟踪，便于调试
-                su - ${runAsUser} -c "${appHome}/bin/hdfs namenode -format -nonInteractive -force smhadoop"
+                su - ${runAsUser} -c "${appHome}/bin/hdfs namenode -format -nonInteractive -force ${nameServiceId}"
                 FORMAT_RESULT=$?
                 set +x  # 关闭命令跟踪
                 
@@ -371,7 +381,6 @@ spec:
               fi
               
               echo "========== 完成NameNode格式化/同步操作 =========="
-        </#if>
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
@@ -383,14 +392,17 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-        <#if isInstall?? && isInstall>
-        # ZKFC格式化初始化容器 - 只在首次安装且是第一个NameNode(index=0)时执行
+        # ZKFC格式化初始化容器 - 每次启动时都会检查，确保幂等性
         # 注意：Pod索引检查在容器内部进行
         - name: zkfc-format
           image: "${dockerImage}"
           env:
             - name: USER
               value: ${runAsUser}
+            - name: ZK_QUORUM
+              value: ${zkQuorum}
+            - name: NAME_SERVICE_ID
+              value: ${nameServiceId}
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -403,45 +415,41 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              echo "开始检查是否需要格式化ZKFC..."
+              echo "========== 开始ZKFC格式化检查 =========="
               
               # 从Pod名称确定NameNode ID和角色
               POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
               
-              # 只在第一个NameNode（index=0）上执行格式化
+              # 只在第一个NameNode（index=0）上执行检查和格式化
               if [ "$POD_INDEX" != "0" ]; then
-                echo -e "$BLUE$INFO 当前Pod不是第一个NameNode (index=$POD_INDEX)，跳过ZKFC格式化$NC"
+                echo "ℹ️ 当前Pod不是第一个NameNode (index=$POD_INDEX)，跳过ZKFC格式化检查。"
                 exit 0
               fi
               
-              # 设置环境变量
-              export NAMENODE_ID="nn1"
-              export HADOOP_OPTS="-Ddfs.ha.namenode.id=nn1"
-              export HDFS_NAMENODE_OPTS="-Ddfs.ha.namenode.id=nn1"
+              ZK_HA_PATH="/hadoop-ha/${NAME_SERVICE_ID}"
+              echo "检查ZooKeeper HA路径: ${ZK_HA_PATH}..."
               
-              # 检查是否是首次安装
-              <#if isInstall?? && isInstall>
-              echo -e "$BLUE$INFO 检测到首次安装，将执行ZKFC格式化$NC"
-              <#else>
-              echo -e "$YELLOW$WARNING 非首次安装，跳过ZKFC格式化$NC"
-              exit 0
-              </#if>
+              # 使用Hadoop自带的ZK客户端检查znode是否存在
+              hdfs org.apache.zookeeper.ZooKeeperMain -server $ZK_QUORUM stat $ZK_HA_PATH > /dev/null 2>&1
               
-              echo -e "$BLUE$INFO 开始执行ZKFC格式化...$NC"
+              if [ $? -eq 0 ]; then
+                echo "✅ ZKFC HA路径已存在，跳过格式化。"
+                exit 0
+              fi
+              
+              echo "ℹ️ ZKFC HA路径不存在，开始执行ZKFC格式化..."
               
               # 添加Kerberos相关配置
               if ${enableKerberos}; then
-                echo -e "$BLUE$INFO Kerberos已启用，设置Kerberos配置...$NC";
+                echo "ℹ️ Kerberos已启用，设置Kerberos配置...";
                 HOSTNAME=$(hostname)
                 if [ ! -f /etc/security/keytab/keystore ]; then
                   cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
-                  echo -e "$BLUE$INFO ssl-client.xml不存在，从模板复制...$NC";
                   cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
-                  echo -e "$BLUE$INFO ssl-server.xml不存在，从模板复制...$NC";
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
                 # 执行Kerberos身份验证
@@ -449,9 +457,9 @@ spec:
               fi
               
               # 执行ZKFC格式化
-              set -x  # 启用命令跟踪，便于调试
+              set -x  # 启用命令跟踪
               FORMAT_CMD="${appHome}/bin/hdfs zkfc -formatZK -force"
-              echo -e "$BLUE$INFO 执行命令: $FORMAT_CMD$NC"
+              echo "执行命令: $FORMAT_CMD"
               # 使用 -force 参数强制格式化，避免交互式提示
               su - ${runAsUser} -c "cd ${appHome} && $FORMAT_CMD"
               FORMAT_RESULT=$?
@@ -459,15 +467,14 @@ spec:
               
               # 检查格式化结果
               if [ $FORMAT_RESULT -eq 0 ]; then
-                echo -e "$GREEN$CHECK_MARK ZKFC格式化成功$NC"
+                echo "✅ ZKFC格式化成功"
               else
-                echo -e "$RED$ERROR ZKFC格式化失败，错误码: $FORMAT_RESULT$NC"
-                # 这里可以添加重试逻辑或其他错误处理
-                # 但为了保证初始化容器不阻塞Pod启动，我们依然返回成功
-                echo -e "$YELLOW$WARNING ZKFC格式化失败，但允许Pod继续启动$NC"
+                echo "❌ ZKFC格式化失败，错误码: $FORMAT_RESULT"
+                # 允许Pod继续启动以进行调试
+                echo "⚠️ ZKFC格式化失败，但允许Pod继续启动。"
               fi
               
-              echo -e "$BLUE$INFO ZKFC格式化步骤完成$NC"
+              echo "========== ZKFC格式化步骤完成 =========="
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
