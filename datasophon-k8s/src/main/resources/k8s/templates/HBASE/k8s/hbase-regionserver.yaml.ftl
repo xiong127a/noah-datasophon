@@ -6,15 +6,12 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -26,6 +23,8 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -80,6 +79,8 @@ spec:
               fi
               chown -R ${runAsUser}:${runAsGroup} ${appHome}
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
+              HOSTNAME=$(hostname -f)
+              sed -i "s/\$(hostname)/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:
@@ -114,8 +115,6 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         <#list volumeConfigMapSet as item>

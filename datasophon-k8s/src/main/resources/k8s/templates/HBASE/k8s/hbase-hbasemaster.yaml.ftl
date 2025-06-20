@@ -6,6 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -82,8 +83,8 @@ spec:
                 sh ${appHome}/ranger-hbase-plugin/enable-hbase-plugin.sh
               fi
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
-              HOST_IP=$(hostname -I | awk '{print $1}')
-              sed -i "s/{{IP}}/$HOST_IP/g" ${appHome}/conf/hbase-site.xml
+              HOSTNAME=$(hostname -f)
+              sed -i "s/\$(hostname)/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:

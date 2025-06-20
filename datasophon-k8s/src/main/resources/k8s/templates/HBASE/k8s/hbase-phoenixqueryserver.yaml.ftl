@@ -1,20 +1,17 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -26,6 +23,8 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -114,8 +113,6 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         <#list volumeConfigMapSet as item>
