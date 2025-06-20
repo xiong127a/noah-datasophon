@@ -416,7 +416,7 @@ CREATE TABLE `t_ddh_cluster_variable`  (
   `id` int(10) NOT NULL AUTO_INCREMENT,
   `cluster_id` int(10) DEFAULT NULL,
   `variable_name` varchar(255)  DEFAULT NULL,
-  `variable_value` varchar(255)  DEFAULT NULL,
+  `variable_value` LONGTEXT  DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) AUTO_INCREMENT = 1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT = DYNAMIC;
 
@@ -627,7 +627,7 @@ CREATE TABLE `t_ddh_operation_log`  (
   `host_ids` varchar(30)  DEFAULT NULL COMMENT '主机',
   `service_name` varchar(30)  DEFAULT NULL COMMENT '服务名称',
   `service_role_instances_ids` varchar(30)  DEFAULT NULL COMMENT '服务实例',
-  `param` text(128)  DEFAULT NULL COMMENT '请求数据',
+  `param` LONGTEXT(128)  DEFAULT NULL COMMENT '请求数据',
   `return_code` int(10)  DEFAULT NULL COMMENT '返回状态码',
   `return_msg` text  DEFAULT NULL COMMENT '返回说明',
   `operate_user` varchar(128)  DEFAULT NULL COMMENT '操作人',
