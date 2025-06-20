@@ -269,9 +269,9 @@ spec:
           image: "${dockerImage}"
           env:
             - name: USER
-              value: ${runAsUser}
+              value: "${runAsUser}"
             - name: NN_NAME_DIR
-              value: ${nn_name_dir}
+              value: "${nn_name_dir}"
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -287,7 +287,7 @@ spec:
               echo "========== 开始NameNode格式化/同步检查 =========="
               
               # 检查NameNode是否已经格式化
-              if [ -f "${NN_NAME_DIR}/current/VERSION" ]; then
+              if [ -f "${nn_name_dir}/current/VERSION" ]; then
                 echo "✅ NameNode数据目录已存在，跳过格式化/同步。"
                 exit 0
               fi
@@ -398,11 +398,11 @@ spec:
           image: "${dockerImage}"
           env:
             - name: USER
-              value: ${runAsUser}
+              value: "${runAsUser}"
             - name: ZK_QUORUM
-              value: ${zkQuorum}
+              value: "${zkQuorum}"
             - name: NAME_SERVICE_ID
-              value: ${nameServiceId}
+              value: "${nameServiceId}"
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -426,8 +426,8 @@ spec:
                 exit 0
               fi
               
-              ZK_HA_PATH="/hadoop-ha/${NAME_SERVICE_ID}"
-              echo "检查ZooKeeper HA路径: ${ZK_HA_PATH}..."
+              ZK_HA_PATH="/hadoop-ha/${nameServiceId}"
+              echo "检查ZooKeeper HA路径: $ZK_HA_PATH..."
               
               # 使用Hadoop自带的ZK客户端检查znode是否存在
               hdfs org.apache.zookeeper.ZooKeeperMain -server $ZK_QUORUM stat $ZK_HA_PATH > /dev/null 2>&1
