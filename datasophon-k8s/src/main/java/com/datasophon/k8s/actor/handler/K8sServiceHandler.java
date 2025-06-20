@@ -922,7 +922,7 @@ public class K8sServiceHandler {
             if (pvcConfigGenerator == null) {
                 String errorMsg = String.format("找不到服务%s的PVC配置生成器", serviceRoleFullName);
                 logger.error(errorMsg);
-                throw new IllegalArgumentException(errorMsg);
+                //throw new IllegalArgumentException(errorMsg);
             }
 
             // 获取配置列表

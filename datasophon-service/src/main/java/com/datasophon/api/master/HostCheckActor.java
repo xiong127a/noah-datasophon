@@ -60,7 +60,7 @@ public class HostCheckActor extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws Throwable {
     if (msg instanceof HostCheckCommand) {
-      logger.info("start to check host info");
+      //logger.info("start to check host info");
       ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
       ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
           .getBean(ClusterServiceRoleInstanceService.class);
