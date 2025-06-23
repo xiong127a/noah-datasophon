@@ -79,6 +79,8 @@ spec:
               fi
               chown -R ${runAsUser}:${runAsGroup} ${appHome}
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
+              HOSTNAME=$(hostname -f)
+              sed -i "s/{{HOST}}/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:

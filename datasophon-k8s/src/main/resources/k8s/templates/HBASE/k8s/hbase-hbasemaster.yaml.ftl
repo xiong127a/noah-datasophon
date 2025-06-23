@@ -15,7 +15,8 @@ spec:
     type: "RollingUpdate"
     rollingUpdate:
       maxSurge: 0
-      maxUnavailable: 1
+      maxUnavailable: 1+
+  podManagementPolicy: Parallel
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -84,7 +85,7 @@ spec:
               fi
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
               HOSTNAME=$(hostname -f)
-              sed -i "s/\$(hostname)/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
+              sed -i "s/{{HOST}}/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:
