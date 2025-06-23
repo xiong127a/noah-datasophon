@@ -6,6 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -15,6 +16,7 @@ spec:
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1
+  podManagementPolicy: Parallel
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
