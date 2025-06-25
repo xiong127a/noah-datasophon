@@ -57,8 +57,9 @@ public class K8sZkServerHandlerStrategy extends K8sAbstractHandlerStrategy imple
                     // 计算Pod索引 (serverId-1)
                     int podIndex = serverId - 1;
 
-                    // 修改为简化DNS名称
-                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + ":2888:3888";
+                    // 修改为 FQDN DNS 名称
+                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + "." + NAMESPACE + "."
+                            + CLUSTER_DOMAIN + ":2888:3888";
                     config.setValue(newValue);
 
                     logger.info("更新ZK配置: {} = {}", name, newValue);
