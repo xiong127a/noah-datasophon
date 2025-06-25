@@ -358,11 +358,6 @@ spec:
               mountPath: "/etc/localtime"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list volumeConfigMapSet as item>
-        - name: "${item.name}"
-          configMap:
-            name: "${item.name}"
-        </#list>
         - name: efak-data
           persistentVolumeClaim:
             claimName: "${serviceRoleFullName}-pvc"

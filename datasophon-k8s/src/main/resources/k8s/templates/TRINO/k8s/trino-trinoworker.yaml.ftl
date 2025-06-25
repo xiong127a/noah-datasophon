@@ -6,6 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -15,6 +16,7 @@ spec:
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1
+  podManagementPolicy: Parallel
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -91,10 +93,6 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -106,16 +104,7 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list volumeConfigMapSet as item>
-        - name: "${item.name}"
-          configMap:
-            name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
-        </#list>
+
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

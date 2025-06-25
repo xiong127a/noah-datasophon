@@ -824,6 +824,7 @@ public class K8sServiceHandler {
                         .delete();
                 execResult.setExecResult(true);
                 CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+                CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.POD_NAME);
             } catch (Exception e) {
                 logger.error("停止deployment时发生异常: {}", e.getMessage(), e);
                 execResult.setExecErrOut("停止deployment时发生异常: " + e.getMessage());
@@ -922,6 +923,7 @@ public class K8sServiceHandler {
             if (pvcConfigGenerator == null) {
                 String errorMsg = String.format("找不到服务%s的PVC配置生成器", serviceRoleFullName);
                 logger.error(errorMsg);
+                return;
                 //throw new IllegalArgumentException(errorMsg);
             }
 

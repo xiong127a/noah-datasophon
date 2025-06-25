@@ -6,6 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -68,18 +69,14 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -91,16 +88,7 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list volumeConfigMapSet as item>
-        - name: "${item.name}"
-          configMap:
-            name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
-        </#list>
+
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

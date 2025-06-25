@@ -6,6 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -77,11 +78,11 @@ spec:
             timeoutSeconds: 15
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:

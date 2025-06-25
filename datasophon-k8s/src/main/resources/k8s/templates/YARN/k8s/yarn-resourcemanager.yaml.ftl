@@ -247,11 +247,6 @@ spec:
         - name: yarn-data
           persistentVolumeClaim:
             claimName: "${serviceRoleFullName}-pvc"
-        <#list volumeConfigMapSet as item>
-        - name: "${item.name}"
-          configMap:
-            name: "${item.name}"
-        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

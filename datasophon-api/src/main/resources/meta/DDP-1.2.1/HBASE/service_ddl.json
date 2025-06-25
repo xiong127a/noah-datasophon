@@ -158,7 +158,6 @@
           "hbase.master.port",
           "hbase.master.info.port",
           "hbase.regionserver.port",
-          "hbase.master.hostname",
           "phoenix.queryserver.port",
           "phoenix.queryserver.http.port",
           "hbase.rootdir",
@@ -341,17 +340,6 @@
       "bindRole": "RegionServer",
       "serviceType": "ClusterIP",
       "portNumber": "16200"
-    },
-    {
-      "name": "hbase.master.hostname",
-      "label": "hbase.master.hostname",
-      "description": "hbase.master.hostname",
-      "required": true,
-      "type": "input",
-      "value": "{{IP}}",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "{{IP}}"
     },
     {
       "name": "phoenix.queryserver.port",
@@ -750,10 +738,10 @@
       "description": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
       "required": true,
       "type": "input",
-      "value": "${hostname}-queryserver",
+      "value": "{{HOST}}-queryserver",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "{{IP}}-queryserver"
+      "defaultValue": "{{HOST}}-queryserver"
     },
     {
       "name": "esAuditEnable",
