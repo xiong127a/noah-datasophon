@@ -66,11 +66,11 @@ spec:
           name: "prometheus-prometheus"
           resources:
             requests:
-              memory: ${requests_memory}
-              cpu: ${requests_cpu}
+              memory: "2Gi"
+              cpu: "1"
             limits:
-              memory: ${limits_memory}
-              cpu: ${limits_cpu}
+              memory: "4Gi"
+              cpu: "2"
           securityContext:
             privileged: true
           volumeMounts:
