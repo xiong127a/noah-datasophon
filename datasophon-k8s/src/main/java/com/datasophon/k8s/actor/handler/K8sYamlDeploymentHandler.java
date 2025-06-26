@@ -347,7 +347,7 @@ public class K8sYamlDeploymentHandler {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
-            if (StrUtil.startWith(generators.getFilename(), "." + Constants.K8S_CONFIG_PREFIX)) {
+            if (StrUtil.startWith(generators.getFilename(), Constants.K8S_CONFIG_PREFIX)) {
                 return;
             }
             boolean containsHost = entry.getValue().stream()
