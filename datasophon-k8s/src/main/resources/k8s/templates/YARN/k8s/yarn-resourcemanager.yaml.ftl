@@ -8,6 +8,7 @@ metadata:
 spec:
   serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
