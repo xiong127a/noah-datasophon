@@ -269,6 +269,7 @@
           "yarn.resourcemanager.scheduler.bind-host",
           "yarn.resourcemanager.admin.bind-host",
           "yarn.resourcemanager.webapp.bind-host",
+          "yarn.nodemanager.local-dirs.permission",
           "custom.yarn.site.xml"
         ]
       },
@@ -1240,7 +1241,8 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "",
+      "defaultValue": [
+      ],
       "configCategory": "file",
       "configGroup": "yarn-site",
       "configLevel": "custom"
@@ -1586,6 +1588,20 @@
       "portNumber": "10020",
       "configCategory": "role",
       "configGroup": "HistoryServer",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "yarn.nodemanager.local-dirs.permission",
+      "label": "NodeManager本地目录权限",
+      "description": "NodeManager本地目录的权限设置，影响容器执行时的访问权限。设置为775可确保hive等用户能正常访问本地目录执行作业。",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "777",
+      "configCategory": "role",
+      "configGroup": "NodeManager",
       "configLevel": "advanced"
     }
   ]
