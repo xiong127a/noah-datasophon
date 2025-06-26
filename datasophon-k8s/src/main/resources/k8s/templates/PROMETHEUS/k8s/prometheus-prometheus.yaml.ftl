@@ -89,6 +89,34 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo "========== 开始处理hosts文件 =========="
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo "已备份原始hosts文件到/tmp/original_hosts"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo "从主机hosts文件提取有用条目..."
+                grep -v "^127.0.0.1" /tmp/host_etc_hosts | grep -v "^::1" | grep -v "^#" >> /tmp/original_hosts
+              else
+                echo "警告: 主机hosts文件未找到"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo "最终hosts文件内容:"
+              cat /etc/hosts
+              
+              echo "测试主机名解析:"
+              echo "hostname: $(hostname)"
+              echo "hostname -f: $(hostname -f 2>/dev/null || echo '无法获取FQDN')"
+              
+              echo "========== hosts文件处理完成 =========="
+              
+              # 继续原来的启动命令
               ulimit -n 1000000
               ulimit -u 65535
               sysctl -w fs.file-max=1000000
@@ -147,7 +175,7 @@ spec:
             - name: "timezone"
               mountPath: "/etc/localtime"
             - name: "hosts-file"
-              mountPath: "/etc/hosts"
+              mountPath: "/tmp/host_etc_hosts"  # 修改为临时目录
       terminationGracePeriodSeconds: 30
       volumes:
         - name: prometheus-data
