@@ -39,6 +39,67 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
+        - name: init-hdfs-hive-dirs
+          image: ${dockerImage}
+          imagePullPolicy: Always
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 定义颜色和图标
+              RED='\033[0;31m'
+              GREEN='\033[0;32m'
+              YELLOW='\033[1;33m'
+              BLUE='\033[0;34m'
+              NC='\033[0m'
+              CHECK_MARK="✅"
+              ERROR="❌"
+              INFO="ℹ️"
+
+              echo -e "$BLUE$INFO 开始检查HDFS目录...$NC"
+
+              # 解析hive-site.xml获取HDFS目录
+              CONFIG_FILE="${app_home}/conf/hive-site.xml"
+              if [ ! -f "$CONFIG_FILE" ]; then
+                echo -e "$RED$ERROR 致命错误: 在 $CONFIG_FILE 未找到Hive配置文件$NC"
+                exit 1
+              fi
+
+              # 使用xmllint提取目录路径
+              WAREHOUSE_DIR=$(xmllint --xpath "string(//property[name='hive.metastore.warehouse.dir']/value)" $CONFIG_FILE)
+              SCRATCH_DIR=$(xmllint --xpath "string(//property[name='hive.exec.scratch.dir']/value)" $CONFIG_FILE)
+
+              # 检查HDFS目录是否存在
+              for dir in "$WAREHOUSE_DIR" "$SCRATCH_DIR"; do
+                echo -e "$YELLOW 正在检查目录: $dir...$NC"
+                if hdfs dfs -test -d "$dir"; then
+                  echo -e "$GREEN$CHECK_MARK 目录 $dir 存在.$NC"
+                else
+                  echo -e "$RED$ERROR 目录 $dir 不存在，正在创建...$NC"
+                  hdfs dfs -mkdir -p "$dir"
+                  echo -e "$GREEN$CHECK_MARK 目录 $dir 创建成功.$NC"
+                fi
+
+                # 检查权限
+                echo -e "$YELLOW 正在检查目录 $dir 的权限...$NC"
+                if hdfs dfs -ls "$dir" | grep -q 'drwx'; then
+                  echo -e "$GREEN$CHECK_MARK 目录 $dir 权限正确.$NC"
+                else
+                  echo -e "$RED$ERROR 目录 $dir 权限不正确，正在修复...$NC"
+                  hdfs dfs -chmod 755 "$dir"
+                  echo -e "$GREEN$CHECK_MARK 目录 $dir 权限已修复.$NC"
+                fi
+              done
+
+              echo -e "$GREEN$CHECK_MARK HDFS目录检查完成.$NC"
+          volumeMounts:
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
         - name: wait-for-metastore
           image: "${dockerBusyboxImage}"
           imagePullPolicy: Always
