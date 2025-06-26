@@ -11,11 +11,6 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -26,7 +21,10 @@ spec:
         podConflictName: "${serviceRoleFullName}"
       annotations:
         serviceInstanceName: "${serviceName}"
+        service.kubernetes.io/headless: "true"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,20 +38,35 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
-        - name: init-sysctl
-          image: "${dockerImage}"
-          command: ["/bin/bash", "-c"]
-          args:
+        - name: set-permissions
+          image: "${dockerBusyboxImage}"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - "/bin/sh"
+            - "-c"
             - |
-              sysctl -w fs.file-max=1000000
-              sysctl -w fs.inotify.max_user_watches=524288
-              sysctl -w fs.inotify.max_user_instances=524288
-              echo "* soft nofile 1000000" >> /etc/security/limits.conf
-              echo "* hard nofile 1000000" >> /etc/security/limits.conf
-              echo "* soft nproc 65535" >> /etc/security/limits.conf
-              echo "* hard nproc 65535" >> /etc/security/limits.conf
+              echo "========== 开始准备Prometheus数据目录和权限 =========="
+              
+              echo "Setting permissions for Prometheus PVC mount path..."
+              chmod -R 777 ${mount_path}
+              echo "Permissions set successfully"
+              
+              echo "========== 完成数据目录和权限设置 =========="
           securityContext:
+            runAsUser: 0  # 以root用户运行
             privileged: true
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -62,6 +75,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
@@ -115,24 +136,31 @@ spec:
               - name: fs.inotify.max_user_instances
                 value: "524288"
           volumeMounts:
+            - name: prometheus-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
-              <#if item.fileName?? && item.fileName != "">
               subPath: "${item.fileName}"
-              </#if>
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-            - name: "hosts"
+            - name: "hosts-file"
               mountPath: "/etc/hosts"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
+        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
-        - name: "hosts"
+        - name: "hosts-file"
           hostPath:
             path: "/etc/hosts"
