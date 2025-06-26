@@ -18,14 +18,20 @@
 package com.datasophon.k8s.strategy;
 
 import cn.hutool.json.JSONUtil;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.constants.Constant;
+import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.List;
 
 public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -36,31 +42,52 @@ public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy i
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
-        logger.info("FEObserverHandlerStrategy start fe observer" + JSONUtil.toJsonStr(command));
+        logger.info("Start FE Observer installation: {}", JSONUtil.toJsonStr(command));
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        startResult = serviceHandler.start(command);
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
-            logger.info("first start fe observer");
-            startResult = serviceHandler.start(command);
             if (startResult.getExecResult()) {
-                // add observer
-                try {
-                    startResult = OlapUtils.addObserver(command.getMasterHost(), command.getHostname());
-                    int tryTimes = 0;
-                    while (!startResult.getExecResult() && tryTimes < 3) {
-                        TimeUnit.SECONDS.sleep(10L);
-                        startResult = OlapUtils.addObserver(command.getMasterHost(), command.getHostname());
-                        tryTimes++;
+                try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+                    Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+                    List<String> podNames = (List<String>) podNamesObj;
+
+                    if (podNames == null || podNames.isEmpty()) {
+                        return startResult;
                     }
+
+                    // 构建批量注册命令
+                    StringBuilder batchCmd = new StringBuilder();
+                    for (String podName : podNames) {
+                        String observerAddr = String.format("%s.%s.%s.svc.cluster.local:9010",
+                                podName, serviceRoleFullName, Constants.DATASOPHON);
+
+                        batchCmd.append("mysql -h127.0.0.1 -P9030 -uroot -p -e \"")
+                                .append("ALTER SYSTEM add OBSERVER '").append(observerAddr).append("';\" && ");
+                    }
+
+                    // 移除最后的 " && "
+                    String finalCmd = batchCmd.substring(0, batchCmd.length() - 4);
+
+                    startResult = K8sUtil.runCmd(
+                            Constants.DATASOPHON,
+                            kubeClient,
+                            "starrocks-srfe",
+                            command.getMasterHost(),
+                            finalCmd
+                    );
                 } catch (Exception e) {
-                    logger.error("add fe observer failed {}", ThrowableUtils.getStackTrace(e));
+                    logger.error("Add Observer failed", e);
+                    startResult.setExecResult(false);
+                    startResult.setExecOut(e.getMessage());
                 }
-                logger.info("fe observer start success");
-            } else {
-                logger.error("fe observer start failed");
+
             }
         } else {
             startResult = serviceHandler.start(command);
         }
+
+        logger.info("FE Observer installation {}", startResult.getExecResult() ? "succeeded" : "failed");
         return startResult;
     }
+
 }
