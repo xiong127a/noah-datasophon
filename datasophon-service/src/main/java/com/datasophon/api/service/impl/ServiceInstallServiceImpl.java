@@ -84,7 +84,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public static final String PROMETHEUS = "prometheus";
     public static final String ALERTMANAGER = "ALERTMANAGER";
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallServiceImpl.class);
-    private static final List<String> MUST_AT_SAME_NODE_BASIC_SERVICE = Arrays.asList("Grafana", "AlertManager",
+    private static final List<String> MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES = Arrays.asList("Grafana", "AlertManager",
             "Prometheus");
     @Autowired
     FrameInfoService frameInfoService;
@@ -348,7 +348,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-                                                HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -381,13 +381,14 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         // 缓存zookeeper节点数量
-        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
-        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = clusterServiceRoleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ZkServer");
+        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
+                .getBean(ClusterServiceRoleInstanceService.class);
+        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = clusterServiceRoleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ZkServer");
         int zkNodeCount = CollUtil.size(zookeeperNodes);
         String zkNodeCountKey = "zookeeper_node_count";
         CacheUtils.put(clusterId + UNDERLINE + zkNodeCountKey, zkNodeCount);
         logger.info("已缓存 Zookeeper 节点数量: {}，集群ID: {}", zkNodeCount, clusterId);
-
 
         CacheUtils.put(
                 clusterInfo.getClusterCode()
@@ -488,7 +489,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
 
         try (FileInputStream inputStream = new FileInputStream(file);
-             OutputStream out = response.getOutputStream()) {
+                OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = inputStream.read(buffer)) != -1) {
@@ -830,7 +831,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param username        用户名
      */
     private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId,
-                                       Integer userId, String username, String description) {
+            Integer userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
@@ -848,9 +849,15 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         configVersionInfoService.updateCurrentVersion(configVersionInfo.getVersion(), refType, refId);
     }
 
+    /**
+     * 检查AlertManager、Grafana和Prometheus主角色是否部署在同一主机上
+     * 注意：此检查针对的是特定角色名称，而不是服务名
+     * 例如：Prometheus服务中的Prometheus角色（主角色）必须与AlertManager和Grafana部署在同一主机
+     * 但NodeExporter角色（工作角色）可以部署在任意主机上
+     */
     private void checkOnSameNode(Integer clusterId, List<ServiceRoleHostMapping> list) {
         Set<String> hostnameSet = list.stream()
-                .filter(s -> MUST_AT_SAME_NODE_BASIC_SERVICE.contains(s.getServiceRole()))
+                .filter(s -> MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES.contains(s.getServiceRole()))
                 .map(ServiceRoleHostMapping::getHosts)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
@@ -861,8 +868,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         Set<String> installedHostnameSet = roleInstanceService.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
                 .in(
-                        ClusterServiceRoleInstanceEntity::getServiceName,
-                        MUST_AT_SAME_NODE_BASIC_SERVICE)
+                        ClusterServiceRoleInstanceEntity::getServiceRoleName,
+                        MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES)
                 .list().stream()
                 .map(ClusterServiceRoleInstanceEntity::getHostname)
                 .collect(Collectors.toSet());
