@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -16,6 +16,7 @@ spec:
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1
+  podManagementPolicy: Parallel
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -43,11 +44,28 @@ spec:
         - name: "${serviceRoleFullName}"
           image: "${dockerImage}"
           imagePullPolicy: "Always"
+          <#if node_port_mappings?? || cluster_port_mappings??>
+          ports:
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           command:
             - "/bin/bash"
             - "-c"
             - |
-              modified_command=$(echo "${startCommand}" | sed 's/start_fe.sh --daemon/start_fe.sh --helper ${masterHost}:9010 --daemon/')
+              modified_command=$(echo "${startCommand}" | sed 's/start_fe.sh --daemon/start_fe.sh --helper starrocks-srfe-0.starrocks-srfe.datasophon.svc.cluster.local:9010 --daemon/')
               echo $modified_command
               eval $modified_command
           env:
@@ -57,6 +75,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           readinessProbe:
             exec:
               command:
@@ -70,18 +96,14 @@ spec:
             timeoutSeconds: 15
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -97,11 +119,6 @@ spec:
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:

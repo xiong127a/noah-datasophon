@@ -17,13 +17,21 @@
 
 package com.datasophon.k8s.strategy;
 
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.constants.Constant;
+import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -38,29 +46,47 @@ public class K8sSRCNHandlerStrategy extends K8sAbstractHandlerStrategy implement
     public ExecResult handler(K8sServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
-
+        startResult = serviceHandler.start(command);
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("add cn to cluster");
-
-            startResult = serviceHandler.start(command);
             if (startResult.getExecResult()) {
-                try {
-                    startResult=OlapUtils.addCn(command.getMasterHost(), command.getHostname());
-                    int tryTimes = 0;
-                    while (!startResult.getExecResult() && tryTimes < 3) {
-                        TimeUnit.SECONDS.sleep(10L);
-                        startResult=OlapUtils.addCn(command.getMasterHost(), command.getHostname());
-                        tryTimes++;
+                try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+
+                    Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+
+                    List<String> podNames =(List<String>) podNamesObj;
+
+                    if (podNames == null || podNames.isEmpty()) {
+                        return startResult;
                     }
+
+                    StringBuilder beNodes = new StringBuilder();
+                    for (int i = 0; i < podNames.size(); i++) {
+                        if (i > 0) {
+                            beNodes.append(",");
+                        }
+                        beNodes.append("\\\"").append(podNames.get(i)).append(".").append(serviceRoleFullName)
+                                .append(".").append(Constants.DATASOPHON).append(".svc.cluster.local:9050\\\"");
+                    }
+
+                    String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -p -e  \"ALTER SYSTEM add COMPUTE NODE " + beNodes.toString() + "\"";
+
+                    startResult = K8sUtil.runCmd(
+                            Constants.DATASOPHON,
+                            kubeClient,
+                            "starrocks-srfe",
+                            command.getMasterHost(), // 在主FE上执行注册命令
+                            mysqlCmd
+                    );
                 } catch (Exception e) {
-                    logger.error("add compute failed {}", ThrowableUtils.getStackTrace(e));
+                    logger.error("Add CN failed: {}", ThrowableUtils.getStackTrace(e));
+                    startResult.setExecResult(false);
+                    startResult.setExecOut(e.getMessage());
                 }
                 logger.info("slave cn start success");
             } else {
                 logger.error("slave cn start failed");
             }
-        } else {
-            startResult = serviceHandler.start(command);
         }
         return startResult;
     }
