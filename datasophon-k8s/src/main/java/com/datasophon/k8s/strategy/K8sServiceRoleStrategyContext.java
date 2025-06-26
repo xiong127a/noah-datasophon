@@ -26,6 +26,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("RangerAdmin", new K8sRangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
         map.put("RangerUsersync", new K8sRangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
         map.put("RangerKms", new K8sRangerAdminHandlerStrategy("RANGER", "RangerKms"));
+        map.put("Grafana", new K8sGrafanaHandlerStrategy("GRAFANA", "Grafana"));
 
         map.put("OpenldapServer", new k8sOpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
 
@@ -45,8 +46,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("Storage", new K8sStorageHandlerStrategy("NEBULAGRAPH", "Storage"));
         map.put("TezServer", new K8sTezServerHandlerStrategy("TEZ", "TezServer"));
 
-
-        //TODO 添加其他组件
+        // TODO 添加其他组件
         map.put("ZOOKEEPER", new K8sZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
         map.put("HDFS", new K8sNameNodeHandlerStrategy("HDFS", "NameNode"));
         map.put("YARN", new K8sResourceManagerHandlerStrategy("YARN", "ResourceManager"));
@@ -54,6 +54,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("HIVE", new K8sHiveServer2HandlerStrategy("HIVE", "HiveServer2"));
         map.put("HBASE", new K8sHbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("TRINO", new K8sTrinoHandlerStrategy("TRINO", "TrinoCoordinator"));
+        map.put("GRAFANA", new K8sGrafanaHandlerStrategy("GRAFANA", "Grafana"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

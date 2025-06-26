@@ -4,6 +4,7 @@ import cn.hutool.cache.Cache;
 import cn.hutool.cache.impl.TimedCache;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -329,6 +330,12 @@ public class K8sYamlDeploymentHandler {
         }
         if ("ZOOKEEPER".equals(serviceName)) {
             populateDataWithConfig(configFileMap, "dataDir", "zk_data_dir");
+        }
+        if ("GRAFANA".equals(serviceName)) {
+            String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
+            String hostname = NetUtil.getLocalHostName();
+            int port = 0;
+            data.put("apiUrl",  String.format(url, "192.168.1.54", 8081));
         }
         if ("HIVE".equals(serviceName)) {
             populateDataWithConfig(configFileMap, "hive.metastore.uris", "metastore_uris");
