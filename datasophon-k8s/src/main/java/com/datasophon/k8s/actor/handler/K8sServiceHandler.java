@@ -688,11 +688,7 @@ public class K8sServiceHandler {
         } else {
             addProcessStatus();
             if (isFinalNode()) {
-                if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
-                    // ZKFC作为NameNode Pod的Sidecar容器部署
-                    logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不创建资源");
-                    return;
-                }
+
 
                 // 确保ConfigMap在其他资源之前创建
                 logger.info("开始创建ConfigMap...");
@@ -707,6 +703,12 @@ public class K8sServiceHandler {
                 handlePvc(client, configFileMap);
 
                 // 直接使用原始YAML创建资源，不修改挂载配置
+
+                if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
+                    // ZKFC作为NameNode Pod的Sidecar容器部署
+                    logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不创建资源");
+                    return;
+                }
                 handleNewResource(client, yamlInputStream, resource);
             }
         }

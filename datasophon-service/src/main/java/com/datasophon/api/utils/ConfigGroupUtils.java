@@ -379,14 +379,27 @@ public class ConfigGroupUtils {
                             String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2")
                                     .toLowerCase();
 
-                            // 查找对应的集群端口映射配置
-                            ServiceConfig clusterPortConfig = clusterPortMappingConfigs.get(normRoleName);
+                            // 特殊处理ZKFC角色，将其JMX端口添加到NameNode的端口映射中
+                            if ("ZKFC".equals(roleName)) {
+                                String namenodeRoleName = "namenode"; // NameNode的标准化角色名
+                                ServiceConfig namenodeConfig = clusterPortMappingConfigs.get(namenodeRoleName);
 
-                            if (clusterPortConfig != null) {
-                                // 更新端口映射，添加JMX端口
-                                updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
-                                logger.info("Added JMX port {} to cluster_port_mappings for role {}", jmxPort,
-                                        roleName);
+                                if (namenodeConfig != null) {
+                                    // 更新NameNode的端口映射，添加ZKFC的JMX端口
+                                    updatePortMapping(namenodeConfig, jmxPort, jmxPort);
+                                    logger.info("将ZKFC的JMX端口 {} 添加到NameNode的cluster_port_mappings中", jmxPort);
+                                } else {
+                                    logger.warn("未找到NameNode的端口映射配置，无法添加ZKFC的JMX端口 {}", jmxPort);
+                                }
+                            } else {
+                                // 查找对应的集群端口映射配置
+                                ServiceConfig clusterPortConfig = clusterPortMappingConfigs.get(normRoleName);
+
+                                if (clusterPortConfig != null) {
+                                    // 更新端口映射，添加JMX端口
+                                    updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
+                                    logger.info("添加JMX端口 {} 到cluster_port_mappings，角色: {}", jmxPort, roleName);
+                                }
                             }
                         }
                     }

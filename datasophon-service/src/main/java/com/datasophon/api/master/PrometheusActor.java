@@ -97,6 +97,8 @@ public class PrometheusActor extends UntypedActor {
             HashMap<String, List<String>> roleMap = new HashMap<>();
             Map<String, Integer> roleIndexMap = new HashMap<>();
 
+            // 添加特殊处理ZKFC的映射，将其关联到对应的NameNode
+
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
                 String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(),
                         roleInstanceEntity.getServiceRoleName());
@@ -109,10 +111,25 @@ public class PrometheusActor extends UntypedActor {
                     // serviceRoleFullName-{index}.serviceRoleFullName.namespace.svc.cluster.local
                     // 获取当前服务角色类型的索引
                     int roleIndex = roleIndexMap.getOrDefault(roleInstanceEntity.getServiceRoleName(), 0);
-                    hostname = serviceRoleFullName + "-" + roleIndex + "." + serviceRoleFullName + "."
-                            + Constant.K8S_NAMESPACE + ".svc.cluster.local";
-                    logger.info("Using K8s FQDN with role-specific index: {} for service role {}", roleIndex,
-                            roleInstanceEntity.getServiceRoleName());
+
+                    // 特殊处理ZKFC，使用NameNode的FQDN
+                    if ("ZKFC".equals(roleInstanceEntity.getServiceRoleName())) {
+                        // 查找对应的NameNode FQDN
+                        String namenodeRoleName = "NameNode";
+                        String namenodeFullName = CommonUtil
+                                .generateServiceRoleFullName(roleInstanceEntity.getServiceName(), namenodeRoleName);
+                        // ZKFC使用与NameNode相同的索引
+                        hostname = namenodeFullName + "-" + roleIndex + "." + namenodeFullName + "."
+                                + Constant.K8S_NAMESPACE + ".svc.cluster.local";
+                        logger.info("Using NameNode's FQDN for ZKFC: {} for service role {}", hostname,
+                                roleInstanceEntity.getServiceRoleName());
+                    } else {
+                        hostname = serviceRoleFullName + "-" + roleIndex + "." + serviceRoleFullName + "."
+                                + Constant.K8S_NAMESPACE + ".svc.cluster.local";
+                        logger.info("Using K8s FQDN with role-specific index: {} for service role {}", roleIndex,
+                                roleInstanceEntity.getServiceRoleName());
+                    }
+
                     // 更新该服务角色类型的索引
                     roleIndexMap.put(roleInstanceEntity.getServiceRoleName(), roleIndex + 1);
                 }

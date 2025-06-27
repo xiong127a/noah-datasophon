@@ -650,6 +650,11 @@ spec:
               # 获取本地主机名
               HOSTNAME=$(hostname)
               
+              # 注意：由于ZKFC是作为NameNode的sidecar容器部署的，它使用与NameNode相同的FQDN
+              # ZKFC的FQDN格式为: hdfs-namenode-{index}.hdfs-namenode.namespace.svc.cluster.local
+              # 而不是独立的ZKFC FQDN (hdfs-zkfc-{index}.hdfs-zkfc.namespace.svc.cluster.local)
+              echo -e "$BLUE$INFO ZKFC使用NameNode的FQDN: $HOSTNAME$NC"
+              
               # 使用Hadoop命令检测NameNode是否就绪
               while [ $RETRIES -lt $MAX_RETRIES ]; do
                 # 尝试使用hdfs haadmin命令检测NameNode状态
