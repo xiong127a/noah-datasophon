@@ -39,13 +39,15 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
-      dnsPolicy: Default
+      dnsPolicy: ClusterFirst
       containers:
         - env:
             - name: "ZOOCFGDIR"
               value: "/opt/datasophon/zookeeper-3.5.10/conf"
             - name: USER
               value: ${runAsUser}
+            - name: ELASTICSEARCH_CLUSTER_URL
+              value: "http://elasticsearch-elasticsearch:9200"
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
