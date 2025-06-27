@@ -95,7 +95,8 @@ public class PrometheusActor extends UntypedActor {
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
             HashMap<String, List<String>> roleMap = new HashMap<>();
-            int index = 0;
+            Map<String, Integer> roleIndexMap = new HashMap<>();
+
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
                 String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(),
                         roleInstanceEntity.getServiceRoleName());
@@ -106,11 +107,14 @@ public class PrometheusActor extends UntypedActor {
                     // 使用服务角色的FQDN命名方式，确保稳定性
                     // 格式:
                     // serviceRoleFullName-{index}.serviceRoleFullName.namespace.svc.cluster.local
-                    hostname = serviceRoleFullName + "-" + index + "." + serviceRoleFullName + "."
+                    // 获取当前服务角色类型的索引
+                    int roleIndex = roleIndexMap.getOrDefault(roleInstanceEntity.getServiceRoleName(), 0);
+                    hostname = serviceRoleFullName + "-" + roleIndex + "." + serviceRoleFullName + "."
                             + Constant.K8S_NAMESPACE + ".svc.cluster.local";
-                    logger.info("Using K8s FQDN with index: {} for service role {}", hostname,
+                    logger.info("Using K8s FQDN with role-specific index: {} for service role {}", roleIndex,
                             roleInstanceEntity.getServiceRoleName());
-                    index++;
+                    // 更新该服务角色类型的索引
+                    roleIndexMap.put(roleInstanceEntity.getServiceRoleName(), roleIndex + 1);
                 }
 
                 if (roleMap.containsKey(roleInstanceEntity.getServiceRoleName())) {
