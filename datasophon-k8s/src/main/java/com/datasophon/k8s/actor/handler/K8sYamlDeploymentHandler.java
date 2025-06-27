@@ -499,6 +499,20 @@ public class K8sYamlDeploymentHandler {
             addConfigFile(volumePathSet, "redis-sentinel-data", appHome + "/var/data/");
         }
 
+        // 检查并移除volumeConfigMapSet中属性不完整的ServiceConfigVolume对象
+        Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
+        while (iterator.hasNext()) {
+            ServiceConfigVolume configVolume = iterator.next();
+            if (configVolume.getName() == null || configVolume.getValue() == null || configVolume.getFileName() == null
+                    ||
+                    StrUtil.isBlank(configVolume.getName()) || StrUtil.isBlank((String) configVolume.getValue()) ||
+                    StrUtil.isBlank(configVolume.getFileName())) {
+                logger.warn("移除属性不完整的ConfigVolume: name={}, value={}, fileName={}",
+                        configVolume.getName(), configVolume.getValue(), configVolume.getFileName());
+                iterator.remove();
+            }
+        }
+
     }
 
     private void volumeHadoopConfig(Set<ServiceConfigVolume> volumeConfigMapSet) {
