@@ -583,11 +583,17 @@ public class K8sYamlDeploymentHandler {
                 if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
                     if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
                         String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+
+                        // 特殊处理端口映射配置
                         if (StrUtil.endWith(keyWithoutPrefix, "_port_mappings")) {
-                            if (ObjUtil.isNull(config.getValue())) {
+                            // 使用Hutool的ObjectUtil.isEmpty方法判断值是否为空
+                            if (ObjUtil.isEmpty(config.getValue())) {
+                                logger.debug("跳过空的端口映射配置: {}", keyWithoutPrefix);
                                 continue;
                             }
+                            logger.debug("添加有效的端口映射配置: {} = {}", keyWithoutPrefix, config.getValue());
                         }
+
                         k8sConfigMap.put(keyWithoutPrefix, config.getValue());
                     }
                 }
