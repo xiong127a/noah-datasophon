@@ -8,7 +8,6 @@ metadata:
 spec:
   serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
-  serviceName: elasticsearch-elasticsearch
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
@@ -51,6 +50,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
@@ -74,8 +81,9 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              HOSTNAME=$(hostname -f)
               echo 'y'|cp /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml.example /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml && \
-              sed -i "s/{{HOST}}/$HOSTNAME/g" /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml && \
+              sed -i "s/\$(hostname)/$HOSTNAME/g" /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml && \
               echo "vm.max_map_count=655360" >> /etc/sysctl.conf && sysctl -p && ${startCommand}
           readinessProbe:
             exec:
@@ -99,6 +107,9 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
+            - name: es-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -110,6 +121,14 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: es-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
+        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

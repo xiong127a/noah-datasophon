@@ -359,7 +359,8 @@ public class K8sYamlDeploymentHandler {
             }
             boolean containsHost = entry.getValue().stream()
                     .anyMatch(serviceConfig -> serviceConfig.getValue().toString().contains("{{HOST}}") ||
-                            serviceConfig.getValue().toString().contains("{{IP}}"));
+                            serviceConfig.getValue().toString().contains("{{IP}}")||
+                            serviceConfig.getValue().toString().contains("${hostname}"));
 
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();

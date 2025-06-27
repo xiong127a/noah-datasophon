@@ -132,6 +132,42 @@
         "includeParams": [
           "heapSize"
         ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "ElasticSearch Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "ElasticSearch,EsExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "ElasticSearch Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "ElasticSearch,EsExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "ElasticSearch,EsExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
       }
     ]
   },
@@ -139,24 +175,30 @@
     {
       "name": "cluster.name",
       "label": "集群名称",
-      "description": "集群名称",
+      "description": "ElasticSearch集群的名称，需在同一个集群中的所有节点保持一致",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ddp_es"
+      "defaultValue": "ddp_es",
+      "configCategory": "file",
+      "configGroup": "elasticsearch.yml",
+      "configLevel": "advanced"
     },
     {
       "name": "node.name",
       "label": "节点名称",
-      "description": "",
+      "description": "ElasticSearch节点的唯一标识，建议使用主机名${hostname}",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${hostname}"
+      "defaultValue": "${hostname}",
+      "configCategory": "file",
+      "configGroup": "elasticsearch.yml",
+      "configLevel": "advanced"
     },
     {
       "name": "node.master",
@@ -164,7 +206,7 @@
       "description": "是不是有资格竞选主节点",
       "required": true,
       "type": "switch",
-      "value": "",
+      "value": "true",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
@@ -181,7 +223,7 @@
       "defaultValue": "${hostname}"
     },
     {
-      "name": "http.port",
+      "name": "http.port", 
       "label": "对外服务端口",
       "description": "对外提供服务的端口",
       "required": true,
@@ -189,18 +231,32 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9200"
+      "defaultValue": "9200",
+      "configCategory": "file",
+      "configGroup": "elasticsearch.yml",
+      "configLevel": "advanced",
+      "bindRole": "ElasticSearch",
+      "serviceType": "NodePort",
+      "portNumber": "9200",
+      "nodePort": "30200"
     },
     {
       "name": "transport.tcp.port",
       "label": "集群通信端口",
-      "description": "",
+      "description": "ElasticSearch节点间通信使用的TCP端口，必须在所有节点保持一致",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9300"
+      "defaultValue": "9300",
+      "configCategory": "file",
+      "configGroup": "elasticsearch.yml",
+      "configLevel": "advanced",
+      "bindRole": "ElasticSearch",
+      "serviceType": "NodePort",
+      "portNumber": "9300",
+      "nodePort": "30300"
     },
     {
       "name": "transport.tcp.compress",
@@ -280,9 +336,24 @@
       "defaultValue": "\"*\""
     },
     {
+      "name": "heapSize",
+      "label": "ES堆内存大小",
+      "description": "ElasticSearch JVM堆内存大小，建议设置为不超过物理内存的一半",
+      "required": false,
+      "type": "input",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "2",
+      "configCategory": "file",
+      "configGroup": "jvm.options",
+      "configLevel": "advanced"
+    },
+    {
       "name": "path.data",
       "label": "数据存储目录",
-      "description": "",
+      "description": "ElasticSearch数据存储目录，可以配置多个路径(用逗号分隔)实现数据条带化",
       "configType": "path",
       "separator": ",",
       "required": true,
@@ -292,18 +363,10 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
-    },
-    {
-      "name": "heapSize",
-      "label": "ES堆内存大小",
-      "description": "",
-      "required": false,
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "2g"
+      "defaultValue": "/data/es",
+      "configCategory": "file",
+      "configGroup": "elasticsearch.yml",
+      "configLevel": "advanced"
     },
     {
       "name": "xpack.security.enabled",
@@ -327,6 +390,144 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为ES的数据存储位置",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "ElasticSearch集群内部通信端口配置",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     }
   ]
 }
