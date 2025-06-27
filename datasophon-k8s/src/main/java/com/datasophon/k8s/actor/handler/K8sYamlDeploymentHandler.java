@@ -155,8 +155,17 @@ public class K8sYamlDeploymentHandler {
 
         String filename = generators.getFilename();
         if (containsHost) {
-            filename += ".example";
             configFilePath += ".example";
+
+            // 添加示例文件信息到数据中，以便模板处理
+            // 将示例文件添加到配置列表
+            data.computeIfAbsent("example_config_files", k -> new ArrayList<String>());
+
+            @SuppressWarnings("unchecked")
+            List<String> exampleFiles = (List<String>) data.get("example_config_files");
+
+            // 只需添加包含.example后缀的配置文件路径
+            exampleFiles.add(configFilePath);
         }
 
         // 设置文件路径
@@ -359,9 +368,7 @@ public class K8sYamlDeploymentHandler {
                 continue;
             }
             boolean containsHost = entry.getValue().stream()
-                    .anyMatch(serviceConfig -> serviceConfig.getValue().toString().contains("{{HOST}}") ||
-                            serviceConfig.getValue().toString().contains("{{IP}}")||
-                            serviceConfig.getValue().toString().contains("${hostname}"));
+                    .anyMatch(serviceConfig -> StrUtil.containsAny(serviceConfig.getValue().toString(),"{{HOST}}","{{IP}}","${hostname}","$(hostname)"));
 
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();
@@ -426,54 +433,55 @@ public class K8sYamlDeploymentHandler {
             addConfigFile(volumePathSet, "openldap-conf", "/etc/openldap/slapd.d");
         }
         // Kafka特殊处理ConfigMap挂载
-        if ("KAFKA".equals(serviceName)) {
-            // 查找server.properties的配置卷
-            for (ServiceConfigVolume configVolume : volumeConfigMapSet) {
-                String fileName = configVolume.getFileName();
-                if ("server.properties".equals(fileName)) {
-                    // 修改其挂载路径到一个临时文件，便于主容器处理
-                    String originalPath = (String) configVolume.getValue();
-                    String tempPath = "/tmp/kafka-config/server.properties";
-
-                    // 添加路径映射到数据中，供模板使用
-                    if (!data.containsKey("kafkaConfigTempDir")) {
-                        data.put("kafkaConfigTempDir", tempPath);
-                    }
-                    if (!data.containsKey("kafkaConfigTargetDir")) {
-                        data.put("kafkaConfigTargetDir", originalPath.substring(0, originalPath.lastIndexOf('/')));
-                    }
-
-                    // 修改挂载路径到临时文件
-                    configVolume.setValue(tempPath);
-                    break;
-                }
-            }
-
-            // 根据角色过滤挂载的ConfigMap，确保角色特定的配置文件只挂载到对应角色
-            Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
-            while (iterator.hasNext()) {
-                ServiceConfigVolume configVolume = iterator.next();
-                String mountPath = (String) configVolume.getValue();
-                String fileName = configVolume.getFileName();
-
-                // EFAK相关配置文件只挂载到EFAK服务
-                if ("KafkaBroker".equals(serviceRoleName) &&
-                        (mountPath.contains("/efak/conf/") ||
-                                "system-config.properties".equals(fileName) ||
-                                "system-config.properties.example".equals(fileName))) {
-                    logger.info("移除KafkaBroker中的EFAK配置文件挂载: {}", mountPath);
-                    iterator.remove();
-                }
-
-                // Kafka Broker相关配置文件只挂载到Kafka Broker服务
-                if ("efak".equals(serviceRoleName) &&
-                        (mountPath.contains("/config/server.properties") ||
-                                "server.properties".equals(fileName))) {
-                    logger.info("移除EFAK中的Kafka Broker配置文件挂载: {}", mountPath);
-                    iterator.remove();
-                }
-            }
-        }
+        // if ("KAFKA".equals(serviceName)) {
+        // // 查找server.properties的配置卷
+        // for (ServiceConfigVolume configVolume : volumeConfigMapSet) {
+        // String fileName = configVolume.getFileName();
+        // if ("server.properties".equals(fileName)) {
+        // // 修改其挂载路径到一个临时文件，便于主容器处理
+        // String originalPath = (String) configVolume.getValue();
+        // String tempPath = "/tmp/kafka-config/server.properties";
+        //
+        // // 添加路径映射到数据中，供模板使用
+        // if (!data.containsKey("kafkaConfigTempDir")) {
+        // data.put("kafkaConfigTempDir", tempPath);
+        // }
+        // if (!data.containsKey("kafkaConfigTargetDir")) {
+        // data.put("kafkaConfigTargetDir", originalPath.substring(0,
+        // originalPath.lastIndexOf('/')));
+        // }
+        //
+        // // 修改挂载路径到临时文件
+        // configVolume.setValue(tempPath);
+        // break;
+        // }
+        // }
+        //
+        // // 根据角色过滤挂载的ConfigMap，确保角色特定的配置文件只挂载到对应角色
+        // Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
+        // while (iterator.hasNext()) {
+        // ServiceConfigVolume configVolume = iterator.next();
+        // String mountPath = (String) configVolume.getValue();
+        // String fileName = configVolume.getFileName();
+        //
+        // // EFAK相关配置文件只挂载到EFAK服务
+        // if ("KafkaBroker".equals(serviceRoleName) &&
+        // (mountPath.contains("/efak/conf/") ||
+        // "system-config.properties".equals(fileName) ||
+        // "system-config.properties.example".equals(fileName))) {
+        // logger.info("移除KafkaBroker中的EFAK配置文件挂载: {}", mountPath);
+        // iterator.remove();
+        // }
+        //
+        // // Kafka Broker相关配置文件只挂载到Kafka Broker服务
+        // if ("efak".equals(serviceRoleName) &&
+        // (mountPath.contains("/config/server.properties") ||
+        // "server.properties".equals(fileName))) {
+        // logger.info("移除EFAK中的Kafka Broker配置文件挂载: {}", mountPath);
+        // iterator.remove();
+        // }
+        // }
+        // }
 
         // redis数据目录
         if ("REDIS".equals(serviceName)) {

@@ -94,6 +94,8 @@ spec:
             - name: "timezone"
               mountPath: "/etc/localtime"
 
+
+
         - name: wait-for-zookeeper
           image: "${dockerBusyboxImage}"
           command:
@@ -214,7 +216,6 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              # 定义颜色和图标
               RED='\033[0;31m'
               GREEN='\033[0;32m'
               BLUE='\033[1;34m'
@@ -222,45 +223,62 @@ spec:
               CHECK_MARK="✅"
               INFO="ℹ️"
 
-              echo -e "$BLUE$INFO 开始初始化Kafka配置文件...$NC"
+              echo -e "$BLUE$INFO 开始启动Kafka服务...$NC"
               
               HOSTNAME=$(hostname -f)
-              
-              # 配置文件路径
-              SOURCE_CONF_DIR="/opt/datasophon/datasophon-config/KAFKA/config"
-              TARGET_CONF_DIR="${appHome}/config"
-              SOURCE_CONF_FILE="${kafkaConfigTempDir}"
-              TARGET_CONF_FILE="${kafkaConfigTargetDir}/server.properties"
-              
               echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
               
-              # 创建并准备配置
-              if [ -f "$SOURCE_CONF_FILE" ]; then
-                echo -e "$BLUE$INFO 找到源配置文件，开始准备最终配置..."
+              # 处理包含占位符的配置文件
+              <#if example_config_files?? && (example_config_files?size > 0)>
+              echo -e "$BLUE$INFO 开始处理配置文件模板...$NC"
+              echo -e "$BLUE$INFO 当前Pod的FQDN: $HOSTNAME$NC"
+              echo -e "$BLUE$INFO 当前Pod的IP: $NODE_IP_ADDRESS$NC"
+              
+              <#list example_config_files as exampleFilePath>
+              # 确定源文件和目标文件路径
+              SOURCE_PATH="${exampleFilePath}"
+              TARGET_PATH="${exampleFilePath?remove_ending('.example')}"
+              FILE_NAME="$(basename "$TARGET_PATH")"
+              
+              echo -e "$BLUE$INFO 处理配置文件: $FILE_NAME$NC"
+              echo -e "$BLUE$INFO 源文件: $SOURCE_PATH$NC"
+              echo -e "$BLUE$INFO 目标文件: $TARGET_PATH$NC"
+              
+              # 确保目标目录存在
+              mkdir -p $(dirname "$TARGET_PATH")
+              
+              # 替换占位符并写入目标文件
+              if [ -f "$SOURCE_PATH" ]; then
+                echo -e "$BLUE$INFO 正在替换 $SOURCE_PATH 中的占位符...$NC"
+                # 替换所有$(hostname)为Pod的FQDN
+                sed "s/\\\$(hostname)/$HOSTNAME/g" "$SOURCE_PATH" > "$TARGET_PATH"
+                # 替换所有{{HOST}}为Pod的FQDN
+                sed -i "s/{{HOST}}/$HOSTNAME/g" "$TARGET_PATH"
+                # 替换所有{{IP}}为Pod的IP
+                sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$TARGET_PATH"
+                # 替换所有${r"${hostname}"}为Pod的FQDN
+                sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$TARGET_PATH"
                 
-                # 确保目标目录存在
-                mkdir -p "$TARGET_CONF_DIR"
-                
-                # 复制并替换占位符
-                cat "$SOURCE_CONF_FILE" > "$TARGET_CONF_FILE"
-                
-                # 替换hostname占位符为Pod的FQDN
-                sed -i "s/\$(hostname)/$HOSTNAME/g" "$TARGET_CONF_FILE"
-                
-                # 验证文件创建成功
-                if [ -f "$TARGET_CONF_FILE" ]; then
-                  echo -e "$GREEN$CHECK_MARK 成功创建配置文件: $TARGET_CONF_FILE$NC"
-                  
-                  echo -e "$BLUE$INFO 显示关键配置:$NC"
-                  grep -E "advertised.listeners|listeners|zookeeper.connect" "$TARGET_CONF_FILE"
+                # 检查文件是否创建成功
+                if [ -f "$TARGET_PATH" ]; then
+                  echo -e "$GREEN$CHECK_MARK 配置文件 $FILE_NAME 处理成功!$NC"
+                  echo -e "$BLUE$INFO 文件权限设置中...$NC"
+                  chmod 644 "$TARGET_PATH"
+                  chown ${runAsUser}:${runAsGroup} "$TARGET_PATH"
+                  echo -e "$GREEN$CHECK_MARK 文件权限设置完成!$NC"
                 else
-                  echo -e "$RED 错误: 无法创建配置文件 $TARGET_CONF_FILE$NC"
+                  echo -e "$RED$ERROR 配置文件 $FILE_NAME 处理失败: 目标文件未创建$NC"
                   exit 1
                 fi
               else
-                echo -e "$YELLOW 警告: 源配置文件 $SOURCE_CONF_FILE 不存在，Kafka将使用默认配置$NC"
+                echo -e "$RED$ERROR 源文件 $SOURCE_PATH 不存在!$NC"
+                exit 1
               fi
-
+              </#list>
+              
+              echo -e "$GREEN$CHECK_MARK 所有配置文件处理完成!$NC"
+              </#if>
+              
               # 设置JMX RMI的主机名，以便远程访问
               # 注意：JMX_PORT 和其他JMX参数已通过环境变量注入
               export KAFKA_OPTS="$KAFKA_OPTS -Djava.rmi.server.hostname=$HOSTNAME"
