@@ -538,7 +538,7 @@ public class K8sYamlDeploymentHandler {
 
     // 提取出一个通用方法，用于从配置中提取目录
     private void populateDataWithConfig(String configName,
-                                        String targetDataKey) {
+            String targetDataKey) {
         ServiceConfig serviceConfig = CONFIG_CACHE.get(configName);
         if (ObjUtil.isNull(serviceConfig)) {
             return;
@@ -583,17 +583,22 @@ public class K8sYamlDeploymentHandler {
 
     /**
      * 提取Hive数据库连接信息以创建Secret
-     * 此方法从配置中提取数据库连接信息并创建Secret，不再将信息存储到模板数据中
+     * 此方法从配置中提取数据库连接信息和HDFS路径配置，并创建Secret
      *
      */
     private void extractHiveDatabaseInfo() {
-        logger.info("正在提取Hive数据库连接信息用于创建Secret...");
+        logger.info("正在提取Hive数据库连接信息和HDFS路径配置用于创建Secret...");
 
         // 尝试从缓存中获取数据库连接配置
         ServiceConfig dbUrlConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionURL");
         ServiceConfig dbUserConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionUserName");
         ServiceConfig dbPassConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionPassword");
         ServiceConfig dbDriverConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionDriverName");
+
+        // 获取HDFS路径配置
+        ServiceConfig warehouseConfig = CONFIG_CACHE.get("hive.metastore.warehouse.dir");
+        ServiceConfig scratchConfig = CONFIG_CACHE.get("hive.exec.scratch.dir");
+        ServiceConfig tempStorageConfig = CONFIG_CACHE.get("hive.exec.temporary.table.storage");
 
         if (ObjUtil.isNull(dbUrlConfig) || ObjUtil.isNull(dbUrlConfig.getValue())) {
             logger.error("未找到数据库URL配置，无法创建数据库Secret，Hive元数据存储将无法正常工作");
@@ -607,6 +612,17 @@ public class K8sYamlDeploymentHandler {
                 : "";
         String dbDriver = dbDriverConfig != null && dbDriverConfig.getValue() != null
                 ? dbDriverConfig.getValue().toString()
+                : "";
+
+        // 获取HDFS路径值，如果未配置则使用默认值
+        String warehouseDir = warehouseConfig != null && warehouseConfig.getValue() != null
+                ? warehouseConfig.getValue().toString()
+                : "/user/hive/warehouse";
+        String scratchDir = scratchConfig != null && scratchConfig.getValue() != null
+                ? scratchConfig.getValue().toString()
+                : "/tmp/hive/scratch";
+        String tempStorage = tempStorageConfig != null && tempStorageConfig.getValue() != null
+                ? tempStorageConfig.getValue().toString()
                 : "";
 
         if (StrUtil.isBlank(dbUser) || StrUtil.isBlank(dbPass)) {
@@ -660,6 +676,7 @@ public class K8sYamlDeploymentHandler {
 
             // 创建Secret数据映射
             Map<String, String> secretData = new HashMap<>();
+            // 数据库连接信息
             secretData.put("db-host", dbHost);
             secretData.put("db-port", dbPort);
             secretData.put("db-name", dbName);
@@ -667,11 +684,18 @@ public class K8sYamlDeploymentHandler {
             secretData.put("db-password", dbPass);
             secretData.put("db-type", dbType);
 
+            // HDFS路径配置
+            secretData.put("warehouse-dir", warehouseDir);
+            secretData.put("scratch-dir", scratchDir);
+            secretData.put("temp-storage", tempStorage);
+
             // 缓存Secret，将在K8s集群中创建
             K8sFreeMakerUtils.cacheDatabaseSecret(serviceRoleFullName, secretData, "-db-secret");
 
-            logger.info("成功提取数据库连接信息并创建Secret: 类型={}, 主机={}, 端口={}, 数据库名={}",
+            logger.info("成功提取数据库连接信息和HDFS路径配置并创建Secret");
+            logger.info("数据库信息: 类型={}, 主机={}, 端口={}, 数据库名={}",
                     dbType, dbHost, dbPort, dbName);
+            logger.info("HDFS路径: warehouse={}, scratch={}", warehouseDir, scratchDir);
         } catch (Exception e) {
             logger.error("解析数据库连接URL时出错", e);
             throw new RuntimeException("创建数据库Secret失败: " + e.getMessage(), e);

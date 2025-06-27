@@ -57,52 +57,24 @@ spec:
               INFO="ℹ️"
               WARNING="⚠️"
               
-              # 1. 验证配置文件
+              # 定义应用路径
               APP_HOME="${appHome}"
-              CONFIG_FILE="$APP_HOME/conf/hive-site.xml"
               
-              if [ ! -f "$CONFIG_FILE" ]; then
-                echo -e "$YELLOW$WARNING 未找到Hive配置文件: $CONFIG_FILE, 尝试其他位置$NC"
-                FOUND=0
-                for TRY_PATH in "/etc/hive/conf/hive-site.xml" "$APP_HOME/conf/hivemetastore-site.xml"; do
-                  if [ -f "$TRY_PATH" ]; then
-                    CONFIG_FILE="$TRY_PATH"
-                    FOUND=1
-                    echo -e "$INFO 找到配置文件: $CONFIG_FILE"
-                    break
-                  fi
-                done
-                if [ "$FOUND" = "0" ]; then
-                  echo -e "$RED$ERROR 致命错误: 无法找到Hive配置文件$NC"
-                  exit 1
-                fi
-              fi
+              # 从Secret获取数据库参数
+              echo -e "$INFO 正在从Secret读取数据库参数...$NC"
+              DB_HOST=$(cat /etc/hive-db-secret/db-host)
+              DB_PORT=$(cat /etc/hive-db-secret/db-port)
+              DB_NAME=$(cat /etc/hive-db-secret/db-name)
+              DB_USER=$(cat /etc/hive-db-secret/db-user)
+              DB_PASS=$(cat /etc/hive-db-secret/db-password)
+              DB_TYPE=$(cat /etc/hive-db-secret/db-type)
               
-              # 2. 提取数据库参数
-              echo -e "$INFO 正在从配置文件提取数据库参数...$NC"
-              DB_URL=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionURL']/value)" $CONFIG_FILE 2>/dev/null)
-              DB_USER=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionUserName']/value)" $CONFIG_FILE 2>/dev/null)
-              DB_PASS=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionPassword']/value)" $CONFIG_FILE 2>/dev/null)
-              
-              if [ -z "$DB_URL" ]; then
-                echo -e "$RED$ERROR 致命错误: 配置文件中未找到数据库URL$NC"
+              if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ -z "$DB_TYPE" ]; then
+                echo -e "$RED$ERROR 致命错误: 数据库Secret中缺少必要信息，无法继续$NC"
                 exit 1
               fi
               
-              if [ -z "$DB_USER" ]; then
-                echo -e "$RED$ERROR 致命错误: 配置文件中未找到数据库用户名$NC"
-                exit 1
-              fi
-              
-              # 3. 解析数据库参数
-              HOST=$(echo $DB_URL | sed -n 's/.*:\/\/\([^:\/]*\).*/\1/p')
-              PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-              DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p' | sed 's/;//g')
-              
-              if [ -z "$HOST" ] || [ -z "$PORT" ] || [ -z "$DB_NAME" ]; then
-                echo -e "$RED$ERROR 致命错误: 无法解析数据库连接参数$NC"
-                exit 1
-              fi
+              echo -e "$INFO 成功获取数据库连接信息: $DB_TYPE://$DB_HOST:$DB_PORT/$DB_NAME$NC"
               
               # 4. 检查mysql客户端
               if ! command -v mysql >/dev/null 2>&1; then
@@ -115,7 +87,7 @@ spec:
               LOCK_KEY="hive_hdfs_dirs_init"
               
               echo -e "$INFO 创建锁表(如果不存在)...$NC"
-              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "CREATE TABLE IF NOT EXISTS $LOCK_TABLE (lock_key VARCHAR(255) PRIMARY KEY, status VARCHAR(50), pod_name VARCHAR(255), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);" 2>/dev/null
+              mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "CREATE TABLE IF NOT EXISTS $LOCK_TABLE (lock_key VARCHAR(255) PRIMARY KEY, status VARCHAR(50), pod_name VARCHAR(255), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);" 2>/dev/null
               
               if [ $? -ne 0 ]; then
                 echo -e "$RED$ERROR 致命错误: 创建锁表失败$NC"
@@ -123,7 +95,7 @@ spec:
               fi
               
               # 检查是否已完成初始化
-              STATUS=$(mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null)
+              STATUS=$(mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null)
               if [ "$STATUS" = "complete" ]; then
                 echo -e "$GREEN$CHECK_MARK 检测到HDFS目录已初始化完成，跳过$NC"
                 exit 0
@@ -131,7 +103,7 @@ spec:
               
               # 6. 尝试获取锁
               echo -e "$INFO 尝试获取锁...$NC"
-              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT INTO $LOCK_TABLE (lock_key, status, pod_name) VALUES ('$LOCK_KEY', 'initializing', '$HOSTNAME');" 2>/dev/null
+              mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT INTO $LOCK_TABLE (lock_key, status, pod_name) VALUES ('$LOCK_KEY', 'initializing', '$HOSTNAME');" 2>/dev/null
               
               if [ $? -eq 0 ]; then
                 echo -e "$GREEN$CHECK_MARK 成功获取锁，将执行HDFS目录初始化$NC"
@@ -140,7 +112,7 @@ spec:
                 echo -e "$INFO 未能获取锁，等待其他Pod完成初始化...$NC"
                 for i in $(seq 1 60); do
                   echo -e "$YELLOW ... 等待其他Pod完成HDFS目录初始化 (尝试 $i/60)$NC"
-                  STATUS=$(mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null)
+                  STATUS=$(mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null)
                   if [ "$STATUS" = "complete" ]; then
                     echo -e "$GREEN$CHECK_MARK 检测到HDFS目录已初始化完成，跳过$NC"
                     exit 0
@@ -168,24 +140,33 @@ spec:
               
               if [ -z "$HDFS_CMD" ] || [ ! -f "$HDFS_CMD" ]; then
                 echo -e "$RED$ERROR 致命错误: 无法找到HDFS命令$NC"
-                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                 exit 1
               fi
               
               # 8. 提取Hive目录路径
               echo -e "$INFO 提取Hive目录路径...$NC"
-              WAREHOUSE_DIR=$(xmllint --xpath "string(//property[name='hive.metastore.warehouse.dir']/value)" $CONFIG_FILE 2>/dev/null)
-              SCRATCH_DIR=$(xmllint --xpath "string(//property[name='hive.exec.scratch.dir']/value)" $CONFIG_FILE 2>/dev/null)
-              TMP_DIR=$(xmllint --xpath "string(//property[name='hive.exec.temporary.table.storage']/value)" $CONFIG_FILE 2>/dev/null)
+              # 从Secret获取HDFS路径配置，而不是从XML文件中读取
+              WAREHOUSE_DIR=$(cat /etc/hive-db-secret/warehouse-dir 2>/dev/null)
+              SCRATCH_DIR=$(cat /etc/hive-db-secret/scratch-dir 2>/dev/null)
+              TMP_DIR=$(cat /etc/hive-db-secret/temp-storage 2>/dev/null)
               
               if [ -z "$WAREHOUSE_DIR" ]; then
                 WAREHOUSE_DIR="/user/hive/warehouse"
-                echo -e "$YELLOW$WARNING 未找到warehouse目录配置，使用默认值: $WAREHOUSE_DIR$NC"
+                echo -e "$YELLOW$WARNING 未从Secret获取到warehouse目录配置，使用默认值: $WAREHOUSE_DIR$NC"
+              else
+                echo -e "$INFO 从Secret获取到warehouse目录配置: $WAREHOUSE_DIR$NC"
               fi
               
               if [ -z "$SCRATCH_DIR" ]; then
                 SCRATCH_DIR="/tmp/hive/scratch"
-                echo -e "$YELLOW$WARNING 未找到scratch目录配置，使用默认值: $SCRATCH_DIR$NC"
+                echo -e "$YELLOW$WARNING 未从Secret获取到scratch目录配置，使用默认值: $SCRATCH_DIR$NC"
+              else
+                echo -e "$INFO 从Secret获取到scratch目录配置: $SCRATCH_DIR$NC"
+              fi
+              
+              if [ -n "$TMP_DIR" ]; then
+                echo -e "$INFO 从Secret获取到临时存储目录配置: $TMP_DIR$NC"
               fi
               
               # 9. 创建和检查目录
@@ -197,7 +178,7 @@ spec:
                 $HDFS_CMD dfs -mkdir -p "$WAREHOUSE_DIR"
                 if [ $? -ne 0 ]; then
                   echo -e "$RED$ERROR 创建目录失败: $WAREHOUSE_DIR$NC"
-                  mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                  mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                   exit 1
                 fi
               else
@@ -208,14 +189,14 @@ spec:
               $HDFS_CMD dfs -chmod 777 "$WAREHOUSE_DIR"
               if [ $? -ne 0 ]; then
                 echo -e "$RED$ERROR 设置权限失败: $WAREHOUSE_DIR$NC"
-                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                 exit 1
               fi
               echo -e "$INFO 执行命令: $HDFS_CMD dfs -chmod g+w $WAREHOUSE_DIR$NC"
               $HDFS_CMD dfs -chmod g+w "$WAREHOUSE_DIR"
               if [ $? -ne 0 ]; then
                 echo -e "$RED$ERROR 设置组写权限失败: $WAREHOUSE_DIR$NC"
-                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                 exit 1
               fi
               echo -e "$INFO 当前权限: $($HDFS_CMD dfs -ls -d $WAREHOUSE_DIR | awk '{print $1,$3,$4}')$NC"
@@ -228,7 +209,7 @@ spec:
                   $HDFS_CMD dfs -mkdir -p "$SCRATCH_DIR"
                   if [ $? -ne 0 ]; then
                     echo -e "$RED$ERROR 创建目录失败: $SCRATCH_DIR$NC"
-                    mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                    mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                     exit 1
                   fi
                 else
@@ -239,7 +220,7 @@ spec:
                 $HDFS_CMD dfs -chmod 777 "$SCRATCH_DIR"
                 if [ $? -ne 0 ]; then
                   echo -e "$RED$ERROR 设置权限失败: $SCRATCH_DIR$NC"
-                  mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                  mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                   exit 1
                 fi
                 echo -e "$INFO 当前权限: $($HDFS_CMD dfs -ls -d $SCRATCH_DIR | awk '{print $1,$3,$4}')$NC"
@@ -253,7 +234,7 @@ spec:
                   $HDFS_CMD dfs -mkdir -p "$TMP_DIR"
                   if [ $? -ne 0 ]; then
                     echo -e "$RED$ERROR 创建目录失败: $TMP_DIR$NC"
-                    mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                    mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                     exit 1
                   fi
                 else
@@ -264,7 +245,7 @@ spec:
                 $HDFS_CMD dfs -chmod 777 "$TMP_DIR"
                 if [ $? -ne 0 ]; then
                   echo -e "$RED$ERROR 设置权限失败: $TMP_DIR$NC"
-                  mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                  mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                   exit 1
                 fi
                 echo -e "$INFO 当前权限: $($HDFS_CMD dfs -ls -d $TMP_DIR | awk '{print $1,$3,$4}')$NC"
@@ -277,7 +258,7 @@ spec:
                 $HDFS_CMD dfs -mkdir -p "/tmp/hive"
                 if [ $? -ne 0 ]; then
                   echo -e "$RED$ERROR 创建目录失败: /tmp/hive$NC"
-                  mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                  mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                   exit 1
                 fi
               else
@@ -288,14 +269,14 @@ spec:
               $HDFS_CMD dfs -chmod 777 "/tmp/hive"
               if [ $? -ne 0 ]; then
                 echo -e "$RED$ERROR 设置权限失败: /tmp/hive$NC"
-                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+                mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "DELETE FROM $LOCK_TABLE WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
                 exit 1
               fi
               echo -e "$INFO 当前权限: $($HDFS_CMD dfs -ls -d /tmp/hive | awk '{print $1,$3,$4}')$NC"
               
               # 10. 更新锁状态
               echo -e "$INFO 更新锁状态为完成...$NC"
-              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "UPDATE $LOCK_TABLE SET status = 'complete' WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
+              mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "UPDATE $LOCK_TABLE SET status = 'complete' WHERE lock_key = '$LOCK_KEY';" 2>/dev/null
               
               echo -e "$GREEN$CHECK_MARK HDFS目录初始化完成$NC"
               exit 0
@@ -307,6 +288,9 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
+            - name: db-creds
+              mountPath: /etc/hive-db-secret
+              readOnly: true
         - name: wait-for-metastore
           image: "${dockerBusyboxImage}"
           imagePullPolicy: Always
@@ -411,3 +395,7 @@ spec:
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
+        - name: db-creds
+          secret:
+            secretName: ${serviceRoleFullName}-db-secret
+            defaultMode: 0400
