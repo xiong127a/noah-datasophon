@@ -150,7 +150,7 @@ public class K8sYamlDeploymentHandler {
         String configMapName = K8sFreeMakerUtils.generateConfigMapName(serviceRoleFullName, generators);
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
-        configMapName = configMapName.replace('.', '-');
+        configMapName = configMapName.replace('.', '-').replace('_', '-');
         fileConfig.setName(configMapName);
 
         String filename = generators.getFilename();
