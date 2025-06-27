@@ -7,9 +7,9 @@ global:
 # Alertmanager configuration
 alerting:
   alertmanagers:
-  - static_configs:
-    - targets:
-       - localhost:9093
+  - file_sd_configs:
+    - files:
+      - configs/alertmanagers.json
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
@@ -29,20 +29,23 @@ scrape_configs:
 
     # metrics_path defaults to '/metrics'
     # scheme defaults to 'http'.
-    static_configs:
-    - targets: ['localhost:3000']
+    file_sd_configs:
+    - files:
+      - configs/grafana.json
   - job_name: 'alertmanager'
 
     # metrics_path defaults to '/metrics'
     # scheme defaults to 'http'.
-    static_configs:
-    - targets: ['localhost:9093']
+    file_sd_configs:
+    - files:
+      - configs/alertmanager.json
   - job_name: 'pushgateway'
 
     # metrics_path defaults to '/metrics'
     # scheme defaults to 'http'.
-    static_configs:
-    - targets: ['localhost:9091']
+    file_sd_configs:
+    - files:
+      - configs/pushgateway.json
 
 
   - job_name: 'node' #自定义名称,用于监控linux基础服务
