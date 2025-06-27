@@ -137,7 +137,7 @@
         "filename": "kubernetes.config.persistent-volume-claims",
         "fileDescription": "ElasticSearch Kubernetes存储配置，定义持久卷存储类和挂载路径",
         "configFormat": "properties",
-        "configTargetRoles": "ElasticSearch,EsExporter",
+        "configTargetRoles": "ElasticSearch",
         "outputDirectory": "",
         "includeParams": [
           "storage_classes",
