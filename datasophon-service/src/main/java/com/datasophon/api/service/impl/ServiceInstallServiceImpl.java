@@ -51,7 +51,6 @@ import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceNodeEdge;
 import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
@@ -856,28 +855,36 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * 但NodeExporter角色（工作角色）可以部署在任意主机上
      */
     private void checkOnSameNode(Integer clusterId, List<ServiceRoleHostMapping> list) {
-        Set<String> hostnameSet = list.stream()
-                .filter(s -> MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES.contains(s.getServiceRole()))
-                .map(ServiceRoleHostMapping::getHosts)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toSet());
-        if (CollectionUtils.isEmpty(hostnameSet)) {
-            return;
-        }
+        // TODO: 暂时取消Prometheus、Grafana和AlertManager必须部署在同一主机的限制，后续需要根据实际情况决定是否恢复
+        /*
+         * Set<String> hostnameSet = list.stream()
+         * .filter(s ->
+         * MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES.contains(s.getServiceRole()))
+         * .map(ServiceRoleHostMapping::getHosts)
+         * .flatMap(Collection::stream)
+         * .collect(Collectors.toSet());
+         * if (CollectionUtils.isEmpty(hostnameSet)) {
+         * return;
+         * }
+         * 
+         * Set<String> installedHostnameSet = roleInstanceService.lambdaQuery()
+         * .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
+         * .in(
+         * ClusterServiceRoleInstanceEntity::getServiceRoleName,
+         * MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES)
+         * .list().stream()
+         * .map(ClusterServiceRoleInstanceEntity::getHostname)
+         * .collect(Collectors.toSet());
+         * hostnameSet.addAll(installedHostnameSet);
+         * 
+         * if (hostnameSet.size() > 1) {
+         * throw new
+         * ServiceException(Status.BASIC_SERVICE_SELECT_MOST_ONE_HOST.getMsg());
+         * }
+         */
 
-        Set<String> installedHostnameSet = roleInstanceService.lambdaQuery()
-                .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
-                .in(
-                        ClusterServiceRoleInstanceEntity::getServiceRoleName,
-                        MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES)
-                .list().stream()
-                .map(ClusterServiceRoleInstanceEntity::getHostname)
-                .collect(Collectors.toSet());
-        hostnameSet.addAll(installedHostnameSet);
-
-        if (hostnameSet.size() > 1) {
-            throw new ServiceException(Status.BASIC_SERVICE_SELECT_MOST_ONE_HOST.getMsg());
-        }
+        // 跳过检查，允许这些服务部署在不同主机上
+        return;
     }
 
     private void serviceValidation(ServiceRoleHostMapping serviceRoleHostMapping) {

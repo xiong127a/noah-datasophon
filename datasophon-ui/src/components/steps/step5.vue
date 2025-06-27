@@ -30,14 +30,6 @@
       <div class="steps-title flex-bewteen-container">
         <span>分配服务Master角色</span>
       </div>
-      <a-alert
-        v-if="hasBasicMonitoringServices"
-        type="warning"
-        showIcon
-        class="mgb16"
-        message="部署提示"
-        description="Prometheus主角色、AlertManager和Grafana必须部署在同一台主机上，而NodeExporter可以部署在任意主机。"
-      />
       <div class="mgt16 steps-body">
         <FixedCommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
       </div>
@@ -58,15 +50,8 @@ export default {
       loading: false,
       templateData: [],
       saveData: [],
-      hostList: [],
-      basicMonitoringRoles: ["Prometheus", "AlertManager", "Grafana"]
+      hostList: []
     };
-  },
-  computed: {
-    hasBasicMonitoringServices() {
-      if (!this.templateData || this.templateData.length === 0) return false;
-      return this.templateData.some(item => this.basicMonitoringRoles.includes(item.label));
-    }
   },
   methods: {
     // 去除字符串里面的数字
