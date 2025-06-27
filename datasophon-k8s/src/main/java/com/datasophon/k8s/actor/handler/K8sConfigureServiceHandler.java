@@ -70,8 +70,7 @@ public class K8sConfigureServiceHandler {
                                 Integer myid,
                                 String serviceRoleName,
                                 RunAs runAs,
-                                String hostName,
-                                String kubeConfig) throws Exception {
+                                String hostName) throws Exception {
         ExecResult execResult = new ExecResult();
 
         try {
@@ -202,14 +201,13 @@ public class K8sConfigureServiceHandler {
 //                                );
 //                    } else {
                         K8sFreeMakerUtils.generateConfigFile(
-                                kubeConfig,
                                 generators,
                                 configs,
                                 serviceRoleName,serviceRoleFullName);
 //                    }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String configMapName = generateConfigMapName(serviceRoleFullName,generators);
-                    K8sFreeMakerUtils.cacheConfigMap(kubeConfig,configMapName, "", generators.getFilename(),serviceRoleFullName);
+                    K8sFreeMakerUtils.cacheConfigMap(configMapName, "", generators.getFilename(),serviceRoleFullName);
                 }
 
                 execResult.setExecOut("configure success");

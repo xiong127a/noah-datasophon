@@ -6,8 +6,6 @@ import akka.util.Timeout;
 import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -37,9 +35,6 @@ public class K8sServiceConfigureHandler extends ServiceHandler {
         }
         generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
         generateServiceConfigCommand.setHostName(serviceRoleInfo.getHostname());
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
-        generateServiceConfigCommand.setKubeConfig(kubeConfig);
         ActorRef actorRef = ActorUtils.getLocalActor(K8sConfigureServiceActor.class,
                 ActorUtils.getActorRefName(K8sConfigureServiceActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));

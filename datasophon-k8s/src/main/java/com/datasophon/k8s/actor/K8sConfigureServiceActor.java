@@ -24,8 +24,7 @@ public class K8sConfigureServiceActor extends UntypedActor {
                     command.getMyid(),
                     command.getServiceRoleName(),
                     command.getRunAs(),
-                    command.getHostName(),
-                    command.getKubeConfig()
+                    command.getHostName()
                     );
             getSender().tell(startResult, getSelf());
 

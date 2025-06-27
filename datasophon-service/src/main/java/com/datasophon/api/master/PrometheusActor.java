@@ -48,6 +48,7 @@ import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.K8sFreeMakerUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -373,6 +374,7 @@ public class PrometheusActor extends UntypedActor {
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceEntity prometheusInstance,
             boolean isK8s,
             ServiceRoleInfo serviceRoleInfo) throws Exception {
+
         // Validate critical parameters
         if (prometheusInstance == null || prometheusInstance.getHostname() == null) {
             throw new IllegalArgumentException("Invalid prometheus instance");
@@ -381,12 +383,16 @@ public class PrometheusActor extends UntypedActor {
         if (isK8s) {
             K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
             execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
-
         } else {
             ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
             execResult = configureHandler.handlerRequest(serviceRoleInfo);
         }
 
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
+        String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(prometheusInstance.getServiceName(),
+                prometheusInstance.getServiceRoleName());
+        K8sFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,serviceRoleFullName);
         if (execResult != null && execResult.getExecResult()) {
             String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isK8s);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);
