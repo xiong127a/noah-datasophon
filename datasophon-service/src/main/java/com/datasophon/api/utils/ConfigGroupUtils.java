@@ -261,7 +261,8 @@ public class ConfigGroupUtils {
 
         // 8. 添加非K8S配置到结果列表
         processedConfigs.addAll(nonK8sConfigs);
-
+        // 添加JMX端口处理逻辑
+        processJmxPorts(processedConfigs);
         return processedConfigs;
     }
 
@@ -320,6 +321,83 @@ public class ConfigGroupUtils {
     }
 
     /**
+     * 处理JMX端口，将角色定义中的JMX端口添加到集群IP端口映射中
+     * 
+     * @param processedConfigs 处理后的配置列表
+     */
+    private static void processJmxPorts(List<ServiceConfig> processedConfigs) {
+        // 从Spring上下文获取服务
+        FrameServiceService frameServiceService = SpringTool.getApplicationContext()
+                .getBean(FrameServiceService.class);
+
+        // 收集所有角色配置映射
+        Map<String, ServiceConfig> clusterPortMappingConfigs = new HashMap<>();
+        for (ServiceConfig config : processedConfigs) {
+            String configName = config.getName();
+            if (configName != null && configName.endsWith("_cluster_port_mappings")) {
+                String roleName = configName.substring(0, configName.length() - "_cluster_port_mappings".length());
+                clusterPortMappingConfigs.put(roleName, config);
+            }
+        }
+
+        // 如果没有找到任何集群端口映射配置，直接返回
+        if (clusterPortMappingConfigs.isEmpty()) {
+            logger.info("未找到任何集群端口映射配置，跳过JMX端口处理");
+            return;
+        }
+
+        try {
+            // 获取所有服务定义
+            List<FrameServiceEntity> allServices = frameServiceService.list();
+
+            for (FrameServiceEntity service : allServices) {
+                String serviceJson = service.getServiceJson();
+                if (StrUtil.isBlank(serviceJson)) {
+                    continue;
+                }
+
+                JSONObject serviceObj = JSONObject.parseObject(serviceJson);
+                JSONArray roles = serviceObj.getJSONArray("roles");
+
+                if (roles == null || roles.isEmpty()) {
+                    continue;
+                }
+
+                // 遍历所有角色
+                for (int i = 0; i < roles.size(); i++) {
+                    JSONObject roleObj = roles.getJSONObject(i);
+                    String roleName = roleObj.getString("name");
+                    Object jmxPortObj = roleObj.get("jmxPort");
+
+                    // 如果角色定义了JMX端口
+                    if (roleName != null && jmxPortObj != null) {
+                        String jmxPort = String.valueOf(jmxPortObj);
+
+                        // 检查是否是有效的端口号
+                        if (StrUtil.isNotBlank(jmxPort) && !jmxPort.equals("null")) {
+                            // 将角色名转为小写下划线格式
+                            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2")
+                                    .toLowerCase();
+
+                            // 查找对应的集群端口映射配置
+                            ServiceConfig clusterPortConfig = clusterPortMappingConfigs.get(normRoleName);
+
+                            if (clusterPortConfig != null) {
+                                // 更新端口映射，添加JMX端口
+                                updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
+                                logger.info("Added JMX port {} to cluster_port_mappings for role {}", jmxPort,
+                                        roleName);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("处理JMX端口时出错: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * 更新端口映射配置
      *
      * @param config     配置对象
@@ -330,19 +408,71 @@ public class ConfigGroupUtils {
         try {
             // 获取当前值
             Object currentValue = config.getValue();
-            List<Map<String, String>> portMappings;
+            List<Map<String, String>> portMappings = new ArrayList<>();
 
             // 解析当前值
             if (currentValue == null) {
-                portMappings = new ArrayList<>();
+                // 保持空列表
             } else if (currentValue instanceof String) {
-                portMappings = JSONObject.parseObject((String) currentValue,
-                        new TypeReference<List<Map<String, String>>>() {
-                        });
+                try {
+                    portMappings = JSONObject.parseObject((String) currentValue,
+                            new TypeReference<List<Map<String, String>>>() {
+                            });
+                } catch (Exception e) {
+                    logger.warn("解析端口映射字符串失败，尝试其他格式: {}", e.getMessage());
+                    // 尝试解析为JSONArray
+                    JSONArray jsonArray = JSONObject.parseArray((String) currentValue);
+                    for (int i = 0; i < jsonArray.size(); i++) {
+                        Object item = jsonArray.get(i);
+                        if (item instanceof JSONObject) {
+                            Map<String, String> mapping = new HashMap<>();
+                            JSONObject jsonObj = (JSONObject) item;
+                            for (String key : jsonObj.keySet()) {
+                                mapping.put(key, jsonObj.getString(key));
+                            }
+                            portMappings.add(mapping);
+                        }
+                    }
+                }
             } else if (currentValue instanceof List) {
-                portMappings = (List<Map<String, String>>) currentValue;
+                // 尝试转换List中的每个元素
+                List<?> rawList = (List<?>) currentValue;
+                for (Object item : rawList) {
+                    if (item instanceof Map) {
+                        Map<?, ?> rawMap = (Map<?, ?>) item;
+                        Map<String, String> convertedMap = new HashMap<>();
+                        for (Object key : rawMap.keySet()) {
+                            if (key != null) {
+                                Object val = rawMap.get(key);
+                                convertedMap.put(key.toString(), val != null ? val.toString() : "");
+                            }
+                        }
+                        portMappings.add(convertedMap);
+                    } else if (item instanceof JSONObject) {
+                        JSONObject jsonObj = (JSONObject) item;
+                        Map<String, String> mapping = new HashMap<>();
+                        for (String key : jsonObj.keySet()) {
+                            mapping.put(key, jsonObj.getString(key));
+                        }
+                        portMappings.add(mapping);
+                    }
+                }
+            } else if (currentValue instanceof JSONArray) {
+                JSONArray jsonArray = (JSONArray) currentValue;
+                for (int i = 0; i < jsonArray.size(); i++) {
+                    Object item = jsonArray.get(i);
+                    if (item instanceof JSONObject) {
+                        Map<String, String> mapping = new HashMap<>();
+                        JSONObject jsonObj = (JSONObject) item;
+                        for (String key : jsonObj.keySet()) {
+                            mapping.put(key, jsonObj.getString(key));
+                        }
+                        portMappings.add(mapping);
+                    }
+                }
             } else {
-                logger.warn("Unexpected port mapping value type: {}", currentValue.getClass().getName());
+                logger.warn("无法处理的端口映射值类型: {}", currentValue.getClass().getName());
+                logger.debug("端口映射值内容: {}", currentValue);
                 return;
             }
 
@@ -353,12 +483,16 @@ public class ConfigGroupUtils {
                     // 获取现有的映射值
                     String existingValue = mapping.get(port);
                     // 如果新值不在现有值中，则追加
-                    if (!existingValue.contains(mappedPort)) {
-                        // 使用逗号分隔追加新的NodePort值
+                    if (existingValue != null && !existingValue.contains(mappedPort)) {
+                        // 使用逗号分隔追加新的端口值
                         mapping.put(port, existingValue + "," + mappedPort);
-                        logger.info("Appended new NodePort {} to existing mapping for port {}", mappedPort, port);
+                        logger.info("追加新端口映射 {} 到现有端口 {}", mappedPort, port);
+                    } else if (existingValue == null) {
+                        // 如果现有值为null，直接设置
+                        mapping.put(port, mappedPort);
+                        logger.info("更新端口 {} 的映射为 {}", port, mappedPort);
                     } else {
-                        logger.info("NodePort {} already exists for port {}, skipping", mappedPort, port);
+                        logger.info("端口 {} 已存在映射 {}，跳过", port, mappedPort);
                     }
                     found = true;
                     break;
@@ -370,13 +504,13 @@ public class ConfigGroupUtils {
                 Map<String, String> newMapping = new HashMap<>();
                 newMapping.put(port, mappedPort);
                 portMappings.add(newMapping);
-                logger.info("Added new port mapping: {} -> {}", port, mappedPort);
+                logger.info("添加新端口映射: {} -> {}", port, mappedPort);
             }
 
             // 更新配置值
             config.setValue(portMappings);
         } catch (Exception e) {
-            logger.error("Failed to update port mapping: {}", e.getMessage(), e);
+            logger.error("更新端口映射失败: {}", e.getMessage(), e);
         }
     }
 
