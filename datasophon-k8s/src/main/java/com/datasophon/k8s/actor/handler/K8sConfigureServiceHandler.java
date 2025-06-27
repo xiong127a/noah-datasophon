@@ -202,13 +202,14 @@ public class K8sConfigureServiceHandler {
 //                                );
 //                    } else {
                         K8sFreeMakerUtils.generateConfigFile(
+                                kubeConfig,
                                 generators,
                                 configs,
                                 serviceRoleName,serviceRoleFullName);
 //                    }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String configMapName = generateConfigMapName(serviceRoleFullName,generators);
-                    K8sFreeMakerUtils.cacheConfigMap(configMapName, "", generators.getFilename(),serviceRoleFullName);
+                    K8sFreeMakerUtils.cacheConfigMap(kubeConfig,configMapName, "", generators.getFilename(),serviceRoleFullName);
                 }
 
                 execResult.setExecOut("configure success");

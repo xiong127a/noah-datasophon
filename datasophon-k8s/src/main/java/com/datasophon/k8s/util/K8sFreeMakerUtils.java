@@ -34,7 +34,11 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Getter;
 import lombok.Setter;
@@ -74,12 +78,6 @@ public class K8sFreeMakerUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
 
-    public static void generateConfigFile(Generators generators,
-            List<ServiceConfig> configs,
-            String serviceRoleFullName) throws IOException, TemplateException {
-        generateConfigFile(generators, configs, null, serviceRoleFullName);
-    }
-
     /**
      * 支持 从附加的目录加载 模版
      *
@@ -90,7 +88,7 @@ public class K8sFreeMakerUtils {
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
 
-    public static void generateConfigFile(Generators generators,
+    public static void generateConfigFile(String kubeConfig, Generators generators,
             List<ServiceConfig> configs,
             String extPath, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
@@ -135,7 +133,7 @@ public class K8sFreeMakerUtils {
         data.put("itemList", configs);
         // 3.产生输出
         String configMapName = generateConfigMapName(serviceRoleFullName, generators);
-        writeToConfigMap(template, data, configMapName, generators.getFilename(), serviceRoleFullName);
+        writeToConfigMap(kubeConfig, template, data, configMapName, generators.getFilename(), serviceRoleFullName);
     }
 
     /**
@@ -172,7 +170,8 @@ public class K8sFreeMakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName,
+    public static void writeToConfigMap(String kubeConfig, Template template, Map<String, Object> data,
+            String configMapName,
             String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
         // 使用 StringWriter 合并模板和数据
@@ -184,7 +183,7 @@ public class K8sFreeMakerUtils {
         // 获取生成的内容
         String generatedContent = unixNewlineWriter.target.toString();
         // 将内容创建为 ConfigMap
-        cacheConfigMap(configMapName, generatedContent, fileName, serviceRoleFullName);
+        cacheConfigMap(kubeConfig, configMapName, generatedContent, fileName, serviceRoleFullName);
     }
 
     /**
@@ -193,9 +192,16 @@ public class K8sFreeMakerUtils {
      * @param configMapName    ConfigMap 的名称
      * @param generatedContent 渲染后的配置内容
      */
-    public static void cacheConfigMap(String configMapName, String generatedContent,
+    public static void cacheConfigMap(String kubeConfig, String configMapName, String generatedContent,
             String fileName, String serviceRoleFullName) {
         if (StrUtil.startWith(fileName, Constants.K8S_CONFIG_PREFIX)) {
+            return;
+        }
+        // 处理prometheus配置写入PVC
+        if (StrUtil.equals(serviceRoleFullName, "prometheus-prometheus")) {
+            // 将prometheus配置文件保存到PVC中
+            savePrometheusConfigToPVC(kubeConfig, fileName, generatedContent, serviceRoleFullName);
+            log.info("Prometheus配置文件 {} 已准备好写入PVC", fileName);
             return;
         }
         // 创建 ConfigMap 对象
@@ -216,7 +222,6 @@ public class K8sFreeMakerUtils {
         }
         // 将渲染后的内容加入到 ConfigMap 的 data 中
         configMap.setData(Collections.singletonMap(fileName, generatedContent));
-
         Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
         if (ObjectUtil.isNull(cache)) {
             cache = new HashMap<>();
@@ -344,5 +349,198 @@ public class K8sFreeMakerUtils {
             throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
         }
         return serviceRoleFullName.toLowerCase() + "-" + generators.getFilename().replace('.', '-');
+    }
+
+    /**
+     * 将Prometheus配置文件保存到PVC以便挂载使用
+     * 通过创建一个临时Job来将配置文件写入Prometheus使用的PVC
+     * 
+     * @param fileName            文件名
+     * @param fileContent         文件内容
+     * @param serviceRoleFullName 服务角色全名
+     */
+    private static void savePrometheusConfigToPVC(String kubeConfig, String fileName, String fileContent,
+            String serviceRoleFullName) {
+        try {
+            // 构建Kubernetes API客户端
+            KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
+
+            // 创建临时文件存储配置内容
+            String configFileBase64 = Base64.getEncoder().encodeToString(fileContent.getBytes(StandardCharsets.UTF_8));
+
+            // 创建Job以更新Prometheus配置文件
+            String jobName = "prometheus-config-updater-" + System.currentTimeMillis();
+
+            // 确定PVC名称
+            String pvcName = serviceRoleFullName + "-pvc";
+
+            // 确定Pod名称 - 使用索引为0的Pod
+            String podName = serviceRoleFullName + "-0";
+
+            // 配置挂载路径 - 与Prometheus Pod相同
+            String configMountPath = "/opt/datasophon/prometheus/configs";
+
+            // 确定配置文件路径
+            String configPath;
+            if (fileName.endsWith(".json")) {
+                configPath = configMountPath + "/" + fileName;
+            } else {
+                configPath = configMountPath + "/" + fileName;
+            }
+
+            log.info("使用subPathExpr挂载PVC: {}, Pod名称: {}, 文件路径: {}", pvcName, podName, configPath);
+
+            // 创建Job对象
+            Job job = new JobBuilder()
+                    .withNewMetadata()
+                    .withName(jobName)
+                    .withNamespace(Constant.K8S_NAMESPACE)
+                    .addToLabels("app", serviceRoleFullName)
+                    .addToLabels("managed-by", "datasophon")
+                    .addToLabels("job-type", "config-update")
+                    .endMetadata()
+                    .withNewSpec()
+                    .withBackoffLimit(2) // 失败重试次数
+                    .withTtlSecondsAfterFinished(300) // 完成后5分钟删除
+                    .withNewTemplate()
+                    .withNewMetadata()
+                    .addToLabels("app", jobName)
+                    .endMetadata()
+                    .withNewSpec()
+                    .addNewContainer()
+                    .withName("config-updater")
+                    .withImage(DockerImageUtils.getString("BUSYBOX"))
+                    .addNewEnv()
+                    .withName("POD_NAME")
+                    .withValue(podName)
+                    .endEnv()
+                    .addNewEnv()
+                    .withName("POD_NAMESPACE")
+                    .withValue(Constant.K8S_NAMESPACE)
+                    .endEnv()
+                    .withCommand("/bin/sh", "-c")
+                    .withArgs(
+                            "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 开始更新配置文件: " + fileName + "\"; " +
+                                    "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 目标路径: " + configPath + "\"; " +
+                                    "mkdir -p $(dirname " + configPath + "); " +
+                                    "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 已创建目录: $(dirname " + configPath + ")\"; " +
+                                    "echo " + configFileBase64 + " | base64 -d > " + configPath + "; " +
+                                    "if [ $? -eq 0 ]; then " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 成功写入配置文件 " + fileName + "\"; " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 文件详情: $(ls -la " + configPath + ")\"; " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 文件大小: $(stat -c %s " + configPath
+                                    + ") 字节\"; " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 行数: $(wc -l < " + configPath + ") 行\"; " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] MD5校验和: $(md5sum " + configPath
+                                    + " | cut -d' ' -f1)\"; " +
+                                    "  LINE_COUNT=$(wc -l < " + configPath + "); " +
+                                    "  if [ $LINE_COUNT -le 10 ]; then " +
+                                    "    echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 文件内容:\"; " +
+                                    "    cat " + configPath + " | sed 's/^/  /'; " +
+                                    "  else " +
+                                    "    echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 文件前10行:\"; " +
+                                    "    head -n10 " + configPath + " | sed 's/^/  /'; " +
+                                    "    echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ......（省略中间内容）......\"; " +
+                                    "    echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 文件后5行:\"; " +
+                                    "    tail -n5 " + configPath + " | sed 's/^/  /'; " +
+                                    "  fi; " +
+                                    "else " +
+                                    "  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 错误: 写入配置文件 " + fileName + " 失败\"; " +
+                                    "  exit 1; " +
+                                    "fi; " +
+                                    "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] 配置文件 " + fileName + " 更新成功完成\";")
+                    .addNewVolumeMount()
+                    .withName("prometheus-data")
+                    .withMountPath(configMountPath)
+                    .withSubPathExpr("$(POD_NAMESPACE)/$(POD_NAME)")
+                    .endVolumeMount()
+                    .endContainer()
+                    .addNewVolume()
+                    .withName("prometheus-data")
+                    .withNewPersistentVolumeClaim()
+                    .withClaimName(pvcName)
+                    .endPersistentVolumeClaim()
+                    .endVolume()
+                    .withRestartPolicy("Never")
+                    .endSpec()
+                    .endTemplate()
+                    .endSpec()
+                    .build();
+
+            // 提交Job到Kubernetes
+            client.batch().jobs().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(job);
+
+            log.info("创建配置更新Job: {}, 配置文件: {}", jobName, fileName);
+
+            // 监控Job执行状态
+            watchJobCompletion(client, jobName, fileName);
+
+        } catch (Exception e) {
+            log.error("保存Prometheus配置到PVC时出错: {}", e.getMessage(), e);
+            throw new RuntimeException("保存Prometheus配置失败", e);
+        }
+    }
+
+    /**
+     * 监控Job执行完成情况
+     * 
+     * @param client   Kubernetes客户端
+     * @param jobName  Job名称
+     * @param fileName 配置文件名
+     */
+    private static void watchJobCompletion(KubernetesClient client, String jobName, String fileName) {
+        try {
+            // 等待Job完成，最多等待30秒
+            int maxRetries = 30;
+            int retryCount = 0;
+
+            while (retryCount < maxRetries) {
+                Job job = client.batch().jobs().inNamespace(Constant.K8S_NAMESPACE).withName(jobName).get();
+                if (job == null) {
+                    log.warn("Job {} 不存在", jobName);
+                    break;
+                }
+
+                JobStatus status = job.getStatus();
+                if (status != null) {
+                    Integer succeeded = status.getSucceeded();
+                    Integer failed = status.getFailed();
+
+                    if (succeeded != null && succeeded > 0) {
+                        log.info("Prometheus配置文件 {} 更新成功", fileName);
+                        break;
+                    }
+
+                    if (failed != null && failed > 0) {
+                        log.error("更新Prometheus配置文件 {} 失败", fileName);
+                        // 获取Job的Pod日志
+                        try {
+                            PodList podList = client.pods().inNamespace(Constant.K8S_NAMESPACE)
+                                    .withLabel("job-name", jobName).list();
+                            if (podList != null && !podList.getItems().isEmpty()) {
+                                String podName = podList.getItems().get(0).getMetadata().getName();
+                                String logs = client.pods().inNamespace(Constant.K8S_NAMESPACE)
+                                        .withName(podName).getLog();
+                                log.error("Job Pod {} 日志: {}", podName, logs);
+                            }
+                        } catch (Exception e) {
+                            log.error("无法获取Job Pod日志", e);
+                        }
+                        break;
+                    }
+                }
+
+                // 等待1秒再检查
+                Thread.sleep(1000);
+                retryCount++;
+            }
+
+            if (retryCount >= maxRetries) {
+                log.warn("监控Job {} 超时，状态未知", jobName);
+            }
+
+        } catch (Exception e) {
+            log.error("监控Job执行状态时出错: {}", e.getMessage(), e);
+        }
     }
 }

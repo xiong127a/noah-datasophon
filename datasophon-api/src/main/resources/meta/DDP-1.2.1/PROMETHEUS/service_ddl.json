@@ -231,10 +231,10 @@
       "configType": "k8s",
       "required": false,
       "type": "input",
-      "value": "/data",
+      "value": "/opt/datasophon/prometheus/configs",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data",
+      "defaultValue": "/opt/datasophon/prometheus/configs",
       "configCategory": "k8s",
       "configGroup": "kubernetes.config.persistent-volume-claims",
       "configLevel": "advanced"

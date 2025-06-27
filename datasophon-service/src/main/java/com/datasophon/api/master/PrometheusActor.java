@@ -74,22 +74,21 @@ public class PrometheusActor extends UntypedActor {
         if (msg instanceof GeneratePrometheusConfigCommand) {
 
             GeneratePrometheusConfigCommand command = (GeneratePrometheusConfigCommand) msg;
-            ClusterServiceInstanceService serviceInstanceService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
-            ClusterServiceInstanceEntity serviceInstance =
-                    serviceInstanceService.getById(command.getServiceInstanceId());
-            List<ClusterServiceRoleInstanceEntity> roleInstanceList =
-                    roleInstanceService.getServiceRoleInstanceListByServiceId(
+            ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                    .getById(command.getServiceInstanceId());
+            List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
+                    .getServiceRoleInstanceListByServiceId(
                             serviceInstance.getId());
 
-            ClusterServiceRoleInstanceEntity prometheusInstance =
-                    roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
+            ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
+                    "Prometheus", null, command.getClusterId());
 
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                    .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             boolean isK8s = Constants.K8S_MODE.equals(depType);
             logger.info("start to generate {} prometheus config", serviceInstance.getServiceName());
@@ -98,17 +97,20 @@ public class PrometheusActor extends UntypedActor {
             HashMap<String, List<String>> roleMap = new HashMap<>();
             int index = 0;
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
-                String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(), roleInstanceEntity.getServiceRoleName());
-
-                List<String> podNames = (List<String>) CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+                String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(),
+                        roleInstanceEntity.getServiceRoleName());
 
                 String hostname = roleInstanceEntity.getHostname();
 
-                if (isK8s && Objects.nonNull(podNames) && !podNames.isEmpty()) {
-                    if (podNames.size() > index) {
-                        hostname = podNames.get(index);
-                        index++;
-                    }
+                if (isK8s) {
+                    // 使用服务角色的FQDN命名方式，确保稳定性
+                    // 格式:
+                    // serviceRoleFullName-{index}.serviceRoleFullName.namespace.svc.cluster.local
+                    hostname = serviceRoleFullName + "-" + index + "." + serviceRoleFullName + "."
+                            + Constant.K8S_NAMESPACE + ".svc.cluster.local";
+                    logger.info("Using K8s FQDN with index: {} for service role {}", hostname,
+                            roleInstanceEntity.getServiceRoleName());
+                    index++;
                 }
 
                 if (roleMap.containsKey(roleInstanceEntity.getServiceRoleName())) {
@@ -161,21 +163,18 @@ public class PrometheusActor extends UntypedActor {
             GenerateHostPrometheusConfig command = (GenerateHostPrometheusConfig) msg;
             Integer clusterId = command.getClusterId();
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-            ClusterHostService hostService =
-                    SpringTool.getApplicationContext().getBean(ClusterHostService.class);
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            ClusterHostService hostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                    .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
-            List<ClusterHostDO> hostList =
-                    hostService.list(
-                            new QueryWrapper<ClusterHostDO>()
-                                    .eq(Constants.MANAGED, 1)
-                                    .eq(Constants.CLUSTER_ID, clusterId));
-            ClusterServiceRoleInstanceEntity prometheusInstance =
-                    roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
+            List<ClusterHostDO> hostList = hostService.list(
+                    new QueryWrapper<ClusterHostDO>()
+                            .eq(Constants.MANAGED, 1)
+                            .eq(Constants.CLUSTER_ID, clusterId));
+            ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
+                    "Prometheus", null, command.getClusterId());
             boolean isK8s = Constants.K8S_MODE.equals(depType);
             if (Objects.nonNull(prometheusInstance)) {
 
@@ -184,7 +183,6 @@ public class PrometheusActor extends UntypedActor {
                 workerGenerators.setOutputDirectory("configs");
                 workerGenerators.setConfigFormat("custom");
                 workerGenerators.setTemplateName("scrape.ftl");
-
 
                 Generators nodeGenerators = new Generators();
                 nodeGenerators.setFilename("linux.json");
@@ -244,28 +242,25 @@ public class PrometheusActor extends UntypedActor {
         } else if (msg instanceof GenerateAlertConfigCommand) {
 
             GenerateAlertConfigCommand command = (GenerateAlertConfigCommand) msg;
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
-            ClusterServiceRoleInstanceEntity prometheusInstance =
-                    roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
+                    "Prometheus", null, command.getClusterId());
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                    .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             if (Objects.nonNull(prometheusInstance)) {
                 ExecResult configResult;
                 if (Constants.K8S_MODE.equals(depType)) {
                     return;
                 } else {
-                    ActorSelection alertConfigActor =
-                            ActorUtils.actorSystem.actorSelection(
-                                    "akka.tcp://datasophon@"
-                                            + prometheusInstance.getHostname()
-                                            + ":2552/user/worker/alertConfigActor");
+                    ActorSelection alertConfigActor = ActorUtils.actorSystem.actorSelection(
+                            "akka.tcp://datasophon@"
+                                    + prometheusInstance.getHostname()
+                                    + ":2552/user/worker/alertConfigActor");
                     Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
                     Future<Object> configureFuture = Patterns.ask(alertConfigActor, command, timeout);
-                    configResult =
-                            (ExecResult) Await.result(configureFuture, timeout.duration());
+                    configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
                 }
                 if (configResult.getExecResult()) {
                     logger.info("Generate prometheus alert config success , now start to reload prometheus");
@@ -277,22 +272,21 @@ public class PrometheusActor extends UntypedActor {
 
         } else if (msg instanceof GenerateSRPromConfigCommand) {
             GenerateSRPromConfigCommand command = (GenerateSRPromConfigCommand) msg;
-            ClusterServiceInstanceService serviceInstanceService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
-            ClusterServiceInstanceEntity serviceInstance =
-                    serviceInstanceService.getById(command.getServiceInstanceId());
-            List<ClusterServiceRoleInstanceEntity> roleInstanceList =
-                    roleInstanceService.getServiceRoleInstanceListByServiceId(
+            ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                    .getById(command.getServiceInstanceId());
+            List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
+                    .getServiceRoleInstanceListByServiceId(
                             serviceInstance.getId());
 
-            ClusterServiceRoleInstanceEntity prometheusInstance =
-                    roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
+            ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
+                    "Prometheus", null, command.getClusterId());
 
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                    .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
 
             logger.info("start to genetate {} prometheus config", serviceInstance.getServiceName());
@@ -302,12 +296,11 @@ public class PrometheusActor extends UntypedActor {
             ArrayList<String> beList = new ArrayList<>();
 
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
-                String jmxKey =
-                        command.getClusterFrame()
-                                + Constants.UNDERLINE
-                                + serviceInstance.getServiceName()
-                                + Constants.UNDERLINE
-                                + roleInstanceEntity.getServiceRoleName();
+                String jmxKey = command.getClusterFrame()
+                        + Constants.UNDERLINE
+                        + serviceInstance.getServiceName()
+                        + Constants.UNDERLINE
+                        + roleInstanceEntity.getServiceRoleName();
                 logger.info("jmxKey is {}", jmxKey);
                 if ("SRFE".equals(roleInstanceEntity.getServiceRoleName())
                         || "SRFEObserver".equals(roleInstanceEntity.getServiceRoleName())
@@ -357,8 +350,8 @@ public class PrometheusActor extends UntypedActor {
     }
 
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceEntity prometheusInstance,
-                                        boolean isK8s,
-                                        ServiceRoleInfo serviceRoleInfo) throws Exception {
+            boolean isK8s,
+            ServiceRoleInfo serviceRoleInfo) throws Exception {
         // Validate critical parameters
         if (prometheusInstance == null || prometheusInstance.getHostname() == null) {
             throw new IllegalArgumentException("Invalid prometheus instance");
@@ -366,21 +359,20 @@ public class PrometheusActor extends UntypedActor {
         ExecResult execResult;
         if (isK8s) {
             K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
-            execResult= k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+            execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
 
         } else {
             ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-            execResult= configureHandler.handlerRequest(serviceRoleInfo);
+            execResult = configureHandler.handlerRequest(serviceRoleInfo);
         }
 
         if (execResult != null && execResult.getExecResult()) {
-            String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(),isK8s);
+            String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isK8s);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);
         }
     }
 
-
-    private String buildReloadUrl(String hostname,boolean isK8s) {
-        return "http://" + hostname + ":" + (isK8s?PROMETHEUS_NODE_PORT:PROMETHEUS_PORT) + RELOAD_PATH;
+    private String buildReloadUrl(String hostname, boolean isK8s) {
+        return "http://" + hostname + ":" + (isK8s ? PROMETHEUS_NODE_PORT : PROMETHEUS_PORT) + RELOAD_PATH;
     }
 }
