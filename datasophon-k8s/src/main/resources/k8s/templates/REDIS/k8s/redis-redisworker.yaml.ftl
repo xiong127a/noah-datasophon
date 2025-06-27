@@ -44,10 +44,29 @@ spec:
         - name: "${serviceRoleFullName}"
           image: "${dockerImage}"
           imagePullPolicy: "Always"
+          <#if node_port_mappings?? || cluster_port_mappings??>
+          ports:
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              mkdir -p /opt/datasophon/redis-7.2.3/cluster/{log,conf,pid}
+              ${startCommand}
           env:
             - name: USER
               value: ${runAsUser}
@@ -55,6 +74,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           readinessProbe:
             exec:
               command:
@@ -76,6 +103,9 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
+            - name: redis-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -87,6 +117,14 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
+        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

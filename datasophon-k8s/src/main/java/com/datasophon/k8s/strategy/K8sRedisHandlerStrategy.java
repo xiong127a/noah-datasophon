@@ -1,16 +1,22 @@
 package com.datasophon.k8s.strategy;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class K8sRedisHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -23,33 +29,27 @@ public class K8sRedisHandlerStrategy extends K8sAbstractHandlerStrategy implemen
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult;
-        String hostname = command.getHostname();
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            /*if (serviceRoleName.equals("RedisMaster")&&!K8sMinaUtils.checkPathExists(hostname,workPath+"/cluster/dump-master.rdb")){
-                K8sMinaUtils.createFile(hostname,workPath+"/cluster/dump-master.rdb");
-            }
-            if (serviceRoleName.equals("RedisWorker")&&!K8sMinaUtils.checkPathExists(hostname,workPath+"/cluster/dump-slave.rdb")){
-                K8sMinaUtils.createFile(hostname,workPath+"/cluster/dump-slave.rdb");
-            }*/
 
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             startResult = serviceHandler.start(command);
+            Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+            List<String> podNames = (List<String>) podNamesObj;
+
+            if (podNames == null || podNames.isEmpty()) {
+                return startResult;
+            }
 
             ArrayList<String> commands = new ArrayList<>();
-            commands.add("chmod");
-            commands.add("+x");
-            commands.add(workPath + "/redis-cluster.sh");
-            commands.add("&&");
             commands.add("sh");
             commands.add(workPath + "/redis-cluster.sh");
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                K8sUtil.runCmd(
+                startResult=K8sUtil.runCmd(
                         Constants.DATASOPHON,
                         kubeClient,
-                        (command.getServiceName()+"-"+command.getServiceRoleName()).toLowerCase(),
+                        (command.getServiceName() + "-" + command.getServiceRoleName()).toLowerCase(),
                         command.getHostname(),
-                        String.join(" ",commands));
+                        String.join(" ", commands));
                 logger.info("sh redis-cluster.sh success");
-                startResult.setExecResult(true);
             } catch (Exception e) {
                 logger.info("sh redis-cluster.sh failed");
                 startResult.setExecResult(false);
@@ -59,5 +59,89 @@ public class K8sRedisHandlerStrategy extends K8sAbstractHandlerStrategy implemen
         }
         startResult = serviceHandler.start(command);
         return startResult;
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        if (list == null || list.isEmpty()) {
+            logger.warn("Redis配置列表为空，无法更新服务地址");
+            return;
+        }
+
+        logger.info("开始更新Redis配置，适配Kubernetes服务发现...");
+        
+        for (ServiceConfig config : list) {
+            String name = config.getName();
+            if (name == null || config.getValue() == null) {
+                continue;
+            }
+            
+            try {
+                if ("RedisMasterAddr".equals(name)) {
+                    String value = (String) config.getValue();
+                    StringBuilder newValue = new StringBuilder();
+                    String[] split = value.split(" ");
+                    for (int i = 0; i < split.length; i++) {
+                        newValue.append("redis-redismaster-")
+                               .append(i)
+                               .append(".redis-redismaster.datasophon.svc.cluster.local:7000 ");
+                    }
+                    if (newValue.length() > 0) {
+                        config.setValue(newValue.substring(0, newValue.length() - 1));
+                        logger.info("RedisMasterAddr配置已更新为K8S服务地址: {}", config.getValue());
+                    }
+                } else if ("RedisSlaveAddr".equals(name)) {
+                    String value = (String) config.getValue();
+                    StringBuilder newValue = new StringBuilder();
+                    String[] split = value.split(" ");
+                    
+                    List<String> workerList = Arrays.asList(split);
+                    List<String> adjustedWorker = new ArrayList<>(workerList);
+
+                    List<String> masterList = new ArrayList<>();
+                    for (int i = 0; i < split.length; i++) {
+                        masterList.add("redis-redismaster-" + i + ".redis-redismaster.datasophon.svc.cluster.local");
+                    }
+                    
+                    // 循环位移直到无冲突或尝试次数耗尽
+                    int maxAttempts = adjustedWorker.size();
+                    boolean conflictFound;
+                    int attempts = 0;
+                    do {
+                        conflictFound = false;
+                        // 检查所有下标，现在假设主从节点列表长度一致
+                        for (int i = 0; i < masterList.size(); i++) {
+                            String masterHost = masterList.get(i);
+                            String workerHost = adjustedWorker.get(i);
+                            if (masterHost.equals(workerHost)) {
+                                conflictFound = true;
+                                break;
+                            }
+                        }
+                        
+                        if (conflictFound && !adjustedWorker.isEmpty()) {
+                            Collections.rotate(adjustedWorker, 1);
+                            attempts++;
+                            logger.info("检测到主从节点冲突，执行第{}次位移调整", attempts);
+                        }
+                    } while (conflictFound && attempts < maxAttempts);
+                    
+                    // 构建新的worker地址
+                    for (int i = 0; i < adjustedWorker.size(); i++) {
+                        newValue.append("redis-redisworker-")
+                               .append(i)
+                               .append(".redis-redisworker.datasophon.svc.cluster.local:7001 ");
+                    }
+                    
+                    if (newValue.length() > 0) {
+                        config.setValue(newValue.substring(0, newValue.length() - 1));
+                        logger.info("RedisSlaveAddr配置已更新为K8S服务地址(经过冲突调整): {}", config.getValue());
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("更新Redis服务地址配置失败", e);
+            }
+        }
+        logger.info("Redis配置更新完成");
     }
 }

@@ -108,7 +108,7 @@ public class K8sYamlDeploymentHandler {
             String configFilePath) {
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
-        configFileName = configFileName.replace('.', '-');
+        configFileName = configFileName.replace('.', '-').replace('_', '-');
         fileConfig.setName(configFileName);
 
         // 设置文件路径
