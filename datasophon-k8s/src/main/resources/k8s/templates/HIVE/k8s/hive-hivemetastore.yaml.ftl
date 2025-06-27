@@ -57,42 +57,39 @@ spec:
               INFO="ℹ️"
 
               echo -e "$BLUE$INFO 开始检查后端数据库连接...$NC"
-
-              # 从配置中提取数据库连接URL
-              <#if db_connection_url??>
-              DB_URL="${db_connection_url}"
-              # 格式: jdbc:mysql://host:port/dbname... -> host port
-              HOST=$(echo $DB_URL | sed -n 's/.*:\/\/\(.*\):.*/\1/p')
-              PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-              <#else>
-              echo -e "$RED$ERROR 错误: 配置中未提供 javax.jdo.option.ConnectionURL，无法继续$NC"
-              exit 1
-              </#if>
               
-              if [ -z "$HOST" ] || [ -z "$PORT" ]; then
-                  echo -e "$RED$ERROR 错误: 无法从 '$DB_URL' 解析数据库主机或端口$NC"
+              # 从Secret挂载的文件中读取数据库连接信息
+              DB_HOST=$(cat /etc/hive-db-secret/db-host)
+              DB_PORT=$(cat /etc/hive-db-secret/db-port)
+              
+              if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
+                  echo -e "$RED$ERROR 错误: 无法获取数据库主机或端口信息$NC"
                   exit 1
               fi
 
-              echo -e "$INFO 目标数据库地址: $HOST:$PORT"
+              echo -e "$INFO 目标数据库地址: $DB_HOST:$DB_PORT"
               
               # 循环等待，最多等待300秒
               for i in $(seq 1 60); do
-                nc -z -w 3 $HOST $PORT >/dev/null 2>&1
+                nc -z -w 3 $DB_HOST $DB_PORT >/dev/null 2>&1
                 if [ $? -eq 0 ]; then
-                  echo -e "$GREEN$CHECK_MARK $HOST:$PORT 连接成功!$NC"
+                  echo -e "$GREEN$CHECK_MARK $DB_HOST:$DB_PORT 连接成功!$NC"
                   break
                 else
-                  echo -e "$YELLOW ... 第 $i 次尝试, $HOST:$PORT 仍在等待中...$NC"
+                  echo -e "$YELLOW ... 第 $i 次尝试, $DB_HOST:$DB_PORT 仍在等待中...$NC"
                   sleep 5
                 fi
                 if [ $i -eq 60 ]; then
-                  echo -e "$RED$ERROR 错误: 等待 $HOST:$PORT 超时 (300秒)，请检查数据库服务状态!$NC"
+                  echo -e "$RED$ERROR 错误: 等待 $DB_HOST:$DB_PORT 超时 (300秒)，请检查数据库服务状态!$NC"
                   exit 1
                 fi
               done
               
               echo -e "$BLUE$INFO 数据库已准备就绪!$NC"
+          volumeMounts:
+            - name: db-creds
+              mountPath: /etc/hive-db-secret
+              readOnly: true
         <#if isInstall?? && isInstall>
         # InitContainer 2: Use a database lock to elect a leader for schema initialization.
         - name: initialize-schema-with-db-lock
@@ -113,42 +110,31 @@ spec:
               NC='\033[0m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; INFO="ℹ️"; ERROR="❌"; CHECK_MARK="✅"
 
               echo -e "$BLUE$INFO 开始使用数据库锁进行Schema初始化...$NC"
+              
+              # 从Secret挂载的文件中读取数据库连接信息
+              DB_HOST=$(cat /etc/hive-db-secret/db-host)
+              DB_PORT=$(cat /etc/hive-db-secret/db-port)
+              DB_NAME=$(cat /etc/hive-db-secret/db-name)
+              DB_USER=$(cat /etc/hive-db-secret/db-user)
+              DB_PASS=$(cat /etc/hive-db-secret/db-password)
+              DB_TYPE=$(cat /etc/hive-db-secret/db-type)
 
-              # hive-site.xml的实际路径是 `$_APP_HOME/conf/hive-site.xml`
-              CONFIG_FILE="$_APP_HOME/conf/hive-site.xml"
-
-              if [ ! -f "$CONFIG_FILE" ]; then
-                echo -e "$ERROR 致命错误: 在 $CONFIG_FILE 未找到Hive配置文件$NC"
+              if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ -z "$DB_TYPE" ]; then
+                echo -e "$ERROR 致命错误: 数据库Secret中缺少必要信息，无法继续$NC"
                 exit 1
               fi
-
-              # 使用xmllint安全地从hive-site.xml中提取数据库参数
-              DB_URL=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionURL']/value)" $CONFIG_FILE)
-              DB_USER=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionUserName']/value)" $CONFIG_FILE)
-              DB_PASS=$(xmllint --xpath "string(//property[name='javax.jdo.option.ConnectionPassword']/value)" $CONFIG_FILE)
-              DB_TYPE=$(echo "$DB_URL" | awk -F':' '{print $2}')
-
-              # 解析DB_URL以获取主机、端口和数据库名
-              HOST=$(echo $DB_URL | sed -n 's/.*:\/\/\([^:\/]*\).*/\1/p')
-              PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-              DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p' | sed 's/;//g')
-
-              if [ -z "$HOST" ] || [ -z "$PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
-                  echo -e "$ERROR 致命错误: 无法从 $CONFIG_FILE 解析所有必需的数据库连接信息$NC"
-                  exit 1
-              fi
               
-              echo -e "$INFO 已解析数据库连接: mysql -h $HOST -P $PORT -u $DB_USER -D $DB_NAME$NC"
+              echo -e "$INFO 已获取数据库连接: $DB_TYPE://$DB_HOST:$DB_PORT/$DB_NAME$NC"
 
               LOCK_TABLE="ddp_hive_init_lock"
               LOCK_KEY="hive_metastore_schema_init"
 
               echo -e "$BLUE$INFO 尝试创建锁表 '$LOCK_TABLE' (如果不存在)...$NC"
-              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "CREATE TABLE IF NOT EXISTS ${LOCK_TABLE} (lock_key VARCHAR(255) PRIMARY KEY, status VARCHAR(50), pod_name VARCHAR(255), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);"
+              mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "CREATE TABLE IF NOT EXISTS ${LOCK_TABLE} (lock_key VARCHAR(255) PRIMARY KEY, status VARCHAR(50), pod_name VARCHAR(255), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);"
               
               echo -e "$BLUE$INFO Pod ($HOSTNAME) 正在尝试获取初始化锁...$NC"
               # 尝试插入记录以获取锁
-              mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT INTO ${LOCK_TABLE} (lock_key, status, pod_name) VALUES ('${LOCK_KEY}', 'initializing', '$HOSTNAME');"
+              mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "INSERT INTO ${LOCK_TABLE} (lock_key, status, pod_name) VALUES ('${LOCK_KEY}', 'initializing', '$HOSTNAME');"
               
               # 检查插入是否成功
               if [ $? -eq 0 ]; then
@@ -165,7 +151,7 @@ spec:
                 
                 # 更新状态，通知其他等待的Pod
                 echo -e "$BLUE$INFO 正在更新锁状态以通知所有Pod初始化已完成...$NC"
-                mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "UPDATE ${LOCK_TABLE} SET status = 'complete' WHERE lock_key = '${LOCK_KEY}';"
+                mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "UPDATE ${LOCK_TABLE} SET status = 'complete' WHERE lock_key = '${LOCK_KEY}';"
                 echo -e "$GREEN$CHECK_MARK 初始化过程已结束。$NC"
                 exit 0
               else
@@ -174,7 +160,7 @@ spec:
                 
                 # 循环检查锁状态
                 for i in $(seq 1 120); do
-                  STATUS=$(mysql -h $HOST -P $PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM ${LOCK_TABLE} WHERE lock_key = '${LOCK_KEY}';")
+                  STATUS=$(mysql -h $DB_HOST -P $DB_PORT -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -B -e "SELECT status FROM ${LOCK_TABLE} WHERE lock_key = '${LOCK_KEY}';")
                   if [ "$STATUS" == "complete" ]; then
                     echo -e "$GREEN$CHECK_MARK 检测到 'complete' 状态。Schema已就绪。$NC"
                     exit 0
@@ -195,6 +181,9 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
+            - name: db-creds
+              mountPath: /etc/hive-db-secret
+              readOnly: true
         </#if>
       containers:
         - name: ${serviceRoleFullName}
@@ -230,6 +219,15 @@ spec:
             - name: "timezone"
               mountPath: "/etc/localtime"
       volumes:
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
+        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
+        - name: db-creds
+          secret:
+            secretName: ${serviceRoleFullName}-db-secret
+            defaultMode: 0400

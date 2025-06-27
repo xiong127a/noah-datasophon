@@ -65,7 +65,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname,
-                                  String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
+            String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
@@ -105,7 +105,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, String configFileName,
-                                     String configFilePath) {
+            String configFilePath) {
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
         configFileName = configFileName.replace('.', '-');
@@ -145,7 +145,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath,
-                              boolean containsHost) {
+            boolean containsHost) {
 
         String configMapName = K8sFreeMakerUtils.generateConfigMapName(serviceRoleFullName, generators);
         // 创建新的 ServiceConfigVolume 对象
@@ -170,9 +170,9 @@ public class K8sYamlDeploymentHandler {
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
-                                ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
-                                String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
-                                boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
+            ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
+            String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
+            boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -214,7 +214,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumeConfigMapSet, String appHome,
-                                            String serviceRoleName, boolean enableKerberos) {
+            String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             addConfigFile(volumeConfigMapSet, "keytab", "/etc/security/keytab/");
             addConfigFile(volumeConfigMapSet, "krd5conf", "/etc/krb5.conf");
@@ -238,17 +238,17 @@ public class K8sYamlDeploymentHandler {
     private Template generateTemplate() throws IOException {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 使用方括号语法替代后，不再需要特别设置命名约定
-        config.setTemplateLoader(new MultiTemplateLoader(new TemplateLoader[]{new ClassTemplateLoader(
+        config.setTemplateLoader(new MultiTemplateLoader(new TemplateLoader[] { new ClassTemplateLoader(
                 K8sFreeMakerUtils.class,
-                "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s")}));
+                "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s") }));
         return config.getTemplate(serviceRoleFullName + ".yaml.ftl");
     }
 
     private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
-                                                   ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
-                                                   Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
-                                                   String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
-                                                   CommandType commandType) {
+            ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
+            Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
+            String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
+            CommandType commandType) {
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
                         (existing, replacement) -> replacement));
@@ -293,13 +293,13 @@ public class K8sYamlDeploymentHandler {
         data.put("startCommand",
                 startRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s && tail -F -f %s'", runAs.getUser(),
-                        appHome,
-                        startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
+                                appHome,
+                                startRunner.getProgram(), String.join(" ", startRunner.getArgs()), logFilePath)
                         : "tail -F -f " + logFilePath);
         data.put("statusCommand",
                 statusRunner != null
                         ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome,
-                        statusRunner.getProgram(), String.join(" ", statusRunner.getArgs()))
+                                statusRunner.getProgram(), String.join(" ", statusRunner.getArgs()))
                         : "exit 0");
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
@@ -310,36 +310,37 @@ public class K8sYamlDeploymentHandler {
 
         // 处理有点的参数
         if ("HDFS".equals(serviceName)) {
-            populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "nn_name_dir");
-            populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
-            populateDataWithConfig(configFileMap, "dfs.namenode.checkpoint.dir", "snn_checkpoint_dir");
-            populateDataWithConfig(configFileMap, "dfs.datanode.data.dir", "dn_data_dir");
-            populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "jn_node_dir");
-            populateDataWithConfig(configFileMap, "ha.zookeeper.quorum", "zkQuorum");
-            populateDataWithConfig(configFileMap, "dfs.nameservices", "nameServiceId");
+            populateDataWithConfig("dfs.namenode.name.dir", "nn_name_dir");
+            populateDataWithConfig("dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
+            populateDataWithConfig("dfs.namenode.checkpoint.dir", "snn_checkpoint_dir");
+            populateDataWithConfig("dfs.datanode.data.dir", "dn_data_dir");
+            populateDataWithConfig("dfs.journalnode.edits.dir", "jn_node_dir");
+            populateDataWithConfig("ha.zookeeper.quorum", "zkQuorum");
+            populateDataWithConfig("dfs.nameservices", "nameServiceId");
         }
         if ("KAFKA".equals(serviceName)) {
-            populateDataWithConfig(configFileMap, "log.dirs", "kafka_log_dirs");
-            populateDataWithConfig(configFileMap, "zookeeper.connect", "zookeeper_connect");
-            populateDataWithConfig(configFileMap, "cluster1.zk.list", "cluster1ZkList");
-            populateDataWithConfig(configFileMap, "JMX_PORT", "JMX_PORT");
+            populateDataWithConfig("log.dirs", "kafka_log_dirs");
+            populateDataWithConfig("zookeeper.connect", "zookeeper_connect");
+            populateDataWithConfig("cluster1.zk.list", "cluster1ZkList");
+            populateDataWithConfig("JMX_PORT", "JMX_PORT");
         }
         if ("YARN".equals(serviceName)) {
-            populateDataWithConfig(configFileMap, "yarn.resourcemanager.zk-address", "yarn_resourcemanager_zk_address");
-            populateDataWithConfig(configFileMap, "yarn.resourcemanager.webapp.address", "rmWebAppAddress");
+            populateDataWithConfig("yarn.resourcemanager.zk-address", "yarn_resourcemanager_zk_address");
+            populateDataWithConfig("yarn.resourcemanager.webapp.address", "rmWebAppAddress");
         }
         if ("ZOOKEEPER".equals(serviceName)) {
-            populateDataWithConfig(configFileMap, "dataDir", "zk_data_dir");
+            populateDataWithConfig("dataDir", "zk_data_dir");
         }
         if ("GRAFANA".equals(serviceName)) {
             String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
             String hostname = NetUtil.getLocalHostName();
             int port = 0;
-            data.put("apiUrl",  String.format(url, "192.168.1.54", 8081));
+            data.put("apiUrl", String.format(url, "192.168.1.54", 8081));
         }
         if ("HIVE".equals(serviceName)) {
-            populateDataWithConfig(configFileMap, "hive.metastore.uris", "metastore_uris");
-            populateDataWithConfig(configFileMap, "javax.jdo.option.ConnectionURL", "db_connection_url");
+            populateDataWithConfig("hive.metastore.uris", "metastore_uris");
+            // 提取数据库连接信息，以便创建Secret
+            extractHiveDatabaseInfo();
         }
 
         data.putAll(k8sConfigMap);
@@ -349,13 +350,13 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome,
-                              Set<ServiceConfigVolume> volumePathSet, String serviceRoleName,
-                              Set<ServiceConfigVolume> volumeConfigMapSet) {
+            Set<ServiceConfigVolume> volumePathSet, String serviceRoleName,
+            Set<ServiceConfigVolume> volumeConfigMapSet) {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
             if (StrUtil.startWith(generators.getFilename(), Constants.K8S_CONFIG_PREFIX)) {
-                return;
+                continue;
             }
             boolean containsHost = entry.getValue().stream()
                     .anyMatch(serviceConfig -> serviceConfig.getValue().toString().contains("{{HOST}}") ||
@@ -536,7 +537,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     // 提取出一个通用方法，用于从配置中提取目录
-    private void populateDataWithConfig(Map<Generators, List<ServiceConfig>> configFileMap, String configName,
+    private void populateDataWithConfig(String configName,
                                         String targetDataKey) {
         ServiceConfig serviceConfig = CONFIG_CACHE.get(configName);
         if (ObjUtil.isNull(serviceConfig)) {
@@ -577,6 +578,103 @@ public class K8sYamlDeploymentHandler {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 提取Hive数据库连接信息以创建Secret
+     * 此方法从配置中提取数据库连接信息并创建Secret，不再将信息存储到模板数据中
+     *
+     */
+    private void extractHiveDatabaseInfo() {
+        logger.info("正在提取Hive数据库连接信息用于创建Secret...");
+
+        // 尝试从缓存中获取数据库连接配置
+        ServiceConfig dbUrlConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionURL");
+        ServiceConfig dbUserConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionUserName");
+        ServiceConfig dbPassConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionPassword");
+        ServiceConfig dbDriverConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionDriverName");
+
+        if (ObjUtil.isNull(dbUrlConfig) || ObjUtil.isNull(dbUrlConfig.getValue())) {
+            logger.error("未找到数据库URL配置，无法创建数据库Secret，Hive元数据存储将无法正常工作");
+            throw new RuntimeException("缺少必要的数据库配置信息");
+        }
+
+        String dbUrl = dbUrlConfig.getValue().toString();
+        String dbUser = dbUserConfig != null && dbUserConfig.getValue() != null ? dbUserConfig.getValue().toString()
+                : "";
+        String dbPass = dbPassConfig != null && dbPassConfig.getValue() != null ? dbPassConfig.getValue().toString()
+                : "";
+        String dbDriver = dbDriverConfig != null && dbDriverConfig.getValue() != null
+                ? dbDriverConfig.getValue().toString()
+                : "";
+
+        if (StrUtil.isBlank(dbUser) || StrUtil.isBlank(dbPass)) {
+            logger.error("数据库用户名或密码为空，无法创建数据库Secret，Hive元数据存储将无法正常工作");
+            throw new RuntimeException("数据库凭据不完整");
+        }
+
+        // 解析数据库类型、主机、端口和名称
+        String dbType = "";
+        String dbHost = "";
+        String dbPort = "";
+        String dbName = "";
+
+        try {
+            // 提取数据库类型 (如 mysql, postgresql)
+            if (dbUrl.contains("jdbc:")) {
+                dbType = dbUrl.substring(dbUrl.indexOf("jdbc:") + 5, dbUrl.indexOf("://"));
+            }
+
+            // 提取主机和端口
+            if (dbUrl.contains("://")) {
+                String hostPortPart = dbUrl.substring(dbUrl.indexOf("://") + 3);
+                if (hostPortPart.contains(":")) {
+                    dbHost = hostPortPart.substring(0, hostPortPart.indexOf(":"));
+                    String portAndRest = hostPortPart.substring(hostPortPart.indexOf(":") + 1);
+                    if (portAndRest.contains("/")) {
+                        dbPort = portAndRest.substring(0, portAndRest.indexOf("/"));
+                    }
+                }
+            }
+
+            // 提取数据库名称
+            if (dbUrl.contains("/")) {
+                String nameAndParams = dbUrl.substring(dbUrl.lastIndexOf("/") + 1);
+                if (nameAndParams.contains("?")) {
+                    dbName = nameAndParams.substring(0, nameAndParams.indexOf("?"));
+                } else {
+                    dbName = nameAndParams;
+                }
+            }
+
+            // 清理可能的分号
+            dbName = dbName.replace(";", "");
+
+            // 验证所有必要信息是否提取成功
+            if (StrUtil.isBlank(dbHost) || StrUtil.isBlank(dbPort) ||
+                    StrUtil.isBlank(dbName) || StrUtil.isBlank(dbType)) {
+                logger.error("无法从JDBC URL解析完整的数据库连接信息");
+                throw new RuntimeException("数据库连接URL格式无效");
+            }
+
+            // 创建Secret数据映射
+            Map<String, String> secretData = new HashMap<>();
+            secretData.put("db-host", dbHost);
+            secretData.put("db-port", dbPort);
+            secretData.put("db-name", dbName);
+            secretData.put("db-user", dbUser);
+            secretData.put("db-password", dbPass);
+            secretData.put("db-type", dbType);
+
+            // 缓存Secret，将在K8s集群中创建
+            K8sFreeMakerUtils.cacheDatabaseSecret(serviceRoleFullName, secretData, "-db-secret");
+
+            logger.info("成功提取数据库连接信息并创建Secret: 类型={}, 主机={}, 端口={}, 数据库名={}",
+                    dbType, dbHost, dbPort, dbName);
+        } catch (Exception e) {
+            logger.error("解析数据库连接URL时出错", e);
+            throw new RuntimeException("创建数据库Secret失败: " + e.getMessage(), e);
         }
     }
 }

@@ -34,12 +34,13 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -64,27 +67,32 @@ public class K8sFreeMakerUtils {
     @Setter
     private static Map<String, Map<String, ConfigMap>> configMapCache = new HashMap<>();
 
+    // 添加Secret缓存
+    @Getter
+    @Setter
+    private static Map<String, Map<String, Secret>> secretCache = new HashMap<>();
+
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
 
     public static void generateConfigFile(Generators generators,
-                                          List<ServiceConfig> configs,
-                                           String serviceRoleFullName) throws IOException, TemplateException {
+            List<ServiceConfig> configs,
+            String serviceRoleFullName) throws IOException, TemplateException {
         generateConfigFile(generators, configs, null, serviceRoleFullName);
     }
 
     /**
      * 支持 从附加的目录加载 模版
      *
-     * @param generators      生成器对象，包含模板配置信息
-     * @param configs         服务配置列表，包含需要渲染到模板中的配置项
-     * @param extPath         附加模板路径，用于加载额外的模板文件
+     * @param generators 生成器对象，包含模板配置信息
+     * @param configs    服务配置列表，包含需要渲染到模板中的配置项
+     * @param extPath    附加模板路径，用于加载额外的模板文件
      * @throws IOException       当模板加载或写入过程中发生I/O错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
 
     public static void generateConfigFile(Generators generators,
-                                          List<ServiceConfig> configs,
-                                          String extPath, String serviceRoleFullName) throws IOException, TemplateException {
+            List<ServiceConfig> configs,
+            String extPath, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
@@ -165,7 +173,7 @@ public class K8sFreeMakerUtils {
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
     public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName,
-                                        String fileName, String serviceRoleFullName)
+            String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
         // 使用 StringWriter 合并模板和数据
         StringWriter stringWriter = new StringWriter();
@@ -186,7 +194,7 @@ public class K8sFreeMakerUtils {
      * @param generatedContent 渲染后的配置内容
      */
     public static void cacheConfigMap(String configMapName, String generatedContent,
-                                      String fileName, String serviceRoleFullName) {
+            String fileName, String serviceRoleFullName) {
         if (StrUtil.startWith(fileName, Constants.K8S_CONFIG_PREFIX)) {
             return;
         }
@@ -203,7 +211,7 @@ public class K8sFreeMakerUtils {
             }
             labels.put("app", serviceRoleFullName);
         }
-        if (generatedContent.contains("{{HOST}}")||generatedContent.contains("{{IP}}")) {
+        if (generatedContent.contains("{{HOST}}") || generatedContent.contains("{{IP}}")) {
             fileName += ".example";
         }
         // 将渲染后的内容加入到 ConfigMap 的 data 中
@@ -219,6 +227,11 @@ public class K8sFreeMakerUtils {
 
     public static void createConfigMap(String serviceRoleFullName, KubernetesClient client) {
         Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
+        if (cache == null || cache.isEmpty()) {
+            log.info("No ConfigMaps found for {}", serviceRoleFullName);
+            return;
+        }
+
         Set<String> keySet = cache.keySet();
         for (String configMapName : keySet) {
             ConfigMap configMap = cache.get(configMapName);
@@ -239,6 +252,89 @@ public class K8sFreeMakerUtils {
             }
         }
         configMapCache.remove(serviceRoleFullName);
+    }
+
+    /**
+     * 创建数据库凭据Secret
+     * 
+     * @param serviceRoleFullName 服务角色全名，用作Secret名称前缀
+     * @param secretData          包含Secret数据的Map
+     * @param secretSuffix        Secret名称后缀，通常为"-db-secret"
+     */
+    public static void cacheDatabaseSecret(String serviceRoleFullName, Map<String, String> secretData,
+            String secretSuffix) {
+        if (secretData == null || secretData.isEmpty()) {
+            log.warn("数据库凭据为空，不创建Secret");
+            return;
+        }
+
+        String secretName = serviceRoleFullName.toLowerCase() + secretSuffix;
+
+        // 将普通字符串值转换为base64编码
+        Map<String, String> encodedData = new HashMap<>();
+        for (Map.Entry<String, String> entry : secretData.entrySet()) {
+            encodedData.put(entry.getKey(),
+                    Base64.getEncoder().encodeToString(entry.getValue().getBytes(StandardCharsets.UTF_8)));
+        }
+
+        // 创建Secret对象
+        Secret secret = new Secret();
+        secret.setMetadata(new ObjectMeta());
+        secret.getMetadata().setName(secretName);
+        secret.getMetadata().setNamespace(Constant.K8S_NAMESPACE);
+
+        // 设置标签
+        Map<String, String> labels = new HashMap<>();
+        labels.put("app", serviceRoleFullName);
+        secret.getMetadata().setLabels(labels);
+
+        // 设置数据
+        secret.setData(encodedData);
+        secret.setType("Opaque");
+
+        // 添加到缓存
+        Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
+        if (cache == null) {
+            cache = new HashMap<>();
+        }
+        cache.put(secretName, secret);
+        secretCache.put(serviceRoleFullName, cache);
+
+        log.info("数据库Secret {} 已添加到缓存", secretName);
+    }
+
+    /**
+     * 创建所有缓存的Secret
+     * 
+     * @param serviceRoleFullName 服务角色全名
+     * @param client              Kubernetes客户端
+     */
+    public static void createSecrets(String serviceRoleFullName, KubernetesClient client) {
+        Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
+        if (cache == null || cache.isEmpty()) {
+            log.info("No Secrets found for {}", serviceRoleFullName);
+            return;
+        }
+
+        for (Map.Entry<String, Secret> entry : cache.entrySet()) {
+            String secretName = entry.getKey();
+            Secret secret = entry.getValue();
+
+            try {
+                // 使用createOrReplace创建或替换Secret
+                client.secrets().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(secret);
+                log.info("Secret {} 已成功创建在命名空间 {}", secretName, Constant.K8S_NAMESPACE);
+
+                // 添加彩色日志输出
+                ColorLogUtils.printResourceCreated("Secret", secretName, Constant.K8S_NAMESPACE);
+            } catch (Exception e) {
+                log.error("创建Secret时出错: {}", e.getMessage());
+                ColorLogUtils.printError("创建Secret " + secretName + " 失败：" + e.getMessage());
+                throw new RuntimeException("创建Secret时出错: " + e.getMessage());
+            }
+        }
+
+        secretCache.remove(serviceRoleFullName);
     }
 
     // 获取或创建缓存客户端[8](@ref)

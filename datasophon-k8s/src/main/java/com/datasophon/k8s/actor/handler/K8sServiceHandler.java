@@ -149,13 +149,13 @@ public class K8sServiceHandler {
             return execResult;
         }
 
-        if(StrUtil.equalsIgnoreCase(serviceRoleFullName,"hdfs-zkfc")){
+        if (StrUtil.equalsIgnoreCase(serviceRoleFullName, "hdfs-zkfc")) {
             execResult.setExecResult(true);
             logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不加载k8s yaml文件");
             return execResult;
         }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-             InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
 
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
@@ -713,7 +713,11 @@ public class K8sServiceHandler {
     }
 
     private void handleConfigMap(KubernetesClient client, String serviceRoleFullName) {
+        // 创建ConfigMap
         K8sFreeMakerUtils.createConfigMap(serviceRoleFullName, client);
+
+        // 创建Secret(如果有)
+        K8sFreeMakerUtils.createSecrets(serviceRoleFullName, client);
     }
 
     private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
@@ -815,7 +819,7 @@ public class K8sServiceHandler {
                 return execResult;
             }
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-                 FileInputStream fis = new FileInputStream(yamlFileObj)) {
+                    FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
                         .inNamespace(Constant.K8S_NAMESPACE)
                         .delete();
@@ -926,7 +930,7 @@ public class K8sServiceHandler {
                 String errorMsg = String.format("找不到服务%s的PVC配置生成器", serviceRoleFullName);
                 logger.error(errorMsg);
                 return;
-                //throw new IllegalArgumentException(errorMsg);
+                // throw new IllegalArgumentException(errorMsg);
             }
 
             // 获取配置列表
