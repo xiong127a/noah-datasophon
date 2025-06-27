@@ -32,7 +32,6 @@ public class K8sServiceRoleStrategyContext {
 
         map.put("HueMaster", new K8sHueHandlerStrategy("HUE", "HueMaster"));
 
-        map.put("RedisMaster", new K8sRedisHandlerStrategy("REDIS", "RedisMaster"));
         map.put("RedisWorker", new K8sRedisHandlerStrategy("REDIS", "RedisWorker"));
 
         map.put("PostgresqlMaster", new K8sPostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
@@ -55,6 +54,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("HBASE", new K8sHbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("TRINO", new K8sTrinoHandlerStrategy("TRINO", "TrinoCoordinator"));
         map.put("GRAFANA", new K8sGrafanaHandlerStrategy("GRAFANA", "Grafana"));
+        map.put("REDIS", new K8sRedisHandlerStrategy("REDIS", "RedisMaster"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

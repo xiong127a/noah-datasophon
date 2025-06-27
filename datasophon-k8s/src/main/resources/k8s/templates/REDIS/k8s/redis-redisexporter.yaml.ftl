@@ -44,6 +44,23 @@ spec:
         - name: "${serviceRoleFullName}"
           image: "${dockerImage}"
           imagePullPolicy: "Always"
+          <#if node_port_mappings?? || cluster_port_mappings??>
+          ports:
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           command:
             - "/bin/bash"
             - "-c"

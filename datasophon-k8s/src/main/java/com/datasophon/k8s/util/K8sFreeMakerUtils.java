@@ -350,7 +350,7 @@ public class K8sFreeMakerUtils {
         if (serviceRoleFullName == null || generators == null) {
             throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
         }
-        return serviceRoleFullName.toLowerCase() + "-" + generators.getFilename().replace('.', '-');
+        return serviceRoleFullName.toLowerCase() + "-" + generators.getFilename().replace('.', '-').replace("_", "-");
     }
 
     /**

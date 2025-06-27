@@ -108,6 +108,42 @@
   "configWriter": {
     "generators": [
       {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "Redis Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "RedisMaster,RedisWorker",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Redis Kubernetes网络服务配置，定义端口映射",
+        "configFormat": "properties",
+        "configTargetRoles": "RedisMaster,RedisWorker,RedisExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "Redis Kubernetes资源配置，定义CPU和内存限额",
+        "configFormat": "properties",
+        "configTargetRoles": "RedisMaster,RedisWorker,RedisExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
+      },
+      {
         "filename": "control_redis.sh",
         "fileDescription": "Redis控制脚本，用于启动、停止和检查Redis服务状态",
         "configFormat": "custom",
@@ -180,26 +216,40 @@
     {
       "name": "redisMasterPort",
       "label": "master节点端口号",
-      "description": "",
+      "description": "Redis主节点服务端口",
       "configType": "map",
       "required": true,
       "type": "input",
       "value": "7000",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "7000"
+      "defaultValue": "7000",
+      "configCategory": "file",
+      "configGroup": "redis-master",
+      "configLevel": "advanced",
+      "bindRole": "RedisMaster",
+      "serviceType": "NodePort",
+      "portNumber": "7000",
+      "nodePort": "30070"
     },
     {
       "name": "redisSlavePort",
       "label": "worker节点端口号",
-      "description": "",
+      "description": "Redis从节点服务端口",
       "configType": "map",
       "required": true,
       "type": "input",
       "value": "7001",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "7001"
+      "defaultValue": "7001",
+      "configCategory": "file",
+      "configGroup": "redis-slave",
+      "configLevel": "advanced",
+      "bindRole": "RedisWorker",
+      "serviceType": "NodePort",
+      "portNumber": "7001",
+      "nodePort": "30071"
     },
     {
       "name": "custom.master.conf",
@@ -211,7 +261,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "redis-master",
+      "configLevel": "custom"
     },
     {
       "name": "custom.slave.conf",
@@ -223,7 +276,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "redis-slave",
+      "configLevel": "custom"
     },
     {
       "name": "RedisMasterAddr",
@@ -254,13 +310,151 @@
       "label": "redis监控节点地址",
       "description": "redis监控节点地址",
       "required": true,
-      "separator":",",
+      "separator": ",",
       "configType": "map",
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": ""
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为Redis的数据存储位置的父目录",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "/opt/datasophon/redis/cluster",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/redis/cluster",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "Redis集群内部通信端口配置",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     }
   ]
 }
