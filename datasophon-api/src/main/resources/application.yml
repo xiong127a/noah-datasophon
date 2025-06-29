@@ -38,18 +38,25 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,loggers,metrics
   endpoint:
     prometheus:
       enabled: true
     health:
       show-details: always
+    loggers:
+      enabled: true
   metrics:
     export:
       prometheus:
         enabled: true
     tags:
       application: ${spring.application.name:datasophon-api}
+    enable:
+      jvm: true
+      logback: true
+      process: true
+      system: true
       
 #mybatis
 mybatis-plus:
