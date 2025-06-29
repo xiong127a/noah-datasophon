@@ -31,6 +31,7 @@ export default {
   getFrameList: path + '/api/frame/list',// 获取服务框架列表
   runningClusterList: path + '/api/cluster/runningClusterList',// 正在运行状态集群列表
   getDashboardUrl: path + '/cluster/service/dashboard/getDashboardUrl',// 查询总览地址
+  getDatasophonDashboardUrl: path + '/cluster/service/dashboard/getDatasophonDashboard',// 查询Datasophon总览地址
   reNameGroup: path + '/cluster/service/instance/role/group/rename',
   delGroup: path + '/cluster/service/instance/role/group/delete',
   saveLabel: path + '/cluster/node/label/save',

@@ -28,8 +28,19 @@ const options = {
       redirect: '/login',
       children: [
         {
+          path: 'datasophon-overview',
+          name: 'Datasophon总览',
+          meta: {
+            notAlive: true,
+            icon: 'datasophon-overview',
+            isCluster: 'isCluster',
+          },
+          component: () => import('@/pages/overview/datasophon'),
+          children: [],
+        },
+        {
           path: 'overview',
-          name: '总览',
+          name: '集群总览',
           meta: {
             notAlive: true,
             icon: 'over-view',
