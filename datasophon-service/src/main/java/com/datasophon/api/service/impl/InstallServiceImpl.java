@@ -31,9 +31,9 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
 import com.datasophon.api.master.HostConnectActor;
 import com.datasophon.api.master.WorkerStartActor;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.api.utils.ProcessUtils;
@@ -63,7 +63,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -98,11 +97,6 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 1、查询缓存是否存在当前主机列表 2、存在则根据分页返回数据 3、不存在则解析hosts，产生主机列表并放入缓存中
      *
-     * @param clusterId
-     * @param hosts
-     * @param sshUser
-     * @param sshPort
-     * @return
      */
     @Override
     public Result analysisHostList(
@@ -115,7 +109,7 @@ public class InstallServiceImpl implements InstallService {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, SSHUSER, sshUser);
 
-        List<HostInfo> list = new ArrayList<>();
+        List<HostInfo> list;
         hosts = hosts.replace(" ", "");
         String md5 = SecureUtil.md5(hosts);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -184,8 +178,8 @@ public class InstallServiceImpl implements InstallService {
         // list分页
         list =
                 map.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getKey()))
-                        .map(e -> e.getValue())
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(Map.Entry::getValue)
                         .collect(Collectors.toList());
         Integer offset = (page - 1) * pageSize;
         List<HostInfo> result = getListPage(list, offset, pageSize);
@@ -240,8 +234,8 @@ public class InstallServiceImpl implements InstallService {
                 (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
         List<HostInfo> list =
                 map.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getKey()))
-                        .map(e -> e.getValue())
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(Map.Entry::getValue)
                         .collect(Collectors.toList());
         return Result.success(list);
     }
@@ -281,8 +275,8 @@ public class InstallServiceImpl implements InstallService {
                 (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
         List<HostInfo> list =
                 map.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getKey()))
-                        .map(e -> e.getValue())
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(Map.Entry::getValue)
                         .filter(e -> e.getCheckResult().getCode() == 10001)
                         .collect(Collectors.toList());
 
@@ -378,9 +372,7 @@ public class InstallServiceImpl implements InstallService {
                 (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo value = hostInfoEntry.getValue();
-            if (Objects.isNull(value.getCheckResult())
-                    || (Objects.nonNull(value.getCheckResult())
-                            && value.getCheckResult().getCode() != 10001)) {
+            if (Objects.isNull(value.getCheckResult()) || value.getCheckResult().getCode() != 10001) {
                 return Result.success().put("hostCheckCompleted", false);
             }
         }
@@ -439,13 +431,9 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 一键 启动 主机上安装的服务
      *
-     * @param clusterHostIds
-     * @param commandType
-     * @return
-     * @throws Exception
      */
     @Override
-    public Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception {
+    public Result generateHostServiceCommand(String clusterHostIds, String commandType) {
         if (StringUtils.isBlank(clusterHostIds)) {
             return Result.error(Status.SELECT_LEAST_ONE_HOST.getMsg());
         }
@@ -471,7 +459,7 @@ public class InstallServiceImpl implements InstallService {
 
     private List<HostInfo> getListPage(List<HostInfo> list, Integer offset, Integer pageSize) {
         List<HostInfo> result = new ArrayList<>();
-        Integer limit = offset + pageSize;
+        int limit = offset + pageSize;
         if (list.size() < offset + pageSize) {
             limit = list.size();
         }
