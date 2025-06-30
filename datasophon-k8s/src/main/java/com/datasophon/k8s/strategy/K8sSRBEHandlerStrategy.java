@@ -68,7 +68,7 @@ public class K8sSRBEHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                 .append(".").append(Constants.DATASOPHON).append(".svc.cluster.local:9050\\\"");
                     }
 
-                    String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -p -e \"ALTER SYSTEM add BACKEND " + beNodes.toString() + "\"";
+                    String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -e \"ALTER SYSTEM add BACKEND " + beNodes.toString() + "\"";
 
                     startResult = K8sUtil.runCmd(
                             Constants.DATASOPHON,

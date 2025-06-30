@@ -61,7 +61,7 @@ public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy i
                         String observerAddr = String.format("%s.%s.%s.svc.cluster.local:9010",
                                 podName, serviceRoleFullName, Constants.DATASOPHON);
 
-                        batchCmd.append("mysql -h127.0.0.1 -P9030 -uroot -p -e \"")
+                        batchCmd.append("mysql -h127.0.0.1 -P9030 -uroot  -e \"")
                                 .append("ALTER SYSTEM add OBSERVER '").append(observerAddr).append("';\" && ");
                     }
 
