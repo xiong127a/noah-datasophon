@@ -31,4 +31,6 @@ import com.datasophon.dao.entity.ClusterServiceDashboard;
 public interface ClusterServiceDashboardService extends IService<ClusterServiceDashboard> {
 
     Result getDashboardUrl(Integer clusterId);
+
+    Result getDatasophonDashboard(Integer clusterId);
 }

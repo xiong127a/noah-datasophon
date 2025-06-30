@@ -49,7 +49,19 @@ start(){
     fi
   fi
   echo starting $command, logging to $log
-  exec_command="$SH_DIR/elasticsearch_exporter --es.all --es.indices --es.cluster_settings --es.indices_settings --es.shards --es.snapshots --es.timeout=10s --web.listen-address=":9114" --web.telemetry-path="/metrics" --es.uri http://$HOSTNAME:9200"
+  
+  # 检查环境变量elasticsearch-cluster-url是否存在
+  echo "检查ELASTICSEARCH_CLUSTER_URL环境变量..."
+  echo "ELASTICSEARCH_CLUSTER_URL=${ELASTICSEARCH_CLUSTER_URL:-未设置}"
+  if [ -n "$ELASTICSEARCH_CLUSTER_URL" ]; then
+    ES_URI="$ELASTICSEARCH_CLUSTER_URL"
+    echo "使用环境变量中的ES地址: $ES_URI"
+  else
+    ES_URI="http://$HOSTNAME:9200"
+    echo "环境变量未设置，使用hostname构建地址: $ES_URI"
+  fi
+  
+  exec_command="$SH_DIR/elasticsearch_exporter --es.all --es.indices --es.cluster_settings --es.indices_settings --es.shards --es.snapshots --es.timeout=10s --web.listen-address=":9114" --web.telemetry-path="/metrics" --es.uri $ES_URI"
   echo "nohup $exec_command > $log 2>&1 &"
   nohup $exec_command > $log 2>&1 &
   echo $! > $pid

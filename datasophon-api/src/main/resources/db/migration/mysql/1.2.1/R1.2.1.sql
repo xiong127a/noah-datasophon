@@ -9,3 +9,6 @@ INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (27, 'POSTGRESQL', 'http://
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (28, 'ZEPPELIN', 'http://${grafanaHost}:3000/d/0qEUoL0nz/zeppelin?orgId=1&kiosk');
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (29, 'HUE', 'http://${grafanaHost}:3000/d/L581Vo3Zk/hue?orgId=1&kiosk');
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (30, 'PUSHGATEWAY', 'http://${grafanaHost}:3000/d/eea-9_siks1/pushgateway?orgId=1&refresh=30s?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (31, 'REDIS','http://${grafanaHost}:3000/d/bRd48yKMdd/redis-exporter-quickstart-and-dashboard?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (32, 'DATASOPHON','http://${grafanaHost}:3000/d/sbapmwalker/springboot-apm-dashboard-zhong-wen-ban-ben?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (33, 'KUBERNETES','http://${grafanaHost}:30003/d/StarsL_cn_K8S/k8s-dashboard-cn-20240513-starsl-cn?orgId=1&kiosk&var-NameSpace=datasophon');

@@ -32,6 +32,32 @@ spring:
   web:
     resources:
       static-locations: classpath:/front/views/
+      
+# Prometheus监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,loggers,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+    loggers:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name:datasophon-api}
+    enable:
+      jvm: true
+      logback: true
+      process: true
+      system: true
+      
 #mybatis
 mybatis-plus:
   mapper-locations: classpath*:/mapper/*.xml
