@@ -17,19 +17,19 @@
 
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
+import java.util.List;
 
 public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -39,38 +39,169 @@ public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
-        logger.info("FEHandlerStrategy start fe" + JSONUtil.toJsonStr(command));
-        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        ExecResult startResult;
+        logger.info("FEHandlerStrategy start fe");
+        Integer clusterId = command.getClusterId();
+        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         startResult = serviceHandler.start(command);
+
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
-            if (command.isSlave()) {
-                if (startResult.getExecResult()) {
-                    // add follower
-                    try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
 
-                        // 拼接完整的mysql命令语句
-                        String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -e \"ALTER SYSTEM add FOLLOWER \\\"" + serviceRoleFullName + "-1."+serviceRoleFullName+"."+Constants.DATASOPHON+".svc.cluster.local:9010\\\"\"";
+            int currentRoleLoopIndex = getCurrentRoleLoopIndex();
+            int totalRoleLoopCount = getTotalRoleLoopCount();
+            Integer roleInstallCount = getRoleInstallCount(clusterId);
 
-                        // 进入容器执行mysql命令添加follower
-                        startResult = K8sUtil.runCmd(
+            // 计算已经存在的节点数量
+            int existingNodesCount = roleInstallCount - totalRoleLoopCount;
+
+            logger.info("当前角色 [{}] 处理状态：当前循环次数={}, 本次安装数量={}, 总安装数量={}, 已存在节点数量={}",
+                    serviceRoleFullName, currentRoleLoopIndex, totalRoleLoopCount, roleInstallCount,
+                    existingNodesCount);
+
+            if (startResult.getExecResult()) {
+                // 检查是否已经存在master节点
+                boolean masterExists = existingNodesCount > 0;
+
+                // 如果不存在master节点，且当前是第一个循环，则当前节点是master
+                boolean isCurrentNodeMaster = !masterExists && currentRoleLoopIndex == 1;
+
+                // 如果当前节点是master，不需要执行添加follower操作
+                if (isCurrentNodeMaster) {
+                    logger.info("当前是主节点，无需执行添加follower操作");
+                    return startResult;
+                }
+
+                // 判断是否是最后一次循环，只在最后一次循环添加follower
+                boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
+                if (!isLastLoop) {
+                    logger.info("当前不是最后一次循环，跳过添加follower操作");
+                    return startResult;
+                }
+
+                logger.info("当前是最后一次循环，执行添加follower操作");
+
+                // 如果需要添加follower，继续执行
+                try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+                    StringBuilder cmdBuilder = new StringBuilder();
+
+                    // 先确定是否是新集群安装还是扩容
+                    boolean isNewCluster = existingNodesCount == 0;
+
+                    // 确定master节点索引（Pod索引从0开始，但在DNS中我们需要使用从0开始的索引）
+                    int masterPodIndex = isNewCluster ? 0 : existingNodesCount - 1;
+
+                    logger.info("集群状态: {}，已有节点数: {}, 主节点Pod索引: {}",
+                            (isNewCluster ? "新集群" : "扩容"), existingNodesCount, masterPodIndex);
+
+                    // 计算需要添加的follower节点范围（Pod索引从0开始）
+                    int followerStartPodIndex = isNewCluster ? 1 : existingNodesCount;
+                    int followerEndPodIndex = existingNodesCount + totalRoleLoopCount - 1;
+
+                    logger.info("需要添加follower节点Pod索引范围: {} 到 {}", followerStartPodIndex, followerEndPodIndex);
+
+                    // 检查是否有follower需要添加
+                    if (followerStartPodIndex > followerEndPodIndex) {
+                        logger.info("没有follower节点需要添加");
+                        return startResult;
+                    }
+
+                    // 构建添加命令
+                    for (int i = followerStartPodIndex; i <= followerEndPodIndex; i++) {
+                        // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
+                        String followerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
+                                serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                        String followerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
+                                serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+
+                        logger.info("添加follower节点: {}", followerAddr);
+
+                        // 为每个节点生成连接检测命令
+                        String checkCmd = generateConnectionCheckCommand(followerHost, 9010);
+
+                        // 执行连接检测命令
+                        logger.info("检测follower节点 {} 连接是否可用", followerHost);
+                        ExecResult checkResult = K8sUtil.runCmd(
                                 Constants.DATASOPHON,
                                 kubeClient,
                                 serviceRoleFullName,
                                 command.getMasterHost(),
-                                mysqlCmd
-                        );
-                    } catch (Exception e) {
-                        logger.error("Add slave FE failed: {}", ThrowableUtils.getStackTrace(e));
-                        startResult.setExecResult(false);
-                        startResult.setExecOut(e.getMessage());
+                                checkCmd);
+
+                        if (!checkResult.getExecResult()) {
+                            logger.error("follower节点 {} 连接检测失败，跳过添加此节点", followerHost);
+                            logger.error("错误信息: {}", checkResult.getExecErrOut());
+                            continue;
+                        }
+
+                        logger.info("follower节点 {} 连接检测成功，准备添加节点", followerHost);
+
+                        // 使用单引号而非双引号，避免多层转义问题
+                        String singleCmd = String.format(
+                                "mysql -h127.0.0.1 -P9030 -uroot --connect-timeout=10 -e 'ALTER SYSTEM ADD FOLLOWER \"%s\"'",
+                                followerAddr);
+
+                        // 添加命令分隔符
+                        if (cmdBuilder.length() > 0) {
+                            cmdBuilder.append(" && ");
+                        }
+
+                        cmdBuilder.append(singleCmd);
                     }
-                    logger.info("slave fe start success");
-                } else {
-                    logger.error("slave fe start failed");
+
+                    String mysqlCmd = cmdBuilder.toString();
+
+                    if (mysqlCmd.isEmpty()) {
+                        logger.info("没有需要执行的添加follower命令");
+                        return startResult;
+                    }
+
+                    logger.info("执行添加follower命令: {}", mysqlCmd);
+                    logger.info("在主节点 [{}] 上执行命令", command.getMasterHost());
+
+                    // 执行命令
+                    startResult = K8sUtil.runCmd(
+                            Constants.DATASOPHON,
+                            kubeClient,
+                            serviceRoleFullName,
+                            command.getMasterHost(),
+                            mysqlCmd);
+                } catch (Exception e) {
+                    logger.error("Add slave FE failed: {}", ThrowableUtils.getStackTrace(e));
+                    startResult.setExecResult(false);
+                    startResult.setExecOut(e.getMessage());
                 }
+                logger.info("slave fe start success");
+            } else {
+                logger.error("slave fe start failed");
             }
         }
+
         return startResult;
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        // 移除在K8s环境中不需要的参数
+        logger.info("开始移除StarRocks在K8s环境下不需要的参数...");
+
+        if (list != null && !list.isEmpty()) {
+            // 使用迭代器遍历，方便删除元素
+            Iterator<ServiceConfig> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                ServiceConfig config = iterator.next();
+                String paramName = config.getName();
+
+                // 检查是否为priority_networks参数
+                if ("priority_networks".equals(paramName)) {
+                    logger.info("在K8s环境中移除 priority_networks 参数，该参数在Pod网络中不适用");
+                    iterator.remove();
+                }
+
+                // 如果有其他需要移除的参数，可以在这里添加更多条件
+            }
+        }
+
+        logger.info("StarRocks参数调整完成，已适配Kubernetes环境");
     }
 }

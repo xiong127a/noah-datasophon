@@ -44,6 +44,30 @@ public class K8sAbstractHandlerStrategy {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
+    /**
+     * 生成检测节点连接的命令
+     * 使用nc命令检测目标主机和端口是否可连接，每10秒检测一次，最多检测6次
+     *
+     * @param host 目标主机名
+     * @param port 目标端口
+     * @return 检测连接的命令字符串
+     */
+    public String generateConnectionCheckCommand(String host, int port) {
+        return String.format(
+                "for i in $(seq 1 6); do " +
+                        "echo \"检测连接 %s:%d (第 $i 次)...\";" +
+                        "if nc -z -w 5 %s %d; then " +
+                        "echo \"连接成功，继续执行...\";" +
+                        "exit 0;" +
+                        "fi;" +
+                        "echo \"连接失败，10秒后重试...\";" +
+                        "sleep 10;" +
+                        "done;" +
+                        "echo \"连接检测失败，已达到最大重试次数\";" +
+                        "exit 1",
+                host, port, host, port);
+    }
+
     public int getCurrentRoleLoopIndex() {
         String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", serviceRoleName, serviceName);
         Integer currentIndex = (Integer) CacheUtils.get(cacheKey);
@@ -80,7 +104,7 @@ public class K8sAbstractHandlerStrategy {
      * @return 角色安装数量
      */
     public Integer getRoleInstallCount(Integer clusterId) {
-       return getRoleInstallCount(clusterId,serviceRoleName);
+        return getRoleInstallCount(clusterId, serviceRoleName);
     }
 
     public Integer getRoleInstallCount(Integer clusterId, String serviceRoleName) {
