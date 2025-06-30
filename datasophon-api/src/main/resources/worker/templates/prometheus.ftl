@@ -185,7 +185,10 @@ scrape_configs:
     metrics_path: '/metrics'
     file_sd_configs:
      - files:
-       - configs/starrocks.json
+       - configs/srfe.json
+       - configs/srfeobserver.json
+       - configs/srbe.json
+       - configs/srcn.json
   - job_name: 'doris'
     metrics_path: '/metrics'
     file_sd_configs:
