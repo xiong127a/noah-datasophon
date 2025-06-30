@@ -1,7 +1,5 @@
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.model.ServiceConfig;
@@ -12,7 +10,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
-import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
 import static com.datasophon.common.Constants.UNDERLINE;
 
 public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
@@ -50,20 +47,7 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
         }
 
         // 动态获取HiveMetaStore节点数量
-        int metaNodeCount = 0;
-        final String serviceRoleHostMappingKey = clusterId + UNDERLINE + SERVICE_ROLE_HOST_MAPPING;
-        Object mappingObj = CacheUtils.get(serviceRoleHostMappingKey);
-        if (Objects.nonNull(mappingObj)) {
-            JSONObject mapping = JSONUtil.parseObj(mappingObj);
-            if (mapping.containsKey("HiveMetaStore")) {
-                metaNodeCount = mapping.getJSONArray("HiveMetaStore").size();
-                logger.info("从 {} 中获取到 HiveMetaStore 节点数量为: {}", SERVICE_ROLE_HOST_MAPPING, metaNodeCount);
-            } else {
-                logger.warn("在 {} 中未找到 HiveMetaStore 角色", SERVICE_ROLE_HOST_MAPPING);
-            }
-        } else {
-            logger.warn("缓存中未找到 {}", serviceRoleHostMappingKey);
-        }
+        int metaNodeCount = getRoleInstallCount(clusterId, "HiveMetaStore");
 
         // 构建Metastore URIs
         final String METASTORE_SERVICE = "hive-hivemetastore";
