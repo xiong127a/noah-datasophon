@@ -19,6 +19,56 @@ rule_files:
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
+  - job_name: 'k8s-kubelet'
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    kubernetes_sd_configs:
+    - role: node
+    relabel_configs:
+    - target_label: __address__
+      replacement: kubernetes.default.svc:443
+    - source_labels: [__meta_kubernetes_node_name]
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/${1}/proxy/metrics
+
+  - job_name: 'k8s-cadvisor'
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    kubernetes_sd_configs:
+    - role: node
+    relabel_configs:
+    - target_label: __address__
+      replacement: kubernetes.default.svc:443
+    - source_labels: [__meta_kubernetes_node_name]
+      regex: (.+)
+      target_label: __metrics_path__
+      replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+    metric_relabel_configs:
+    - source_labels: [instance]
+      separator: ;
+      regex: (.+)
+      target_label: node
+      replacement: $1
+      action: replace
+
+  - job_name: kube-state-metrics
+    kubernetes_sd_configs:
+    - role: endpoints
+      namespaces:
+        names:
+        - ops-monit
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+      regex: kube-state-metrics
+      replacement: $1
+      action: keep
+
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'
 
     # metrics_path defaults to '/metrics'
