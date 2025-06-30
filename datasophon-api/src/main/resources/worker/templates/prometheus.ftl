@@ -32,7 +32,7 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_node_name]
       regex: (.+)
       target_label: __metrics_path__
-      replacement: /api/v1/nodes/${1}/proxy/metrics
+      replacement: /api/v1/nodes/${r"${1}"}/proxy/metrics
 
   - job_name: 'k8s-cadvisor'
     scheme: https
@@ -47,7 +47,7 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_node_name]
       regex: (.+)
       target_label: __metrics_path__
-      replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+      replacement: /api/v1/nodes/${r"${1}"}/proxy/metrics/cadvisor
     metric_relabel_configs:
     - source_labels: [instance]
       separator: ;
@@ -67,6 +67,13 @@ scrape_configs:
       regex: kube-state-metrics
       replacement: $1
       action: keep
+
+
+  - job_name: 'datasophon-api'
+    metrics_path: '/ddh/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['{{apiUrl}}']
 
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'

@@ -36,7 +36,6 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: false
       initContainers:
         - name: set-permissions
           image: "${dockerBusyboxImage}"
@@ -83,6 +82,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: API_URL
+              value: "${apiUrl}"
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
@@ -115,6 +116,62 @@ spec:
               echo "hostname -f: $(hostname -f 2>/dev/null || echo '无法获取FQDN')"
               
               echo "========== hosts文件处理完成 =========="
+
+                            HOSTNAME=$(hostname -f)
+              echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
+              
+              # 处理包含占位符的配置文件
+              <#if example_config_files?? && (example_config_files?size > 0)>
+              echo -e "$BLUE$INFO 开始处理配置文件模板...$NC"
+              echo -e "$BLUE$INFO 当前Pod的FQDN: $HOSTNAME$NC"
+              echo -e "$BLUE$INFO 当前Pod的IP: $NODE_IP_ADDRESS$NC"
+              
+              <#list example_config_files as exampleFilePath>
+              # 确定源文件和目标文件路径
+              SOURCE_PATH="${exampleFilePath}"
+              TARGET_PATH="${exampleFilePath?remove_ending('.example')}"
+              FILE_NAME="$(basename "$TARGET_PATH")"
+              
+              echo -e "$BLUE$INFO 处理配置文件: $FILE_NAME$NC"
+              echo -e "$BLUE$INFO 源文件: $SOURCE_PATH$NC"
+              echo -e "$BLUE$INFO 目标文件: $TARGET_PATH$NC"
+              
+              # 确保目标目录存在
+              mkdir -p $(dirname "$TARGET_PATH")
+              
+              # 替换占位符并写入目标文件
+              if [ -f "$SOURCE_PATH" ]; then
+                echo -e "$BLUE$INFO 正在替换 $SOURCE_PATH 中的占位符...$NC"
+                # 替换所有$(hostname)为Pod的FQDN
+                sed "s/\\\$(hostname)/$HOSTNAME/g" "$SOURCE_PATH" > "$TARGET_PATH"
+                # 替换所有{{HOST}}为Pod的FQDN
+                sed -i "s/{{HOST}}/$HOSTNAME/g" "$TARGET_PATH"
+                # 替换所有{{IP}}为Pod的IP
+                sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$TARGET_PATH"
+                # 替换所有${r"${hostname}"}为Pod的FQDN
+                sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$TARGET_PATH"
+                # 替换所有{{apiUrl}}，使用环境变量而不是直接替换，避免特殊字符问题
+                sed -i "s|{{apiUrl}}|$API_URL|g" "$TARGET_PATH"
+                
+                # 检查文件是否创建成功
+                if [ -f "$TARGET_PATH" ]; then
+                  echo -e "$GREEN$CHECK_MARK 配置文件 $FILE_NAME 处理成功!$NC"
+                  echo -e "$BLUE$INFO 文件权限设置中...$NC"
+                  chmod 644 "$TARGET_PATH"
+                  chown ${runAsUser}:${runAsGroup} "$TARGET_PATH"
+                  echo -e "$GREEN$CHECK_MARK 文件权限设置完成!$NC"
+                else
+                  echo -e "$RED$ERROR 配置文件 $FILE_NAME 处理失败: 目标文件未创建$NC"
+                  exit 1
+                fi
+              else
+                echo -e "$RED$ERROR 源文件 $SOURCE_PATH 不存在!$NC"
+                exit 1
+              fi
+              </#list>
+              
+              echo -e "$GREEN$CHECK_MARK 所有配置文件处理完成!$NC"
+              </#if>
               
               # 继续原来的启动命令
               ulimit -n 1000000

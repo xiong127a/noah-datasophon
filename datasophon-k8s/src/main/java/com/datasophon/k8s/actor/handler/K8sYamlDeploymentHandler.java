@@ -343,13 +343,25 @@ public class K8sYamlDeploymentHandler {
         if ("GRAFANA".equals(serviceName)) {
             String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
             String hostname = NetUtil.getLocalHostName();
-            int port = 0;
-            data.put("apiUrl", String.format(url, "192.168.1.54", 8081));
+            data.put("apiUrl", String.format(url, hostname, 8081));
         }
         if ("HIVE".equals(serviceName)) {
             populateDataWithConfig("hive.metastore.uris", "metastore_uris");
             // 提取数据库连接信息，以便创建Secret
             extractHiveDatabaseInfo();
+        }
+        if ("REDIS".equals(serviceName)) {
+            String redisMasterAddr = paramMap.get("${RedisMasterAddr}");
+            String redisSlaveAddr = paramMap.get("${RedisSlaveAddr}");
+            if(StrUtil.isNotBlank(redisSlaveAddr)){
+                data.put("REDIS_ADDRESS", redisMasterAddr + "," + redisSlaveAddr);
+            }else{
+                data.put("REDIS_ADDRESS", redisMasterAddr);
+            }
+        }
+        if("PROMETHEUS".equals(serviceName)){
+            String hostname = NetUtil.getLocalHostName();
+            data.put("apiUrl",  String.format("%s:8081",hostname));
         }
 
         data.putAll(k8sConfigMap);
@@ -369,7 +381,9 @@ public class K8sYamlDeploymentHandler {
             }
             boolean containsHost = entry.getValue().stream()
                     .anyMatch(serviceConfig -> StrUtil.containsAny(serviceConfig.getValue().toString(),"{{HOST}}","{{IP}}","${hostname}","$(hostname)"));
-
+            if(StrUtil.equals(entry.getKey().getFilename(),"prometheus.yml")){
+                containsHost=true;
+            }
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();
 
