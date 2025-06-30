@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
 import static com.datasophon.common.Constants.UNDERLINE;
@@ -41,6 +42,63 @@ public class K8sAbstractHandlerStrategy {
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
+    }
+
+    public int getCurrentRoleLoopIndex() {
+        String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", serviceRoleName, serviceName);
+        Integer currentIndex = (Integer) CacheUtils.get(cacheKey);
+        if (currentIndex == null) {
+            currentIndex = 1; // 初始化为1
+            CacheUtils.put(cacheKey, currentIndex);
+        }
+        return currentIndex;
+    }
+
+    /**
+     * 获取当前角色需要的总循环次数
+     *
+     * @return 总循环次数
+     */
+    public int getTotalRoleLoopCount() {
+        // 使用与 getCurrentRoleLoopIndex 相同的缓存键格式，但添加 "_TOTAL" 后缀
+        String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s_TOTAL", serviceRoleName, serviceName);
+        Integer totalCount = (Integer) CacheUtils.get(cacheKey);
+        if (totalCount == null) {
+            logger.warn("未找到角色 [{}] 的总循环次数缓存", serviceRoleFullName);
+            // 如果缓存中没有，则尝试从角色主机映射中获取
+            totalCount = 1;
+        }
+
+        logger.debug("角色 [{}] 的总循环次数: {}", serviceRoleFullName, totalCount);
+        return totalCount;
+    }
+
+    /**
+     * 获取角色的安装数量
+     * 
+     * @param clusterId 集群ID
+     * @return 角色安装数量
+     */
+    public Integer getRoleInstallCount(Integer clusterId) {
+       return getRoleInstallCount(clusterId,serviceRoleName);
+    }
+
+    public Integer getRoleInstallCount(Integer clusterId, String serviceRoleName) {
+        final String serviceRoleHostMappingKey = clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+        Object mappingObj = CacheUtils.get(serviceRoleHostMappingKey);
+        if (Objects.nonNull(mappingObj)) {
+            JSONObject mapping = JSONUtil.parseObj(mappingObj);
+            if (mapping.containsKey(serviceRoleName)) {
+                int roleCount = mapping.getJSONArray(serviceRoleName).size();
+                logger.debug("从 {} 中获取到 {} 节点数量为: {}", Constants.SERVICE_ROLE_HOST_MAPPING, serviceRoleName, roleCount);
+                return roleCount;
+            } else {
+                logger.warn("在 {} 中未找到 {} 角色", Constants.SERVICE_ROLE_HOST_MAPPING, serviceRoleName);
+            }
+        } else {
+            logger.warn("缓存中未找到 {}", serviceRoleHostMappingKey);
+        }
+        return 0;
     }
 
     public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap,

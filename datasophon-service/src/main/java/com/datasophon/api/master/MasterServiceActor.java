@@ -60,18 +60,41 @@ public class MasterServiceActor extends UntypedActor {
     @Override
     public void onReceive(Object message) {
         if (message instanceof ExecuteServiceRoleCommand) {
-            ExecuteServiceRoleCommand executeServiceRoleCommand =
-                    (ExecuteServiceRoleCommand) message;
+            ExecuteServiceRoleCommand executeServiceRoleCommand = (ExecuteServiceRoleCommand) message;
 
-            ClusterServiceRoleGroupConfigService roleGroupConfigService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleGroupConfigService.class);
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleGroupConfigService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-            Collections.sort(serviceRoleInfoList); //排序
+            Collections.sort(serviceRoleInfoList); // 排序
+
+            // 使用Map跟踪每个角色的处理次数
+            Map<String, Integer> roleLoopCountMap = new HashMap<>();
+
+            // 创建Map统计每个角色的总数量
+            Map<String, Integer> roleTotalCountMap = new HashMap<>();
+
+            // 统计每个角色的总数量
+            for (ServiceRoleInfo roleInfo : serviceRoleInfoList) {
+                String roleKey = roleInfo.getParentName() + "_" + roleInfo.getName();
+                roleTotalCountMap.merge(roleKey, 1, Integer::sum);
+            }
+
+            // 设置每个角色的总循环次数缓存
+            for (Map.Entry<String, Integer> entry : roleTotalCountMap.entrySet()) {
+                String roleKey = entry.getKey();
+                Integer totalCount = entry.getValue();
+                String[] parts = roleKey.split("_", 2);
+                if (parts.length == 2) {
+                    String parentName = parts[0];
+                    String roleName = parts[1];
+                    String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s_TOTAL", roleName, parentName);
+                    CacheUtils.put(cacheKey, totalCount);
+                    logger.info("设置角色 [{}] 的总循环次数缓存: {}", roleKey, totalCount);
+                }
+            }
 
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
@@ -84,33 +107,40 @@ public class MasterServiceActor extends UntypedActor {
                 }
                 ExecResult execResult = new ExecResult();
                 Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
-                ClusterServiceRoleInstanceEntity serviceRoleInstance =
-                        roleInstanceService.getOneServiceRole(
-                                serviceRoleInfo.getName(),
-                                serviceRoleInfo.getHostname(),
-                                serviceRoleInfo.getClusterId());
+                ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.getOneServiceRole(
+                        serviceRoleInfo.getName(),
+                        serviceRoleInfo.getHostname(),
+                        serviceRoleInfo.getClusterId());
                 HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                boolean enableRangerPlugin =
-                        isEnableRangerPlugin(
-                                serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
+                boolean enableRangerPlugin = isEnableRangerPlugin(
+                        serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
                 boolean needReConfig = false;
                 if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
-                    Integer roleGroupId =
-                            (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
-                    ClusterServiceRoleGroupConfig config =
-                            roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
+                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
                     // TODO 获取角色组配置
                     ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
-                    ClusterServiceRoleGroupConfig config =
-                            roleGroupConfigService.getConfigByRoleGroupId(
-                                    serviceRoleInstance.getRoleGroupId());
+                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(
+                            serviceRoleInstance.getRoleGroupId());
                     ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
                 logger.info("enable ranger plugin is {}", enableRangerPlugin);
                 serviceRoleInfo.setConfigFileMap(configFileMap);
                 serviceRoleInfo.setEnableRangerPlugin(enableRangerPlugin);
+
+                // 设置当前角色的循环次数缓存
+                String roleKey = serviceRoleInfo.getParentName() + "_" + serviceRoleInfo.getName();
+                // 获取当前处理的循环索引
+                Integer currentLoopIndex = roleLoopCountMap.getOrDefault(roleKey, 0) + 1; // 从1开始计数
+                // 更新循环计数
+                roleLoopCountMap.put(roleKey, currentLoopIndex);
+                // 设置缓存
+                String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", serviceRoleInfo.getName(),
+                        serviceRoleInfo.getParentName());
+                CacheUtils.put(cacheKey, currentLoopIndex); // 直接设置当前循环索引
+
                 switch (executeServiceRoleCommand.getCommandType()) {
                     case INSTALL_SERVICE:
                         try {
@@ -208,8 +238,8 @@ public class MasterServiceActor extends UntypedActor {
                                     "stop {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-//                            ServiceHandler serviceStopHandler = new ServiceStopHandler();
-//                            execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
+                            // ServiceHandler serviceStopHandler = new ServiceStopHandler();
+                            // execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
                             execResult = ProcessUtils.stopService(serviceRoleInfo);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) { // 执行成功
                                 successNum += 1;
