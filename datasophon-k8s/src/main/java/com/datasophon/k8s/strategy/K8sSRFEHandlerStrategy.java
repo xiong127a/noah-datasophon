@@ -50,7 +50,7 @@ public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implement
                     try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
 
                         // 拼接完整的mysql命令语句
-                        String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -p -e \"ALTER SYSTEM add FOLLOWER \\\"" + serviceRoleFullName + "-1."+serviceRoleFullName+"."+Constants.DATASOPHON+".svc.cluster.local:9010\\\"\"";
+                        String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -e \"ALTER SYSTEM add FOLLOWER \\\"" + serviceRoleFullName + "-1."+serviceRoleFullName+"."+Constants.DATASOPHON+".svc.cluster.local:9010\\\"\"";
 
                         // 进入容器执行mysql命令添加follower
                         startResult = K8sUtil.runCmd(
