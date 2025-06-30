@@ -203,7 +203,7 @@ public class K8sFreeMakerUtils {
             return;
         }
         // 处理prometheus配置写入PVC
-        if (StrUtil.equals(serviceRoleFullName, "prometheus-prometheus")) {
+        if (StrUtil.equals(serviceRoleFullName, "prometheus-update")) {
             // 将prometheus配置文件保存到PVC中
             savePrometheusConfigToPVC(fileName, generatedContent, serviceRoleFullName);
             log.info("Prometheus配置文件 {} 已准备好写入PVC", fileName);

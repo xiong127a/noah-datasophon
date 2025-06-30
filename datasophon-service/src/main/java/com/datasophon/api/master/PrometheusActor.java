@@ -23,6 +23,8 @@ import akka.actor.ActorSelection;
 import akka.actor.UntypedActor;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.util.BooleanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
@@ -99,11 +101,15 @@ public class PrometheusActor extends UntypedActor {
             Map<String, Integer> roleIndexMap = new HashMap<>();
 
             // 添加特殊处理ZKFC的映射，将其关联到对应的NameNode
-
+            String symbolName = "Prometheus";
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
                 String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(),
                         roleInstanceEntity.getServiceRoleName());
-
+                if(StrUtil.equals("prometheus-prometheus",serviceRoleFullName)){
+                    symbolName="prometheus";
+                }else {
+                    symbolName="update";
+                }
                 String hostname = roleInstanceEntity.getHostname();
 
                 if (isK8s) {
@@ -144,6 +150,7 @@ public class PrometheusActor extends UntypedActor {
                     roleMap.put(roleInstanceEntity.getServiceRoleName(), list);
                 }
             }
+
             for (Map.Entry<String, List<String>> roleEntry : roleMap.entrySet()) {
                 Generators generators = new Generators();
                 generators.setFilename(roleEntry.getKey().toLowerCase() + ".json");
@@ -172,7 +179,7 @@ public class PrometheusActor extends UntypedActor {
                 configFileMap.put(generators, serviceConfigs);
             }
             ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
-            serviceRoleInfo.setName("Prometheus");
+            serviceRoleInfo.setName(symbolName);
             serviceRoleInfo.setParentName("PROMETHEUS");
             serviceRoleInfo.setConfigFileMap(configFileMap);
             serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
@@ -245,12 +252,12 @@ public class PrometheusActor extends UntypedActor {
                     nodeServiceConfigs.add(nodeServiceConfig);
                 }
 
-                if (!isK8s) {
+                if (BooleanUtil.isFalse(isK8s)) {
                     // 如果是非k8s模式，则添加worker配置
                     configFileMap.put(workerGenerators, workerServiceConfigs);
                 }
                 configFileMap.put(masterGenerators, masterServiceConfigs);
-                configFileMap.put(workerGenerators, nodeServiceConfigs);
+                configFileMap.put(nodeGenerators, nodeServiceConfigs);
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                 serviceRoleInfo.setName("Prometheus");
                 serviceRoleInfo.setParentName("PROMETHEUS");
