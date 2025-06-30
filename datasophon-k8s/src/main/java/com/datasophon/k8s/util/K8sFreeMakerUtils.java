@@ -449,7 +449,9 @@ public class K8sFreeMakerUtils {
     public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName) {
         // 获取该服务角色的配置缓存
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
-
+        if(StrUtil.equals("prometheus-update" ,serviceRoleFullName)){
+            serviceRoleFullName="prometheus-prometheus";
+        }
         // 如果缓存为空，直接返回
         if (configsCache == null || configsCache.isEmpty()) {
             log.info("没有需要写入PVC的Prometheus配置文件");

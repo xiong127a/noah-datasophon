@@ -266,7 +266,7 @@ scrape_configs:
   - job_name: 'redis'
     file_sd_configs:
       - files:
-        - /opt/datasophon/redis/redis_exporter/redisexporter.json
+        - configs/redisexporter.json
     metrics_path: /metrics
   - job_name: 'postgres'
     file_sd_configs:

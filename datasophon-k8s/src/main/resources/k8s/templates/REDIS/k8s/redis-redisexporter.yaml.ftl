@@ -72,6 +72,8 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: REDIS_ADDRESS
+              value: "${REDIS_ADDRESS}"
           readinessProbe:
             exec:
               command:

@@ -75,8 +75,9 @@
     {
       "name": "RedisExporter",
       "label": "RedisExporter",
-      "roleType": "worker",
+      "roleType": "master",
       "cardinality": "1",
+      "jmxPort": 9121,
       "sortNum": 2,
       "logFile": "redis_exporter/logs/redis-${hostname}.out",
       "startRunner": {

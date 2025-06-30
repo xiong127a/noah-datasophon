@@ -397,9 +397,7 @@ public class PrometheusActor extends UntypedActor {
 
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
-        String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(prometheusInstance.getServiceName(),
-                prometheusInstance.getServiceRoleName());
-        K8sFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,serviceRoleFullName);
+        K8sFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,"prometheus-update");
         if (execResult != null && execResult.getExecResult()) {
             String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isK8s);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);
