@@ -488,7 +488,7 @@
       "bindRole": "SRBE,SRCN",
       "serviceType": "NodePort",
       "portNumber": "8070",
-      "nodePort": "30700"
+      "nodePort": "30087"
     },
     {
       "name": "heartbeat_service_port",
