@@ -1,4 +1,4 @@
-package com.datasophon.k8s.util;
+package com.datasophon.common.utils;
 
 import java.io.IOException;
 import java.io.Writer;
