@@ -183,7 +183,6 @@ public class FreemarkerUtils {
      * @param templateContent       模板内容字符串
      * @param templateName          模板名称
      * @param decompressPackageName 解压后的包名
-     * @param directMode            是否直接模式（不进行prepareTemplateData处理）
      * @throws IOException       IO异常
      * @throws TemplateException 模板异常
      */
@@ -556,16 +555,14 @@ public class FreemarkerUtils {
      * 统一处理配置列表，包括值转换、自定义配置处理等
      * 供Worker和K8s模块使用
      * 
-     * @param generators 配置生成器
      * @param configs    配置列表
      * @param paramMap   参数映射表
      * @param logger     日志对象
      * @return 处理后的配置列表，包括自定义配置
      */
-    public static List<ServiceConfig> processConfigList(Generators generators,
-            List<ServiceConfig> configs,
-            Map<String, String> paramMap,
-            Logger logger) {
+    public static List<ServiceConfig> processConfigList(List<ServiceConfig> configs,
+                                                        Map<String, String> paramMap,
+                                                        Logger logger) {
         if (configs == null || configs.isEmpty()) {
             return new ArrayList<>();
         }
@@ -603,7 +600,7 @@ public class FreemarkerUtils {
 
             // 移除不需要的配置项
             if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                if (StrUtil.equals("map2", config.getConfigType())) {
+                if (StrUtil.equalsAny(config.getConfigType(),"map2","k8s")) {
                     config.setConfigType("map");
                 } else {
                     iterator.remove();
@@ -748,104 +745,9 @@ public class FreemarkerUtils {
             Map<String, String> params,
             Logger logger) {
         // 处理配置列表
-        List<ServiceConfig> processedConfigs = processConfigList(generators, configs, params, logger);
+        List<ServiceConfig> processedConfigs = processConfigList(configs, params, logger);
 
         // 准备渲染数据
         return prepareTemplateData(generators.getConfigFormat(), processedConfigs);
-    }
-
-    /**
-     * 直接使用配置列表生成配置文件，不进行额外处理
-     * 用于保持原始业务逻辑一致性，避免prepareTemplateData的处理逻辑
-     *
-     * @param generators            配置文件生成器
-     * @param configs               配置项列表
-     * @param templateContent       模板内容
-     * @param templateName          模板名称
-     * @param decompressPackageName 解压后的包名
-     * @throws IOException       IO异常
-     * @throws TemplateException 模板异常
-     */
-    public static void generateConfigFileDirectly(Generators generators,
-            List<ServiceConfig> configs,
-            String templateContent,
-            String templateName,
-            String decompressPackageName) throws IOException, TemplateException {
-        // 从模板内容创建Template对象
-        Template template = createTemplateFromContent(templateContent, templateName);
-
-        // 创建数据模型，直接将原始配置列表放入itemList，不做任何处理
-        Map<String, Object> data = new HashMap<>();
-        data.put("itemList", configs);
-
-        // 处理文件输出
-        String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
-        String outputDirectory = generators.getOutputDirectory();
-
-        if (outputDirectory.contains(Constants.COMMA)) {
-            // 如果输出目录包含多个路径，则按照逗号分隔，并逐个处理
-            for (String outPutDir : generators.getOutputDirectory().split(StrUtil.COMMA)) {
-                // 构建输出文件的路径
-                String outputFile = packagePath + outPutDir + Constants.SLASH + generators.getFilename();
-                // 调用方法将数据模板写入到输出文件中
-                writeToTemplate(template, data, outputFile);
-            }
-        } else if (outputDirectory.startsWith(Constants.SLASH)) {
-            // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
-            String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-            // 调用方法将数据模板写入到输出文件中
-            writeToTemplate(template, data, outputFile);
-        } else {
-            // 如果输出目录不以斜杠开头也不包含逗号，则将输出目录添加到包路径之后作为输出文件的路径
-            String outputFile = packagePath + generators.getOutputDirectory() + Constants.SLASH
-                    + generators.getFilename();
-            // 调用方法将数据模板写入到输出文件中
-            writeToTemplate(template, data, outputFile);
-        }
-    }
-
-    /**
-     * 直接根据模板内容字符串和变量映射渲染为结果字符串
-     * 
-     * @param templateContent 模板内容字符串
-     * @param variables       变量映射（键值对）
-     * @return 渲染后的内容字符串
-     * @throws IOException       IO异常
-     * @throws TemplateException 模板异常
-     */
-    public static String renderFromTemplateContent(String templateContent, Map<String, Object> variables)
-            throws IOException, TemplateException {
-        if (StringUtils.isBlank(templateContent)) {
-            return "";
-        }
-
-        // 创建模板
-        Template template = createTemplateFromContent(templateContent, "dynamic_template");
-
-        // 渲染并返回结果
-        return renderTemplateToString(template, variables);
-    }
-
-    /**
-     * 直接根据模板内容字符串和String类型变量映射渲染为结果字符串
-     * 
-     * @param templateContent 模板内容字符串
-     * @param stringVariables 字符串变量映射（键值对）
-     * @return 渲染后的内容字符串
-     * @throws IOException       IO异常
-     * @throws TemplateException 模板异常
-     */
-    public static String renderFromTemplateContentWithStringVars(String templateContent,
-            Map<String, String> stringVariables)
-            throws IOException, TemplateException {
-        // 将String类型的变量Map转换为Object类型的变量Map
-        Map<String, Object> variables = new HashMap<>();
-        if (stringVariables != null) {
-            for (Map.Entry<String, String> entry : stringVariables.entrySet()) {
-                variables.put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        return renderFromTemplateContent(templateContent, variables);
     }
 }

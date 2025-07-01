@@ -41,6 +41,63 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
+        - name: "init-dirs"
+          image: "${dockerBusyboxImage}"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 创建必要的目录并赋权
+              mkdir -p ${mount_path}
+              chown -R ${runAsUser}:${runAsGroup} ${mount_path}
+              echo "目录创建和权限设置完成: ${mount_path}"
+              
+              # 创建FE配置文件中定义的目录
+              # 元数据目录
+              <#if meta_dir??>
+              mkdir -p ${meta_dir}
+              chown -R ${runAsUser}:${runAsGroup} ${meta_dir}
+              echo "创建FE元数据目录: ${meta_dir}"
+              </#if>
+              
+              # 日志目录
+              <#if LOG_DIR??>
+              mkdir -p ${LOG_DIR}
+              chown -R ${runAsUser}:${runAsGroup} ${LOG_DIR}
+              echo "创建FE日志目录: ${LOG_DIR}"
+              <#else>
+              # 默认日志目录
+              mkdir -p ${appHome}/log
+              chown -R ${runAsUser}:${runAsGroup} ${appHome}/log
+              echo "创建FE默认日志目录: ${appHome}/log"
+              </#if>
+              
+              # 如果有其他需要创建的目录，可以在这里添加
+              <#if create_dirs??>
+              <#list create_dirs as dir>
+              mkdir -p ${dir}
+              chown -R ${runAsUser}:${runAsGroup} ${dir}
+              echo "目录创建和权限设置完成: ${dir}"
+              </#list>
+              </#if>
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: srfe-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
         - name: "wait-for-master"
           image: "${dockerBusyboxImage}"
           imagePullPolicy: "Always"

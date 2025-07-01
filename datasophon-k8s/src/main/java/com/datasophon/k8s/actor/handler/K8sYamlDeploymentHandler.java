@@ -18,6 +18,7 @@ import com.datasophon.common.model.ServiceConfigVolume;
 import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.FileUtils;
+import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
@@ -33,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -212,7 +214,7 @@ public class K8sYamlDeploymentHandler {
 
             String yamlFilePath = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
 
-            K8sFreeMakerUtils.writeToTemplateLocal(template, data, yamlFilePath);
+            K8sFreeMakerUtils.writeToTemplate(template, data, yamlFilePath);
 
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
@@ -253,35 +255,114 @@ public class K8sYamlDeploymentHandler {
         return config.getTemplate(serviceRoleFullName + ".yaml.ftl");
     }
 
+    /**
+     * 创建参数映射，包含主机名、IP等基本信息
+     * 
+     * @param user                运行用户，如果为空则使用"root"
+     * @param useHostnameVariable 是否使用$(hostname)变量（K8s环境中使用）
+     * @return 参数映射
+     */
+    private Map<String, String> createParamMap(String user, boolean useHostnameVariable) {
+        Map<String, String> paramMap = new HashMap<>();
+        try {
+            String hostName = InetAddress.getLocalHost().getHostName();
+            String ip = NetUtil.getIpByHost(hostName);
+
+            // 设置主机名，根据环境决定是使用实际值还是变量
+            paramMap.put("${hostname}", useHostnameVariable ? "$(hostname)" : hostName);
+            paramMap.put("${ip}", ip);
+            paramMap.put("${user}", StrUtil.isBlank(user) ? "root" : user);
+        } catch (Exception e) {
+            logger.error("获取主机信息失败: {}", e.getMessage());
+        }
+        return paramMap;
+    }
+
+    /**
+     * 处理配置并加载到缓存，处理Kubernetes特定配置
+     *
+     * @param configFileMap   配置文件映射
+     * @param serviceRoleName 服务角色名称
+     * @return 处理后的K8s配置映射
+     */
+    public Map<String, Object> loadConfigToCache(Map<Generators, List<ServiceConfig>> configFileMap,
+            String serviceRoleName) {
+        // 获取参数映射
+        Map<String, String> paramMap = createParamMap(null, false);
+
+        // 转换角色名为小写并添加下划线作为前缀
+        String rolePrefixPattern = serviceRoleName.toLowerCase() + "_";
+        Map<String, Object> resultConfigMap = new HashMap<>();
+
+        // 清除旧缓存
+        CONFIG_CACHE.clear();
+
+        // 处理所有配置值并放入缓存
+        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
+            Generators generators = entry.getKey();
+            List<ServiceConfig> configList = entry.getValue();
+
+            // 使用FreemarkerUtils处理配置列表，确保正确处理特殊类型
+            List<ServiceConfig> processedConfigs = FreemarkerUtils.processConfigList(
+                    new ArrayList<>(configList), paramMap, logger);
+
+            // 处理单位，将值和单位组合
+            for (ServiceConfig config : processedConfigs) {
+                String unit = config.getUnit();
+                if (StrUtil.isNotBlank(unit) && config.getValue() != null) {
+                    config.setValue(config.getValue() + unit);
+                }
+
+                // 所有配置都加入通用缓存
+                CONFIG_CACHE.put(config.getName(), config);
+
+                // 处理Kubernetes配置，条件更具体
+                if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
+                    if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
+                        String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+
+                        // 特殊处理端口映射配置
+                        if (StrUtil.endWith(keyWithoutPrefix, "_port_mappings")) {
+                            // 使用Hutool的ObjectUtil.isEmpty方法判断值是否为空
+                            if (ObjUtil.isEmpty(config.getValue())) {
+                                logger.debug("跳过空的端口映射配置: {}", keyWithoutPrefix);
+                                continue;
+                            }
+                            logger.debug("添加有效的端口映射配置: {} = {}", keyWithoutPrefix, config.getValue());
+                        }
+
+                        resultConfigMap.put(keyWithoutPrefix, config.getValue());
+                    }
+                }
+            }
+        }
+        return resultConfigMap;
+    }
+
     private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
             String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
             CommandType commandType) {
-        Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
-                .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
-                        (existing, replacement) -> replacement));
-        paramMap.put("${user}", runAs.getUser());
-        paramMap.put("${hostname}", "$(hostname)");
-        logFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
+        // 获取参数映射，使用runAs中的用户名，在K8s环境中使用$(hostname)
+        Map<String, String> paramMap = createParamMap(runAs.getUser(), true);
 
-        String logFilePath = FileUtils.concatPath(appHome, logFile);
+        // 处理logFile
+        String processedLogFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
+        String logFilePath = FileUtils.concatPath(appHome, processedLogFile);
 
-        // 在这里处理configFileMap中的配置值，添加单位
-        for (List<ServiceConfig> configs : configFileMap.values()) {
-            for (ServiceConfig config : configs) {
-                Object value = config.getValue();
-                String unit = config.getUnit();
+        // 处理配置并获取K8s特定配置
+        Map<String, Object> k8sSpecificConfig = loadConfigToCache(configFileMap, serviceRoleName);
 
-                // 如果值是数字类型且有单位，将值和单位组合
-                if (StrUtil.isNotBlank(unit)) {
-                    config.setValue(value + unit);
-                }
-            }
-        }
+        // 合并数据
         if (MapUtil.isEmpty(data)) {
             data = new HashMap<>();
         }
+
+        // 将K8s特定配置添加到data中
+        data.putAll(k8sSpecificConfig);
+
+        // 添加其他数据
         data.put("volumePathSet", new ArrayList<>(volumePathSet));
         data.put("volumeConfigMapSet", new ArrayList<>(volumeConfigMapSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
@@ -320,18 +401,19 @@ public class K8sYamlDeploymentHandler {
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
 
-        if (CONFIG_CACHE.isEmpty()) {
-            loadConfigToCache(configFileMap, serviceRoleName);
-        }
+        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
 
+        // 调用处理特定服务配置的方法
         processServiceSpecificConfigs(paramMap);
 
-        data.putAll(k8sConfigMap);
-        CONFIG_CACHE.clear();
-        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
     }
 
+    /**
+     * 处理特定服务的配置
+     * 
+     * @param paramMap 参数映射
+     */
     private void processServiceSpecificConfigs(Map<String, String> paramMap) {
         if ("HDFS".equals(serviceName)) {
             populateDataWithConfig("dfs.namenode.name.dir", "nn_name_dir");
@@ -386,6 +468,12 @@ public class K8sYamlDeploymentHandler {
             data.put("fe_master_host", feMasterHost);
             populateDataWithConfig("edit_log_port", "fe_master_port");
 
+            // 添加目录相关配置
+            populateDataWithConfig("meta_dir", "meta_dir");
+            populateDataWithConfig("LOG_DIR", "LOG_DIR");
+            populateDataWithConfig("storage_root_path", "storage_root_path");
+            populateDataWithConfig("spill_local_storage_dir", "spill_local_storage_dir");
+            populateDataWithConfig("block_cache_disk_path", "block_cache_disk_path");
         }
     }
 
@@ -555,43 +643,6 @@ public class K8sYamlDeploymentHandler {
             return;
         }
         data.put(targetDataKey, value);
-    }
-
-    /**
-     * 加载配置到缓存并处理Kubernetes特定配置
-     *
-     * @param configFileMap   配置文件映射
-     * @param serviceRoleName 服务角色名称
-     */
-    public void loadConfigToCache(Map<Generators, List<ServiceConfig>> configFileMap, String serviceRoleName) {
-        // 转换角色名为小写并添加下划线作为前缀
-        String rolePrefixPattern = serviceRoleName.toLowerCase() + "_";
-
-        for (List<ServiceConfig> configList : configFileMap.values()) {
-            for (ServiceConfig config : configList) {
-                // 所有配置都加入通用缓存
-                CONFIG_CACHE.put(config.getName(), config);
-
-                // 处理Kubernetes配置，条件更具体
-                if (StrUtil.startWith(config.getConfigGroup(), Constants.K8S_CONFIG_PREFIX)) {
-                    if (StrUtil.startWith(config.getName(), rolePrefixPattern)) {
-                        String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
-
-                        // 特殊处理端口映射配置
-                        if (StrUtil.endWith(keyWithoutPrefix, "_port_mappings")) {
-                            // 使用Hutool的ObjectUtil.isEmpty方法判断值是否为空
-                            if (ObjUtil.isEmpty(config.getValue())) {
-                                logger.debug("跳过空的端口映射配置: {}", keyWithoutPrefix);
-                                continue;
-                            }
-                            logger.debug("添加有效的端口映射配置: {} = {}", keyWithoutPrefix, config.getValue());
-                        }
-
-                        k8sConfigMap.put(keyWithoutPrefix, config.getValue());
-                    }
-                }
-            }
-        }
     }
 
     /**

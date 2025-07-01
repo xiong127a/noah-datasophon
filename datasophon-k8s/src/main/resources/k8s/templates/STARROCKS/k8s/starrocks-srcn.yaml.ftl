@@ -40,6 +40,50 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: "init-dirs"
+          image: "${dockerBusyboxImage}"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 创建必要的目录并赋权
+              mkdir -p ${mount_path}
+              chown -R ${runAsUser}:${runAsGroup} ${mount_path}
+              echo "目录创建和权限设置完成: ${mount_path}"
+              
+              # 创建CN节点所需目录
+              # 日志目录
+              mkdir -p ${appHome}/log
+              chown -R ${runAsUser}:${runAsGroup} ${appHome}/log
+              echo "创建CN日志目录: ${appHome}/log"
+              
+              # 如果有其他需要创建的目录，可以在这里添加
+              <#if create_dirs??>
+              <#list create_dirs as dir>
+              mkdir -p ${dir}
+              chown -R ${runAsUser}:${runAsGroup} ${dir}
+              echo "目录创建和权限设置完成: ${dir}"
+              </#list>
+              </#if>
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: srcn-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
       containers:
         - name: "${serviceRoleFullName}"
           image: "${dockerRoleImage}"
