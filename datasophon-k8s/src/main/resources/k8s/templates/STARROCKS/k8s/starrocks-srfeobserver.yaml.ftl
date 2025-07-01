@@ -17,7 +17,7 @@ spec:
       maxSurge: 0
       maxUnavailable: 1
   podManagementPolicy: Parallel
-  minReadySeconds: 5
+  minReadySeconds: 30
   revisionHistoryLimit: 10
   template:
     metadata:
@@ -90,39 +90,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-        - name: "wait-for-master"
-          image: "${dockerBusyboxImage}"
-          imagePullPolicy: "Always"
-          command:
-            - "/bin/sh"
-            - "-c"
-            - |
-              # 使用POD_NAME环境变量获取Pod索引
-              POD_NAME=$(hostname)
-              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
-              
-              echo "This is an observer node (index $POD_INDEX), waiting for master to be ready..."
-              
-              # 等待master节点就绪
-              for i in $(seq 1 30); do
-                echo "Checking if master node $MASTER_HOST is ready (attempt $i)..."
-                if nc -z -w 5 $MASTER_HOST ${fe_master_port}; then
-                  echo "Master node is ready, proceeding with observer startup"
-                  exit 0
-                fi
-                echo "Master node not ready yet, waiting 5 seconds..."
-                sleep 5
-              done
-              
-              echo "Master node not ready after 30 attempts, proceeding anyway"
-              exit 0
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: MASTER_HOST
-              value: "${fe_master_host}"
       containers:
         - name: "${serviceRoleFullName}"
           image: "${dockerRoleImage}"
@@ -181,7 +148,7 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 3
+            initialDelaySeconds: 60
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15

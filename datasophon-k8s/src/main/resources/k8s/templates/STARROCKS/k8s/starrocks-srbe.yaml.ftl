@@ -17,7 +17,7 @@ spec:
       maxSurge: 0
       maxUnavailable: 1
   podManagementPolicy: Parallel
-  minReadySeconds: 5
+  minReadySeconds: 30
   revisionHistoryLimit: 10
   template:
     metadata:
@@ -153,7 +153,7 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 3
+            initialDelaySeconds: 60
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15
