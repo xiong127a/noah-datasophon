@@ -26,6 +26,9 @@ import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class K8sSRBEHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
     public K8sSRBEHandlerStrategy(String serviceName, String serviceRoleName) {
@@ -54,47 +57,62 @@ public class K8sSRBEHandlerStrategy extends K8sAbstractHandlerStrategy implement
                             serviceRoleFullName, currentRoleLoopIndex, totalRoleLoopCount, roleInstallCount,
                             existingNodesCount);
 
-                    logger.info("开始执行添加BE操作");
-
-                    // 计算当前节点索引
-                    int bePodIndex = existingNodesCount + currentRoleLoopIndex - 1;
-
-                    // 构建完整的节点地址
-                    String beHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
-                            serviceRoleFullName, bePodIndex, serviceRoleFullName, Constants.DATASOPHON);
-
-                    logger.info("添加当前BE节点: {}", beHostPort);
-
-                    // 获取masterHost
-                    String masterHost = getMasterHost(kubeClient, "starrocks-srfe");
-                    logger.info("使用masterHost: {}", masterHost);
-
-                    // 构建FE master pod名称
-                    String masterPodName = "starrocks-srfe-0";
-                    logger.info("使用Master Pod: {}", masterPodName);
-
-                    // 直接使用SQL语句
-                    String sql = String.format("ALTER SYSTEM ADD BACKEND \"%s\"", beHostPort);
-
-                    // 直接在master pod中执行SQL命令
-                    startResult = executeMySqlInPod(
-                            Constants.DATASOPHON,
-                            kubeClient,
-                            masterPodName, // 使用master pod名称
-                            sql);
-
-                    if (!startResult.getExecResult()) {
-                        logger.error("添加BE节点 {} 失败", beHostPort);
+                    // 判断是否是最后一次循环
+                    boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
+                    if (!isLastLoop) {
+                        logger.info("当前不是最后一次循环，跳过添加BE操作");
                         return startResult;
                     }
 
-                    logger.info("BE节点添加成功");
+                    logger.info("当前是最后一次循环，开始执行添加BE操作");
+
+                    // 计算需要添加的节点范围（Pod索引从0开始）
+                    int startPodIndex = existingNodesCount; // 新节点的起始Pod索引
+                    int endPodIndex = existingNodesCount + totalRoleLoopCount - 1; // 新节点的结束Pod索引
+
+                    logger.info("需要添加BE节点Pod索引范围: {} 到 {}", startPodIndex, endPodIndex);
+
+                    // 检查是否有节点需要添加
+                    if (startPodIndex > endPodIndex) {
+                        logger.warn("没有BE节点需要添加");
+                        return startResult;
+                    }
+
+                    // 创建SQL语句列表 - 使用IntStream更优雅地生成
+                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(startPodIndex, endPodIndex)
+                            .mapToObj(i -> {
+                                // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
+                                String beHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                String beHost = String.format("%s-%d.%s.%s.svc.cluster.local",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+
+                                logger.info("添加BE节点 {}: {}:{}", i - startPodIndex + 1, beHost, "9050");
+
+                                // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
+                                return String.format("ALTER SYSTEM ADD BACKEND \"%s\"", beHostPort);
+                            })
+                            .collect(Collectors.toList());
+
+                    if (sqlStatements.isEmpty()) {
+                        logger.warn("没有需要添加的BE节点");
+                        return startResult;
+                    }
+
+                    logger.info("执行添加BE命令，共 {} 条SQL语句", sqlStatements.size());
+
+                    // 使用executeMySqlInPod批量执行SQL语句
+                    startResult = executeMySqlInPod(
+                            Constants.DATASOPHON,
+                            kubeClient,
+                            "starrocks-srfe-0", // 使用第一个FE节点执行命令
+                            sqlStatements);
                 } catch (Exception e) {
                     logger.error("Add BE failed: {}", ThrowableUtils.getStackTrace(e));
                     startResult.setExecResult(false);
                     startResult.setExecOut(e.getMessage());
                 }
-                logger.info("BE节点添加完成");
+                logger.info("slave be start success");
             } else {
                 logger.error("slave be start failed");
             }

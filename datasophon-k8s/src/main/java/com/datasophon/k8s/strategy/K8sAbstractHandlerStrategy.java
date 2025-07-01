@@ -19,9 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
 import static com.datasophon.common.Constants.UNDERLINE;
@@ -260,11 +262,39 @@ public class K8sAbstractHandlerStrategy {
      */
     public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
             String podName, String sqlStatement) {
-        String mysqlCmd = String.format("mysql -h127.0.0.1 -P9030 -uroot --connect-timeout=10 -e \"%s\"",
-                sqlStatement.replace("\"", "\\\"")); // 转义双引号
+        // 调用批量执行方法，但只传入一条SQL语句
+        return executeMySqlInPod(namespace, kubeClient, podName, Collections.singletonList(sqlStatement));
+    }
 
-        logger.info("在Pod [{}] 中执行MySQL命令: {}", podName, mysqlCmd);
-        return K8sUtil.runCmdInPod(namespace, kubeClient, podName, mysqlCmd);
+    /**
+     * 直接在指定Pod中批量执行MySQL SQL命令
+     *
+     * @param namespace     K8s命名空间
+     * @param kubeClient    K8s客户端
+     * @param podName       Pod名称(如: starrocks-srfe-0)
+     * @param sqlStatements SQL语句列表
+     * @return 执行结果
+     */
+    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
+            String podName, List<String> sqlStatements) {
+        if (cn.hutool.core.collection.CollUtil.isEmpty(sqlStatements)) {
+            logger.warn("没有提供SQL语句，无法执行");
+            ExecResult result = new ExecResult();
+            result.setExecResult(false);
+            result.setExecErrOut("没有提供SQL语句");
+            return result;
+        }
+
+        // 使用Hutool的StrUtil.join来拼接命令，更优雅
+        List<String> mysqlCommands = sqlStatements.stream()
+                .map(sql -> String.format("mysql -h127.0.0.1 -P9030 -uroot --connect-timeout=10 -e \"%s\"",
+                        sql.replace("\"", "\\\"")))
+                .collect(Collectors.toList());
+
+        String finalCmd = cn.hutool.core.util.StrUtil.join(" && ", mysqlCommands);
+
+        logger.info("在Pod [{}] 中执行MySQL命令: {}", podName, finalCmd);
+        return K8sUtil.runCmdInPod(namespace, kubeClient, podName, finalCmd);
     }
 
     /**

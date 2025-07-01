@@ -24,11 +24,14 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -71,47 +74,76 @@ public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implement
                     return startResult;
                 }
 
-                logger.info("当前节点需要作为follower添加到集群");
+                // 判断是否是最后一次循环，只在最后一次循环添加follower
+                boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
+                if (!isLastLoop) {
+                    logger.info("当前不是最后一次循环，跳过添加follower操作");
+                    return startResult;
+                }
 
+                logger.info("当前是最后一次循环，执行添加follower操作");
+
+                // 如果需要添加follower，继续执行
                 try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                    // 计算当前节点索引
-                    int followerPodIndex = existingNodesCount + currentRoleLoopIndex - 1;
+                    StringBuilder cmdBuilder = new StringBuilder();
 
-                    // 构建完整的节点地址
-                    String followerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
-                            serviceRoleFullName, followerPodIndex, serviceRoleFullName, Constants.DATASOPHON);
+                    // 先确定是否是新集群安装还是扩容
+                    boolean isNewCluster = existingNodesCount == 0;
 
-                    logger.info("添加当前follower节点: {}", followerAddr);
+                    // 确定master节点索引（Pod索引从0开始，但在DNS中我们需要使用从0开始的索引）
+                    int masterPodIndex = isNewCluster ? 0 : existingNodesCount - 1;
 
-                    // 获取masterHost
-                    String masterHost = getMasterHost(kubeClient, serviceRoleFullName);
-                    logger.info("使用masterHost: {}", masterHost);
+                    logger.info("集群状态: {}，已有节点数: {}, 主节点Pod索引: {}",
+                            (isNewCluster ? "新集群" : "扩容"), existingNodesCount, masterPodIndex);
 
-                    // 构建FE master pod名称
-                    String masterPodName = serviceRoleFullName + "-0";
-                    logger.info("使用Master Pod: {}", masterPodName);
+                    // 计算需要添加的follower节点范围（Pod索引从0开始）
+                    int followerStartPodIndex = isNewCluster ? 1 : existingNodesCount;
+                    int followerEndPodIndex = existingNodesCount + totalRoleLoopCount - 1;
 
-                    // 直接使用SQL语句
-                    String sql = String.format("ALTER SYSTEM ADD FOLLOWER \"%s\"", followerAddr);
+                    logger.info("需要添加follower节点Pod索引范围: {} 到 {}", followerStartPodIndex, followerEndPodIndex);
 
-                    // 直接在master pod中执行SQL命令
-                    startResult = executeMySqlInPod(
-                            Constants.DATASOPHON,
-                            kubeClient,
-                            masterPodName, // 使用master pod名称
-                            sql);
-
-                    if (!startResult.getExecResult()) {
-                        logger.error("添加follower节点 {} 失败", followerAddr);
+                    // 检查是否有follower需要添加
+                    if (followerStartPodIndex > followerEndPodIndex) {
+                        logger.info("没有follower节点需要添加");
                         return startResult;
                     }
 
-                    logger.info("follower节点添加成功");
+                    // 创建SQL语句列表 - 使用IntStream更优雅地生成
+                    List<String> sqlStatements = java.util.stream.IntStream
+                            .rangeClosed(followerStartPodIndex, followerEndPodIndex)
+                            .mapToObj(i -> {
+                                // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
+                                String followerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                String followerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+
+                                logger.info("添加follower节点: {}", followerAddr);
+
+                                // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
+                                return String.format("ALTER SYSTEM ADD FOLLOWER \"%s\"", followerAddr);
+                            })
+                            .collect(Collectors.toList());
+
+                    if (sqlStatements.isEmpty()) {
+                        logger.info("没有需要执行的添加follower命令");
+                        return startResult;
+                    }
+
+                    logger.info("执行添加follower命令，共 {} 条SQL语句", sqlStatements.size());
+
+                    // 使用executeMySqlInPod批量执行SQL语句
+                    startResult = executeMySqlInPod(
+                            Constants.DATASOPHON,
+                            kubeClient,
+                            serviceRoleFullName + "-0", // 使用第一个FE节点执行命令
+                            sqlStatements);
                 } catch (Exception e) {
-                    logger.error("Add follower FE failed: {}", ThrowableUtils.getStackTrace(e));
+                    logger.error("Add slave FE failed: {}", ThrowableUtils.getStackTrace(e));
                     startResult.setExecResult(false);
                     startResult.setExecOut(e.getMessage());
                 }
+                logger.info("slave fe start success");
             } else {
                 logger.error("slave fe start failed");
             }
@@ -144,5 +176,4 @@ public class K8sSRFEHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
         logger.info("StarRocks参数调整完成，已适配Kubernetes环境");
     }
-
 }
