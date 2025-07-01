@@ -288,6 +288,13 @@ public class K8sYamlDeploymentHandler {
         data.put("serviceName", serviceName);
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
+        if (StrUtil.equals(serviceRoleFullName, "starrocks-srcn")) {
+            data.put("dockerRoleImage", DockerImageUtils.getString("starrocks-srbe"));
+        } else if (StrUtil.equals(serviceRoleFullName, "starrocks-srfeobserver")) {
+            data.put("dockerRoleImage", DockerImageUtils.getString("starrocks-srfe"));
+        } else {
+            data.put("dockerRoleImage", DockerImageUtils.getString(serviceRoleFullName));
+        }
         data.put("dockerBusyboxImage", DockerImageUtils.getString("BUSYBOX"));
         data.put("enableKerberos", enableKerberos.toString());
         data.put("enableRangerPlugin", enableRangerPlugin.toString());
@@ -317,7 +324,15 @@ public class K8sYamlDeploymentHandler {
             loadConfigToCache(configFileMap, serviceRoleName);
         }
 
-        // 处理有点的参数
+        processServiceSpecificConfigs(paramMap);
+
+        data.putAll(k8sConfigMap);
+        CONFIG_CACHE.clear();
+        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
+        return data;
+    }
+
+    private void processServiceSpecificConfigs(Map<String, String> paramMap) {
         if ("HDFS".equals(serviceName)) {
             populateDataWithConfig("dfs.namenode.name.dir", "nn_name_dir");
             populateDataWithConfig("dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
@@ -353,21 +368,25 @@ public class K8sYamlDeploymentHandler {
         if ("REDIS".equals(serviceName)) {
             String redisMasterAddr = paramMap.get("${RedisMasterAddr}");
             String redisSlaveAddr = paramMap.get("${RedisSlaveAddr}");
-            if(StrUtil.isNotBlank(redisSlaveAddr)){
+            if (StrUtil.isNotBlank(redisSlaveAddr)) {
                 data.put("REDIS_ADDRESS", redisMasterAddr + "," + redisSlaveAddr);
-            }else{
+            } else {
                 data.put("REDIS_ADDRESS", redisMasterAddr);
             }
         }
-        if("PROMETHEUS".equals(serviceName)){
+        if ("PROMETHEUS".equals(serviceName)) {
             String hostname = NetUtil.getLocalHostName();
-            data.put("apiUrl",  String.format("%s:8081",hostname));
+            data.put("apiUrl", String.format("%s:8081", hostname));
         }
+        if ("STARROCKS".equals(serviceName)) {
+            // 查找FE节点的服务角色全名
+            // 设置FE master节点地址
+            String feMasterHost = String.format("%s-0.%s.%s.svc.cluster.local",
+                    serviceRoleFullName, serviceRoleFullName, Constant.K8S_NAMESPACE);
+            data.put("fe_master_host", feMasterHost);
+            populateDataWithConfig("edit_log_port", "fe_master_port");
 
-        data.putAll(k8sConfigMap);
-        CONFIG_CACHE.clear();
-        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
-        return data;
+        }
     }
 
     private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome,
@@ -380,9 +399,10 @@ public class K8sYamlDeploymentHandler {
                 continue;
             }
             boolean containsHost = entry.getValue().stream()
-                    .anyMatch(serviceConfig -> StrUtil.containsAny(serviceConfig.getValue().toString(),"{{HOST}}","{{IP}}","${hostname}","$(hostname)"));
-            if(StrUtil.equals(entry.getKey().getFilename(),"prometheus.yml")){
-                containsHost=true;
+                    .anyMatch(serviceConfig -> StrUtil.containsAny(serviceConfig.getValue().toString(), "{{HOST}}",
+                            "{{IP}}", "${hostname}", "$(hostname)"));
+            if (StrUtil.equals(entry.getKey().getFilename(), "prometheus.yml")) {
+                containsHost = true;
             }
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();

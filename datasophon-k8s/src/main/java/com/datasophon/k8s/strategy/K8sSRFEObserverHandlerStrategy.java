@@ -22,7 +22,6 @@ import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
@@ -54,93 +53,46 @@ public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy i
                             serviceRoleFullName, currentRoleLoopIndex, totalRoleLoopCount, roleInstallCount,
                             existingNodesCount);
 
-                    // 判断是否是最后一次循环
-                    boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
-                    if (!isLastLoop) {
-                        logger.info("当前不是最后一次循环，跳过添加Observer操作");
-                        return startResult;
-                    }
+                    logger.info("开始执行添加Observer操作");
 
-                    logger.info("当前是最后一次循环，开始执行添加Observer操作");
+                    // 计算当前节点索引
+                    int observerPodIndex = existingNodesCount + currentRoleLoopIndex - 1;
 
-                    // 构建批量注册命令
-                    StringBuilder cmdBuilder = new StringBuilder();
+                    // 构建完整的节点地址
+                    String observerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
+                            serviceRoleFullName, observerPodIndex, serviceRoleFullName, Constants.DATASOPHON);
 
-                    // 计算需要添加的节点范围（Pod索引从0开始）
-                    int startPodIndex = existingNodesCount; // 新节点的起始Pod索引
-                    int endPodIndex = existingNodesCount + totalRoleLoopCount - 1; // 新节点的结束Pod索引
+                    logger.info("添加当前Observer节点: {}", observerAddr);
 
-                    logger.info("需要添加Observer节点Pod索引范围: {} 到 {}", startPodIndex, endPodIndex);
+                    // 获取masterHost
+                    String masterHost = getMasterHost(kubeClient, "starrocks-srfe");
+                    logger.info("使用masterHost: {}", masterHost);
 
-                    // 检查是否有节点需要添加
-                    if (startPodIndex > endPodIndex) {
-                        logger.warn("没有Observer节点需要添加");
-                        return startResult;
-                    }
+                    // 构建FE master pod名称
+                    String masterPodName = "starrocks-srfe-0";
+                    logger.info("使用Master Pod: {}", masterPodName);
 
-                    // 遍历需要添加的所有节点
-                    for (int i = startPodIndex; i <= endPodIndex; i++) {
-                        // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
-                        String observerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
-                                serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
-                        String observerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
-                                serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                    // 直接使用SQL语句
+                    String sql = String.format("ALTER SYSTEM ADD OBSERVER \"%s\"", observerAddr);
 
-                        logger.info("添加Observer节点 {}: {}", i - startPodIndex + 1, observerAddr);
-
-                        // 为每个节点生成连接检测命令
-                        String checkCmd = generateConnectionCheckCommand(observerHost, 9010);
-
-                        // 执行连接检测命令
-                        logger.info("检测Observer节点 {} 连接是否可用", observerHost);
-                        ExecResult checkResult = K8sUtil.runCmd(
-                                Constants.DATASOPHON,
-                                kubeClient,
-                                "starrocks-srfe",
-                                command.getMasterHost(),
-                                checkCmd);
-
-                        if (!checkResult.getExecResult()) {
-                            logger.error("Observer节点 {} 连接检测失败，跳过添加此节点", observerHost);
-                            logger.error("错误信息: {}", checkResult.getExecErrOut());
-                            continue;
-                        }
-
-                        logger.info("Observer节点 {} 连接检测成功，准备添加节点", observerHost);
-
-                        // 使用单引号而非双引号，避免多层转义问题
-                        String singleCmd = String.format(
-                                "mysql -h127.0.0.1 -P9030 -uroot --connect-timeout=10 -e 'ALTER SYSTEM ADD OBSERVER \"%s\"'",
-                                observerAddr);
-
-                        // 添加命令分隔符
-                        if (cmdBuilder.length() > 0) {
-                            cmdBuilder.append(" && ");
-                        }
-
-                        cmdBuilder.append(singleCmd);
-                    }
-
-                    if (cmdBuilder.length() <= 0) {
-                        logger.warn("没有需要添加的Observer节点");
-                        return startResult;
-                    }
-
-                    String finalCmd = cmdBuilder.toString();
-                    logger.info("执行添加Observer命令: {}", finalCmd);
-
-                    startResult = K8sUtil.runCmd(
+                    // 直接在master pod中执行SQL命令
+                    startResult = executeMySqlInPod(
                             Constants.DATASOPHON,
                             kubeClient,
-                            "starrocks-srfe",
-                            command.getMasterHost(),
-                            finalCmd);
+                            masterPodName, // 使用master pod名称
+                            sql);
+
+                    if (!startResult.getExecResult()) {
+                        logger.error("添加Observer节点 {} 失败", observerAddr);
+                        return startResult;
+                    }
+
+                    logger.info("Observer节点添加成功");
                 } catch (Exception e) {
                     logger.error("Add Observer failed", e);
                     startResult.setExecResult(false);
                     startResult.setExecOut(e.getMessage());
                 }
-
             }
         } else {
             startResult = serviceHandler.start(command);
@@ -149,5 +101,4 @@ public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy i
         logger.info("FE Observer installation {}", startResult.getExecResult() ? "succeeded" : "failed");
         return startResult;
     }
-
 }

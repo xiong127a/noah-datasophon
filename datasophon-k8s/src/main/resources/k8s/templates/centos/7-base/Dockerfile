@@ -11,8 +11,7 @@ RUN echo "====> 配置YUM源..." && \
     rm -f /etc/yum.repos.d/*.repo && \
     curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo && \
     sed -i -e '/mirrors.cloud.aliyuncs.com/d' -e '/mirrors.aliyuncs.com/d' /etc/yum.repos.d/CentOS-Base.repo && \
-    yum clean all && \
-    yum makecache
+    yum clean all
 
 # 设置工作目录
 WORKDIR /opt

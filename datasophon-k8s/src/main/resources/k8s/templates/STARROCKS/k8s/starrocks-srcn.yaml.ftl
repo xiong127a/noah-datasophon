@@ -42,7 +42,7 @@ spec:
       hostNetwork: false
       containers:
         - name: "${serviceRoleFullName}"
-          image: "${dockerImage}"
+          image: "${dockerRoleImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
           ports:

@@ -17,7 +17,7 @@ spec:
       maxSurge: 0
       maxUnavailable: 1
   podManagementPolicy: Parallel
-  minReadySeconds: 5
+  minReadySeconds: 30
   revisionHistoryLimit: 10
   template:
     metadata:
@@ -40,9 +40,49 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: "wait-for-master"
+          image: "${dockerBusyboxImage}"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 使用POD_NAME环境变量获取Pod索引
+              POD_NAME=$(hostname)
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 如果当前节点是索引0（master），则不需要等待
+              if [ "$POD_INDEX" = "0" ]; then
+                echo "This is the master node (index 0), no need to wait."
+                exit 0
+              fi
+              
+              echo "This is a follower node (index $POD_INDEX), waiting for master to be ready..."
+              
+              # 等待master节点就绪
+              for i in $(seq 1 30); do
+                echo "Checking if master node $MASTER_HOST is ready (attempt $i)..."
+                if nc -z -w 5 $MASTER_HOST ${fe_master_port}; then
+                  echo "Master node is ready, proceeding with follower startup"
+                  exit 0
+                fi
+                echo "Master node not ready yet, waiting 5 seconds..."
+                sleep 5
+              done
+              
+              echo "Master node not ready after 30 attempts, proceeding anyway"
+              exit 0
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MASTER_HOST
+              value: "${fe_master_host}"
       containers:
         - name: "${serviceRoleFullName}"
-          image: "${dockerImage}"
+          image: "${dockerRoleImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
           ports:
@@ -65,15 +105,20 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              HOSTNAME=$(hostname -f)
-              MASTER_HOST="${serviceRoleFullName}-0.${serviceRoleFullName}.${namespace}.svc.cluster.local"
-              echo "Hostname: $HOSTNAME"
-              if [ "$MASTER_HOST" = "$HOSTNAME" ]; then
+              # 使用POD_NAME环境变量获取Pod索引
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 根据Pod索引决定启动命令
+              if [ "$POD_INDEX" = "0" ]; then
+                echo "Starting as master FE node (index 0)..."
+                # 主节点不使用--helper参数
                 ${startCommand}
               else
-                modified_command=$(echo "${startCommand}" | sed "s|start_fe.sh --daemon|start_fe.sh --helper $MASTER_HOST:9010 --daemon|")
-                echo $modified_command
-                eval $modified_command
+                echo "Starting as follower FE node (index $POD_INDEX)..."
+                # 从节点添加--helper参数，使用环境变量MASTER_HOST
+                HELPER_CMD=$(echo "${startCommand}" | sed "s|start_fe.sh --daemon|start_fe.sh --helper $MASTER_HOST:${fe_master_port} --daemon|")
+                echo "Executing: $HELPER_CMD"
+                eval $HELPER_CMD
               fi
           env:
             - name: USER
@@ -90,6 +135,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: MASTER_HOST
+              value: "${fe_master_host}"
           readinessProbe:
             exec:
               command:
@@ -97,7 +144,18 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 3
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 15
+          livenessProbe:
+            exec:
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "${statusCommand}"
+            failureThreshold: 3
+            initialDelaySeconds: 60
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15
