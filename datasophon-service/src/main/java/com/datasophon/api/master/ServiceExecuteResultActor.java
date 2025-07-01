@@ -17,6 +17,9 @@
 
 package com.datasophon.api.master;
 
+import akka.actor.ActorRef;
+import akka.actor.UntypedActor;
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
@@ -25,17 +28,13 @@ import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.ServiceExecuteResultMessage;
 import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceRoleInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
 
 public class ServiceExecuteResultActor extends UntypedActor {
 
@@ -73,7 +72,7 @@ public class ServiceExecuteResultActor extends UntypedActor {
                     // submit worker node
                     ServiceNode serviceNode = dag.getNode(node);
                     List<ServiceRoleInfo> elseRoles = serviceNode.getElseRoles();
-                    if (elseRoles.size() > 0) {
+                    if (CollUtil.isNotEmpty(elseRoles)) {
                         logger.info("start to submit worker/client roles");
                         for (ServiceRoleInfo elseRole : serviceNode.getElseRoles()) {
                             ActorRef serviceActor = ActorUtils.getLocalActor(WorkerServiceActor.class,
