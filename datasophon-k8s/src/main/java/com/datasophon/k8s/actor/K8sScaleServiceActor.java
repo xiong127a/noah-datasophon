@@ -19,11 +19,28 @@ public class K8sScaleServiceActor extends UntypedActor {
 
             K8sServiceScaleCommand command = (K8sServiceScaleCommand) msg;
             logger.info("start scale service role {}", command.getServiceRoleName());
-            K8sScaleServiceHandler serviceHandler = new K8sScaleServiceHandler(command.getServiceName(), command.getServiceRoleName());
+            K8sScaleServiceHandler serviceHandler = new K8sScaleServiceHandler(command.getServiceName(),
+                    command.getServiceRoleName());
+
+            // 设置当前角色的循环次数缓存
+            String roleName = command.getServiceRoleName();
+            String parentName = command.getServiceName();
+            String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", roleName, parentName);
+
+            // 从缓存获取当前循环索引，不存在则初始化为0
+            Integer currentLoopIndex = (Integer) com.datasophon.common.cache.CacheUtils.get(cacheKey);
+            if (currentLoopIndex == null) {
+                currentLoopIndex = 0;
+            }
+
+            // 增加循环索引并更新缓存
+            currentLoopIndex++;
+            com.datasophon.common.cache.CacheUtils.put(cacheKey, currentLoopIndex);
+            logger.info("设置角色 [{}_{}}] 的当前循环索引缓存: {}", parentName, roleName, currentLoopIndex);
+
             ExecResult startResult = serviceHandler.scaleService(
                     command.getKubeConfig(),
-                    command.getScaleType()
-            );
+                    command.getScaleType());
             getSender().tell(startResult, getSelf());
 
             logger.info("{} scale {}",

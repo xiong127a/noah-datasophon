@@ -20,6 +20,7 @@ package com.datasophon.api.master;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.RollingRestartUtils;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
@@ -31,6 +32,7 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import scala.Option;
 
 import java.util.*;
+import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,10 +106,33 @@ public class SubmitTaskNodeActor extends UntypedActor {
                     } else if (CollUtil.isNotEmpty(serviceNode.getElseRoles())) {
                         logger.info("{} does not has master roles , start to submit worker or client roles", node);
 
-                        //滚动重启
+                        // 滚动重启
                         RollingRestartInfo rollingRestartInfo = submitActiveTaskNodeCommand.getRollingRestartInfo();
                         int errorCount = 0;
                         List<ServiceRoleInfo> batchList = new ArrayList<>(); // 批次集合
+
+                        // 添加：创建Map统计每个角色的总数量
+                        Map<String, Integer> roleTotalCountMap = new HashMap<>();
+
+                        // 添加：统计每个角色的总数量
+                        for (ServiceRoleInfo elseRole : serviceNode.getElseRoles()) {
+                            String roleKey = elseRole.getParentName() + "_" + elseRole.getName();
+                            roleTotalCountMap.merge(roleKey, 1, Integer::sum);
+                        }
+
+                        // 添加：设置每个角色的总循环次数缓存
+                        for (Map.Entry<String, Integer> entry : roleTotalCountMap.entrySet()) {
+                            String roleKey = entry.getKey();
+                            Integer totalCount = entry.getValue();
+                            String[] parts = roleKey.split("_", 2);
+                            if (parts.length == 2) {
+                                String parentName = parts[0];
+                                String roleName = parts[1];
+                                String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s_TOTAL", roleName, parentName);
+                                CacheUtils.put(cacheKey, totalCount);
+                                logger.info("设置角色 [{}] 的总循环次数缓存: {}", roleKey, totalCount);
+                            }
+                        }
 
                         for (ServiceRoleInfo elseRole : serviceNode.getElseRoles()) {
                             ActorRef serviceActor = ActorUtils.getLocalActor(WorkerServiceActor.class,
@@ -129,27 +154,31 @@ public class SubmitTaskNodeActor extends UntypedActor {
                                     serviceActor,
                                     ServiceRoleType.WORKER);
 
-                            //滚动重启控制
+                            // 滚动重启控制
                             batchList.add(elseRole);
-                            if (Objects.nonNull(rollingRestartInfo) && batchList.size() == rollingRestartInfo.getBatchCount()) {
+                            if (Objects.nonNull(rollingRestartInfo)
+                                    && batchList.size() == rollingRestartInfo.getBatchCount()) {
 
-                                //批量等待
+                                // 批量等待
                                 for (ServiceRoleInfo serviceRoleInfo : batchList) {
-                                    RollingRestartUtils.getCountDownLatchByServiceKey(serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId()).await();
-                                    //错误计数
-                                    errorCount = errorCount + RollingRestartUtils.getErrorCount(serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId());
+                                    RollingRestartUtils.getCountDownLatchByServiceKey(
+                                            serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId())
+                                            .await();
+                                    // 错误计数
+                                    errorCount = errorCount + RollingRestartUtils.getErrorCount(
+                                            serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId());
                                 }
 
-                                //清除缓存
-//                                RollingRestartUtils.clean();
+                                // 清除缓存
+                                // RollingRestartUtils.clean();
 
                                 // 启动失败数量大于阈值 停止后边的任务
                                 if (errorCount > rollingRestartInfo.getTaskFailureTolerance()) {
-                                    return;//停止循环
+                                    return;// 停止循环
                                 }
                                 logger.info("批次实例滚动重启结束");
                                 logger.info("滚动重启批次等待:{} s", rollingRestartInfo.getBatchSeparationInSeconds());
-                                Thread.sleep(rollingRestartInfo.getBatchSeparationInSeconds()*1000);
+                                Thread.sleep(rollingRestartInfo.getBatchSeparationInSeconds() * 1000);
                                 logger.info("滚动重启批次等待结束");
 
                                 batchList.clear();// 进行下一批次计数

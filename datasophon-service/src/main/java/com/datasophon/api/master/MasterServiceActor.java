@@ -70,9 +70,6 @@ public class MasterServiceActor extends UntypedActor {
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
             Collections.sort(serviceRoleInfoList); // 排序
 
-            // 使用Map跟踪每个角色的处理次数
-            Map<String, Integer> roleLoopCountMap = new HashMap<>();
-
             // 创建Map统计每个角色的总数量
             Map<String, Integer> roleTotalCountMap = new HashMap<>();
 
@@ -129,17 +126,6 @@ public class MasterServiceActor extends UntypedActor {
                 logger.info("enable ranger plugin is {}", enableRangerPlugin);
                 serviceRoleInfo.setConfigFileMap(configFileMap);
                 serviceRoleInfo.setEnableRangerPlugin(enableRangerPlugin);
-
-                // 设置当前角色的循环次数缓存
-                String roleKey = serviceRoleInfo.getParentName() + "_" + serviceRoleInfo.getName();
-                // 获取当前处理的循环索引
-                Integer currentLoopIndex = roleLoopCountMap.getOrDefault(roleKey, 0) + 1; // 从1开始计数
-                // 更新循环计数
-                roleLoopCountMap.put(roleKey, currentLoopIndex);
-                // 设置缓存
-                String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", serviceRoleInfo.getName(),
-                        serviceRoleInfo.getParentName());
-                CacheUtils.put(cacheKey, currentLoopIndex); // 直接设置当前循环索引
 
                 switch (executeServiceRoleCommand.getCommandType()) {
                     case INSTALL_SERVICE:

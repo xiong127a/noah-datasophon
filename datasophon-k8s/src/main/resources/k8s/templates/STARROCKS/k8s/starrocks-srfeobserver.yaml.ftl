@@ -79,6 +79,9 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
+            - name: srfeobserver-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
           env:
@@ -162,6 +165,9 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
+            - name: srfeobserver-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -173,6 +179,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: srfeobserver-data
+          persistentVolumeClaim:
+            claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
