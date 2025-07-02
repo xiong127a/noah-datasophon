@@ -37,10 +37,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.net.InetAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-import static com.datasophon.k8s.util.K8sFreeMakerUtils.*;
+import static com.datasophon.k8s.util.K8sFreeMakerUtils.generateConfigMapName;
 
 @Data
 public class K8sConfigureServiceHandler {
@@ -146,17 +151,17 @@ public class K8sConfigureServiceHandler {
                         customConfList.add(serviceConfig);
                         customConfList.add(serviceConfig1);
                     }
-                    if ("fe_priority_networks".equals(config.getName())
-                            || "be_priority_networks".equals(config.getName())) {
-                        config.setName("priority_networks");
-                    }
-                    if (("SRFE".equals(serviceRoleName)
-                            || "SRBE".equals(serviceRoleName)
-                            || "SRFEObserver".equals(serviceRoleName)
-                            || "SRCN".equals(serviceRoleName))
-                            && "priority_networks".equals(config.getName())) {
-                        config.setValue(InetAddress.getLocalHost().getHostAddress());
-                    }
+//                    if ("fe_priority_networks".equals(config.getName())
+//                            || "be_priority_networks".equals(config.getName())) {
+//                        config.setName("priority_networks");
+//                    }
+//                    if (("SRFE".equals(serviceRoleName)
+//                            || "SRBE".equals(serviceRoleName)
+//                            || "SRFEObserver".equals(serviceRoleName)
+//                            || "SRCN".equals(serviceRoleName))
+//                            && "priority_networks".equals(config.getName())) {
+//                        config.setValue(InetAddress.getLocalHost().getHostAddress());
+//                    }
 
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module

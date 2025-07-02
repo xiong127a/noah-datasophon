@@ -17,21 +17,17 @@
 
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
-
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -42,39 +38,75 @@ public class K8sSRFEObserverHandlerStrategy extends K8sAbstractHandlerStrategy i
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
-        logger.info("Start FE Observer installation: {}", JSONUtil.toJsonStr(command));
-        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        logger.info("Start FE Observer installation");
+        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         startResult = serviceHandler.start(command);
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
             if (startResult.getExecResult()) {
                 try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                    Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
-                    List<String> podNames = (List<String>) podNamesObj;
+                    // 获取当前循环索引、总循环次数和角色安装数量
+                    int currentRoleLoopIndex = getCurrentRoleLoopIndex();
+                    int totalRoleLoopCount = getTotalRoleLoopCount();
+                    Integer roleInstallCount = getRoleInstallCount(command.getClusterId());
 
-                    if (podNames == null || podNames.isEmpty()) {
+                    // 计算已经存在的节点数量
+                    int existingNodesCount = roleInstallCount - totalRoleLoopCount;
+
+                    logger.info("当前角色 [{}] 处理状态：当前循环次数={}, 本次安装数量={}, 总安装数量={}, 已存在节点数量={}",
+                            serviceRoleFullName, currentRoleLoopIndex, totalRoleLoopCount, roleInstallCount,
+                            existingNodesCount);
+
+                    // 判断是否是最后一次循环
+                    boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
+                    if (!isLastLoop) {
+                        logger.info("当前不是最后一次循环，跳过添加Observer操作");
                         return startResult;
                     }
 
-                    // 构建批量注册命令
-                    StringBuilder batchCmd = new StringBuilder();
-                    for (String podName : podNames) {
-                        String observerAddr = String.format("%s.%s.%s.svc.cluster.local:9010",
-                                podName, serviceRoleFullName, Constants.DATASOPHON);
+                    logger.info("当前是最后一次循环，开始执行添加Observer操作");
 
-                        batchCmd.append("mysql -h127.0.0.1 -P9030 -uroot  -e \"")
-                                .append("ALTER SYSTEM add OBSERVER '").append(observerAddr).append("';\" && ");
+                    // 计算需要添加的节点范围（Pod索引从0开始）
+                    int startPodIndex = existingNodesCount; // 新节点的起始Pod索引
+                    int endPodIndex = existingNodesCount + totalRoleLoopCount - 1; // 新节点的结束Pod索引
+
+                    logger.info("需要添加Observer节点Pod索引范围: {} 到 {}", startPodIndex, endPodIndex);
+
+                    // 检查是否有节点需要添加
+                    if (startPodIndex > endPodIndex) {
+                        logger.warn("没有Observer节点需要添加");
+                        return startResult;
                     }
 
-                    // 移除最后的 " && "
-                    String finalCmd = batchCmd.substring(0, batchCmd.length() - 4);
+                    // 创建SQL语句列表 - 使用IntStream更优雅地生成
+                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(startPodIndex, endPodIndex)
+                            .mapToObj(i -> {
+                                // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
+                                String observerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                String observerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
 
-                    startResult = K8sUtil.runCmd(
+                                logger.info("添加Observer节点 {}: {}", i - startPodIndex + 1, observerAddr);
+
+                                // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
+                                return String.format("ALTER SYSTEM ADD OBSERVER \"%s\"", observerAddr);
+                            })
+                            .collect(Collectors.toList());
+
+                    if (sqlStatements.isEmpty()) {
+                        logger.warn("没有需要添加的Observer节点");
+                        return startResult;
+                    }
+
+                    logger.info("执行添加Observer命令，共 {} 条SQL语句", sqlStatements.size());
+
+                    // 使用executeMySqlInPod批量执行SQL语句
+                    startResult = executeMySqlInPod(
                             Constants.DATASOPHON,
                             kubeClient,
-                            "starrocks-srfe",
-                            command.getMasterHost(),
-                            finalCmd
-                    );
+                            "starrocks-srfe-0", // 使用第一个FE节点执行命令
+                            sqlStatements);
                 } catch (Exception e) {
                     logger.error("Add Observer failed", e);
                     startResult.setExecResult(false);

@@ -305,14 +305,14 @@ public class ConfigGroupUtils {
                     if (configName.equals(nodePortMappingName) && "NodePort".equalsIgnoreCase(serviceType)
                             && nodePort != null) {
                         updatePortMapping(config, portNumber, nodePort);
-                        logger.info("Updated {} for role {}: port {} -> nodePort {}",
+                        logger.debug("Updated {} for role {}: port {} -> nodePort {}",
                                 nodePortMappingName, roleName, portNumber, nodePort);
                     }
 
                     // 处理ClusterIP类型的端口映射
                     if (configName.equals(clusterPortMappingName)) {
                         updatePortMapping(config, portNumber, portNumber);
-                        logger.info("Updated {} for role {}: port {}",
+                        logger.debug("Updated {} for role {}: port {}",
                                 clusterPortMappingName, roleName, portNumber);
                     }
                 }
@@ -398,7 +398,7 @@ public class ConfigGroupUtils {
                                 if (clusterPortConfig != null) {
                                     // 更新端口映射，添加JMX端口
                                     updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
-                                    logger.info("添加JMX端口 {} 到cluster_port_mappings，角色: {}", jmxPort, roleName);
+                                    logger.debug("添加JMX端口 {} 到cluster_port_mappings，角色: {}", jmxPort, roleName);
                                 }
                             }
                         }
@@ -503,9 +503,9 @@ public class ConfigGroupUtils {
                     } else if (existingValue == null) {
                         // 如果现有值为null，直接设置
                         mapping.put(port, mappedPort);
-                        logger.info("更新端口 {} 的映射为 {}", port, mappedPort);
+                        logger.debug("更新端口 {} 的映射为 {}", port, mappedPort);
                     } else {
-                        logger.info("端口 {} 已存在映射 {}，跳过", port, mappedPort);
+                        logger.debug("端口 {} 已存在映射 {}，跳过", port, mappedPort);
                     }
                     found = true;
                     break;
@@ -517,7 +517,7 @@ public class ConfigGroupUtils {
                 Map<String, String> newMapping = new HashMap<>();
                 newMapping.put(port, mappedPort);
                 portMappings.add(newMapping);
-                logger.info("添加新端口映射: {} -> {}", port, mappedPort);
+                logger.debug("添加新端口映射: {} -> {}", port, mappedPort);
             }
 
             // 更新配置值

@@ -55,6 +55,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("TRINO", new K8sTrinoHandlerStrategy("TRINO", "TrinoCoordinator"));
         map.put("GRAFANA", new K8sGrafanaHandlerStrategy("GRAFANA", "Grafana"));
         map.put("REDIS", new K8sRedisHandlerStrategy("REDIS", "RedisMaster"));
+        map.put("STARROCKS", new K8sSRFEHandlerStrategy("STARROCKS", "SRFE"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

@@ -8,15 +8,10 @@ metadata:
 spec:
   serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-  podManagementPolicy: Parallel
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -28,6 +23,8 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,9 +37,74 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: "init-dirs"
+          image: "${dockerBusyboxImage}"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 创建必要的目录并赋权
+              mkdir -p ${mount_path}
+              chown -R ${runAsUser}:${runAsGroup} ${mount_path}
+              echo "目录创建和权限设置完成: ${mount_path}"
+              
+              # 创建BE配置文件中定义的目录
+              # 存储根目录
+              <#if storage_root_path??>
+              mkdir -p ${storage_root_path}
+              chown -R ${runAsUser}:${runAsGroup} ${storage_root_path}
+              echo "创建BE存储根目录: ${storage_root_path}"
+              </#if>
+              
+              # 溢出存储目录
+              <#if spill_local_storage_dir??>
+              mkdir -p ${spill_local_storage_dir}
+              chown -R ${runAsUser}:${runAsGroup} ${spill_local_storage_dir}
+              echo "创建BE溢出存储目录: ${spill_local_storage_dir}"
+              </#if>
+              
+              # 块缓存目录
+              <#if block_cache_disk_path??>
+              mkdir -p ${block_cache_disk_path}
+              chown -R ${runAsUser}:${runAsGroup} ${block_cache_disk_path}
+              echo "创建BE块缓存目录: ${block_cache_disk_path}"
+              </#if>
+              
+              # 日志目录
+              mkdir -p ${appHome}/log
+              chown -R ${runAsUser}:${runAsGroup} ${appHome}/log
+              echo "创建BE日志目录: ${appHome}/log"
+              
+              # 如果有其他需要创建的目录，可以在这里添加
+              <#if create_dirs??>
+              <#list create_dirs as dir>
+              mkdir -p ${dir}
+              chown -R ${runAsUser}:${runAsGroup} ${dir}
+              echo "目录创建和权限设置完成: ${dir}"
+              </#list>
+              </#if>
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: srbe-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
       containers:
         - name: "${serviceRoleFullName}"
-          image: "${dockerImage}"
+          image: "${dockerRoleImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
           ports:
@@ -88,7 +150,7 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 3
+            initialDelaySeconds: 60
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15
@@ -112,8 +174,6 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
-      nodeSelector:
-        ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         - name: srbe-data

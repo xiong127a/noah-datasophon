@@ -1,7 +1,7 @@
 # =================================================================
 #  阶段一：工作台 (Builder) - 使用CentOS 7作为基础
 # =================================================================
-FROM harbor.norintech.com/bdp/centos7:java-11.0.21-openjdk AS builder
+FROM harbor.norintech.com/bdp/centos:7.9.2009-tools AS builder
 
 # 设置工作目录
 WORKDIR /opt/datasophon
@@ -19,47 +19,36 @@ RUN \
     echo "====> 解压软件包..." && \
     tar -zxf starRocks-3.3.2.tar.gz && \
     \
-    # 删除StarRocks根目录中的JDK 11
-    echo "====> 删除StarRocks根目录中的JDK 11..." && \
-    rm -rf /opt/datasophon/starRocks-3.3.2/jdk* && \
-    \
     # 删除原始压缩包
     echo "====> 清理压缩包..." && \
     rm -f starRocks-3.3.2.tar.gz && \
+    \
+    # 只保留BE组件
+    echo "====> 提取BE组件..." && \
+    mkdir -p /opt/datasophon/starRocks-3.3.2-be && \
+    mv /opt/datasophon/starRocks-3.3.2/be /opt/datasophon/starRocks-3.3.2-be/ && \
+    cp /opt/datasophon/starRocks-3.3.2/LICENSE.txt /opt/datasophon/starRocks-3.3.2-be/ && \
+    cp /opt/datasophon/starRocks-3.3.2/NOTICE.txt /opt/datasophon/starRocks-3.3.2-be/ && \
     echo "====> 构建阶段清理完成."
 
 # =================================================================
 #  阶段二：最终产物 (Final Image) - 基于CentOS 7
 # =================================================================
-FROM harbor.norintech.com/bdp/centos7:java-11.0.21-openjdk
+FROM harbor.norintech.com/bdp/centos:7.9.2009-tools
 
 LABEL maintainer="DataSophon Team" \
-      description="StarRocks image with MySQL client and netcat tools"
+      description="StarRocks BE image with netcat tools"
 
 WORKDIR /opt/datasophon
 
-# --- 精确拷贝，只从builder阶段复制清理后的目录 ---
-COPY --from=builder /opt/datasophon/starRocks-3.3.2 /opt/datasophon/starRocks-3.3.2
+# --- 精确拷贝，只从builder阶段复制BE目录 ---
+COPY --from=builder /opt/datasophon/starRocks-3.3.2-be /opt/datasophon/starRocks-3.3.2
 
 # --- 安装依赖、设置用户、权限和软链接 ---
 RUN \
-    # 更新yum源
-    echo "====> 更新yum源..." && \
-    yum clean all && \
-    yum makecache && \
-    \
     # 安装必要工具
     echo "====> 安装必要工具..." && \
-    yum install -y yum-utils nc && \
-    \
-    # 配置MySQL yum源并安装MySQL客户端
-    echo "====> 配置MySQL yum源..." && \
-    rpm -Uvh https://repo.mysql.com/mysql80-community-release-el7-3.noarch.rpm && \
-    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-mysql && \
-    yum-config-manager --disable mysql80-community && \
-    yum-config-manager --enable mysql57-community && \
-    echo "====> 安装MySQL客户端..." && \
-    yum install -y mysql-community-client --nogpgcheck && \
+    yum install -y nc && \
     \
     # 清理yum缓存
     echo "====> 清理yum缓存..." && \
@@ -72,6 +61,6 @@ RUN \
     echo "====> 正在更改文件权限..." && \
     chmod -R 755 /opt/datasophon/starRocks-3.3.2
 
-# 设置环境变量 - 使用硬编码路径而不是变量引用
+# 设置环境变量
 ENV STARROCKS_HOME=/opt/datasophon/starrocks \
-    PATH=/opt/datasophon/starrocks/bin:/usr/bin:$PATH
+    PATH=/opt/datasophon/starrocks/be/bin:/usr/bin:$PATH

@@ -17,12 +17,12 @@
 
 package com.datasophon.k8s.util;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.constants.Constant;
 import freemarker.cache.ClassTemplateLoader;
@@ -49,9 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringWriter;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -61,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @UtilityClass
 @Slf4j
@@ -109,33 +107,30 @@ public class K8sFreeMakerUtils {
         }
         config.setTemplateLoader(new MultiTemplateLoader(loaderList.toArray(new TemplateLoader[0])));
 
-        Map<String, Object> data = new HashMap<>();
-        // 得到模板对象
-        String configFormat = generators.getConfigFormat();
-        Template template = null;
-        if (Constants.XML.equals(configFormat)) {
-            template = config.getTemplate("xml.ftl");
+        // 使用FreemarkerUtils获取模板名称，避免重复逻辑
+        String templateName = FreemarkerUtils.determineTemplateName(generators);
+        if (templateName == null) {
+            throw new IllegalArgumentException("不支持的配置格式: " + generators.getConfigFormat());
         }
-        if (Constants.PROPERTIES.equals(configFormat)) {
-            template = config.getTemplate("properties.ftl");
-        }
-        if (Constants.PROPERTIES2.equals(configFormat)) {
-            template = config.getTemplate("properties2.ftl");
-        }
-        if (Constants.PROPERTIES3.equals(configFormat)) {
-            template = config.getTemplate("properties3.ftl");
-        }
-        if (Constants.PROMETHEUS.equals(configFormat)) {
-            template = config.getTemplate("alert.yml");
-        }
-        if (Constants.CUSTOM.equals(configFormat)) {
-            template = config.getTemplate(generators.getTemplateName());
-            data = configs.stream().filter(e -> "map".equals(e.getConfigType()))
-                    .collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue));
-            configs = configs.stream().filter(e -> !"map".equals(e.getConfigType())).collect(Collectors.toList());
-        }
+
+        Template template = config.getTemplate(templateName);
         logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
-        data.put("itemList", configs);
+
+        // 获取主机名和IP用于变量替换
+        Map<String, String> paramMap = new HashMap<>();
+        try {
+            String hostName = InetAddress.getLocalHost().getHostName();
+            String ip = cn.hutool.core.net.NetUtil.getIpByHost(hostName);
+            paramMap.put("${hostname}", hostName);
+            paramMap.put("${ip}", ip);
+            paramMap.put("${user}", "root");
+        } catch (Exception e) {
+            logger.error("获取主机信息失败: {}", e.getMessage());
+        }
+
+        // 使用FreemarkerUtils处理数据，避免重复逻辑
+        Map<String, Object> data = FreemarkerUtils.prepareRenderData(generators, configs, paramMap, logger);
+
         // 3.产生输出
         String configMapName = generateConfigMapName(serviceRoleFullName, generators);
         writeToConfigMap(template, data, configMapName, generators.getFilename(), serviceRoleFullName);
@@ -150,20 +145,10 @@ public class K8sFreeMakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToTemplateLocal(Template template, Map<String, Object> data, String outputFile)
+    public static void writeToTemplate(Template template, Map<String, Object> data, String outputFile)
             throws IOException, TemplateException {
-        // 创建文件对象
-        File file = new File(outputFile);
-        // 如果文件不存在，则创建其父目录
-        if (!file.exists()) {
-            FileUtil.mkParentDirs(file);
-        }
-        // 创建文件写入器
-        FileWriter out = new FileWriter(file);
-        // 将数据写入模板，并将结果写入文件
-        template.process(data, out);
-        // 关闭文件写入器
-        out.close();
+        // 直接调用FreemarkerUtils中的对应方法
+        FreemarkerUtils.writeToTemplate(template, data, outputFile);
     }
 
     /**
@@ -179,14 +164,9 @@ public class K8sFreeMakerUtils {
             String configMapName,
             String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
-        // 使用 StringWriter 合并模板和数据
-        StringWriter stringWriter = new StringWriter();
-        UnixNewlineWriter unixNewlineWriter = new UnixNewlineWriter(stringWriter);
+        // 使用FreemarkerUtils生成内容
+        String generatedContent = FreemarkerUtils.renderTemplateToString(template, data);
 
-        template.process(data, unixNewlineWriter);
-
-        // 获取生成的内容
-        String generatedContent = unixNewlineWriter.target.toString();
         // 将内容创建为 ConfigMap
         cacheConfigMap(configMapName, generatedContent, fileName, serviceRoleFullName);
     }
@@ -346,11 +326,41 @@ public class K8sFreeMakerUtils {
 
     // 获取或创建缓存客户端[8](@ref)
 
+    /**
+     * 生成ConfigMap名称，规范化名称以符合Kubernetes命名规则
+     * 
+     * @param serviceRoleFullName 服务角色全名
+     * @param generators          配置生成器
+     * @return 规范化的ConfigMap名称
+     */
     public static String generateConfigMapName(String serviceRoleFullName, Generators generators) {
         if (serviceRoleFullName == null || generators == null) {
             throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
         }
-        return serviceRoleFullName.toLowerCase() + "-" + generators.getFilename().replace('.', '-').replace("_", "-");
+
+        // 获取文件名
+        String filename = generators.getFilename();
+
+        // 转换文件名为有效的Kubernetes资源名称
+        // - 替换点、下划线为连字符
+        // - 限制长度避免超过Kubernetes命名限制
+        String normalizedFilename = filename.replace('.', '-').replace("_", "-");
+
+        // 构建完整的ConfigMap名称
+        String configMapName = serviceRoleFullName.toLowerCase() + "-" + normalizedFilename;
+
+        // 确保名称符合Kubernetes命名规则：小写字母、数字和连字符
+        configMapName = configMapName.replaceAll("[^a-z0-9-]", "-");
+
+        // Kubernetes资源名称最大长度为253个字符，为安全起见这里限制为240
+        if (configMapName.length() > 240) {
+            configMapName = configMapName.substring(0, 240);
+        }
+
+        // 确保名称不以连字符开头或结尾
+        configMapName = configMapName.replaceAll("^-+|-+$", "");
+
+        return configMapName;
     }
 
     /**
@@ -449,8 +459,8 @@ public class K8sFreeMakerUtils {
     public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName) {
         // 获取该服务角色的配置缓存
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
-        if(StrUtil.equals("prometheus-update" ,serviceRoleFullName)){
-            serviceRoleFullName="prometheus-prometheus";
+        if (StrUtil.equals("prometheus-update", serviceRoleFullName)) {
+            serviceRoleFullName = "prometheus-prometheus";
         }
         // 如果缓存为空，直接返回
         if (configsCache == null || configsCache.isEmpty()) {
@@ -578,5 +588,59 @@ public class K8sFreeMakerUtils {
             log.error("批量保存Prometheus配置到PVC时出错: {}", e.getMessage(), e);
             throw new RuntimeException("批量保存Prometheus配置失败", e);
         }
+    }
+
+    /**
+     * 便捷方法：直接使用服务配置和生成器渲染模板并生成ConfigMap
+     * 这个方法简化了从配置到ConfigMap的整个过程
+     *
+     * @param generators          配置生成器
+     * @param configs             服务配置列表
+     * @param serviceRoleFullName 服务角色全名
+     * @throws IOException       IO异常
+     * @throws TemplateException 模板异常
+     */
+    public static void renderTemplateToConfigMap(Generators generators,
+            List<ServiceConfig> configs,
+            String serviceRoleFullName) throws IOException, TemplateException {
+        // 获取主机名和IP用于变量替换
+        Map<String, String> paramMap = new HashMap<>();
+        try {
+            String hostName = InetAddress.getLocalHost().getHostName();
+            String ip = cn.hutool.core.net.NetUtil.getIpByHost(hostName);
+            paramMap.put("${hostname}", hostName);
+            paramMap.put("${ip}", ip);
+            paramMap.put("${user}", "root");
+        } catch (Exception e) {
+            logger.error("获取主机信息失败: {}", e.getMessage());
+        }
+
+        // 使用FreemarkerUtils处理配置
+        Map<String, Object> data = FreemarkerUtils.prepareRenderData(generators, configs, paramMap, logger);
+
+        // 使用FreemarkerUtils渲染模板
+        String templateName = FreemarkerUtils.determineTemplateName(generators);
+        if (templateName == null) {
+            throw new IllegalArgumentException("不支持的配置格式: " + generators.getConfigFormat());
+        }
+
+        // 创建模板配置
+        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
+        config.setClassForTemplateLoading(K8sFreeMakerUtils.class, "/worker/templates");
+
+        // 获取模板
+        Template template = config.getTemplate(templateName);
+        if (template == null) {
+            throw new IOException("无法加载模板: " + templateName);
+        }
+
+        // 渲染模板并生成内容
+        String renderedContent = FreemarkerUtils.renderTemplateToString(template, data);
+
+        // 生成ConfigMap名称
+        String configMapName = generateConfigMapName(serviceRoleFullName, generators);
+
+        // 缓存ConfigMap
+        cacheConfigMap(configMapName, renderedContent, generators.getFilename(), serviceRoleFullName);
     }
 }

@@ -179,6 +179,7 @@ public class PrometheusActor extends UntypedActor {
                 configFileMap.put(generators, serviceConfigs);
             }
             ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+            serviceRoleInfo.setClusterId(command.getClusterId());
             serviceRoleInfo.setName(symbolName);
             serviceRoleInfo.setParentName("PROMETHEUS");
             serviceRoleInfo.setConfigFileMap(configFileMap);
@@ -259,6 +260,7 @@ public class PrometheusActor extends UntypedActor {
                 configFileMap.put(masterGenerators, masterServiceConfigs);
                 configFileMap.put(nodeGenerators, nodeServiceConfigs);
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+                serviceRoleInfo.setClusterId(command.getClusterId());
                 serviceRoleInfo.setName("Prometheus");
                 serviceRoleInfo.setParentName("PROMETHEUS");
                 serviceRoleInfo.setConfigFileMap(configFileMap);
@@ -366,6 +368,7 @@ public class PrometheusActor extends UntypedActor {
             configFileMap.put(generators, serviceConfigs);
 
             ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+            serviceRoleInfo.setClusterId(command.getClusterId());
             serviceRoleInfo.setName("Prometheus");
             serviceRoleInfo.setParentName("PROMETHEUS");
             serviceRoleInfo.setConfigFileMap(configFileMap);

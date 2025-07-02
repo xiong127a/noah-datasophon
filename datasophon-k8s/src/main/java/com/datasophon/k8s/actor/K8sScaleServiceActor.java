@@ -2,10 +2,8 @@ package com.datasophon.k8s.actor;
 
 import akka.actor.UntypedActor;
 import com.datasophon.common.K8sServiceScaleCommand;
-import com.datasophon.common.command.K8sGenerateHostTagCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sScaleServiceHandler;
-import com.datasophon.k8s.actor.handler.K8sTagHostHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -9,15 +9,21 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.VolumeMountDTO;
+import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.K8sUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
 import static com.datasophon.common.Constants.UNDERLINE;
@@ -43,8 +49,54 @@ public class K8sAbstractHandlerStrategy {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
+    public int getCurrentRoleLoopIndex() {
+        Integer count = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        if (Objects.isNull(count)) {
+            count = getTotalRoleLoopCount();
+        }
+        return count;
+    }
+
+    /**
+     * 获取当前角色需要的总循环次数
+     *
+     * @return 总循环次数
+     */
+    public int getTotalRoleLoopCount() {
+        // 使用与 getCurrentRoleLoopIndex 相同的缓存键格式，但添加 "_TOTAL" 后缀
+        return (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
+    }
+
+    /**
+     * 获取角色的安装数量
+     *
+     * @param clusterId 集群ID
+     * @return 角色安装数量
+     */
+    public Integer getRoleInstallCount(Integer clusterId) {
+        return getRoleInstallCount(clusterId, serviceRoleName);
+    }
+
+    public Integer getRoleInstallCount(Integer clusterId, String serviceRoleName) {
+        final String serviceRoleHostMappingKey = clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+        Object mappingObj = CacheUtils.get(serviceRoleHostMappingKey);
+        if (Objects.nonNull(mappingObj)) {
+            JSONObject mapping = JSONUtil.parseObj(mappingObj);
+            if (mapping.containsKey(serviceRoleName)) {
+                int roleCount = mapping.getJSONArray(serviceRoleName).size();
+                logger.debug("从 {} 中获取到 {} 节点数量为: {}", Constants.SERVICE_ROLE_HOST_MAPPING, serviceRoleName, roleCount);
+                return roleCount;
+            } else {
+                logger.warn("在 {} 中未找到 {} 角色", Constants.SERVICE_ROLE_HOST_MAPPING, serviceRoleName);
+            }
+        } else {
+            logger.warn("缓存中未找到 {}", serviceRoleHostMappingKey);
+        }
+        return 0;
+    }
+
     public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap,
-            boolean enableKerberos) {
+                                            boolean enableKerberos) {
         List<VolumeMountDTO> volumeList = new ArrayList<>();
         int fileCount = 1;
         int pathCount = 1;
@@ -86,21 +138,6 @@ public class K8sAbstractHandlerStrategy {
         }
 
         return volumeList.toArray(new VolumeMountDTO[0]);
-    }
-
-    public VolumeMountDTO[] hadoopVolumeMountList() {
-        String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
-        String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
-        String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
-        String mapredSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/mapred-site.xml";
-        String yarnSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/yarn-site.xml";
-        return new VolumeMountDTO[] {
-                new VolumeMountDTO("core-site", coreSite, coreSite),
-                new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
-                new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
-                new VolumeMountDTO("mapred-site", mapredSite, mapredSite),
-                new VolumeMountDTO("yarn-site", yarnSite, yarnSite),
-        };
     }
 
     /**
@@ -190,7 +227,7 @@ public class K8sAbstractHandlerStrategy {
                     // 如果成功生成了端口映射，则更新配置值
                     if (hasValidMapping) {
                         config.setValue(resultArray);
-                        logger.info("生成节点端口映射: {} -> {}", config.getName(), resultArray.toString());
+                        logger.info("生成节点端口映射: {} -> {}", config.getName(), resultArray);
                     } else {
                         // 如果没有成功解析任何端口映射，保留原始配置
                         logger.info("未能解析任何有效的端口映射，保留原始配置: {}", config.getName());
@@ -203,4 +240,84 @@ public class K8sAbstractHandlerStrategy {
         }
     }
 
+    /**
+     * 直接在指定Pod中执行MySQL SQL命令
+     *
+     * @param namespace    K8s命名空间
+     * @param kubeClient   K8s客户端
+     * @param podName      Pod名称(如: starrocks-srfe-0)
+     * @param sqlStatement SQL语句(如: "ALTER SYSTEM ADD FOLLOWER \"xxx\"")
+     * @return 执行结果
+     */
+    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
+                                        String podName, String sqlStatement) {
+        // 调用批量执行方法，但只传入一条SQL语句
+        return executeMySqlInPod(namespace, kubeClient, podName, Collections.singletonList(sqlStatement));
+    }
+
+    /**
+     * 直接在指定Pod中批量执行MySQL SQL命令
+     *
+     * @param namespace     K8s命名空间
+     * @param kubeClient    K8s客户端
+     * @param podName       Pod名称(如: starrocks-srfe-0)
+     * @param sqlStatements SQL语句列表
+     * @return 执行结果
+     */
+    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
+                                        String podName, List<String> sqlStatements) {
+        if (cn.hutool.core.collection.CollUtil.isEmpty(sqlStatements)) {
+            logger.warn("没有提供SQL语句，无法执行");
+            ExecResult result = new ExecResult();
+            result.setExecResult(false);
+            result.setExecErrOut("没有提供SQL语句");
+            return result;
+        }
+
+        // 使用Hutool的StrUtil.join来拼接命令，更优雅
+        List<String> mysqlCommands = sqlStatements.stream()
+                .map(sql -> String.format("mysql -h127.0.0.1 -P9030 -uroot --connect-timeout=10 -e \"%s\"",
+                        sql.replace("\"", "\\\"")))
+                .collect(Collectors.toList());
+
+        String finalCmd = cn.hutool.core.util.StrUtil.join(" && ", mysqlCommands);
+
+        logger.info("在Pod [{}] 中执行MySQL命令: {}", podName, finalCmd);
+        return K8sUtil.runCmdInPod(namespace, kubeClient, podName, finalCmd);
+    }
+
+    /**
+     * 获取StarRocks FE的Master节点hostname
+     * 如果srFeMaster参数有值就返回该值，
+     * 如果没有值就查询{serviceRoleFullName}-0这个pod的hostname
+     *
+     * @param kubeClient          K8s客户端
+     * @param serviceRoleFullName 服务角色全名(例如: starrocks-srfe)
+     * @return FE Master节点的hostname
+     */
+    public String getMasterHost(KubernetesClient kubeClient, String serviceRoleFullName) {
+        // 先从缓存中查询
+        String cacheKey = serviceRoleFullName + "_master_host";
+        if (CacheUtils.constainsKey(cacheKey)) {
+            String cachedMasterHost = (String) CacheUtils.get(cacheKey);
+            logger.info("从缓存中获取到Master节点: {}", cachedMasterHost);
+            return cachedMasterHost;
+        }
+
+        // 否则查询索引为0的Pod所在节点
+        String masterPodName = serviceRoleFullName + "-0";
+        logger.info("尝试获取FE Master Pod [{}] 所在节点", masterPodName);
+
+        String masterNodeName = K8sUtil.getPodNodeName(NAMESPACE, kubeClient, masterPodName);
+        if (masterNodeName != null) {
+            logger.info("找到FE Master节点: {}, 并缓存", masterNodeName);
+            // 将结果缓存
+            CacheUtils.put(cacheKey, masterNodeName);
+            return masterNodeName;
+        } else {
+            logger.warn("无法找到FE Master节点，请检查Pod [{}] 是否已创建", masterPodName);
+            // 返回一个可能的默认值或null
+            return null;
+        }
+    }
 }

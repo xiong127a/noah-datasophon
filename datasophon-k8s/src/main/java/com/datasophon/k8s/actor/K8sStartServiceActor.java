@@ -1,4 +1,3 @@
-
 package com.datasophon.k8s.actor;
 
 import akka.actor.UntypedActor;

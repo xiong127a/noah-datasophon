@@ -18,66 +18,95 @@
 package com.datasophon.k8s.strategy;
 
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
+import java.util.stream.Collectors;
 
 public class K8sSRCNHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
-
     public K8sSRCNHandlerStrategy(String serviceName, String serviceRoleName) {
-        super(serviceName,serviceRoleName);
+        super(serviceName, serviceRoleName);
     }
 
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
-        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         startResult = serviceHandler.start(command);
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("add cn to cluster");
             if (startResult.getExecResult()) {
                 try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+                    // 获取当前循环索引、总循环次数和角色安装数量
+                    int currentRoleLoopIndex = getCurrentRoleLoopIndex();
+                    int totalRoleLoopCount = getTotalRoleLoopCount();
+                    Integer roleInstallCount = getRoleInstallCount(command.getClusterId());
 
-                    Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+                    // 计算已经存在的节点数量
+                    int existingNodesCount = roleInstallCount - totalRoleLoopCount;
 
-                    List<String> podNames =(List<String>) podNamesObj;
+                    logger.info("当前角色 [{}] 处理状态：当前循环次数={}, 本次安装数量={}, 总安装数量={}, 已存在节点数量={}",
+                            serviceRoleFullName, currentRoleLoopIndex, totalRoleLoopCount, roleInstallCount,
+                            existingNodesCount);
 
-                    if (podNames == null || podNames.isEmpty()) {
+                    // 判断是否是最后一次循环
+                    boolean isLastLoop = (currentRoleLoopIndex == totalRoleLoopCount);
+                    if (!isLastLoop) {
+                        logger.info("当前不是最后一次循环，跳过添加CN操作");
                         return startResult;
                     }
 
-                    StringBuilder beNodes = new StringBuilder();
-                    for (int i = 0; i < podNames.size(); i++) {
-                        if (i > 0) {
-                            beNodes.append(",");
-                        }
-                        beNodes.append("\\\"").append(podNames.get(i)).append(".").append(serviceRoleFullName)
-                                .append(".").append(Constants.DATASOPHON).append(".svc.cluster.local:9050\\\"");
+                    logger.info("当前是最后一次循环，开始执行添加CN操作");
+
+                    // 计算需要添加的节点范围（Pod索引从0开始）
+                    int startPodIndex = existingNodesCount; // 新节点的起始Pod索引
+                    int endPodIndex = existingNodesCount + totalRoleLoopCount - 1; // 新节点的结束Pod索引
+
+                    logger.info("需要添加CN节点Pod索引范围: {} 到 {}", startPodIndex, endPodIndex);
+
+                    // 检查是否有节点需要添加
+                    if (startPodIndex > endPodIndex) {
+                        logger.warn("没有CN节点需要添加");
+                        return startResult;
                     }
 
-                    String mysqlCmd = "mysql -h127.0.0.1 -P9030 -uroot -e  \"ALTER SYSTEM add COMPUTE NODE " + beNodes.toString() + "\"";
+                    // 创建SQL语句列表 - 使用IntStream更优雅地生成
+                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(startPodIndex, endPodIndex)
+                            .mapToObj(i -> {
+                                // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
+                                String cnHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                String cnHost = String.format("%s-%d.%s.%s.svc.cluster.local",
+                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
 
-                    startResult = K8sUtil.runCmd(
+                                logger.info("添加CN节点 {}: {}:{}", i - startPodIndex + 1, cnHost, "9050");
+
+                                // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
+                                return String.format("ALTER SYSTEM ADD COMPUTE NODE \"%s\"", cnHostPort);
+                            })
+                            .collect(Collectors.toList());
+
+                    if (sqlStatements.isEmpty()) {
+                        logger.warn("没有需要添加的CN节点");
+                        return startResult;
+                    }
+
+                    logger.info("执行添加CN命令，共 {} 条SQL语句", sqlStatements.size());
+
+                    // 使用executeMySqlInPod批量执行SQL语句
+                    startResult = executeMySqlInPod(
                             Constants.DATASOPHON,
                             kubeClient,
-                            "starrocks-srfe",
-                            command.getMasterHost(), // 在主FE上执行注册命令
-                            mysqlCmd
-                    );
+                            "starrocks-srfe-0", // 使用第一个FE节点执行命令
+                            sqlStatements);
                 } catch (Exception e) {
                     logger.error("Add CN failed: {}", ThrowableUtils.getStackTrace(e));
                     startResult.setExecResult(false);
