@@ -463,8 +463,7 @@ public class K8sYamlDeploymentHandler {
         if ("STARROCKS".equals(serviceName)) {
             // 查找FE节点的服务角色全名
             // 设置FE master节点地址
-            String feMasterHost = String.format("%s-0.%s.%s.svc.cluster.local",
-                    serviceRoleFullName, serviceRoleFullName, Constant.K8S_NAMESPACE);
+            String feMasterHost = String.format("starrocks-srfe-0.starrocks-srfe.%s.svc.cluster.local", Constant.K8S_NAMESPACE);
             data.put("fe_master_host", feMasterHost);
             populateDataWithConfig("edit_log_port", "fe_master_port");
 
