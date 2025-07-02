@@ -181,12 +181,24 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/trinoworker.json
-  - job_name: 'StarRocks'
+  - job_name: 'srfe'
     metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: []
+        target_label: group
+        replacement: 'srfe'
     file_sd_configs:
      - files:
        - configs/srfe.json
        - configs/srfeobserver.json
+  - job_name: 'srbe'
+    metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: []
+        target_label: group
+        replacement: 'srbe'
+    file_sd_configs:
+     - files:
        - configs/srbe.json
        - configs/srcn.json
   - job_name: 'doris'
