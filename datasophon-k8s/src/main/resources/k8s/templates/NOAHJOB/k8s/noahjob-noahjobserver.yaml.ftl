@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -54,6 +54,16 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            # 添加POD_NAME环境变量
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # 添加POD_NAMESPACE环境变量
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           readinessProbe:
             exec:
               command:
@@ -74,7 +84,28 @@ spec:
               cpu: ${limits_cpu}
           securityContext:
             privileged: true
+          <#if node_port_mappings?? || cluster_port_mappings??>
+          ports:
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           volumeMounts:
+            - name: noahjob-data
+              mountPath: ${mount_path}
+              # 使用环境变量动态生成子路径
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -86,6 +117,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: noahjob-data
+          persistentVolumeClaim:
+          claimName: "${serviceRoleFullName}-pvc"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:
