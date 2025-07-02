@@ -287,9 +287,9 @@
       "configGroup": "fe.conf",
       "configLevel": "advanced",
       "bindRole": "SRFE",
-      "serviceType": "NodePort",
+      "serviceType": "ClusterIP",
       "portNumber": "8060",
-      "nodePort": "30600"
+      "nodePort": "30860"
     },
     {
       "name": "http_port1",
@@ -305,9 +305,8 @@
       "configGroup": "fe.conf",
       "configLevel": "advanced",
       "bindRole": "SRFEObserver",
-      "serviceType": "NodePort",
-      "portNumber": "8060",
-      "nodePort": "30601"
+      "serviceType": "ClusterIP",
+      "portNumber": "8060"
     },
     {
       "name": "rpc_port",
@@ -340,7 +339,7 @@
       "configGroup": "fe.conf",
       "configLevel": "advanced",
       "bindRole": "SRFE",
-      "serviceType": "NodePort",
+      "serviceType": "ClusterIP",
       "portNumber": "9030",
       "nodePort": "30930"
     },
@@ -358,9 +357,8 @@
       "configGroup": "fe.conf",
       "configLevel": "advanced",
       "bindRole": "SRFE",
-      "serviceType": "NodePort",
-      "portNumber": "9010",
-      "nodePort": "30910"
+      "serviceType": "ClusterIP",
+      "portNumber": "9010"
     },
     {
       "name": "cloud_native_meta_port",
@@ -486,9 +484,8 @@
       "configGroup": "be.conf",
       "configLevel": "advanced",
       "bindRole": "SRBE,SRCN",
-      "serviceType": "NodePort",
-      "portNumber": "8070",
-      "nodePort": "30087"
+      "serviceType": "ClusterIP",
+      "portNumber": "8070"
     },
     {
       "name": "heartbeat_service_port",
@@ -504,9 +501,8 @@
       "configGroup": "be.conf",
       "configLevel": "advanced",
       "bindRole": "SRBE",
-      "serviceType": "NodePort",
-      "portNumber": "9050",
-      "nodePort": "30950"
+      "serviceType": "ClusterIP",
+      "portNumber": "9050"
     },
     {
       "name": "brpc_port",

@@ -50,13 +50,11 @@ public class K8sAbstractHandlerStrategy {
     }
 
     public int getCurrentRoleLoopIndex() {
-        String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s", serviceRoleName, serviceName);
-        Integer currentIndex = (Integer) CacheUtils.get(cacheKey);
-        if (currentIndex == null) {
-            currentIndex = 1; // 初始化为1
-            CacheUtils.put(cacheKey, currentIndex);
+        Integer count = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        if (Objects.isNull(count)) {
+            count = getTotalRoleLoopCount();
         }
-        return currentIndex;
+        return count;
     }
 
     /**
@@ -66,21 +64,12 @@ public class K8sAbstractHandlerStrategy {
      */
     public int getTotalRoleLoopCount() {
         // 使用与 getCurrentRoleLoopIndex 相同的缓存键格式，但添加 "_TOTAL" 后缀
-        String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s_TOTAL", serviceRoleName, serviceName);
-        Integer totalCount = (Integer) CacheUtils.get(cacheKey);
-        if (totalCount == null) {
-            logger.warn("未找到角色 [{}] 的总循环次数缓存", serviceRoleFullName);
-            // 如果缓存中没有，则尝试从角色主机映射中获取
-            totalCount = 1;
-        }
-
-        logger.debug("角色 [{}] 的总循环次数: {}", serviceRoleFullName, totalCount);
-        return totalCount;
+        return (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
     }
 
     /**
      * 获取角色的安装数量
-     * 
+     *
      * @param clusterId 集群ID
      * @return 角色安装数量
      */
@@ -107,7 +96,7 @@ public class K8sAbstractHandlerStrategy {
     }
 
     public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap,
-            boolean enableKerberos) {
+                                            boolean enableKerberos) {
         List<VolumeMountDTO> volumeList = new ArrayList<>();
         int fileCount = 1;
         int pathCount = 1;
@@ -261,7 +250,7 @@ public class K8sAbstractHandlerStrategy {
      * @return 执行结果
      */
     public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
-            String podName, String sqlStatement) {
+                                        String podName, String sqlStatement) {
         // 调用批量执行方法，但只传入一条SQL语句
         return executeMySqlInPod(namespace, kubeClient, podName, Collections.singletonList(sqlStatement));
     }
@@ -276,7 +265,7 @@ public class K8sAbstractHandlerStrategy {
      * @return 执行结果
      */
     public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
-            String podName, List<String> sqlStatements) {
+                                        String podName, List<String> sqlStatements) {
         if (cn.hutool.core.collection.CollUtil.isEmpty(sqlStatements)) {
             logger.warn("没有提供SQL语句，无法执行");
             ExecResult result = new ExecResult();

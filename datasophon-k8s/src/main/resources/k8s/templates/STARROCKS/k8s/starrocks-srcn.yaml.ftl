@@ -51,6 +51,27 @@ spec:
               echo "目录创建和权限设置完成: ${mount_path}"
               
               # 创建CN节点所需目录
+              # 存储根目录
+              <#if storage_root_path??>
+              mkdir -p ${storage_root_path}
+              chown -R ${runAsUser}:${runAsGroup} ${storage_root_path}
+              echo "创建CN存储根目录: ${storage_root_path}"
+              </#if>
+              
+              # 溢出存储目录
+              <#if spill_local_storage_dir??>
+              mkdir -p ${spill_local_storage_dir}
+              chown -R ${runAsUser}:${runAsGroup} ${spill_local_storage_dir}
+              echo "创建CN溢出存储目录: ${spill_local_storage_dir}"
+              </#if>
+              
+              # 块缓存目录
+              <#if block_cache_disk_path??>
+              mkdir -p ${block_cache_disk_path}
+              chown -R ${runAsUser}:${runAsGroup} ${block_cache_disk_path}
+              echo "创建CN块缓存目录: ${block_cache_disk_path}"
+              </#if>
+              
               # 日志目录
               mkdir -p ${appHome}/log
               chown -R ${runAsUser}:${runAsGroup} ${appHome}/log

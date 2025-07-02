@@ -70,29 +70,6 @@ public class MasterServiceActor extends UntypedActor {
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
             Collections.sort(serviceRoleInfoList); // 排序
 
-            // 创建Map统计每个角色的总数量
-            Map<String, Integer> roleTotalCountMap = new HashMap<>();
-
-            // 统计每个角色的总数量
-            for (ServiceRoleInfo roleInfo : serviceRoleInfoList) {
-                String roleKey = roleInfo.getParentName() + "_" + roleInfo.getName();
-                roleTotalCountMap.merge(roleKey, 1, Integer::sum);
-            }
-
-            // 设置每个角色的总循环次数缓存
-            for (Map.Entry<String, Integer> entry : roleTotalCountMap.entrySet()) {
-                String roleKey = entry.getKey();
-                Integer totalCount = entry.getValue();
-                String[] parts = roleKey.split("_", 2);
-                if (parts.length == 2) {
-                    String parentName = parts[0];
-                    String roleName = parts[1];
-                    String cacheKey = String.format("ROLE_LOOP_INDEX_%s_%s_TOTAL", roleName, parentName);
-                    CacheUtils.put(cacheKey, totalCount);
-                    logger.info("设置角色 [{}] 的总循环次数缓存: {}", roleKey, totalCount);
-                }
-            }
-
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
                 logger.info(
