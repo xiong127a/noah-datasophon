@@ -77,12 +77,19 @@ public class HostCheckActor extends UntypedActor {
       for (ClusterInfoEntity clusterInfoEntity : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
         Integer clusterId = clusterInfoEntity.getId();
+        String depType = clusterInfoEntity.getDepType();
+        String prometheusPort = "9090";
+        if (Constants.K8S_MODE.equals(depType)) {
+          prometheusPort="30909";
+        }
+
         ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole("Prometheus", "",
             clusterId);
         if (Objects.nonNull(prometheusInstance)) {
           // 集群正常安装了 Prometheus
           List<ClusterHostDO> list = clusterHostService.getHostListByClusterId(clusterId);
-          String promUrl = "http://" + prometheusInstance.getHostname() + ":9090/api/v1/query";
+
+          String promUrl = "http://" + prometheusInstance.getHostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostDO clusterHostDO : list) {
             if (hostInfo != null && !StringUtils.equals(clusterHostDO.getHostname(), hostInfo.getHostname())) {
               // 指定了节点，直接只处理这一个节点的
@@ -155,7 +162,6 @@ public class HostCheckActor extends UntypedActor {
             try {
               // rpc 检测
               ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-              String depType = clusterInfo.getDepType();
               if (Constants.K8S_MODE.equals(depType)) {
                 try {
                   // 使用Java原生的isReachable方法替代系统ping命令
