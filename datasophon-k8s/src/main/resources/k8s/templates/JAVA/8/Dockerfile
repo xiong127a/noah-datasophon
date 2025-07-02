@@ -2,7 +2,7 @@
 #  第一阶段：JDK准备阶段 (Builder)
 #  使用CentOS 7作为基础，下载并清理JDK 1.8.0_333
 # =================================================================
-FROM harbor.norintech.com/bdp/centos:7 AS builder
+FROM harbor.norintech.com/bdp/centos:7.9.2009-tools AS builder
 
 # 设置工作目录
 WORKDIR /tmp
@@ -51,7 +51,7 @@ RUN echo "正在优化JDK..." && \
 #  第二阶段：最终镜像构建
 #  使用一个干净的CentOS 7作为基础，只拷贝优化后的JDK
 # =================================================================
-FROM harbor.norintech.com/bdp/centos:7
+FROM harbor.norintech.com/bdp/centos:7.9.2009-tools
 
 # 作者信息
 LABEL maintainer="renxiangpeng"
