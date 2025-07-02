@@ -23,10 +23,9 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -83,12 +82,12 @@ public class K8sSRCNHandlerStrategy extends K8sAbstractHandlerStrategy implement
                     List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(startPodIndex, endPodIndex)
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
-                                String cnHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9020",
+                                String cnHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
                                         serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
                                 String cnHost = String.format("%s-%d.%s.%s.svc.cluster.local",
                                         serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
 
-                                logger.info("添加CN节点 {}: {}:{}", i - startPodIndex + 1, cnHost, "9020");
+                                logger.info("添加CN节点 {}: {}:{}", i - startPodIndex + 1, cnHost, "9050");
 
                                 // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
                                 return String.format("ALTER SYSTEM ADD COMPUTE NODE \"%s\"", cnHostPort);
