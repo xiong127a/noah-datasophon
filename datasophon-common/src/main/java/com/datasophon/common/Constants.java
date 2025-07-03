@@ -131,11 +131,13 @@ public final class Constants {
         public static final String K8S_SVC_CONF = "kubernetes.config.services";
         public static final String K8S_CLUSTER_IP = "ClusterIP";
         public static final String K8S_NODE_PORT = "NodePort";
+        public static final String K8S_LOAD_BALANCER = "LoadBalancer";
 
         public static final String K8S_CONFIG_PREFIX = "kubernetes.config.";
 
         public static final String K8S_NODEPORT_MAPPING = "node_port_mappings";
         public static final String K8S_CLUSTERIP_MAPPING = "cluster_port_mappings";
+        public static final String K8S_LOADBALANCER_MAPPING = "load_balancer_port_mappings";
         public static final String CONFIG_TARGET_ROLES = "configTargetRoles";
 
         public static final String GENERAL = "General";

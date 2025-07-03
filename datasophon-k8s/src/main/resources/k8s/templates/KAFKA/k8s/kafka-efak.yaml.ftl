@@ -105,8 +105,8 @@ spec:
               # 定义颜色和图标
               RED='\033[0;31m'
               GREEN='\033[0;32m'
-              YELLOW='\033[1;33m'
               BLUE='\033[0;34m'
+              YELLOW='\033[1;33m'
               NC='\033[0m' # No Color
               CHECK_MARK="✅"
               WARNING="⚠️"
@@ -265,11 +265,41 @@ spec:
               RED='\033[0;31m'
               GREEN='\033[0;32m'
               BLUE='\033[0;34m'
+              YELLOW='\033[1;33m'
               NC='\033[0m' # No Color
               CHECK_MARK="✅"
               INFO="ℹ️"
+              ERROR="❌"
+              WARNING="⚠️"
 
               echo -e "$BLUE$INFO 开始初始化EFAK配置文件...$NC"
+              
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ==========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v "^127.0.0.1" /tmp/host_etc_hosts | grep -v "^::1" | grep -v "^#" >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$BLUE$INFO 测试主机名解析:$NC"
+              echo -e "$BLUE$INFO hostname: $(hostname)$NC"
+              echo -e "$BLUE$INFO hostname -f: $(hostname -f 2>/dev/null || echo '无法获取FQDN')$NC"
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ==========$NC"
               
               # 创建目标配置目录
               mkdir -p $TARGET_CONF_DIR
@@ -413,6 +443,8 @@ spec:
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
       terminationGracePeriodSeconds: 30
       volumes:
         <#list volumeConfigMapSet as item>
@@ -426,3 +458,6 @@ spec:
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
+        - name: "hosts-file"
+          hostPath:
+            path: "/etc/hosts"

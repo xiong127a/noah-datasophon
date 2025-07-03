@@ -125,6 +125,7 @@
           "sasl.mechanism.inter.broker.protocol",
           "sasl.enabled.mechanisms",
           "sasl.kerberos.service.name",
+          "listener.security.protocol.map",
           "custom.server.properties"
         ]
       },
@@ -302,7 +303,8 @@
         "outputDirectory": "",
         "includeParams": [
           "node_port_mappings",
-          "cluster_port_mappings"
+          "cluster_port_mappings",
+          "load_balancer_port_mappings"
         ]
       },
       {
@@ -642,7 +644,6 @@
       "name": "advertised.listeners",
       "label": "Kafka对外广播地址",
       "description": "Kafka Broker对外广播的监听地址，客户端通过此地址连接Kafka",
-      "configWithKerberos": true,
       "required": true,
       "type": "input",
       "value": "PLAINTEXT://${hostname}:9092",
@@ -653,18 +654,30 @@
       "configGroup": "KafkaBroker",
       "configLevel": "advanced",
       "bindRole": "KafkaBroker",
-      "serviceType": "NodePort",
-      "portNumber": "9092",
-      "nodePort": "30392"
+      "serviceType": "LoadBalancer",
+      "portNumber": "9093"
+    },
+    {
+      "name": "listener.security.protocol.map",
+      "label": "Kafka监听协议",
+      "description": "Kafka Broker监听协议配置，PLAINTEXT表示明文，SASL_PLAINTEXT表示SASL明文，SASL_SSL表示SASL加密，SSL表示加密",
+      "required": true,
+      "type": "input",
+      "value": "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "listeners",
       "label": "Kafka监听地址",
       "description": "Kafka Broker的监听地址配置，定义服务绑定的网络接口和端口",
-      "configWithKerberos": true,
       "required": true,
       "type": "input",
-      "value": "PLAINTEXT://0.0.0.0:9092",
+      "value": "PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "PLAINTEXT://0.0.0.0:9092",
@@ -790,7 +803,6 @@
       "label": "kafkaHome",
       "description": "",
       "configType": "map",
-      "configWithKerberos": true,
       "required": false,
       "type": "input",
       "value": "${KAFKA_HOME}",
@@ -1421,10 +1433,10 @@
         "description": "指定 MySQL 数据库的 JDBC 连接 URL。",
         "required": true,
         "type": "input",
-        "value": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "value": "jdbc:mysql://datasophon-mysql:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "defaultValue": "jdbc:mysql://datasophon-mysql:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
         "configCategory": "file",
         "configGroup": "system-config",
         "configLevel": "advanced"
@@ -1539,6 +1551,22 @@
       "name": "node_port_mappings",
       "label": "NodePort端口映射",
       "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "k8s",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "load_balancer_port_mappings",
+      "label": "负载均衡器端口映射",
+      "description": "配置Kubernetes Service的LoadBalancer类型端口映射，为每个Pod提供独立的外部IP和负载均衡器。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同。系统将为每个Pod创建独立的LoadBalancer服务，实现高可用的外部访问。适用于需要固定外部IP的场景，如Kafka的外部监听器。",
       "configType": "k8s",
       "required": false,
       "type": "multipleWithKey",

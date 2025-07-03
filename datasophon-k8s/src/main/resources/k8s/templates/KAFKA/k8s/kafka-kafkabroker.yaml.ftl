@@ -210,6 +210,13 @@ spec:
               name: clusterport-${item?index + 1}
           </#list>
           </#if>
+          <#if load_balancer_port_mappings??>
+          <#assign mappings = load_balancer_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: loadbalancer-${item?index + 1}
+          </#list>
+          </#if>
             - containerPort: ${JMX_PORT}
               name: jmx
           command:
@@ -228,11 +235,21 @@ spec:
               HOSTNAME=$(hostname -f)
               echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
               
+              # 获取外部IP地址
+              echo -e "$BLUE$INFO 获取外部IP地址...$NC"
+              if [ -f "/etc/kafka-external-ip/$POD_NAME" ]; then
+                EXTERNAL_IP=$(cat /etc/kafka-external-ip/$POD_NAME)
+                echo -e "$GREEN$CHECK_MARK 获取到外部IP: $EXTERNAL_IP$NC"
+              else
+                echo -e "$RED$ERROR 未找到外部IP配置$NC"
+              fi
+              
               # 处理包含占位符的配置文件
               <#if example_config_files?? && (example_config_files?size > 0)>
               echo -e "$BLUE$INFO 开始处理配置文件模板...$NC"
               echo -e "$BLUE$INFO 当前Pod的FQDN: $HOSTNAME$NC"
               echo -e "$BLUE$INFO 当前Pod的IP: $NODE_IP_ADDRESS$NC"
+              echo -e "$BLUE$INFO 当前external的IP: $EXTERNAL_IP$NC"
               
               <#list example_config_files as exampleFilePath>
               # 确定源文件和目标文件路径
@@ -256,6 +273,8 @@ spec:
                 sed -i "s/{{HOST}}/$HOSTNAME/g" "$TARGET_PATH"
                 # 替换所有{{IP}}为Pod的IP
                 sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$TARGET_PATH"
+                # 替换所有{{EXTERNAL_IP}}为Pod的EXTERNAL_IP
+                sed -i "s/{{EXTERNAL_IP}}/$EXTERNAL_IP/g" "$TARGET_PATH"
                 # 替换所有${r"${hostname}"}为Pod的FQDN
                 sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$TARGET_PATH"
                 
@@ -282,6 +301,7 @@ spec:
               # 设置JMX RMI的主机名，以便远程访问
               # 注意：JMX_PORT 和其他JMX参数已通过环境变量注入
               export KAFKA_OPTS="$KAFKA_OPTS -Djava.rmi.server.hostname=$HOSTNAME"
+              
               
               # 启动Kafka服务
               echo -e "$BLUE$INFO 启动Kafka服务...$NC"
@@ -337,6 +357,8 @@ spec:
               mountPath: "${item.value}"
               subPath: "${item.fileName}"
             </#list>
+            - name: kafka-external-ip
+              mountPath: "/etc/kafka-external-ip"
             - name: kafka-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
@@ -349,6 +371,9 @@ spec:
           configMap:
             name: "${item.name}"
         </#list>
+        - name: kafka-external-ip
+          configMap:
+            name: "${serviceRoleFullName}-external"
         - name: kafka-data
           persistentVolumeClaim:
             claimName: "${serviceRoleFullName}-pvc"

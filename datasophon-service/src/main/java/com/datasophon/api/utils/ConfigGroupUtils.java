@@ -293,6 +293,7 @@ public class ConfigGroupUtils {
                 // 构建要查找的配置名称
                 String nodePortMappingName = roleName + "_node_port_mappings";
                 String clusterPortMappingName = roleName + "_cluster_port_mappings";
+                String loadBalancerMappingName = roleName + "_load_balancer_port_mappings";
 
                 // 直接查找和更新匹配的配置
                 for (ServiceConfig config : processedConfigs) {
@@ -307,6 +308,13 @@ public class ConfigGroupUtils {
                         updatePortMapping(config, portNumber, nodePort);
                         logger.debug("Updated {} for role {}: port {} -> nodePort {}",
                                 nodePortMappingName, roleName, portNumber, nodePort);
+                    }
+
+                    // 处理LoadBalancer类型的端口映射
+                    if (configName.equals(loadBalancerMappingName) && "LoadBalancer".equalsIgnoreCase(serviceType)) {
+                        updatePortMapping(config, portNumber, portNumber);
+                        logger.debug("Updated {} for role {}: port {} for LoadBalancer",
+                                loadBalancerMappingName, roleName, portNumber);
                     }
 
                     // 处理ClusterIP类型的端口映射

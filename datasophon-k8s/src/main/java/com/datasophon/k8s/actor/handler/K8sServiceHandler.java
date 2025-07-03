@@ -1,6 +1,7 @@
 package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
@@ -55,6 +56,8 @@ import static com.datasophon.common.Constants.K8S_NODEPORT_MAPPING;
 import static com.datasophon.common.Constants.K8S_NODE_PORT;
 import static com.datasophon.common.Constants.K8S_SVC_CONF;
 import static com.datasophon.common.Constants.STATEFULSET;
+import static com.datasophon.common.Constants.K8S_LOADBALANCER_MAPPING;
+import static com.datasophon.common.Constants.K8S_LOAD_BALANCER;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
@@ -228,6 +231,14 @@ public class K8sServiceHandler {
                 false // 不是NodePort类型
         );
 
+        // 4. 处理LoadBalancer端口映射
+        processPortMappings(
+                svcConfigs,
+                serviceRoleName.toLowerCase() + "_" + K8S_LOADBALANCER_MAPPING,
+                servicePorts,
+                false // 不是NodePort类型
+        );
+
         return servicePorts;
     }
 
@@ -305,13 +316,26 @@ public class K8sServiceHandler {
 
         // 3. 创建ServicePort对象
         int index = 0;
-        String portType = isNodePort ? "nodeport" : "clusterport";
+        String portType;
+
+        // 根据配置名称确定端口类型
+        if (isNodePort) {
+            portType = "nodeport";
+        } else if (configName.contains(K8S_LOADBALANCER_MAPPING)) {
+            portType = "loadbalancer";
+        } else {
+            portType = "clusterport";
+        }
 
         for (Map<String, String> mapping : portMappings) {
             for (Map.Entry<String, String> entry : mapping.entrySet()) {
                 // 尝试解析端口值
                 int port;
                 try {
+                    if (ObjUtil.isEmpty(entry.getValue())) {
+                        logger.warn("端口映射[{}]的值为空，跳过处理", entry.getKey());
+                        continue;
+                    }
                     port = Integer.parseInt(entry.getKey());
                 } catch (NumberFormatException e) {
                     logger.error("无法解析端口映射 [{}:{}]: {}", entry.getKey(), entry.getValue(), e.getMessage());
@@ -325,7 +349,7 @@ public class K8sServiceHandler {
                 }
 
                 // 对于ClusterIP类型，检查重复端口
-                if (!isNodePort) {
+                if (!isNodePort && !configName.contains(K8S_LOADBALANCER_MAPPING)) {
                     if (processedClusterPorts.contains(port)) {
                         logger.info("跳过重复的ClusterIP端口配置: {}", port);
                         continue;
@@ -348,7 +372,7 @@ public class K8sServiceHandler {
                         servicePorts.add(servicePort);
                     }
                 } else {
-                    // 创建ClusterIP的ServicePort
+                    // 创建ClusterIP或LoadBalancer的ServicePort
                     ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, isNodePort,
                             VALID_NODEPORT_RANGE);
                     servicePorts.add(servicePort);
@@ -446,15 +470,25 @@ public class K8sServiceHandler {
             return;
         }
 
-        // 分离基础服务端口和NodePort服务端口
+        // 分离基础服务端口、NodePort服务端口和LoadBalancer服务端口
         List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
         List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
+        List<ServicePort> loadBalancerPorts = new ArrayList<>(); // LoadBalancer服务端口
 
         // 跟踪已添加的ClusterIP端口，防止重复
         List<Integer> addedClusterPorts = new ArrayList<>();
 
         // 处理所有端口
         for (ServicePort originalPort : servicePorts) {
+            // 检查端口名称以确定类型
+            String portName = originalPort.getName();
+
+            // 处理LoadBalancer端口
+            if (portName != null && portName.startsWith("loadbalancer-")) {
+                loadBalancerPorts.add(originalPort);
+                continue;
+            }
+
             // 处理基础端口
             if (!addedClusterPorts.contains(originalPort.getPort())) {
                 // 创建基础服务端口副本
@@ -486,6 +520,11 @@ public class K8sServiceHandler {
         // 创建独立NodePort服务
         if (!nodePorts.isEmpty()) {
             createNodePortServices(nodePorts, client);
+        }
+
+        // 创建LoadBalancer服务
+        if (!loadBalancerPorts.isEmpty()) {
+            createLoadBalancerServices(loadBalancerPorts, client);
         }
     }
 
@@ -625,26 +664,199 @@ public class K8sServiceHandler {
     }
 
     /**
-     * 统一执行服务创建
-     *
-     * @param client  Kubernetes客户端
-     * @param service 要创建的服务
+     * 创建LoadBalancer服务，为StatefulSet中的每个Pod创建独立的LoadBalancer服务
+     * 并将分配的外部IP存入ConfigMap
      */
-    private void executeServiceCreation(KubernetesClient client, Service service) {
+    private void createLoadBalancerServices(List<ServicePort> ports, KubernetesClient client) {
+        if (ports == null || ports.isEmpty()) {
+            logger.info("没有需要创建的LoadBalancer端口");
+            return;
+        }
+
+        // 获取StatefulSet的副本数
+        Integer replicaCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
+        if (replicaCount == null || replicaCount <= 0) {
+            logger.warn("无法获取{}的副本数，无法创建LoadBalancer服务", serviceRoleFullName);
+            return;
+        }
+
+        logger.info("为{}的{}个Pod创建LoadBalancer服务", serviceRoleFullName, replicaCount);
+
+        // 创建ConfigMap用于存储外部IP映射
+        String configMapName = serviceRoleFullName + "-external";
+        Map<String, String> externalIpMap = new HashMap<>();
+
+        // 为每个Pod创建独立的LoadBalancer服务
+        for (int podIndex = 0; podIndex < replicaCount; podIndex++) {
+            // 构建完整的pod名称
+            String podName = serviceRoleFullName + "-" + podIndex;
+
+            for (ServicePort port : ports) {
+                // 创建服务规范
+                ServiceSpecBuilder specBuilder = new ServiceSpecBuilder()
+                        .withType(K8S_LOAD_BALANCER)
+                        .withPorts(port)
+                        .withPublishNotReadyAddresses();
+
+                // 使用statefulset.kubernetes.io/pod-name标签选择特定pod
+                specBuilder.withSelector(Collections.singletonMap("statefulset.kubernetes.io/pod-name", podName));
+
+                // 动态生成服务名称
+                String serviceName = serviceRoleFullName + "-lb-" + podIndex + "-" + port.getPort();
+
+                // 创建服务对象
+                Service service = new ServiceBuilder()
+                        .withNewMetadata()
+                        .withName(serviceName)
+                        .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
+                        .withNamespace(Constant.K8S_NAMESPACE)
+                        .endMetadata()
+                        .withSpec(specBuilder.build())
+                        .build();
+
+                // 保存YAML文件到本地
+                saveServiceYaml(service, "loadbalancer");
+
+                // 在集群上创建服务
+                service = executeServiceCreationWithReturnValue(client, service);
+
+                // 等待LoadBalancer分配外部IP
+                String externalIP = waitForLoadBalancerIP(client, serviceName);
+                if (externalIP != null) {
+                    logger.info("为Pod {} 创建LoadBalancer服务 {} 映射端口 {}，分配的外部IP: {}",
+                            podName, serviceName, port.getPort(), externalIP);
+
+                    // 将Pod名称和外部IP的映射存入Map
+                    externalIpMap.put(podName, externalIP);
+                } else {
+                    logger.error("无法获取LoadBalancer服务 {} 的外部IP", serviceName);
+                }
+            }
+        }
+
+        // 创建或更新ConfigMap，存储Pod名称到外部IP的映射
+        if (!externalIpMap.isEmpty()) {
+            createOrUpdateExternalIpConfigMap(client, configMapName, externalIpMap);
+        } else {
+            logger.warn("没有获取到任何外部IP，不创建ConfigMap");
+        }
+    }
+
+    /**
+     * 执行服务创建并返回创建的服务对象
+     */
+    private Service executeServiceCreationWithReturnValue(KubernetesClient client, Service service) {
         try {
             // 创建Service
-            client.services().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(service);
+            Service createdService = client.services().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(service);
             logger.info("成功创建服务: {}", service.getMetadata().getName());
 
             // 添加彩色日志输出
             ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.K8S_NAMESPACE);
 
-            // 保存Service的YAML文件
-            String serviceType = service.getSpec().getType();
-            saveServiceYaml(service, serviceType);
+            return createdService;
         } catch (Exception e) {
             logger.error("创建服务失败: {}", e.getMessage(), e);
             ColorLogUtils.printError("创建服务 " + service.getMetadata().getName() + " 失败: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 等待LoadBalancer服务分配外部IP
+     */
+    private String waitForLoadBalancerIP(KubernetesClient client, String serviceName) {
+        logger.info("等待LoadBalancer服务 {} 分配外部IP...", serviceName);
+
+        final int MAX_RETRIES = 60; // 最大重试次数
+        final int RETRY_INTERVAL_SECONDS = 5; // 重试间隔（秒）
+
+        for (int i = 0; i < MAX_RETRIES; i++) {
+            Service service = client.services().inNamespace(Constant.K8S_NAMESPACE).withName(serviceName).get();
+
+            if (service != null && service.getStatus() != null && service.getStatus().getLoadBalancer() != null) {
+                List<LoadBalancerIngress> ingresses = service.getStatus().getLoadBalancer().getIngress();
+
+                if (ingresses != null && !ingresses.isEmpty()) {
+                    LoadBalancerIngress ingress = ingresses.get(0);
+
+                    // 优先使用IP地址，如果没有则使用主机名
+                    if (StrUtil.isNotBlank(ingress.getIp())) {
+                        return ingress.getIp();
+                    } else if (StrUtil.isNotBlank(ingress.getHostname())) {
+                        return ingress.getHostname();
+                    }
+                }
+            }
+
+            logger.info("LoadBalancer服务 {} 外部IP尚未分配，等待 {} 秒后重试 ({}/{})",
+                    serviceName, RETRY_INTERVAL_SECONDS, i + 1, MAX_RETRIES);
+
+            try {
+                Thread.sleep(RETRY_INTERVAL_SECONDS * 1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("等待过程被中断", e);
+                return null;
+            }
+        }
+
+        logger.error("等待LoadBalancer服务 {} 分配外部IP超时", serviceName);
+        return null;
+    }
+
+    /**
+     * 创建或更新ConfigMap，存储Pod名称到外部IP的映射
+     */
+    private void createOrUpdateExternalIpConfigMap(KubernetesClient client, String configMapName,
+            Map<String, String> externalIpMap) {
+        try {
+            // 检查ConfigMap是否已存在
+            ConfigMap existingConfigMap = client.configMaps()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .withName(configMapName)
+                    .get();
+
+            if (existingConfigMap != null) {
+                logger.info("更新现有ConfigMap: {}", configMapName);
+
+                // 更新现有ConfigMap
+                existingConfigMap.setData(externalIpMap);
+                client.configMaps()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .withName(configMapName)
+                        .replace(existingConfigMap);
+
+                // 保存ConfigMap的YAML文件
+                saveConfigMapYaml(existingConfigMap);
+
+                logger.info("成功更新ConfigMap: {}", configMapName);
+                ColorLogUtils.printResourceUpdated("ConfigMap", configMapName, Constant.K8S_NAMESPACE);
+            } else {
+                logger.info("创建新的ConfigMap: {}", configMapName);
+
+                // 创建新的ConfigMap
+                ConfigMap configMap = new ConfigMapBuilder()
+                        .withNewMetadata()
+                        .withName(configMapName)
+                        .withNamespace(Constant.K8S_NAMESPACE)
+                        .endMetadata()
+                        .withData(externalIpMap)
+                        .build();
+
+                client.configMaps()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .createOrReplace(configMap);
+
+                // 保存ConfigMap的YAML文件
+                saveConfigMapYaml(configMap);
+
+                logger.info("成功创建ConfigMap: {}", configMapName);
+                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.K8S_NAMESPACE);
+            }
+        } catch (Exception e) {
+            logger.error("创建或更新ConfigMap失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("创建或更新ConfigMap " + configMapName + " 失败: " + e.getMessage());
         }
     }
 
@@ -688,7 +900,6 @@ public class K8sServiceHandler {
         } else {
             addProcessStatus();
             if (isFinalNode()) {
-
 
                 // 确保ConfigMap在其他资源之前创建
                 logger.info("开始创建ConfigMap...");
@@ -1042,6 +1253,30 @@ public class K8sServiceHandler {
         } catch (Exception e) {
             logger.error("创建PVC失败: {}", e.getMessage(), e);
             ColorLogUtils.printError("创建PVC失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 统一执行服务创建
+     *
+     * @param client  Kubernetes客户端
+     * @param service 要创建的服务
+     */
+    private void executeServiceCreation(KubernetesClient client, Service service) {
+        try {
+            // 创建Service
+            client.services().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(service);
+            logger.info("成功创建服务: {}", service.getMetadata().getName());
+
+            // 添加彩色日志输出
+            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.K8S_NAMESPACE);
+
+            // 保存Service的YAML文件
+            String serviceType = service.getSpec().getType();
+            saveServiceYaml(service, serviceType);
+        } catch (Exception e) {
+            logger.error("创建服务失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("创建服务 " + service.getMetadata().getName() + " 失败: " + e.getMessage());
         }
     }
 

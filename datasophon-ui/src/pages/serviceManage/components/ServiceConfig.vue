@@ -579,6 +579,7 @@ export default {
         'services': '服务暴露',
         'node_port_mappings': '节点端口映射',
         'cluster_port_mappings': '集群端口映射',
+        'load_balancer_port_mappings': '负载均衡器端口映射',
         'requests_memory': '内存请求',
         'requests_cpu': 'CPU请求',
         'limits_memory': '内存限制',

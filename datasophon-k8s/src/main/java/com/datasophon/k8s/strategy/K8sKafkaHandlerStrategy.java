@@ -131,7 +131,15 @@ public class K8sKafkaHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                     // 使用NodePort方式暴露给外部客户端访问
                     // 格式为 K8S宿主机IP:NodePort，这里使用占位符，将在Pod启动时替换为实际IP
                     // 保留9092端口，在Pod启动时会根据实际NodePort进行替换
-                    String newValue = protocol + "://${hostname}:9092";
+                    String newValue = protocol + "://${hostname}:9092,EXTERNAL://{{EXTERNAL_IP}}:9093";
+                    config.setValue(newValue);
+                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+                    break;
+                }
+                case "listeners": {
+                    String protocol = value != null && value.toString().startsWith("SASL_") ? "SASL_PLAINTEXT"
+                            : "PLAINTEXT";
+                    String newValue = protocol + "://${hostname}:9092,EXTERNAL://0.0.0.0:9093";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
