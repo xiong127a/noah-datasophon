@@ -76,9 +76,13 @@ public class K8sScaleServiceHandler {
             logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不加载yaml文件");
             return execResult;
         }
+        String kind ="Deployment";
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            Map<String, Object> yamlData = loadYamlData(yamlFile);
-            String kind = (String) yamlData.get("kind");
+            if (!yamlFile.toLowerCase().contains("operator")) {
+                Map<String, Object> yamlData = loadYamlData(yamlFile);
+                kind = (String) yamlData.get("kind");
+            }
+
             logger.info("Detected resource kind: {}", kind);
             
             // 根据资源类型调用不同的扩缩容逻辑

@@ -171,6 +171,8 @@ spec:
               port: health-port
             failureThreshold: 30
             periodSeconds: 10
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       volumes:
         - name: config-volume
           configMap:

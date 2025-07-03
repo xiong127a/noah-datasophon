@@ -56,6 +56,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("GRAFANA", new K8sGrafanaHandlerStrategy("GRAFANA", "Grafana"));
         map.put("REDIS", new K8sRedisHandlerStrategy("REDIS", "RedisMaster"));
         map.put("STARROCKS", new K8sSRFEHandlerStrategy("STARROCKS", "SRFE"));
+        map.put("FlinkOperator", new K8sFlinkOperatorHandlerStrategy("FlinkOperator", "FlinkOperator"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {
