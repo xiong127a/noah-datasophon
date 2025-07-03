@@ -1,0 +1,42 @@
+# Build stage (if you want to build from source)
+# FROM maven:3.8-openjdk-8 AS builder
+# WORKDIR /app
+# COPY . .
+# RUN mvn clean package -DskipTests
+
+# Final image
+FROM harbor.norintech.com/bdp/jdk8:centos7-tools
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 创建工作目录
+RUN mkdir -p /datasophon-manager
+
+# 方法1：使用已构建好的tar.gz包
+COPY datasophon-api/target/datasophon-manager-*.tar.gz /tmp/
+RUN tar -xzf /tmp/datasophon-manager-*.tar.gz -C /datasophon-manager --strip-components=1 && \
+    rm /tmp/datasophon-manager-*.tar.gz
+
+# 方法2：直接复制目录（如果上面的方法不起作用）
+# COPY datasophon-api/target/datasophon-manager-*/bin/ /datasophon-manager/bin/
+# COPY datasophon-api/target/datasophon-manager-*/conf/ /datasophon-manager/conf/
+# COPY datasophon-api/target/datasophon-manager-*/lib/ /datasophon-manager/lib/
+# COPY jmx/ /datasophon-manager/jmx/
+
+# 暴露端口
+EXPOSE 8081
+EXPOSE 2551
+
+# 设置工作目录
+WORKDIR /datasophon-manager
+
+# 定义健康检查
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8081/api/health || exit 1
+
+# 修改脚本权限
+RUN chmod +x bin/datasophon-api.sh
+
+# 启动命令
+CMD ["sh", "-c", "bin/datasophon-api.sh start api && tail -F -f logs/datasophon-api.log"] 
