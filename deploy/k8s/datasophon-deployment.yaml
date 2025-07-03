@@ -1,0 +1,196 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datasophon-config
+  namespace: datasophon
+data:
+  application.properties: |-
+    # 应用配置
+    spring.datasource.url=jdbc:mysql://192.168.3306.17:3306/datasophon?useUnicode=true&characterEncoding=utf-8
+    spring.datasource.username=root
+    spring.datasource.password=123456
+    # 其他配置项...
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datasophon-api-service
+  labels:
+    app: datasophon-manager
+  namespace: datasophon
+spec:
+  selector:
+    app: datasophon-manager
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+    - port: 8586
+      targetPort: 8586
+      name: metrics
+    - port: 2551
+      targetPort: 2551
+      name: akka
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datasophon-ui-service
+  labels:
+    app: datasophon-ui
+  namespace: datasophon
+spec:
+  selector:
+    app: datasophon-ui
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datasophon-manager
+  labels:
+    app: datasophon-manager
+  namespace: datasophon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datasophon-manager
+  template:
+    metadata:
+      labels:
+        app: datasophon-manager
+    spec:
+      containers:
+        - name: datasophon-manager
+          image: harbor.norintech.com/bdp/datasophon-manager:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+              name: http
+            - containerPort: 8586
+              name: metrics
+            - containerPort: 2551
+              name: akka
+            - containerPort: 8000
+              name: debug
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2000m"
+            limits:
+              memory: "8Gi"
+              cpu: "4000m"
+          readinessProbe:
+            httpGet:
+              path: /ddh/actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /ddh/actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: config-volume
+              mountPath: /datasophon-manager/conf/application.properties
+              subPath: application.properties
+            - name: hosts-file
+              mountPath: /tmp/hosts
+          command: ['sh', '-c', 'cat /tmp/hosts >> /etc/hosts && bin/datasophon-api.sh start api && tail -F -f logs/datasophon-api.log']
+      volumes:
+        - name: config-volume
+          configMap:
+            name: datasophon-config
+        - name: hosts-file
+          hostPath:
+            path: /etc/hosts
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datasophon-ui
+  labels:
+    app: datasophon-ui
+  namespace: datasophon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datasophon-ui
+  template:
+    metadata:
+      labels:
+        app: datasophon-ui
+    spec:
+      containers:
+        - name: datasophon-ui
+          image: harbor.norintech.com/bdp/datasophon-ui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      initContainers:
+        - name: wait-for-backend
+          image: harbor.norintech.com/bdp/busybox:1.28
+          command: ['sh', '-c', 'until wget -T 5 -q --spider http://datasophon-api-service:8081/ddh/actuator/health/liveness; do echo waiting for backend; sleep 5; done;']
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: datasophon-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, PATCH"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  namespace: datasophon
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: datasophon.noah.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: datasophon-ui-service
+                port:
+                  number: 80 

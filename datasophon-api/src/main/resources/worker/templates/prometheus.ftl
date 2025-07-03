@@ -129,6 +129,10 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/hiveserver2.json
+  - job_name: 'noahjob'
+    file_sd_configs:
+     - files:
+       - configs/noahjobserver.json
   - job_name: 'spark'
     file_sd_configs:
      - files:

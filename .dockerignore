@@ -1,0 +1,27 @@
+# 排除构建文件
+**/target/
+**/node_modules/
+**/dist/
+
+# 排除日志
+**/logs/
+**/*.log
+
+# 排除git相关
+.git/
+.gitignore
+
+# 排除IDE相关
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# 排除临时文件
+**/temp/
+**/tmp/
+
+# 只包含必要的文件
+!datasophon-ui/dist/
+!datasophon-api/target/datasophon-manager-*.tar.gz 

@@ -12,3 +12,5 @@ INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (30, 'PUSHGATEWAY', 'http:/
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (31, 'REDIS','http://${grafanaHost}:3000/d/bRd48yKMdd/redis-exporter-quickstart-and-dashboard?orgId=1&kiosk');
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (32, 'DATASOPHON','http://${grafanaHost}:3000/d/sbapmwalker/springboot-apm-dashboard-zhong-wen-ban-ben?orgId=1&kiosk');
 INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (33, 'KUBERNETES','http://${grafanaHost}:30003/d/StarsL_cn_K8S/k8s-dashboard-cn-20240513-starsl-cn?orgId=1&kiosk&var-NameSpace=datasophon');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (24, 'NOAHJOB', 'http://${grafanaHost}:30003/d/noahjob/noah-job-wan-zheng-jian-kong-yi-biao-pan?orgId=1&kiosk');
+
