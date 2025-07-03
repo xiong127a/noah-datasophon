@@ -61,7 +61,8 @@ spec:
               readOnly: true
             - name: config-volume
               mountPath: /opt/flink/conf
-              
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
       volumes:
         - name: keystore
           secret:
