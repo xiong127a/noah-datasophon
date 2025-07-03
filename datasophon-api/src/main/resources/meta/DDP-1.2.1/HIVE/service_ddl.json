@@ -277,10 +277,10 @@
       "description": "数据库链接地址",
       "required": true,
       "type": "input",
-      "value": "jdbc:mysql://${apiHost}:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
+      "value": "jdbc:mysql://datasophon-mysql:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "jdbc:mysql://${apiHost}:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
+      "defaultValue": "jdbc:mysql://datasophon-mysql:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
       "configCategory": "role",
       "configGroup": "HiveMetaStore",
       "configLevel": "advanced"
