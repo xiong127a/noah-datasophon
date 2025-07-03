@@ -8968,8 +8968,19 @@ spec:
       labels:
         app.kubernetes.io/name: spark-operator
         app.kubernetes.io/instance: my-release
+        app: "${serviceRoleFullName}"
     spec:
       serviceAccountName: spark-operator
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  name: "${serviceRoleFullName}"
+                  podConflictName: "${serviceRoleFullName}"
+              namespaces:
+                - "${namespace}"
+              topologyKey: kubernetes.io/hostname
       securityContext:
         {}
       containers:
@@ -9000,6 +9011,8 @@ spec:
         - -metrics-endpoint=/metrics
         - -metrics-prefix=
         - -enable-resource-quota-enforcement=false
+      nodeSelector:
+        ${serviceRoleFullName}: "true"
 ---
 # Source: spark-operator/templates/deployment.yaml
 # If the admission webhook is enabled, then a post-install step is required
