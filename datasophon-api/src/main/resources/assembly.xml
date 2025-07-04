@@ -191,5 +191,16 @@
             <outputDirectory>conf</outputDirectory>
             <fileMode>0755</fileMode>
         </fileSet>
+        
+        <!-- 添加datasophon-api/src/main/resources/docs目录 -->
+        <fileSet>
+            <directory>${basedir}/src/main/resources/docs</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+            <outputDirectory>conf/docs</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
     </fileSets>
 </assembly>
