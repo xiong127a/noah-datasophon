@@ -86,16 +86,17 @@ public class K8sScaleServiceHandler {
             // 先判断需要执行的操作类型
             switch (commandType) {
                 case INSTALL_SERVICE:
-                case START_SERVICE:
                     // 安装服务时增加副本
                     System.out.println(ANSI_CYAN + "ℹ️ 执行服务安装操作，增加副本数" + ANSI_RESET);
                     handleResourceScaling(client, yamlFile, true);
                     break;
-                case STOP_SERVICE:
-                    // 停止服务时减少副本
-                    System.out.println(ANSI_CYAN + "ℹ️ 执行服务停止操作，减少副本数" + ANSI_RESET);
+                case UNINSTALL_SERVICE:
+                    // 卸载服务时减少副本
+                    System.out.println(ANSI_CYAN + "ℹ️ 执行服务卸载操作，减少副本数" + ANSI_RESET);
                     handleResourceScaling(client, yamlFile, false);
                     break;
+                case STOP_SERVICE:
+                case START_SERVICE:
                 case RESTART_SERVICE:
                     // 停止、启动、重启服务时不操作副本数
                     System.out.println(ANSI_CYAN + "ℹ️ 执行" + commandType.name() + "操作，不改变副本数" + ANSI_RESET);
