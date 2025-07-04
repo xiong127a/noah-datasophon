@@ -8,6 +8,7 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.system.SystemUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.CommandType;
@@ -439,8 +440,15 @@ public class K8sYamlDeploymentHandler {
         }
         if ("GRAFANA".equals(serviceName)) {
             String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
-            String hostname = NetUtil.getLocalHostName();
-            data.put("apiUrl", String.format(url, hostname, 8081));
+
+
+            boolean isRunningInK8s = SystemUtil.getBoolean("RUNNING_IN_K8S",false);
+
+            // 使用三元运算符简化主机名选择
+            String hostOrService = isRunningInK8s ? "datasophon-api-service" : NetUtil.getLocalHostName();
+            logger.info("Grafana通信配置: 运行环境[{}], 使用地址[{}]", isRunningInK8s ? "K8S" : "非K8S", hostOrService);
+
+            data.put("apiUrl", String.format(url, hostOrService, 8081));
         }
         if ("HIVE".equals(serviceName)) {
             populateDataWithConfig("hive.metastore.uris", "metastore_uris");
@@ -457,13 +465,20 @@ public class K8sYamlDeploymentHandler {
             }
         }
         if ("PROMETHEUS".equals(serviceName)) {
-            String hostname = NetUtil.getLocalHostName();
-            data.put("apiUrl", String.format("%s:8081", hostname));
+            // 使用Hutool工具类检查环境变量并直接转为布尔值
+            boolean isRunningInK8s = SystemUtil.getBoolean("RUNNING_IN_K8S",false);
+
+            // 使用三元运算符简化主机名选择
+            String hostOrService = isRunningInK8s ? "datasophon-api-service" : NetUtil.getLocalHostName();
+            logger.info("Prometheus通信配置: 运行环境[{}], 使用地址[{}]", isRunningInK8s ? "K8S" : "非K8S", hostOrService);
+
+            data.put("apiUrl", String.format("%s:8081", hostOrService));
         }
         if ("STARROCKS".equals(serviceName)) {
             // 查找FE节点的服务角色全名
             // 设置FE master节点地址
-            String feMasterHost = String.format("starrocks-srfe-0.starrocks-srfe.%s.svc.cluster.local", Constant.K8S_NAMESPACE);
+            String feMasterHost = String.format("starrocks-srfe-0.starrocks-srfe.%s.svc.cluster.local",
+                    Constant.K8S_NAMESPACE);
             data.put("fe_master_host", feMasterHost);
             populateDataWithConfig("edit_log_port", "fe_master_port");
 

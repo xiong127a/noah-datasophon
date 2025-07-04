@@ -73,6 +73,9 @@ spec:
         - name: datasophon-manager
           image: harbor.norintech.com/bdp/datasophon-manager:latest
           imagePullPolicy: Always
+          env:
+            - name: RUNNING_IN_K8S
+              value: "true"
           ports:
             - containerPort: 8081
               name: http
@@ -142,6 +145,9 @@ spec:
         - name: datasophon-ui
           image: harbor.norintech.com/bdp/datasophon-ui:latest
           imagePullPolicy: Always
+          env:
+            - name: RUNNING_IN_K8S
+              value: "true"
           ports:
             - containerPort: 80
               name: http
