@@ -1,6 +1,6 @@
 package com.datasophon.common.command;
 
-import com.datasophon.common.enums.K8sHostTagOperation;
+import com.datasophon.common.enums.CommandType;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -19,5 +19,5 @@ public class K8sGenerateHostTagCommand implements Serializable {
     private String hostName;
     private Integer clusterId;
 
-    private K8sHostTagOperation  tagOperation;
+    private CommandType commandType;
 }

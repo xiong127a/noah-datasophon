@@ -1,6 +1,6 @@
 package com.datasophon.common;
 
-import com.datasophon.common.enums.K8sScaleType;
+import com.datasophon.common.enums.CommandType;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -16,5 +16,6 @@ public class K8sServiceScaleCommand implements Serializable {
 
     private String serviceRoleName;
 
-    private K8sScaleType scaleType;
+    private CommandType commandType;
+
 }

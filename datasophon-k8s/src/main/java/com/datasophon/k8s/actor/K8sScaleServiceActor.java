@@ -20,7 +20,7 @@ public class K8sScaleServiceActor extends UntypedActor {
             K8sScaleServiceHandler serviceHandler = new K8sScaleServiceHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.scaleService(
                     command.getKubeConfig(),
-                    command.getScaleType()
+                    command.getCommandType()
             );
             getSender().tell(startResult, getSelf());
 

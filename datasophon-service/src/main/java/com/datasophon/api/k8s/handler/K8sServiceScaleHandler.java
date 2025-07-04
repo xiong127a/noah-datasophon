@@ -8,7 +8,6 @@ import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.K8sServiceScaleCommand;
-import com.datasophon.common.enums.K8sScaleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.K8sScaleServiceActor;
@@ -21,23 +20,21 @@ import scala.concurrent.duration.Duration;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class K8sServiceScaleDownHandler extends ServiceHandler {
+public class K8sServiceScaleHandler extends ServiceHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(K8sServiceScaleDownHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(K8sServiceScaleHandler.class);
 
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
-        logger.info("start to scale down service role {}", serviceRoleInfo.getName());
         K8sServiceScaleCommand k8sServiceScaleCommand = new K8sServiceScaleCommand();
         k8sServiceScaleCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceScaleCommand.setServiceRoleName(serviceRoleInfo.getName());
-        k8sServiceScaleCommand.setScaleType(K8sScaleType.SCALE_DOWN);
 
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         k8sServiceScaleCommand.setKubeConfig(kubeConfig);
-
+        k8sServiceScaleCommand.setCommandType(serviceRoleInfo.getCommandType());
         ActorRef startActor =
                 ActorUtils.getLocalActor(K8sScaleServiceActor.class, ActorUtils.getActorRefName(K8sScaleServiceActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
@@ -45,7 +42,7 @@ public class K8sServiceScaleDownHandler extends ServiceHandler {
         try {
             ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
             if (Objects.nonNull(startResult) && startResult.getExecResult()) {
-                // 角色停止成功
+                // 角色启动成功
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
                 }

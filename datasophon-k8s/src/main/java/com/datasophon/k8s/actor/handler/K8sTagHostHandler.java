@@ -1,11 +1,12 @@
 package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.enums.K8sHostTagOperation;
+import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
@@ -58,40 +59,70 @@ public class K8sTagHostHandler {
     /**
      * 执行标签操作
      *
-     * @param clusterId       集群ID
-     * @param hostName        主机名
-     * @param kubeConfig      Kubernetes配置
-     * @param isLastExecution 是否是最后一次执行
+     * @param clusterId        集群ID
+     * @param hostName         主机名
+     * @param kubeConfig       Kubernetes配置
+     * @param commandType 标签操作类型
      * @return 执行结果
      */
-    public ExecResult operateTag(Integer clusterId, ExecResult execResult, String hostName, String kubeConfig,
-            boolean isLastExecution) {
+    public ExecResult operateTag(Integer clusterId, String hostName, String kubeConfig,
+                                 CommandType commandType) {
+        ExecResult execResult = new ExecResult();
 
-        // 处理添加标签操作
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            // 1. 获取要打标签的所有主机列表
-            JSONArray targetHosts = getTargetHosts(clusterId);
-            if (targetHosts == null) {
-                System.out.println(ANSI_RED + "❌ 无法获取集群 " + clusterId + " 的服务角色主机映射信息" + ANSI_RESET);
-                execResult.setExecErrOut("Failed to get service role host mapping for cluster " + clusterId);
-                execResult.setExecResult(false);
-                return execResult;
+            // 根据不同的标签操作类型执行对应的操作
+            switch (commandType) {
+                case STOP_SERVICE:
+                    // 停止服务场景，直接移除标签，不需要获取主机列表
+                    System.out.println(ANSI_CYAN + "ℹ️ 执行停止服务场景的标签操作" + ANSI_RESET);
+                    logProcessingInfo(hostName, false, commandType);
+                    handleStopService(client, hostName);
+                    break;
+
+                case START_SERVICE:
+                    // 启动服务场景，直接给当前主机添加标签，不需要获取主机列表
+                    System.out.println(ANSI_CYAN + "ℹ️ 执行启动服务场景的标签操作" + ANSI_RESET);
+                    logProcessingInfo(hostName, false, commandType);
+                    handleStartService(client, hostName);
+                    break;
+
+                case INSTALL_SERVICE:
+                    // 安装场景需要获取主机列表并判断是否是最后一次执行
+                    JSONArray targetHosts = getTargetHosts(clusterId);
+                    if (targetHosts == null) {
+                        System.out.println(ANSI_RED + "❌ 无法获取集群 " + clusterId + " 的服务角色主机映射信息" + ANSI_RESET);
+                        execResult.setExecErrOut("Failed to get service role host mapping for cluster " + clusterId);
+                        execResult.setExecResult(false);
+                        return execResult;
+                    }
+
+                    // 判断是否为最后一次执行
+                    boolean isLastExecution = false;
+                    if (!ObjectUtil.isEmpty(targetHosts)) {
+                        String lastHost = CollUtil.getLast(targetHosts.toList(String.class));
+                        isLastExecution = hostName.equals(lastHost);
+                    }
+
+                    logProcessingInfo(hostName, isLastExecution, commandType);
+                    handleInstall(client, hostName, targetHosts, isLastExecution);
+                    break;
+
+                case RESTART_SERVICE:
+                    // 重启服务场景，直接给当前主机添加标签，不需要获取主机列表
+                    System.out.println(ANSI_CYAN + "ℹ️ 执行重启服务场景的标签操作" + ANSI_RESET);
+                    logProcessingInfo(hostName, false, commandType);
+                    handleRestartService(hostName);
+                    break;
+
+                default:
+                    System.out.println(ANSI_YELLOW + "⚠️ 未知的标签操作类型: " + commandType + ANSI_RESET);
+                    execResult.setExecErrOut("Unknown tag operation type: " + commandType);
+                    execResult.setExecResult(false);
+                    return execResult;
             }
 
-            // 2. 记录处理状态
-            logProcessingInfo(hostName, isLastExecution, targetHosts.size());
-
-            // 3. 如果是最后一次执行，则同步所有标签状态
-            if (isLastExecution) {
-                System.out.println(ANSI_BLUE + "🔍 这是最后一个主机，开始执行全面标签同步..." + ANSI_RESET);
-                synchronizeLabels(client, targetHosts);
-                System.out.println(ANSI_GREEN + "✅ 标签同步完成" + ANSI_RESET);
-            } else {
-                System.out.println(ANSI_CYAN + "ℹ️ 非最后一次执行，跳过标签操作，等待最终调用..." + ANSI_RESET);
-            }
-
-            System.out.println(ANSI_GREEN + "✅ 完成主机 " + hostName + " 的标签检查" + ANSI_RESET);
-            execResult.setExecOut("Tag operation check completed for host " + hostName);
+            System.out.println(ANSI_GREEN + "✅ 完成主机 " + hostName + " 的标签操作" + ANSI_RESET);
+            execResult.setExecOut("Tag operation completed for host " + hostName);
             execResult.setExecResult(true);
 
         } catch (Exception e) {
@@ -105,46 +136,54 @@ public class K8sTagHostHandler {
     }
 
     /**
-     * 执行标签操作（兼容旧版本，内部自动判断是否为最后一次执行）
+     * 处理安装场景的标签操作
      */
-    public ExecResult operateTag(Integer clusterId, String hostName, String kubeConfig,
-            K8sHostTagOperation tagOperation) {
-        ExecResult execResult = new ExecResult();
+    private void handleInstall(KubernetesClient client, String hostName, JSONArray targetHosts,
+            boolean isLastExecution) {
+        System.out.println(ANSI_CYAN + "ℹ️ 执行安装场景的标签操作" + ANSI_RESET);
 
-        // 如果是取消标签操作，直接执行
-        if (tagOperation == K8sHostTagOperation.CANCEL_TAG) {
-            try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-                System.out.println(ANSI_YELLOW + "⚠️ 正在从主机 " + hostName + " 移除标签: " + serviceRoleFullName + ANSI_RESET);
-                cancelTag(hostName, client);
-                System.out.println(ANSI_GREEN + "✅ 成功从主机 " + hostName + " 移除标签: " + serviceRoleFullName + ANSI_RESET);
-                execResult.setExecOut("Successfully removed tag from host " + hostName);
-                execResult.setExecResult(true);
-            } catch (Exception e) {
-                System.out.println(ANSI_RED + "❌ 从主机 " + hostName + " 移除标签失败: " + e.getMessage() + ANSI_RESET);
-                logger.error("Failed to remove tag from host {}: {}", hostName, e.getMessage(), e);
-                execResult.setExecErrOut(e.getMessage());
-                execResult.setExecResult(false);
-            }
-            return execResult;
+        // 为当前主机添加标签
+        addTag(hostName, client);
+
+        // 如果是最后一次执行，则进行全面标签同步
+        if (isLastExecution) {
+            System.out.println(ANSI_BLUE + "🔍 这是最后一个主机，开始执行全面标签同步..." + ANSI_RESET);
+            synchronizeLabels(client, targetHosts);
         }
+    }
 
-        // 获取要打标签的所有主机列表
-        JSONArray targetHosts = getTargetHosts(clusterId);
-        if (targetHosts == null) {
-            execResult = new ExecResult();
-            System.out.println(ANSI_RED + "❌ 无法获取集群 " + clusterId + " 的服务角色主机映射信息" + ANSI_RESET);
-            execResult.setExecErrOut("Failed to retrieve service role host mapping configuration for cluster " + clusterId + 
-            ", service role: " + serviceRoleName + ". Please check if the service role is properly configured.");
-            execResult.setExecResult(false);
-            return execResult;
-        }
+    /**
+     * 处理停止服务场景的标签操作
+     */
+    private void handleStopService(KubernetesClient client, String hostName) {
+        // 移除当前主机的标签
+        cancelTag(hostName, client);
 
-        // 判断是否为最后一次执行：比较当前主机名与列表最后一个元素是否相同
-        String lastHost = CollUtil.getLast(targetHosts.toList(String.class));
-        boolean isLastExecution = hostName.equals(lastHost);
+        System.out.println(ANSI_BLUE + "🔍 已成功从主机 " + hostName + " 移除标签，服务将不再调度到该节点" + ANSI_RESET);
+    }
 
-        // 调用新版本方法
-        return operateTag(clusterId, execResult, hostName, kubeConfig, isLastExecution);
+    /**
+     * 处理启动服务场景的标签操作
+     */
+    private void handleStartService(KubernetesClient client, String hostName) {
+        System.out.println(ANSI_CYAN + "ℹ️ 执行启动服务场景的标签操作" + ANSI_RESET);
+
+        // 为当前主机添加标签
+        addTag(hostName, client);
+
+        System.out.println(ANSI_BLUE + "🔍 已成功为主机 " + hostName + " 添加标签，服务将可调度到该节点" + ANSI_RESET);
+    }
+
+    /**
+     * 处理重启服务场景的标签操作
+     */
+    private void handleRestartService(String hostName) {
+        System.out.println(ANSI_CYAN + "ℹ️ 执行重启服务场景的标签操作" + ANSI_RESET);
+
+        // 重启操作不进行标签操作
+        System.out.println(ANSI_BLUE + "ℹ️ 重启服务操作不对节点标签进行修改" + ANSI_RESET);
+
+        System.out.println(ANSI_GREEN + "✅ 已完成主机 " + hostName + " 的重启服务操作" + ANSI_RESET);
     }
 
     /**
@@ -170,10 +209,11 @@ public class K8sTagHostHandler {
     /**
      * 记录处理状态信息
      */
-    private void logProcessingInfo(String hostName, boolean isLastExecution, int totalSize) {
+    private void logProcessingInfo(String hostName, boolean isLastExecution,
+                                   CommandType commandType) {
         System.out.println(ANSI_CYAN + "ℹ️ 正在处理主机 " + hostName
                 + (isLastExecution ? " (最后一个)" : "") + ANSI_RESET);
-        System.out.println(ANSI_BLUE + "🔍 开始处理主机 " + hostName + " 的标签操作..." + ANSI_RESET);
+        System.out.println(ANSI_BLUE + "🔍 开始处理主机 " + hostName + " 的" + commandType.name() + "标签操作..." + ANSI_RESET);
     }
 
     /**

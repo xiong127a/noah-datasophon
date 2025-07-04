@@ -29,13 +29,27 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.datasophon.api.k8s.handler.*;
+import com.datasophon.api.k8s.handler.K8sDeploymentYamlHandler;
+import com.datasophon.api.k8s.handler.K8sHostTagHandler;
+import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
+import com.datasophon.api.k8s.handler.K8sServiceInstallHandler;
+import com.datasophon.api.k8s.handler.K8sServiceRoleStopHandler;
+import com.datasophon.api.k8s.handler.K8sServiceScaleHandler;
+import com.datasophon.api.k8s.handler.K8sServiceStartHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.master.*;
-import com.datasophon.api.master.handler.service.*;
+import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.CancelCommandMap;
+import com.datasophon.api.master.MasterServiceActor;
+import com.datasophon.api.master.ServiceCommandActor;
+import com.datasophon.api.master.ServiceExecuteResultActor;
+import com.datasophon.api.master.handler.service.ServiceConfigureAsyncHandler;
+import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
+import com.datasophon.api.master.handler.service.ServiceHandler;
+import com.datasophon.api.master.handler.service.ServiceInstallHandler;
+import com.datasophon.api.master.handler.service.ServiceStartHandler;
+import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
@@ -46,16 +60,28 @@ import com.datasophon.common.command.FileOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
-import com.datasophon.common.model.*;
+import com.datasophon.common.model.DAGGraph;
+import com.datasophon.common.model.ExternalLink;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceExecuteResultMessage;
+import com.datasophon.common.model.ServiceNode;
+import com.datasophon.common.model.ServiceRoleInfo;
+import com.datasophon.common.model.StartWorkerMessage;
+import com.datasophon.common.model.UpdateCommandHostMessage;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.*;
-import com.datasophon.dao.enums.*;
+import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.dao.enums.CommandState;
+import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.dao.enums.RoleType;
+import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +92,15 @@ import scala.concurrent.duration.FiniteDuration;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -192,8 +226,7 @@ public class ProcessUtils {
                                     ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
 
                                     // 替换URL端口
-                                    webuis.setWebUrl(mappedPort != null ?
-                                            replacePortInUrl(url, mappedPort) : url);
+                                    webuis.setWebUrl(replacePortInUrl(url, mappedPort));
 
                                     webuis.setServiceInstanceId(clusterServiceInstance.getId());
                                     webuis.setServiceRoleInstanceId(roleInstance.getId());
@@ -525,11 +558,11 @@ public class ProcessUtils {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintStream pout = new PrintStream(out);
         ex.printStackTrace(pout);
-        String ret = new String(out.toByteArray());
+        String ret = out.toString();
         pout.close();
         try {
             out.close();
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return ret;
     }
@@ -548,28 +581,22 @@ public class ProcessUtils {
             }
             return serviceStopHandler.handlerRequest(serviceRoleInfo);
         } else {
-            K8sHostCancelTagHandler k8sHostCancelTagHandler = new K8sHostCancelTagHandler();
-            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
-            K8sServiceScaleDownHandler k8sServiceScaleDownHandler = new K8sServiceScaleDownHandler();
             K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-            K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
-            K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
-            k8sHostCancelTagHandler.setNext(k8sServiceRoleStopHandler);
-            k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
+            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
+            K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
+            k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
             if (needReConfig) {
                 K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
                 K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
-                k8sServiceScaleDownHandler.setNext(k8sServiceConfigureHandler);
                 k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
                 k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceStartHandler);
-                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
+                k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
             } else {
-                k8sServiceScaleDownHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceStartHandler);
-                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
+                k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
             }
-            return k8sHostCancelTagHandler.handlerRequest(serviceRoleInfo);
+            return k8sHostTagHandler.handlerRequest(serviceRoleInfo);
         }
     }
 
@@ -591,17 +618,17 @@ public class ProcessUtils {
                 K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
                 K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
                 K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-                K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
+                K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
                 k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
                 k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceScaleHandler);
                 execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
             } else {
                 K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
                 K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
-                K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
+                K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
                 k8sHostTagHandler.setNext(k8sServiceStartHandler);
-                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleHandler);
                 execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
             }
         }
@@ -615,12 +642,12 @@ public class ProcessUtils {
             ServiceHandler serviceStopHandler = new ServiceStopHandler();
             execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
         } else {
-            K8sHostCancelTagHandler k8sHostCancelTagHandler = new K8sHostCancelTagHandler();
+            K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
             K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
-            K8sServiceScaleDownHandler k8sServiceScaleDownHandler = new K8sServiceScaleDownHandler();
-            k8sHostCancelTagHandler.setNext(k8sServiceRoleStopHandler);
-            k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
-            execResult = k8sHostCancelTagHandler.handlerRequest(serviceRoleInfo);
+            K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
+            k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
+            k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
+            execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
         }
         return execResult;
     }
@@ -695,9 +722,7 @@ public class ProcessUtils {
     }
 
     /**
-     * @param configFileMap
-     * @param config
-     * @Description: 生成configFileMap
+     * &#064;Description:  生成configFileMap
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
                                              ClusterServiceRoleGroupConfig config, Integer clusterId) {
@@ -733,9 +758,6 @@ public class ProcessUtils {
     /**
      * 并集：左边集合与右边集合合并
      *
-     * @param left
-     * @param right
-     * @return
      */
     public static List<ServiceConfig> addAll(List<ServiceConfig> left, List<ServiceConfig> right) {
         if (left == null) {
@@ -925,11 +947,10 @@ public class ProcessUtils {
     public static String replacePortInUrl(String url, String newPort) {
         try {
             java.net.URI uri = java.net.URI.create(url);
-            String newUrl = url.replace(
+            return url.replace(
                     ":" + uri.getPort(),
                     ":" + newPort
             );
-            return newUrl;
         } catch (Exception e) {
             logger.error("Failed to replace port in URL: {}", url, e);
             return url; // 返回原始URL如果替换失败

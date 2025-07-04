@@ -8,7 +8,6 @@ import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.K8sGenerateHostTagCommand;
-import com.datasophon.common.enums.K8sHostTagOperation;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.K8sTagHostActor;
@@ -27,11 +26,12 @@ public class K8sHostTagHandler extends ServiceHandler {
         k8SGenerateHostTagCommand.setHostName(serviceRoleInfo.getHostname());
         k8SGenerateHostTagCommand.setServiceName(serviceRoleInfo.getParentName());
         k8SGenerateHostTagCommand.setServiceRoleName(serviceRoleInfo.getName());
-        k8SGenerateHostTagCommand.setTagOperation(K8sHostTagOperation.ADD_TAG);
+        k8SGenerateHostTagCommand.setCommandType(serviceRoleInfo.getCommandType());
         Integer clusterId = serviceRoleInfo.getClusterId();
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+        k8SGenerateHostTagCommand.setClusterId(clusterId);
         k8SGenerateHostTagCommand.setKubeConfig(kubeConfig);
         k8SGenerateHostTagCommand.setClusterId(clusterId);
         ActorRef actorRef =

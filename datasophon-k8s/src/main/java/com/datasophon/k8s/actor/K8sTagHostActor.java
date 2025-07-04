@@ -22,7 +22,7 @@ public class K8sTagHostActor extends UntypedActor {
                     command.getClusterId(),
                     command.getHostName(),
                     command.getKubeConfig(),
-                    command.getTagOperation()
+                    command.getCommandType()
             );
             getSender().tell(startResult, getSelf());
 
