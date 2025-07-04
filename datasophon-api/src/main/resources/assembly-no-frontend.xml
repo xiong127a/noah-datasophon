@@ -85,31 +85,7 @@
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
         </fileSet>
-        <!-- 前端资源复制 -->
-        <fileSet>
-            <directory>${basedir}/../datasophon-ui/dist</directory>
-            <outputDirectory>/conf/front/views</outputDirectory>
-            <includes>
-                <include>*.html</include>
-                <include>*.ico</include>
-                <include>*.js</include>
-            </includes>
-            <directoryMode>0755</directoryMode>
-            <fileMode>0755</fileMode>
-            <filtered>false</filtered>
-            <useDefaultExcludes>true</useDefaultExcludes>
-        </fileSet>
-        <fileSet>
-            <directory>${basedir}/../datasophon-ui/dist</directory>
-            <outputDirectory>/conf/front/static/resources/bundle-main</outputDirectory>
-            <directoryMode>0755</directoryMode>
-            <fileMode>0755</fileMode>
-            <includes>
-                <include>css/**</include>
-                <include>static/**</include>
-            </includes>
-            <useDefaultExcludes>true</useDefaultExcludes>
-        </fileSet>
+        <!-- 删除前端资源复制 -->
         <fileSet>
             <directory>${basedir}/../conf</directory>
             <outputDirectory>/conf</outputDirectory>
@@ -207,4 +183,4 @@
             <fileMode>0644</fileMode>
         </fileSet>
     </fileSets>
-</assembly>
+</assembly> 

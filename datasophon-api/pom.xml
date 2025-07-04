@@ -281,6 +281,22 @@
                     <value>true</value>
                 </property>
             </activation>
+            <!-- 添加构建配置，使用不同的assembly文件 -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <configuration>
+                            <!-- 指定使用不包含前端资源的assembly文件 -->
+                            <descriptors>
+                                <descriptor>${project.basedir}/src/main/resources/assembly-no-frontend.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
