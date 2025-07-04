@@ -1,27 +1,24 @@
-# 排除构建文件
+# 默认忽略所有文件和目录
+*
+**/
+
+# 只包含UI构建所需的文件
+!datasophon-ui/dist/**
+!deploy/docker/nginx.conf
+!Dockerfile-ui
+
+# 明确排除所有可能引起自引用问题的文件
+**/*.tar
+**/*.tar.gz
+**/*.zip
+**/*.jar
 **/target/
-**/node_modules/
-**/dist/
+**/docker/
+**/.git/
+**/.idea/
+**/.vscode/
+**/*.iml
 
-# 排除日志
-**/logs/
+# 排除日志文件
 **/*.log
-
-# 排除git相关
-.git/
-.gitignore
-
-# 排除IDE相关
-.idea/
-.vscode/
-*.iml
-*.iws
-*.ipr
-
-# 排除临时文件
-**/temp/
-**/tmp/
-
-# 只包含必要的文件
-!datasophon-ui/dist/
-!datasophon-api/target/datasophon-manager-*.tar.gz 
+**/logs/ 

@@ -73,6 +73,7 @@
         <org.freemarker.verion>2.3.34</org.freemarker.verion>
         <commons-codec.version>1.15</commons-codec.version>
         <commons-compress.version>1.21</commons-compress.version>
+        <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
         <jackson-annotations.version>2.13.0</jackson-annotations.version>
         <ant.version>1.10.12</ant.version>
         <jsch.version>0.2.7</jsch.version>
@@ -579,149 +580,37 @@
         <!-- Docker镜像构建和推送 profile
              使用参数：-P docker
              例如：mvn clean package -P docker
+             自定义标签：mvn clean package -P docker -Ddocker.tag=自定义标签
          -->
         <profile>
             <id>docker</id>
             <properties>
                 <docker.skip>false</docker.skip>
-                <docker.username>noah</docker.username>
-                <docker.password>Jd2019@123</docker.password>
+                <docker.registry>harbor.norintech.com</docker.registry>
+                <docker.host>tcp://192.168.200.6:2375</docker.host>
+                <docker.tag>latest</docker.tag>
             </properties>
             <build>
                 <plugins>
-                    <!-- Docker登录插件 -->
                     <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.1.0</version>
-                        <executions>
-                            <execution>
-                                <id>docker-login</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <executable>cmd</executable>
-                                    <arguments>
-                                        <argument>/c</argument>
-                                        <argument>docker login harbor.norintech.com -u noah -p Jd2019@123</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    
-                    <!-- Docker镜像构建插件 -->
-                    <plugin>
-                        <groupId>com.spotify</groupId>
-                        <artifactId>dockerfile-maven-plugin</artifactId>
-                        <version>1.4.13</version>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>${docker-maven-plugin.version}</version>
                         <configuration>
-                            <!-- 全局配置 -->
                             <skip>${docker.skip}</skip>
-                            <noCache>true</noCache>
-                            <pullNewerImage>true</pullNewerImage>
-                            <connectTimeoutMillis>120000</connectTimeoutMillis> <!-- 连接超时时间 -->
-                            <readTimeoutMillis>120000</readTimeoutMillis> <!-- 读取超时时间 -->
+                            <registry>${docker.registry}</registry>
+                            <dockerHost>${docker.host}</dockerHost>
+                            <authConfig>
+                                <push>
+                                    <username>noah</username>
+                                    <password>Jd2019@123</password>
+                                </push>
+                            </authConfig>
+                            <image>
+                                <name>${project.groupId}/${project.artifactId}</name>
+                                <tag>${project.version}</tag>
+                            </image>
                         </configuration>
-                        <executions>
-                            <execution>
-                                <id>build-ui-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                    <goal>push</goal>
-                                </goals>
-                                <configuration>
-                                    <dockerfile>Dockerfile-ui</dockerfile>
-                                    <repository>harbor.norintech.com/bdp/datasophon-ui</repository>
-                                    <tag>latest</tag>
-                                    <buildArgs>
-                                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-                                    </buildArgs>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>build-api-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                    <goal>push</goal>
-                                </goals>
-                                <configuration>
-                                    <dockerfile>Dockerfile-api</dockerfile>
-                                    <repository>harbor.norintech.com/bdp/datasophon-manager</repository>
-                                    <tag>latest</tag>
-                                    <buildArgs>
-                                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-                                    </buildArgs>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <!-- Docker镜像构建和推送 profile (支持版本号)
-             使用参数：-P docker-versioned -Ddocker.tag=1.2.1
-             例如：mvn clean package -P docker-versioned -Ddocker.tag=1.2.1
-         -->
-        <profile>
-            <id>docker-versioned</id>
-            <properties>
-                <docker.tag>${revision}</docker.tag>
-            </properties>
-            <build>
-                <plugins>
-                    <!-- Docker镜像构建插件 -->
-                    <plugin>
-                        <groupId>com.spotify</groupId>
-                        <artifactId>dockerfile-maven-plugin</artifactId>
-                        <version>1.4.13</version>
-                        <configuration>
-                            <!-- 全局配置 -->
-                            <skip>${docker.skip}</skip>
-                            <noCache>true</noCache>
-                            <pullNewerImage>true</pullNewerImage>
-                            <connectTimeoutMillis>120000</connectTimeoutMillis> <!-- 连接超时时间 -->
-                            <readTimeoutMillis>120000</readTimeoutMillis> <!-- 读取超时时间 -->
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>build-ui-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                    <goal>push</goal>
-                                </goals>
-                                <configuration>
-                                    <dockerfile>Dockerfile-ui</dockerfile>
-                                    <repository>harbor.norintech.com/bdp/datasophon-ui</repository>
-                                    <tag>${docker.tag}</tag>
-                                    <buildArgs>
-                                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-                                    </buildArgs>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>build-api-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                    <goal>push</goal>
-                                </goals>
-                                <configuration>
-                                    <dockerfile>Dockerfile-api</dockerfile>
-                                    <repository>harbor.norintech.com/bdp/datasophon-manager</repository>
-                                    <tag>${docker.tag}</tag>
-                                    <buildArgs>
-                                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-                                    </buildArgs>
-                                </configuration>
-                            </execution>
-                        </executions>
                     </plugin>
                 </plugins>
             </build>
@@ -735,7 +624,7 @@
 <!--            <properties>-->
 <!--                &lt;!&ndash; sonar平台地址 如：http://localhost:9000 &ndash;&gt;-->
 <!--                <sonar.host.url>http://192.168.1.104:9000</sonar.host.url>-->
-<!--                &lt;!&ndash; 不知道为什么，前面配置的用户名密码好像都没生效，需要在这里配置，你可以先不加试一下，如果需要再加 &ndash;&gt;-->
+<!--                &lt;!&ndash; 不知道为什么，前面配置的用户名密码好像都没生效，需要在这里配置，你可以先不加试一下，如果需要再�?&ndash;&gt;-->
 <!--                <sonar.login>gaozhenfeng</sonar.login>-->
 <!--                <sonar.password>jkl123</sonar.password>-->
 <!--            </properties>-->
