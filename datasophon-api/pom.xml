@@ -110,6 +110,8 @@
                     <finalName>datasophon-manager-${project.version}</finalName>
                     <!-- tar或者zip包的输出目录 -->
                     <outputDirectory>${project.basedir}/target/</outputDirectory>
+                    <!-- 设置长文件名处理模式为gnu，避免长路径警告 -->
+                    <tarLongFileMode>gnu</tarLongFileMode>
                     <descriptors>
                         <!-- 引用的assembly配置文件-->
                         <descriptor>${project.basedir}/src/main/resources/assembly.xml</descriptor>
@@ -293,6 +295,8 @@
                             <descriptors>
                                 <descriptor>${project.basedir}/src/main/resources/assembly-no-frontend.xml</descriptor>
                             </descriptors>
+                            <!-- 设置长文件名处理模式为gnu，避免长路径警告 -->
+                            <tarLongFileMode>gnu</tarLongFileMode>
                         </configuration>
                     </plugin>
                 </plugins>
