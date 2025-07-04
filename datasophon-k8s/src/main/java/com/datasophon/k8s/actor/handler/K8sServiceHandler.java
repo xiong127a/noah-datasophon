@@ -674,7 +674,7 @@ public class K8sServiceHandler {
         }
 
         // 获取StatefulSet的副本数
-        Integer replicaCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
+        Integer replicaCount = getCountInKey(Constant.ROLE_NODE_CNT);
         if (replicaCount == null || replicaCount <= 0) {
             logger.warn("无法获取{}的副本数，无法创建LoadBalancer服务", serviceRoleFullName);
             return;
@@ -940,6 +940,18 @@ public class K8sServiceHandler {
                 : 0;
         logger.info("当前 Deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
+        // 获取期望的节点数
+        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
+
+        // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
+        if (nodeCount != null && replicas == nodeCount) {
+            logger.info("当前副本数 {} 已等于期望节点数 {}，无需修改", replicas, nodeCount);
+            ColorLogUtils.printWarning("Deployment " + serviceRoleFullName + " 副本数已达到预期值 " + nodeCount + "，跳过更新");
+            return;
+        }
+
+        // 需要更新副本数
+        logger.info("修改 Deployment: {} 副本数 {} -> {}", serviceRoleFullName, replicas, replicas + 1);
         updateField(yamlData, "spec.replicas", replicas + 1);
 
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
@@ -959,6 +971,19 @@ public class K8sServiceHandler {
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
+
+        // 获取期望的节点数
+        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
+
+        // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
+        if (nodeCount != null && replicas == nodeCount) {
+            logger.info("当前副本数 {} 已等于期望节点数 {}，无需修改", replicas, nodeCount);
+            ColorLogUtils.printWarning("StatefulSet " + serviceRoleFullName + " 副本数已达到预期值 " + nodeCount + "，跳过更新");
+            return;
+        }
+
+        // 需要更新副本数
+        logger.info("修改 StatefulSet: {} 副本数 {} -> {}", serviceRoleFullName, replicas, replicas + 1);
         updateField(yamlData, "spec.replicas", replicas + 1);
 
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
@@ -1053,7 +1078,7 @@ public class K8sServiceHandler {
     }
 
     private void addProcessStatus() {
-        Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constant.CURRENT_NODE_CNT);
         if (Objects.isNull(nodeCount)) {
             CacheUtils.put(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT, 1);
         } else {
@@ -1062,10 +1087,14 @@ public class K8sServiceHandler {
     }
 
     private Boolean isFinalNode() {
-        Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
-        Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
+        Integer currentCount = getCountInKey(Constant.CURRENT_NODE_CNT);
         logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
         return currentCount.equals(nodeCount);
+    }
+
+    private Integer getCountInKey(String key) {
+        return (Integer) CacheUtils.get(serviceRoleFullName + "_" + key);
     }
 
     // 保存Service的YAML配置到本地文件
