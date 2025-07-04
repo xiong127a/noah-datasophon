@@ -33,6 +33,14 @@ spring:
     resources:
       static-locations: classpath:/front/views/
       
+# Jasypt加密配置
+jasypt:
+  encryptor:
+    algorithm: PBEWithMD5AndDES
+    # 加密密钥可以通过环境变量或启动参数设置: -Djasypt.encryptor.password=your_key
+    password: ${JASYPT_PASSWORD}
+    iv-generator-classname: org.jasypt.iv.NoIvGenerator
+      
 # Prometheus监控配置
 management:
   endpoints:
