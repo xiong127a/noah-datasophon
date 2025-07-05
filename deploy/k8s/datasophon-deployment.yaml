@@ -11,6 +11,20 @@ stringData:
   jasypt_password: "datasophon_renxiangpeng_key"
   
 ---
+# 添加PVC定义，使用nfs-client存储类
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: datasophon-logs-pvc
+  namespace: datasophon
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 100Gi
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -439,6 +453,14 @@ spec:
           env:
             - name: RUNNING_IN_K8S
               value: "true"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             # 从Secret引入数据库配置
             - name: datasource.url
               valueFrom:
@@ -498,7 +520,31 @@ spec:
               mountPath: /tmp/config
             - name: hosts-file
               mountPath: /tmp/hosts
+            # 添加日志卷挂载
+            - name: logs-volume
+              mountPath: /datasophon-manager/logs
+              subPathExpr: $(POD_NAMESPACE)/datasophon-manager
           command: ['sh', '-c', 'cat /tmp/hosts >> /etc/hosts && mkdir -p /datasophon-manager/conf && cp -f /tmp/config/* /datasophon-manager/conf/ && bin/datasophon-api.sh start api && tail -F -f logs/datasophon-api.log']
+      # 添加初始化容器，用于设置日志目录权限
+      initContainers:
+        - name: prepare-logs-dir
+          image: harbor.norintech.com/bdp/busybox:1.28
+          command: ['sh', '-c', 'mkdir -p /logs/$POD_NAMESPACE/datasophon-manager && chmod -R 777 /logs/$POD_NAMESPACE/datasophon-manager']
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: logs-volume
+              mountPath: /logs
+
       volumes:
         - name: config-volume
           configMap:
@@ -506,6 +552,10 @@ spec:
         - name: hosts-file
           hostPath:
             path: /etc/hosts
+        # 添加日志卷
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: datasophon-logs-pvc
 
 ---
 apiVersion: apps/v1
@@ -532,6 +582,14 @@ spec:
           env:
             - name: RUNNING_IN_K8S
               value: "true"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           ports:
             - containerPort: 80
               name: http
@@ -554,6 +612,10 @@ spec:
               port: 80
             initialDelaySeconds: 20
             periodSeconds: 10
+      volumes:
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: datasophon-logs-pvc
       initContainers:
         - name: wait-for-backend
           image: harbor.norintech.com/bdp/busybox:1.28
