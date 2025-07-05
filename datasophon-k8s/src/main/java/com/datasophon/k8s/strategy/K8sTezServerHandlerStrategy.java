@@ -23,7 +23,6 @@ import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
@@ -34,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 

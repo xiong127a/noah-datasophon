@@ -503,10 +503,10 @@ spec:
             httpGet:
               path: /ddh/actuator/health/liveness
               port: 8081
-            initialDelaySeconds: 60
-            periodSeconds: 10
+            initialDelaySeconds: 30
+            periodSeconds: 5
             timeoutSeconds: 5
-            failureThreshold: 3
+            failureThreshold: 20
           livenessProbe:
             httpGet:
               path: /ddh/actuator/health/liveness

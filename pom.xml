@@ -606,10 +606,6 @@
                                     <password>Jd2019@123</password>
                                 </push>
                             </authConfig>
-                            <image>
-                                <name>${project.groupId}/${project.artifactId}</name>
-                                <tag>${project.version}</tag>
-                            </image>
                         </configuration>
                     </plugin>
                 </plugins>

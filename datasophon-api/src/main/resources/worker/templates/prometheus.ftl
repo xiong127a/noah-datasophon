@@ -75,6 +75,12 @@ scrape_configs:
     static_configs:
     - targets: ['{{apiUrl}}']
 
+  - job_name: 'datasophon-api-role-metrics'
+    metrics_path: '/ddh/api/cluster/grafana/metrics'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['{{apiUrl}}']
+
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'
 

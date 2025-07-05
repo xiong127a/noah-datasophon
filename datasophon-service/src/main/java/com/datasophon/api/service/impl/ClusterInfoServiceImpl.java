@@ -52,7 +52,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service("clusterInfoService")
@@ -60,7 +62,6 @@ import java.util.Objects;
 public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, ClusterInfoEntity>
         implements
         ClusterInfoService {
-
 
     @Autowired
     private ClusterInfoMapper clusterInfoMapper;
@@ -146,8 +147,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     private void putClusterVariable(ClusterInfoEntity clusterInfo) {
         HashMap<String, String> globalVariables = new HashMap<>();
-        List<FrameServiceEntity> frameServiceList =
-                frameServiceService.getAllFrameServiceByFrameCode(clusterInfo.getClusterFrame());
+        List<FrameServiceEntity> frameServiceList = frameServiceService
+                .getAllFrameServiceByFrameCode(clusterInfo.getClusterFrame());
         for (FrameServiceEntity frameServiceEntity : frameServiceList) {
             globalVariables.put("${" + frameServiceEntity.getServiceName() + "_HOME}",
                     Constants.INSTALL_PATH + Constants.SLASH + frameServiceEntity.getDecompressPackageName());
@@ -165,8 +166,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     public Result getClusterList() {
         List<ClusterInfoEntity> list = this.list();
         for (ClusterInfoEntity clusterInfoEntity : list) {
-            List<UserInfoEntity> userList =
-                    clusterUserService.getAllClusterManagerByClusterId(clusterInfoEntity.getId());
+            List<UserInfoEntity> userList = clusterUserService
+                    .getAllClusterManagerByClusterId(clusterInfoEntity.getId());
             clusterInfoEntity.setClusterManagerList(userList);
             clusterInfoEntity.setClusterStateCode(clusterInfoEntity.getClusterState().getValue());
         }
@@ -175,8 +176,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public Result runningClusterList() {
-        List<ClusterInfoEntity> list =
-                this.list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_STATE, ClusterState.RUNNING));
+        List<ClusterInfoEntity> list = this
+                .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_STATE, ClusterState.RUNNING));
         return Result.success(list);
     }
 
@@ -224,9 +225,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
         if (ClusterState.STOP.equals(clusterInfo.getClusterState())) {
             List<ClusterServiceInstanceEntity> serviceInstanceList = clusterServiceInstanceService.listAll(id);
-            if (serviceInstanceList.stream().noneMatch(instance -> clusterServiceInstanceService.hasRunningRoleInstance(instance.getId()))) {
+            if (serviceInstanceList.stream()
+                    .noneMatch(instance -> clusterServiceInstanceService.hasRunningRoleInstance(instance.getId()))) {
                 ActorUtils.getLocalActor(
-                                ClusterActor.class, "clusterActor")
+                        ClusterActor.class, "clusterActor")
                         .tell(new ClusterCommand(ClusterCommandType.DELETE, id), ActorRef.noSender());
 
                 this.updateClusterState(id, ClusterState.DELETING.getValue());
@@ -246,13 +248,37 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public String getKerberosInfo(String serviceRoleName) {
+    public String getServiceRoleMetrics() {
         LambdaQueryWrapper<ClusterServiceRoleInstanceEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, serviceRoleName)
-                .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, 1);
-        long count = clusterServiceRoleInstanceMapper.selectCount(lambdaQueryWrapper);
-        JSONObject jsonObject = JSONUtil.createObj();
-        jsonObject.set(serviceRoleName, count);
-        return jsonObject.toString();
+        lambdaQueryWrapper.eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, 1);
+
+        // 获取所有运行中的服务角色实例
+        List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceMapper
+                .selectList(lambdaQueryWrapper);
+
+        // 按服务角色名称分组并计数
+        Map<String, Long> roleCountMap = roleInstances.stream()
+                .collect(Collectors.groupingBy(
+                        ClusterServiceRoleInstanceEntity::getServiceRoleName,
+                        Collectors.counting()));
+
+        // 构建Prometheus格式的响应
+        StringBuilder prometheusMetrics = new StringBuilder();
+
+        // 添加帮助信息和类型信息
+        prometheusMetrics
+                .append("# HELP service_role_instance_count The number of running instances for each service role\n");
+        prometheusMetrics.append("# TYPE service_role_instance_count gauge\n");
+
+        // 为每个服务角色添加指标行
+        roleCountMap.forEach((roleName, count) -> {
+            prometheusMetrics.append(String.format("service_role_instance_count{role=\"%s\"} %d\n",
+                    roleName.replace("\"", "\\\""), count));
+        });
+
+        // 添加EOF标记
+        prometheusMetrics.append("# EOF\n");
+
+        return prometheusMetrics.toString();
     }
 }
