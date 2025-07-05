@@ -137,10 +137,7 @@ module.exports = {
     // 		use: MonacoWebpackPlugin.loader
     // 	}]
     // }
-   // config.devtool = "source-map"  // 设置debugger可以调试
-    config.cache = {
-      type: 'filesystem',
-    }
+    config.devtool = "source-map"  // 设置debugger可以调试
   },
   chainWebpack(config) {
     // 第一步：让其他svg loader不要对路径下进行操作
@@ -171,22 +168,6 @@ module.exports = {
       //     return args
       //   })
     }
-    // 替换 babel-loader 为 esbuild-loader，并保留 thread-loader
-    config.module
-      .rule('js')
-      .use('thread-loader')
-      .loader('thread-loader')
-      .before('esbuild-loader')
-      .end()
-      .use('esbuild-loader')
-      .loader('esbuild-loader')
-      .options({
-        loader: 'jsx',
-        target: 'es2015',
-        jsxFactory: 'h',
-        jsxFragment: 'Fragment'
-      })
-      .end();
   },
   css: {
     loaderOptions: {
@@ -202,5 +183,4 @@ module.exports = {
   outputDir: 'dist',
   assetsDir: 'static',
   productionSourceMap: false,
-  lintOnSave: false,
 }

@@ -113,33 +113,23 @@
                                 <phase>generate-resources</phase>
                             </execution>
                             <execution>
-                                <id>yarn install</id>
+                                <id>npm install</id>
                                 <goals>
                                     <goal>npm</goal>
                                 </goals>
                                 <phase>generate-resources</phase>
                                 <configuration>
-                                    <arguments>run yarn-install</arguments>
+                                    <arguments>install</arguments>
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>yarn build</id>
+                                <id>npm build</id>
                                 <goals>
                                     <goal>npm</goal>
                                 </goals>
                                 <phase>prepare-package</phase>
                                 <configuration>
-                                    <arguments>run yarn-build</arguments>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>yarn deploy</id>
-                                <goals>
-                                    <goal>npm</goal>
-                                </goals>
-                                <phase>install</phase>
-                                <configuration>
-                                    <arguments>run yarn-deploy</arguments>
+                                    <arguments>run build</arguments>
                                 </configuration>
                             </execution>
                         </executions>
