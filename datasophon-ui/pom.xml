@@ -130,6 +130,9 @@
                                 <phase>prepare-package</phase>
                                 <configuration>
                                     <arguments>run build</arguments>
+                                    <environmentVariables>
+                                        <NODE_OPTIONS>--openssl-legacy-provider</NODE_OPTIONS>
+                                    </environmentVariables>
                                 </configuration>
                             </execution>
                         </executions>
