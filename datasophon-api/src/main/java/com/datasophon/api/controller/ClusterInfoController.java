@@ -44,6 +44,7 @@ public class ClusterInfoController {
     public Result list() {
         return clusterInfoService.getClusterList();
     }
+
     /**
      * 配置好的集群列表
      */
@@ -98,9 +99,9 @@ public class ClusterInfoController {
         return Result.success();
     }
 
-    @RequestMapping("/grafana/kerberos/{serviceRoleName}")
-    public String getKerberosInfo(@PathVariable String serviceRoleName) {
-        return clusterInfoService.getKerberosInfo(serviceRoleName);
+    @RequestMapping("/grafana/metrics")
+    public String getServiceRoleMetrics() {
+        return clusterInfoService.getServiceRoleMetrics();
     }
 
 }
