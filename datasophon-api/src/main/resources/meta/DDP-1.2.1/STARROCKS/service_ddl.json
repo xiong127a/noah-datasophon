@@ -339,7 +339,7 @@
       "configGroup": "fe.conf",
       "configLevel": "advanced",
       "bindRole": "SRFE",
-      "serviceType": "ClusterIP",
+      "serviceType": "NodePort",
       "portNumber": "9030",
       "nodePort": "30930"
     },
