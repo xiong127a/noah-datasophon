@@ -170,7 +170,7 @@
             <properties>
                 <docker.skip>false</docker.skip>
                 <docker.registry>harbor.norintech.com</docker.registry>
-                <docker.host>tcp://192.168.200.6:2375</docker.host>
+                <docker.host>tcp://localhost:2375</docker.host>
                 <docker.tag>latest</docker.tag>
             </properties>
             <build>
