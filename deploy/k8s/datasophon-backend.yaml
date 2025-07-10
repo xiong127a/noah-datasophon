@@ -15,7 +15,7 @@ stringData:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: datasophon-logs-pvc
+  name: datasophon-logs
   namespace: datasophon
 spec:
   accessModes:
@@ -538,4 +538,4 @@ spec:
         # 添加日志卷
         - name: logs-volume
           persistentVolumeClaim:
-            claimName: datasophon-logs-pvc 
+            claimName: datasophon-logs

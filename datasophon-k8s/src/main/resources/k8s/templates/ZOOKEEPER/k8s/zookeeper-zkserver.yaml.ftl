@@ -45,7 +45,7 @@ spec:
               MY_ID=${r"${HOSTNAME##*-}"}
               echo $((MY_ID + 1)) > ${zk_data_dir}/myid
           volumeMounts:
-            - name: nfs-pvc
+            - name: nfs
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       affinity:
@@ -118,7 +118,7 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            - name: nfs-pvc
+            - name: nfs
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
@@ -132,9 +132,9 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: nfs-pvc
+        - name: nfs
           persistentVolumeClaim:
-            claimName: "${serviceRoleFullName}-pvc"
+            claimName: "${serviceRoleFullName}"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

@@ -72,7 +72,7 @@ spec:
       volumes:
         - name: logs-volume
           persistentVolumeClaim:
-            claimName: datasophon-logs-pvc
+            claimName: datasophon-logs
       initContainers:
         - name: wait-for-backend
           image: harbor.norintech.com/bdp/busybox:1.28

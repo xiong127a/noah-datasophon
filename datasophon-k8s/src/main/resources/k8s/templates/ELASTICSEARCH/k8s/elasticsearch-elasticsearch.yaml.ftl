@@ -173,7 +173,7 @@ spec:
       volumes:
         - name: es-data
           persistentVolumeClaim:
-            claimName: "${serviceRoleFullName}-pvc"
+            claimName: "${serviceRoleFullName}"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

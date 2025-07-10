@@ -454,7 +454,7 @@ spec:
         </#list>
         - name: efak-data
           persistentVolumeClaim:
-            claimName: "${serviceRoleFullName}-pvc"
+            claimName: "${serviceRoleFullName}"
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

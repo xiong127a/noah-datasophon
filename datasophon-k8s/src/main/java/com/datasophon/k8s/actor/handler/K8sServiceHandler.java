@@ -1216,8 +1216,8 @@ public class K8sServiceHandler {
             logger.info("正在创建PVC，存储类：{}，存储大小：{}，挂载路径：{}",
                     storageClassName, storageSize, mountPath);
 
-            // PVC名称: serviceRoleFullName-pvc (同一个Deployment/StatefulSet的所有pod共享)
-            String pvcName = serviceRoleFullName + "-pvc";
+            // PVC名称: serviceRoleFullName (同一个Deployment/StatefulSet的所有pod共享)
+            String pvcName = serviceRoleFullName;
 
             // 构建PVC对象
             PersistentVolumeClaim pvc = new PersistentVolumeClaimBuilder()

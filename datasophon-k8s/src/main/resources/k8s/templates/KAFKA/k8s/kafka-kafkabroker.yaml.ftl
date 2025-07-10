@@ -376,7 +376,7 @@ spec:
             name: "${serviceRoleFullName}-external"
         - name: kafka-data
           persistentVolumeClaim:
-            claimName: "${serviceRoleFullName}-pvc"
+            claimName: "${serviceRoleFullName}"
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"

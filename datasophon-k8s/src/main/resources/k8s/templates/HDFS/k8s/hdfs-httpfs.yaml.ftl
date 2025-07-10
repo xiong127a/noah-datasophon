@@ -113,7 +113,7 @@ spec:
       volumes:
         - name: httpfs-data
           persistentVolumeClaim:
-            claimName: "${serviceRoleFullName}-pvc"
+            claimName: "${serviceRoleFullName}"
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
           configMap:

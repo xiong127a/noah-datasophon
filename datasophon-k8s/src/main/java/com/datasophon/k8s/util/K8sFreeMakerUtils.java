@@ -476,7 +476,7 @@ public class K8sFreeMakerUtils {
             String jobName = "prometheus-configs-updater-" + System.currentTimeMillis();
 
             // 确定PVC名称
-            String pvcName = serviceRoleFullName + "-pvc";
+            String pvcName = serviceRoleFullName;
 
             // 确定Pod名称 - 使用索引为0的Pod
             String podName = serviceRoleFullName + "-0";
