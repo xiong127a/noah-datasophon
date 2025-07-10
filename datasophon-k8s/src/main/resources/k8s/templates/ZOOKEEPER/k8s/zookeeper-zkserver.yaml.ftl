@@ -47,7 +47,7 @@ spec:
           volumeMounts:
             - name: nfs
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -120,7 +120,7 @@ spec:
           volumeMounts:
             - name: nfs
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

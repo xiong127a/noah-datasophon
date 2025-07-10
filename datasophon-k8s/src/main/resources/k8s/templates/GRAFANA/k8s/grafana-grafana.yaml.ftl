@@ -89,7 +89,7 @@ spec:
           volumeMounts:
             - name: grafana-data
               mountPath: /tmp/grafana-nfs
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
         - name: copy-initial-data
           image: "${dockerImage}"
           env:
@@ -154,7 +154,7 @@ spec:
           volumeMounts:
             - name: grafana-data
               mountPath: /tmp/grafana-nfs
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
         - name: update-datasources
           image: "${dockerImage}"
           env:
@@ -238,7 +238,7 @@ spec:
           volumeMounts:
             - name: grafana-data
               mountPath: /tmp/grafana-nfs
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -324,7 +324,7 @@ spec:
           volumeMounts:
             - name: grafana-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

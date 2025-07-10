@@ -65,7 +65,7 @@ spec:
           volumeMounts:
             - name: prometheus-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -223,7 +223,7 @@ spec:
           volumeMounts:
             - name: prometheus-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

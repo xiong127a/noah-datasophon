@@ -523,7 +523,7 @@ spec:
             # 添加日志卷挂载
             - name: logs-volume
               mountPath: /datasophon-manager/logs
-              subPathExpr: $(POD_NAMESPACE)/datasophon-manager
+              subPathExpr: datasophon-manager
           command: ['sh', '-c', 'cat /tmp/hosts >> /etc/hosts && mkdir -p /datasophon-manager/conf && cp -f /tmp/config/* /datasophon-manager/conf/ && bin/datasophon-api.sh start api && tail -F -f logs/datasophon-api.log']
       # 添加初始化容器，用于设置日志目录权限
       initContainers:

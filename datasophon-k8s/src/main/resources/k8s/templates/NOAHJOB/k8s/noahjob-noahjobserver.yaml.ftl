@@ -105,7 +105,7 @@ spec:
             - name: noahjob-data
               mountPath: ${mount_path}
               # 使用环境变量动态生成子路径
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

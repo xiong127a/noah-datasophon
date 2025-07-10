@@ -79,7 +79,7 @@ spec:
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
         - name: wait-for-zookeeper
           image: "${dockerBusyboxImage}"
           command:
@@ -384,7 +384,7 @@ spec:
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -478,7 +478,7 @@ spec:
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -591,7 +591,7 @@ spec:
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -724,7 +724,7 @@ spec:
           volumeMounts:
             - name: namenode-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

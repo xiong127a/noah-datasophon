@@ -66,7 +66,7 @@ spec:
           volumeMounts:
             - name: nodemanager-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
       containers:
         - env:
             - name: USER
@@ -131,16 +131,16 @@ spec:
           volumeMounts:
             - name: nodemanager-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             - name: nodemanager-data
               mountPath: /data/nm
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/nm
+              subPathExpr: $(POD_NAME)/nm
             - name: nodemanager-data
               mountPath: /data/nm/userlogs
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/nm/userlogs
+              subPathExpr: $(POD_NAME)/nm/userlogs
             - name: nodemanager-data
               mountPath: /data/mapred/local
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)/mapred/local
+              subPathExpr: $(POD_NAME)/mapred/local
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"

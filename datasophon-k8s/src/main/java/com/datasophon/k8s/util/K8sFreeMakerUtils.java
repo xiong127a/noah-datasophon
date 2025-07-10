@@ -558,7 +558,7 @@ public class K8sFreeMakerUtils {
                     .addNewVolumeMount()
                     .withName("prometheus-data")
                     .withMountPath(configMountPath)
-                    .withSubPathExpr("$(POD_NAMESPACE)/$(POD_NAME)")
+                    .withSubPathExpr("$(POD_NAME)")
                     .endVolumeMount()
                     .endContainer()
                     .addNewVolume()

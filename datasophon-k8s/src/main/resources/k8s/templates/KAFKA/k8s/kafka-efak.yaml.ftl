@@ -92,7 +92,7 @@ spec:
           volumeMounts:
             - name: efak-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
 
@@ -440,7 +440,7 @@ spec:
             </#list>
             - name: efak-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
             - name: "hosts-file"

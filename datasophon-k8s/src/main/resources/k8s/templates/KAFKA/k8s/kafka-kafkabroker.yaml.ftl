@@ -90,7 +90,7 @@ spec:
           volumeMounts:
             - name: kafka-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
 
@@ -361,7 +361,7 @@ spec:
               mountPath: "/etc/kafka-external-ip"
             - name: kafka-data
               mountPath: ${mount_path}
-              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+              subPathExpr: $(POD_NAME)
             - name: "timezone"
               mountPath: "/etc/localtime"
       terminationGracePeriodSeconds: 30
