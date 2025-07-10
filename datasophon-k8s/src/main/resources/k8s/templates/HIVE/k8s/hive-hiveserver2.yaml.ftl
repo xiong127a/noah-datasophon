@@ -57,6 +57,35 @@ spec:
               INFO="ℹ️"
               WARNING="⚠️"
               
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ==========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v '^127.0.0.1' /tmp/host_etc_hosts | grep -v '^::1' | grep -v '^#' >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$BLUE$INFO 测试主机名解析:$NC"
+              HOSTNAME_VALUE=$(hostname)
+              FQDN_VALUE=$(hostname -f 2>/dev/null || echo '无法获取FQDN')
+              echo -e "$BLUE$INFO hostname: $HOSTNAME_VALUE$NC"
+              echo -e "$BLUE$INFO hostname -f: $FQDN_VALUE$NC"
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ==========$NC"
+              
               # 定义应用路径
               APP_HOME="${appHome}"
               
@@ -291,6 +320,8 @@ spec:
             - name: db-creds
               mountPath: /etc/hive-db-secret
               readOnly: true
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
         - name: wait-for-metastore
           image: "${dockerBusyboxImage}"
           imagePullPolicy: Always
@@ -307,6 +338,35 @@ spec:
               CHECK_MARK="✅"
               ERROR="❌"
               INFO="ℹ️"
+
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ==========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v '^127.0.0.1' /tmp/host_etc_hosts | grep -v '^::1' | grep -v '^#' >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$BLUE$INFO 测试主机名解析:$NC"
+              HOSTNAME_VALUE=$(hostname)
+              FQDN_VALUE=$(hostname -f 2>/dev/null || echo '无法获取FQDN')
+              echo -e "$BLUE$INFO hostname: $HOSTNAME_VALUE$NC"
+              echo -e "$BLUE$INFO hostname -f: $FQDN_VALUE$NC"
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ==========$NC"
 
               echo -e "$BLUE$INFO 开始检查HiveMetaStore服务状态...$NC"
 
@@ -353,6 +413,11 @@ spec:
                 echo -e "$RED$ERROR 错误: 所有HiveMetaStore服务均无法连接，无法启动HiveServer2!$NC"
                 exit 1
               fi
+          volumeMounts:
+            - name: "timezone"
+              mountPath: "/etc/localtime"
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
       containers:
         - name: ${serviceRoleFullName}
           image: ${dockerImage}
@@ -370,7 +435,52 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
-          command: ["/bin/sh", "-c", "${startCommand}"]
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              # 定义颜色和图标
+              RED='\033[0;31m'
+              GREEN='\033[0;32m'
+              BLUE='\033[0;34m'
+              YELLOW='\033[1;33m'
+              NC='\033[0m' # No Color
+              CHECK_MARK="✅"
+              INFO="ℹ️"
+              ERROR="❌"
+              WARNING="⚠️"
+              
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ==========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v '^127.0.0.1' /tmp/host_etc_hosts | grep -v '^::1' | grep -v '^#' >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$BLUE$INFO 测试主机名解析:$NC"
+              HOSTNAME_VALUE=$(hostname)
+              FQDN_VALUE=$(hostname -f 2>/dev/null || echo '无法获取FQDN')
+              echo -e "$BLUE$INFO hostname: $HOSTNAME_VALUE$NC"
+              echo -e "$BLUE$INFO hostname -f: $FQDN_VALUE$NC"
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ==========$NC"
+              
+              # 执行原始启动命令
+              ${startCommand}
           resources:
             requests:
               memory: ${requests_memory}
@@ -386,6 +496,8 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
       volumes:
         <#list volumeConfigMapSet as item>
         - name: "${item.name}"
@@ -399,3 +511,6 @@ spec:
           secret:
             secretName: ${serviceRoleFullName}-db-secret
             defaultMode: 0400
+        - name: "hosts-file"
+          hostPath:
+            path: "/etc/hosts"

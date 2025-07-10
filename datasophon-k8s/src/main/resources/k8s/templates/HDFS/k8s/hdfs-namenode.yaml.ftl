@@ -263,7 +263,6 @@ spec:
               else
                 echo -e "$GREEN$CHECK_MARK JournalNode集群状态正常，继续初始化NameNode$NC"
               fi
-        <#if isInstall?? && isInstall>
         # NameNode格式化/同步初始化容器 - 每次启动时都会检查，确保幂等性
         - name: namenode-format
           image: "${dockerImage}"
