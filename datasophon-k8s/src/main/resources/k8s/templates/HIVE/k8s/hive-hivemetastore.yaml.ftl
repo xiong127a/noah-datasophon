@@ -58,6 +58,29 @@ spec:
 
               echo -e "$BLUE$INFO 开始检查后端数据库连接...$NC"
               
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ===========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v '^127.0.0.1' /tmp/host_etc_hosts | grep -v '^::1' | grep -v '^#' >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ===========$NC"
+              
               # 从Secret挂载的文件中读取数据库连接信息
               DB_HOST=$(cat /etc/hive-db-secret/db-host)
               DB_PORT=$(cat /etc/hive-db-secret/db-port)
@@ -90,6 +113,8 @@ spec:
             - name: db-creds
               mountPath: /etc/hive-db-secret
               readOnly: true
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
         <#if isInstall?? && isInstall>
         # InitContainer 2: Use a database lock to elect a leader for schema initialization.
         - name: initialize-schema-with-db-lock
@@ -110,6 +135,29 @@ spec:
               NC='\033[0m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; INFO="ℹ️"; ERROR="❌"; CHECK_MARK="✅"
 
               echo -e "$BLUE$INFO 开始使用数据库锁进行Schema初始化...$NC"
+              
+              # 处理hosts文件，将主机hosts文件内容与Pod DNS配置合并
+              echo -e "$BLUE$INFO ========== 开始处理hosts文件 ===========$NC"
+              
+              # 备份原始hosts文件
+              cp /etc/hosts /tmp/original_hosts
+              echo -e "$BLUE$INFO 已备份原始hosts文件到/tmp/original_hosts$NC"
+              
+              # 从主机hosts文件中提取有用条目 (通常是自定义的主机映射)
+              if [ -f /tmp/host_etc_hosts ]; then
+                echo -e "$BLUE$INFO 从主机hosts文件提取有用条目...$NC"
+                grep -v '^127.0.0.1' /tmp/host_etc_hosts | grep -v '^::1' | grep -v '^#' >> /tmp/original_hosts
+              else
+                echo -e "$YELLOW$WARNING 警告: 主机hosts文件未找到$NC"
+              fi
+              
+              # 应用合并后的hosts文件
+              cat /tmp/original_hosts > /etc/hosts
+              
+              echo -e "$BLUE$INFO 最终hosts文件内容:$NC"
+              cat /etc/hosts
+              
+              echo -e "$GREEN$CHECK_MARK ========== hosts文件处理完成 ===========$NC"
               
               # 从Secret挂载的文件中读取数据库连接信息
               DB_HOST=$(cat /etc/hive-db-secret/db-host)
@@ -184,6 +232,8 @@ spec:
             - name: db-creds
               mountPath: /etc/hive-db-secret
               readOnly: true
+            - name: "hosts-file"
+              mountPath: "/tmp/host_etc_hosts"
         </#if>
       containers:
         - name: ${serviceRoleFullName}
