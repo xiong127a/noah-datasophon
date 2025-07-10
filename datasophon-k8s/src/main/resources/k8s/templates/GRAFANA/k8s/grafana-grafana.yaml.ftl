@@ -23,12 +23,6 @@ spec:
         serviceInstanceName: "${serviceName}"
         service.kubernetes.io/headless: "true"
     spec:
-      # 使用hostAliases来添加hosts条目
-      hostAliases:
-        - ip: "127.0.0.1"
-          hostnames:
-            - "localhost"
-        # 这里可以添加更多的hosts条目，或者通过模板变量动态添加
       nodeSelector:
         ${serviceRoleFullName}: "true"
       affinity:
@@ -92,6 +86,7 @@ spec:
               subPathExpr: $(POD_NAME)
         - name: copy-initial-data
           image: "${dockerImage}"
+          imagePullPolicy: Always
           env:
             - name: POD_NAME
               valueFrom:
@@ -157,6 +152,7 @@ spec:
               subPathExpr: $(POD_NAME)
         - name: update-datasources
           image: "${dockerImage}"
+          imagePullPolicy: Always
           env:
             - name: POD_NAME
               valueFrom:
@@ -256,7 +252,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           image: "${dockerImage}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: Always
           <#assign hasPorts = false>
           <#if node_port_mappings?? && node_port_mappings?has_content>
             <#list node_port_mappings as item>
