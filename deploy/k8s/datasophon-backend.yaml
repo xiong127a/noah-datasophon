@@ -63,7 +63,7 @@ data:
     IMAGE_REGISTRY=harbor.norintech.com
     language=chinese
     install.path=/opt/datasophon
-    yaml.path=/project-code/noah-bigdata-platform
+    yaml.path=/datasophon-manager/logs
     masterHost=master01
     masterWebPort=8081
     frameCode=DDP-1.2.1
