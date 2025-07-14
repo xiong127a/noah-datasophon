@@ -289,6 +289,7 @@ public class K8sConfigureServiceHandler {
                         ServiceConfig serviceConfig = new ServiceConfig();
                         serviceConfig.setName(key);
                         serviceConfig.setValue(json.get(key));
+                        serviceConfig.setConfigType(config.getConfigType());
                         customConfList.add(serviceConfig);
                     }
                 }
