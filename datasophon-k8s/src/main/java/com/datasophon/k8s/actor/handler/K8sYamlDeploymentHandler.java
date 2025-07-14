@@ -456,8 +456,8 @@ public class K8sYamlDeploymentHandler {
             extractHiveDatabaseInfo();
         }
         if ("REDIS".equals(serviceName)) {
-            String redisMasterAddr = String.valueOf(CONFIG_CACHE.get("RedisMasterAddr"));
-            String redisSlaveAddr = String.valueOf(CONFIG_CACHE.get("RedisSlaveAddr"));
+            String redisMasterAddr = (String) CONFIG_CACHE.get("RedisMasterAddr").getValue();
+            String redisSlaveAddr = (String) CONFIG_CACHE.get("RedisSlaveAddr").getValue();
             if (StrUtil.isNotBlank(redisSlaveAddr)) {
                 data.put("REDIS_ADDRESS", redisMasterAddr + "," + redisSlaveAddr);
             } else {
