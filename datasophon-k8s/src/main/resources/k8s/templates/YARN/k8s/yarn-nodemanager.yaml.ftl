@@ -92,8 +92,8 @@ spec:
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Performing Kerberos setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  HOSTNAME=$(hostname)
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  FQDN=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
