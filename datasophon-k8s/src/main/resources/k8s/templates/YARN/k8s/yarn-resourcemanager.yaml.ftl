@@ -184,11 +184,11 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              HOSTNAME=$(hostname)
+              FQDN=$(hostname)
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Performing Kerberos setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
@@ -198,7 +198,7 @@ spec:
                   echo "ssl-server.xml not found. Copying from template...";
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
-                 su - hdfs -c "kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/$HOSTNAME@HADOOP.COM"
+                 su - hdfs -c "kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/$FQDN@HADOOP.COM"
                  su - hdfs -c "kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM"
               else
                 echo "Kerberos is not enabled. Skipping Kerberos setup.";

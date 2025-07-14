@@ -305,13 +305,13 @@ spec:
               mkdir -p $TARGET_CONF_DIR
               
               # 获取主机名
-              HOSTNAME=$(hostname -f)
-              echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
+              FQDN=$(hostname -f)
+              echo -e "$BLUE$INFO 当前主机名: $FQDN$NC"
               
               # 处理包含占位符的配置文件
               <#if example_config_files?? && (example_config_files?size > 0)>
               echo -e "$BLUE$INFO 开始处理配置文件模板...$NC"
-              echo -e "$BLUE$INFO 当前Pod的FQDN: $HOSTNAME$NC"
+              echo -e "$BLUE$INFO 当前Pod的FQDN: $FQDN$NC"
               echo -e "$BLUE$INFO 当前Pod的IP: $NODE_IP_ADDRESS$NC"
               
               <#list example_config_files as exampleFilePath>
@@ -331,15 +331,15 @@ spec:
               if [ -f "$SOURCE_PATH" ]; then
                 echo -e "$BLUE$INFO 正在替换 $SOURCE_PATH 中的占位符...$NC"
                 # 替换所有$(hostname)为Pod的FQDN
-                sed "s/\\\$(hostname)/$HOSTNAME/g" "$SOURCE_PATH" > "$TARGET_PATH"
+                sed "s/\\\$(hostname)/$FQDN/g" "$SOURCE_PATH" > "$TARGET_PATH"
                 # 替换所有{{HOST}}为Pod的FQDN
-                sed -i "s/{{HOST}}/$HOSTNAME/g" "$TARGET_PATH"
+                sed -i "s/{{HOST}}/$FQDN/g" "$TARGET_PATH"
                 # 替换所有{{IP}}为Pod的IP
                 sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$TARGET_PATH"
                 # 替换所有${r"${hostname}"}为Pod的FQDN
-                sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$TARGET_PATH"
-                # 替换所有##HOSTNAME##为Pod的FQDN (兼容旧格式)
-                sed -i "s/##HOSTNAME##/$HOSTNAME/g" "$TARGET_PATH"
+                sed -i "s/${r"${hostname}"}/$FQDN/g" "$TARGET_PATH"
+                # 替换所有##FQDN##为Pod的FQDN (兼容旧格式)
+                sed -i "s/##FQDN##/$FQDN/g" "$TARGET_PATH"
                 
                 # 检查文件是否创建成功
                 if [ -f "$TARGET_PATH" ]; then
@@ -371,16 +371,16 @@ spec:
                     continue
                   fi
                   echo -e "$BLUE$INFO 处理常规配置文件: $FILENAME$NC"
-                  # 替换##HOSTNAME##占位符为实际的主机名
-                  sed -i "s/##HOSTNAME##/$HOSTNAME/g" "$CONF_FILE"
+                  # 替换##FQDN##占位符为实际的主机名
+                  sed -i "s/##FQDN##/$FQDN/g" "$CONF_FILE"
                   # 替换$(hostname)占位符为实际的主机名
-                  sed -i "s/\\\$(hostname)/$HOSTNAME/g" "$CONF_FILE"
+                  sed -i "s/\\\$(hostname)/$FQDN/g" "$CONF_FILE"
                   # 替换{{HOST}}占位符为实际的主机名
-                  sed -i "s/{{HOST}}/$HOSTNAME/g" "$CONF_FILE"
+                  sed -i "s/{{HOST}}/$FQDN/g" "$CONF_FILE"
                   # 替换{{IP}}占位符为实际的IP
                   sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$CONF_FILE"
                   # 替换${r"${hostname}"}占位符为实际的主机名
-                  sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$CONF_FILE"
+                  sed -i "s/${r"${hostname}"}/$FQDN/g" "$CONF_FILE"
                   # 复制到目标目录
                   cp -f "$CONF_FILE" "$TARGET_CONF_DIR/"
                 fi
@@ -406,7 +406,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: HOSTNAME
+            - name: FQDN
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName

@@ -107,11 +107,11 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              HOSTNAME=$(hostname)
+              FQDN=$(hostname -f)
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Performing Kerberos setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";

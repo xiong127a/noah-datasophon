@@ -232,8 +232,8 @@ spec:
 
               echo -e "$BLUE$INFO 开始启动Kafka服务...$NC"
               
-              HOSTNAME=$(hostname -f)
-              echo -e "$BLUE$INFO 当前主机名: $HOSTNAME$NC"
+              FQDN=$(hostname -f)
+              echo -e "$BLUE$INFO 当前主机名: $FQDN$NC"
               
               # 获取外部IP地址
               echo -e "$BLUE$INFO 获取外部IP地址...$NC"
@@ -247,7 +247,7 @@ spec:
               # 处理包含占位符的配置文件
               <#if example_config_files?? && (example_config_files?size > 0)>
               echo -e "$BLUE$INFO 开始处理配置文件模板...$NC"
-              echo -e "$BLUE$INFO 当前Pod的FQDN: $HOSTNAME$NC"
+              echo -e "$BLUE$INFO 当前Pod的FQDN: $FQDN$NC"
               echo -e "$BLUE$INFO 当前Pod的IP: $NODE_IP_ADDRESS$NC"
               echo -e "$BLUE$INFO 当前external的IP: $EXTERNAL_IP$NC"
               
@@ -268,15 +268,15 @@ spec:
               if [ -f "$SOURCE_PATH" ]; then
                 echo -e "$BLUE$INFO 正在替换 $SOURCE_PATH 中的占位符...$NC"
                 # 替换所有$(hostname)为Pod的FQDN
-                sed "s/\\\$(hostname)/$HOSTNAME/g" "$SOURCE_PATH" > "$TARGET_PATH"
+                sed "s/\\\$(hostname)/$FQDN/g" "$SOURCE_PATH" > "$TARGET_PATH"
                 # 替换所有{{HOST}}为Pod的FQDN
-                sed -i "s/{{HOST}}/$HOSTNAME/g" "$TARGET_PATH"
+                sed -i "s/{{HOST}}/$FQDN/g" "$TARGET_PATH"
                 # 替换所有{{IP}}为Pod的IP
                 sed -i "s/{{IP}}/$NODE_IP_ADDRESS/g" "$TARGET_PATH"
                 # 替换所有{{EXTERNAL_IP}}为Pod的EXTERNAL_IP
                 sed -i "s/{{EXTERNAL_IP}}/$EXTERNAL_IP/g" "$TARGET_PATH"
                 # 替换所有${r"${hostname}"}为Pod的FQDN
-                sed -i "s/${r"${hostname}"}/$HOSTNAME/g" "$TARGET_PATH"
+                sed -i "s/${r"${hostname}"}/$FQDN/g" "$TARGET_PATH"
                 
                 # 检查文件是否创建成功
                 if [ -f "$TARGET_PATH" ]; then
@@ -300,7 +300,7 @@ spec:
               
               # 设置JMX RMI的主机名，以便远程访问
               # 注意：JMX_PORT 和其他JMX参数已通过环境变量注入
-              export KAFKA_OPTS="$KAFKA_OPTS -Djava.rmi.server.hostname=$HOSTNAME"
+              export KAFKA_OPTS="$KAFKA_OPTS -Djava.rmi.server.hostname=$FQDN"
               
               
               # 启动Kafka服务
@@ -323,7 +323,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: HOSTNAME
+            - name: FQDN
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName

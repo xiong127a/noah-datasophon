@@ -54,8 +54,8 @@ spec:
               if ${enableKerberos}; then
                   echo "Kerberos is enabled. Running keystore setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  HOSTNAME=$(hostname)
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  FQDN=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
@@ -79,8 +79,8 @@ spec:
               fi
               chown -R ${runAsUser}:${runAsGroup} ${appHome}
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
-              HOSTNAME=$(hostname -f)
-              sed -i "s/{{HOST}}/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
+              FDNQ=$(hostname -f)
+              sed -i "s/{{HOST}}/$FQDN/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:

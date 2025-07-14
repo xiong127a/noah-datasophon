@@ -305,9 +305,9 @@ spec:
                 # 设置Kerberos（如果启用）
                 if ${enableKerberos}; then
                   echo "设置Kerberos..."
-                  HOSTNAME=$(hostname)
+                  FQDN=$(hostname)
                   if [ ! -f /etc/security/keytab/keystore ]; then
-                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                    cd /opt/datasophon/script && sh keystore.sh $FQDN
                   fi
                   if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                     cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
@@ -345,9 +345,9 @@ spec:
                 # 设置Kerberos（如果启用）
                 if ${enableKerberos}; then
                   echo "设置Kerberos..."
-                  HOSTNAME=$(hostname)
+                  FQDN=$(hostname)
                   if [ ! -f /etc/security/keytab/keystore ]; then
-                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                    cd /opt/datasophon/script && sh keystore.sh $FQDN
                   fi
                   if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                     cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
@@ -441,9 +441,9 @@ spec:
               # 添加Kerberos相关配置
               if ${enableKerberos}; then
                 echo "ℹ️ Kerberos已启用，设置Kerberos配置...";
-                HOSTNAME=$(hostname)
+                FQDN=$(hostname)
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
@@ -452,7 +452,7 @@ spec:
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
                 # 执行Kerberos身份验证
-                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
+                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$FQDN@HADOOP.COM"
               fi
               
               # 执行ZKFC格式化
@@ -543,7 +543,7 @@ spec:
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  cd /opt/datasophon/script && sh keystore.sh $FQDN
                 fi
                 if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
@@ -553,7 +553,7 @@ spec:
                   echo "ssl-server.xml not found. Copying from template...";
                   cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
-                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
+                su - ${runAsUser} -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$FQDN@HADOOP.COM"
               else
                 echo "Kerberos is not enabled.";
               fi

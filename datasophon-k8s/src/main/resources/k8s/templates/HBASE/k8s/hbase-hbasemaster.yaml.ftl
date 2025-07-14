@@ -73,8 +73,8 @@ spec:
             - |
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
-                HOSTNAME=$(hostname)
-                cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                FQDN=$(hostname)
+                cd /opt/datasophon/script && sh keystore.sh $FQDN
                 cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
               fi
@@ -84,8 +84,8 @@ spec:
                 sh ${appHome}/ranger-hbase-plugin/enable-hbase-plugin.sh
               fi
               cp ${appHome}/conf/hbase-site.xml.example  ${appHome}/conf/hbase-site.xml
-              HOSTNAME=$(hostname -f)
-              sed -i "s/{{HOST}}/$HOSTNAME/g" ${appHome}/conf/hbase-site.xml
+              FQDN=$(hostname -f)
+              sed -i "s/{{HOST}}/$FQDN/g" ${appHome}/conf/hbase-site.xml
               ${startCommand}
           readinessProbe:
             exec:
