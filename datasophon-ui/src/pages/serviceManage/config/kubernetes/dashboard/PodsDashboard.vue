@@ -1,17 +1,17 @@
 <template>
   <div class="resource-list">
     <!-- Pods列表区域 -->
-    <div class="k8s-dashboard-card k8s-resource-card">
-      <div class="k8s-card-header">
-        <span class="k8s-card-title">Pods</span>
-        <div class="k8s-card-actions">
-          <a-icon type="bars" class="k8s-action-icon" />
-          <a class="k8s-card-collapse-icon">
+    <div class="kubernetes-dashboard-card kubernetes-resource-card">
+      <div class="kubernetes-card-header">
+        <span class="kubernetes-card-title">Pods</span>
+        <div class="kubernetes-card-actions">
+          <a-icon type="bars" class="kubernetes-action-icon" />
+          <a class="kubernetes-card-collapse-icon">
             <a-icon type="minus" />
           </a>
         </div>
       </div>
-      <div class="k8s-card-content">
+      <div class="kubernetes-card-content">
         <a-spin :spinning="loading">
           <a-table
             :columns="columns"
@@ -27,7 +27,7 @@
               hideOnSinglePage: totalPages <= 1,
               showTotal: total => `共 ${total} 条记录`
             }"
-            class="k8s-table"
+            class="kubernetes-table"
             :table-layout="'auto'"
             :bordered="false"
             :zebra-stripes="false"
@@ -260,8 +260,8 @@ export default {
             pageSize: this.pagination.pageSize
         };
         
-        // 使用全局API对象中定义的getK8sPods接口
-        const res = await this.$axiosGet(global.API.getK8sPods, params);
+        // 使用全局API对象中定义的getKubernetesPods接口
+        const res = await this.$axiosGet(global.API.getKubernetesPods, params);
 
         // 打印API返回的原始数据，用于调试
         console.log('API返回的原始数据:', JSON.stringify(res, null, 2));
@@ -444,7 +444,7 @@ export default {
 </script>
 
 <style lang="less" scoped>
-@import './styles/k8s-table-styles.less';
+@import 'styles/kubernetes-table-styles.less';
 
 // 名称单元格样式
 .name-cell {

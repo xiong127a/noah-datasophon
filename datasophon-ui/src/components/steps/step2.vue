@@ -155,15 +155,15 @@ export default {
         this.loading = false;
         this.dataSource = res.data;
         this.pagination.total = res.total;
-        if (res.code == 200 && this.depType=='K8S'){
+        if (res.code === 200 && this.depType==='Kubernetes'){
           let data = JSON.parse(JSON.stringify(res.data))
           data && data.forEach(e => {
-            if (e.checkResult.code=='10001'){
+            if (e.checkResult.code ==='10001'){
               e['CheckResult'] = e.checkResult
               delete e.checkResult
               let arr=[]
               arr[0] = e
-              this.saveK8sHostApi(arr)
+              this.saveKubernetesHostApi(arr)
             } 
         })
         }
@@ -178,8 +178,8 @@ export default {
         self.getEnvironmentList(true);
       }, global.intervalTime);
     },
-    saveK8sHostApi (params){
-      this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
+    saveKubernetesHostApi (params){
+      this.$axiosJsonPost(global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, params).then((res) => {
        });
     },
     //表格选择

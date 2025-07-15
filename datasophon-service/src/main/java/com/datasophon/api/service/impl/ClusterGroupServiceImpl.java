@@ -42,7 +42,7 @@ import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
-import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +122,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         return Result.success();
     }
     @Override
-    public Result saveClusterGroupOnK8s(Integer clusterId, String groupName) {
+    public Result saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -156,7 +156,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         for (ClusterHostDO clusterHost : hostList) {
             // 执行命令获取当前主机的最大 GID
-            String result = K8sMinaUtils.execCmdWithResult(clusterHost.getHostname(),
+            String result = KubernetesMinaUtils.execCmdWithResult(clusterHost.getHostname(),
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/group");
 
             // 将返回结果转换为 Integer 类型
@@ -247,7 +247,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         return Result.success();
     }
     @Override
-    public Result deleteUserGroupOnK8s(Integer id) {
+    public Result deleteUserGroupOnKubernetes(Integer id) {
         ClusterGroup clusterGroup = this.getById(id);
         long num = userGroupService.countGroupUserNum(id);
         if (num > 0) {
@@ -329,18 +329,18 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             commands.add("-g");
             commands.add(String.valueOf(createUnixGroupGid));
         }
-        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
     public static String delUnixGroup(String groupName,String hostname) {
         ArrayList<String> commands = new ArrayList<>();
         commands.add("groupdel");
         commands.add(groupName);
-        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
     public static boolean isGroupExists(String groupName,String hostname) {
-        String result = K8sMinaUtils.execCmdWithResult(hostname, "egrep \"" + groupName + "\" /etc/group >& /dev/null");
+        String result = KubernetesMinaUtils.execCmdWithResult(hostname, "egrep \"" + groupName + "\" /etc/group >& /dev/null");
         return !result.equals(Constants.FAILED);
     }
 }

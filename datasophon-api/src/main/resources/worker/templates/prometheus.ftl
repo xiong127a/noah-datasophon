@@ -19,7 +19,7 @@ rule_files:
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
-  - job_name: 'k8s-kubelet'
+  - job_name: 'kubernetes-kubelet'
     scheme: https
     tls_config:
       ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -34,7 +34,7 @@ scrape_configs:
       target_label: __metrics_path__
       replacement: /api/v1/nodes/${r"${1}"}/proxy/metrics
 
-  - job_name: 'k8s-cadvisor'
+  - job_name: 'kubernetes-cadvisor'
     scheme: https
     tls_config:
       ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt

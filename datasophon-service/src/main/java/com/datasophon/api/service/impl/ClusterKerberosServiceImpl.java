@@ -27,9 +27,8 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
-import com.datasophon.k8s.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,11 +43,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
-import java.util.Objects;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
-import static com.datasophon.k8s.util.K8sUtil.runCmd;
+import static com.datasophon.kubernetes.util.KubernetesUtil.runCmd;
 
 @Service("clusterKerberosService")
 @Transactional
@@ -75,7 +73,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             if (Constants.PVM_MODE.equals(depMode)) {
                 generateKeytabFile(clusterId, keytabFilePath, keytabName);
             } else {
-                K8sgenerateKeytabFile(clusterId, keytabFilePath, keytabName);
+                kubernetesGenerateKeytabFile(clusterId, keytabFilePath, keytabName);
             }
         }
         response.setContentType("application/octet-stream");
@@ -108,7 +106,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             if (Constants.PVM_MODE.equals(depMode)) {
                 generateKeytabFile(clusterId, keytabFilePath, principal);
             } else {
-                K8sgenerateKeytabFile(clusterId, keytabFilePath, principal);
+                kubernetesGenerateKeytabFile(clusterId, keytabFilePath, principal);
             }
         }
 
@@ -135,7 +133,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         file.transferTo(new File(keytabFilePath));
     }
 
-    private void K8sgenerateKeytabFile(
+    private void kubernetesGenerateKeytabFile(
             Integer clusterId,
             String keytabFilePath,
             String principal

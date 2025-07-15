@@ -103,7 +103,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 // 这里是建议的新字段，用于描述配置文件
                 String fileDescription = generator.getString("fileDescription");
 
-                if (StrUtil.startWith(fileName, Constants.K8S_CONFIG_PREFIX)) {
+                if (StrUtil.startWith(fileName, Constants.KUBERNETES_CONFIG_PREFIX)) {
                     continue;
                 }
 

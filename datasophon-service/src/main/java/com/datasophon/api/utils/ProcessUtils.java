@@ -30,13 +30,13 @@ import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.datasophon.api.k8s.handler.K8sDeploymentYamlHandler;
-import com.datasophon.api.k8s.handler.K8sHostTagHandler;
-import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
-import com.datasophon.api.k8s.handler.K8sServiceInstallHandler;
-import com.datasophon.api.k8s.handler.K8sServiceRoleStopHandler;
-import com.datasophon.api.k8s.handler.K8sServiceScaleHandler;
-import com.datasophon.api.k8s.handler.K8sServiceStartHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesDeploymentYamlHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesHostTagHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceInstallHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceRoleStopHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceScaleHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceStartHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.master.ActorUtils;
@@ -581,22 +581,22 @@ public class ProcessUtils {
             }
             return serviceStopHandler.handlerRequest(serviceRoleInfo);
         } else {
-            K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
-            K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
-            k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
+            KubernetesHostTagHandler kubernetesHostTagHandler = new KubernetesHostTagHandler();
+            KubernetesServiceRoleStopHandler kubernetesServiceRoleStopHandler = new KubernetesServiceRoleStopHandler();
+            KubernetesServiceScaleHandler kubernetesServiceScaleHandler = new KubernetesServiceScaleHandler();
+            kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
             if (needReConfig) {
-                K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
-                K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
-                k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
-                k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
-                k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
+                KubernetesServiceConfigureHandler kubernetesServiceConfigureHandler = new KubernetesServiceConfigureHandler();
+                KubernetesDeploymentYamlHandler kubernetesDeploymentYamlHandler = new KubernetesDeploymentYamlHandler();
+                kubernetesServiceConfigureHandler.setNext(kubernetesDeploymentYamlHandler);
+                kubernetesDeploymentYamlHandler.setNext(kubernetesHostTagHandler);
+                kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
+                kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
             } else {
-                k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
-                k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
+                kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
+                kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
             }
-            return k8sHostTagHandler.handlerRequest(serviceRoleInfo);
+            return kubernetesHostTagHandler.handlerRequest(serviceRoleInfo);
         }
     }
 
@@ -615,21 +615,21 @@ public class ProcessUtils {
             }
         } else {
             if (needReConfig) {
-                K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
-                K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
-                K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-                K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
-                k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
-                k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceScaleHandler);
-                execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+                KubernetesServiceConfigureHandler kubernetesServiceConfigureHandler = new KubernetesServiceConfigureHandler();
+                KubernetesDeploymentYamlHandler kubernetesDeploymentYamlHandler = new KubernetesDeploymentYamlHandler();
+                KubernetesHostTagHandler kubernetesHostTagHandler = new KubernetesHostTagHandler();
+                KubernetesServiceScaleHandler kubernetesServiceScaleHandler = new KubernetesServiceScaleHandler();
+                kubernetesServiceConfigureHandler.setNext(kubernetesDeploymentYamlHandler);
+                kubernetesDeploymentYamlHandler.setNext(kubernetesHostTagHandler);
+                kubernetesHostTagHandler.setNext(kubernetesServiceScaleHandler);
+                execResult = kubernetesServiceConfigureHandler.handlerRequest(serviceRoleInfo);
             } else {
-                K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-                K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
-                K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
-                k8sHostTagHandler.setNext(k8sServiceStartHandler);
-                k8sServiceStartHandler.setNext(k8sServiceScaleHandler);
-                execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
+                KubernetesHostTagHandler kubernetesHostTagHandler = new KubernetesHostTagHandler();
+                KubernetesServiceStartHandler kubernetesServiceStartHandler = new KubernetesServiceStartHandler();
+                KubernetesServiceScaleHandler kubernetesServiceScaleHandler = new KubernetesServiceScaleHandler();
+                kubernetesHostTagHandler.setNext(kubernetesServiceStartHandler);
+                kubernetesServiceStartHandler.setNext(kubernetesServiceScaleHandler);
+                execResult = kubernetesHostTagHandler.handlerRequest(serviceRoleInfo);
             }
         }
         return execResult;
@@ -642,12 +642,12 @@ public class ProcessUtils {
             ServiceHandler serviceStopHandler = new ServiceStopHandler();
             execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
         } else {
-            K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
-            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
-            K8sServiceScaleHandler k8sServiceScaleHandler = new K8sServiceScaleHandler();
-            k8sHostTagHandler.setNext(k8sServiceRoleStopHandler);
-            k8sServiceRoleStopHandler.setNext(k8sServiceScaleHandler);
-            execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
+            KubernetesHostTagHandler kubernetesHostTagHandler = new KubernetesHostTagHandler();
+            KubernetesServiceRoleStopHandler kubernetesServiceRoleStopHandler = new KubernetesServiceRoleStopHandler();
+            KubernetesServiceScaleHandler kubernetesServiceScaleHandler = new KubernetesServiceScaleHandler();
+            kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
+            kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
+            execResult = kubernetesHostTagHandler.handlerRequest(serviceRoleInfo);
         }
         return execResult;
     }
@@ -664,30 +664,30 @@ public class ProcessUtils {
             execResult = serviceInstallHandler.handlerRequest(serviceRoleInfo);
         } else {
 //            serviceRoleInfo.setCommandType(CommandType.INSTALL_SERVICE);
-            // 在K8S环境中使用责任链模式实现服务安装流程
+            // 在Kubernetes环境中使用责任链模式实现服务安装流程
             // 责任链模式允许请求依次经过多个处理器，每个处理器负责一个特定的安装步骤
             // 这种设计提高了代码的模块化程度，便于维护和扩展
 
             // 1. 创建服务安装处理器 - 负责服务组件的初始安装准备工作
-            K8sServiceInstallHandler k8sServiceInstallHandler = new K8sServiceInstallHandler();
+            KubernetesServiceInstallHandler kubernetesServiceInstallHandler = new KubernetesServiceInstallHandler();
             // 2. 创建服务配置处理器 - 负责生成和应用服务的配置文件
-            K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
-            // 3. 创建K8S部署YAML处理器 - 负责生成Kubernetes部署所需的YAML文件
+            KubernetesServiceConfigureHandler kubernetesServiceConfigureHandler = new KubernetesServiceConfigureHandler();
+            // 3. 创建Kubernetes部署YAML处理器 - 负责生成Kubernetes部署所需的YAML文件
 
-            K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
+            KubernetesDeploymentYamlHandler kubernetesDeploymentYamlHandler = new KubernetesDeploymentYamlHandler();
             // 4. 创建主机标签处理器 - 为Kubernetes节点添加相应的标签，确保Pod被调度到正确的节点
-            K8sHostTagHandler k8SHostTagHandler = new K8sHostTagHandler();
+            KubernetesHostTagHandler kubernetesHostTagHandler = new KubernetesHostTagHandler();
             // 5. 创建服务启动处理器 - 负责启动已配置的服务
-            K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
+            KubernetesServiceStartHandler kubernetesServiceStartHandler = new KubernetesServiceStartHandler();
 
             // 构建责任链，确定处理器的执行顺序
-            k8sServiceInstallHandler.setNext(k8sServiceConfigureHandler); // 安装完成后进行配置
-            k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler); // 配置完成后生成YAML
-            k8sDeploymentYamlHandler.setNext(k8SHostTagHandler); // YAML生成后设置主机标签
-            k8SHostTagHandler.setNext(k8sServiceStartHandler); // 标签设置后启动服务
+            kubernetesServiceInstallHandler.setNext(kubernetesServiceConfigureHandler); // 安装完成后进行配置
+            kubernetesServiceConfigureHandler.setNext(kubernetesDeploymentYamlHandler); // 配置完成后生成YAML
+            kubernetesDeploymentYamlHandler.setNext(kubernetesHostTagHandler); // YAML生成后设置主机标签
+            kubernetesHostTagHandler.setNext(kubernetesServiceStartHandler); // 标签设置后启动服务
 
             // 从责任链的第一个处理器开始执行请求，服务角色信息会依次通过所有处理器
-            execResult = k8sServiceInstallHandler.handlerRequest(serviceRoleInfo);
+            execResult = kubernetesServiceInstallHandler.handlerRequest(serviceRoleInfo);
         }
         return execResult;
     }

@@ -8,13 +8,13 @@ import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
-import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
-import static com.datasophon.k8s.constants.Constant.K8S_NAMESPACE;
+import static com.datasophon.kubernetes.constants.Constant.KUBERNETES_NAMESPACE;
 
 
 @Service
@@ -40,9 +40,9 @@ public class AutoScaleServiceImpl implements AutoScaleService {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
-        K8sUtil.scaleStatefulSet(
+        KubernetesUtil.scaleStatefulSet(
                 kubeConfig,
-                K8S_NAMESPACE,
+                KUBERNETES_NAMESPACE,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_UP_REPLICAS,
                 "工作日早9点扩容"
@@ -57,9 +57,9 @@ public class AutoScaleServiceImpl implements AutoScaleService {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
-        K8sUtil.scaleStatefulSet(
+        KubernetesUtil.scaleStatefulSet(
                 kubeConfig,
-                K8S_NAMESPACE,
+                KUBERNETES_NAMESPACE,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_DOWN_REPLICAS,
                 "工作日晚6点缩容"

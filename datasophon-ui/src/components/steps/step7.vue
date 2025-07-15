@@ -206,7 +206,7 @@ export default {
       isGroupExpanded: {},      // 分组展开状态 { service1: { group1: true, group2: false }, ... }
       selectKeys: [],
       activeKubernetesTabs: {}, // 存储每个服务的Kubernetes Tab激活状态
-      k8sSubGroupChineseNames: {
+      kubernetesSubGroupChineseNames: {
         'persistentVolumeClaims': '持久卷声明',
         'resources': '资源规格',
         'services': '服务暴露',
@@ -457,19 +457,19 @@ export default {
             // 处理该分组内的Kubernetes配置
             if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
               for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
-                const k8sRefName = `CommonTemplateRef_${currentService}_${groupName}_${subGroupName}`;
-                const k8sFormRef = this.$refs[k8sRefName]?.[0];
-                if (k8sFormRef) {
-                  await k8sFormRef.form.validateFields();
+                const kubernetesRefName = `CommonTemplateRef_${currentService}_${groupName}_${subGroupName}`;
+                const kubernetesFormRef = this.$refs[kubernetesRefName]?.[0];
+                if (kubernetesFormRef) {
+                  await kubernetesFormRef.form.validateFields();
                   // 获取表单值并过滤
-                  const k8sFormValues = k8sFormRef.form.getFieldsValue();
-                  const filteredK8sValues = {};
-                  for (const key in k8sFormValues) {
+                  const kubernetesFormValues = kubernetesFormRef.form.getFieldsValue();
+                  const filteredKubernetesValues = {};
+                  for (const key in kubernetesFormValues) {
                     if (!key.endsWith('_value')) {
-                      filteredK8sValues[key] = k8sFormValues[key];
+                      filteredKubernetesValues[key] = kubernetesFormValues[key];
                     }
                   }
-                  Object.assign(allFormData, filteredK8sValues);
+                  Object.assign(allFormData, filteredKubernetesValues);
                 }
               }
             }
@@ -478,19 +478,19 @@ export default {
           // 处理通用Kubernetes配置组
           if (this.kubernetesGroups[currentService]) {
             for (const subGroupName of Object.keys(this.kubernetesGroups[currentService])) {
-              const k8sRefName = `CommonTemplateRef_${currentService}_Kubernetes_${subGroupName}`;
-              const k8sFormRef = this.$refs[k8sRefName]?.[0];
-              if (k8sFormRef) {
-                await k8sFormRef.form.validateFields();
+              const kubernetesRefName = `CommonTemplateRef_${currentService}_Kubernetes_${subGroupName}`;
+              const kubernetesFormRef = this.$refs[kubernetesRefName]?.[0];
+              if (kubernetesFormRef) {
+                await kubernetesFormRef.form.validateFields();
                 // 获取表单值并过滤
-                const k8sFormValues = k8sFormRef.form.getFieldsValue();
-                const filteredK8sValues = {};
-                for (const key in k8sFormValues) {
+                const kubernetesFormValues = kubernetesFormRef.form.getFieldsValue();
+                const filteredKubernetesValues = {};
+                for (const key in kubernetesFormValues) {
                   if (!key.endsWith('_value')) {
-                    filteredK8sValues[key] = k8sFormValues[key];
+                    filteredKubernetesValues[key] = kubernetesFormValues[key];
                   }
                 }
-                Object.assign(allFormData, filteredK8sValues);
+                Object.assign(allFormData, filteredKubernetesValues);
               }
             }
           }
@@ -669,15 +669,15 @@ export default {
           this.$set(processedGroups[targetRole], 'kubernetesSubGroups', {});
         }
         
-        const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
+        const shortSubGroupNameWithoutKubernetesPrefix = subGroupName.replace('kubernetes.config.', '');
         
         // 使用Vue的响应式方法添加子组
         this.$set(
           processedGroups[targetRole].kubernetesSubGroups, 
-          shortSubGroupNameWithoutK8sPrefix, 
+          shortSubGroupNameWithoutKubernetesPrefix,
           {
             items: processedConfigs,
-            displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
+            displayName: this.formatSubGroupName(shortSubGroupNameWithoutKubernetesPrefix),
             templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
           }
         );
@@ -752,7 +752,7 @@ export default {
       if (!readableEnglishName && subGroupName) readableEnglishName = subGroupName; 
       else if (!readableEnglishName && !subGroupName) readableEnglishName = 'Unknown'; // 处理 subGroupName 为 null 或 undefined 的情况
 
-      const chineseName = this.k8sSubGroupChineseNames[subGroupName];
+      const chineseName = this.kubernetesSubGroupChineseNames[subGroupName];
 
       let displayText;
       if (chineseName) {
@@ -761,7 +761,7 @@ export default {
         // 如果没有特定的中文翻译，使用处理后的英文名作为主要的"中文"部分
         displayText = readableEnglishName; 
       }
-      return `${displayText} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
+      return `${displayText} <span class="kubernetes-subgroup-en">(${readableEnglishName})</span>`;
     },
     checkAllForm() {
       const self = this;
@@ -795,11 +795,11 @@ export default {
           // 验证角色分组内的Kubernetes配置表单
           if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
             for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
-              const k8sRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
-              const k8sFormComponent = self.$refs[k8sRefName]?.[0];
+              const kubernetesRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+              const kubernetesFormComponent = self.$refs[kubernetesRefName]?.[0];
               
-              if (k8sFormComponent) {
-                k8sFormComponent.form.validateFields((err) => {
+              if (kubernetesFormComponent) {
+                kubernetesFormComponent.form.validateFields((err) => {
                   if (err) {
                     hasError = true;
                     self.serviceNameKey = serviceName; // 切换到错误页签
@@ -823,11 +823,11 @@ export default {
         // 验证通用Kubernetes配置
         if (self.kubernetesGroups[serviceName]) {
           for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
-            const k8sRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
-            const k8sFormComponent = self.$refs[k8sRefName]?.[0];
+            const kubernetesRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
+            const kubernetesFormComponent = self.$refs[kubernetesRefName]?.[0];
             
-            if (k8sFormComponent) {
-              k8sFormComponent.form.validateFields((err) => {
+            if (kubernetesFormComponent) {
+              kubernetesFormComponent.form.validateFields((err) => {
                 if (err) {
                   hasError = true;
                   self.serviceNameKey = serviceName; // 切换到错误页签
@@ -892,25 +892,25 @@ export default {
                   // 处理角色分组内的Kubernetes配置表单
                   if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
                     for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
-                      const k8sRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
-                      const k8sFormRef = self.$refs[k8sRefName]?.[0];
+                      const kubernetesRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+                      const kubernetesFormRef = self.$refs[kubernetesRefName]?.[0];
                       
-                      if (k8sFormRef) {
+                      if (kubernetesFormRef) {
                         // 验证并收集表单数据
-                        await k8sFormRef.form.validateFields();
-                        const k8sRawData = k8sFormRef.form.getFieldsValue();
+                        await kubernetesFormRef.form.validateFields();
+                        const kubernetesRawData = kubernetesFormRef.form.getFieldsValue();
                         
                         // 处理字段名并过滤
-                        const convertedK8sData = Object.keys(k8sRawData).reduce((acc, key) => {
+                        const convertedKubernetesData = Object.keys(kubernetesRawData).reduce((acc, key) => {
                           if (!key.endsWith('_value')) {
                             const newKey = key.replace(/\./g, '!');
-                            acc[newKey] = k8sRawData[key];
+                            acc[newKey] = kubernetesRawData[key];
                           }
                           return acc;
                         }, {});
                         
                         // 合并数据
-                        Object.assign(allFormData, convertedK8sData);
+                        Object.assign(allFormData, convertedKubernetesData);
                       }
                     }
                   }
@@ -919,25 +919,25 @@ export default {
                 // 处理通用Kubernetes配置
                 if (self.kubernetesGroups[serviceName]) {
                   for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
-                    const k8sRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
-                    const k8sFormRef = self.$refs[k8sRefName]?.[0];
+                    const kubernetesRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
+                    const kubernetesFormRef = self.$refs[kubernetesRefName]?.[0];
                     
-                    if (k8sFormRef) {
+                    if (kubernetesFormRef) {
                       // 验证并收集表单数据
-                      await k8sFormRef.form.validateFields();
-                      const k8sRawData = k8sFormRef.form.getFieldsValue();
+                      await kubernetesFormRef.form.validateFields();
+                      const kubernetesRawData = kubernetesFormRef.form.getFieldsValue();
                       
                       // 处理字段名并过滤
-                      const convertedK8sData = Object.keys(k8sRawData).reduce((acc, key) => {
+                      const convertedKubernetesData = Object.keys(kubernetesRawData).reduce((acc, key) => {
                         if (!key.endsWith('_value')) {
                           const newKey = key.replace(/\./g, '!');
-                          acc[newKey] = k8sRawData[key];
+                          acc[newKey] = kubernetesRawData[key];
                         }
                         return acc;
                       }, {});
                       
                       // 合并数据
-                      Object.assign(allFormData, convertedK8sData);
+                      Object.assign(allFormData, convertedKubernetesData);
                     }
                   }
                 }
@@ -1750,7 +1750,7 @@ export default {
 }
 
 /* 新增：Kubernetes子组Tab英文名样式 */
-.steps7 /deep/ .ant-tabs-tab .k8s-subgroup-en {
+.steps7 /deep/ .ant-tabs-tab .kubernetes-subgroup-en {
   color: #E6A23C; /* 浅橙色 */
   font-size: 0.9em;   /* 辅助字体稍小 */
   font-weight: normal; /* 非粗体 */

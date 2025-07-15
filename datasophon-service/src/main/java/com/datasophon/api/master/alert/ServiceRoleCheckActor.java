@@ -20,7 +20,6 @@
 package com.datasophon.api.master.alert;
 
 import akka.actor.UntypedActor;
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
@@ -67,9 +66,9 @@ public class ServiceRoleCheckActor extends UntypedActor {
                         case Constants.PVM_MODE:
                             Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
                             break;
-                        case Constants.K8S_MODE:
-                            handlerK8sServiceRoleCheck(roleInstanceEntity, map);
-                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerK8sServiceRoleCheck(roleInstanceEntity, map));
+                        case Constants.KUBERNETES_MODE:
+                            handlerKubernetesServiceRoleCheck(roleInstanceEntity, map);
+                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         default:
                             break;
@@ -85,9 +84,9 @@ public class ServiceRoleCheckActor extends UntypedActor {
     }
 
 
-    private void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        K8sServiceRoleStatusService k8sServiceRoleStatusHandler = new K8sServiceRoleStatusService();
-        k8sServiceRoleStatusHandler.checkStatusAndOpAlert(roleInstanceEntity);
+    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        KubernetesServiceRoleStatusService kubernetesServiceRoleStatusService = new KubernetesServiceRoleStatusService();
+        kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceEntity);
     }
 
 

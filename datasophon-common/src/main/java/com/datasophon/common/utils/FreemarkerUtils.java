@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
  * Freemarker工具类
  * 用于生成配置文件，支持多种格式和模板加载方式
  */
-// TODO 业务逻辑代码重复，需要重构。 ConfigureServiceHandler K8sConfigureServiceHandler
+// TODO 业务逻辑代码重复，需要重构。 ConfigureServiceHandler KubernetesConfigureServiceHandler
 // FreemarkerUtils 后期需要重构
 @UtilityClass
 public class FreemarkerUtils {
@@ -553,7 +553,7 @@ public class FreemarkerUtils {
 
     /**
      * 统一处理配置列表，包括值转换、自定义配置处理等
-     * 供Worker和K8s模块使用
+     * 供Worker和Kubernetes模块使用
      * 
      * @param configs    配置列表
      * @param paramMap   参数映射表
@@ -600,7 +600,7 @@ public class FreemarkerUtils {
 
             // 移除不需要的配置项
             if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                if (StrUtil.equalsAny(config.getConfigType(),"map2","k8s")) {
+                if (StrUtil.equalsAny(config.getConfigType(),"map2","kubernetes")) {
                     config.setConfigType("map");
                 } else {
                     iterator.remove();
@@ -732,7 +732,7 @@ public class FreemarkerUtils {
     }
 
     /**
-     * 提取公共的配置处理逻辑，供WorkerFreemarkerUtils和K8sFreeMakerUtils使用
+     * 提取公共的配置处理逻辑，供WorkerFreemarkerUtils和KubernetesFreeMakerUtils使用
      *
      * @param generators 配置生成器
      * @param configs    配置列表

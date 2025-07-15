@@ -166,7 +166,7 @@
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources</directory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>
             </includes>
@@ -174,8 +174,8 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources/k8s</directory>
-            <outputDirectory>conf/k8s</outputDirectory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources/kubernetes</directory>
+            <outputDirectory>conf/kubernetes</outputDirectory>
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>

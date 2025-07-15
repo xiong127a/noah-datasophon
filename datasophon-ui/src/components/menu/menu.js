@@ -288,14 +288,14 @@ export default {
     },
     updateMenu() {
       this.selectedKeys = this.getSelectedKeys(this.options)
-      const keyParts = this.selectedKeys.split('-')
       this.rootSubmenuKeys = this.getRootSubmenuKeys(this.options)
       this.selectedKeysMap = {}
-      Object.keys(keyParts).forEach(key => {
-        this.selectedKeysMap[keyParts[key]] = true
+      // selectedKeys已经是数组，直接遍历即可
+      this.selectedKeys.forEach(key => {
+        this.selectedKeysMap[key] = true
       })
-      openKey = this.selectedKeys.split('-')
-      this.openKeys = openKey
+      // 设置openKeys为除最后一项外的所有key，用于展开菜单
+      this.sOpenKeys = this.selectedKeys.slice(0, -1)
       
       // 强制更新menuData
       let menuData = JSON.parse(localStorage.getItem('menuData')) || []

@@ -62,7 +62,7 @@ export default {
     async fetchNamespaces() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
+        const res = await this.$axiosGet(global.API.getKubernetesNamespaces, {
           clusterId: this.clusterId
         });
         

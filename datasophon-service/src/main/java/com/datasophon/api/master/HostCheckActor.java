@@ -79,7 +79,7 @@ public class HostCheckActor extends UntypedActor {
         Integer clusterId = clusterInfoEntity.getId();
         String depType = clusterInfoEntity.getDepType();
         String prometheusPort = "9090";
-        if (Constants.K8S_MODE.equals(depType)) {
+        if (Constants.KUBERNETES_MODE.equals(depType)) {
           prometheusPort="30909";
         }
 
@@ -162,22 +162,22 @@ public class HostCheckActor extends UntypedActor {
             try {
               // rpc 检测
               ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-              if (Constants.K8S_MODE.equals(depType)) {
+              if (Constants.KUBERNETES_MODE.equals(depType)) {
                 try {
                   // 使用Java原生的isReachable方法替代系统ping命令
                   java.net.InetAddress address = java.net.InetAddress.getByName(host.getHostname());
                   boolean reachable = address.isReachable(3000); // 3000毫秒超时
 
                   if (reachable) {
-                    logger.info("检查主机连通性: {} 成功 (K8S模式)", host.getHostname());
+                    logger.info("检查主机连通性: {} 成功 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.RUNNING);
                     checkedHost.setManaged(MANAGED.YES);
                   } else {
-                    logger.warn("检查主机连通性: {} 失败 (K8S模式)", host.getHostname());
+                    logger.warn("检查主机连通性: {} 失败 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.OFFLINE);
                   }
                 } catch (Exception e) {
-                  logger.warn("K8S模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
+                  logger.warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
                   checkedHost.setHostState(HostState.OFFLINE);
                 }
                 continue; // 跳过下面的pingActor检测

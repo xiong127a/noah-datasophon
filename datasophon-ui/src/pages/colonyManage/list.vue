@@ -26,7 +26,7 @@
             </div>
             <div class="card-content">
               <div>
-                集群管理员：
+                集群管理员： 
                 <span>{{item.userManageName || '-'}}</span>
               </div>
               <div>

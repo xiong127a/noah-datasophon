@@ -101,19 +101,19 @@ export default {
   },
   computed: {
     stepsNumber () {
-      if (this.currentSteps === 4 && this.depType == 'K8S'){
+      if (this.currentSteps === 4 && this.depType === 'Kubernetes'){
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 5 && this.depType == 'K8S') {
+      if (this.currentSteps === 5 && this.depType === 'Kubernetes') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 6 && this.depType == 'K8S') {
+      if (this.currentSteps === 6 && this.depType === 'Kubernetes') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 7 && this.depType == 'K8S') {
+      if (this.currentSteps === 7 && this.depType === 'Kubernetes') {
       return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 3 && this.depType == 'K8S'){
+      if (this.currentSteps === 3 && this.depType === 'Kubernetes'){
         return this.currentSteps + 1
       }else{
         return this.currentSteps + this.interval
@@ -174,7 +174,7 @@ export default {
         this.steps4Data.serviceType = this.$refs.steps4Ref.params.type || '';
         
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        if (this.depType!=='K8S'){
+        if (this.depType!=='Kubernetes'){
           arr.map((item, index) => {
             let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
             if (curIndex !== -1) {

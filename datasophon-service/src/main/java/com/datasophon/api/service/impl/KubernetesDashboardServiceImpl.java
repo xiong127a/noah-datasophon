@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.k8s.DeploymentInfo;
+import com.datasophon.common.model.kubernetes.DeploymentInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -76,7 +76,7 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 /**
- * K8S仪表盘服务实现类
+ * Kubernetes仪表盘服务实现类
  */
 @Service("kubernetesDashboardService")
 @Slf4j
@@ -2291,7 +2291,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             if (deployment.getMetadata().getCreationTimestamp() != null) {
                 try {
-                    // 将K8s时间字符串转换为Java Date对象
+                    // 将Kubernetes时间字符串转换为Java Date对象
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                     Date createDate = sdf.parse(deployment.getMetadata().getCreationTimestamp());
@@ -2337,7 +2337,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
     @Override
     public Result getResourceStats(Integer clusterId, Integer serviceId, String namespace) {
-        log.info("一次性获取所有K8s资源统计, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        log.info("一次性获取所有Kubernetes资源统计, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
         try {
             // 使用kubeconfig创建Kubernetes客户端（只创建一次连接）
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -2406,8 +2406,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, statsMap);
         } catch (Exception e) {
-            log.error("获取K8s资源统计出错", e);
-            return Result.error("获取K8s资源统计出错: " + e.getMessage());
+            log.error("获取Kubernetes资源统计出错", e);
+            return Result.error("获取Kubernetes资源统计出错: " + e.getMessage());
         }
     }
 

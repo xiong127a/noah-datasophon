@@ -51,7 +51,7 @@ public class ClusterServiceDashboardServiceImpl
         ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
         String depType = clusterInfoEntity.getDepType();
         String serviceName = "TOTAL";
-        if(StrUtil.equals(depType, Constants.K8S_MODE)){
+        if(StrUtil.equals(depType, Constants.KUBERNETES_MODE)){
             serviceName = "KUBERNETES";
         }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);

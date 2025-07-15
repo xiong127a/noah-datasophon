@@ -39,7 +39,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -108,10 +108,10 @@ public interface ServiceRoleStrategy {
     }
 
     /**
-     * 定期检查角色处理（K8S）
+     * 定期检查角色处理（Kubernetes）
      */
-    default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    default void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                   Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
@@ -186,10 +186,10 @@ public interface ServiceRoleStrategy {
 
         try {
             if (StrUtil.isBlank(actorName)) {
-                // 对于 K8s 服务，使用 K8sUtil 执行命令
-                execResult = K8sUtil.exec(roleInstanceEntity, getKubeConfig(roleInstanceEntity), cmdCommand);
+                // 对于 Kubernetes 服务，使用 KubernetesUtil 执行命令
+                execResult = KubernetesUtil.exec(roleInstanceEntity, getKubeConfig(roleInstanceEntity), cmdCommand);
             } else {
-                // 对于非 K8s 服务，使用 Actor 系统执行命令
+                // 对于非 Kubernetes 服务，使用 Actor 系统执行命令
                 Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
                 ActorRef actorRef = ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), actorName);
                 Future<Object> execFuture = Patterns.ask(actorRef, cmdCommand, timeout);

@@ -1,24 +1,24 @@
 <template>
   <div class="resource-list">
     <!-- StorageClasses列表区域 -->
-    <div class="k8s-dashboard-card k8s-resource-card">
-      <div class="k8s-card-header">
-        <span class="k8s-card-title">Storage Classes</span>
-        <div class="k8s-card-actions">
-          <a-icon type="bars" class="k8s-action-icon" />
-          <a class="k8s-card-collapse-icon">
+    <div class="kubernetes-dashboard-card kubernetes-resource-card">
+      <div class="kubernetes-card-header">
+        <span class="kubernetes-card-title">Storage Classes</span>
+        <div class="kubernetes-card-actions">
+          <a-icon type="bars" class="kubernetes-action-icon" />
+          <a class="kubernetes-card-collapse-icon">
             <a-icon type="minus" />
           </a>
         </div>
       </div>
-      <div class="k8s-card-content">
+      <div class="kubernetes-card-content">
         <a-spin :spinning="loading">
           <a-table 
             :columns="columns" 
             :dataSource="storageClasses" 
             :pagination="pagination"
             :rowKey="record => (record && record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2)"
-            class="k8s-table"
+            class="kubernetes-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
@@ -124,7 +124,7 @@ export default {
     async fetchStorageClasses(page = this.pagination.current, pageSize = this.pagination.pageSize) {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sStorageClasses, {
+        const res = await this.$axiosGet(global.API.getKubernetesStorageClasses, {
           clusterId: this.clusterId,
           pageNum: page,
           pageSize: pageSize
@@ -219,7 +219,7 @@ export default {
 </script>
 
 <style lang="less" scoped>
-@import './styles/k8s-table-styles.less';
+@import 'styles/kubernetes-table-styles.less';
 
 .name-text {
   cursor: pointer;

@@ -1,0 +1,534 @@
+/* 
+ * Kubernetes仪表盘统一表格样式
+ * 这些样式仅在Kubernetes仪表盘组件内生效
+ */
+
+/* Kubernetes表格通用样式 */
+.kubernetes-table {
+  width: 100%;
+  
+  // 启用表格水平滚动
+  :deep(.ant-table) {
+    overflow-x: auto;
+    font-size: 13px;
+    
+    // 表格内容布局
+    table {
+      table-layout: auto !important;
+      width: 100%;
+      border-color: #e8e8e8;
+      
+      // 确保列之间没有多余间隙
+      th, td {
+        padding: 8px;
+        transition: background 0.3s;
+        word-break: break-all;
+        border-color: #e8e8e8 !important;
+      }
+    }
+  }
+  
+  // 固定表格布局，提高性能
+  :deep(.ant-table-fixed-header .ant-table-container, 
+  .ant-table-fixed-column .ant-table-container) {
+    border-radius: 4px 4px 0 0;
+  }
+  
+  // 表头样式
+  :deep(.ant-table-thead > tr > th) {
+    background-color: #fafafa;
+    font-weight: 500;
+    color: #333;
+    padding: 8px 12px;
+    white-space: nowrap;
+    border-color: #e8e8e8;
+    border-right: none !important;
+    border-bottom: 1px solid #e8e8e8 !important;
+  }
+  
+  // 表格行样式
+  :deep(.ant-table-tbody > tr > td) {
+    padding: 8px 12px;
+    vertical-align: middle;
+    background-color: white !important;
+    border-color: #e8e8e8;
+    border-right: none !important;
+    border-bottom: 1px solid #e8e8e8 !important;
+    
+    // 对于空内容的单元格，缩小高度
+    &:empty, &:only-child:empty {
+      padding: 4px 8px;
+    }
+    
+    // 单元格内容溢出处理
+    .cell-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+  }
+  
+  // 最后一行底部可以不要边框
+  :deep(.ant-table-tbody > tr:last-child > td) {
+    border-bottom: none !important;
+  }
+  
+  // 移除斑马纹样式
+  :deep(.ant-table-tbody > tr:nth-child(odd) > td) {
+    background-color: white !important;
+  }
+  
+  :deep(.ant-table-tbody > tr:nth-child(even) > td) {
+    background-color: white !important;
+  }
+  
+  // 表格行悬停样式
+  :deep(.ant-table-tbody > tr:hover > td) {
+    background-color: #f9fafb !important;
+  }
+  
+  // 选中行样式
+  :deep(.ant-table-tbody > tr.ant-table-row-selected > td) {
+    background-color: #e6f7ff;
+    border-color: #e8e8e8;
+  }
+  
+  // 空状态样式
+  :deep(.ant-empty) {
+    margin: 32px 0;
+  }
+  
+  // 修复固定列样式
+  :deep(.ant-table-fixed-left) {
+    .ant-table-thead > tr > th:last-child {
+      padding-right: 8px;
+    }
+    
+    .ant-table-tbody > tr > td:last-child {
+      padding-right: 8px;
+    }
+  }
+  
+  // 边框样式调整
+  :deep(.ant-table-container) {
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  // 标签样式
+  .tag-list, .labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    
+    .label-tag {
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin: 2px;
+      height: auto;
+      min-height: 22px;
+      line-height: 20px;
+      padding: 0 8px;
+    }
+  }
+  
+  // 内部端点样式
+  .internal-endpoint {
+    padding: 2px 0;
+    word-break: keep-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  
+  // 外部端点样式
+  .external-endpoint {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    
+    .external-icon {
+      margin-left: 4px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+  }
+  
+  // 格式化时间单元格
+  .format-time-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  // 操作按钮样式
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    
+    .ant-btn {
+      padding: 0 8px;
+    }
+  }
+  
+  // 长文本单元格处理
+  .long-text-cell {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    position: relative;
+    
+    // 悬停显示全文
+    &:hover::after {
+      content: attr(title);
+      position: absolute;
+      left: 0;
+      top: 100%;
+      z-index: 100;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 4px 8px;
+      max-width: 300px;
+      word-break: break-word;
+      white-space: normal;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  // 可展开内容样式
+  .expandable-content {
+    max-height: 100px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: normal;
+  }
+  
+  // 名称单元格样式
+  .name-cell {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    line-height: 1.5;
+    display: block; 
+    overflow: hidden;
+    padding: 0;
+  }
+  
+  // 镜像单元格样式
+  .image-cell {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    display: block;
+    overflow: hidden;
+    padding: 0;
+  }
+  
+  // 名称与状态点组合样式
+  .name-with-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .name-text {
+      flex-grow: 1;
+    }
+  }
+  
+  // 名称文本样式
+  .name-text {
+    display: inline !important; 
+    color: #333;
+    word-break: break-word;
+  }
+  
+  // 状态点样式
+  .status-dot {
+    display: inline-block;
+    min-width: 12px; 
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+    box-sizing: content-box;
+    position: relative;
+    
+    &.running, &.status-running, &.bound {
+      background-color: #52c41a;
+    }
+    
+    &.warning, &.pending, &.status-warning, &.available {
+      background-color: #faad14;
+    }
+    
+    &.danger, &.failed, &.status-danger {
+      background-color: #f5222d;
+    }
+    
+    &.succeeded, &.status-info, &.released, &.info {
+      background-color: #1890ff;
+    }
+    
+    &.terminating {
+      background-color: #722ed1;
+    }
+    
+    &.unknown, &.status-unknown {
+      background-color: #d9d9d9;
+    }
+  }
+  
+  // 优化表格列宽控制
+  .name-with-status-column {
+    min-width: 150px;
+  }
+} 
+
+// 为tooltip提供统一样式
+.kubernetes-tooltip {
+  max-width: 500px;
+  
+  .tooltip-content {
+    max-height: 300px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: normal;
+  }
+} 
+
+// 响应式调整
+@media screen and (max-width: 1400px) {
+  .kubernetes-table {
+    .labels-container .label-tag {
+      max-width: 150px;
+    }
+  }
+}
+
+@media screen and (max-width: 1200px) {
+  .kubernetes-table {
+    .labels-container .label-tag {
+      max-width: 120px;
+    }
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .kubernetes-table {
+    .labels-container .label-tag {
+      max-width: 100px;
+    }
+    
+    // 更小屏幕下隐藏部分次要内容
+    .empty-value {
+      font-size: 11px;
+    }
+  }
+}
+
+// 优化表格列宽控制
+.name-column {
+  min-width: 150px;
+  white-space: normal !important;
+}
+
+// 镜像列样式
+.image-column {
+  min-width: 180px;
+  white-space: normal !important;
+}
+
+// 针对标签列的特殊优化
+.labels-column {
+  min-width: 200px;
+  max-width: 250px;
+  white-space: normal !important;
+}
+
+// 针对时间列的特殊优化
+.time-column {
+  min-width: 80px;
+}
+
+// 状态列优化
+[key="status"] {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+}
+
+// 统一时间显示样式
+.time-cell, .format-time-cell {
+  white-space: nowrap;
+  color: #666;
+  min-width: 60px; 
+  display: inline-block;
+  &:hover {
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
+// 空值的显示样式
+.empty-value {
+  color: #bfbfbf;
+  padding: 0 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+// YAML样式
+.yaml-container {
+  background-color: #fafafa;
+  border-radius: 4px;
+  padding: 16px;
+  max-height: 500px;
+  overflow: auto;
+
+  pre.yaml-content {
+    margin: 0;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+// Pod详情样式
+.pod-detail-section {
+  margin-bottom: 16px;
+
+  .section-title {
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+}
+
+// 外部链接样式
+.external-endpoint {
+  display: flex;
+  align-items: center;
+  color: #1890ff;
+
+  .external-icon {
+    margin-left: 4px;
+    font-size: 12px;
+  }
+}
+
+// 资源列表容器样式
+.resource-list {
+  height: 100%;
+}
+
+// 仪表板卡片样式
+.kubernetes-dashboard-card {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+  overflow: hidden;
+  
+  &.kubernetes-resource-card {
+    .kubernetes-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 48px;
+      padding: 0 16px;
+      background-color: #f7f7f7;
+      border-bottom: 1px solid #eee;
+      
+      .kubernetes-card-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: #333;
+      }
+
+      .kubernetes-card-actions {
+        display: flex;
+        gap: 12px;
+        
+        .kubernetes-action-icon {
+          font-size: 16px;
+          color: #999;
+          cursor: pointer;
+          
+          &:hover {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+    
+    .kubernetes-card-content {
+      padding: 0;
+    }
+  }
+}
+
+// 使用图表样式
+.usage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  
+  .usage-chart {
+    width: 100%;
+    margin-bottom: 4px;
+    
+    .usage-bar-container {
+      width: 100%;
+      height: 8px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+      overflow: hidden;
+      
+      .usage-bar {
+        height: 100%;
+        border-radius: 4px;
+        
+        &.cpu-usage {
+          background-color: #1890ff;
+        }
+        
+        &.memory-usage {
+          background-color: #13c2c2;
+        }
+      }
+    }
+  }
+  
+  .usage-text {
+    font-size: 12px;
+    color: #666;
+  }
+} 

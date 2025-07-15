@@ -90,14 +90,14 @@ public class ConfigGroupUtils {
     }
 
     /**
-     * 从服务定义中获取原始K8S配置
+     * 从服务定义中获取原始Kubernetes配置
      *
      * @param frameCode   框架代码
      * @param serviceName 服务名称
-     * @return 按K8S配置类型分组的原始配置映射
+     * @return 按Kubernetes配置类型分组的原始配置映射
      */
     private static Map<String, List<ServiceConfig>> getOriginalKubernetesConfigs(String frameCode, String serviceName) {
-        Map<String, List<ServiceConfig>> k8sConfigsByType = new HashMap<>();
+        Map<String, List<ServiceConfig>> kubernetesConfigsByType = new HashMap<>();
 
         try {
             // 从Spring上下文获取服务
@@ -110,14 +110,14 @@ public class ConfigGroupUtils {
 
             if (frameServiceEntity == null) {
                 logger.error("无法获取服务定义: {}", serviceName);
-                return k8sConfigsByType;
+                return kubernetesConfigsByType;
             }
 
             // 解析服务JSON
             String serviceJson = frameServiceEntity.getServiceJson();
             if (StrUtil.isBlank(serviceJson)) {
                 logger.error("服务定义JSON为空: {}", serviceName);
-                return k8sConfigsByType;
+                return kubernetesConfigsByType;
             }
 
             JSONObject serviceObj = JSONObject.parseObject(serviceJson);
@@ -126,33 +126,33 @@ public class ConfigGroupUtils {
             JSONArray parameters = serviceObj.getJSONArray("parameters");
             if (parameters == null || parameters.isEmpty()) {
                 logger.warn("服务定义中没有parameters数组，无法获取原始配置");
-                return k8sConfigsByType;
+                return kubernetesConfigsByType;
             }
 
-            // 遍历parameters，过滤出K8S配置并按类型分组
+            // 遍历parameters，过滤出Kubernetes配置并按类型分组
             for (int i = 0; i < parameters.size(); i++) {
                 JSONObject paramJson = parameters.getJSONObject(i);
 
-                // 只处理K8S配置
+                // 只处理Kubernetes配置
                 String configGroup = paramJson.getString("configGroup");
-                if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+                if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                     // 将JSON转为ServiceConfig对象
                     ServiceConfig config = paramJson.toJavaObject(ServiceConfig.class);
 
-                    // 提取K8S配置类型
-                    String k8sConfigType = extractK8sConfigType(configGroup);
+                    // 提取Kubernetes配置类型
+                    String kubernetesConfigType = extractKubernetesConfigType(configGroup);
 
                     // 按类型分组
-                    k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
+                    kubernetesConfigsByType.computeIfAbsent(kubernetesConfigType, k -> new ArrayList<>()).add(config);
 
                 }
             }
 
         } catch (Exception e) {
-            logger.error("获取原始K8S配置时出错: {}", e.getMessage(), e);
+            logger.error("获取原始Kubernetes配置时出错: {}", e.getMessage(), e);
         }
 
-        return k8sConfigsByType;
+        return kubernetesConfigsByType;
     }
 
     /**
@@ -177,59 +177,59 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        // 2. 从服务定义中获取原始K8S配置
-        Map<String, List<ServiceConfig>> originalK8sConfigsByType = getOriginalKubernetesConfigs(frameCode,
+        // 2. 从服务定义中获取原始Kubernetes配置
+        Map<String, List<ServiceConfig>> originalKubernetesConfigsByType = getOriginalKubernetesConfigs(frameCode,
                 serviceName);
 
-        if (originalK8sConfigsByType.isEmpty()) {
-            logger.warn("无法从服务定义中获取原始K8S配置，将使用传入的配置列表");
+        if (originalKubernetesConfigsByType.isEmpty()) {
+            logger.warn("无法从服务定义中获取原始Kubernetes配置，将使用传入的配置列表");
             // 回退到原有逻辑，使用传入的配置列表
         }
 
         // 3. 对配置进行分类
         List<ServiceConfig> processedConfigs = new ArrayList<>();
-        List<ServiceConfig> nonK8sConfigs = new ArrayList<>();
+        List<ServiceConfig> nonKubernetesConfigs = new ArrayList<>();
         Map<String, ServiceConfig> portConfigs = new HashMap<>(); // 存储端口配置，用于后续处理
 
-        // 4. 获取非K8S配置和端口配置
+        // 4. 获取非Kubernetes配置和端口配置
         for (ServiceConfig config : list) {
-            // 只处理非K8S配置，K8S配置将使用从服务定义中获取的原始配置
-            if (config.getConfigGroup() == null || !config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
+            // 只处理非Kubernetes配置，Kubernetes配置将使用从服务定义中获取的原始配置
+            if (config.getConfigGroup() == null || !config.getConfigGroup().startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                 // 检查是否有端口绑定相关的配置
                 if (config.getBindRole() != null && config.getPortNumber() != null) {
                     // 使用配置名称作为键，存储端口配置
                     portConfigs.put(config.getName(), config);
                 }
 
-                // 非K8S配置，直接保留
-                nonK8sConfigs.add(config);
+                // 非Kubernetes配置，直接保留
+                nonKubernetesConfigs.add(config);
             }
         }
 
-        // 5. 处理K8S配置（使用原始配置或回退到传入的配置）
-        Map<String, List<ServiceConfig>> k8sConfigsByType = originalK8sConfigsByType;
-        if (k8sConfigsByType.isEmpty()) {
+        // 5. 处理Kubernetes配置（使用原始配置或回退到传入的配置）
+        Map<String, List<ServiceConfig>> kubernetesConfigsByType = originalKubernetesConfigsByType;
+        if (kubernetesConfigsByType.isEmpty()) {
             // 如果没有获取到原始配置，回退到使用传入的配置
-            k8sConfigsByType = new HashMap<>();
+            kubernetesConfigsByType = new HashMap<>();
             for (ServiceConfig config : list) {
                 String configGroup = config.getConfigGroup();
-                if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
-                    String k8sConfigType = extractK8sConfigType(configGroup);
-                    k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
+                if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
+                    String kubernetesConfigType = extractKubernetesConfigType(configGroup);
+                    kubernetesConfigsByType.computeIfAbsent(kubernetesConfigType, k -> new ArrayList<>()).add(config);
                 }
             }
         }
 
         // 6. 为每个配置类型创建角色特定的配置
-        for (Map.Entry<String, List<ServiceConfig>> entry : k8sConfigsByType.entrySet()) {
-            String k8sConfigType = entry.getKey();
+        for (Map.Entry<String, List<ServiceConfig>> entry : kubernetesConfigsByType.entrySet()) {
+            String kubernetesConfigType = entry.getKey();
             List<ServiceConfig> configs = entry.getValue();
 
             // 获取该类型配置的角色集合
-            Set<String> targetRoles = getTargetRolesForConfigType(configFileToRolesMap, k8sConfigType);
+            Set<String> targetRoles = getTargetRolesForConfigType(configFileToRolesMap, kubernetesConfigType);
 
             if (targetRoles.isEmpty()) {
-                logger.warn("无法确定K8S配置类型 {} 的目标角色，将使用通用角色", k8sConfigType);
+                logger.warn("无法确定Kubernetes配置类型 {} 的目标角色，将使用通用角色", kubernetesConfigType);
                 targetRoles.add(GENERAL);
             }
 
@@ -243,7 +243,7 @@ public class ConfigGroupUtils {
                     copy.setConfigTargetRoles(roleName);
 
                     // 设置角色特定的configGroup
-                    copy.setConfigGroup(Constants.K8S_CONFIG_PREFIX + k8sConfigType + "." + roleName);
+                    copy.setConfigGroup(Constants.KUBERNETES_CONFIG_PREFIX + kubernetesConfigType + "." + roleName);
 
                     // 添加角色前缀到name
                     addRolePrefixToName(copy, roleName);
@@ -259,8 +259,8 @@ public class ConfigGroupUtils {
             processPortConfigs(portConfigs, processedConfigs);
         }
 
-        // 8. 添加非K8S配置到结果列表
-        processedConfigs.addAll(nonK8sConfigs);
+        // 8. 添加非Kubernetes配置到结果列表
+        processedConfigs.addAll(nonKubernetesConfigs);
         // 添加JMX端口处理逻辑
         processJmxPorts(processedConfigs);
         return processedConfigs;
@@ -590,8 +590,8 @@ public class ConfigGroupUtils {
                 String filename = generator.getString("filename");
                 String configTargetRoles = generator.getString("configTargetRoles");
 
-                // 检查是否有K8S相关的配置文件
-                if (filename != null && filename.toLowerCase().startsWith(Constants.K8S_CONFIG_PREFIX)) {
+                // 检查是否有Kubernetes相关的配置文件
+                if (filename != null && filename.toLowerCase().startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                     Set<String> roles = new HashSet<>();
                     // 解析角色列表
                     if (StrUtil.isNotBlank(configTargetRoles)) {
@@ -615,7 +615,7 @@ public class ConfigGroupUtils {
                     String configGroup = parameter.getString("configGroup");
 
                     // 如果configGroup以kubernetes.config.开头，查找对应的filename
-                    if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+                    if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                         // 查找匹配的filename（就是configGroup完全一致的filename）
                         Set<String> roles = filenameToRolesMap.get(configGroup);
 
@@ -654,7 +654,7 @@ public class ConfigGroupUtils {
         Set<String> result = new HashSet<>();
 
         // 完整的configGroup
-        String fullConfigGroup = Constants.K8S_CONFIG_PREFIX + configType;
+        String fullConfigGroup = Constants.KUBERNETES_CONFIG_PREFIX + configType;
 
         // 1. 优先尝试完全匹配
         if (configFileToRolesMap.containsKey(fullConfigGroup)) {
@@ -675,12 +675,12 @@ public class ConfigGroupUtils {
     }
 
     /**
-     * 提取K8S配置类型
+     * 提取Kubernetes配置类型
      *
      * @param configGroup 配置组
-     * @return K8S配置类型（如persistentVolumeClaims或resources）
+     * @return Kubernetes配置类型（如persistentVolumeClaims或resources）
      */
-    private static String extractK8sConfigType(String configGroup) {
+    private static String extractKubernetesConfigType(String configGroup) {
         // kubernetes.config.persistent-volume-claims 或 kubernetes.config.resources 等
         String[] parts = configGroup.split("\\.");
         if (parts.length >= 3) {
@@ -729,7 +729,7 @@ public class ConfigGroupUtils {
         // 存储分组结果
         Map<String, List<ServiceConfig>> groupedConfigs = new LinkedHashMap<>();
         // 收集从Kubernetes配置中提取的角色名
-        Set<String> k8sRoles = new HashSet<>();
+        Set<String> kubernetesRoles = new HashSet<>();
 
         if (list != null) {
             for (ServiceConfig config : list) {
@@ -740,15 +740,15 @@ public class ConfigGroupUtils {
                 String groupKey = GENERAL;
 
                 // 处理kubernetes.config类型的配置组
-                if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+                if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                     // 特殊处理kubernetes配置，使用完整的configGroup作为键
                     groupKey = configGroup;
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
 
                     // 从Kubernetes配置组名中提取角色名
-                    String roleName = extractRoleFromK8sConfigGroup(configGroup);
+                    String roleName = extractRoleFromKubernetesConfigGroup(configGroup);
                     if (StrUtil.isNotBlank(roleName)) {
-                        k8sRoles.add(roleName);
+                        kubernetesRoles.add(roleName);
                     }
                 }
                 // 处理角色配置
@@ -815,8 +815,8 @@ public class ConfigGroupUtils {
             }
         }
 
-        // 为从K8S配置组中提取的角色创建空角色分组（如果尚不存在）
-        for (String roleName : k8sRoles) {
+        // 为从Kubernetes配置组中提取的角色创建空角色分组（如果尚不存在）
+        for (String roleName : kubernetesRoles) {
             groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>());
         }
 
@@ -839,8 +839,8 @@ public class ConfigGroupUtils {
      * @param configGroup Kubernetes配置组名
      * @return 提取的角色名，如果无法提取则返回null
      */
-    private static String extractRoleFromK8sConfigGroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+    private static String extractRoleFromKubernetesConfigGroup(String configGroup) {
+        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -873,7 +873,7 @@ public class ConfigGroupUtils {
             // 无角色信息，直接处理原始配置
             processOriginalConfig(configFileMap, originalConfigMap, clusterId);
         } else {
-            // 有角色信息，分别处理K8S和非K8S配置
+            // 有角色信息，分别处理Kubernetes和非Kubernetes配置
             processConfigWithRoles(configFileMap, originalConfigMap, roleNames, clusterId);
         }
 
@@ -979,60 +979,60 @@ public class ConfigGroupUtils {
             Set<String> roleNames,
             Integer clusterId) {
 
-        // 1. 分离K8S和非K8S配置
-        Map<String, List<ServiceConfig>> k8sConfigsByType = new HashMap<>();
-        Map<Generators, List<ServiceConfig>> nonK8sConfigs = new HashMap<>();
+        // 1. 分离Kubernetes和非Kubernetes配置
+        Map<String, List<ServiceConfig>> kubernetesConfigsByType = new HashMap<>();
+        Map<Generators, List<ServiceConfig>> nonKubernetesConfigs = new HashMap<>();
 
-        separateK8sAndNonK8sConfigs(originalMap, k8sConfigsByType, nonK8sConfigs, clusterId);
+        separateKubernetesAndNonKubernetesConfigs(originalMap, kubernetesConfigsByType, nonKubernetesConfigs, clusterId);
 
-        // 2. 处理K8S配置
-        processK8sConfigs(resultMap, originalMap, k8sConfigsByType, roleNames, clusterId);
+        // 2. 处理Kubernetes配置
+        processKubernetesConfigs(resultMap, originalMap, kubernetesConfigsByType, roleNames, clusterId);
 
-        // 3. 添加非K8S配置到结果
-        resultMap.putAll(nonK8sConfigs);
+        // 3. 添加非Kubernetes配置到结果
+        resultMap.putAll(nonKubernetesConfigs);
     }
 
     /**
      * 分离Kubernetes和非Kubernetes配置
      *
      * @param originalMap      原始配置映射
-     * @param k8sConfigsByType K8S配置映射（按类型分组）
-     * @param nonK8sConfigs    非K8S配置映射
+     * @param kubernetesConfigsByType Kubernetes配置映射（按类型分组）
+     * @param nonKubernetesConfigs    非Kubernetes配置映射
      * @param clusterId        集群ID
      */
-    private static void separateK8sAndNonK8sConfigs(
+    private static void separateKubernetesAndNonKubernetesConfigs(
             Map<JSONObject, JSONArray> originalMap,
-            Map<String, List<ServiceConfig>> k8sConfigsByType,
-            Map<Generators, List<ServiceConfig>> nonK8sConfigs,
+            Map<String, List<ServiceConfig>> kubernetesConfigsByType,
+            Map<Generators, List<ServiceConfig>> nonKubernetesConfigs,
             Integer clusterId) {
 
         for (JSONObject fileJson : originalMap.keySet()) {
             Generators generator = fileJson.toJavaObject(Generators.class);
             List<ServiceConfig> originalConfigs = originalMap.get(fileJson).toJavaList(ServiceConfig.class);
 
-            // 分拣K8S配置和非K8S配置
-            List<ServiceConfig> k8sConfigs = new ArrayList<>();
+            // 分拣Kubernetes配置和非Kubernetes配置
+            List<ServiceConfig> kubernetesConfigs = new ArrayList<>();
             List<ServiceConfig> otherConfigs = new ArrayList<>();
 
             for (ServiceConfig serviceConfig : originalConfigs) {
                 if (serviceConfig.getConfigGroup() != null
-                        && serviceConfig.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
-                    k8sConfigs.add(serviceConfig);
+                        && serviceConfig.getConfigGroup().startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
+                    kubernetesConfigs.add(serviceConfig);
                 } else {
                     otherConfigs.add(serviceConfig);
                 }
             }
 
-            // 处理非K8S配置
+            // 处理非Kubernetes配置
             if (!otherConfigs.isEmpty()) {
                 replaceVariable(otherConfigs, clusterId);
-                nonK8sConfigs.put(generator, otherConfigs);
+                nonKubernetesConfigs.put(generator, otherConfigs);
             }
 
-            // 按类型分组K8S配置
-            for (ServiceConfig k8sConfig : k8sConfigs) {
-                String k8sConfigType = extractK8sConfigType(k8sConfig.getConfigGroup());
-                k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(k8sConfig);
+            // 按类型分组Kubernetes配置
+            for (ServiceConfig kubernetesConfig : kubernetesConfigs) {
+                String kubernetesConfigType = extractKubernetesConfigType(kubernetesConfig.getConfigGroup());
+                kubernetesConfigsByType.computeIfAbsent(kubernetesConfigType, k -> new ArrayList<>()).add(kubernetesConfig);
             }
         }
     }
@@ -1042,30 +1042,30 @@ public class ConfigGroupUtils {
      *
      * @param resultMap        结果配置映射
      * @param originalMap      原始配置映射
-     * @param k8sConfigsByType K8S配置映射（按类型分组）
+     * @param kubernetesConfigsByType Kubernetes配置映射（按类型分组）
      * @param roleNames        角色名集合
      * @param clusterId        集群ID
      */
-    private static void processK8sConfigs(
+    private static void processKubernetesConfigs(
             Map<Generators, List<ServiceConfig>> resultMap,
             Map<JSONObject, JSONArray> originalMap,
-            Map<String, List<ServiceConfig>> k8sConfigsByType,
+            Map<String, List<ServiceConfig>> kubernetesConfigsByType,
             Set<String> roleNames,
             Integer clusterId) {
 
-        // 处理每种类型的K8S配置
-        for (Map.Entry<String, List<ServiceConfig>> entry : k8sConfigsByType.entrySet()) {
-            String k8sConfigType = entry.getKey();
+        // 处理每种类型的Kubernetes配置
+        for (Map.Entry<String, List<ServiceConfig>> entry : kubernetesConfigsByType.entrySet()) {
+            String kubernetesConfigType = entry.getKey();
             List<ServiceConfig> configs = entry.getValue();
 
             // 1. 为每个角色创建配置副本
-            List<ServiceConfig> allK8sConfigs = createConfigsForRoles(configs, k8sConfigType, roleNames);
+            List<ServiceConfig> allKubernetesConfigs = createConfigsForRoles(configs, kubernetesConfigType, roleNames);
 
             // 2. 替换变量
-            replaceVariable(allK8sConfigs, clusterId);
+            replaceVariable(allKubernetesConfigs, clusterId);
 
             // 3. 查找并使用原始Generator对象
-            findAndUseOriginalGenerator(resultMap, originalMap, k8sConfigType, allK8sConfigs);
+            findAndUseOriginalGenerator(resultMap, originalMap, kubernetesConfigType, allKubernetesConfigs);
         }
     }
 
@@ -1073,13 +1073,13 @@ public class ConfigGroupUtils {
      * 为每个角色创建配置副本
      *
      * @param configs       配置列表
-     * @param k8sConfigType K8S配置类型
+     * @param kubernetesConfigType Kubernetes配置类型
      * @param roleNames     角色名集合
      * @return 创建的配置列表
      */
     private static List<ServiceConfig> createConfigsForRoles(
             List<ServiceConfig> configs,
-            String k8sConfigType,
+            String kubernetesConfigType,
             Set<String> roleNames) {
 
         List<ServiceConfig> allConfigs = new ArrayList<>();
@@ -1092,7 +1092,7 @@ public class ConfigGroupUtils {
                 ServiceConfig newConfig = ObjectUtil.cloneByStream(config);
 
                 // 设置角色特定的configGroup
-                newConfig.setConfigGroup(Constants.K8S_CONFIG_PREFIX + k8sConfigType + "." + roleName);
+                newConfig.setConfigGroup(Constants.KUBERNETES_CONFIG_PREFIX + kubernetesConfigType + "." + roleName);
 
                 // 添加角色前缀到name
                 addRolePrefixToName(newConfig, roleName);
@@ -1109,13 +1109,13 @@ public class ConfigGroupUtils {
      *
      * @param resultMap     结果配置映射
      * @param originalMap   原始配置映射
-     * @param k8sConfigType K8S配置类型
+     * @param kubernetesConfigType Kubernetes配置类型
      * @param configs       配置列表
      */
     private static void findAndUseOriginalGenerator(
             Map<Generators, List<ServiceConfig>> resultMap,
             Map<JSONObject, JSONArray> originalMap,
-            String k8sConfigType,
+            String kubernetesConfigType,
             List<ServiceConfig> configs) {
 
         // 查找原始Generator对象
@@ -1123,7 +1123,7 @@ public class ConfigGroupUtils {
         for (JSONObject generatorJson : originalMap.keySet()) {
             Generators generator = generatorJson.toJavaObject(Generators.class);
             if (generator.getFilename() != null &&
-                    generator.getFilename().equals(Constants.K8S_CONFIG_PREFIX + k8sConfigType)) {
+                    generator.getFilename().equals(Constants.KUBERNETES_CONFIG_PREFIX + kubernetesConfigType)) {
                 originalGenerator = generator;
                 break;
             }
@@ -1133,7 +1133,7 @@ public class ConfigGroupUtils {
         if (originalGenerator != null) {
             resultMap.put(originalGenerator, configs);
         } else {
-            logger.warn("无法为K8S配置类型 {} 找到原始Generator对象", k8sConfigType);
+            logger.warn("无法为Kubernetes配置类型 {} 找到原始Generator对象", kubernetesConfigType);
         }
     }
 
@@ -1212,7 +1212,7 @@ public class ConfigGroupUtils {
         }
 
         // 如果配置组是Kubernetes相关的，添加角色前缀
-        if (configGroup != null && configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+        if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
             String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
             return normRoleName + "_" + configName;

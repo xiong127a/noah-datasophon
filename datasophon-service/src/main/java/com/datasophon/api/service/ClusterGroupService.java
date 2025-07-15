@@ -31,7 +31,7 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
 
     Result deleteUserGroup(Integer id);
 
-    Result deleteUserGroupOnK8s(Integer id);
+    Result deleteUserGroupOnKubernetes(Integer id);
 
     Result listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
 
@@ -39,5 +39,5 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
 
     void createUnixGroupOnHost(String hostname, String groupName);
 
-    Result saveClusterGroupOnK8s(Integer clusterId, String groupName);
+    Result saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
 }

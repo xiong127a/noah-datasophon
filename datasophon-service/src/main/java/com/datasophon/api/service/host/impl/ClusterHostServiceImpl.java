@@ -278,7 +278,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 .eq(Constants.RACK, rack));
     }
 
-    public Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId) {
+    public Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {

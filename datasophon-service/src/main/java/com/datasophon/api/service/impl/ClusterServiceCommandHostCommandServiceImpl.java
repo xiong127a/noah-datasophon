@@ -34,7 +34,7 @@ import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostCommandMapper;
-import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -181,9 +181,9 @@ public class ClusterServiceCommandHostCommandServiceImpl
         String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
 
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             String baseDir = System.getProperty("user.dir");
-            String logStr = K8sMinaUtils
+            String logStr = KubernetesMinaUtils
                     .readLastRows(
                             baseDir + Constants.SLASH + logFile,
                             Charset.defaultCharset(), PropertyUtils.getInt("rows"));

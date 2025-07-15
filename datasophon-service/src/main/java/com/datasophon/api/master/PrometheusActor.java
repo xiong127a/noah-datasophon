@@ -27,7 +27,7 @@ import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
 import com.datasophon.api.load.ServiceRoleJmxMap;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.service.ClusterInfoService;
@@ -48,9 +48,9 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.CommonUtil;
-import com.datasophon.k8s.util.K8sFreeMakerUtils;
+import com.datasophon.kubernetes.constants.Constant;
+import com.datasophon.kubernetes.util.CommonUtil;
+import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -93,7 +93,7 @@ public class PrometheusActor extends UntypedActor {
             ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
                     .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
-            boolean isK8s = Constants.K8S_MODE.equals(depType);
+            boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
             logger.info("start to generate {} prometheus config", serviceInstance.getServiceName());
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
@@ -112,7 +112,7 @@ public class PrometheusActor extends UntypedActor {
                 }
                 String hostname = roleInstanceEntity.getHostname();
 
-                if (isK8s) {
+                if (isKubernetes) {
                     // 使用服务角色的FQDN命名方式，确保稳定性
                     // 格式:
                     // serviceRoleFullName-{index}.serviceRoleFullName.namespace.svc.cluster.local
@@ -127,13 +127,13 @@ public class PrometheusActor extends UntypedActor {
                                 .generateServiceRoleFullName(roleInstanceEntity.getServiceName(), namenodeRoleName);
                         // ZKFC使用与NameNode相同的索引
                         hostname = namenodeFullName + "-" + roleIndex + "." + namenodeFullName + "."
-                                + Constant.K8S_NAMESPACE + ".svc.cluster.local";
+                                + Constant.KUBERNETES_NAMESPACE + ".svc.cluster.local";
                         logger.info("Using NameNode's FQDN for ZKFC: {} for service role {}", hostname,
                                 roleInstanceEntity.getServiceRoleName());
                     } else {
                         hostname = serviceRoleFullName + "-" + roleIndex + "." + serviceRoleFullName + "."
-                                + Constant.K8S_NAMESPACE + ".svc.cluster.local";
-                        logger.info("Using K8s FQDN with role-specific index: {} for service role {}", roleIndex,
+                                + Constant.KUBERNETES_NAMESPACE + ".svc.cluster.local";
+                        logger.info("Using Kubernetes FQDN with role-specific index: {} for service role {}", roleIndex,
                                 roleInstanceEntity.getServiceRoleName());
                     }
 
@@ -187,7 +187,7 @@ public class PrometheusActor extends UntypedActor {
             if (Objects.nonNull(prometheusInstance)) {
                 serviceRoleInfo.setClusterId(prometheusInstance.getClusterId());
                 serviceRoleInfo.setHostname(prometheusInstance.getHostname());
-                reloadPrometheusConfig(prometheusInstance, isK8s, serviceRoleInfo);
+                reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
             }
         } else if (msg instanceof GenerateHostPrometheusConfig) {
             GenerateHostPrometheusConfig command = (GenerateHostPrometheusConfig) msg;
@@ -205,7 +205,7 @@ public class PrometheusActor extends UntypedActor {
                             .eq(Constants.CLUSTER_ID, clusterId));
             ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
                     "Prometheus", null, command.getClusterId());
-            boolean isK8s = Constants.K8S_MODE.equals(depType);
+            boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
             if (Objects.nonNull(prometheusInstance)) {
 
                 Generators workerGenerators = new Generators();
@@ -237,8 +237,8 @@ public class PrometheusActor extends UntypedActor {
                 masterServiceConfigs.add(masterConfig);
 
                 for (ClusterHostDO clusterHostDO : hostList) {
-                    // 非k8s模式才生成worker配置
-                    if (!isK8s) {
+                    // 非Kubernetes模式才生成worker配置
+                    if (!isKubernetes) {
                         ServiceConfig serviceConfig = new ServiceConfig();
                         serviceConfig.setName("worker_" + clusterHostDO.getHostname());
                         serviceConfig.setValue(clusterHostDO.getHostname() + ":8585");
@@ -253,8 +253,8 @@ public class PrometheusActor extends UntypedActor {
                     nodeServiceConfigs.add(nodeServiceConfig);
                 }
 
-                if (BooleanUtil.isFalse(isK8s)) {
-                    // 如果是非k8s模式，则添加worker配置
+                if (BooleanUtil.isFalse(isKubernetes)) {
+                    // 如果是非Kubernetes模式，则添加worker配置
                     configFileMap.put(workerGenerators, workerServiceConfigs);
                 }
                 configFileMap.put(masterGenerators, masterServiceConfigs);
@@ -267,7 +267,7 @@ public class PrometheusActor extends UntypedActor {
                 serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
                 serviceRoleInfo.setHostname(prometheusInstance.getHostname());
 
-                reloadPrometheusConfig(prometheusInstance, isK8s, serviceRoleInfo);
+                reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
             }
 
         } else if (msg instanceof GenerateAlertConfigCommand) {
@@ -282,7 +282,7 @@ public class PrometheusActor extends UntypedActor {
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             if (Objects.nonNull(prometheusInstance)) {
                 ExecResult configResult;
-                if (Constants.K8S_MODE.equals(depType)) {
+                if (Constants.KUBERNETES_MODE.equals(depType)) {
                     return;
                 } else {
                     ActorSelection alertConfigActor = ActorUtils.actorSystem.actorSelection(
@@ -374,15 +374,15 @@ public class PrometheusActor extends UntypedActor {
             serviceRoleInfo.setConfigFileMap(configFileMap);
             serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
             serviceRoleInfo.setHostname(prometheusInstance.getHostname());
-            boolean isK8s = Constants.K8S_MODE.equals(depType);
-            reloadPrometheusConfig(prometheusInstance, isK8s, serviceRoleInfo);
+            boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
+            reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
         } else {
             unhandled(msg);
         }
     }
 
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceEntity prometheusInstance,
-            boolean isK8s,
+            boolean isKubernetes,
             ServiceRoleInfo serviceRoleInfo) throws Exception {
 
         // Validate critical parameters
@@ -390,9 +390,9 @@ public class PrometheusActor extends UntypedActor {
             throw new IllegalArgumentException("Invalid prometheus instance");
         }
         ExecResult execResult;
-        if (isK8s) {
-            K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
-            execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+        if (isKubernetes) {
+            KubernetesServiceConfigureHandler kubernetesServiceConfigureHandler = new KubernetesServiceConfigureHandler();
+            execResult = kubernetesServiceConfigureHandler.handlerRequest(serviceRoleInfo);
         } else {
             ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
             execResult = configureHandler.handlerRequest(serviceRoleInfo);
@@ -400,14 +400,14 @@ public class PrometheusActor extends UntypedActor {
 
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
-        K8sFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,"prometheus-update");
+        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,"prometheus-update");
         if (execResult != null && execResult.getExecResult()) {
-            String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isK8s);
+            String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isKubernetes);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);
         }
     }
 
-    private String buildReloadUrl(String hostname, boolean isK8s) {
-        return "http://" + hostname + ":" + (isK8s ? PROMETHEUS_NODE_PORT : PROMETHEUS_PORT) + RELOAD_PATH;
+    private String buildReloadUrl(String hostname, boolean isKubernetes) {
+        return "http://" + hostname + ":" + (isKubernetes ? PROMETHEUS_NODE_PORT : PROMETHEUS_PORT) + RELOAD_PATH;
     }
 }

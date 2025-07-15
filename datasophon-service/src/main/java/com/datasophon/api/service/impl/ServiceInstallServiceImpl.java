@@ -56,8 +56,8 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
-import com.datasophon.k8s.strategy.K8sServiceRoleStrategy;
-import com.datasophon.k8s.strategy.K8sServiceRoleStrategyContext;
+import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategy;
+import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategyContext;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,9 +121,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param clusterId 集群ID
      */
     public static void processConfigList(List<ServiceConfig> list, Integer clusterId) {
-        if (Constants.K8S_MODE.equals(ProcessUtils.getDepMode(clusterId))) {
+        if (Constants.KUBERNETES_MODE.equals(ProcessUtils.getDepMode(clusterId))) {
             for (ServiceConfig config : list) {
-                if (Constants.K8S_MODE.toLowerCase().equals(config.getConfigType())) {
+                if (Constants.KUBERNETES_MODE.toLowerCase().equals(config.getConfigType())) {
                     config.setHidden(false);
                     config.setRequired(true);
                 }
@@ -168,12 +168,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         ClusterInfoEntity clusterInfoEntity = SpringUtil.getBean(ClusterInfoService.class).getById(clusterId);
         String depType = clusterInfoEntity.getDepType();
-        if (Constants.K8S_MODE.equals(depType)) {
+        if (Constants.KUBERNETES_MODE.equals(depType)) {
             // 获取Kubernetes服务角色处理类
-            K8sServiceRoleStrategy k8sServiceRoleStrategy = K8sServiceRoleStrategyContext
+            KubernetesServiceRoleStrategy kubernetesServiceRoleStrategy = KubernetesServiceRoleStrategyContext
                     .getServiceRoleHandler(serviceName);
-            if (Objects.nonNull(k8sServiceRoleStrategy)) {
-                k8sServiceRoleStrategy.getConfig(clusterId, list);
+            if (Objects.nonNull(kubernetesServiceRoleStrategy)) {
+                kubernetesServiceRoleStrategy.getConfig(clusterId, list);
             }
         }
 
@@ -210,7 +210,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
             // 处理Kubernetes配置项，添加角色前缀
             if (serviceConfig.getConfigGroup() != null
-                    && serviceConfig.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX)) {
+                    && serviceConfig.getConfigGroup().startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                 // 从配置组名称中提取角色名
                 String extractedRoleName = getKubernetesRole(serviceConfig.getConfigGroup());
                 if (extractedRoleName != null) {
@@ -927,7 +927,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      */
     private boolean isKubernetesConfig(ServiceConfig config) {
         return config != null && config.getConfigGroup() != null &&
-                config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX);
+                config.getConfigGroup().startsWith(Constants.KUBERNETES_CONFIG_PREFIX);
     }
 
     /**
@@ -936,7 +936,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * "persistentVolumeClaims"
      */
     private String getKubernetesSubgroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -953,7 +953,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * "ZkServer"
      */
     private String getKubernetesRole(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -994,7 +994,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         // 收集修改的配置项
         List<String> regularChangedConfigs = new ArrayList<>();
-        Map<String, Set<String>> k8sChangedConfigsByRole = new HashMap<>(); // Role -> Set of subgroups
+        Map<String, Set<String>> kubernetesChangedConfigsByRole = new HashMap<>(); // Role -> Set of subgroups
 
         // 检查修改的配置项
         for (ServiceConfig newConfig : newConfigs) {
@@ -1014,7 +1014,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         String subgroup = getKubernetesSubgroup(configGroup);
 
                         if (role != null && subgroup != null) {
-                            k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                            kubernetesChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
                         } else {
                             // 如果无法确定角色或子组，作为常规配置处理
                             String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel()
@@ -1036,7 +1036,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                     String subgroup = getKubernetesSubgroup(configGroup);
 
                     if (role != null && subgroup != null) {
-                        k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                        kubernetesChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
                     } else {
                         String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
                         regularChangedConfigs.add(label);
@@ -1059,7 +1059,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                     String subgroup = getKubernetesSubgroup(configGroup);
 
                     if (role != null && subgroup != null) {
-                        k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                        kubernetesChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
                     } else {
                         String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel()
                                 : configName;
@@ -1077,15 +1077,15 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         StringBuilder sb = new StringBuilder();
 
         // 如果没有修改，返回默认描述
-        if (regularChangedConfigs.isEmpty() && k8sChangedConfigsByRole.isEmpty()) {
+        if (regularChangedConfigs.isEmpty() && kubernetesChangedConfigsByRole.isEmpty()) {
             return "配置更新";
         }
 
         // 1. 先添加Kubernetes配置的变更
-        if (!k8sChangedConfigsByRole.isEmpty()) {
+        if (!kubernetesChangedConfigsByRole.isEmpty()) {
             sb.append("修改了 ");
             int roleCount = 0;
-            for (Map.Entry<String, Set<String>> entry : k8sChangedConfigsByRole.entrySet()) {
+            for (Map.Entry<String, Set<String>> entry : kubernetesChangedConfigsByRole.entrySet()) {
                 String role = entry.getKey();
                 Set<String> subgroups = entry.getValue();
 

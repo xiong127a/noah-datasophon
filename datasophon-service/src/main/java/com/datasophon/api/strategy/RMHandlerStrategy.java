@@ -111,8 +111,8 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         }
 
         @Override
-        public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
                 // 调用通用方法，传递特定的actorPath
                 performServiceRoleCheck(roleInstanceEntity, "");
         }

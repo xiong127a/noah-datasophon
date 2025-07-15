@@ -51,8 +51,7 @@ public final class Constants {
 
         public static final String WORKER_PACKAGE_NAME = "datasophon-worker.tar.gz";
         public static final String WORKER_SCRIPT_PATH = INSTALL_PATH + "/datasophon-worker/script/";
-        public static final String K8S_SCRIPT_PATH = INSTALL_PATH + "/opt/datasophon/script/";
-        public static final String WORKER_PATH = INSTALL_PATH + "/datasophon-worker";
+
 
         public static final String CLUSTER_ID = "cluster_id";
         public static final String MANAGED = "managed";
@@ -126,19 +125,19 @@ public final class Constants {
         public static final String RACK = "rack";
         public static final String SERVICE_STATE = "service_state";
         public static final String EQUAL_SIGN = "=";
-        public static final String K8S_DNS_SUFFIX = "." + DATASOPHON;
 
-        public static final String K8S_SVC_CONF = "kubernetes.config.services";
-        public static final String K8S_CLUSTER_IP = "ClusterIP";
-        public static final String K8S_NODE_PORT = "NodePort";
-        public static final String K8S_LOAD_BALANCER = "LoadBalancer";
 
-        public static final String K8S_CONFIG_PREFIX = "kubernetes.config.";
+        public static final String KUBERNETES_CONFIG_SERVICES = "kubernetes.config.services";
+        public static final String KUBERNETES_CLUSTER_IP = "ClusterIP";
+        public static final String KUBERNETES_NODE_PORT = "NodePort";
+        public static final String KUBERNETES_LOAD_BALANCER = "LoadBalancer";
 
-        public static final String K8S_NODEPORT_MAPPING = "node_port_mappings";
-        public static final String K8S_CLUSTERIP_MAPPING = "cluster_port_mappings";
-        public static final String K8S_LOADBALANCER_MAPPING = "load_balancer_port_mappings";
-        public static final String CONFIG_TARGET_ROLES = "configTargetRoles";
+        public static final String KUBERNETES_CONFIG_PREFIX = "kubernetes.config.";
+
+        public static final String KUBERNETES_NODEPORT_MAPPING = "node_port_mappings";
+        public static final String KUBERNETES_CLUSTERIP_MAPPING = "cluster_port_mappings";
+        public static final String KUBERNETES_LOADBALANCER_MAPPING = "load_balancer_port_mappings";
+
 
         public static final String GENERAL = "General";
 
@@ -285,7 +284,7 @@ public final class Constants {
 
         public static final String PVM_MODE = "PVM";
 
-        public static final String K8S_MODE = "K8S";
+        public static final String KUBERNETES_MODE = "Kubernetes";
 
         public static final String SERVICE_CHECK_NAMES = "Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
 

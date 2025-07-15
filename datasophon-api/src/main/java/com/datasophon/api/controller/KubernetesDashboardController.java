@@ -28,11 +28,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * K8S仪表盘控制器
+ * Kubernetes仪表盘控制器
  * 提供Kubernetes资源查询接口
  */
 @RestController
-@RequestMapping("api/k8s/dashboard")
+@RequestMapping("api/kubernetes/dashboard")
 @Slf4j
 public class KubernetesDashboardController {
 
@@ -322,8 +322,8 @@ public class KubernetesDashboardController {
 
             return result;
         } catch (Exception e) {
-            log.error("获取K8s资源统计失败", e);
-            return Result.error("获取K8s资源统计失败: " + e.getMessage());
+            log.error("获取Kubernetes资源统计失败", e);
+            return Result.error("获取Kubernetes资源统计失败: " + e.getMessage());
         }
     }
 
