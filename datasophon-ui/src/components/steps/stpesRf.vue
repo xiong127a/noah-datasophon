@@ -133,14 +133,42 @@ export default {
       // this.nextLoading = true
       let flag = true;
       if (this.stepsNumber === 1) {
-        this.$refs.steps1Ref.form.validateFields((err, values) => {
-          if (!err) {
-            flag = true;
-            this.steps1Data = values;
+        try {
+          const values = await new Promise((resolve, reject) => {
+            this.$refs.steps1Ref.form.validateFields((err, values) => {
+              if (!err) {
+                resolve(values);
+              } else {
+                reject(err);
+              }
+            });
+          });
+          
+          // 如果是K8S集群，需要先保存K8S配置
+          if (this.$refs.steps1Ref.isK8sCluster) {
+            const saveResult = await this.$refs.steps1Ref.saveKubernetesConfig();
+            if (!saveResult) {
+              flag = false;
+              return;
+            }
+            
+            // K8S模式下，为steps1Data提供默认值，因为不需要用户输入主机信息
+            this.steps1Data = {
+              hosts: '', // K8S模式下会自动从集群获取，这里设为空字符串
+              sshUser: 'root', // 默认用户
+              sshPort: 22, // 默认端口
+              kubeConfigContent: values.kubeConfigContent,
+              namespace: values.namespace
+            };
           } else {
-            flag = false;
+            // PVM模式使用用户输入的值
+            this.steps1Data = values;
           }
-        });
+          
+          flag = true;
+        } catch (error) {
+          flag = false;
+        }
       }
       if (this.stepsNumber === 2) {
         const self = this;

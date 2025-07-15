@@ -48,4 +48,7 @@ export default {
   getParcelProcess: path + '/cluster/parcel/process',
   downloadComponent: path + '/cluster/parcel/download',
   installComponent: path + '/cluster/parcel/install',
+  getClusterDetail: path + '/api/cluster/detail', // 获取集群详细信息
+  getKubernetesNamespaces: path + '/api/cluster/namespaces', // 获取Kubernetes命名空间列表
+  updateClusterKubeConfig: path + '/api/cluster/kube-config', // 更新集群K8S配置
 }

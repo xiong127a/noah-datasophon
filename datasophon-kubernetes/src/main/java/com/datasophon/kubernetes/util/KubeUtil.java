@@ -4,6 +4,7 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.client.Config;
@@ -33,6 +34,33 @@ public class KubeUtil {
 
     public static boolean checkNamespace(KubernetesClient kubernetesClient, String namespace) {
         return kubernetesClient.namespaces().withName(namespace).get() != null;
+    }
+
+    /**
+     * 创建命名空间
+     */
+    public static boolean createNamespace(KubernetesClient kubernetesClient, String namespace) {
+        try {
+            // 检查命名空间是否已存在
+            if (checkNamespace(kubernetesClient, namespace)) {
+                log.info("命名空间 {} 已存在，跳过创建", namespace);
+                return true;
+            }
+
+            // 创建命名空间
+            io.fabric8.kubernetes.api.model.Namespace ns = new io.fabric8.kubernetes.api.model.NamespaceBuilder()
+                    .withNewMetadata()
+                    .withName(namespace)
+                    .endMetadata()
+                    .build();
+
+            kubernetesClient.namespaces().resource(ns).create();
+            log.info("成功创建命名空间：{}", namespace);
+            return true;
+        } catch (Exception e) {
+            log.error("创建命名空间 {} 失败", namespace, e);
+            return false;
+        }
     }
 
     /**

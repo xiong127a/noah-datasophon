@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller;
 
+import com.datasophon.api.dto.KubeConfigUpdateRequest;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
@@ -24,11 +25,13 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/cluster")
@@ -102,6 +105,39 @@ public class ClusterInfoController {
     @RequestMapping("/grafana/metrics")
     public String getServiceRoleMetrics() {
         return clusterInfoService.getServiceRoleMetrics();
+    }
+
+    /**
+     * 获取集群详细信息
+     */
+    @RequestMapping("/detail/{clusterId}")
+    public Result getClusterDetail(@PathVariable("clusterId") Integer clusterId) {
+        return clusterInfoService.getClusterById(clusterId);
+    }
+
+    /**
+     * 获取Kubernetes命名空间列表
+     */
+    @PostMapping("/namespaces/{clusterId}")
+    public Result getKubernetesNamespaces(@PathVariable("clusterId") Integer clusterId,
+            @RequestBody Map<String, String> requestBody) {
+        String kubeConfig = requestBody.get("kubeConfig");
+        if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
+            return Result.error("请提供Kubernetes配置内容");
+        }
+        return clusterInfoService.getKubernetesNamespaces(clusterId, kubeConfig);
+    }
+
+    /**
+     * 更新集群Kubernetes配置
+     */
+    @PostMapping("/kube-config")
+    public Result updateClusterKubeConfig(@RequestBody KubeConfigUpdateRequest request) {
+        return clusterInfoService.updateClusterKubeConfig(
+                request.getClusterId(),
+                request.getKubeConfig(),
+                request.getNamespace(),
+                request.getCustomNamespace());
     }
 
 }

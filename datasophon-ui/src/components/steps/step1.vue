@@ -28,7 +28,9 @@
   <div class="steps1 steps">
     <div class="steps-title">为集群安装主机</div>
     <div class="steps-tips mgt20 mgb16">
-      <a-icon class="steps-tips-icon mgr5" type="exclamation-circle" />提示：使用IP或主机名输入主机列表，按逗号分隔或使用主机域批量添加主机，例如：10.3.144.[19-23]
+      <a-icon class="steps-tips-icon mgr5" type="exclamation-circle" />
+      <span v-if="!isK8sCluster">提示：使用IP或主机名输入主机列表，按逗号分隔或使用主机域批量添加主机，例如：10.3.144.[19-23]</span>
+      <span v-else>提示：K8S集群配置，请上传或输入Kubernetes配置文件，然后选择命名空间</span>
     </div>
     <div class="form-content steps-body">
       <a-form :label-col="labelCol" :wrapper-col="wrapperCol" :form="form">
@@ -62,7 +64,8 @@
                   'kubeConfigContent',
                   { rules: [{ required: true, message: 'Kubernetes配置不能为空!' }] }
                 ]"
-                placeholder="请输入Kubernetes配置内容，或点击上方按钮从文件载入...&#10;支持标准的 ~/.kube/config 文件（无扩展名）"
+                placeholder="请输入Kubernetes配置内容，或点击上方按钮从文件载入...
+支持标准的 ~/.kube/config 文件（无扩展名）"
                 :rows="8"
                 @change="onKubeConfigChange"
                 class="config-textarea"
@@ -77,34 +80,84 @@
           </a-form-item>
           
           <a-form-item label="命名空间">
-            <a-select
-              v-decorator="[
-                'namespace',
-                { 
-                  initialValue: selectedNamespace,
-                  rules: [{ required: true, message: '请选择命名空间!' }] 
-                }
-              ]"
-              placeholder="请选择命名空间"
-              :loading="namespacesLoading"
-              @change="onNamespaceChange"
-            >
-              <a-select-option value="__create_new__">创建新的命名空间</a-select-option>
-              <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
-                {{ ns }}
-              </a-select-option>
-            </a-select>
+            <div class="namespace-selector-container">
+              <!-- 选择命名空间模式 -->
+              <a-select
+                v-if="!isCreatingNewNamespace"
+                v-decorator="[
+                  'namespace',
+                  { 
+                    rules: [{ required: true, message: '请选择命名空间!' }] 
+                  }
+                ]"
+                :placeholder="!kubeConfigContent ? '请先输入Kubernetes配置' : '请选择或搜索命名空间'"
+                :loading="namespacesLoading"
+                :disabled="!kubeConfigContent || !kubeConfigContent.trim()"
+                show-search
+                :filter-option="false"
+                @search="onNamespaceSearch"
+                @select="onNamespaceSelect"
+                @click="onNamespaceDropdownClick"
+                @focus="onNamespaceDropdownClick"
+                :dropdown-match-select-width="true"
+              >
+                <a-select-option key="__create_new__" value="__create_new__">
+                  <div class="create-namespace-option">
+                    <a-icon type="plus" />
+                    创建新的命名空间
+                  </div>
+                </a-select-option>
+                <a-select-option key="divider" disabled class="namespace-divider">
+                  <div class="divider-line"></div>
+                </a-select-option>
+                <a-select-option 
+                  v-for="ns in filteredNamespaces" 
+                  :key="ns" 
+                  :value="ns"
+                >
+                  {{ ns }}
+                </a-select-option>
+              </a-select>
+              
+              <!-- 创建命名空间模式 -->
+              <a-input
+                v-if="isCreatingNewNamespace"
+                v-decorator="[
+                  'namespace',
+                  { 
+                    rules: [{ required: true, message: '请输入命名空间名称!' }] 
+                  }
+                ]"
+                placeholder="请输入新的命名空间名称"
+                @change="onNamespaceInputChange"
+              >
+                <a-icon slot="suffix" type="close-circle" @click="cancelCreateNamespace" style="cursor: pointer; color: #ccc;" />
+              </a-input>
+              
+              <!-- 命名空间操作提示信息 -->
+              <div v-if="isCreatingNewNamespace && customNamespaceInput" 
+                   :class="isNamespaceExists ? 'namespace-use-tip' : 'namespace-creation-tip'">
+                <a-icon 
+                  :type="isNamespaceExists ? 'check-circle' : 'info-circle'" 
+                  :style="{ 
+                    color: isNamespaceExists ? '#52c41a' : '#1890ff', 
+                    marginRight: '4px' 
+                  }" 
+                />
+                {{ isNamespaceExists ? '将使用命名空间' : '将创建命名空间' }} 
+                <span :style="{ 
+                  color: isNamespaceExists ? '#52c41a' : '#1890ff', 
+                  fontWeight: '500' 
+                }">{{ customNamespaceInput }}</span>
+              </div>
+              
+              <!-- 调试信息，后续可删除 -->
+              <div v-if="false" style="margin-top: 8px; padding: 8px; background: #f0f0f0; font-size: 12px;">
+                调试：isCreatingNewNamespace: {{ isCreatingNewNamespace }}, customNamespaceInput: '{{ customNamespaceInput }}', selectedNamespace: '{{ selectedNamespace }}'
+              </div>
+            </div>
           </a-form-item>
-          
-          <a-form-item v-if="showCustomNamespace" label="命名空间名称">
-            <a-input
-              v-decorator="[
-                'customNamespace',
-                { rules: [{ required: true, message: '请输入命名空间名称!' }] }
-              ]"
-              placeholder="请输入新的命名空间名称"
-            />
-          </a-form-item>
+
         </template>
         
         <!-- 传统集群配置 -->
@@ -130,6 +183,8 @@
   </div>
 </template>
 <script>
+import clusterAPI from '@/api/httpApi/cluster'
+
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
@@ -165,7 +220,29 @@ export default {
       showCustomNamespace: false,
       clusterInfo: null,
       fileLoading: false,
+      isCreatingNewNamespace: false,
+      customNamespaceInput: '',
+      namespaceSearchText: '',
+
     };
+  },
+  
+  computed: {
+    filteredNamespaces() {
+      if (!this.namespaceSearchText) {
+        return this.namespaces;
+      }
+      return this.namespaces.filter(ns => 
+        ns.toLowerCase().includes(this.namespaceSearchText.toLowerCase())
+      );
+    },
+    
+    isNamespaceExists() {
+      if (!this.customNamespaceInput || !this.namespaces.length) {
+        return false;
+      }
+      return this.namespaces.includes(this.customNamespaceInput);
+    }
   },
   
   async mounted() {
@@ -175,18 +252,18 @@ export default {
   methods: {
     async loadClusterInfo() {
       try {
-        const res = await this.$axiosGet(global.API.getClusterDetail + '/' + this.clusterId);
+        const res = await this.$axiosGet(clusterAPI.getClusterDetail + '/' + this.clusterId);
         if (res.code === 200) {
           this.clusterInfo = res.data;
           this.isK8sCluster = res.data.depType === 'Kubernetes';
           
-          // 如果是K8S集群且已有配置，加载命名空间
+          // 如果是K8S集群且已有配置，设置配置内容
           if (this.isK8sCluster && res.data.kubeConfig) {
             this.kubeConfigContent = res.data.kubeConfig;
             this.form.setFieldsValue({
               kubeConfigContent: res.data.kubeConfig
             });
-            await this.loadNamespaces(res.data.kubeConfig);
+            // 不自动加载命名空间，等用户点击下拉框时再加载
           }
         }
       } catch (error) {
@@ -196,22 +273,46 @@ export default {
     },
     
     async loadNamespaces(kubeConfig) {
+      
       if (!kubeConfig) {
+        console.warn('kubeConfig为空，不调用API');
         return;
       }
       
       this.namespacesLoading = true;
       try {
-        const res = await this.$axiosPost(global.API.getKubernetesNamespaces, kubeConfig, {
-          params: { clusterId: this.clusterId }
+        const res = await this.$axiosJsonPost(clusterAPI.getKubernetesNamespaces + '/' + this.clusterId, {
+          kubeConfig: kubeConfig
         });
         
         if (res.code === 200) {
           this.namespaces = res.data.namespaces || [];
-          this.selectedNamespace = res.data.defaultNamespace || 'datasophon';
-          this.form.setFieldsValue({
-            namespace: this.selectedNamespace
-          });
+          const defaultNamespace = res.data.defaultNamespace || 'datasophon';
+          
+          // 检查默认命名空间是否存在于列表中
+          if (this.namespaces.includes(defaultNamespace)) {
+            // 默认命名空间存在，直接选择
+            this.selectedNamespace = defaultNamespace;
+            this.isCreatingNewNamespace = false;
+            this.customNamespaceInput = '';
+            // 使用 $nextTick 确保DOM更新后再设置表单值
+            this.$nextTick(() => {
+              this.form.setFieldsValue({
+                namespace: defaultNamespace
+              });
+            });
+          } else {
+            // 默认命名空间不存在，进入创建模式
+            this.isCreatingNewNamespace = true;
+            this.customNamespaceInput = defaultNamespace;
+            this.selectedNamespace = '';
+            // 使用 $nextTick 确保DOM更新后再设置表单值
+            this.$nextTick(() => {
+              this.form.setFieldsValue({
+                namespace: defaultNamespace
+              });
+            });
+          }
           
           // 显示集群连接成功信息
           const clusterVersion = res.data.clusterVersion || '未知版本';
@@ -239,9 +340,13 @@ export default {
       this.kubeConfigContent = '';
       this.namespaces = [];
       this.selectedNamespace = '';
-      this.form.setFieldsValue({
-        kubeConfigContent: '',
-        namespace: ''
+      this.isCreatingNewNamespace = false;
+      this.customNamespaceInput = '';
+      this.$nextTick(() => {
+        this.form.setFieldsValue({
+          kubeConfigContent: '',
+          namespace: ''
+        });
       });
     },
     
@@ -270,9 +375,18 @@ export default {
         this.form.setFieldsValue({
           kubeConfigContent: content
         });
-        this.loadNamespaces(content);
+        // 文件载入时重置命名空间状态
+        this.namespaces = [];
+        this.selectedNamespace = '';
+        this.isCreatingNewNamespace = false;
+        this.customNamespaceInput = '';
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: ''
+          });
+        });
         this.fileLoading = false;
-        this.$message.success('配置文件载入成功');
+        this.$message.success('配置文件载入成功，请点击命名空间下拉框加载命名空间');
       };
       reader.onerror = () => {
         this.$message.error('文件读取失败');
@@ -287,28 +401,233 @@ export default {
     async onKubeConfigChange(e) {
       const content = e.target.value;
       this.kubeConfigContent = content;
-      if (content.trim()) {
-        await this.loadNamespaces(content);
-      } else {
+      // 配置变化时重置命名空间状态
+      if (!content.trim()) {
         this.namespaces = [];
         this.selectedNamespace = '';
+        this.isCreatingNewNamespace = false;
+        this.customNamespaceInput = '';
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: ''
+          });
+        });
       }
     },
     
-    onNamespaceChange(value) {
-      this.selectedNamespace = value;
-      this.showCustomNamespace = value === '__create_new__';
+    async onNamespaceDropdownClick() {
       
-      if (this.showCustomNamespace) {
+      // 只有在有配置内容且命名空间列表为空时才调用
+      if (this.kubeConfigContent && this.kubeConfigContent.trim() && this.namespaces.length === 0) {
+        await this.loadNamespaces(this.kubeConfigContent);
+      } else {
+        if (!this.kubeConfigContent) {
+          console.warn('kubeConfigContent为空');
+        }
+        if (this.kubeConfigContent && !this.kubeConfigContent.trim()) {
+          console.warn('kubeConfigContent只包含空白字符');
+        }
+      }
+    },
+    
+    onNamespaceSelect(value) {
+      if (value === '__create_new__') {
+        // 立即设置状态，避免显示 __create_new__
+        this.isCreatingNewNamespace = true;
+        this.customNamespaceInput = '';
+        this.selectedNamespace = '';
+        
+        // 立即清空表单值，然后在下一个tick再次确保
+        this.form.setFieldsValue({
+          namespace: ''
+        });
+        
         this.$nextTick(() => {
           this.form.setFieldsValue({
-            customNamespace: ''
+            namespace: ''
           });
         });
+      } else {
+        this.isCreatingNewNamespace = false;
+        this.customNamespaceInput = '';
+        this.selectedNamespace = value;
+        // 确保表单值被正确设置
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: value
+          });
+        });
+      }
+    },
+
+    cancelCreateNamespace() {
+      this.isCreatingNewNamespace = false;
+      this.customNamespaceInput = '';
+      this.selectedNamespace = '';
+      // 使用 $nextTick 确保组件切换完成后再清空表单值
+      this.$nextTick(() => {
+        this.form.setFieldsValue({
+          namespace: ''
+        });
+      });
+    },
+
+    onNamespaceInputChange(e) {
+      const value = e.target ? e.target.value : e;
+      if (this.isCreatingNewNamespace) {
+        this.customNamespaceInput = value || '';
+        // v-decorator 会自动处理表单值更新，不需要手动调用 setFieldsValue
+      }
+    },
+
+    onNamespaceSearch(value) {
+      this.namespaceSearchText = value;
+    },
+
+    // 下一步时保存K8S配置
+    async saveKubernetesConfig() {
+      if (!this.isK8sCluster) {
+        return true; // 非K8S集群直接返回成功
+      }
+
+      try {
+        const formValues = await this.form.validateFields();
+        
+        const configData = {
+          clusterId: this.clusterId,
+          kubeConfig: formValues.kubeConfigContent,
+          namespace: formValues.namespace
+        };
+
+        const res = await this.$axiosJsonPost(
+          clusterAPI.updateClusterKubeConfig, 
+          configData
+        );
+
+        if (res.code === 200) {
+          this.$message.success('Kubernetes配置保存成功');
+          return true;
+        } else {
+          this.$message.error('保存配置失败: ' + res.msg);
+          return false;
+        }
+      } catch (error) {
+        console.error('保存K8S配置失败:', error);
+        this.$message.error('保存配置失败');
+        return false;
       }
     },
   },
 };
 </script>
+
+<style scoped>
+.namespace-selector-container {
+  position: relative;
+}
+
+.namespace-creation-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1890ff;
+}
+
+.namespace-use-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #52c41a;
+}
+
+/* 创建新命名空间选项样式 */
+.create-namespace-option {
+  color: #1890ff !important;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 分割线样式 */
+.namespace-divider {
+  height: 1px !important;
+  padding: 4px 0 !important;
+  margin: 0 !important;
+  line-height: 1px !important;
+  cursor: default !important;
+}
+
+.divider-line {
+  height: 1px;
+  background-color: #f0f0f0;
+  margin: 0 -12px;
+}
+
+/* 下拉菜单整体样式 */
+:deep(.ant-select-dropdown-menu-item) {
+  padding: 8px 12px !important;
+}
+
+:deep(.ant-select-dropdown-menu-item:hover) {
+  background-color: #f5f5f5 !important;
+}
+
+/* 创建新命名空间选项的hover效果 */
+:deep(.ant-select-dropdown-menu-item:hover .create-namespace-option) {
+  background-color: #e6f7ff;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+/* 禁用分割线的hover效果 */
+:deep(.namespace-divider:hover) {
+  background-color: transparent !important;
+  cursor: default !important;
+}
+</style>
 <style lang="less" scoped>
+.steps1 {
+  .k8s-config-input-container {
+    .config-actions {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .config-textarea {
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      
+      &::placeholder {
+        color: #bbb;
+        font-style: italic;
+      }
+    }
+  }
+  
+  .namespace-selector {
+    .custom-namespace-input {
+      margin-top: 10px;
+    }
+  }
+  
+  .steps-tips {
+    color: #666;
+    font-size: 14px;
+    
+    .steps-tips-icon {
+      color: #1890ff;
+    }
+  }
+}
 </style>

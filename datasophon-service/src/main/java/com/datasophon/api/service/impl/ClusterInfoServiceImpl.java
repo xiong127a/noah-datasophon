@@ -18,8 +18,6 @@
 package com.datasophon.api.service.impl;
 
 import akka.actor.ActorRef;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -37,12 +35,19 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ClusterCommand;
 import com.datasophon.common.enums.ClusterCommandType;
+import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.*;
+import com.datasophon.dao.entity.AlertGroupEntity;
+import com.datasophon.dao.entity.ClusterAlertGroupMap;
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.entity.FrameServiceEntity;
+import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
-import com.datasophon.k8s.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,14 +114,6 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public Result saveCluster(ClusterInfoEntity clusterInfo) {
-
-        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
-            try (KubernetesClient client = KubeUtil.getKubeClientByConfig(clusterInfo.getKubeConfig())) {
-                KubeUtil.testConnect(client);
-            } catch (Exception e) {
-                return Result.error("连接k8s集群失败");
-            }
-        }
 
         List<ClusterInfoEntity> list = this
                 .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_CODE, clusterInfo.getClusterCode()));
@@ -280,5 +277,104 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         prometheusMetrics.append("# EOF\n");
 
         return prometheusMetrics.toString();
+    }
+
+    @Override
+    public Result getClusterById(Integer clusterId) {
+        ClusterInfoEntity clusterInfo = this.getById(clusterId);
+        if (clusterInfo == null) {
+            return Result.error("集群不存在");
+        }
+        return Result.success(clusterInfo);
+    }
+
+    @Override
+    public Result getKubernetesNamespaces(Integer clusterId, String kubeConfig) {
+        if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
+            return Result.error("Kubernetes配置不能为空");
+        }
+
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            // 测试连接
+            KubeUtil.testConnect(client);
+
+            // 获取所有命名空间
+            List<io.fabric8.kubernetes.api.model.Namespace> namespaces = client.namespaces().list().getItems();
+
+            // 转换为简单的名称列表并排序
+            List<String> namespaceNames = namespaces.stream()
+                    .map(ns -> ns.getMetadata().getName())
+                    .sorted()
+                    .collect(Collectors.toList());
+
+            // 构建返回结果
+            KubernetesNamespaceDto kubernetesNamespaceDto = new KubernetesNamespaceDto();
+            kubernetesNamespaceDto.setNamespaces(namespaceNames);
+            kubernetesNamespaceDto.setDefaultNamespace("datasophon");
+            kubernetesNamespaceDto.setShowNamespaceSelector(true);
+            kubernetesNamespaceDto.setClusterVersion(client.getKubernetesVersion().getGitVersion());
+            return Result.success(kubernetesNamespaceDto);
+        } catch (io.fabric8.kubernetes.client.KubernetesClientException e) {
+            log.error("Kubernetes客户端异常", e);
+            String errorMsg = "连接Kubernetes集群失败";
+            if (e.getMessage().contains("Unauthorized")) {
+                errorMsg = "认证失败，请检查Kubernetes配置文件的凭证信息";
+            } else if (e.getMessage().contains("refused")) {
+                errorMsg = "连接被拒绝，请检查Kubernetes集群地址和端口";
+            } else if (e.getMessage().contains("timeout")) {
+                errorMsg = "连接超时，请检查网络连接和集群状态";
+            }
+            return Result.error(errorMsg + ": " + e.getMessage());
+        } catch (Exception e) {
+            log.error("获取Kubernetes命名空间失败", e);
+            return Result.error("处理Kubernetes配置时出错: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace,
+            String customNamespace) {
+        try {
+            ClusterInfoEntity clusterInfo = this.getById(clusterId);
+            if (clusterInfo == null) {
+                return Result.error("集群不存在");
+            }
+
+            // 使用传入的命名空间名称
+            String finalNamespace = namespace;
+
+            if (finalNamespace == null || finalNamespace.trim().isEmpty()) {
+                return Result.error("命名空间名称不能为空");
+            }
+
+            // 验证配置有效性
+            try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+                KubeUtil.testConnect(client);
+
+                // 检查命名空间是否存在，不存在就创建
+                if (!KubeUtil.checkNamespace(client, finalNamespace)) {
+                    log.info("命名空间 '{}' 不存在，开始创建", finalNamespace);
+
+                    // 创建命名空间
+                    if (!KubeUtil.createNamespace(client, finalNamespace)) {
+                        return Result.error("创建命名空间 '" + finalNamespace + "' 失败");
+                    }
+
+                    log.info("成功创建命名空间：{}", finalNamespace);
+                } else {
+                    log.info("命名空间 '{}' 已存在，直接使用", finalNamespace);
+                }
+            }
+
+            // 更新集群信息
+            clusterInfo.setKubeConfig(kubeConfig);
+            clusterInfo.setNamespace(finalNamespace);
+            this.updateById(clusterInfo);
+
+            return Result.success("Kubernetes配置更新成功");
+        } catch (Exception e) {
+            log.error("更新Kubernetes配置失败", e);
+            return Result.error("更新Kubernetes配置失败: " + e.getMessage());
+        }
     }
 }

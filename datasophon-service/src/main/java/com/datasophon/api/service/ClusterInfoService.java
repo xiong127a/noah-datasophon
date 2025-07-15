@@ -86,4 +86,32 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
      *         For example: {"HDFS_NAMENODE": 2, "HDFS_DATANODE": 10, ...}
      */
     String getServiceRoleMetrics();
+
+    /**
+     * Retrieves detailed information about a cluster by its ID.
+     *
+     * @param clusterId The ID of the cluster to retrieve information for.
+     * @return A Result object containing the cluster information.
+     */
+    Result getClusterById(Integer clusterId);
+
+    /**
+     * Retrieves the list of Kubernetes namespaces for a cluster.
+     *
+     * @param clusterId  The ID of the cluster.
+     * @param kubeConfig The Kubernetes configuration content.
+     * @return A Result object containing the list of namespaces.
+     */
+    Result getKubernetesNamespaces(Integer clusterId, String kubeConfig);
+
+    /**
+     * 更新集群Kubernetes配置
+     *
+     * @param clusterId       集群ID
+     * @param kubeConfig      Kubernetes配置内容
+     * @param namespace       选择的命名空间
+     * @param customNamespace 自定义命名空间（如果选择创建新的命名空间）
+     * @return 更新结果
+     */
+    Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
 }
