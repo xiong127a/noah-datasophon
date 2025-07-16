@@ -7,6 +7,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -36,6 +37,8 @@ public class KubernetesServiceStopHandler extends ServiceHandler {
                 SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
+        kubernetesServiceRoleOperateCommand.setNamespace(namespace);
 
         if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT) {
             ExecResult execResult = new ExecResult();
