@@ -509,15 +509,19 @@ spec:
           <#if node_port_mappings??>
           <#assign mappings = node_port_mappings>
           <#list mappings as item>
+          <#if item?size gt 0 && item?keys[0]?has_content>
             - containerPort: ${(item?keys[0])}
               name: nodeport-${item?index + 1}
+          </#if>
           </#list>
           </#if>
           <#if cluster_port_mappings??>
           <#assign mappings = cluster_port_mappings>
           <#list mappings as item>
+          <#if item?size gt 0 && item?keys[0]?has_content>
             - containerPort: ${(item?keys[0])}
               name: clusterport-${item?index + 1}
+          </#if>
           </#list>
           </#if>
           </#if>
