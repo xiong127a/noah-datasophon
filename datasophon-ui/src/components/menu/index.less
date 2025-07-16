@@ -19,3 +19,80 @@
   border-radius: 50%;
   background-color: @primary-color;
 }
+
+.cdh-side-menu {
+  background: #fff !important;
+  border-right: 1px solid #e0e0e0 !important;
+  box-shadow: 2px 0 8px 0 rgba(30, 34, 45, 0.06);
+  .ant-menu {
+    background: #fff !important;
+    border-right: none;
+    box-shadow: none;
+    padding: 24px 0;
+    border-radius: 12px;
+    margin: 28px 12px;
+  }
+  .ant-menu-item, .ant-menu-submenu-title {
+    height: 56px !important;
+    line-height: 56px !important;
+    font-size: 18px;
+    color: #222b45;
+    padding-left: 40px !important;
+    padding-right: 28px !important;
+    display: flex;
+    align-items: center;
+    border-radius: 12px;
+    margin: 14px 0;
+    transition: background 0.2s, color 0.2s;
+    .anticon, .svg-icon {
+      margin-right: 18px;
+      font-size: 28px;
+      display: inline-block;
+      vertical-align: middle;
+      color: #1976d2;
+    }
+  }
+  .ant-menu-item-selected, .ant-menu-item-active {
+    background: linear-gradient(90deg, #e3f0ff 0%, #f7fbff 100%) !important;
+    color: #1976d2 !important;
+    box-shadow: 0 2px 8px 0 rgba(25, 118, 210, 0.08);
+    .anticon, .svg-icon {
+      color: #1976d2;
+    }
+  }
+  .ant-menu-submenu-open > .ant-menu-submenu-title {
+    color: #1976d2 !important;
+    background: #f0f6ff !important;
+  }
+  .ant-menu-submenu-title {
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    color: #1976d2;
+    background: #f7fbff;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    border-radius: 12px 12px 0 0;
+  }
+}
+.cdh-cluster-menu {
+  .ant-menu-item, .ant-menu-submenu-title {
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 14px;
+    color: #222b45;
+    padding-left: 20px !important;
+    display: flex;
+    align-items: center;
+    .anticon, .svg-icon {
+      margin-right: 8px;
+    }
+  }
+  .ant-menu-item-selected, .ant-menu-item-active {
+    background: @hover-bg-color !important;
+    color: @primary-color !important;
+  }
+  .ant-menu-submenu-open > .ant-menu-submenu-title {
+    color: @primary-color !important;
+  }
+}

@@ -1,18 +1,13 @@
 <template>
   <a-dropdown>
     <div class="header-avatar" style="cursor: pointer">
-      <!-- <a-avatar class="avatar" size="small" shape="circle" src="../../assets/img/logo3.svg"/> -->
-      <!-- <img width="32" class="mgr6" src="@/assets/img/avatar.svg" /> -->
+      <svg-icon icon-class="avatar" class="avatar-icon" />
       <span class="name">{{ user.username }}</span>
     </div>
     <a-menu :class="['avatar-menu']" slot="overlay">
       <a-menu-item @click="viewUserInfo">
         <a-icon type="user" />
         <span>个人中心</span>
-      </a-menu-item>
-      <a-menu-item v-if="isCluster === 'isCluster'" @click="toCluster">
-        <svg-icon icon-class="colony"></svg-icon>
-        <span style="margin-left: 8px">集群管理</span>
       </a-menu-item>
       <a-menu-divider />
       <a-menu-item @click="logout">
@@ -80,16 +75,27 @@ export default {
 <style lang="less">
 .header-avatar {
   display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  margin-left: 8px;
+  
+  .avatar-icon {
+    font-size: 18px;
+    margin-right: 8px;
+    color: #222b45;
+  }
+  
   .avatar,
   .name {
     align-self: center;
-    color: #fff;
+    color: #222b45;
+    font-size: 15px;
   }
   .avatar {
     margin-right: 8px;
   }
   .name {
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 .avatar-menu {

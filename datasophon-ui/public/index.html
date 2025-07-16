@@ -88,8 +88,8 @@
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="popContainer" class="beauty-scroll" style="height: 100vh; overflow-y: hidden">
-      <div id="app"></div>
+    <div id="popContainer" class="beauty-scroll" style="height: 100vh; width: 100vw; max-width: 100%; overflow-y: auto !important; overflow-x: hidden !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+      <div id="app" style="height: 100%; width: 100%; overflow: visible !important;"></div>
     </div>
     <!-- require cdn assets js -->
     <% for (var i in htmlWebpackPlugin.options.cdn && htmlWebpackPlugin.options.cdn.js) { %>

@@ -26,8 +26,10 @@
 -->
 <template>
   <div @click.stop>
-    <a-popover trigger="hover" placement="rightTop" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
-      <a-icon type="more" class="cluster-more" style="top: -28px" />
+    <a-popover trigger="click" placement="bottomRight" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
+      <button class="more-btn">
+        <a-icon type="ellipsis" />
+      </button>
     </a-popover>
     <!-- 配置集群的modal -->
     <a-modal v-if="visible" title :visible="visible" class="service-option-modal" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
@@ -191,6 +193,36 @@ export default {
     padding: 12px 16px;
   }
 }
+
+.more-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #f0f6ff;
+  }
+  
+  &:active {
+    background-color: #e6e6e6;
+    box-shadow: none;
+  }
+  
+  .anticon {
+    font-size: 16px;
+    color: #0076ce; /* CDH风格的蓝色 */
+  }
+}
+
 .service-option-modal {
   /deep/ .ant-modal {
     top: 61px;

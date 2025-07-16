@@ -24,19 +24,16 @@
  * @FilePath: \ddh-ui\src\components\menu\SideMenu.vue
 -->
 <template>
-  <a-layout-sider :theme="sideTheme" :class="['side-menu', 'beauty-scroll', isMobile ? null : 'shadow']" width="225px" :collapsible="collapsible" v-model="collapsed" :trigger="null">
-    <ClusterMenu v-if="isCluster === 'isCluster'" :theme="theme" :collapsed="collapsed" :options="menuData" @select="onSelect" class="menu" /> 
-    <i-menu v-else :theme="theme" :collapsed="collapsed" :options="menuData" @select="onSelect" class="menu"/>
+  <a-layout-sider :theme="'light'" class="cdh-side-menu" width="200px" :collapsible="collapsible" v-model="collapsed" :trigger="null" style="background:#fff; border-right:1px solid #e0e0e0;">
+    <i-menu :theme="'light'" :collapsed="collapsed" :options="menuData" @select="onSelect" class="menu"/>
   </a-layout-sider>
 </template>
 
 <script>
 import IMenu from './menu'
-import ClusterMenu from './clusterMenu'
-import {mapState, mapGetters} from 'vuex'
 export default {
   name: 'SideMenu',
-  components: {IMenu, ClusterMenu},
+  components: {IMenu},
   props: {
     collapsible: {
       type: Boolean,
@@ -51,23 +48,10 @@ export default {
     menuData: {
       type: Array,
       required: true
-    },
-    theme: {
-      type: String,
-      required: false,
-      default: 'dark'
     }
-  },
-  computed: {
-    sideTheme() {
-      return this.theme == 'light' ? this.theme : 'dark'
-    },
-    ...mapState('setting', ['isMobile', 'systemName']),
-    ...mapGetters('setting', ['isCluster'])
   },
   methods: {
     onSelect (obj) {
-      console.log(obj);
       this.$emit('menuSelect', obj)
     }
   }

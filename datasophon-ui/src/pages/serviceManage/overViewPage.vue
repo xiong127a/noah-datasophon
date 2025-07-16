@@ -84,8 +84,18 @@ export default {
 <style lang="less" scoped>
 .overview-page {
   background: #fff;
-  // padding: 20px;
-  height: calc(100vh - 180px);
+  height: 100%;
   position: relative;
+  overflow: visible !important;
+  
+  /* 隐藏内部滚动条 */
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
 }
 </style>

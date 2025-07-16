@@ -24,7 +24,7 @@
  * @FilePath: \ddh-ui\src\assets\img\svg\SvgIcon.vue
 -->
 <template>
-  <svg :class="svgClass" aria-hidden="true">
+  <svg :class="svgClass" aria-hidden="true" v-on="$listeners" style="cursor: pointer;">
     <use :xlink:href="iconName" />
   </svg>
 </template>
@@ -40,6 +40,7 @@ export default {
   },
   computed: {
     iconName() {
+      console.log('图标类名:', this.iconClass, '处理后:', `#icon-${this.iconClass.toLowerCase()}`);
       return `#icon-${this.iconClass.toLowerCase()}`;
     },
     svgClass() {

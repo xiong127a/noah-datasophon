@@ -25,7 +25,7 @@ const options = {
       path: '/',
       name: '首页',
       component: TabsView,
-      redirect: '/login',
+      redirect: '/service-manage',
       children: [
         {
           path: 'datasophon-overview',
@@ -51,25 +51,34 @@ const options = {
         },
         {
           path: 'service-manage',
-          name: '服务管理',
-          meta: {
-            icon: 'service-manage',
-            isCluster: 'isCluster',
+          name: '主页',
+          meta: { 
+            notAlive: true,
+            icon: 'home'
           },
-          component: PageView,
+          component: () => import('@/pages/serviceManage/ServiceLayout'),
           children: [
             {
+              path: '',
+              name: '服务总览',
+              meta: {
+                invisible: true,
+                notShow: true
+              },
+              component: () => import('@/pages/serviceManage/ServiceOverview'),
+            },
+            {
+              path: 'service-list/:serviceId',
+              name: '服务详情',
               meta: {
                 notAlive: true,
                 params: {
                   serviceId: '',
                 },
               },
-              path: 'service-list/:serviceId',
-              name: '服务管理',
               component: () => import('@/pages/serviceManage/index'),
-            },
-          ],
+            }
+          ]
         },
         {
           path: 'colony-manage',
@@ -84,6 +93,7 @@ const options = {
               path: 'colony-list',
               meta: {
                 notAlive: true,
+                icon: 'cluster',
               },
               name: '集群管理',
               component: () => import('@/pages/colonyManage/list'),
@@ -91,11 +101,13 @@ const options = {
             {
               path: 'colony-parcel',
               name: '存储库管理',
+              meta: { icon: 'wenjian' },
               component: () => import('@/pages/colonyManage/parcel'),
             },
             {
               path: 'colony-frame',
               name: '集群框架',
+              meta: { icon: 'shangwutubiao-' },
               component: () => import('@/pages/colonyManage/frame'),
             },
           ],
@@ -104,17 +116,11 @@ const options = {
           path: 'security-center',
           name: '用户管理',
           meta: {
-            icon: 'safety-certificate',
+            icon: 'user',
             isCluster: '',
           },
-          component: PageView,
-          children: [
-            {
-              path: 'user',
-              name: '用户管理',
               component: () => import('@/pages/securityCenter/user'),
-            },
-          ],
+          children: []
         },
         {
           path: 'host-manage',
@@ -157,6 +163,7 @@ const options = {
               path: 'metric',
               meta: {
                 notAlive: true,
+                icon: 'yanjiuzhulu',
               },
               name: '告警指标管理',
               label: '告警指标管理',
@@ -166,6 +173,7 @@ const options = {
               path: 'help',
               meta: {
                 notAlive: false,
+                icon: 'zhuye',
               },
               name: '使用帮助',
               label: '使用帮助',
@@ -193,30 +201,35 @@ const options = {
               path: 'tenant',
               name: '租户管理',
               label: '租户管理',
+              meta: { icon: 'user' },
               component: () => import('@/pages/systemCenter/tenant/index'),
             },
             {
               path: 'user',
               name: '用户管理',
               label: '用户管理',
+              meta: { icon: 'user' },
               component: () => import('@/pages/systemCenter/user'),
             },
             {
               path: 'frame',
               name: '机架管理',
               label: '机架管理',
+              meta: { icon: 'shangwutubiao-' },
               component: () => import('@/pages/systemCenter/frame/index'),
             },
             {
               path: 'tag',
               name: '标签管理',
               label: '标签管理',
+              meta: { icon: 'tag' },
               component: () => import('@/pages/systemCenter/tag/index'),
             },
             {
               path: 'log',
               name: '日志审计',
               label: '日志审计',
+              meta: { icon: 'wenjian' },
               component: () => import('@/pages/systemCenter/log/index'),
             },
           ],

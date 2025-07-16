@@ -114,7 +114,32 @@ export default {
 }
 </script>
 
-<style lang="less" scoped>
-  #id{
+<style lang="less">
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: visible !important;
+}
+
+/* 全局重写规则，确保只有最外层有滚动条 */
+#popContainer {
+  overflow-y: auto !important;
+}
+
+/* 移除所有内部容器的滚动条，只保留表格滚动 */
+div:not(#popContainer):not(.ant-table-body):not(.ant-table-fixed) {
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
+  
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* 确保路由视图不会产生滚动条 */
+.router-view-container {
+  overflow: visible !important;
+}
 </style>

@@ -198,8 +198,41 @@ export default {
 </script>
 <style lang="less" scoped>
 .service-setting {
+  height: 100%;
+  overflow: visible;
+  
+  /* 隐藏内部滚动条 */
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
   /deep/ .ant-spin-container {
     position: relative;
+  }
+  
+  /* 配置标签页内容区域样式 */
+  /deep/ .ant-tabs-content {
+    height: 100%;
+    
+    .ant-tabs-tabpane {
+      height: 100%;
+      overflow: visible;
+      
+      /* 隐藏滚动条 */
+      &::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        display: none !important;
+      }
+      
+      scrollbar-width: none !important; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
   }
 }
 </style>

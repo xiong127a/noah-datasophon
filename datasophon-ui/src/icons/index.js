@@ -25,6 +25,8 @@ import SvgIcon from './SvgIcon'// svg component
 Vue.component('svg-icon', SvgIcon)
 const common = require.context('./common', false, /\.svg$/)
 const colony = require.context('./colony', false, /\.svg$/)
+// 删除对旧目录的引用，因为文件已移至common目录
 const requireAll = requireContext => requireContext.keys().map(requireContext)
 requireAll(common)
 requireAll(colony)
+// 删除对旧服务图标目录的引用

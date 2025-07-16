@@ -1,114 +1,41 @@
 <template>
-  <a-layout :class="['admin-layout', 'beauty-scroll']">
-    <admin-header :class="[{'fixed-tabs': fixedTabs, 'fixed-header': fixedHeader, 'multi-page': multiPage}]" :style="headerStyle" :menuData="headMenuData" :collapsed="collapsed" @toggleCollapse="toggleCollapse"/>
-    <a-layout-header :class="['virtual-header', {'fixed-tabs' : fixedTabs, 'fixed-header': fixedHeader, 'multi-page': multiPage}]" v-show="fixedHeader"></a-layout-header>
-    <a-layout class="admin-layout-main beauty-scroll">
-      <drawer v-if="isMobile" v-model="drawerOpen">
-          <side-menu :theme="theme.mode" :menuData="menuDataOptions" :collapsed="false" :collapsible="false" @menuSelect="onMenuSelect"/>
-      </drawer>
-      <side-menu :class="[fixedSideBar ? 'fixed-side' : '']" :style="{paddingTop: isCluster === 'isCluster' ? '10px': 0}" :theme="theme.mode" v-else-if="layout === 'side' || layout === 'mix'" :menuData="sideMenuData" :collapsed="collapsed" :collapsible="true" />
-      <div v-if="fixedSideBar && !isMobile" :style="`width: ${sideMenuWidth}; min-width: ${sideMenuWidth};max-width: ${sideMenuWidth};`" class="virtual-side"></div>
-      <drawer v-if="!hideSetting" v-model="showSetting" placement="right">
-        <div class="setting" slot="handler">
-          <a-icon :type="showSetting ? 'close' : 'setting'"/>
-        </div>
-        <setting />
-      </drawer>
-      <a-layout-content class="admin-layout-content" :style="`min-height: ${minHeight}px;`">
-        <div class="breadcrumb">
-          <a-breadcrumb>
-            <a-breadcrumb-item :key="index" v-for="(item, index) in breadcrumb">
-              <span>{{item}}</span>
-            </a-breadcrumb-item>
-          </a-breadcrumb>
-        </div>
+  <div class="cdh-layout">
+    <admin-header
+      :firstMenu="firstMenu"
+      :activeFirstMenuKey="activeFirstMenuKey"
+      @firstMenuSelect="onFirstMenuSelect"
+      @routeChanged="onRouteChanged"
+      :class="['cdh-header', {'fixed-tabs': fixedTabs, 'fixed-header': fixedHeader, 'multi-page': multiPage}]"
+    />
+    <div class="cdh-main">
+      <!-- 二级菜单已改为从顶部下拉，移除左侧菜单 -->
+      <div class="cdh-content full">
+        <!-- 删除面包屑导航，更好利用空间 -->
         <div style="position: relative">
           <slot></slot>
         </div>
-      </a-layout-content>
-      <!-- <a-layout-footer style="padding: 0px">
-        <page-footer :link-list="footerLinks" :copyright="copyright" />
-      </a-layout-footer> -->
-    </a-layout>
-  </a-layout>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
 import AdminHeader from './header/AdminHeader'
-// import PageFooter from './footer/PageFooter'
-import Drawer from '../components/tool/Drawer'
-import SideMenu from '../components/menu/SideMenu'
-import Setting from '../components/setting/Setting'
-import {mapState, mapMutations, mapGetters} from 'vuex'
-import {getI18nKey} from '@/utils/routerUtil'
-import menu from '../components/menu/menu'
-
-// const minHeight = window.innerHeight - 64 - 122
+import { mapState, mapGetters, mapMutations } from 'vuex'
+import { getI18nKey } from '@/utils/routerUtil'
 
 export default {
   name: 'AdminLayout',
-  components: {Setting, SideMenu, Drawer, AdminHeader},
+  components: { AdminHeader },
   data () {
     return {
-      minHeight: window.innerHeight - 64 - 122,
       collapsed: false,
-      showSetting: false,
-      drawerOpen: false,
-      menuDataOptions: []
-    }
-  },
-  provide() {
-    return {
-      adminLayout: this
-    }
-  },
-  watch: {
-    $route(val) {
-      this.setActivated(val)
-    },
-    layout() {
-      this.setActivated(this.$route)
-    },
-    isMobile(val) {
-      if(!val) {
-        this.drawerOpen = false
-      }
-    },
-    isCluster: {
-      handler(val) {
-        this.menuDataOptions = this.hanlderMenuData()
-      },
-      immediate: true
-    },
-    // menuData
-    menuData: {
-      handler(val) {
-        this.menuDataOptions = this.hanlderMenuData()
-      },
-      immediate: true,
-      deep: true
+      activeFirstMenuKey: ''
     }
   },
   computed: {
-    ...mapState('setting', ['isMobile', 'theme', 'layout', 'footerLinks', 'copyright', 'fixedHeader', 'fixedSideBar',
-      'fixedTabs', 'hideSetting', 'multiPage']),
-    ...mapGetters('setting', ['firstMenu', 'subMenu', 'isCluster', 'menuData']),
-    sideMenuWidth() {
-      return this.collapsed ? '80px' : '225px'
-    },
-    headerStyle() {
-      let width = (this.fixedHeader && this.layout !== 'head' && !this.isMobile) ? `calc(100% - ${this.sideMenuWidth})` : '100%'
-      let position = this.fixedHeader ? 'fixed' : 'static'
-      return `width: ${width}; position: ${position};`
-    },
-    headMenuData() {
-      const {layout, menuDataOptions, firstMenu} = this
-      return layout === 'mix' ? firstMenu : menuDataOptions
-    },
-    sideMenuData() {
-      const {layout, menuDataOptions, subMenu} = this
-      return layout === 'mix' ? subMenu : menuDataOptions
-    },
+    ...mapState('setting', ['fixedTabs', 'fixedHeader', 'multiPage']),
+    ...mapGetters('setting', ['firstMenu', 'subMenu']),
     breadcrumb() {
       let page = this.page
       let breadcrumb = page && page.breadcrumb
@@ -124,19 +51,63 @@ export default {
     },
   },
   methods: {
-    ...mapMutations('setting', ['correctPageMinHeight', 'setActivatedFirst']),
-    toggleCollapse () {
-      this.collapsed = !this.collapsed
+    ...mapMutations('setting', ['setActivatedFirst']),
+    onRouteChanged(path) {
+      console.log('路由已变更到:', path);
+      // 手动刷新视图
+      this.$nextTick(() => {
+        this.$forceUpdate();
+      });
     },
-    hanlderMenuData () {
-      // let menuData = this.$store.state.setting.menuData
-      let menuData = JSON.parse(localStorage.getItem('menuData'))
-      const isCluster = localStorage.getItem('isCluster') || ''
-      let arr = menuData.filter(item => item.meta.isCluster === isCluster)
-      return arr
-    },
-    onMenuSelect () {
-      this.toggleCollapse()
+    onFirstMenuSelect(key) {
+      this.activeFirstMenuKey = key
+      this.setActivatedFirst(key)
+      
+      // 对于service-manage（主页）路径做特殊处理
+      if (key === '/service-manage') {
+        // 直接跳转到主页而不是子菜单
+        if (this.$route.path !== '/service-manage') {
+          this.$router.push('/service-manage').catch(err => {
+            if (err.name !== 'NavigationDuplicated') {
+              throw err;
+            }
+          });
+        }
+        return;
+      }
+      
+      // 跳转到第一个可见二级菜单页面，若无则跳转到一级菜单自身
+      const firstMenu = this.firstMenu.find(item => item.fullPath === key)
+      if (firstMenu) {
+        let targetPath = firstMenu.fullPath
+        if (firstMenu.children && firstMenu.children.length > 0) {
+          const findFirstLeaf = (children) => {
+            for (const child of children) {
+              if (child.meta && child.meta.invisible) continue
+              if (!child.children || child.children.length === 0) {
+                return child
+              } else {
+                const leaf = findFirstLeaf(child.children)
+                if (leaf) return leaf
+              }
+            }
+            return null
+          }
+          const firstLeaf = findFirstLeaf(firstMenu.children)
+          if (firstLeaf && firstLeaf.fullPath) {
+            targetPath = firstLeaf.fullPath
+          }
+        }
+        // 避免重复导航
+        if (this.$route.path !== targetPath) {
+          this.$router.push(targetPath).catch(err => {
+            // 忽略导航重复错误
+            if (err.name !== 'NavigationDuplicated') {
+              throw err;
+            }
+          })
+        }
+      }
     },
     getRouteBreadcrumb() {
       let routes = this.$route.matched
@@ -166,106 +137,76 @@ export default {
         }
       }
       return breadcrumb
-    },
-    setActivated(route) {
-      if (this.layout === 'mix') {
-        let matched = route.matched
-        matched = matched.slice(0, matched.length - 1)
-        const {firstMenu} = this
-        for (let menu of firstMenu) {
-          if (matched.findIndex(item => item.path === menu.fullPath) !== -1) {
-            this.setActivatedFirst(menu.fullPath)
-            break
-          }
-        }
-      }
     }
   },
   created() {
-    this.correctPageMinHeight(this.minHeight - 24)
-    this.setActivated(this.$route)
-  },
-  beforeDestroy() {
-    this.correctPageMinHeight(-this.minHeight + 24)
+    if (this.firstMenu && this.firstMenu.length > 0) {
+      this.activeFirstMenuKey = this.firstMenu[0].fullPath
+    }
   }
 }
 </script>
 
-<style lang="less" scoped>
-  .admin-layout{
-    .side-menu{
-      &.fixed-side{
-        position: fixed;
-        height: calc(100vh - 47px);
-        left: 0;
-        top: 47px;
-      }
-    }
-    .virtual-side{
-      transition: all 0.2s;
-    }
-    .virtual-header{
-      transition: all 0.2s;
-      opacity: 0;
-      &.fixed-tabs.multi-page:not(.fixed-header){
-        height: 0;
-      }
-    }
-    .admin-layout-main{
-      .admin-header{
-        top: 0;
-        right: 0;
-        overflow: hidden;
-        transition: all 0.2s;
-        &.fixed-tabs.multi-page:not(.fixed-header){
-          height: 0;
-        }
-      }
-    }
-    .admin-layout-content{
-      overflow-y: auto;
-      padding: 20px;
-      background: rgb(238, 240, 245);
-      // background: #f5f7f8;
-      /*overflow-x: hidden;*/
-      /*min-height: calc(100vh - 64px - 122px);*/
-      max-height: calc(100vh - 48px);
-      height: calc(100vh - 48px);
-      scrollbar-color: @primary-color @primary-2;
-      scrollbar-width: thin;
-      -ms-overflow-style:none;
-      position: relative;
-      &::-webkit-scrollbar{
-        width: 3px;
-        height: 1px;
-      }
-      &::-webkit-scrollbar-thumb {
-        border-radius: 3px;
-        background: @primary-color;
-      }
-      &::-webkit-scrollbar-track {
-        -webkit-box-shadow: inset 0 0 1px rgba(0,0,0,0);
-        border-radius: 3px;
-        background: @primary-3;
-      }
-    }
-    .setting{
-      background-color: @primary-color;
-      color: @base-bg-color;
-      border-radius: 5px 0 0 5px;
-      line-height: 40px;
-      font-size: 22px;
-      width: 40px;
-      height: 40px;
-      box-shadow: -2px 0 8px @shadow-color;
-    }
-    // 面包屑
-    .breadcrumb {
-      margin-top: -16px;
-      margin-bottom: 4px;
-      /deep/ .ant-breadcrumb-link {
-        font-size: 12px;
+<style lang="less">
+.cdh-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  .cdh-header {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    position: relative;
+    z-index: 10;
+    
+    /* 隐藏总览标签 */
+    .tabs-view-content {
+      a[href="/service-manage"],
+      a[href="/service-manage/"],
+      div.tab:has(> div.title:contains("总览")),
+      div:has(> span:contains("总览")) {
+        display: none !important;
       }
     }
   }
+
+  .cdh-main {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+
+    .cdh-content {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      
+      &.full {
+        margin: 0;
+        padding: 0;
+        overflow: visible !important; /* 确保内容区域不产生自己的滚动条 */
+      }
+    }
+  }
+}
+
+/* 确保页面宽度固定并禁用内部滚动 */
+#app, .router-view {
+  width: 100%;
+  height: 100%;
+  overflow: visible !important;
+}
+
+/* 移除所有内部滚动，只在最外层显示滚动条 */
+.cdh-content, .service-detail, .ant-tabs-content, .ant-tabs-tabpane {
+  overflow: visible !important;
+}
+
+/* 保留表格滚动行为 */
+.ant-table-body {
+  overflow: auto !important;
+}
 </style>

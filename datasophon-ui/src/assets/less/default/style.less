@@ -3,27 +3,32 @@
   filter: invert(80%);
 }
 .beauty-scroll{
-  scrollbar-color: @primary-color @primary-2;
+  scrollbar-color: rgba(192, 196, 204, 0.5) transparent;
   scrollbar-width: thin;
   -ms-overflow-style:none;
   position: relative;
   &::-webkit-scrollbar{
-    width: 3px;
-    height: 1px;
+    width: 8px;
+    height: 8px;
   }
   &::-webkit-scrollbar-thumb {
-    border-radius: 3px;
-    background: @primary-color;
+    border-radius: 10px;
+    background: rgba(192, 196, 204, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   &::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 1px rgba(0,0,0,0);
     border-radius: 3px;
-    background: @primary-3;
+    background: transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
   }
 }
 .split-right{
   &:not(:last-child) {
-    border-right: 1px solid rgba(98, 98, 98, 0.2);
+    border-right: 1px solid #e0e0e0;
   }
 }
 .disabled{
