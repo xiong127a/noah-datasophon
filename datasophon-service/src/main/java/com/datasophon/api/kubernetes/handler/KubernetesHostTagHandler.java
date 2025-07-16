@@ -11,6 +11,7 @@ import com.datasophon.common.command.KubernetesGenerateHostTagCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.KubernetesTagHostActor;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -33,7 +34,8 @@ public class KubernetesHostTagHandler extends ServiceHandler {
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         kubernetesGenerateHostTagCommand.setClusterId(clusterId);
         kubernetesGenerateHostTagCommand.setKubeConfig(kubeConfig);
-        kubernetesGenerateHostTagCommand.setClusterId(clusterId);
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
+        kubernetesGenerateHostTagCommand.setNamespace(namespace);
         ActorRef actorRef =
                 ActorUtils.getLocalActor(KubernetesTagHostActor.class, ActorUtils.getActorRefName(KubernetesTagHostActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));

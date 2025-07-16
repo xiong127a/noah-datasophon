@@ -172,7 +172,7 @@ spec:
             failureThreshold: 30
             periodSeconds: 10
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       volumes:
         - name: config-volume
           configMap:

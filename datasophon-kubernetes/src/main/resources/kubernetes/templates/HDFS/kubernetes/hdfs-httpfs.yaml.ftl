@@ -28,7 +28,7 @@ spec:
         serviceInstanceName: "${serviceName}"
     spec:
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -25,7 +25,7 @@ spec:
         service.kubernetes.io/headless: "true"
     spec:
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

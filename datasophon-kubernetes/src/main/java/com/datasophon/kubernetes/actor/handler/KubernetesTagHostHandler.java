@@ -9,7 +9,6 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.constants.Constant;
-import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeBuilder;
@@ -43,30 +42,33 @@ public class KubernetesTagHostHandler {
     private static final ConcurrentHashMap<String, AtomicInteger> processCounters = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, AtomicInteger> totalCounters = new ConcurrentHashMap<>();
 
+    private String namespace;
     private String serviceName;
     private String serviceRoleName;
     private String serviceRoleFullName;
     private Logger logger;
 
-    public KubernetesTagHostHandler(String serviceName, String serviceRoleName) {
+    public KubernetesTagHostHandler(String namespace, String serviceName, String serviceRoleName) {
+        this.namespace = namespace;
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
-        this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        this.serviceRoleFullName = String.format("%s-%s-%s", namespace,serviceName.toLowerCase(), serviceRoleName.toLowerCase());
+        String loggerName = String.format("%s-%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, namespace, serviceName,
+                serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
     /**
      * 执行标签操作
      *
-     * @param clusterId        集群ID
-     * @param hostName         主机名
-     * @param kubeConfig       Kubernetes配置
+     * @param clusterId   集群ID
+     * @param hostName    主机名
+     * @param kubeConfig  Kubernetes配置
      * @param commandType 标签操作类型
      * @return 执行结果
      */
     public ExecResult operateTag(Integer clusterId, String hostName, String kubeConfig,
-                                 CommandType commandType) {
+            CommandType commandType) {
         ExecResult execResult = new ExecResult();
 
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
@@ -210,7 +212,7 @@ public class KubernetesTagHostHandler {
      * 记录处理状态信息
      */
     private void logProcessingInfo(String hostName, boolean isLastExecution,
-                                   CommandType commandType) {
+            CommandType commandType) {
         System.out.println(ANSI_CYAN + "ℹ️ 正在处理主机 " + hostName
                 + (isLastExecution ? " (最后一个)" : "") + ANSI_RESET);
         System.out.println(ANSI_BLUE + "🔍 开始处理主机 " + hostName + " 的" + commandType.name() + "标签操作..." + ANSI_RESET);

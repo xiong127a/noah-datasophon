@@ -17,7 +17,7 @@ public class KubernetesTagHostActor extends UntypedActor {
 
             KubernetesGenerateHostTagCommand command = (KubernetesGenerateHostTagCommand) msg;
             logger.info("start add service tag {}", command.getServiceRoleName());
-            KubernetesTagHostHandler serviceHandler = new KubernetesTagHostHandler(command.getServiceName(), command.getServiceRoleName());
+            KubernetesTagHostHandler serviceHandler = new KubernetesTagHostHandler(command.getNamespace(),command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.operateTag(
                     command.getClusterId(),
                     command.getHostName(),

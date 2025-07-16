@@ -9012,7 +9012,7 @@ spec:
         - -metrics-prefix=
         - -enable-resource-quota-enforcement=false
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
 ---
 # Source: spark-operator/templates/deployment.yaml
 # If the admission webhook is enabled, then a post-install step is required

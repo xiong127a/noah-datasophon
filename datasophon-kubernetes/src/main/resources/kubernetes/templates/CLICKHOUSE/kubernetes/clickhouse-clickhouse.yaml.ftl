@@ -97,7 +97,7 @@ spec:
             - mountPath: "/etc/localtime"
               name: "timezone"
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         <#list volumeConfigMapSet as item>

@@ -28,7 +28,7 @@ spec:
         datasophon.io/version: "1.5.0"
     spec:
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       hostNetwork: true
       hostPID: true
       containers:

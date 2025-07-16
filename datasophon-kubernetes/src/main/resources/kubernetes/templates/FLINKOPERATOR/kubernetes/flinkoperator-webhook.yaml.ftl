@@ -62,7 +62,7 @@ spec:
             - name: config-volume
               mountPath: /opt/flink/conf
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       volumes:
         - name: keystore
           secret:

@@ -119,7 +119,7 @@ spec:
             - name: "timezone"
               mountPath: "/etc/localtime"
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        ${namespace}-${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
         - name: hbase-data
