@@ -3,10 +3,13 @@ package com.datasophon.kubernetes.util;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.mapper.ClusterInfoMapper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
@@ -630,8 +633,9 @@ public class KubernetesUtil {
     }
 
     public static String getKubernetesNamespace(Integer clusterId) {
-
-        return "data";
+        ClusterInfoMapper clusterInfoMapper = SpringUtil.getBean(ClusterInfoMapper.class);
+        ClusterInfoEntity clusterInfoEntity = clusterInfoMapper.selectById(clusterId);
+        return clusterInfoEntity.getNamespace();
     }
 
 }
