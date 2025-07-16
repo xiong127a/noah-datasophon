@@ -24,23 +24,32 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import java.util.List;
 
 /**
- * The `ClusterInfoService` interface provides methods to manage and retrieve information about clusters.
- * It extends the `IService` interface, which is typically used for common CRUD operations on entities.
- * This service is designed to handle operations related to cluster information, such as retrieving,
- * saving, updating, and deleting cluster details, as well as managing cluster states and configurations.
+ * The `ClusterInfoService` interface provides methods to manage and retrieve
+ * information about clusters.
+ * It extends the `IService` interface, which is typically used for common CRUD
+ * operations on entities.
+ * This service is designed to handle operations related to cluster information,
+ * such as retrieving,
+ * saving, updating, and deleting cluster details, as well as managing cluster
+ * states and configurations.
  *
- * <p>Key functionalities include:
+ * <p>
+ * Key functionalities include:
  * <ul>
- *   <li>Retrieving cluster information by cluster code or framework code.</li>
- *   <li>Saving and updating cluster information.</li>
- *   <li>Fetching lists of clusters, including running clusters.</li>
- *   <li>Updating the state of a cluster.</li>
- *   <li>Deleting clusters by their IDs.</li>
- *   <li>Retrieving Kubernetes configuration and Kerberos information for a cluster.</li>
+ * <li>Retrieving cluster information by cluster code or framework code.</li>
+ * <li>Saving and updating cluster information.</li>
+ * <li>Fetching lists of clusters, including running clusters.</li>
+ * <li>Updating the state of a cluster.</li>
+ * <li>Deleting clusters by their IDs.</li>
+ * <li>Retrieving Kubernetes configuration and Kerberos information for a
+ * cluster.</li>
  * </ul>
  *
- * <p>This interface is intended to be implemented by a service class that interacts with a data source
- * (e.g., a database) to perform the necessary operations on cluster information.
+ * <p>
+ * This interface is intended to be implemented by a service class that
+ * interacts with a data source
+ * (e.g., a database) to perform the necessary operations on cluster
+ * information.
  *
  * @see IService
  * @see ClusterInfoEntity
@@ -66,17 +75,45 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     String getKubeConfigByClusterId(Integer clusterId);
 
     /**
-     * Retrieves Kerberos-related information for a specified service role.
+     * Retrieves metrics information for all service roles in the cluster.
      *
-     * This method is used to fetch Kerberos configuration or authentication details
-     * associated with a specific service role within the cluster. The service role name
-     * is used to identify the relevant Kerberos information.
+     * This method fetches the count of running instances for each service role
+     * in the cluster. It returns a JSON string containing the service role names
+     * as keys and their respective instance counts as values.
      *
-     * @param serviceRoleName The name of the service role for which Kerberos information is requested.
-     *                        This should be a non-null string representing the role in the cluster.
-     * @return A string containing the Kerberos information for the specified service role.
-     *         This could include details such as the Kerberos principal, keytab location, or other
-     *         relevant configuration data. Returns null if no information is found for the given role.
+     * @return A JSON string containing metrics about service roles and their
+     *         instance counts.
+     *         For example: {"HDFS_NAMENODE": 2, "HDFS_DATANODE": 10, ...}
      */
-    String getKerberosInfo(String serviceRoleName);
+    String getServiceRoleMetrics();
+
+    /**
+     * Retrieves detailed information about a cluster by its ID.
+     *
+     * @param clusterId The ID of the cluster to retrieve information for.
+     * @return A Result object containing the cluster information.
+     */
+    Result getClusterById(Integer clusterId);
+
+    /**
+     * Retrieves the list of Kubernetes namespaces for a cluster.
+     *
+     * @param clusterId  The ID of the cluster.
+     * @param kubeConfig The Kubernetes configuration content.
+     * @return A Result object containing the list of namespaces.
+     */
+    Result getKubernetesNamespaces(Integer clusterId, String kubeConfig);
+
+    /**
+     * 更新集群Kubernetes配置
+     *
+     * @param clusterId       集群ID
+     * @param kubeConfig      Kubernetes配置内容
+     * @param namespace       选择的命名空间
+     * @param customNamespace 自定义命名空间（如果选择创建新的命名空间）
+     * @return 更新结果
+     */
+    Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
+
+    String getKubernetesNamespace(Integer clusterId);
 }

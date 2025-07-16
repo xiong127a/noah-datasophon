@@ -86,7 +86,7 @@
       "externalLink": {
         "name": "efak Ui",
         "label": "efak Ui",
-        "url": "http://${host}:8048"
+        "url": "http://${hostname}:8048"
       }
     }
   ],
@@ -120,10 +120,12 @@
           "socket.request.max.bytes",
           "advertised.listeners",
           "listeners",
+          "inter.broker.listener.name",
           "security.inter.broker.protocol",
           "sasl.mechanism.inter.broker.protocol",
           "sasl.enabled.mechanisms",
           "sasl.kerberos.service.name",
+          "listener.security.protocol.map",
           "custom.server.properties"
         ]
       },
@@ -277,7 +279,45 @@
         "includeParams": [
           "securityProtocol",
           "saslMechanism",
-          "kbServiceName"
+          "kbServiceName",
+          "custom.kafka-client.properties"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "Kafka Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "KafkaBroker,efak",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Kafka Kubernetes网络服务配置，定义端口映射和服务类型",
+        "configFormat": "properties",
+        "configTargetRoles": "KafkaBroker,efak",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings",
+          "load_balancer_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "Kafka Kubernetes资源配置，定义CPU和内存资源限制",
+        "configFormat": "properties",
+        "configTargetRoles": "KafkaBroker,efak",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
         ]
       }
     ]
@@ -286,21 +326,24 @@
     {
       "name": "log.dirs",
       "label": "kafka数据存储目录",
-      "description": "",
+      "description": "Kafka数据日志存储目录，支持多个路径以逗号分隔，用于存储Topic分区数据",
+      "configType": "path",
       "required": true,
-      "type": "multiple",
+      "type": "input",
+       "heightMultiple": 4,
       "separator": ",",
-      "value": [
-        "/data/kafka-logs"
-      ],
+      "value": "/data/kafka-logs",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaHeapSize",
       "label": "Kafka堆内存大小",
-      "description": "Kafka堆内存大小",
+      "description": "Kafka Broker进程的JVM堆内存大小，影响Kafka的处理能力和稳定性",
       "configType": "map",
       "required": true,
       "minValue": 0,
@@ -310,51 +353,66 @@
       "unit": "GB",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "6"
+      "defaultValue": "6",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "num.partitions",
-      "label": "分区数",
-      "description": "",
+      "label": "默认分区数",
+      "description": "新创建Topic的默认分区数，影响Topic的并行度和性能",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "8"
+      "defaultValue": "8",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "offsets.topic.replication.factor",
-      "label": "内置topic副本数",
-      "description": "",
+      "label": "内置Topic副本数",
+      "description": "Kafka内置Topic（如__consumer_offsets）的副本数，建议设置为3以确保高可用",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "3"
+      "defaultValue": "3",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "log.retention.hours",
-      "label": "数据保留的最长时间",
-      "description": "",
+      "label": "数据保留时间",
+      "description": "Kafka日志数据保留的最长时间（小时），超过此时间的数据将被删除",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "168"
+      "defaultValue": "168",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "zookeeper.connect",
-      "label": "zk连接地址",
-      "description": "",
+      "label": "ZooKeeper连接地址",
+      "description": "Kafka连接ZooKeeper集群的地址列表，格式为host1:port,host2:port/kafka",
       "required": true,
       "type": "input",
       "value": "${zkUrls}/kafka",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "securityProtocol",
@@ -367,95 +425,122 @@
       "value": "SASL_PLAINTEXT",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
+      "defaultValue": "SASL_PLAINTEXT",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "default.replication.factor",
-      "label": "topic副本数",
-      "description": "",
+      "label": "默认Topic副本数",
+      "description": "新创建Topic的默认副本数，影响数据可靠性和可用性",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "2"
+      "defaultValue": "2",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "auto.create.topics.enable",
-      "label": "启用自动创建topic",
-      "description": "",
+      "label": "启用自动创建Topic",
+      "description": "是否允许生产者和消费者自动创建不存在的Topic",
       "required": true,
       "type": "switch",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "unclean.leader.election.enable",
-      "label": "是否允许Unclean Leader选举",
-      "description": "是否允许落后较多的副本参加leader选举",
+      "label": "允许Unclean Leader选举",
+      "description": "是否允许落后较多的副本参加Leader选举，可能导致数据丢失但提高可用性",
       "required": true,
       "type": "switch",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "auto.leader.rebalance.enable",
-      "label": "是否允许Leader重平衡",
-      "description": "设置它的值为true表示允许Kafka定期地对一些Topic分区进行Leader重选举",
+      "label": "启用Leader重平衡",
+      "description": "是否允许Kafka定期对Topic分区进行Leader重选举以平衡负载",
       "required": true,
       "type": "switch",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "message.max.bytes",
-      "label": "Broker能够接收的最大消息大小",
-      "description": "",
+      "label": "最大消息大小",
+      "description": "Broker能够接收的单个消息最大字节数，影响大消息的处理能力",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "10000120"
+      "defaultValue": "10000120",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "replica.fetch.max.bytes",
-      "label": "Broker可复制的最大消息大小",
-      "description": "kafka接收单个消息size的最大限制,默认为1M左右 message.max.bytes必须小于等于replica.fetch.max.bytes",
+      "label": "副本同步最大消息大小",
+      "description": "Broker副本同步时可复制的最大消息大小，必须大于等于message.max.bytes",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "10485760"
+      "defaultValue": "10485760",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "num.network.threads",
-      "label": "处理网络请求的网络线程数目",
-      "description": "server用来处理网络请求的网络线程数目；一般你不需要更改这个属性。",
+      "label": "网络线程数",
+      "description": "Broker处理网络请求的线程数，影响网络I/O性能",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "3"
+      "defaultValue": "3",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "num.io.threads",
-      "label": "处理io请求的线程数目",
-      "description": "server用来处理请求的I/O线程的数目；这个线程数目至少要等于硬盘的个数。",
+      "label": "I/O线程数",
+      "description": "Broker处理磁盘I/O请求的线程数，建议设置为磁盘数量",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "12"
+      "defaultValue": "12",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "num.replica.fetchers",
@@ -466,7 +551,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "12"
+      "defaultValue": "12",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "replica.lag.time.max.ms",
@@ -477,7 +565,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "20000"
+      "defaultValue": "20000",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "queued.max.requests",
@@ -488,7 +579,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "500"
+      "defaultValue": "500",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "socket.receive.buffer.bytes",
@@ -499,7 +593,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "1024000"
+      "defaultValue": "1024000",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "socket.send.buffer.bytes",
@@ -510,7 +607,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "1024000"
+      "defaultValue": "1024000",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "socket.request.max.bytes",
@@ -521,7 +621,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "102857600"
+      "defaultValue": "102857600",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "enableKerberos",
@@ -532,33 +635,72 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "advertised.listeners",
-      "label": "advertised.listeners",
-      "description": "",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "label": "Kafka对外广播地址",
+      "description": "Kafka Broker对外广播的监听地址，客户端通过此地址连接Kafka",
+      "required": true,
       "type": "input",
-      "value": "SASL_PLAINTEXT://${host}:9092",
+      "value": "PLAINTEXT://${hostname}:9092",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT://${host}:9092"
+      "hidden": false,
+      "defaultValue": "PLAINTEXT://${hostname}:9092",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced",
+      "bindRole": "KafkaBroker",
+      "serviceType": "LoadBalancer",
+      "portNumber": "9093"
+    },
+    {
+      "name": "listener.security.protocol.map",
+      "label": "Kafka监听协议",
+      "description": "Kafka Broker监听协议配置，PLAINTEXT表示明文，SASL_PLAINTEXT表示SASL明文，SASL_SSL表示SASL加密，SSL表示加密",
+      "required": true,
+      "type": "input",
+      "value": "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced"
     },
     {
       "name": "listeners",
-      "label": "listeners",
-      "description": "",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "label": "Kafka监听地址",
+      "description": "Kafka Broker的监听地址配置，定义服务绑定的网络接口和端口",
+      "required": true,
       "type": "input",
-      "value": "SASL_PLAINTEXT://${host}:9092",
+      "value": "PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT://${host}:9092"
+      "hidden": false,
+      "defaultValue": "PLAINTEXT://0.0.0.0:9092",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced",
+      "bindRole": "KafkaBroker",
+      "serviceType": "ClusterIP",
+      "portNumber": "9092"
+    },
+    {
+      "name": "inter.broker.listener.name",
+      "label": "Broker间通信监听器名称",
+      "description": "指定Broker之间通信使用的监听器名称，必须是advertised.listeners中定义的一个监听器名称",
+      "required": true,
+      "type": "input",
+      "value": "PLAINTEXT",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "PLAINTEXT",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "security.inter.broker.protocol",
@@ -571,7 +713,10 @@
       "value": "SASL_PLAINTEXT",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
+      "defaultValue": "SASL_PLAINTEXT",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.mechanism.inter.broker.protocol",
@@ -584,7 +729,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.enabled.mechanisms",
@@ -597,7 +745,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "sasl.kerberos.service.name",
@@ -610,7 +761,10 @@
       "value": "kafka",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "kafka"
+      "defaultValue": "kafka",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "advanced"
     },
     {
       "name": "javaSecurityKrb5Conf",
@@ -623,7 +777,10 @@
       "value": "/etc/krb5.conf",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "/etc/krb5.conf"
+      "defaultValue": "/etc/krb5.conf",
+      "configCategory": "file",
+      "configGroup": "kafka-run-class",
+      "configLevel": "advanced"
     },
     {
       "name": "javaSecurityAuthLoginConfig",
@@ -636,20 +793,25 @@
       "value": "${KAFKA_HOME}/config/kafka-jaas.conf",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${KAFKA_HOME}/config/kafka-jaas.conf"
+      "defaultValue": "${KAFKA_HOME}/config/kafka-jaas.conf",
+      "configCategory": "file",
+      "configGroup": "kafka-run-class",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaHome",
       "label": "kafkaHome",
       "description": "",
       "configType": "map",
-      "configWithKerberos": true,
       "required": false,
       "type": "input",
       "value": "${KAFKA_HOME}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${KAFKA_HOME}"
+      "defaultValue": "${KAFKA_HOME}",
+      "configCategory": "file",
+      "configGroup": "kafka-topics",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaHost",
@@ -659,10 +821,13 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}",
+      "configCategory": "file",
+      "configGroup": "kafka-jaas",
+      "configLevel": "advanced"
     },
     {
       "name": "kafkaRealm",
@@ -675,7 +840,10 @@
       "value": "${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${realm}"
+      "defaultValue": "${realm}",
+      "configCategory": "file",
+      "configGroup": "kafka-jaas",
+      "configLevel": "advanced"
     },
     {
       "name": "saslMechanism",
@@ -688,7 +856,10 @@
       "value": "GSSAPI",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "GSSAPI"
+      "defaultValue": "GSSAPI",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "kbServiceName",
@@ -701,24 +872,33 @@
       "value": "kafka",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "kafka"
+      "defaultValue": "kafka",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "advanced"
     },
     {
       "name": "JMX_PORT",
-      "label": "Kafka JMX 端口",
-      "description": "Kafka JMX 端口",
+      "label": "Kafka JMX监控端口",
+      "description": "Kafka JMX监控服务端口，用于监控和管理Kafka Broker状态",
       "configType": "map2",
       "required": false,
       "type": "input",
       "value": "9999",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9999"
+      "defaultValue": "9999",
+      "configCategory": "role",
+      "configGroup": "KafkaBroker",
+      "configLevel": "advanced",
+      "bindRole": "KafkaBroker",
+      "serviceType": "ClusterIP",
+      "portNumber": "9999"
     },
     {
       "name": "custom.server.properties",
-      "label": "自定义配置server.properties",
-      "description": "自定义配置",
+      "label": "自定义Kafka服务器配置",
+      "description": "用于添加自定义的Kafka服务器参数，这些参数将被添加到server.properties配置文件中",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
@@ -727,7 +907,10 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "server",
+      "configLevel": "custom"
     },
     {
       "name": "efak.zk.cluster.alias",
@@ -739,7 +922,10 @@
       "value": "cluster1",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "cluster1"
+      "defaultValue": "cluster1",
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
       "name": "cluster1.zk.list",
@@ -751,7 +937,10 @@
       "value": "${zkUrls}/kafka",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${zkUrls}/kafka"
+      "defaultValue": "${zkUrls}/kafka",
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
       "name": "cluster1.zk.acl.enable",
@@ -762,7 +951,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.schema",
@@ -774,7 +966,10 @@
        "value": "digest",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "digest"
+       "defaultValue": "digest",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.username",
@@ -786,7 +981,10 @@
        "value": "test",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "test"
+       "defaultValue": "test",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.zk.acl.password",
@@ -798,7 +996,10 @@
        "value": "test123",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "test123"
+       "defaultValue": "test123",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "cluster1.efak.broker.size",
@@ -809,7 +1010,10 @@
        "value": "20",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "20"
+       "defaultValue": "20",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "kafka.zk.limit.size",
@@ -820,18 +1024,28 @@
        "value": "16",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "16"
+       "defaultValue": "16",
+       "configCategory": "file",
+       "configGroup": "system-config",
+       "configLevel": "advanced"
     },
     {
        "name": "efak.webui.port",
-       "label": "EFAK Web UI 端口",
-       "description": "EFAK Web UI 服务的端口号。",
+       "label": "EFAK Web UI端口",
+       "description": "EFAK Web UI服务的端口号，用于访问Kafka监控管理界面",
        "required": true,
        "type": "input",
        "value": "8048",
        "configurableInWizard": true,
        "hidden": false,
-       "defaultValue": "8048"
+       "defaultValue": "8048",
+       "configCategory": "role",
+       "configGroup": "efak",
+       "configLevel": "advanced",
+       "bindRole": "efak",
+       "serviceType": "NodePort",
+       "portNumber": "8048",
+       "nodePort": "30048"
     },
 {
         "name": "efak.distributed.enable",
@@ -842,7 +1056,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.cluster.mode.status",
@@ -854,7 +1071,10 @@
         "value": "master",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "master"
+        "defaultValue": "master",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.worknode.master.host",
@@ -866,7 +1086,10 @@
         "value": "localhost",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "localhost"
+        "defaultValue": "localhost",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.worknode.port",
@@ -878,7 +1101,10 @@
         "value": "8085",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "8085"
+        "defaultValue": "8085",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
 {
         "name": "cluster1.efak.jmx.acl",
@@ -889,7 +1115,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.user",
@@ -901,7 +1130,10 @@
         "value": "keadmin",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin"
+        "defaultValue": "keadmin",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.password",
@@ -913,7 +1145,10 @@
         "value": "keadmin123",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin123"
+        "defaultValue": "keadmin123",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.ssl",
@@ -925,7 +1160,10 @@
         "value": "false",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "false"
+        "defaultValue": "false",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.truststore.location",
@@ -937,7 +1175,10 @@
         "value": "/data/ssl/certificates/kafka.truststore",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "/data/ssl/certificates/kafka.truststore"
+        "defaultValue": "/data/ssl/certificates/kafka.truststore",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.truststore.password",
@@ -949,7 +1190,10 @@
         "value": "ke123456",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "ke123456"
+        "defaultValue": "ke123456",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.offset.storage",
@@ -964,7 +1208,10 @@
         "selectValue": [
             "kafka",
             "zk"
-        ]
+        ],
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.jmx.uri",
@@ -975,7 +1222,10 @@
         "value": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi"
+        "defaultValue": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.metrics.charts",
@@ -986,7 +1236,10 @@
         "value": "true",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": true
+        "defaultValue": true,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.metrics.retain",
@@ -997,7 +1250,10 @@
         "value": "15",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "15"
+        "defaultValue": "15",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.sql.topic.records.max",
@@ -1008,7 +1264,10 @@
         "value": "5000",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "5000"
+        "defaultValue": "5000",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.sql.topic.preview.records.max",
@@ -1019,7 +1278,10 @@
         "value": "10",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "10"
+        "defaultValue": "10",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.topic.token",
@@ -1030,7 +1292,10 @@
         "value": "keadmin",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "keadmin"
+        "defaultValue": "keadmin",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.enable",
@@ -1041,7 +1306,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.protocol",
@@ -1053,7 +1321,10 @@
         "value": "${securityProtocol}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${securityProtocol}"
+        "defaultValue": "${securityProtocol}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.mechanism",
@@ -1065,7 +1336,10 @@
         "value": "${saslMechanism}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${saslMechanism}"
+        "defaultValue": "${saslMechanism}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.jaas.config",
@@ -1077,7 +1351,10 @@
         "value": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";"
+        "defaultValue": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.client.id",
@@ -1086,10 +1363,13 @@
         "required": true,
         "configType": "sasl",
         "type": "input",
-        "value": "${host}",
+        "value": "${hostname}",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "${host}"
+        "defaultValue": "${hostname}",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.blacklist.topics",
@@ -1100,7 +1380,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": ""
+        "defaultValue": "",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "cluster1.efak.sasl.cgroup.enable",
@@ -1111,7 +1394,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": false
+        "defaultValue": false,
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
 {
         "name": "cluster1.efak.sasl.cgroup.topics",
@@ -1122,7 +1408,10 @@
         "value": "",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": ""
+        "defaultValue": "",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.driver",
@@ -1133,7 +1422,10 @@
         "value": "com.mysql.cj.jdbc.Driver",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "com.mysql.cj.jdbc.Driver"
+        "defaultValue": "com.mysql.cj.jdbc.Driver",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.url",
@@ -1141,10 +1433,13 @@
         "description": "指定 MySQL 数据库的 JDBC 连接 URL。",
         "required": true,
         "type": "input",
-        "value": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "value": "jdbc:mysql://datasophon-mysql:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull"
+        "defaultValue": "jdbc:mysql://datasophon-mysql:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.username",
@@ -1155,7 +1450,10 @@
         "value": "root",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "root"
+        "defaultValue": "root",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
         "name": "efak.password",
@@ -1166,7 +1464,10 @@
         "value": "123456",
         "configurableInWizard": true,
         "hidden": false,
-        "defaultValue": "123456"
+        "defaultValue": "123456",
+        "configCategory": "file",
+        "configGroup": "system-config",
+        "configLevel": "advanced"
     },
     {
       "name": "custom.system-config.properties",
@@ -1180,7 +1481,181 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "system-config",
+      "configLevel": "custom"
+    },
+    {
+      "name": "custom.kafka-client.properties",
+      "label": "自定义Kafka客户端配置",
+      "description": "用于添加自定义的Kafka客户端参数，这些参数将被添加到kafka-client.properties配置文件中",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "kafka-client",
+      "configLevel": "custom"
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为Kafka的数据存储位置的父目录",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "load_balancer_port_mappings",
+      "label": "负载均衡器端口映射",
+      "description": "配置Kubernetes Service的LoadBalancer类型端口映射，为每个Pod提供独立的外部IP和负载均衡器。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同。系统将为每个Pod创建独立的LoadBalancer服务，实现高可用的外部访问。适用于需要固定外部IP的场景，如Kafka的外部监听器。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
     }
   ]
 }

@@ -17,7 +17,7 @@
         "group": "root"
       },
       "cardinality": 1,
-      "logFile": "logs/prometheus-${host}.out",
+      "logFile": "logs/prometheus-${hostname}.out",
       "jmxPort": 9090,
       "startRunner": {
         "timeout": "60",
@@ -54,7 +54,7 @@
       "externalLink": {
         "name": "Prometheus Ui",
         "label": "Prometheus Ui",
-        "url": "http://${host}:9090"
+        "url": "http://${hostname}:9090"
       }
     }
   ],

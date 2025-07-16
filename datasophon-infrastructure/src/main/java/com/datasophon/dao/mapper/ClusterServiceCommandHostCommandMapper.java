@@ -48,23 +48,15 @@ public interface ClusterServiceCommandHostCommandMapper extends MPJBaseMapper<Cl
      */
     default Integer getHostCommandTotalProgressByHostnameAndCommandHostId(@Param("hostname") String hostname,
             @Param("commandHostId") String commandHostId) {
-        // 使用聚合函数sum
-        LambdaQueryWrapper<ClusterServiceCommandHostCommandEntity> wrapper = Wrappers
-                .<ClusterServiceCommandHostCommandEntity>lambdaQuery()
-                .select(ClusterServiceCommandHostCommandEntity::getCommandProgress,
-                        a -> "sum(command_progress) as total")
-                .eq(ClusterServiceCommandHostCommandEntity::getHostname, hostname)
-                .eq(ClusterServiceCommandHostCommandEntity::getCommandHostId, commandHostId);
+        // 使用原生SQL查询避免Lambda表达式导致的MyBatis解析问题
+        Object result = selectObjs(Wrappers.<ClusterServiceCommandHostCommandEntity>query()
+                .select("SUM(command_progress) as total")
+                .eq("hostname", hostname)
+                .eq("command_host_id", commandHostId))
+                .stream()
+                .findFirst()
+                .orElse(null);
 
-        // 使用selectMaps查询聚合结果
-        Map<String, Object> result = selectMaps(wrapper).stream().findFirst().orElse(null);
-
-        // 提取结果或返回0
-        if (result != null && result.containsKey("total")) {
-            Object total = result.get("total");
-            return total == null ? 0 : Integer.parseInt(total.toString());
-        }
-
-        return 0;
+        return result == null ? 0 : ((Number) result).intValue();
     }
 }

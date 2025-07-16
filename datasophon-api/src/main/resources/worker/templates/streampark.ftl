@@ -95,7 +95,7 @@ streampark:
       response-timeout-sec: 12000
       docker-host: ""
 
-  # flink-k8s tracking configuration
+  # flink-kubernetes tracking configuration
   flink-k8s:
     tracking:
       silent-state-keep-sec: 10

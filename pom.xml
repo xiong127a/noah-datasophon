@@ -34,7 +34,7 @@
         <module>datasophon-ui</module>
         <module>datasophon-service</module>
         <module>datasophon-domain</module>
-        <module>datasophon-k8s</module>
+        <module>datasophon-kubernetes</module>
     </modules>
 
     <properties>
@@ -73,6 +73,7 @@
         <org.freemarker.verion>2.3.34</org.freemarker.verion>
         <commons-codec.version>1.15</commons-codec.version>
         <commons-compress.version>1.21</commons-compress.version>
+        <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
         <jackson-annotations.version>2.13.0</jackson-annotations.version>
         <ant.version>1.10.12</ant.version>
         <jsch.version>0.2.7</jsch.version>
@@ -293,6 +294,12 @@
             <version>3.6.3</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Jasypt加密工具 -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>3.0.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -347,7 +354,7 @@
 <!--                                </artifactItem>-->
 <!--                                <artifactItem>-->
 <!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-k8s</artifactId>-->
+<!--                                    <artifactId>datasophon-kubernetes</artifactId>-->
 <!--                                    <version>${project.version}</version>-->
 <!--                                    <type>jar</type>-->
 <!--                                    <overWrite>true</overWrite>-->
@@ -505,9 +512,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
-                <configuration>
-                    <lineEnding>unix</lineEnding>
-                </configuration>
             </plugin>
 
 <!--            <plugin>-->
@@ -573,6 +577,41 @@
             </properties>
         </profile>
 
+        <!-- Docker镜像构建和推送 profile
+             使用参数：-P docker
+             例如：mvn clean package -P docker
+             自定义标签：mvn clean package -P docker -Ddocker.tag=自定义标签
+         -->
+        <profile>
+            <id>docker</id>
+            <properties>
+                <docker.skip>false</docker.skip>
+                <docker.registry>harbor.norintech.com</docker.registry>
+                <docker.host>tcp://localhost:2375</docker.host>
+                <docker.tag>latest</docker.tag>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>${docker-maven-plugin.version}</version>
+                        <configuration>
+                            <skip>${docker.skip}</skip>
+                            <registry>${docker.registry}</registry>
+                            <dockerHost>${docker.host}</dockerHost>
+                            <authConfig>
+                                <push>
+                                    <username>noah</username>
+                                    <password>Jd2019@123</password>
+                                </push>
+                            </authConfig>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
 <!--        <profile>-->
 <!--            <id>sonar</id>-->
 <!--            <activation>-->
@@ -581,7 +620,7 @@
 <!--            <properties>-->
 <!--                &lt;!&ndash; sonar平台地址 如：http://localhost:9000 &ndash;&gt;-->
 <!--                <sonar.host.url>http://192.168.1.104:9000</sonar.host.url>-->
-<!--                &lt;!&ndash; 不知道为什么，前面配置的用户名密码好像都没生效，需要在这里配置，你可以先不加试一下，如果需要再加 &ndash;&gt;-->
+<!--                &lt;!&ndash; 不知道为什么，前面配置的用户名密码好像都没生效，需要在这里配置，你可以先不加试一下，如果需要再�?&ndash;&gt;-->
 <!--                <sonar.login>gaozhenfeng</sonar.login>-->
 <!--                <sonar.password>jkl123</sonar.password>-->
 <!--            </properties>-->

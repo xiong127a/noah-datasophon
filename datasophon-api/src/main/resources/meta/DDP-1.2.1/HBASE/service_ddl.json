@@ -1,663 +1,947 @@
 {
-    "name": "HBASE",
-    "label": "HBase",
-    "description": "分布式列式海量存储数据库",
-    "version": "2.2.7",
-    "sortNum": 8,
-    "dependencies": [
-        "HDFS"
-    ],
-    "packageName": "hbase-2.2.7.tar.gz",
-    "decompressPackageName": "hbase-2.2.7",
-    "runAs": "root",
-    "roles": [
-        {
-            "name": "HbaseMaster",
-            "label": "HbaseMaster",
-            "roleType": "master",
-            "runAs": {
-                "user": "hbase",
-                "group": "hadoop"
-            },
-            "cardinality": "1+",
-            "logFile": "logs/hbase-hbase-master-${host}.log",
-            "jmxPort": 16100,
-            "startRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "start",
-                    "master"
-                ]
-            },
-            "stopRunner": {
-                "timeout": "600",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "stop",
-                    "master"
-                ]
-            },
-            "statusRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "status",
-                    "master"
-                ]
-            },
-            "restartRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "restart",
-                    "master"
-                ]
-            },
-            "externalLink": {
-                "name": "HbaseMaster Ui",
-                "label": "HbaseMaster Ui",
-                "url": "http://${host}:16010"
-            }
-        },
-        {
-            "name": "RegionServer",
-            "label": "RegionServer",
-            "roleType": "worker",
-            "runAs": {
-                "user": "hbase",
-                "group": "hadoop"
-            },
-            "cardinality": "1+",
-            "logFile": "logs/hbase-hbase-regionserver-${host}.log",
-            "jmxPort": 16101,
-            "startRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "start",
-                    "regionserver"
-                ]
-            },
-            "stopRunner": {
-                "timeout": "600",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "stop",
-                    "regionserver"
-                ]
-            },
-            "statusRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "status",
-                    "regionserver"
-                ]
-            },
-            "restartRunner": {
-                "timeout": "60",
-                "program": "bin/hbase-daemon.sh",
-                "args": [
-                    "restart",
-                    "regionserver"
-                ]
-            }
-        },
-        {
-            "name": "PhoenixQueryServer",
-            "label": "PhoenixQueryServer",
-            "roleType": "master",
-            "runAs": {
-                "user": "hbase",
-                "group": "hadoop"
-            },
-            "cardinality": "1+",
-            "logFile": "logs/phoenix-queryserver-${host}.log",
-            "startRunner": {
-                "timeout": "60",
-                "program": "phoenix/bin/queryserver_control.sh",
-                "args": [
-                    "start"
-                ]
-            },
-            "stopRunner": {
-                "timeout": "600",
-                "program": "phoenix/bin/queryserver_control.sh",
-                "args": [
-                    "stop"
-                ]
-            },
-            "statusRunner": {
-                "timeout": "60",
-                "program": "phoenix/bin/queryserver_control.sh",
-                "args": [
-                    "status"
-                ]
-            },
-            "restartRunner": {
-                "timeout": "60",
-                "program": "phoenix/bin/queryserver_control.sh",
-                "args": [
-                    "restart"
-                ]
-            }
-        }
-    ],
-    "configWriter": {
-        "generators": [
-            {
-                "filename": "hbase-site.xml",
-                "fileDescription": "HBase核心配置文件，定义存储路径、ZooKeeper连接和安全认证参数",
-                "configFormat": "xml",
-                "outputDirectory": "conf",
-                "includeParams": [
-                    "hbase.cluster.distributed",
-                    "hbase.rootdir",
-                    "hbase.zookeeper.quorum",
-                    "hbase.wal.provider",
-                    "hbase.unsafe.stream.capability.enforce",
-                    "hbase.security.authentication",
-                    "hbase.rpc.engine",
-                    "hbase.coprocessor.region.classes",
-                    "hbase.master.kerberos.principal",
-                    "hbase.master.keytab.file",
-                    "hbase.regionserver.kerberos.principal",
-                    "hbase.regionserver.keytab.file",
-                    "hbase.quota.enabled",
-                    "phoenix.schema.mapSystemTablesToNamespace",
-                    "phoenix.schema.isNamespaceMappingEnabled",
-                    "phoenix.queryserver.loadbalancer.enabled",
-                    "phoenix.queryserver.base.path",
-                    "phoenix.queryserver.service.name",
-                    "phoenix.queryserver.keytab.file",
-                    "phoenix.queryserver.kerberos.principal",
-                    "phoenix.queryserver.http.keytab.file",
-                    "phoenix.queryserver.http.kerberos.principal",
-                    "custom.hbase.site.xml"
-                ]
-            },
-            {
-                "filename": "install.properties",
-                "fileDescription": "Ranger HBase插件配置文件，设置权限管理和审计参数",
-                "configFormat": "custom",
-                "outputDirectory": "ranger-hbase-plugin",
-                "templateName": "ranger-hbase.ftl",
-                "includeParams": [
-                    "rangerAdminUrl",
-                    "hbaseHome",
-                    "esAuditEnable",
-                    "esSingleHost",
-                    "esHttpPort"
-                ]
-            },
-            {
-                "filename": "zk-jaas.conf",
-                "fileDescription": "ZooKeeper认证配置文件，设置Kerberos安全认证参数",
-                "configFormat": "custom",
-                "outputDirectory": "conf",
-                "templateName": "zk-jaas.ftl",
-                "includeParams": [
-                    "hostname"
-                ]
-            },
-            {
-                "filename": "hbase-env.sh",
-                "fileDescription": "HBase环境变量脚本，设置进程ID目录、日志路径和安全配置",
-                "configFormat": "custom",
-                "outputDirectory": "conf",
-                "templateName": "hbase-env.ftl",
-                "includeParams": [
-                    "hbasePidDir",
-                    "hbaseLogDir",
-                    "hbaseSecurity",
-                    "custom.hbase.env.sh"
-                ]
-            }
+  "name": "HBASE",
+  "label": "HBase",
+  "description": "分布式列式海量存储数据库",
+  "version": "2.2.7",
+  "sortNum": 8,
+  "dependencies": [
+    "HDFS"
+  ],
+  "packageName": "hbase-2.2.7.tar.gz",
+  "decompressPackageName": "hbase-2.2.7",
+  "runAs": "root",
+  "roles": [
+    {
+      "name": "HbaseMaster",
+      "label": "HbaseMaster",
+      "sortNum": 1,
+      "roleType": "master",
+      "runAs": {
+        "user": "hbase",
+        "group": "hadoop"
+      },
+      "cardinality": "1+",
+      "logFile": "logs/hbase-hbase-master-${hostname}.log",
+      "jmxPort": 16100,
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "start",
+          "master"
         ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "stop",
+          "master"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "status",
+          "master"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "restart",
+          "master"
+        ]
+      },
+      "externalLink": {
+        "name": "HbaseMaster Ui",
+        "label": "HbaseMaster Ui",
+        "url": "http://${hostname}:16010"
+      }
     },
-    "parameters": [
-        {
-            "name": "hbase.cluster.distributed",
-            "label": "hbase.cluster.distributed",
-            "description": "hbase.cluster.distributed",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "true"
-        },
-        {
-            "name": "hbase.rootdir",
-            "label": "hbase.rootdir",
-            "description": "hbase.rootdir",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "${fs.defaultFS}/hbase"
-        },
-        {
-            "name": "hbase.zookeeper.quorum",
-            "label": "hbase.zookeeper.quorum",
-            "description": "hbase.zookeeper.quorum",
-            "required": true,
-            "type": "input",
-            "value": "${zkHostsUrl}:2181",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": ""
-        },
-        {
-            "name": "hbase.wal.provider",
-            "label": "hbase.wal.provider",
-            "description": "hbase.wal.provider",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "filesystem"
-        },
-        {
-            "name": "hbase.unsafe.stream.capability.enforce",
-            "label": "hbase.unsafe.stream.capability.enforce",
-            "description": "hbase.unsafe.stream.capability.enforce",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "false"
-        },
-        {
-            "name": "hbasePidDir",
-            "label": "HBase PID DIR",
-            "description": "",
-            "configType": "map",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "${HBASE_HOME}/pid"
-        },
-        {
-            "name": "hbaseLogDir",
-            "label": "HBase LOG DIR",
-            "description": "",
-            "configType": "map",
-            "required": true,
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "${HBASE_HOME}/logs"
-        },
-        {
-            "name": "hbase.security.authorization",
-            "label": "启用Ranger权限",
-            "description": "",
-            "configType": "permission",
-            "required": false,
-            "type": "switch",
-            "value": true,
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": true
-        },
-        {
-            "name": "hbase.coprocessor.master.classes",
-            "label": "RangerHbaseMaster认证类",
-            "description": "",
-            "configType": "permission",
-            "required": false,
-            "type": "input",
-            "value": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor"
-        },
-        {
-            "name": "hbase.coprocessor.region.classes",
-            "label": "RangerHbaseRegion认证类",
-            "description": "",
-            "configType": "permission",
-            "required": false,
-            "type": "input",
-            "value": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor"
-        },
-        {
-            "name": "rangerAdminUrl",
-            "label": "Ranger访问地址",
-            "description": "",
-            "required": false,
-            "configType": "map",
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": ""
-        },
-        {
-            "name": "enableKerberos",
-            "label": "开启Kerberos认证",
-            "description": "开启Kerberos认证",
-            "required": false,
-            "type": "switch",
-            "value": false,
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": false
-        },
-        {
-            "name": "hbase.security.authentication",
-            "label": "hbase.security.authentication",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "kerberos",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "kerberos"
-        },
-        {
-            "name": "hbase.rpc.engine",
-            "label": "HBase rpc安全通信",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "org.apache.hadoop.hbase.ipc.SecureRpcEngine",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "org.apache.hadoop.hbase.ipc.SecureRpcEngine"
-        },
-        {
-            "name": "hbase.coprocessor.region.classes",
-            "label": "hbase.coprocessor.region.classes",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "org.apache.hadoop.hbase.security.token.TokenProvider",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "org.apache.hadoop.hbase.security.token.TokenProvider"
-        },
-        {
-            "name": "hbase.master.kerberos.principal",
-            "label": "HMaster kerberos安全凭据",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "hbase/_HOST@HADOOP.COM",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "hbase/_HOST@HADOOP.COM"
-        },
-        {
-            "name": "hbase.master.keytab.file",
-            "label": "HMasterkeytab文件位置",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "/etc/security/keytab/hbase.keytab",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "/etc/security/keytab/hbase.keytab"
-        },
-        {
-            "name": "hbase.regionserver.kerberos.principal",
-            "label": "RegionServer kerberos安全凭据",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "hbase/_HOST@HADOOP.COM",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "hbase/_HOST@HADOOP.COM"
-        },
-        {
-            "name": "hbase.regionserver.keytab.file",
-            "label": "RegionServer keytab文件位置",
-            "description": "",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "/etc/security/keytab/hbase.keytab",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "/etc/security/keytab/hbase.keytab"
-        },
-        {
-            "name": "hostname",
-            "label": "hostname",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "${host}",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "${host}"
-        },
-        {
-            "name": "hbaseSecurity",
-            "label": "hbaseSecurity",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "-Djava.security.auth.login.config=${HBASE_HOME}/conf/zk-jaas.conf",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "-Djava.security.auth.login.config=${HBASE_HOME}/conf/zk-jaas.conf"
-        },
-        {
-            "name": "phoenix.queryserver.keytab.file",
-            "label": "phoenix.queryserver.keytab.file",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "/etc/security/keytab/hbase.keytab",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "/etc/security/keytab/hbase.keytab"
-        },
-        {
-            "name": "phoenix.queryserver.kerberos.principal",
-            "label": "phoenix.queryserver.kerberos.principal",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "hbase/_HOST@HADOOP.COM",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "hbase/_HOST@HADOOP.COM"
-        },
-        {
-            "name": "phoenix.queryserver.http.keytab.file",
-            "label": "phoenix.queryserver.http.keytab.file",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "/etc/security/keytab/hbase.keytab",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "/etc/security/keytab/hbase.keytab"
-        },
-        {
-            "name": "phoenix.queryserver.http.kerberos.principal",
-            "label": "phoenix.queryserver.http.kerberos.principal",
-            "description": "",
-            "configType": "map",
-            "configWithKerberos": true,
-            "required": false,
-            "type": "input",
-            "value": "hbase/_HOST@HADOOP.COM",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "hbase/_HOST@HADOOP.COM"
-        },
-        {
-            "name": "hbaseHome",
-            "label": "HBASE_HOME",
-            "description": "HBase的安装目录",
-            "required": true,
-            "configType": "map",
-            "type": "input",
-            "value": "${HBASE_HOME}",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "${HBASE_HOME}"
-        },
-        {
-            "name": "hbase.quota.enabled",
-            "label": "允许配置限额",
-            "description": "hbase.quota.enabled",
-            "required": true,
-            "type": "input",
-            "value": "true",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "true"
-        },
-        {
-            "name": "phoenix.schema.mapSystemTablesToNamespace",
-            "label": "系统表将自动迁移到SYSTEM命名空间",
-            "description": "系统表将自动迁移到SYSTEM命名空间",
-            "required": true,
-            "type": "input",
-            "value": "true",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "true"
-        },
-        {
-            "name": "phoenix.schema.isNamespaceMappingEnabled",
-            "label": "使用模式创建的表将映射到名称空间",
-            "description": "使用模式创建的表将映射到名称空间",
-            "required": true,
-            "type": "input",
-            "value": "true",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "true"
-        },
-        {
-            "name": "phoenix.queryserver.loadbalancer.enabled",
-            "label": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
-            "description": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
-            "required": true,
-            "type": "input",
-            "value": "true",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "true"
-        },
-        {
-            "name": "phoenix.queryserver.base.path",
-            "label": "PQS 实例应将自身注册到的根 znode。",
-            "description": "PQS 实例应将自身注册到的根 znode。",
-            "required": true,
-            "type": "input",
-            "value": "/phoenix",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "/phoenix"
-        },
-        {
-            "name": "phoenix.queryserver.service.name",
-            "label": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
-            "description": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
-            "required": true,
-            "type": "input",
-            "value": "${host}-queryserver",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "${host}-queryserver"
-        },
-        {
-            "name": "esAuditEnable",
-            "label": "esAuditEnable",
-            "description": "",
-            "required": false,
-            "configType": "map",
-            "type": "input",
-            "value": "false",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": "false"
-        },
-        {
-            "name": "esSingleHost",
-            "label": "esSingleHost",
-            "description": "",
-            "required": false,
-            "configType": "map",
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": ""
-        },
-        {
-            "name": "esHttpPort",
-            "label": "esHttpPort",
-            "description": "",
-            "required": false,
-            "configType": "map",
-            "type": "input",
-            "value": "",
-            "configurableInWizard": true,
-            "hidden": true,
-            "defaultValue": ""
-        },
-        {
-            "name": "custom.hbase.site.xml",
-            "label": "自定义配置hbase-site.xml",
-            "description": "自定义配置",
-            "configType": "custom",
-            "required": false,
-            "type": "multipleWithKey",
-            "value": [
-
-            ],
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": ""
-        },
-        {
-            "name": "custom.hbase.env.sh",
-            "label": "自定义配置hbase-env.sh",
-            "description": "自定义配置",
-            "configType": "custom",
-            "required": false,
-            "type": "multipleWithKey",
-            "value": [
-
-            ],
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": ""
-        }
+    {
+      "name": "RegionServer",
+      "label": "RegionServer",
+      "roleType": "worker",
+      "runAs": {
+        "user": "hbase",
+        "group": "hadoop"
+      },
+      "cardinality": "1+",
+      "logFile": "logs/hbase-hbase-regionserver-${hostname}.log",
+      "jmxPort": 16101,
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "start",
+          "regionserver"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "stop",
+          "regionserver"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "status",
+          "regionserver"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/hbase-daemon.sh",
+        "args": [
+          "restart",
+          "regionserver"
+        ]
+      }
+    },
+    {
+      "name": "PhoenixQueryServer",
+      "label": "PhoenixQueryServer",
+      "sortNum": 2,
+      "roleType": "master",
+      "runAs": {
+        "user": "hbase",
+        "group": "hadoop"
+      },
+      "cardinality": "1+",
+      "logFile": "logs/phoenix-queryserver-${hostname}.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "phoenix/bin/queryserver_control.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "phoenix/bin/queryserver_control.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "phoenix/bin/queryserver_control.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "phoenix/bin/queryserver_control.sh",
+        "args": [
+          "restart"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "hbase-site.xml",
+        "fileDescription": "HBase核心配置文件，定义存储路径、ZooKeeper连接和安全认证参数",
+        "configFormat": "xml",
+        "outputDirectory": "conf",
+        "includeParams": [
+          "hbase.cluster.distributed",
+          "hbase.master.port",
+          "hbase.master.info.port",
+          "hbase.regionserver.port",
+          "phoenix.queryserver.port",
+          "phoenix.queryserver.http.port",
+          "hbase.rootdir",
+          "hbase.zookeeper.quorum",
+          "hbase.wal.provider",
+          "hbase.unsafe.stream.capability.enforce",
+          "hbase.security.authentication",
+          "hbase.rpc.engine",
+          "hbase.coprocessor.region.classes",
+          "hbase.master.kerberos.principal",
+          "hbase.master.keytab.file",
+          "hbase.regionserver.kerberos.principal",
+          "hbase.regionserver.keytab.file",
+          "hbase.quota.enabled",
+          "phoenix.schema.mapSystemTablesToNamespace",
+          "phoenix.schema.isNamespaceMappingEnabled",
+          "phoenix.queryserver.loadbalancer.enabled",
+          "phoenix.queryserver.base.path",
+          "phoenix.queryserver.service.name",
+          "phoenix.queryserver.keytab.file",
+          "phoenix.queryserver.kerberos.principal",
+          "phoenix.queryserver.http.keytab.file",
+          "phoenix.queryserver.http.kerberos.principal",
+          "custom.hbase.site.xml"
+        ]
+      },
+      {
+        "filename": "install.properties",
+        "fileDescription": "Ranger HBase插件配置文件，设置权限管理和审计参数",
+        "configFormat": "custom",
+        "outputDirectory": "ranger-hbase-plugin",
+        "templateName": "ranger-hbase.ftl",
+        "includeParams": [
+          "rangerAdminUrl",
+          "hbaseHome",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
+        ]
+      },
+      {
+        "filename": "zk-jaas.conf",
+        "fileDescription": "ZooKeeper认证配置文件，设置Kerberos安全认证参数",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "templateName": "zk-jaas.ftl",
+        "includeParams": [
+          "hostname"
+        ]
+      },
+      {
+        "filename": "hbase-env.sh",
+        "fileDescription": "HBase环境变量脚本，设置进程ID目录、日志路径和安全配置",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "templateName": "hbase-env.ftl",
+        "includeParams": [
+          "hbasePidDir",
+          "hbaseLogDir",
+          "hbaseSecurity",
+          "custom.hbase.env.sh"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "Hbase Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "HbaseMaster,RegionServer,PhoenixQueryServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Hbase Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "HbaseMaster,RegionServer,PhoenixQueryServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "HbaseMaster,RegionServer,PhoenixQueryServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
+      }
     ]
+  },
+  "parameters": [
+    {
+      "name": "hbase.cluster.distributed",
+      "label": "HBase集群模式",
+      "description": "HBase是否以分布式模式运行。设置为'true'表示分布式模式，'false'表示单机模式",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "hbase.master.port",
+      "label": "HBase Master RPC端口",
+      "description": "HBase Master服务的RPC端口号，用于RegionServer和客户端与Master通信",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16000",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "HbaseMaster",
+      "serviceType": "ClusterIP",
+      "portNumber": "16000"
+    },
+    {
+      "name": "hbase.master.info.port",
+      "label": "HBase Master UI端口",
+      "description": "HBase Master Web UI的HTTP端口号，用于访问管理界面",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16010",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "HbaseMaster",
+      "serviceType": "NodePort",
+      "portNumber": "16010",
+      "nodePort": "31010"
+    },
+    {
+      "name": "hbase.master.info.port1",
+      "label": "HBase Master UI端口",
+      "description": "HBase Master Web UI的HTTP端口号，用于访问管理界面",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16010",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "HbaseMaster",
+      "serviceType": "NodePort",
+      "portNumber": "16010",
+      "nodePort": "31011"
+    },
+    {
+      "name": "hbase.regionserver.port",
+      "label": "HBase RegionServer RPC端口",
+      "description": "HBase RegionServer服务的RPC端口号，用于客户端与RegionServer通信",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16200",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "RegionServer",
+      "serviceType": "ClusterIP",
+      "portNumber": "16200"
+    },
+    {
+      "name": "phoenix.queryserver.port",
+      "label": "Phoenix QueryServer RPC端口",
+      "description": "Phoenix QueryServer服务的RPC端口号，用于客户端与QueryServer通信",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8765",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "PhoenixQueryServer",
+      "serviceType": "ClusterIP",
+      "portNumber": "8765"
+    },
+    {
+      "name": "phoenix.queryserver.http.port",
+      "label": "Phoenix QueryServer HTTP端口",
+      "description": "Phoenix QueryServer Web UI的HTTP端口号，用于访问管理界面",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8766",
+      "configCategory": "file",
+      "configGroup": "hbase-site",
+      "configLevel": "advanced",
+      "bindRole": "PhoenixQueryServer",
+      "serviceType": "NodePort",
+      "portNumber": "8766",
+      "nodePort": "30766"
+    },
+    {
+      "name": "hbase.rootdir",
+      "label": "hbase.rootdir",
+      "description": "hbase.rootdir",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${fs.defaultFS}/hbase"
+    },
+    {
+      "name": "hbase.zookeeper.quorum",
+      "label": "hbase.zookeeper.quorum",
+      "description": "hbase.zookeeper.quorum",
+      "required": true,
+      "type": "input",
+      "value": "${zkHostsUrl}:2181",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "hbase.wal.provider",
+      "label": "hbase.wal.provider",
+      "description": "hbase.wal.provider",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "filesystem"
+    },
+    {
+      "name": "hbase.unsafe.stream.capability.enforce",
+      "label": "hbase.unsafe.stream.capability.enforce",
+      "description": "hbase.unsafe.stream.capability.enforce",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "hbasePidDir",
+      "label": "HBase PID DIR",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${HBASE_HOME}/pid"
+    },
+    {
+      "name": "hbaseLogDir",
+      "label": "HBase LOG DIR",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${HBASE_HOME}/logs"
+    },
+    {
+      "name": "hbase.security.authorization",
+      "label": "启用Ranger权限",
+      "description": "",
+      "configType": "permission",
+      "required": false,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": true
+    },
+    {
+      "name": "hbase.coprocessor.master.classes",
+      "label": "RangerHbaseMaster认证类",
+      "description": "",
+      "configType": "permission",
+      "required": false,
+      "type": "input",
+      "value": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor"
+    },
+    {
+      "name": "hbase.coprocessor.region.classes",
+      "label": "RangerHbaseRegion认证类",
+      "description": "",
+      "configType": "permission",
+      "required": false,
+      "type": "input",
+      "value": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "org.apache.ranger.authorization.hbase.RangerAuthorizationCoprocessor"
+    },
+    {
+      "name": "rangerAdminUrl",
+      "label": "Ranger访问地址",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "enableKerberos",
+      "label": "开启Kerberos认证",
+      "description": "开启Kerberos认证",
+      "required": false,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "hbase.security.authentication",
+      "label": "hbase.security.authentication",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "kerberos",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "kerberos"
+    },
+    {
+      "name": "hbase.rpc.engine",
+      "label": "HBase rpc安全通信",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "org.apache.hadoop.hbase.ipc.SecureRpcEngine",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "org.apache.hadoop.hbase.ipc.SecureRpcEngine"
+    },
+    {
+      "name": "hbase.coprocessor.region.classes",
+      "label": "hbase.coprocessor.region.classes",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "org.apache.hadoop.hbase.security.token.TokenProvider",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "org.apache.hadoop.hbase.security.token.TokenProvider"
+    },
+    {
+      "name": "hbase.master.kerberos.principal",
+      "label": "HMaster kerberos安全凭据",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "hbase/_HOST@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "hbase/_HOST@HADOOP.COM"
+    },
+    {
+      "name": "hbase.master.keytab.file",
+      "label": "HMasterkeytab文件位置",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "/etc/security/keytab/hbase.keytab",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "/etc/security/keytab/hbase.keytab"
+    },
+    {
+      "name": "hbase.regionserver.kerberos.principal",
+      "label": "RegionServer kerberos安全凭据",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "hbase/_HOST@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "hbase/_HOST@HADOOP.COM"
+    },
+    {
+      "name": "hbase.regionserver.keytab.file",
+      "label": "RegionServer keytab文件位置",
+      "description": "",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "/etc/security/keytab/hbase.keytab",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "/etc/security/keytab/hbase.keytab"
+    },
+    {
+      "name": "hostname",
+      "label": "hostname",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "${hostname}",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "${hostname}"
+    },
+    {
+      "name": "hbaseSecurity",
+      "label": "hbaseSecurity",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "-Djava.security.auth.login.config=${HBASE_HOME}/conf/zk-jaas.conf",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "-Djava.security.auth.login.config=${HBASE_HOME}/conf/zk-jaas.conf"
+    },
+    {
+      "name": "phoenix.queryserver.keytab.file",
+      "label": "phoenix.queryserver.keytab.file",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "/etc/security/keytab/hbase.keytab",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "/etc/security/keytab/hbase.keytab"
+    },
+    {
+      "name": "phoenix.queryserver.kerberos.principal",
+      "label": "phoenix.queryserver.kerberos.principal",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "hbase/_HOST@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "hbase/_HOST@HADOOP.COM"
+    },
+    {
+      "name": "phoenix.queryserver.http.keytab.file",
+      "label": "phoenix.queryserver.http.keytab.file",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "/etc/security/keytab/hbase.keytab",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "/etc/security/keytab/hbase.keytab"
+    },
+    {
+      "name": "phoenix.queryserver.http.kerberos.principal",
+      "label": "phoenix.queryserver.http.kerberos.principal",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "hbase/_HOST@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "hbase/_HOST@HADOOP.COM"
+    },
+    {
+      "name": "hbaseHome",
+      "label": "HBASE_HOME",
+      "description": "HBase的安装目录",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "${HBASE_HOME}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${HBASE_HOME}"
+    },
+    {
+      "name": "hbase.quota.enabled",
+      "label": "允许配置限额",
+      "description": "hbase.quota.enabled",
+      "required": true,
+      "type": "input",
+      "value": "true",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "phoenix.schema.mapSystemTablesToNamespace",
+      "label": "系统表将自动迁移到SYSTEM命名空间",
+      "description": "系统表将自动迁移到SYSTEM命名空间",
+      "required": true,
+      "type": "input",
+      "value": "true",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "phoenix.schema.isNamespaceMappingEnabled",
+      "label": "使用模式创建的表将映射到名称空间",
+      "description": "使用模式创建的表将映射到名称空间",
+      "required": true,
+      "type": "input",
+      "value": "true",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "phoenix.queryserver.loadbalancer.enabled",
+      "label": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
+      "description": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
+      "required": true,
+      "type": "input",
+      "value": "true",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "phoenix.queryserver.base.path",
+      "label": "PQS 实例应将自身注册到的根 znode。",
+      "description": "PQS 实例应将自身注册到的根 znode。",
+      "required": true,
+      "type": "input",
+      "value": "/phoenix",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/phoenix"
+    },
+    {
+      "name": "phoenix.queryserver.service.name",
+      "label": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
+      "description": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
+      "required": true,
+      "type": "input",
+      "value": "{{HOST}}-queryserver",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "{{HOST}}-queryserver"
+    },
+    {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为HDFS的数据存储位置的父目录",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "custom.hbase.site.xml",
+      "label": "自定义配置hbase-site.xml",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.hbase.env.sh",
+      "label": "自定义配置hbase-env.sh",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
 }

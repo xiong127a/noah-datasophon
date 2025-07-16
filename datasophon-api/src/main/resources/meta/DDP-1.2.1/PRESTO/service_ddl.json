@@ -46,7 +46,7 @@
       "externalLink": {
         "name": "Presto UI",
         "label": "Presto UI",
-        "url": "http://${host}:7777"
+        "url": "http://${hostname}:7777"
       }
     },
     {

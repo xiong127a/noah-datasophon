@@ -68,7 +68,6 @@ export default {
           console.error(e)
         }
       }
-      console.log(state.clusterId, 'getter')
       return state.clusterId
     },
     isCluster(state, getters, rootState) {
@@ -108,7 +107,6 @@ export default {
     },
     getRunningClusterList ({dispatch, commit}) {
       this._vm.$axiosPost(global.API.runningClusterList, {}).then(res => {
-        console.log(res)
         let arr = []
         res.data.map(item => {
           arr.push({
@@ -198,7 +196,6 @@ export default {
     setClusterId (state, clusterId) {
       state.clusterId = clusterId
       localStorage.setItem('clusterId', clusterId)
-      console.log(state.clusterId, 'setter')
     },
     setDevice (state, isMobile) {
       state.isMobile = isMobile

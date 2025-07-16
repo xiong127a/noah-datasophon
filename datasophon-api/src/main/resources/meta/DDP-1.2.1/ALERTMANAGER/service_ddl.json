@@ -17,7 +17,7 @@
         "group": "root"
       },
       "cardinality": 1,
-      "logFile": "logs/alertmanager-${host}.out",
+      "logFile": "logs/alertmanager-${hostname}.out",
       "jmxPort": 9093,
       "startRunner": {
         "timeout": "60",
@@ -54,7 +54,7 @@
       "externalLink": {
         "name": "AlertManager Ui",
         "label": "AlertManager Ui",
-        "url": "http://${host}:9093"
+        "url": "http://${hostname}:9093"
       }
     }
   ],

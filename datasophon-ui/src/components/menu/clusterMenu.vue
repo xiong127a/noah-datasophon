@@ -148,6 +148,9 @@ export default {
     },
     ...mapState('setting', ['alarmManageVisible', "clusterId"])
   },
+  mounted() {
+    this.updateMenuNames()
+  },
   methods: {
     ...mapMutations("setting", ["showClusterSetting" ]),
     textCompare(){
@@ -362,7 +365,26 @@ export default {
     },
     openChange (val) {
       this.sOpenKeys = val
-    }
+    },
+    updateMenuNames() {
+      // 强制更新菜单项名称
+      let menuData = JSON.parse(localStorage.getItem('menuData')) || []
+      if(menuData.length > 0) {
+        let updated = false
+        // 查找并更新菜单名称
+        menuData.forEach(item => {
+          if(item.path === 'overview' && item.name !== '集群总览') {
+            item.name = '集群总览'
+            updated = true
+          }
+        })
+        // 保存修改后的菜单数据
+        if(updated) {
+          localStorage.setItem('menuData', JSON.stringify(menuData))
+          window.location.reload()
+        }
+      }
+    },
   },
 };
 </script>

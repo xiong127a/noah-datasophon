@@ -1,5 +1,5 @@
 <template>
-  <div class="k8s-config-container">
+  <div class="kubernetes-config-container">
     <!-- 顶部标题区域 -->
     <div class="page-header">
       <div class="header-icon-wrapper">
@@ -27,9 +27,9 @@
       </div>
     </div>
 
-    <div class="k8s-dashboard-layout">
+    <div class="kubernetes-dashboard-layout">
       <!-- 左侧导航菜单 -->
-      <k8s-sidebar-menu 
+      <kubernetes-sidebar-menu
         :active-resource="activeResource"
         :resource-counts="resourceCounts"
         @resource-change="handleResourceChange"
@@ -172,7 +172,7 @@ import dayjs from 'dayjs'
 // import API from '@/api';
 
 // 导入拆分的组件
-import K8sSidebarMenu from './K8sSidebarMenu.vue';
+import KubernetesSidebarMenu from './KubernetesSidebarMenu.vue';
 import ConfigMapDashboard from './ConfigMapDashboard.vue';
 import DeploymentDashboard from './DeploymentDashboard.vue';
 import ReplicaSetsDashboard from './ReplicaSetsDashboard.vue';
@@ -193,7 +193,7 @@ import ReplicationControllersDashboard from './ReplicationControllersDashboard.v
 export default defineComponent({
   name: 'KubernetesDashboard',
   components: {
-    K8sSidebarMenu,
+    KubernetesSidebarMenu,
     ConfigMapDashboard,
     DeploymentDashboard,
     ReplicaSetsDashboard,
@@ -253,12 +253,12 @@ export default defineComponent({
     // 添加loadData方法，供父组件调用
     loadData() {
       console.log('KubernetesDashboard loadData被调用');
-      // 复用fetchK8sResources方法
-      return this.fetchK8sResources();
+      // 复用fetchKubernetesResources方法
+      return this.fetchKubernetesResources();
     },
     
     // 移除API路径初始化方法
-    async fetchK8sResources() {
+    async fetchKubernetesResources() {
       // 获取命名空间列表
       this.fetchNamespaces();
         
@@ -272,7 +272,7 @@ export default defineComponent({
       this.namespacesLoading = true;
       try {
         // 使用全局API对象替代导入的API
-        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
+        const res = await this.$axiosGet(global.API.getKubernetesNamespaces, {
           clusterId: this.clusterId
         });
         
@@ -357,7 +357,7 @@ export default defineComponent({
     // 获取资源统计信息
     async fetchResourceStats() {
       try {
-        const apiUrl = global.API.getK8sResourceStats;
+        const apiUrl = global.API.getKubernetesResourceStats;
         const params = {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
@@ -429,9 +429,9 @@ export default defineComponent({
     //   // 首先获取所有资源统计数据
     //   this.fetchResourceStats();
     //   // 然后获取详细资源数据
-    //   this.fetchK8sResources();
+    //   this.fetchKubernetesResources();
     // } else {
-    //   console.error('serviceId is required to fetch K8s resources');
+    //   console.error('serviceId is required to fetch Kubernetes resources');
     // }
   },
   beforeDestroy() {
@@ -458,7 +458,7 @@ export default defineComponent({
     serviceId(newVal) {
       // 注释掉自动调用代码，改为由父组件通过loadData方法控制
       // if (newVal) {
-      //   this.fetchK8sResources();
+      //   this.fetchKubernetesResources();
       // }
     },
     activeResource(newVal, oldVal) {
@@ -476,7 +476,7 @@ export default defineComponent({
 </script>
 
 <style lang="less" scoped>
-.k8s-config-container {
+.kubernetes-config-container {
   width: 100%;
   height: 100%;
   display: flex;
@@ -536,7 +536,7 @@ export default defineComponent({
 }
   
   // 整体仪表盘布局
-.k8s-dashboard-layout {
+.kubernetes-dashboard-layout {
   display: flex;
     flex: 1;
     min-height: calc(100vh - 185px);
@@ -639,15 +639,15 @@ export default defineComponent({
   }
   
   // 仪表板卡片样式
-  .k8s-dashboard-card {
+  .kubernetes-dashboard-card {
     background-color: #fff;
     border-radius: 4px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     margin-bottom: 16px;
     overflow: hidden;
     
-    &.k8s-resource-card {
-      .k8s-card-header {
+    &.kubernetes-resource-card {
+      .kubernetes-card-header {
   display: flex;
         justify-content: space-between;
   align-items: center;
@@ -656,17 +656,17 @@ export default defineComponent({
         background-color: #f7f7f7;
         border-bottom: 1px solid #eee;
         
-        .k8s-card-title {
+        .kubernetes-card-title {
           font-size: 16px;
           font-weight: 500;
           color: #333;
 }
 
-        .k8s-card-actions {
+        .kubernetes-card-actions {
   display: flex;
           gap: 12px;
           
-          .k8s-action-icon {
+          .kubernetes-action-icon {
             font-size: 16px;
             color: #999;
             cursor: pointer;
@@ -678,7 +678,7 @@ export default defineComponent({
         }
       }
       
-      .k8s-card-content {
+      .kubernetes-card-content {
         padding: 0;
       }
     }
@@ -686,13 +686,13 @@ export default defineComponent({
 }
 
 // 图表相关样式
-.k8s-dashboard-charts {
+.kubernetes-dashboard-charts {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 16px;
 
-  .k8s-chart-card {
+  .kubernetes-chart-card {
   flex: 1;
     min-width: 400px;
     height: 250px;
@@ -702,7 +702,7 @@ export default defineComponent({
   overflow: hidden;
     position: relative;
 
-    .k8s-chart-header {
+    .kubernetes-chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -711,14 +711,14 @@ export default defineComponent({
       background-color: #f7f7f7;
       border-bottom: 1px solid #e8e8e8;
       
-      .k8s-chart-title {
+      .kubernetes-chart-title {
   font-size: 14px;
   font-weight: 500;
         color: #333;
 }
 
-      .k8s-chart-actions {
-        .k8s-action-icon {
+      .kubernetes-chart-actions {
+        .kubernetes-action-icon {
           cursor: pointer;
           color: #999;
           transition: color 0.3s;
@@ -730,12 +730,12 @@ export default defineComponent({
       }
     }
     
-    .k8s-chart-content {
+    .kubernetes-chart-content {
       position: relative;
       height: calc(100% - 48px);
       padding: 10px 5px 10px 15px;
       
-      .k8s-chart-y-label {
+      .kubernetes-chart-y-label {
         position: absolute;
         left: -25px;
         top: 50%;
@@ -759,9 +759,9 @@ export default defineComponent({
 
 /* 响应式布局 */
 @media screen and (max-width: 1200px) {
-  .k8s-dashboard-container {
-    .k8s-dashboard-charts {
-      .k8s-chart-card {
+  .kubernetes-dashboard-container {
+    .kubernetes-dashboard-charts {
+      .kubernetes-chart-card {
         min-width: 300px;
       }
     }
@@ -769,11 +769,11 @@ export default defineComponent({
 }
 
 @media screen and (max-width: 768px) {
-  .k8s-dashboard-container {
-    .k8s-dashboard-charts {
+  .kubernetes-dashboard-container {
+    .kubernetes-dashboard-charts {
       flex-direction: column;
       
-      .k8s-chart-card {
+      .kubernetes-chart-card {
         width: 100%;
       }
     }
@@ -781,7 +781,7 @@ export default defineComponent({
 }
 
 /* 表格通用样式 */
-.k8s-table {
+.kubernetes-table {
   .status-dot {
     display: inline-block;
     width: 8px;
@@ -863,7 +863,7 @@ export default defineComponent({
   height: 100%;
 }
 
-.k8s-dashboard {
+.kubernetes-dashboard {
   &-container {
     min-height: 600px;
     background-color: #fff;
@@ -994,7 +994,7 @@ export default defineComponent({
 }
 
 // 修复表格在Safari和Firefox中的显示问题
-.k8s-config-container {
+.kubernetes-config-container {
   .ant-table-wrapper {
     overflow-x: auto;
     
@@ -1073,7 +1073,7 @@ export default defineComponent({
 }
 
 // 修改全局表头样式
-.k8s-config-container {
+.kubernetes-config-container {
   .ant-table-column-has-sorters {
     .ant-table-column-title {
       writing-mode: horizontal-tb !important;

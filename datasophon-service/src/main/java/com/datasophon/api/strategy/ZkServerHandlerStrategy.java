@@ -17,12 +17,13 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ConnectionInfo;
@@ -35,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
-import cn.hutool.core.collection.CollUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,9 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.utils.HostUtils.generateHosts;
 
 public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -130,7 +127,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         @Override
         public void getConfig(Integer clusterId, List<ServiceConfig> list) {
                 // add server.x config
-                ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                ClusterInfoService clusterInfoService = SpringUtil
                                 .getBean(ClusterInfoService.class);
                 ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
@@ -145,11 +142,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                 if (Objects.nonNull(hostMap)) {
                         List<String> zkServers = hostMap.get("ZkServer");
 
-                        String depMode = getDepMode(clusterId);
 
-                        if (!Constants.PVM_MODE.equals(depMode)) {
-                                zkServers = generateHosts(zkServers, "zookeeper-zkserver");
-                        }
 
                         Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
 
@@ -159,7 +152,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 serviceConfig.setName("server." + myid);
                                 serviceConfig.setLabel("server." + myid);
                                 // TODO:
-                                // 在PVM环境中使用域名通信，在K8S中使用DNS域名通信，避免直接使用IP地址。为了提高系统的灵活性和可维护性，因为直接使用IP地址可能会导致在IP变更时需要大量修改配置，而使用域名可以通过DNS解析动态获取IP，减少维护成本。
+                                // 在PVM环境中使用域名通信，在Kubernetes中使用DNS域名通信，避免直接使用IP地址。为了提高系统的灵活性和可维护性，因为直接使用IP地址可能会导致在IP变更时需要大量修改配置，而使用域名可以通过DNS解析动态获取IP，减少维护成本。
                                 serviceConfig.setValue(server + ":2888:3888");
                                 serviceConfig.setHidden(false);
                                 serviceConfig.setRequired(true);
@@ -167,6 +160,11 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 serviceConfig.setConfigTargetRoles("ZkServer");
                                 serviceConfig.setDefaultValue("");
                                 serviceConfig.setConfigType("zkserver");
+                                serviceConfig.setConfigCategory("role");
+                                serviceConfig.setConfigGroup("ZkServer");
+                                serviceConfig.setConfigLevel("advanced");
+
+
                                 if (map.containsKey("server." + myid)) {
                                         logger.info("set zk server {}", myid);
                                         ServiceConfig config = map.get("server." + myid);
@@ -178,27 +176,6 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 CacheUtils.put("zkserver_" + server, myid);
                                 myid++;
                         }
-                        /*
-                         * ServiceConfig clusterIp = map.get(K8S_CLUSTER_IP);
-                         * ArrayList<Map<String, String>> clusterIpLists = new ArrayList<>();
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2181");
-                         * }});
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2888");
-                         * }});
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "3888");
-                         * }});
-                         * clusterIp.setValue(clusterIpLists);
-                         * ServiceConfig targetPort = map.get(K8S_NODE_PORT);
-                         *
-                         * ArrayList<Map<String, String>> targetPortLists = new ArrayList<>();
-                         * targetPortLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2181:32181");
-                         * }});
-                         * targetPort.setValue(targetPortLists);
-                         */
                 }
         }
 

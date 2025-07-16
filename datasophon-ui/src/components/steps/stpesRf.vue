@@ -88,7 +88,7 @@ export default {
   },
   watch: {
     currentSteps(val) {
-      console.log(val, "asdsdsa");
+      // 当从其他步骤返回到步骤1时，不清空数据（保留恢复机制）
     },
     stepsType: {
       handler (val) {
@@ -99,21 +99,27 @@ export default {
       immediate: true
     }
   },
+  mounted() {
+    if (this.currentSteps === 1 && this.clusterId === undefined) {
+      this.steps1Data.kubeConfigContent = undefined;
+      this.steps1Data.namespace = undefined;
+    }
+  },
   computed: {
     stepsNumber () {
-      if (this.currentSteps === 4 && this.depType == 'K8S'){
+      if (this.currentSteps === 4 && this.depType === 'Kubernetes'){
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 5 && this.depType == 'K8S') {
+      if (this.currentSteps === 5 && this.depType === 'Kubernetes') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 6 && this.depType == 'K8S') {
+      if (this.currentSteps === 6 && this.depType === 'Kubernetes') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 7 && this.depType == 'K8S') {
+      if (this.currentSteps === 7 && this.depType === 'Kubernetes') {
       return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 3 && this.depType == 'K8S'){
+      if (this.currentSteps === 3 && this.depType === 'Kubernetes'){
         return this.currentSteps + 1
       }else{
         return this.currentSteps + this.interval
@@ -133,23 +139,68 @@ export default {
       // this.nextLoading = true
       let flag = true;
       if (this.stepsNumber === 1) {
-        this.$refs.steps1Ref.form.validateFields((err, values) => {
-          if (!err) {
-            flag = true;
-            this.steps1Data = values;
+        try {
+          const values = await new Promise((resolve, reject) => {
+            this.$refs.steps1Ref.form.validateFields((err, values) => {
+              if (!err) {
+                resolve(values);
+              } else {
+                reject(err);
+              }
+            });
+          });
+          
+          // 如果是K8S集群，需要先保存K8S配置
+          if (this.$refs.steps1Ref.isK8sCluster) {
+            const saveResult = await this.$refs.steps1Ref.saveKubernetesConfig();
+            if (!saveResult) {
+              flag = false;
+              return;
+            }
+            
+            // K8S模式下，为steps1Data提供默认值，因为不需要用户输入主机信息
+            this.steps1Data = {
+              hosts: '', // K8S模式下会自动从集群获取，这里设为空字符串
+              sshUser: 'root', // 默认用户
+              sshPort: 22, // 默认端口
+              kubeConfigContent: values.kubeConfigContent,
+              namespace: values.namespace
+            };
           } else {
-            flag = false;
+            // PVM模式使用用户输入的值
+            this.steps1Data = values;
           }
-        });
+          
+          flag = true;
+        } catch (error) {
+          flag = false;
+        }
       }
       if (this.stepsNumber === 2) {
         const self = this;
+        
+        // K8S模式下先进行兜底保存
+        if (this.depType === 'Kubernetes') {
+          const successfulHosts = this.$refs.steps2Ref.getSuccessfulHosts();
+          
+          // 强制测试接口调用（无论是否有主机）
+          try {
+            const saveResult = await this.$axiosJsonPost(
+              global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, 
+              successfulHosts
+            );
+          } catch (error) {
+            // 不阻断流程，因为可能已经在轮询中保存过了
+          }
+        }
+        
+        // 然后执行原有的完成状态检查
         this.$refs.steps2Ref.hostCheckCompleted((res) => {
           this.nextLoading = false;
           flag = res.hostCheckCompleted;
           if (!flag) self.$message.warning("存在为未检验成功的主机");
           if (!flag) return false;
-          this.currentStepsAdd();
+          self.currentStepsAdd();
         });
       }
       if (this.stepsNumber === 3) {
@@ -174,7 +225,7 @@ export default {
         this.steps4Data.serviceType = this.$refs.steps4Ref.params.type || '';
         
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        if (this.depType!=='K8S'){
+        if (this.depType!=='Kubernetes'){
           arr.map((item, index) => {
             let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
             if (curIndex !== -1) {
@@ -292,25 +343,58 @@ export default {
 <style lang="less" scoped>
 .steps-rf {
   height: 100%;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   flex-direction: column;
+  box-sizing: border-box;
+  
+  .steps-rf-container {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 确保容器可以缩小 */
+    box-sizing: border-box;
+    padding: 0 20px; /* 添加一些内边距，避免内容太靠边 */
+  }
+  
   .footer {
     // margin: 0 32px 0 auto;
     // margin: 0 32px 0 0;
     // margin: 0 auto;
-    width: 1300px;
+    width: 100%;
     height: 64px;
     background: rgba(242, 244, 247, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
+    box-sizing: border-box;
+    padding: 0 20px; /* 与内容区域保持一致的内边距 */
     button {
       width: 86px;
     }
     /deep/
       .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
       padding-left: 20px;
+    }
+  }
+  
+  /* 添加媒体查询以处理不同的屏幕尺寸 */
+  @media screen and (max-width: 1300px) {
+    .footer {
+      padding: 0 16px;
+    }
+  }
+  
+  /* 确保所有步骤组件都能正确适应容器 */
+  /deep/ .steps {
+    width: 100%;
+    box-sizing: border-box;
+    
+    /* 在小屏幕上保持一致的布局 */
+    @media screen and (max-width: 992px) {
+      min-width: max-content; /* 确保内容可以完全显示 */
     }
   }
 }

@@ -18,15 +18,12 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
-import com.datasophon.api.utils.TemplatePathUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.model.TemplateRequestMessage;
 import com.datasophon.common.model.TemplateResponseMessage;
-import com.datasophon.common.model.TemplateResponseMessage.ResponseType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
-
-import java.util.List;
 
 /**
  * 处理Worker请求模板的Actor
@@ -44,16 +41,10 @@ public class TemplateServiceActor extends UntypedActor {
             TemplateResponseMessage response = new TemplateResponseMessage();
 
             try {
-                if (request.getRequestType() == TemplateRequestMessage.RequestType.CONTENT) {
-                    // 处理获取模板内容请求
-                    handleContentRequest(request, response);
-                } else if (request.getRequestType() == TemplateRequestMessage.RequestType.LIST) {
-                    // 处理获取模板列表请求
-                    handleListRequest(response);
-                } else {
-                    response.setSuccess(false);
-                    response.setErrorMessage("未知的请求类型");
-                }
+
+                // 处理获取模板内容请求
+                handleContentRequest(request, response);
+
             } catch (Exception e) {
                 log.error("处理模板请求时发生错误", e);
                 response.setSuccess(false);
@@ -88,21 +79,7 @@ public class TemplateServiceActor extends UntypedActor {
         }
 
         response.setSuccess(true);
-        response.setResponseType(ResponseType.CONTENT);
         response.setTemplateContent(content);
         log.info("成功获取模板: {}, 内容长度: {}", templateName, content.length());
-    }
-
-    /**
-     * 处理获取模板列表的请求
-     */
-    private void handleListRequest(TemplateResponseMessage response) {
-        log.info("收到模板列表请求");
-        List<String> templateList = TemplatePathUtils.getTemplateList();
-
-        response.setSuccess(true);
-        response.setResponseType(ResponseType.LIST);
-        response.setTemplateList(templateList);
-        log.info("成功获取模板列表, 共 {} 个模板", templateList.size());
     }
 }

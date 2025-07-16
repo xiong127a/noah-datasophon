@@ -13,7 +13,7 @@
       "label": "ZeppelinServer",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "logs/zeppelin-root-${host}.log",
+      "logFile": "logs/zeppelin-root-${hostname}.log",
       "jmxPort": 8889,
       "startRunner": {
         "timeout": "60",
@@ -39,7 +39,7 @@
       "externalLink": {
         "name": "ZeppelinServer UI",
         "label": "ZeppelinServer UI",
-        "url": "http://${host}:8889"
+        "url": "http://${hostname}:8889"
       }
     }
   ],

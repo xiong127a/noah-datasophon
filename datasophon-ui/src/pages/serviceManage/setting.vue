@@ -37,9 +37,9 @@
         />
       </a-tab-pane>
       
-      <a-tab-pane key="k8s-config" tab="Kubernetes 仪表盘" :forceRender="true">
-        <K8sConfig 
-          ref="k8sConfigRef"
+      <a-tab-pane key="Kubernetes-config" tab="Kubernetes 仪表盘" :forceRender="true">
+        <KubernetesConfig
+          ref="kubernetesConfigRef"
           :serviceId="serviceId" 
           :serviceName="serviceName" 
           :clusterId="clusterId"
@@ -65,7 +65,7 @@ import KubernetesDashboard from "./config/kubernetes/dashboard/KubernetesDashboa
 import ServiceConfig from "./components/ServiceConfig.vue";
 
 export default {
-  components: {ServiceConfig, ConfigDownload, K8sConfig: KubernetesDashboard},
+  components: {ServiceConfig, ConfigDownload, KubernetesConfig: KubernetesDashboard},
   props: {
     steps4Data: Object,
   },
@@ -119,10 +119,10 @@ export default {
             }
             break;
             
-          case 'k8s-config':
-            if (this.$refs.k8sConfigRef) {
-              console.log('调用K8s仪表盘组件的loadData方法');
-              this.$refs.k8sConfigRef.loadData();
+          case 'kubernetes-config':
+            if (this.$refs.kubernetesConfigRef) {
+              console.log('调用Kubernetes仪表盘组件的loadData方法');
+              this.$refs.kubernetesConfigRef.loadData();
             }
             break;
             

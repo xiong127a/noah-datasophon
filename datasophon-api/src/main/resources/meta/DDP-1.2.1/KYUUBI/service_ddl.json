@@ -17,7 +17,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "logFile": "logs/kyuubi-server-${host}.out",
+      "logFile": "logs/kyuubi-server-${hostname}.out",
       "startRunner": {
         "timeout": "60",
         "program": "bin/kyuubi",
@@ -310,10 +310,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value":  "kyuubi/${host}@${realm}",
+      "value":  "kyuubi/${hostname}@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "kyuubi/${host}@${realm}"
+      "defaultValue": "kyuubi/${hostname}@${realm}"
     },
     {
       "name": "kyuubi.kinit.keytab",

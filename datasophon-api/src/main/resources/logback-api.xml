@@ -93,6 +93,27 @@
         </filter>
     </appender>
 
+    <!-- JMX指标导出配置 -->
+    <jmxConfigurator/>
+    
+    <!-- 添加Metrics指标收集器 -->
+    <appender name="METRICS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.base}/metrics.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.base}/metrics.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    
+    <!-- 为Logback指标配置特定的Logger -->
+    <logger name="ch.qos.logback" level="INFO" additivity="false">
+        <appender-ref ref="METRICS"/>
+        <appender-ref ref="STDOUT"/>
+    </logger>
 
     <!-- root 级别的配置 -->
     <root level="INFO">

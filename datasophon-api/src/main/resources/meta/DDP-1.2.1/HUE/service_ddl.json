@@ -43,7 +43,7 @@
       "externalLink": {
         "name": "hue UI",
         "label": "hue UI",
-        "url": "http://${host}:8777"
+        "url": "http://${hostname}:8777"
       }
     }
   ],
@@ -334,10 +334,10 @@
       "configType": "map",
       "required": true,
       "type": "input",
-      "value": "hue/${host}@HADOOP.COM",
+      "value": "hue/${hostname}@HADOOP.COM",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hue/${host}@HADOOP.COM"
+      "defaultValue": "hue/${hostname}@HADOOP.COM"
     },
     {
       "name": "hueKbCachePath",

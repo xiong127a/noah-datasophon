@@ -26,6 +26,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +35,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.utils.HostUtils.generateHosts;
+import static com.datasophon.common.utils.HostUtils.generateDnsName;
 
 public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -42,8 +43,9 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String depMode = getDepMode(clusterId);
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         if (!Constants.PVM_MODE.equals(depMode)) {
-            hosts = generateHosts(hosts, "elasticsearch-elasticsearch");
+            hosts = generateDnsName(hosts, "elasticsearch-elasticsearch",namespace);
         }
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}",
                                 String.join(",", hosts));

@@ -17,12 +17,11 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ProcInfo;
-import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -101,7 +100,7 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
     }
 
     private Map<String, String> getHostMap(Integer clusterId) {
-        ClusterHostService clusterHostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+        ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
         List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
         return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }

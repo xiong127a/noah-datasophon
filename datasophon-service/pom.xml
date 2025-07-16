@@ -92,7 +92,7 @@
         </dependency>
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-k8s</artifactId>
+            <artifactId>datasophon-kubernetes</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

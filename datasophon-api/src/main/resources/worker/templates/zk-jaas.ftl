@@ -3,5 +3,5 @@ Client {
  useKeyTab=true
  keyTab="/etc/security/keytab/hbase.keytab"
  useTicketCache=false
- principal="hbase/${hostname}@HADOOP.COM";
+ principal="hbase/${host}@HADOOP.COM";
 };

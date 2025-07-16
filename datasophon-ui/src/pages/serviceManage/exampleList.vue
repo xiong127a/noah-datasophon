@@ -83,6 +83,13 @@
               <a-icon type="down" />
             </a-button>
           </a-dropdown>
+          <!-- 新增独立自动伸缩按钮 -->
+          <a-button
+            type="primary"
+            class="mgr12"
+            v-if="serviceName === 'SEATUNNEL'"
+            @click="toggleAutoScale"
+          >{{ autoScaleEnabled ? '关闭自动伸缩' : '开启自动伸缩' }}</a-button>
           <a-button
             type="primary"
             @click="addExample"
@@ -222,7 +229,9 @@ export default {
       changeRoleName: false,
       changeGroupName: false,
       rollingRestartStrParam:"",
-      item: null
+      item: null,
+      autoScaleEnabled: false, // 新增自动伸缩状态
+      serviceName: getServiceName(Number(this.$route.params.serviceId)) || '' // 初始化时从路由参数获取服务名称
     };
   },
 
@@ -245,6 +254,11 @@ export default {
   },
 
   mounted () {
+    // 初始化时获取服务名称
+    console.log('serviceName1:', this.serviceName);
+    this.serviceName = getServiceName(Number(this.$route.params.serviceId)) || '';
+    console.log('serviceName2:', this.serviceName);
+    this.getAutoScaleStatus();
     this.getServiceRoleType()
     this.pollingSearch();
   },
@@ -267,6 +281,32 @@ export default {
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
     ...mapState("setting", ["menuData"]),
+    
+    // 优化后的服务名称获取方法
+    getServiceNameByInstanceId(serviceInstanceId) {
+      // 已初始化后直接使用data中的serviceName
+      if (this.serviceName) return this.serviceName;
+      
+      // 保持原有获取逻辑作为fallback
+      const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+      const serviceManageMenu = menuData.find(item => item.path === 'service-manage');
+      
+      if (serviceManageMenu && serviceManageMenu.children) {
+        const targetService = serviceManageMenu.children.find(item => 
+          item.meta?.params?.serviceId == serviceInstanceId
+        );
+        if (targetService) {
+          this.serviceName = targetService.name;
+        }
+      }
+      console.log(' :', this.serviceName);
+      // 使用工具函数作为备选
+      if (!this.serviceName) {
+        this.serviceName = getServiceName(Number(serviceInstanceId)) || "未知服务";
+      }
+      return this.serviceName;
+    },
+
     handleLogCancel () {
       this.logsVisible = false;
     },
@@ -502,28 +542,11 @@ export default {
       });
     },
     addExample () {
-      let serviceName = [];
-      let frameServiceId = null;
-      const serviceId = this.$route.params.serviceId || "";
-      const menuData = JSON.parse(localStorage.getItem("menuData")) || [];
-      const arr = menuData.filter((item) => item.path === "service-manage");
-      if (arr.length > 0) {
-        arr[0].children.map((item) => {
-          if (item.meta.params.serviceId == serviceId) {
-            serviceName = [
-              {
-                serviceName: item.name,
-                serviceId: item.meta.obj.frameServiceId,
-              },
-            ];
-            frameServiceId = item.meta.obj.frameServiceId;
-          }
-        });
-      }
-
+      const serviceInstanceId = this.$route.params.serviceId || "";
+      // 直接使用已初始化的serviceName
       this.steps4Data = {
-        serviceIds:  [frameServiceId],
-        serviceNames: serviceName,
+        serviceIds: [getFrameServiceId(Number(serviceInstanceId))],
+        serviceNames: [{ serviceName: this.serviceName }] // 使用data中已初始化的值
       };
       this.visible = true;
     },
@@ -683,6 +706,48 @@ export default {
         self.getExampleList(true);
       }, global.intervalTime);
     },
+    // 修改方法：修复控制台日志拼写错误，并调整自动伸缩状态转换逻辑
+    getAutoScaleStatus() {
+      const params = {
+        clusterId: this.clusterId
+      }
+      this.$axiosJsonPost(global.API.getAutoScaleTasks, params).then((res) => {
+        if (res.code === 200) {
+          console.log('获取自动伸缩状态成功:', res.data);
+          // 修正：将字符串类型的"true"/"false"转换为布尔值
+          this.autoScaleEnabled = res.data === 'true'; 
+        }
+      }).catch(err => {
+        console.error('获取自动伸缩状态失败:', err);
+        this.$message.error('获取自动伸缩状态失败');
+      });
+    },
+    
+    // 修改方法：调整自动伸缩切换逻辑，使用JSON格式请求，增加错误处理
+    toggleAutoScale() {
+      const api = this.autoScaleEnabled 
+        ? global.API.updateAutoScaleTask // 关闭时调用更新接口
+        : global.API.createAutoScaleTask; // 开启时调用创建接口
+      
+      const params = {
+        clusterId: this.clusterId
+      };
+
+      this.$axiosJsonPost(api, params).then((res) => {
+        if (res.code === 200) {
+          // 修改：直接切换状态无需等待查询
+          this.autoScaleEnabled = !this.autoScaleEnabled;
+          this.$message.success(`操作成功`);
+          this.pollingSearch();
+        }
+      }).catch(err => {
+        console.error('操作失败:', err);
+        this.$message.error(`操作失败: ${err.message || '请联系管理员'}`);
+      });
+    },
+
+    // 在模板调用的地方添加类型转换
+    getServiceName: (id) => getServiceName(Number(id)), // 强制转换为数字类型
   }
 };
 </script>

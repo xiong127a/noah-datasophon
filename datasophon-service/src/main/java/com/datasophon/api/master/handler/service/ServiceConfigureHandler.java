@@ -17,22 +17,21 @@
 
 package com.datasophon.api.master.handler.service;
 
+import akka.actor.ActorSelection;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-
+import com.datasophon.api.utils.ClusterInfoUtils;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
-import akka.actor.ActorSelection;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
 
 public class ServiceConfigureHandler extends ServiceHandler {
 
@@ -41,6 +40,8 @@ public class ServiceConfigureHandler extends ServiceHandler {
         // config
         GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
         generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
+        generateServiceConfigCommand.setNamespace(namespace);
         generateServiceConfigCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
         generateServiceConfigCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
         generateServiceConfigCommand.setRunAs(serviceRoleInfo.getRunAs());

@@ -46,7 +46,7 @@
       "externalLink": {
         "name": "Trino UI",
         "label": "Trino UI",
-        "url": "http://${host}:8086"
+        "url": "http://${hostname}:8086"
       }
     },
     {
@@ -139,6 +139,30 @@
         "includeParams": [
           "custom.hive.properties"
         ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Trino Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "TrinoCoordinator,TrinoWorker",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "TrinoCoordinator,TrinoWorker",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
       }
     ]
   },
@@ -175,10 +199,16 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "8086",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "8086"
+      "defaultValue": "8086",
+      "configCategory": "file",
+      "configLevel": "advanced",
+      "bindRole": "TrinoCoordinator",
+      "serviceType": "NodePort",
+      "portNumber": "8086",
+      "nodePort": "30886"
     },
     {
       "name": "discovery.uri",
@@ -186,7 +216,7 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "http://${coordinatorHost}:8086",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://${coordinatorHost}:8086"
@@ -260,10 +290,10 @@
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"connector.name":"carbondata"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
+      "value": [{"connector.name":"carbondata"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": [{"connector.name":"carbondata"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+      "defaultValue": [{"connector.name":"carbondata"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
     },
     {
       "name": "custom.hive.properties",
@@ -272,10 +302,102 @@
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"connector.name":"hive"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
+      "value": [{"connector.name":"hive"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": [{"connector.name":"hive"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+      "defaultValue": [{"connector.name":"hive"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：8086:30806表示将容器的8086端口映射到集群节点的30806端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     }
   ]
 }

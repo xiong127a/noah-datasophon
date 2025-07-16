@@ -13,7 +13,7 @@
       "label": "RangerAdmin",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "/var/log/ranger/admin/ranger-admin-${host}-root.log",
+      "logFile": "/var/log/ranger/admin/ranger-admin-${hostname}-root.log",
       "jmxPort": 6081,
       "sortNum": 1,
       "startRunner": {
@@ -40,7 +40,7 @@
       "externalLink": {
         "name": "RangerAdmin Ui",
         "label": "RangerAdmin Ui",
-        "url": "http://${host}:6080"
+        "url": "http://${hostname}:6080"
       }
     },
     {
@@ -52,7 +52,7 @@
         "group": "root"
       },
       "cardinality": "1",
-      "logFile": "ranger-2.1.0-usersync/logs/usersync-${host}-root.log",
+      "logFile": "ranger-2.1.0-usersync/logs/usersync-${hostname}-root.log",
       "jmxPort": "",
       "sortNum": 2,
       "startRunner": {
@@ -93,7 +93,7 @@
         "group": "root"
       },
       "cardinality": "1",
-      "logFile": "ranger-2.1.0-kms/log/ranger-kms-${host}-root.log",
+      "logFile": "ranger-2.1.0-kms/log/ranger-kms-${hostname}-root.log",
       "jmxPort": "",
       "sortNum": 3,
       "startRunner": {
@@ -332,10 +332,10 @@
       "required": false,
       "configType": "map",
       "type": "input",
-      "value": "HTTP/${host}@HADOOP.COM",
+      "value": "HTTP/${hostname}@HADOOP.COM",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "HTTP/${host}@HADOOP.COM"
+      "defaultValue": "HTTP/${hostname}@HADOOP.COM"
     },
     {
       "name": "spnegoKeytab",
@@ -358,10 +358,10 @@
       "required": false,
       "configType": "map",
       "type": "input",
-      "value": "rangeradmin/${host}@HADOOP.COM",
+      "value": "rangeradmin/${hostname}@HADOOP.COM",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "rangeradmin/${host}@HADOOP.COM"
+      "defaultValue": "rangeradmin/${hostname}@HADOOP.COM"
     },
     {
       "name": "adminKeytab",

@@ -60,5 +60,5 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
 
     List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack);
 
-    Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId);
+    Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId);
 }

@@ -26,7 +26,7 @@
             </div>
             <div class="card-content">
               <div>
-                集群管理员：
+                集群管理员： 
                 <span>{{item.userManageName || '-'}}</span>
               </div>
               <div>
@@ -48,7 +48,9 @@
     <!-- 配置集群的modal -->
     <a-modal v-if="visible" title :visible="visible" :maskClosable="false" :closable="false" :width="1576"
       :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
-      <Steps :clusterId="clusterId" :depType="depType" />
+      <div style="width: 100%; box-sizing: border-box;">
+        <Steps :clusterId="clusterId" :depType="depType" />
+      </div>
     </a-modal>
   </div>
 </template>
@@ -149,7 +151,6 @@ export default {
     },
     getColonyList() {
       this.$axiosPost(global.API.getColonyList, {}).then((res) => {
-        console.log(res);
         this.dataSource = res.data;
         this.dataSource.forEach((item) => {
           let arr = [];
@@ -158,7 +159,6 @@ export default {
           });
           item["userManageName"] = arr.join(",");
         });
-        console.log(this.dataSource, "2222");
         this.dataSource.push({
           add: true,
         });
@@ -200,11 +200,15 @@ export default {
 <style lang="less" scoped>
 /deep/ .ant-modal-body {
   padding: 0;
+  width: 100%;
+  overflow: visible;
 }
 /deep/ .ant-modal {
   top: 62px;
   .ant-modal-content {
     border-radius: 4px;
+    width: 100%;
+    overflow: visible;
   }
 }
 .card-list {

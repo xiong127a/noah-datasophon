@@ -24,15 +24,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 集群服务 dashboard inti
+ */
 @RestController
-@RequestMapping("cluster/service/dashboard")
+@RequestMapping("/cluster/service/dashboard")
 public class ClusterServiceDashboardController {
 
     @Autowired
     private ClusterServiceDashboardService clusterServiceDashboardService;
 
     /**
-     * 列表
+     * get dashboard url
+     * 
+     * @param clusterId clusterId
+     * @return Result
      */
     @RequestMapping("/getDashboardUrl")
     public Result getDashboardUrl(Integer clusterId) {
@@ -40,4 +46,15 @@ public class ClusterServiceDashboardController {
         return clusterServiceDashboardService.getDashboardUrl(clusterId);
     }
 
+    /**
+     * get datasophon dashboard url
+     * 
+     * @param clusterId clusterId
+     * @return Result
+     */
+    @RequestMapping("/getDatasophonDashboard")
+    public Result getDatasophonDashboard(Integer clusterId) {
+
+        return clusterServiceDashboardService.getDatasophonDashboard(clusterId);
+    }
 }

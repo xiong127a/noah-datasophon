@@ -138,7 +138,7 @@
             "externalLink": {
                 "name": "NebulaGraph Studio UI",
                 "label": "Studio UI",
-                "url": "http://${host}:7002"
+                "url": "http://${hostname}:7002"
             }
         }
     ],
@@ -295,10 +295,10 @@
             "required": true,
             "configType": "map",
             "type": "input",
-            "value": "${host}",
+            "value": "${hostname}",
             "configurableInWizard": true,
             "hidden": true,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "logDir",

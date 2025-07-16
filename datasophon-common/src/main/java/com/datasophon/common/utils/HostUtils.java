@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.datasophon.common.Constants.DATASOPHON;
+
 
 /**
  * 读取hosts文件
@@ -152,7 +152,7 @@ public class HostUtils {
         return false;
     }
 
-    public static List<String> generateHosts(List<String> host, String serviceRoleFullName) {
-        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON).collect(Collectors.toList());
+    public static List<String> generateDnsName(List<String> host, String serviceRoleFullName,String namespace) {
+        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + namespace +".svc.cluster.local").collect(Collectors.toList());
     }
 }

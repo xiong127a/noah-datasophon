@@ -92,7 +92,7 @@ Watermark 的生成策略可以自定义，通常需要结合对数据流延迟�
 1.  **程序提交**: 用户通过 Flink 客户端 (CLI 或 Web UI) 将 Flink 作业 (JobGraph) 提交给 Dispatcher。
 2.  **JobMaster 创建**: Dispatcher 为每个作业启动一个 JobMaster。
 3.  **资源请求**: JobMaster 向 ResourceManager 请求所需的 Task Slot。
-4.  **资源分配**: ResourceManager (如果使用 Standalone 模式，则自身管理；如果使用 YARN/K8s，则向它们请求) 将可用的 Task Slot 分配给 JobMaster。
+4.  **资源分配**: ResourceManager (如果使用 Standalone 模式，则自身管理；如果使用 YARN/Kubernetes，则向它们请求) 将可用的 Task Slot 分配给 JobMaster。
 5.  **Task 部署**: JobMaster 将计算任务 (Task) 部署到分配到的 TaskManager 的 Task Slot 上。
 6.  **Task 执行**: TaskManager 上的 Task 执行数据处理逻辑，包括从 Source 读取数据、进行转换、通过网络交换数据、将结果写入 Sink。
 7.  **状态管理与 Checkpoint**: Task 在执行过程中管理其状态，并参与由 JobMaster 协调的 Checkpoint 过程。

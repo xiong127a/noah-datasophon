@@ -13,7 +13,7 @@
       "label": "ZkServer",
       "roleType": "master",
       "cardinality": "1+",
-      "logFile": "logs/zookeeper-root-server-${host}.out",
+      "logFile": "logs/zookeeper-root-server-${hostname}.out",
       "jmxPort": 2191,
       "startRunner": {
         "timeout": "60",
@@ -234,10 +234,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}"
     },
     {
       "name": "zkRealm",

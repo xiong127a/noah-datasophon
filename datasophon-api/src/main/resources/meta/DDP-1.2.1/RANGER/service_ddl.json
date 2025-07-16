@@ -15,7 +15,7 @@
             "label": "RangerAdmin",
             "roleType": "master",
             "cardinality": "1",
-            "logFile": "/var/log/ranger/admin/ranger-admin-${host}-root.log",
+            "logFile": "/var/log/ranger/admin/ranger-admin-${hostname}-root.log",
             "jmxPort": 6081,
             "sortNum": 1,
             "startRunner": {
@@ -42,7 +42,7 @@
             "externalLink": {
                 "name": "RangerAdmin Ui",
                 "label": "RangerAdmin Ui",
-                "url": "http://${host}:6080"
+                "url": "http://${hostname}:6080"
             }
         },
         {
@@ -54,7 +54,7 @@
                 "group": "root"
             },
             "cardinality": "1",
-            "logFile": "ranger-2.1.0-usersync/logs/usersync-${host}-root.log",
+            "logFile": "ranger-2.1.0-usersync/logs/usersync-${hostname}-root.log",
             "jmxPort": "",
             "sortNum": 2,
             "startRunner": {
@@ -95,7 +95,7 @@
                 "group": "root"
             },
             "cardinality": "1",
-            "logFile": "ranger-2.1.0-kms/log/ranger-kms-${host}-root.log",
+            "logFile": "ranger-2.1.0-kms/log/ranger-kms-${hostname}-root.log",
             "jmxPort": "",
             "sortNum": 3,
             "startRunner": {
@@ -421,10 +421,10 @@
             "required": true,
             "configType": "map",
             "type": "input",
-            "value": "${host}",
+            "value": "${hostname}",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "spnegoPrincipal",
@@ -512,10 +512,10 @@
             "required": true,
             "configType": "map",
             "type": "input",
-            "value": "dbks://http@${host}:9292/kms",
+            "value": "dbks://http@${hostname}:9292/kms",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "dbks://http@${host}:9292/kms"
+            "defaultValue": "dbks://http@${hostname}:9292/kms"
         },
         {
             "name": "hadoopKmsAuthenticationKerberosNameRules",

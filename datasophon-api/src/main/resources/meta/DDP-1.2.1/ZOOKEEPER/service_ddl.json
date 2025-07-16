@@ -13,7 +13,7 @@
       "label": "ZkServer",
       "roleType": "master",
       "cardinality": "1+",
-      "logFile": "logs/zookeeper-root-server-${host}.out",
+      "logFile": "logs/zookeeper-root-server-${hostname}.out",
       "jmxPort": 2191,
       "startRunner": {
         "timeout": "60",
@@ -99,38 +99,39 @@
         ]
       },
       {
-        "filename": "pvc.config.k8s",
+        "filename": "kubernetes.config.persistent-volume-claims",
         "fileDescription": "ZooKeeper Kubernetes存储配置，定义持久卷存储类和挂载路径",
         "configFormat": "properties",
         "configTargetRoles": "ZkServer",
         "outputDirectory": "",
         "includeParams": [
-          "storageClasses",
-          "mountPath",
-          "storage"
+          "storage_classes",
+          "mount_path",
+          "storage_size"
         ]
       },
       {
-        "filename": "svc.config.k8s",
+        "filename": "kubernetes.config.services",
         "fileDescription": "ZooKeeper Kubernetes网络服务配置，定义端口",
         "configFormat": "properties",
         "configTargetRoles": "ZkServer",
         "outputDirectory": "",
         "includeParams": [
-          "portMappings"
+          "node_port_mappings",
+          "cluster_port_mappings"
         ]
       },
       {
-        "filename": "resources.config.k8s",
+        "filename": "kubernetes.config.resources",
         "fileDescription": "cpu、memory系统资源",
         "configFormat": "properties",
         "configTargetRoles": "ZkServer",
         "outputDirectory": "",
         "includeParams": [
-          "requestsMemory",
-          "requestsCpu",
-          "limitsMemory",
-          "limitsCpu"
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
         ]
       }
     ]
@@ -145,100 +146,148 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "2181"
+      "defaultValue": "2181",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
-      "name": "storageClasses",
+      "name": "storage_classes",
       "label": "存储类名称",
       "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
-      "configType": "k8s",
+      "configType": "kubernetes",
       "required": false,
       "type": "input",
       "value": "nfs-client",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "nfs-client"
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
     },
     {
-      "name": "mountPath",
+      "name": "mount_path",
       "label": "挂载路径",
       "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为ZooKeeper的数据存储位置（如/data/zookeeper）的父目录",
-      "configType": "k8s",
+      "configType": "kubernetes",
       "required": false,
       "type": "input",
       "value": "/data",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "/data"
-    },{
-      "name": "storage",
-      "label": "存储大小",
-      "description": "持久卷的存储大小，需与存储类配合使用。例如：10Gi",
-      "configType": "k8s",
-      "required": false,
-      "type": "input",
-      "value": "10Gi",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "10Gi"
-    },{
-      "name": "requestsMemory",
-      "label": "内存请求值",
-      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
-      "configType": "k8s",
-      "required": false,
-      "type": "input",
-      "value": "2Gi",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "2Gi"
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
     },
     {
-      "name": "requestsCpu",
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：10Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "10",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "10",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
       "label": "CPU 请求值",
       "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
-      "configType": "k8s",
+      "configType": "kubernetes",
       "required": false,
       "type": "input",
       "value": "1",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "1"
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
     },
     {
-      "name": "limitsMemory",
+      "name": "limits_memory",
       "label": "内存限制值",
       "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
-      "configType": "k8s",
+      "configType": "kubernetes",
       "required": false,
       "type": "input",
-      "value": "4Gi",
+      "value": "4",
+      "unit": "Gi",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "4Gi"
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
     },
     {
-      "name": "limitsCpu",
+      "name": "limits_cpu",
       "label": "CPU 限制值 (limits.cpu)",
       "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
-      "configType": "k8s",
+      "configType": "kubernetes",
       "required": false,
       "type": "input",
       "value": "2",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "2"
-    },{
-      "name": "portMappings",
-      "label": "端口映射 (portMappings)",
-      "description": "定义容器与主机之间的端口映射关系，用于网络通信。key 表示 port 和 targetPort（port 和 targetPort 使用同一个端口），value 表示 nodePort。如果 value 为空，则表示不开放 nodePort。",
-      "configType": "k8s",
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：2181:32181表示将容器的2181端口映射到集群节点的32181端口。",
+      "configType": "kubernetes",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"2181": "32181", "2888": "2888", "3888": "3888"}],
+      "value": [{"2181": "32181"}],
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": [{"2181": "32181", "2888": "2888", "3888": "3888"}]
+      "hidden": false,
+      "defaultValue": [{"2181": "32181"}],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"2888": "2888", "3888": "3888"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"2888": "2888", "3888": "3888"}],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     },
     {
       "name": "dataDir",
@@ -250,7 +299,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data/zookeeper"
+      "defaultValue": "/data/zookeeper",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "dataLogDir",
@@ -262,7 +314,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data/log"
+      "defaultValue": "/data/zookeeper/log",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "tickTime",
@@ -273,7 +328,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "2000"
+      "defaultValue": "2000",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "initLimit",
@@ -284,7 +342,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "10"
+      "defaultValue": "10",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "syncLimit",
@@ -295,7 +356,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "5"
+      "defaultValue": "5",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "zkHeapSize",
@@ -310,7 +374,12 @@
       "unit": "GB",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "1"
+      "defaultValue": "1",
+      "configCategory": "file",
+      "configGroup": "java.env",
+      "configLevel": "advanced",
+      "templateName": "zk-env.ftl",
+      "displayName": "java.env template"
     },
     {
       "name": "skipACL",
@@ -321,7 +390,10 @@
       "value": "yes",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "yes"
+      "defaultValue": "yes",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "enableKerberos",
@@ -345,7 +417,10 @@
       "value": "org.apache.zookeeper.server.auth.SASLAuthenticationProvider",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "org.apache.zookeeper.server.auth.SASLAuthenticationProvider"
+      "defaultValue": "org.apache.zookeeper.server.auth.SASLAuthenticationProvider",
+      "configCategory": "file",
+      "configGroup": "jaas.conf",
+      "configLevel": "advanced"
     },
     {
       "name": "jaasLoginRenew",
@@ -358,7 +433,10 @@
       "value": "3600000",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "3600000"
+      "defaultValue": "3600000",
+      "configCategory": "file",
+      "configGroup": "jaas.conf",
+      "configLevel": "advanced"
     },
     {
       "name": "hostname",
@@ -368,10 +446,13 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "${host}",
+      "value": "${hostname}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${host}"
+      "defaultValue": "${hostname}",
+      "configCategory": "file",
+      "configGroup": "jaas.conf",
+      "configLevel": "advanced"
     },
     {
       "name": "zkRealm",
@@ -384,7 +465,10 @@
       "value": "${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${realm}"
+      "defaultValue": "${realm}",
+      "configCategory": "file",
+      "configGroup": "jaas.conf",
+      "configLevel": "advanced"
     },
     {
       "name": "zkSecurity",
@@ -397,7 +481,10 @@
       "value": "-Djava.security.auth.login.config=${ZOOKEEPER_HOME}/conf/jaas.conf",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "-Djava.security.auth.login.config=${ZOOKEEPER_HOME}/conf/jaas.conf"
+      "defaultValue": "-Djava.security.auth.login.config=${ZOOKEEPER_HOME}/conf/jaas.conf",
+      "configCategory": "file",
+      "configGroup": "java.env",
+      "configLevel": "advanced"
     },
     {
       "name": "server.1",
@@ -409,7 +496,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "ZkServer",
+      "configLevel": "advanced"
     },
     {
       "name": "server.2",
@@ -421,7 +511,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "ZkServer",
+      "configLevel": "advanced"
     },
     {
       "name": "server.3",
@@ -433,7 +526,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "ZkServer",
+      "configLevel": "advanced"
     },
     {
       "name": "server.4",
@@ -445,7 +541,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "server.5",
@@ -457,7 +556,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "advanced"
     },
     {
       "name": "custom.zoo.cfg",
@@ -469,7 +571,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "zoo.cfg",
+      "configLevel": "custom"
     }
   ]
 }

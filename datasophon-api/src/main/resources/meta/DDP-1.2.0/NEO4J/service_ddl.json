@@ -37,7 +37,7 @@
       "externalLink": {
         "name": "neo4j UI",
         "label": "neo4j UI",
-        "url": "http://${host}:7474"
+        "url": "http://${hostname}:7474"
       }
     }
   ],

@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: mysql-pod
 spec:
-  hostNetwork: true  # 使用宿主机的网络
+  hostNetwork: false  # 使用宿主机的网络
   nodeSelector:
     kubernetes.io/hostname: 
   tolerations:

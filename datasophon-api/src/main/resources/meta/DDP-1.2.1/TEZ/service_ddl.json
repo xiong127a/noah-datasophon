@@ -49,7 +49,7 @@
       "externalLink": {
         "name": "TEZServer UI",
         "label": "TEZServer UI",
-        "url": "http://${host}:9998/tez/#/"
+        "url": "http://${hostname}:9998/tez/#/"
       }
     }
   ],
@@ -101,7 +101,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${host}:6080/tez/"
+      "defaultValue": "http://${hostname}:6080/tez/"
     },
     {
       "name": "tez.history.logging.service.class",

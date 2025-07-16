@@ -6,6 +6,6 @@ hazelcast-client:
     cluster-members:
 <#list itemList as item>
     <#list item.value?split(",") as host>
-      - ${host}:${port}
+      - ${hostname}:${port}
     </#list>
 </#list>

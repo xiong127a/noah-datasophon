@@ -28,6 +28,28 @@ const options = {
       redirect: '/service-manage',
       children: [
         {
+          path: 'datasophon-overview',
+          name: 'Datasophon总览',
+          meta: {
+            notAlive: true,
+            icon: 'datasophon-overview',
+            isCluster: 'isCluster',
+          },
+          component: () => import('@/pages/overview/datasophon'),
+          children: [],
+        },
+        {
+          path: 'overview',
+          name: '集群总览',
+          meta: {
+            notAlive: true,
+            icon: 'over-view',
+            isCluster: 'isCluster',
+          },
+          component: () => import('@/pages/overview/index'),
+          children: [],
+        },
+        {
           path: 'service-manage',
           name: '主页',
           meta: { 

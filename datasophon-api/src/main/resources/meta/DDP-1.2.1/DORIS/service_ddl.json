@@ -40,7 +40,7 @@
       "externalLink": {
         "name": "FE UI",
         "label": "FE UI",
-        "url": "http://${host}:18030"
+        "url": "http://${hostname}:18030"
       }
     },
     {

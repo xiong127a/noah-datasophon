@@ -23,9 +23,9 @@ import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.FileUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.worker.utils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +45,7 @@ public class LogActor extends UntypedActor {
             HashMap<String, String> paramMap = new HashMap<>();
             String hostName = InetAddress.getLocalHost().getHostName();
             paramMap.put("${user}", "root");
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             String logFileName =
                     PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap, Constants.REGEX_VARIABLE);
 

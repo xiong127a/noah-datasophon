@@ -1,0 +1,35 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: wordcount
+  namespace: datasophon
+spec:
+  image: harbor.norintech.com/bdp/flink:v1.16.2
+  flinkVersion: v1_16
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+  serviceAccount: flink-operator
+  podTemplate:
+    spec:
+      containers:
+        - name: flink-main-container
+          volumeMounts:
+            - name: input-volume
+              mountPath: /opt/flink/input
+      volumes:
+        - name: input-volume
+          configMap:
+            name: wordcount-input
+  jobManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+  job:
+    jarURI: local:///opt/flink/examples/streaming/WordCount.jar
+    args: ["--input", "/opt/flink/input/input.txt", "--output", "/tmp/output.txt"]
+    parallelism: 2
+    upgradeMode: stateless

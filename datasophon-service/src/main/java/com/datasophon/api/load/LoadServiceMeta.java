@@ -32,6 +32,7 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.serviceCacheSyncActor;
 import com.datasophon.api.service.*;
 import com.datasophon.api.utils.CommonUtils;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
@@ -55,7 +56,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
-import static com.datasophon.api.utils.CommonUtils.buildNameToRoleMap;
 import static com.datasophon.common.Constants.GENERAL;
 
 @Component
@@ -258,7 +258,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         FrameServiceEntity serviceEntity = frameServiceService.getServiceByFrameIdAndServiceName(
                 frameInfo.getId(), serviceName);
         List<ServiceConfig> parameters = serviceInfo.getParameters();
-        Map<String, String> nameToRoleMap = buildNameToRoleMap(configFileMap);
+        Map<String, String> nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(configFileMap);
 
         parameters.stream()
                 .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles())) // 只处理
