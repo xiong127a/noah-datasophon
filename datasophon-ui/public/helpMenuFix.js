@@ -9,14 +9,11 @@
   // 添加到窗口加载完成后执行
   window.addEventListener('load', function() {
     try {
-      console.log('强制添加告警管理帮助菜单...');
-      
       setTimeout(function() {
         try {
           // 从本地存储获取菜单数据
           const menuDataStr = localStorage.getItem('menuData');
           if (!menuDataStr) {
-            console.warn('未找到菜单数据');
             return;
           }
           
@@ -26,7 +23,6 @@
           const alarmManageModule = menuData.find(item => item.path === 'alarm-manage');
           
           if (!alarmManageModule) {
-            console.warn('未找到告警管理模块');
             return;
           }
           
@@ -34,8 +30,6 @@
           const hasHelpMenu = alarmManageModule.children.some(item => item.path === 'help');
           
           if (hasHelpMenu) {
-            console.log('告警管理帮助菜单已存在');
-            
             // 如果已存在，确保它在最后位置
             const helpMenuIndex = alarmManageModule.children.findIndex(item => item.path === 'help');
             if (helpMenuIndex !== -1 && helpMenuIndex !== alarmManageModule.children.length - 1) {
@@ -43,14 +37,12 @@
               const helpMenuItem = alarmManageModule.children.splice(helpMenuIndex, 1)[0];
               // 添加到末尾
               alarmManageModule.children.push(helpMenuItem);
-              console.log('已将帮助菜单项移动到最后位置');
               
               // 更新本地存储
               localStorage.setItem('menuData', JSON.stringify(menuData));
               
               // 如果当前在告警管理页面，刷新页面
               if (window.location.pathname.includes('/alarm-manage')) {
-                console.log('正在告警管理页面，刷新页面应用新菜单...');
                 setTimeout(() => {
                   window.location.reload();
                 }, 1000);
@@ -74,11 +66,9 @@
           
           // 更新本地存储
           localStorage.setItem('menuData', JSON.stringify(menuData));
-          console.log('成功添加告警管理帮助菜单');
           
           // 如果当前在告警管理页面，刷新页面
           if (window.location.pathname.includes('/alarm-manage')) {
-            console.log('正在告警管理页面，刷新页面应用新菜单...');
             setTimeout(() => {
               window.location.reload();
             }, 1000);

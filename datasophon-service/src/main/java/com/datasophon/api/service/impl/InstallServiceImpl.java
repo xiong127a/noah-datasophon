@@ -255,21 +255,68 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public Result rehostCheck(
             Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
-        // 开启主机校验
+
+        // 获取集群信息和部署模式
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String clusterCode = clusterInfo.getClusterCode();
+        String depType = clusterInfo.getDepType();
+
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        for (String hostname : hostnames.split(",")) {
-            if (map.containsKey(hostname)) {
-                ActorRef hostActor = ActorUtils.getLocalActor(HostConnectActor.class, "hostActor-" + hostname);
-                HostInfo hostInfo = map.get(hostname);
-                hostInfo.setCheckResult(
-                        new CheckResult(
-                                Status.START_CHECK_HOST.getCode(),
-                                Status.START_CHECK_HOST.getMsg()));
-                hostActor.tell(new HostCheckCommand(hostInfo, clusterCode), ActorRef.noSender());
+
+        if (Constants.KUBERNETES_MODE.equals(depType)) {
+            // K8S模式：直接更新校验结果，不进行SSH连接测试
+            logger.info("Kubernetes mode detected, updating host check results directly");
+
+            for (String hostname : hostnames.split(",")) {
+                if (map.containsKey(hostname)) {
+                    HostInfo hostInfo = map.get(hostname);
+
+                    // 检查主机是否已受管
+                    ClusterHostDO existingHost = hostService.getClusterHostByHostname(hostname);
+
+                    if (existingHost != null && existingHost.getClusterId().equals(clusterId)) {
+                        // 主机已在当前集群中受管 - 重复添加
+                        hostInfo.setCheckResult(
+                                new CheckResult(
+                                        Status.CONNECTION_FAILED.getCode(),
+                                        "主机已在当前集群中受管，请勿重复添加"));
+                        logger.info("Host {} is already managed in current Kubernetes cluster {}",
+                                hostname, clusterId);
+                    } else if (existingHost != null) {
+                        // 主机已在其他集群中受管
+                        hostInfo.setCheckResult(
+                                new CheckResult(
+                                        Status.CONNECTION_FAILED.getCode(),
+                                        "主机已在其他集群中受管"));
+                        logger.info("Host {} is already managed in another cluster {}",
+                                hostname, existingHost.getClusterId());
+                    } else {
+                        // 主机未受管，可以添加
+                        hostInfo.setCheckResult(
+                                new CheckResult(
+                                        Status.CHECK_HOST_SUCCESS.getCode(),
+                                        Status.CHECK_HOST_SUCCESS.getMsg()));
+                        logger.info("Host {} is not managed in Kubernetes mode, can be added", hostname);
+                    }
+                }
+            }
+        } else {
+            // PVM模式：开启主机校验，使用Actor进行SSH连接测试
+            logger.info("PVM mode detected, starting SSH-based host check");
+
+            for (String hostname : hostnames.split(",")) {
+                if (map.containsKey(hostname)) {
+                    ActorRef hostActor = ActorUtils.getLocalActor(HostConnectActor.class, "hostActor-" + hostname);
+                    HostInfo hostInfo = map.get(hostname);
+                    hostInfo.setCheckResult(
+                            new CheckResult(
+                                    Status.START_CHECK_HOST.getCode(),
+                                    Status.START_CHECK_HOST.getMsg()));
+                    hostActor.tell(new HostCheckCommand(hostInfo, clusterCode), ActorRef.noSender());
+                }
             }
         }
+
         return Result.success();
     }
 
@@ -485,22 +532,41 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setClusterCode(clusterCode);
                 hostInfo.setCreateTime(new Date());
 
-                // 检查是否已受管
+                // 从K8S API获取的架构信息
+                hostInfo.setCpuArchitecture(k8sHost.getCpuArchitecture());
+
+                // K8S模式下检查主机受管状态
                 ClusterHostDO existingHost = hostService.getClusterHostByHostname(k8sHost.getHostname());
-                if (existingHost != null) {
+
+                if (existingHost != null && existingHost.getClusterId().equals(clusterId)) {
+                    // 主机已在当前集群中受管 - 重复添加
                     hostInfo.setManaged(true);
+                    hostInfo.setInstallState(InstallState.FAILED);
+                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                    hostInfo.setProgress(Constants.ONE_HUNDRRD);
+                    hostInfo.setCheckResult(
+                            new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
+                    logger.info("Host {} is already managed in current Kubernetes cluster {}",
+                            k8sHost.getHostname(), clusterId);
+                } else if (existingHost != null) {
+                    // 主机已在其他集群中受管
+                    hostInfo.setManaged(true);
+                    hostInfo.setInstallState(InstallState.FAILED);
+                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                    hostInfo.setProgress(Constants.ONE_HUNDRRD);
+                    hostInfo.setCheckResult(
+                            new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
+                    logger.info("Host {} is already managed in another cluster {}",
+                            k8sHost.getHostname(), existingHost.getClusterId());
+                } else {
+                    // 主机未受管，K8S模式下校验成功，可以添加
+                    hostInfo.setManaged(false);
                     hostInfo.setInstallState(InstallState.SUCCESS);
                     hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
-                } else {
-                    hostInfo.setManaged(false);
-                    hostInfo.setInstallState(InstallState.RUNNING);
-                    hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                    hostInfo.setProgress(0);
-                    hostInfo.setCheckResult(
-                            new CheckResult(Status.START_CHECK_HOST.getCode(), Status.START_CHECK_HOST.getMsg()));
+                    logger.info("Host {} is not managed in Kubernetes mode, can be added", k8sHost.getHostname());
                 }
 
                 hostInfoList.add(hostInfo);

@@ -87,7 +87,7 @@ export default {
     }
   },
   mounted () {
-    console.log(this.setting, 'setting', this.clusterId)
+    // Component mounted
   },
   data() {
     return {

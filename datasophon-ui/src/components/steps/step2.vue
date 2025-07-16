@@ -155,23 +155,21 @@ export default {
         this.loading = false;
         this.dataSource = res.data;
         this.pagination.total = res.total;
-        if (res.code === 200 && this.depType==='Kubernetes'){
-          let data = JSON.parse(JSON.stringify(res.data))
-          data && data.forEach(e => {
-            if (e.checkResult.code ==='10001'){
-              e['CheckResult'] = e.checkResult
-              delete e.checkResult
-              let arr=[]
-              arr[0] = e
-              this.saveKubernetesHostApi(arr)
-            } 
-        })
+        
+        // For K8S, auto-select all successful hosts
+        if (this.depType === 'Kubernetes') {
+            const successfulHostnames = (res.data || [])
+                .filter(host => host.checkResult && (host.checkResult.code === 10001 || host.checkResult.code === '10001'))
+                .map(host => host.hostname);
+            this.selectedRowKeys = successfulHostnames;
         }
       });
     },
     // 三秒去刷一下
     pollingSearch() {
       this.getEnvironmentList(); // 先立马刷一次
+      if (this.depType === 'Kubernetes') return; // No polling for K8S
+
       let self = this;
       if (self.timer) clearInterval(self.timer);
       self.timer = setInterval(() => {
@@ -179,8 +177,59 @@ export default {
       }, global.intervalTime);
     },
     saveKubernetesHostApi (params){
-      this.$axiosJsonPost(global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, params).then((res) => {
-       });
+      this.$axiosJsonPost(global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, params)
+        .then((res) => {
+          if (res.code === 200) {
+            // 保存成功
+          } else {
+            console.warn('K8S主机轮询保存失败:', res.msg);
+          }
+        })
+        .catch((error) => {
+          console.warn('K8S主机轮询保存异常:', error);
+        });
+    },
+    // 获取所有校验成功的主机列表
+    getSuccessfulHosts() {
+      const successfulHosts = [];
+      
+      this.dataSource.forEach((host, index) => {
+        if (!host || typeof host !== 'object') {
+          return;
+        }
+        
+        const hostname = host.hostname;
+        const ip = host.ip;
+        
+        if (!hostname || !ip) {
+          return;
+        }
+        
+        // 检查是否被选中
+        const isSelected = this.selectedRowKeys.includes(hostname);
+        
+        // 检查校验状态 - 使用正确的字段结构
+        const checkResult = host.checkResult;
+        const isCheckSuccessful = checkResult && (
+          checkResult.code === 10001 || 
+          checkResult.code === '10001'
+        );
+        
+        // 只有选中且校验成功的主机才加入列表
+        if (isSelected && isCheckSuccessful) {
+          successfulHosts.push({
+            hostname: hostname,
+            ip: ip,
+            sshUser: host.sshUser || this.steps1Data.sshUser || 'root',
+            sshPort: host.sshPort || this.steps1Data.sshPort || 22,
+            clusterId: this.clusterId,
+            managed: host.managed || false,
+            checkResult: checkResult
+          });
+        }
+      });
+      
+      return successfulHosts;
     },
     //表格选择
     onSelectChange(selectedRowKeys) {

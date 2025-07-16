@@ -88,7 +88,7 @@ export default {
   },
   watch: {
     currentSteps(val) {
-      console.log(val, "asdsdsa");
+      // 当从其他步骤返回到步骤1时，不清空数据（保留恢复机制）
     },
     stepsType: {
       handler (val) {
@@ -97,6 +97,12 @@ export default {
 
       },
       immediate: true
+    }
+  },
+  mounted() {
+    if (this.currentSteps === 1 && this.clusterId === undefined) {
+      this.steps1Data.kubeConfigContent = undefined;
+      this.steps1Data.namespace = undefined;
     }
   },
   computed: {
@@ -172,12 +178,29 @@ export default {
       }
       if (this.stepsNumber === 2) {
         const self = this;
+        
+        // K8S模式下先进行兜底保存
+        if (this.depType === 'Kubernetes') {
+          const successfulHosts = this.$refs.steps2Ref.getSuccessfulHosts();
+          
+          // 强制测试接口调用（无论是否有主机）
+          try {
+            const saveResult = await this.$axiosJsonPost(
+              global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, 
+              successfulHosts
+            );
+          } catch (error) {
+            // 不阻断流程，因为可能已经在轮询中保存过了
+          }
+        }
+        
+        // 然后执行原有的完成状态检查
         this.$refs.steps2Ref.hostCheckCompleted((res) => {
           this.nextLoading = false;
           flag = res.hostCheckCompleted;
           if (!flag) self.$message.warning("存在为未检验成功的主机");
           if (!flag) return false;
-          this.currentStepsAdd();
+          self.currentStepsAdd();
         });
       }
       if (this.stepsNumber === 3) {

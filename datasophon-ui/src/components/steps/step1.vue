@@ -82,25 +82,25 @@
           <a-form-item label="命名空间">
             <div class="namespace-selector-container">
               <!-- 选择命名空间模式 -->
-              <a-select
+            <a-select
                 v-if="!isCreatingNewNamespace"
-                v-decorator="[
-                  'namespace',
-                  { 
-                    rules: [{ required: true, message: '请选择命名空间!' }] 
-                  }
-                ]"
+              v-decorator="[
+                'namespace',
+                { 
+                  rules: [{ required: true, message: '请选择命名空间!' }] 
+                }
+              ]"
                 :placeholder="!kubeConfigContent ? '请先输入Kubernetes配置' : '请选择或搜索命名空间'"
-                :loading="namespacesLoading"
+              :loading="namespacesLoading"
                 :disabled="!kubeConfigContent || !kubeConfigContent.trim()"
                 show-search
                 :filter-option="false"
                 @search="onNamespaceSearch"
                 @select="onNamespaceSelect"
-                @click="onNamespaceDropdownClick"
-                @focus="onNamespaceDropdownClick"
+              @click="onNamespaceDropdownClick"
+              @focus="onNamespaceDropdownClick"
                 :dropdown-match-select-width="true"
-              >
+            >
                 <a-select-option key="__create_new__" value="__create_new__">
                   <div class="create-namespace-option">
                     <a-icon type="plus" />
@@ -115,20 +115,20 @@
                   :key="ns" 
                   :value="ns"
                 >
-                  {{ ns }}
-                </a-select-option>
-              </a-select>
-              
+                {{ ns }}
+              </a-select-option>
+            </a-select>
+          
               <!-- 创建命名空间模式 -->
-              <a-input
+            <a-input
                 v-if="isCreatingNewNamespace"
-                v-decorator="[
+              v-decorator="[
                   'namespace',
                   { 
                     rules: [{ required: true, message: '请输入命名空间名称!' }] 
                   }
-                ]"
-                placeholder="请输入新的命名空间名称"
+              ]"
+              placeholder="请输入新的命名空间名称"
                 @change="onNamespaceInputChange"
               >
                 <a-icon slot="suffix" type="close-circle" @click="cancelCreateNamespace" style="cursor: pointer; color: #ccc;" />
@@ -245,37 +245,89 @@ export default {
     }
   },
   
+  watch: {
+    steps1: {
+      handler(newVal) {
+        if (newVal && newVal.$el) {
+          if (this.isK8sCluster) {
+            this.restoreStateFromProps();
+          }
+        }
+      },
+      deep: true,
+      immediate: true
+    }
+  },
+  
   async mounted() {
     await this.loadClusterInfo();
   },
   
   methods: {
-    async loadClusterInfo() {
+
+    // 从props恢复状态的方法
+    async restoreStateFromProps() {
       try {
-        const res = await this.$axiosGet(clusterAPI.getClusterDetail + '/' + this.clusterId);
-        if (res.code === 200) {
-          this.clusterInfo = res.data;
-          this.isK8sCluster = res.data.depType === 'Kubernetes';
-          
-          // 如果是K8S集群且已有配置，设置配置内容
-          if (this.isK8sCluster && res.data.kubeConfig) {
-            this.kubeConfigContent = res.data.kubeConfig;
-            this.form.setFieldsValue({
-              kubeConfigContent: res.data.kubeConfig
-            });
-            // 不自动加载命名空间，等用户点击下拉框时再加载
-          }
-        }
+        await this.waitForFormFieldsAndRestore();
       } catch (error) {
-        console.error('加载集群信息失败:', error);
-        this.$message.error('加载集群信息失败');
+        this.doRestoreFormValues();
       }
     },
     
-    async loadNamespaces(kubeConfig) {
+    // 等待表单字段准备好并恢复状态
+    async waitForFormFieldsAndRestore(attempts = 0) {
+      const maxAttempts = 10;
       
+      if (attempts >= maxAttempts) {
+        this.doRestoreFormValues();
+        return;
+      }
+
+      const kubeConfigField = this.form.getFieldValue('kubeConfigContent');
+      const namespaceField = this.form.getFieldValue('namespace');
+      
+      if (kubeConfigField !== undefined && namespaceField !== undefined) {
+        this.doRestoreFormValues();
+      } else {
+        setTimeout(() => {
+          this.waitForFormFieldsAndRestore(attempts + 1);
+        }, 100);
+      }
+    },
+    
+    // 执行表单值恢复
+    doRestoreFormValues() {
+      const hasValidKubeConfig = this.steps1.kubeConfigContent && this.steps1.kubeConfigContent.trim();
+      const hasValidNamespace = this.steps1.namespace && this.steps1.namespace.trim();
+      
+      if (!hasValidKubeConfig && !hasValidNamespace) {
+        return;
+      }
+
+      const formValues = {};
+      
+      if (hasValidKubeConfig) {
+        this.kubeConfigContent = this.steps1.kubeConfigContent;
+        formValues.kubeConfigContent = this.steps1.kubeConfigContent;
+      }
+      
+      if (hasValidNamespace) {
+        this.selectedNamespace = this.steps1.namespace;
+        formValues.namespace = this.steps1.namespace;
+      }
+      
+      if (Object.keys(formValues).length > 0) {
+        this.form.setFieldsValue(formValues);
+        
+        if (hasValidKubeConfig) {
+          this.loadNamespaces(this.steps1.kubeConfigContent, true);
+        }
+      }
+    },
+    
+    // 加载命名空间列表但不覆盖用户选择的命名空间
+    async loadNamespacesWithoutOverride(kubeConfig, selectedNamespace) {
       if (!kubeConfig) {
-        console.warn('kubeConfig为空，不调用API');
         return;
       }
       
@@ -287,48 +339,120 @@ export default {
         
         if (res.code === 200) {
           this.namespaces = res.data.namespaces || [];
-          const defaultNamespace = res.data.defaultNamespace || 'datasophon';
           
-          // 检查默认命名空间是否存在于列表中
-          if (this.namespaces.includes(defaultNamespace)) {
-            // 默认命名空间存在，直接选择
-            this.selectedNamespace = defaultNamespace;
+          // 检查用户选择的命名空间是否存在
+          if (this.namespaces.includes(selectedNamespace)) {
+            this.selectedNamespace = selectedNamespace;
             this.isCreatingNewNamespace = false;
             this.customNamespaceInput = '';
-            // 使用 $nextTick 确保DOM更新后再设置表单值
             this.$nextTick(() => {
               this.form.setFieldsValue({
-                namespace: defaultNamespace
+                namespace: selectedNamespace
               });
             });
           } else {
-            // 默认命名空间不存在，进入创建模式
             this.isCreatingNewNamespace = true;
-            this.customNamespaceInput = defaultNamespace;
+            this.customNamespaceInput = selectedNamespace;
             this.selectedNamespace = '';
-            // 使用 $nextTick 确保DOM更新后再设置表单值
             this.$nextTick(() => {
               this.form.setFieldsValue({
-                namespace: defaultNamespace
+                namespace: selectedNamespace
               });
             });
           }
           
-          // 显示集群连接成功信息
+          this.$nextTick(() => {
+            this.form.setFieldsValue({
+              namespace: selectedNamespace
+            });
+          });
+          
           const clusterVersion = res.data.clusterVersion || '未知版本';
-          this.$message.success(`连接成功! 集群版本: ${clusterVersion}, 发现 ${this.namespaces.length} 个命名空间`);
         } else {
           this.$message.error('获取命名空间失败: ' + res.msg);
           this.namespaces = [];
           this.selectedNamespace = '';
         }
       } catch (error) {
-        console.error('获取命名空间失败:', error);
         this.$message.error('连接Kubernetes集群失败');
         this.namespaces = [];
         this.selectedNamespace = '';
       } finally {
         this.namespacesLoading = false;
+      }
+    },
+    
+    async loadClusterInfo() {
+      if (!this.clusterId) return;
+      
+      try {
+        const res = await this.$axiosJsonPost(clusterAPI.getClusterDetail + '/' + this.clusterId);
+        if (res.code === 200) {
+          this.clusterInfo = res.data;
+          this.isK8sCluster = res.data.depType === 'Kubernetes';
+          
+          // 如果是K8S集群且已有配置，设置配置内容
+          // 但是如果props已经被清空（首次进入配置），则不恢复旧配置
+          const propsCleared = (!this.steps1.kubeConfigContent || this.steps1.kubeConfigContent === undefined) && 
+                               (!this.steps1.namespace || this.steps1.namespace === undefined);
+          
+          if (this.isK8sCluster && res.data.kubeConfig && !propsCleared) {
+            this.kubeConfigContent = res.data.kubeConfig;
+            this.form.setFieldsValue({kubeConfigContent: res.data.kubeConfig});
+            
+            if (res.data.namespace) {
+              this.selectedNamespace = res.data.namespace;
+              this.form.setFieldsValue({namespace: res.data.namespace});
+            }
+            
+            this.restoreStateFromProps();
+          } else if (this.isK8sCluster && propsCleared) {
+            this.clearConfig();
+          }
+        } else {
+          if (this.isK8sCluster) {
+            this.clearConfig();
+          }
+        }
+      } catch (error) {
+        console.error('加载集群信息失败:', error);
+        this.$message.error('加载集群信息失败');
+      }
+    },
+    
+    async loadNamespaces(kubeConfig, preserveSelection = false) {
+      if (!kubeConfig || kubeConfig.trim() === '') {
+        return;
+      }
+
+      try {
+        const response = await this.$axiosJsonPost(clusterAPI.getKubernetesNamespaces + '/' + this.clusterId, {
+          kubeConfig: kubeConfig
+        });
+
+        if (response.code === 200) {
+          this.namespaces = response.data.namespaces || [];
+          
+          if (preserveSelection && this.selectedNamespace) {
+            const namespaceExists = this.namespaces.some(ns => ns.name === this.selectedNamespace);
+            if (namespaceExists) {
+              this.form.setFieldsValue({namespace: this.selectedNamespace});
+              return;
+            }
+          }
+          
+          this.kubernetesConnected = true;
+          this.kubernetesMessage = `连接成功! 集群版本: ${response.data.clusterVersion || 'Unknown'}, 发现 ${this.namespaces.length} 个命名空间`;
+          this.form.setFieldsValue({namespace: this.selectedNamespace});
+        } else {
+          this.kubernetesConnected = false;
+          this.kubernetesMessage = response.data.msg || '连接失败';
+          this.namespaces = [];
+        }
+      } catch (error) {
+        this.kubernetesConnected = false;
+        this.kubernetesMessage = `连接失败: ${error.message}`;
+        this.namespaces = [];
       }
     },
     
@@ -338,10 +462,11 @@ export default {
     
     clearConfig() {
       this.kubeConfigContent = '';
-      this.namespaces = [];
       this.selectedNamespace = '';
-      this.isCreatingNewNamespace = false;
-      this.customNamespaceInput = '';
+      this.namespaces = [];
+      this.kubernetesConnected = false;
+      this.kubernetesMessage = '';
+      
       this.$nextTick(() => {
         this.form.setFieldsValue({
           kubeConfigContent: '',
@@ -400,6 +525,7 @@ export default {
     
     async onKubeConfigChange(e) {
       const content = e.target.value;
+      
       this.kubeConfigContent = content;
       // 配置变化时重置命名空间状态
       if (!content.trim()) {
@@ -408,8 +534,8 @@ export default {
         this.isCreatingNewNamespace = false;
         this.customNamespaceInput = '';
         this.$nextTick(() => {
-          this.form.setFieldsValue({
-            namespace: ''
+        this.form.setFieldsValue({
+          namespace: ''
           });
         });
       }
@@ -422,10 +548,10 @@ export default {
         await this.loadNamespaces(this.kubeConfigContent);
       } else {
         if (!this.kubeConfigContent) {
-          console.warn('kubeConfigContent为空');
+          return;
         }
         if (this.kubeConfigContent && !this.kubeConfigContent.trim()) {
-          console.warn('kubeConfigContent只包含空白字符');
+          return;
         }
       }
     },
@@ -450,7 +576,7 @@ export default {
       } else {
         this.isCreatingNewNamespace = false;
         this.customNamespaceInput = '';
-        this.selectedNamespace = value;
+      this.selectedNamespace = value;
         // 确保表单值被正确设置
         this.$nextTick(() => {
           this.form.setFieldsValue({

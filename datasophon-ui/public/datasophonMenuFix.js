@@ -9,14 +9,11 @@
   // 添加到窗口加载完成后执行
   window.addEventListener('load', function() {
     try {
-      console.log('强制更新Datasophon总览菜单...');
-      
       setTimeout(function() {
         try {
           // 从本地存储获取菜单数据
           const menuDataStr = localStorage.getItem('menuData');
           if (!menuDataStr) {
-            console.warn('未找到菜单数据');
             return;
           }
           
@@ -43,7 +40,6 @@
               item.meta.icon = 'datasophon-overview';
               item.name = 'Datasophon总览';
               updated = true;
-              console.log('已更新Datasophon总览菜单图标');
             }
             
             if (item.path === 'overview') {
@@ -59,24 +55,19 @@
             // 在集群总览前插入
             menuData.splice(clusterIndex, 0, datasophonOverviewItem);
             updated = true;
-            console.log('已调整菜单顺序，Datasophon总览现在在第一位');
           }
           
           if (updated) {
             // 更新本地存储
             localStorage.setItem('menuData', JSON.stringify(menuData));
-            console.log('成功更新菜单数据');
             
             // 如果当前在相关页面，刷新页面
             if (window.location.pathname.includes('/datasophon-overview') || 
                 window.location.pathname.includes('/overview')) {
-              console.log('正在总览页面，刷新页面应用新菜单...');
               setTimeout(() => {
                 window.location.reload();
               }, 500);
             }
-          } else {
-            console.warn('未找到需要更新的菜单项');
           }
         } catch (error) {
           console.error('强制更新菜单失败:', error);
