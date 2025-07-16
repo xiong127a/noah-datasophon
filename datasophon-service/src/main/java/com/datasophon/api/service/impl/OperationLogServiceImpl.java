@@ -29,7 +29,8 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
                 .isNotNull(OperationLog::getClusterId)
                 .eq(StrUtil.isNotBlank(param.getOperationModule()), OperationLog::getOperationModule, param.getOperationModule())
                 .eq(StrUtil.isNotBlank(param.getOperateUser()), OperationLog::getOperateUser, param.getOperateUser())
-                .eq(StrUtil.isNotBlank(param.getServiceName()), OperationLog::getServiceName, param.getServiceName());
+                .eq(StrUtil.isNotBlank(param.getServiceName()), OperationLog::getServiceName, param.getServiceName())
+                .orderByDesc(OperationLog::getId);
 
         IPage<OperationLog> page = page(mPage, query);
         List<OperationLog> records = page.getRecords();
