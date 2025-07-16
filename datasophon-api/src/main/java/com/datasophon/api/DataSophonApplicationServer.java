@@ -27,7 +27,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.event.EventListener;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -42,19 +46,31 @@ import java.security.NoSuchAlgorithmException;
 @EnableScheduling
 public class DataSophonApplicationServer extends SpringBootServletInitializer {
 
+    private static final Logger logger = LoggerFactory.getLogger(DataSophonApplicationServer.class);
+
+    private static long startTime;
+
     public static void main(String[] args) {
+        startTime = System.currentTimeMillis();
+        logger.info("开始启动 DataSophon-API...");
         SpringApplication.run(DataSophonApplicationServer.class, args);
-		// add shutdown hook， close and shutdown resources
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        // add shutdown hook， close and shutdown resources
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             shutdown();
         }));
     }
 
     @PostConstruct
-    public void run() throws UnknownHostException, NoSuchAlgorithmException {
+    public void init() throws UnknownHostException, NoSuchAlgorithmException {
         String hostName = InetAddress.getLocalHost().getHostName();
         CacheUtils.put(Constants.HOSTNAME, hostName);
         ActorUtils.init();
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        double duration = (System.currentTimeMillis() - startTime) / 1000.0;
+        logger.info("DataSophon-API 启动成功，耗时 {} 秒", String.format("%.3f", duration));
     }
 
     /**
