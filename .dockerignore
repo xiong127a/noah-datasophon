@@ -2,12 +2,6 @@
 *
 **/
 
-# 只包含UI构建所需的文件
-!datasophon-ui/dist/**
-!deploy/docker/nginx.conf
-!Dockerfile-ui
-
-# 明确排除所有可能引起自引用问题的文件
 **/*.tar
 **/*.tar.gz
 **/*.zip
@@ -21,4 +15,12 @@
 
 # 排除日志文件
 **/*.log
-**/logs/ 
+**/logs/
+# 只包含UI构建所需的文件
+!datasophon-ui/dist/**
+!deploy/docker/nginx.conf
+!Dockerfile-ui
+!datasophon-api/target/datasophon-manager-*.tar.gz
+
+# 明确排除所有可能引起自引用问题的文件
+
