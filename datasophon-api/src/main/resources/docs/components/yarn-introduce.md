@@ -132,25 +132,25 @@ YARN提供了三种主要的调度器实现：
 ```xml
 <!-- 容量调度器队列定义 -->
 <property>
-  <n>yarn.scheduler.capacity.root.queues</n>
+  <name>yarn.scheduler.capacity.root.queues</n>
   <value>default,prod,dev</value>
 </property>
 
 <!-- 队列容量配置 -->
 <property>
-  <n>yarn.scheduler.capacity.root.prod.capacity</n>
+  <name>yarn.scheduler.capacity.root.prod.capacity</n>
   <value>60</value>
 </property>
 
 <!-- 队列用户限制配置 -->
 <property>
-  <n>yarn.scheduler.capacity.root.prod.user-limit-factor</n>
+  <name>yarn.scheduler.capacity.root.prod.user-limit-factor</n>
   <value>1.0</value>
 </property>
 
 <!-- 抢占配置 -->
 <property>
-  <n>yarn.scheduler.capacity.root.prod.disable_preemption</n>
+  <name>yarn.scheduler.capacity.root.prod.disable_preemption</n>
   <value>false</value>
 </property>
 ```
@@ -226,23 +226,23 @@ YARN ResourceManager支持高可用配置，通过以下方式实现：
 基本配置示例：
 ```xml
 <property>
-  <n>yarn.resourcemanager.ha.enabled</n>
+  <name>yarn.resourcemanager.ha.enabled</n>
   <value>true</value>
 </property>
 <property>
-  <n>yarn.resourcemanager.ha.rm-ids</n>
+  <name>yarn.resourcemanager.ha.rm-ids</n>
   <value>rm1,rm2</value>
 </property>
 <property>
-  <n>yarn.resourcemanager.hostname.rm1</n>
+  <name>yarn.resourcemanager.hostname.rm1</n>
   <value>master1</value>
 </property>
 <property>
-  <n>yarn.resourcemanager.hostname.rm2</n>
+  <name>yarn.resourcemanager.hostname.rm2</n>
   <value>master2</value>
 </property>
 <property>
-  <n>yarn.resourcemanager.zk-address</n>
+  <name>yarn.resourcemanager.zk-address</n>
   <value>zk1:2181,zk2:2181,zk3:2181</value>
 </property>
 ```
@@ -321,19 +321,19 @@ YARN 3.x支持多种自定义资源类型：
 ```xml
 <!-- 启用GPU资源支持 -->
 <property>
-  <n>yarn.nodemanager.resource-plugins</n>
+  <name>yarn.nodemanager.resource-plugins</n>
   <value>yarn.io/gpu</value>
 </property>
 
 <!-- GPU设备发现 -->
 <property>
-  <n>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</n>
+  <name>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</n>
   <value>/usr/bin/nvidia-smi</value>
 </property>
 
 <!-- 自定义资源类型 -->
 <property>
-  <n>yarn.resource-types</n>
+  <name>yarn.resource-types</n>
   <value>resource1,resource2</value>
 </property>
 ```
@@ -361,23 +361,23 @@ YARN提供多层安全机制保护集群资源和数据：
 ```xml
 <!-- 启用Kerberos认证 -->
 <property>
-  <n>hadoop.security.authentication</n>
+  <name>hadoop.security.authentication</n>
   <value>kerberos</value>
 </property>
 
 <!-- 启用授权 -->
 <property>
-  <n>hadoop.security.authorization</n>
+  <name>hadoop.security.authorization</n>
   <value>true</value>
 </property>
 
 <!-- ResourceManager安全配置 -->
 <property>
-  <n>yarn.resourcemanager.principal</n>
+  <name>yarn.resourcemanager.principal</n>
   <value>rm/_HOST@REALM</value>
 </property>
 <property>
-  <n>yarn.resourcemanager.keytab</n>
+  <name>yarn.resourcemanager.keytab</n>
   <value>/etc/hadoop/conf/rm.keytab</value>
 </property>
 ```
@@ -470,19 +470,19 @@ YARN公开JMX指标，可用于高级监控：
 ```xml
 <!-- 启用日志聚合 -->
 <property>
-  <n>yarn.log-aggregation-enable</n>
+  <name>yarn.log-aggregation-enable</n>
   <value>true</value>
 </property>
 
 <!-- 日志保留时间 -->
 <property>
-  <n>yarn.log-aggregation.retain-seconds</n>
+  <name>yarn.log-aggregation.retain-seconds</n>
   <value>604800</value>
 </property>
 
 <!-- 聚合日志目录 -->
 <property>
-  <n>yarn.nodemanager.remote-app-log-dir</n>
+  <name>yarn.nodemanager.remote-app-log-dir</n>
   <value>/tmp/logs</value>
 </property>
 ```
@@ -513,17 +513,17 @@ YARN公开JMX指标，可用于高级监控：
 ```xml
 <!-- 启用Docker运行时 -->
 <property>
-  <n>yarn.nodemanager.container-executor.class</n>
+  <name>yarn.nodemanager.container-executor.class</n>
   <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
 </property>
 <property>
-  <n>yarn.nodemanager.runtime.linux.allowed-runtimes</n>
+  <name>yarn.nodemanager.runtime.linux.allowed-runtimes</n>
   <value>default,docker</value>
 </property>
 
 <!-- 启用集群联邦 -->
 <property>
-  <n>yarn.federation.enabled</n>
+  <name>yarn.federation.enabled</n>
   <value>true</value>
 </property>
 ```

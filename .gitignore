@@ -46,7 +46,7 @@ node/
 /datasophon-common/src/main/resources/rebel.xml
 /datasophon-domain/src/main/resources/rebel.xml
 /datasophon-infrastructure/src/main/resources/rebel.xml
-/datasophon-k8s/src/main/resources/rebel.xml
+/datasophon-kubernetes/src/main/resources/rebel.xml
 /datasophon-service/src/main/resources/rebel.xml
 /datasophon-ui/src/main/resources/rebel.xml
 /datasophon-worker/src/main/resources/rebel.xml
@@ -57,10 +57,10 @@ node/
 /datasophon-common/src/main/resources/rebel-remote.xml
 /datasophon-domain/src/main/resources/rebel-remote.xml
 /datasophon-infrastructure/src/main/resources/rebel-remote.xml
-/datasophon-k8s/src/main/resources/rebel-remote.xml
+/datasophon-kubernetes/src/main/resources/rebel-remote.xml
 /datasophon-service/src/main/resources/rebel-remote.xml
 /datasophon-ui/src/main/resources/rebel-remote.xml
 /datasophon-worker/src/main/resources/rebel-remote.xml
 /datasophon-ui/.yarn/
-/k8sDep/
+/kubernetesYaml/
 /.cursor/

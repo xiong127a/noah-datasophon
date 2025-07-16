@@ -112,8 +112,8 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         }
 
         @Override
-        public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
                 performServiceRoleCheck(roleInstanceEntity, "");
         }
 

@@ -2,10 +2,10 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
@@ -30,7 +30,7 @@ public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+        ClusterInfoService clusterInfoService = SpringUtil
                 .getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 

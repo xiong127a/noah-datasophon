@@ -20,6 +20,7 @@ package com.datasophon.api.master;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandService;
@@ -27,7 +28,6 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
@@ -43,11 +43,11 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datasophon.dao.enums.ServiceRoleState;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,9 +70,9 @@ public class WorkerStartActor extends UntypedActor {
             logger.info("Receive message when worker first start :{}", hostname);
 
             ClusterHostService clusterHostService =
-                    SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+                    SpringUtil.getBean(ClusterHostService.class);
             ClusterInfoService clusterInfoService =
-                    SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                    SpringUtil.getBean(ClusterInfoService.class);
 
             // is managed?
             ClusterHostDO hostEntity = clusterHostService.getClusterHostByHostname(hostname);
@@ -125,9 +125,9 @@ public class WorkerStartActor extends UntypedActor {
     private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId,CommandType commandType,
         boolean needRestart) {
         ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+                SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceCommandService.class);
+                SpringUtil.getBean(ClusterServiceCommandService.class);
 
         List<ClusterServiceRoleInstanceEntity> serviceRoleList = null;
         // 启动服务
@@ -168,8 +168,8 @@ public class WorkerStartActor extends UntypedActor {
     }
 
     private void syncClusterUserAndGroup(Integer clusterId, String hostname) {
-        ClusterGroupService clusterGroupService = SpringTool.getApplicationContext().getBean(ClusterGroupService.class);
-        ClusterUserService clusterUserService = SpringTool.getApplicationContext().getBean(ClusterUserService.class);
+        ClusterGroupService clusterGroupService = SpringUtil.getBean(ClusterGroupService.class);
+        ClusterUserService clusterUserService = SpringUtil.getBean(ClusterUserService.class);
 
         List<ClusterGroup> userGroupList = clusterGroupService.listAllUserGroup(clusterId);
         for (ClusterGroup clusterGroup : userGroupList) {

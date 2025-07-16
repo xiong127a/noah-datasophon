@@ -2,10 +2,10 @@ package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantHiveResource;
@@ -54,7 +54,7 @@ public class TenantResourceDispatcherActor extends UntypedActor {
 
     private Map<String, String> getRoleHostMap(Integer clusterId) {
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+                SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         List<ClusterServiceRoleInstanceEntity> nameNodeInstance = clusterServiceRoleInstanceService.list(
                 new QueryWrapper<ClusterServiceRoleInstanceEntity>().eq(Constants.CLUSTER_ID, clusterId));
         return nameNodeInstance.stream().collect(Collectors.toMap(

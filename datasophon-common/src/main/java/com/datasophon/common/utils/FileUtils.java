@@ -258,4 +258,19 @@ public class FileUtils {
             return new String(tempbytes, charset);
         }
     }
+
+    /**
+     * 替换字符串中的主机名部分
+     * 
+     * @param original 原始字符串（包含URL）
+     * @param newHost 新的主机名（IP或域名）
+     * @return 替换主机名后的字符串
+     */
+    public static String replaceHost(String original, String newHost) {
+        if (StringUtils.isBlank(original) || StringUtils.isBlank(newHost)) {
+            return original;
+        }
+        // 匹配协议://主机名(:端口)的模式
+        return original.replaceAll("(\\w+://)([\\w.-]+)(:\\d+)?", "$1" + newHost + "$3");
+    }
 }

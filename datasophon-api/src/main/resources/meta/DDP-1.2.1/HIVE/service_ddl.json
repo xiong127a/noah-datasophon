@@ -160,7 +160,8 @@
           "hive.security.authorization.enabled",
           "hive.metastore.client.socket.timeout",
           "hive.stats.autogather",
-          "hive.server2.active.passive.ha.enable"
+          "hive.server2.active.passive.ha.enable",
+          "hive.metastore.thrift.bind.host"
         ]
       },
       {
@@ -188,6 +189,42 @@
           "esSingleHost",
           "esHttpPort"
         ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "HIVE Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "HiveServer2,HiveMetaStore",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "HIVE Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "HiveServer2,HiveMetaStore",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "HiveServer2,HiveMetaStore",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
       }
     ]
   },
@@ -195,111 +232,281 @@
     {
       "name": "javax.jdo.option.ConnectionDriverName",
       "label": "jdbc链接驱动类名",
-      "description": "",
+      "description": "jdbc链接驱动类名",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "com.mysql.jdbc.Driver",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "com.mysql.jdbc.Driver"
+      "defaultValue": "com.mysql.jdbc.Driver",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
     },
     {
       "name": "javax.jdo.option.ConnectionUserName",
       "label": "数据库用户名",
-      "description": "",
+      "description": "数据库用户名",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "hive",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hive"
+      "defaultValue": "hive",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
     },
     {
       "name": "javax.jdo.option.ConnectionPassword",
       "label": "数据库密码",
-      "description": "",
+      "description": "数据库密码",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "hive",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hive"
+      "defaultValue": "hive",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
     },
     {
       "name": "javax.jdo.option.ConnectionURL",
       "label": "数据库链接地址",
-      "description": "",
+      "description": "数据库链接地址",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "jdbc:mysql://datasophon-mysql:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "jdbc:mysql://${apiHost}:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false"
+      "defaultValue": "jdbc:mysql://datasophon-mysql:3306/hive?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "hive.metastore.thrift.bind.host",
+      "label": "Metastore服务地址",
+      "description": "Hive Metastore Thrift服务绑定的主机名。在Kubernetes环境中，通常设置为0.0.0.0以监听Pod内的所有网络接口。",
+      "required": true,
+      "type": "input",
+      "value": "0.0.0.0",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "0.0.0.0",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为Hive的数据存储位置的父目录",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.enable.doAs",
       "label": "启用doAs",
-      "description": "",
+      "description": "启用doAs",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "false",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "false"
-    },{
+      "defaultValue": "false",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
       "name": "hive.metastore.schema.verification",
       "label": "是否验证schema",
       "description": "是否验证schema",
       "required": true,
-      "type": "switch",
-      "value": "",
+      "type": "input",
+      "value": "true",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": "true",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "hive.metastore.schema.verification.record.version",
+      "label": "是否验证schema版本",
+      "description": "是否验证schema版本",
+      "required": true,
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.warehouse.dir",
       "label": "hive默认hdfs数据存储目录",
-      "description": "",
+      "description": "hive数仓目录",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "/user/hive/warehouse",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/user/hive/warehouse"
+      "defaultValue": "/user/hive/warehouse",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.port",
-      "label": "hive metastore服务端口",
-      "description": "",
+      "label": "metastore thrift端口",
+      "description": "metastore thrift端口",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "9083",
+      "portNumber": "9083",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9083"
+      "defaultValue": "9083",
+      "bindRole": "HiveMetaStore",
+      "serviceType": "ClusterIP",
+      "configCategory": "role",
+      "configGroup": "HiveMetaStore",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.uris",
-      "label": "hive metastore服务地址",
-      "description": "",
+      "label": "metastore uris",
+      "description": "metastore uris",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "thrift://${masterHost}:9083",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${metastoreHosts}"
+      "defaultValue": "thrift://${masterHost}:9083",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.map.fair.scheduler.queue",
       "label": "HiveServer2是否使用公平调度队列",
-      "description": "",
+      "description": "hiveserver2公平调度队列",
       "required": true,
-      "type": "switch",
-      "value": "",
+      "type": "input",
+      "value": "default",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": "default",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "enableKerberos",
@@ -322,7 +529,10 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "yarn",
-      "selectValue" : ["local", "classic", "yarn"]
+      "selectValue" : ["local", "classic", "yarn"],
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.execution.engine",
@@ -334,7 +544,10 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "mr",
-      "selectValue" : ["mr", "tez", "spark"]
+      "selectValue" : ["mr", "tez", "spark"],
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.tez.container.size",
@@ -347,7 +560,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": 1024
+      "defaultValue": 1024,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.files.umask.value",
@@ -358,7 +574,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "0002"
+      "defaultValue": "0002",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.tez.wm.am.registry.timeout",
@@ -371,7 +590,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": 30000
+      "defaultValue": 30000,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "tez.lib.uris",
@@ -382,7 +604,10 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${fs.defaultFS}/user/tez/tez.tar.gz"
+      "defaultValue": "${fs.defaultFS}/user/tez/tez.tar.gz",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.mapfiles",
@@ -394,7 +619,10 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.mapredfiles",
@@ -406,7 +634,10 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.size.per.task",
@@ -418,7 +649,10 @@
       "value": "268435456",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "268435456"
+      "defaultValue": "268435456",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.merge.smallfiles.avgsize",
@@ -430,7 +664,10 @@
       "value": "104857600",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "104857600"
+      "defaultValue": "104857600",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.exec.submit.local.task.via.child",
@@ -442,7 +679,10 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "iceberg.engine.hive.enabled",
@@ -454,170 +694,207 @@
       "value": true,
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": true
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.authentication",
       "label": "hive认证方式",
-      "description": "",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "description": "hiveserver2认证方式",
+      "required": true,
       "type": "input",
-      "value": "kerberos",
+      "value": "NONE",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "kerberos"
+      "hidden": false,
+      "defaultValue": "NONE",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.authentication.kerberos.principal",
       "label": "HiveServer2服务的Kerberos主体",
-      "description": "HiveServer2服务的Kerberos主体",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "description": "hiveserver2 kerberos principal",
+      "required": true,
       "type": "input",
-      "value": "hive/${hostname}@${realm}",
+      "value": "hive/_HOST@HADOOP.COM",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hive/${hostname}@${realm}"
+      "defaultValue": "hive/_HOST@HADOOP.COM",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.authentication.kerberos.keytab",
       "label": "HiveServer2服务的Kerberos密钥文件",
-      "description": "HiveServer2服务的Kerberos密钥文件",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "description": "hiveserver2 kerberos keytab",
+      "required": true,
       "type": "input",
       "value": "/etc/security/keytab/hive.service.keytab",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "/etc/security/keytab/hive.service.keytab"
+      "defaultValue": "/etc/security/keytab/hive.service.keytab",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.sasl.enabled",
       "label": "Metastore启动认证",
-      "description": "Metastore启动认证",
-      "configWithKerberos": true,
-      "required": false,
-      "type": "switch",
-      "value": true,
+      "description": "metastore sasl认证",
+      "required": true,
+      "type": "input",
+      "value": "false",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": true
+      "defaultValue": "false",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.kerberos.principal",
       "label": "Metastore Kerberos主体",
-      "description": "Metastore Kerberos主体",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "description": "metastore kerberos principal",
+      "required": true,
       "type": "input",
-      "value": "hive/_HOST@${realm}",
+      "value": "hive/_HOST@HADOOP.COM",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hive/_HOST@${realm}"
+      "defaultValue": "hive/_HOST@HADOOP.COM",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.kerberos.keytab.file",
       "label": "Metastore Kerberos密钥文件",
-      "description": "Metastore Kerberos密钥文件",
-      "configType": "kb",
-      "configWithKerberos": true,
-      "required": false,
+      "description": "metastore kerberos keytab",
+      "required": true,
       "type": "input",
       "value": "/etc/security/keytab/hive.service.keytab",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "/etc/security/keytab/hive.service.keytab"
+      "defaultValue": "/etc/security/keytab/hive.service.keytab",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.support.dynamic.service.discovery",
       "label": "开启HiveServer2动态发现",
       "configType": "ha",
       "configWithHA": true,
-      "description": "",
-      "required": false,
-      "type": "switch",
-      "value": true,
+      "description": "hiveserver2是否支持动态服务发现",
+      "required": true,
+      "type": "input",
+      "value": "false",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": true
+      "defaultValue": "false",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.server2.zookeeper.namespace",
       "label": "HiveServer2在zk命名空间",
       "configType": "ha",
       "configWithHA": true,
-      "description": "",
-      "required": false,
+      "description": "hiveserver2 zookeeper namespace",
+      "required": true,
       "type": "input",
       "value": "hiveserver2",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hiveserver2"
-    },{
+      "defaultValue": "hiveserver2",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
       "name": "hive.zookeeper.quorum",
       "label": "zk地址",
       "configType": "ha",
       "configWithHA": true,
-      "description": "",
-      "required": false,
+      "description": "zk地址",
+      "required": true,
       "type": "input",
       "value": "${zkUrls}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${zkUrls}"
-    },{
+      "defaultValue": "${zkUrls}",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
       "name": "hive.zookeeper.client.port",
       "label": "zk端口",
       "configType": "ha",
       "configWithHA": true,
-      "description": "",
-      "required": false,
+      "description": "zk端口",
+      "required": true,
       "type": "input",
       "value": "2181",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "2181"
-    },{
+      "defaultValue": "2181",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
       "name": "hive.server2.thrift.bind.host",
       "label": "hive.server2.thrift.bind.host",
       "configType": "ha",
       "configWithHA": true,
-      "description": "",
-      "required": false,
+      "description": "hive.server2.thrift.bind.host",
+      "required": true,
       "type": "input",
-      "value": "${hostname}",
+      "value": "0.0.0.0",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "${hostname}"
-    },{
+      "defaultValue": "0.0.0.0",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
+    },
+    {
       "name": "hive.server2.thrift.port",
       "label": "hiveserver2 thrift端口",
-      "configType": "ha",
-      "configWithHA": true,
-      "description": "",
-      "required": false,
+      "description": "hiveserver2 thrift端口",
+      "required": true,
       "type": "input",
       "value": "10000",
+      "portNumber": "10000",
+      "nodePort": "30001",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "10000"
+      "hidden": false,
+      "defaultValue": "10000",
+      "bindRole": "HiveServer2",
+      "serviceType": "NodePort",
+      "configCategory": "role",
+      "configGroup": "HiveServer2",
+      "configLevel": "advanced"
     },
     {
       "name": "hiveHeapSize",
       "label": "Hive最大堆内存(MB)",
-      "description": "Hive最大堆内存,单位MB",
-      "configType": "map",
+      "description": "hive堆内存",
       "required": true,
+      "configType": "map",
       "type": "input",
-      "value": "",
+      "value": "1024",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "1024"
+      "defaultValue": "1024",
+      "configCategory": "file",
+      "configGroup": "hive-env",
+      "configLevel": "advanced"
     },
     {
       "name": "rangerAdminUrl",
@@ -634,14 +911,17 @@
     {
       "name": "hadoopHome",
       "label": "HADOOP_HOME",
-      "description": "Hadoop的安装目录",
+      "description": "hadoop home",
       "required": true,
       "configType": "map",
       "type": "input",
       "value": "${HADOOP_HOME}",
       "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "${HADOOP_HOME}"
+      "hidden": true,
+      "defaultValue": "${HADOOP_HOME}",
+      "configCategory": "file",
+      "configGroup": "hive-env",
+      "configLevel": "advanced"
     },
     {
       "name": "hiveHome",
@@ -693,27 +973,35 @@
     },
     {
       "name": "custom.hive.site.xml",
-      "label": "自定义配置hive-site.xml",
-      "description": "自定义配置",
+      "label": "自定义Hive核心配置",
+      "description": "用于添加自定义的Hive核心参数，这些参数将被添加到hive-site.xml配置文件中",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": [],
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "custom"
     },
     {
       "name": "custom.hive.env.sh",
-      "label": "自定义配置hive-env.sh",
-      "description": "自定义配置",
+      "label": "自定义Hive环境变量",
+      "description": "用于添加自定义的Hive环境变量，这些参数将被添加到hive-env.sh脚本中",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"HIVE_AUX_JARS_PATH":"${INSTALL_PATH}/hive-3.1.0/auxlibs"}],
+      "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "hive-env",
+      "configLevel": "custom",
+      "templateName": "hive-env.ftl",
+      "displayName": "hive-env template"
     },
     {
       "name": "hive.security.authorization.enabled",
@@ -725,7 +1013,10 @@
       "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": false
+      "defaultValue": false,
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.metastore.client.socket.timeout",
@@ -737,7 +1028,10 @@
       "value": "30000",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "30000"
+      "defaultValue": "30000",
+      "configCategory": "file",
+      "configGroup": "hive-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hive.stats.autogather",
@@ -762,6 +1056,36 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     }
   ]
 }

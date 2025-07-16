@@ -49,7 +49,15 @@ start(){
     fi
   fi
   echo starting $command, logging to $log
-  exec_command="$SH_DIR/redis_exporter --redis.addr=localhost:${redisMasterPort}"
+  # 优先使用REDIS_ADDR环境变量，如果为空则使用FreeMarker模板中的redisMasterPort值，如果都没有才使用localhost:7000作为默认值
+  if [ -n "$REDIS_ADDRESS" ]; then
+    REDIS_ADDRESS=$REDIS_ADDRESS
+  elif [ -n "${redisMasterPort}" ]; then
+    REDIS_ADDRESS=${redisMasterPort}
+  else
+    REDIS_ADDRESS=localhost:7000
+  fi
+  exec_command="$SH_DIR/redis_exporter --redis.addr=$REDIS_ADDRESS"
   echo "nohup $exec_command > $log 2>&1 &"
   nohup $exec_command > $log 2>&1 &
   echo $! > $pid

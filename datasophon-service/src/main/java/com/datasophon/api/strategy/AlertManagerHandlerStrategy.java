@@ -18,11 +18,11 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
@@ -41,7 +41,7 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
 
-        NoticeGroupService noticeGroupService = (NoticeGroupService) SpringTool.getBean("noticeGroupService");
+        NoticeGroupService noticeGroupService = SpringUtil.getBean(NoticeGroupService.class);
 
         MPage<NoticeGroupEntity> page = new MPage<>();
         page.setSize(1000);

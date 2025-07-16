@@ -258,6 +258,7 @@
                       <template v-if="item.configType === 'custom'">配置名</template>
                       <template v-else-if="item.name.endsWith('node_port_mappings')">容器端口</template>
                       <template v-else-if="item.name.endsWith('cluster_port_mappings')">集群内部端口</template>
+                      <template v-else-if="item.name.endsWith('load_balancer_port_mappings')">容器端口</template>
                       <template v-else>键</template>
                     </div>
                   </div>
@@ -280,20 +281,20 @@
                       initialValue: child.key,
                       rules: [
                         {
-                          required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') ? item.required : false,
+                          required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') && !item.name.endsWith('load_balancer_port_mappings') ? item.required : false,
                           whitespace: true,
                           message: `${item.label}不能为空!`,
                         },
                       ],
                     }
-                      ]" :placeholder="item.configType === 'custom' ? '请输入配置名' : (item.name.endsWith('node_port_mappings') ? '容器内部端口' : (item.name.endsWith('cluster_port_mappings') ? '集群内部端口' : '请输入键'))" class="container-port-input" />
+                      ]" :placeholder="item.configType === 'custom' ? '请输入配置名' : (item.name.endsWith('node_port_mappings') ? '容器内部端口' : (item.name.endsWith('cluster_port_mappings') ? '集群内部端口' : (item.name.endsWith('load_balancer_port_mappings') ? '容器内部端口' : '请输入键')))" class="container-port-input" />
                       </div>
                     </a-tooltip>
                   </a-form-item>
                 </a-col>
                 
                 <!-- 独立的箭头列 -->
-                <a-col :span="4" class="arrow-column" v-if="item.name.endsWith('node_port_mappings') || item.name.endsWith('cluster_port_mappings')">
+                <a-col :span="4" class="arrow-column" v-if="item.name.endsWith('node_port_mappings') || item.name.endsWith('cluster_port_mappings') || item.name.endsWith('load_balancer_port_mappings')">
                   <div class="enhanced-arrow-container" style="transform: translateX(-60px);">
                     <div class="enhanced-arrow-line">
                       <div class="enhanced-flow-effect"></div>
@@ -313,6 +314,7 @@
                       <template v-if="item.configType === 'custom'">配置值</template>
                       <template v-else-if="item.name.endsWith('node_port_mappings')">节点端口</template>
                       <template v-else-if="item.name.endsWith('cluster_port_mappings')">集群端口</template>
+                      <template v-else-if="item.name.endsWith('load_balancer_port_mappings')">负载均衡器端口</template>
                       <template v-else>值</template>
                     </div>
                   </div>
@@ -336,13 +338,13 @@
                               initialValue: child.value,
                               rules: [
                                 {
-                                  required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') ? item.required : false,
+                                  required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') && !item.name.endsWith('load_balancer_port_mappings') ? item.required : false,
                                   whitespace: true,
                                   message: `${item.label}不能为空!`,
                                 },
                               ],
                             }
-                          ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name.endsWith('node_port_mappings') ? '节点暴露端口' : (item.name.endsWith('cluster_port_mappings') ? '集群端口' : '请输入值'))" class="nodeport-input" style="flex: 1;" />
+                          ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name.endsWith('node_port_mappings') ? '节点暴露端口' : (item.name.endsWith('cluster_port_mappings') ? '集群端口' : (item.name.endsWith('load_balancer_port_mappings') ? '负载均衡器端口' : '请输入值')))" class="nodeport-input" style="flex: 1;" />
                           
                           <!-- 内嵌删除按钮 -->
                           <a-button 
@@ -368,13 +370,13 @@
                             initialValue: child.value,
                             rules: [
                               {
-                                required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') ? item.required : false,
+                                required: !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings') && !item.name.endsWith('load_balancer_port_mappings') ? item.required : false,
                                 whitespace: true,
                                 message: `${item.label}不能为空!`,
                               },
                             ],
                           }
-                        ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name.endsWith('node_port_mappings') ? '节点暴露端口' : (item.name.endsWith('cluster_port_mappings') ? '集群端口' : '请输入值'))" class="nodeport-input" style="flex: 1;" />
+                        ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name.endsWith('node_port_mappings') ? '节点暴露端口' : (item.name.endsWith('cluster_port_mappings') ? '集群端口' : (item.name.endsWith('load_balancer_port_mappings') ? '负载均衡器端口' : '请输入值')))" class="nodeport-input" style="flex: 1;" />
                         
                         <!-- 内嵌删除按钮 -->
                         <a-button 
@@ -395,17 +397,18 @@
 
             <!-- 添加按钮移回各自部分内 -->
             <a-form-item class="form-multiple-item" :wrapper-col="formItemLayoutWithOutLabel.wrapperCol">
-              <a-button type="link" :class="['add-field-button', item.name.endsWith('node_port_mappings') ? 'add-node-port-btn' : 'add-cluster-port-btn']" @click="() => addMultiple(item.name, 'multipleWithKey')">
+              <a-button type="link" :class="['add-field-button', item.name.endsWith('node_port_mappings') ? 'add-node-port-btn' : (item.name.endsWith('cluster_port_mappings') ? 'add-cluster-port-btn' : (item.name.endsWith('load_balancer_port_mappings') ? 'add-load-balancer-port-btn' : ''))]" @click="() => addMultiple(item.name, 'multipleWithKey')">
                 <span class="custom-plus-icon">+</span> 
                 <template v-if="item.configType === 'custom'">添加自定义配置</template>
                 <template v-else-if="item.name.endsWith('node_port_mappings')">添加NodePort端口映射</template>
                 <template v-else-if="item.name.endsWith('cluster_port_mappings')">添加集群内部端口</template>
+                <template v-else-if="item.name.endsWith('load_balancer_port_mappings')">添加负载均衡器端口映射</template>
                 <template v-else>添加键值对</template>
               </a-button>
             </a-form-item>
 
-            <!-- 只在NodePort映射的末尾添加分隔线 -->
-            <div v-if="item.name.endsWith('node_port_mappings')" class="separator-line"></div>
+            <!-- 只在NodePort映射和负载均衡器端口映射的末尾添加分隔线 -->
+            <div v-if="item.name.endsWith('node_port_mappings') || item.name.endsWith('load_balancer_port_mappings')" class="separator-line"></div>
             
             <div class="filed-name-tips">
               <span class="filed-name-tips-word" :title="item.name">{{item.name.replaceAll("!", ".")}}</span>

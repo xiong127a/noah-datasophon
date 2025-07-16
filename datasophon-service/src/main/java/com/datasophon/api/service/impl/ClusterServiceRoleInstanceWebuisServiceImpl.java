@@ -65,9 +65,11 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
 
     @Override
     public ClusterServiceRoleInstanceWebuis getRoleInstanceWebUi(Integer roleInstanceId) {
-        return this.lambdaQuery()
+        List<ClusterServiceRoleInstanceWebuis> webuisList = this.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
-                .one();
+                .list();
+        // 返回第一条数据，或者根据业务需求调整
+        return webuisList.isEmpty() ? null : webuisList.get(0);
     }
 
     @Override
@@ -90,31 +92,35 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     private void updateWebUiName(Integer roleInstanceId, String state) {
-        ClusterServiceRoleInstanceWebuis webuis =
-                this.lambdaQuery()
-                        .eq(
-                                ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId,
-                                roleInstanceId)
-                        .one();
-        String webuiName = webuis.getName();
-        boolean needUpdate = false;
-        if (webuiName.contains(ACTIVE) && STANDBY.equals(state)) {
-            webuiName = webuiName.replace(ACTIVE, STANDBY);
-            needUpdate = true;
+        List<ClusterServiceRoleInstanceWebuis> webuisList = this.lambdaQuery()
+                .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
+                .list();
+                
+        if (webuisList.isEmpty()) {
+            return;
         }
-        if (webuiName.contains(STANDBY) && ACTIVE.equals(state)) {
-            webuiName = webuiName.replace(STANDBY, ACTIVE);
-            needUpdate = true;
-        }
-        webuis.setName(webuiName);
-        if (!webuiName.contains(ACTIVE) && !webuiName.contains(STANDBY)) {
-            webuis.setName(webuis.getName() + state);
-            needUpdate = true;
-        }
-        if (needUpdate) {
-            this.lambdaUpdate()
-                    .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
-                    .update(webuis);
+        
+        for (ClusterServiceRoleInstanceWebuis webuis : webuisList) {
+            String webuiName = webuis.getName();
+            boolean needUpdate = false;
+            if (webuiName.contains(ACTIVE) && STANDBY.equals(state)) {
+                webuiName = webuiName.replace(ACTIVE, STANDBY);
+                needUpdate = true;
+            }
+            if (webuiName.contains(STANDBY) && ACTIVE.equals(state)) {
+                webuiName = webuiName.replace(STANDBY, ACTIVE);
+                needUpdate = true;
+            }
+            webuis.setName(webuiName);
+            if (!webuiName.contains(ACTIVE) && !webuiName.contains(STANDBY)) {
+                webuis.setName(webuis.getName() + state);
+                needUpdate = true;
+            }
+            if (needUpdate) {
+                this.lambdaUpdate()
+                        .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
+                        .update(webuis);
+            }
         }
     }
 }

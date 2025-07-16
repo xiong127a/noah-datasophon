@@ -87,7 +87,7 @@ export default {
     }
   },
   mounted () {
-    console.log(this.setting, 'setting', this.clusterId)
+    // Component mounted
   },
   data() {
     return {
@@ -101,7 +101,7 @@ export default {
       if (this.stepsType === 'hostManage')list =  list.splice(0, 3)
       if (this.stepsType === 'addService')list =  list.splice(3, list.length)
       if (this.stepsType === 'service-example')list =  list.splice(4, list.length)
-      if (this.depType == 'K8S') {
+      if (this.depType === 'Kubernetes') {
         list = list.filter(item => item !== '主机Agent分发')
       }
       return list

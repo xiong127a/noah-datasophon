@@ -44,7 +44,8 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterNodeLabelMapper;
-import com.datasophon.k8s.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.k8s.util.K8sUtil.runCmd;
+import static com.datasophon.kubernetes.util.KubernetesUtil.runCmd;
 
 @Service("clusterNodeLabelService")
 @Transactional
@@ -117,6 +118,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
                 roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
         String depMode = getDepMode(clusterId);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + Constants.SLASH
                 + PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN") + "/bin/yarn");
@@ -152,7 +154,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
                     cmd="kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM && "+cmd;
                 }
                 try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-                runCmd(Constants.DATASOPHON,
+                runCmd(namespace,
                         client,
                         "yarn-resourcemanager",
                         hostname,

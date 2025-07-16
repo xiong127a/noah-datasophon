@@ -20,7 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.utils.Result;
 
 /**
- * K8S仪表盘服务接口
+ * Kubernetes仪表盘服务接口
  * 提供Kubernetes资源查询方法
  */
 public interface KubernetesDashboardService {

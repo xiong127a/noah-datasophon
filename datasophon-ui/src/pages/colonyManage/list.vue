@@ -26,7 +26,7 @@
             </div>
             <div class="card-content">
               <div>
-                集群管理员：
+                集群管理员： 
                 <span>{{item.userManageName || '-'}}</span>
               </div>
               <div>
@@ -151,7 +151,6 @@ export default {
     },
     getColonyList() {
       this.$axiosPost(global.API.getColonyList, {}).then((res) => {
-        console.log(res);
         this.dataSource = res.data;
         this.dataSource.forEach((item) => {
           let arr = [];
@@ -160,7 +159,6 @@ export default {
           });
           item["userManageName"] = arr.join(",");
         });
-        console.log(this.dataSource, "2222");
         this.dataSource.push({
           add: true,
         });

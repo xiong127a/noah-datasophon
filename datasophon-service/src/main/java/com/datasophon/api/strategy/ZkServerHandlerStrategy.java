@@ -18,12 +18,12 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ConnectionInfo;
@@ -127,7 +127,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         @Override
         public void getConfig(Integer clusterId, List<ServiceConfig> list) {
                 // add server.x config
-                ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                ClusterInfoService clusterInfoService = SpringUtil
                                 .getBean(ClusterInfoService.class);
                 ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
@@ -152,7 +152,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 serviceConfig.setName("server." + myid);
                                 serviceConfig.setLabel("server." + myid);
                                 // TODO:
-                                // 在PVM环境中使用域名通信，在K8S中使用DNS域名通信，避免直接使用IP地址。为了提高系统的灵活性和可维护性，因为直接使用IP地址可能会导致在IP变更时需要大量修改配置，而使用域名可以通过DNS解析动态获取IP，减少维护成本。
+                                // 在PVM环境中使用域名通信，在Kubernetes中使用DNS域名通信，避免直接使用IP地址。为了提高系统的灵活性和可维护性，因为直接使用IP地址可能会导致在IP变更时需要大量修改配置，而使用域名可以通过DNS解析动态获取IP，减少维护成本。
                                 serviceConfig.setValue(server + ":2888:3888");
                                 serviceConfig.setHidden(false);
                                 serviceConfig.setRequired(true);

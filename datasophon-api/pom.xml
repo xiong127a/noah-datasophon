@@ -29,6 +29,8 @@
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
+        <!-- 默认复制前端资源 -->
+        <skip.frontend.copy>false</skip.frontend.copy>
     </properties>
     <dependencies>
         <dependency>
@@ -38,10 +40,10 @@
         </dependency>
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-k8s</artifactId>
+            <artifactId>datasophon-kubernetes</artifactId>
             <version>${revision}</version>
         </dependency>
-        <!-- ui 工程打包是一个空包，这里依赖主要是让 ui 先编译，这样前端就能自动打包到 tar 介质中-->
+        <!-- ui 工程打包是一个空包，这里依赖主要是让 ui 先编译，这样前端就能自动打包到 tar 介质 -->
         <dependency>
             <groupId>com.datasophon</groupId>
             <artifactId>datasophon-ui</artifactId>
@@ -55,7 +57,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
-            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
     </dependencies>
 
@@ -64,7 +69,7 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <excludes>
-                    <exclude>front/**</exclude> <!-- 替换为您要排除的文件夹名称 -->
+                    <exclude>front/**</exclude><!-- 替换为您要排除的文件夹名 -->
                 </excludes>
             </resource>
         </resources>
@@ -72,6 +77,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
                 <configuration>
                     <excludes>
                         <exclude>db/**</exclude>
@@ -87,7 +93,7 @@
                         <fileset>
                             <directory>${project.basedir}/src/main/resources</directory>
                             <includes>
-                                <include>front/**</include> <!-- 替换为要删除的文件名 -->
+                                <include>front/**</include><!-- 替换为要删除的文件名 -->
                             </includes>
                         </fileset>
                     </filesets>
@@ -98,12 +104,14 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <!-- 打包后的包名是否包含assembly的id名 -->
+                    <!-- 打包后的包名是否包含assembly的id -->
                     <appendAssemblyId>false</appendAssemblyId>
                     <!-- 指定最后tar或者zip包的名字 -->
                     <finalName>datasophon-manager-${project.version}</finalName>
                     <!-- tar或者zip包的输出目录 -->
                     <outputDirectory>${project.basedir}/target/</outputDirectory>
+                    <!-- 设置长文件名处理模式为gnu，避免长路径警告 -->
+                    <tarLongFileMode>gnu</tarLongFileMode>
                     <descriptors>
                         <!-- 引用的assembly配置文件-->
                         <descriptor>${project.basedir}/src/main/resources/assembly.xml</descriptor>
@@ -123,12 +131,177 @@
                             <!-- 只运行一次 -->
                             <goal>single</goal>
                         </goals>
-                        <!-- 绑定到package生命周期阶段上 -->
+                        <!-- 绑定到package生命周期阶段 -->
                         <phase>package</phase>
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.5.4</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build-image</goal>
+                        </goals>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.40.2</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Docker镜像构建 - API -->
+        <profile>
+            <id>docker</id>
+            <properties>
+                <docker.skip>false</docker.skip>
+                <docker.registry>harbor.norintech.com</docker.registry>
+                <docker.host>tcp://localhost:2375</docker.host>
+                <docker.tag>latest</docker.tag>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- 准备 Docker 构建上下文 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-docker-context</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/docker-context</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.basedir}/target</directory>
+                                            <includes>
+                                                <include>datasophon-manager-*.tar.gz</include>
+                                            </includes>
+                                            <targetPath>datasophon-api/target</targetPath>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- 使用ant插件复制Dockerfile-api -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-dockerfile</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <copy file="../Dockerfile-api"
+                                              tofile="${project.build.directory}/docker-context/Dockerfile-api" />
+                                        <echo>Copied Dockerfile-api to ${project.build.directory}/docker-context/</echo>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <skip>${docker.skip}</skip>
+                            <registry>${docker.registry}</registry>
+                            <dockerHost>${docker.host}</dockerHost>
+                            <authConfig>
+                                <push>
+                                    <username>noah</username>
+                                    <password>Jd2019@123</password>
+                                </push>
+                            </authConfig>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-api-image</id>
+                                <!-- 绑定到package阶段，确保API构建完成后执行 -->
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                    <goal>push</goal>
+                                </goals>
+                                <configuration>
+                                    <images>
+                                        <image>
+                                            <name>${docker.registry}/bdp/datasophon-manager:${docker.tag}</name>
+                                            <build>
+                                                <contextDir>${project.build.directory}/docker-context</contextDir>
+                                                <dockerFile>Dockerfile-api</dockerFile>
+                                                <nocache>true</nocache>
+                                                <optimise>true</optimise>
+                                                <cleanup>true</cleanup>
+                                            </build>
+                                        </image>
+                                    </images>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- 新增控制前端资源复制的profile -->
+        <profile>
+            <id>skip-frontend</id>
+            <properties>
+                <skip.frontend.copy>true</skip.frontend.copy>
+            </properties>
+            <!-- 添加激活条件，当父项目的skip.frontend.build为true时激活 -->
+            <activation>
+                <property>
+                    <name>skip.frontend.build</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <!-- 添加构建配置，使用不同的assembly文件 -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <configuration>
+                            <!-- 指定使用不包含前端资源的assembly文件 -->
+                            <descriptors>
+                                <descriptor>${project.basedir}/src/main/resources/assembly-no-frontend.xml</descriptor>
+                            </descriptors>
+                            <!-- 设置长文件名处理模式为gnu，避免长路径警告 -->
+                            <tarLongFileMode>gnu</tarLongFileMode>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

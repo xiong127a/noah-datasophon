@@ -53,8 +53,8 @@ public class PrometheusHandlerStrategy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                           Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                  Map<String, ClusterServiceRoleInstanceEntity> map) {
         // 调用公共方法，指定 actorName 为空
         performServiceRoleCheck(roleInstanceEntity, "");
     }

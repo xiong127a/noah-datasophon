@@ -19,11 +19,11 @@ import { request } from '@/utils/request'
 import API from '@/api/httpApi/services'
 
 // Kubernetes Deployment API
-export const k8sDeploymentApi = {
+export const kubernetesDeploymentApi = {
   // 获取Deployment详情
   getDeploymentDetails(params) {
     return request({
-      url: API.getK8sDeploymentDetail,
+      url: API.getKubernetesDeploymentDetail,
       method: 'get',
       params
     })
@@ -32,7 +32,7 @@ export const k8sDeploymentApi = {
   // 获取Deployment的Pods
   getDeploymentPods(params) {
     return request({
-      url: API.getK8sPods, // 使用getK8sPods API配合Deployment筛选
+      url: API.getKubernetesPods, // 使用getKubernetesPods API配合Deployment筛选
       method: 'get',
       params: {
         ...params,
@@ -44,7 +44,7 @@ export const k8sDeploymentApi = {
   // 获取资源相关事件
   getResourceEvents(params) {
     return request({
-      url: API.getK8sDeploymentEvents,
+      url: API.getKubernetesDeploymentEvents,
       method: 'get',
       params
     })
@@ -52,11 +52,11 @@ export const k8sDeploymentApi = {
 }
 
 // Kubernetes Service API
-export const k8sServiceApi = {
+export const kubernetesServiceApi = {
   // 获取Service详情
   getServiceDetails(params) {
     return request({
-      url: API.getK8sServiceDetail,
+      url: API.getKubernetesServiceDetail,
       method: 'get',
       params
     })
@@ -65,7 +65,7 @@ export const k8sServiceApi = {
   // 获取Service的端点
   getServiceEndpoints(params) {
     return request({
-      url: API.getK8sServiceDetail + '/endpoints',
+      url: API.getKubernetesServiceDetail + '/endpoints',
       method: 'get',
       params
     })
@@ -74,7 +74,7 @@ export const k8sServiceApi = {
   // 获取资源相关事件
   getResourceEvents(params) {
     return request({
-      url: API.getK8sServiceDetail + '/events',
+      url: API.getKubernetesServiceDetail + '/events',
       method: 'get',
       params
     })

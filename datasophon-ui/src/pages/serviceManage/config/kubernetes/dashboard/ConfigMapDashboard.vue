@@ -1,24 +1,24 @@
 <template>
   <div class="resource-list">
     <!-- ConfigMap列表区域 -->
-    <div class="k8s-dashboard-card k8s-resource-card">
-      <div class="k8s-card-header">
-        <span class="k8s-card-title">Config Maps</span>
-        <div class="k8s-card-actions">
-          <a-icon type="bars" class="k8s-action-icon" />
-          <a class="k8s-card-collapse-icon">
+    <div class="kubernetes-dashboard-card kubernetes-resource-card">
+      <div class="kubernetes-card-header">
+        <span class="kubernetes-card-title">Config Maps</span>
+        <div class="kubernetes-card-actions">
+          <a-icon type="bars" class="kubernetes-action-icon" />
+          <a class="kubernetes-card-collapse-icon">
             <a-icon type="minus" />
           </a>
         </div>
       </div>
-      <div class="k8s-card-content">
+      <div class="kubernetes-card-content">
         <a-spin :spinning="loading">
           <a-table
             :columns="configMapColumns"
             :dataSource="configMaps"
             :pagination="false"
             :rowKey="getRowKey"
-            class="k8s-table"
+            class="kubernetes-table"
             :bordered="false"
           >
             <!-- Remove scoped slots as we are using customRender now -->
@@ -161,7 +161,7 @@ export default {
           pageSize: this.pageSize
         };
         
-        const res = await this.$axiosGet(global.API.getK8sConfigMaps, params);
+        const res = await this.$axiosGet(global.API.getKubernetesConfigMaps, params);
         
         if (res.code === 200 && res.data) {
           // 确保获取ConfigMaps列表数组
@@ -272,7 +272,7 @@ export default {
 </script>
 
 <style lang="less" scoped>
-@import './styles/k8s-table-styles.less';
+@import 'styles/kubernetes-table-styles.less';
 
 // ConfigMapList没有特有的样式，直接使用公共样式
 

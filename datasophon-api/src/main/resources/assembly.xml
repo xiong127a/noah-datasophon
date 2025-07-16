@@ -85,6 +85,7 @@
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
         </fileSet>
+        <!-- 前端资源复制 -->
         <fileSet>
             <directory>${basedir}/../datasophon-ui/dist</directory>
             <outputDirectory>/conf/front/views</outputDirectory>
@@ -95,6 +96,8 @@
             </includes>
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
+            <filtered>false</filtered>
+            <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>
         <fileSet>
             <directory>${basedir}/../datasophon-ui/dist</directory>
@@ -105,6 +108,7 @@
                 <include>css/**</include>
                 <include>static/**</include>
             </includes>
+            <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>
         <fileSet>
             <directory>${basedir}/../conf</directory>
@@ -162,7 +166,7 @@
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources</directory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>
             </includes>
@@ -170,8 +174,8 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources/k8s</directory>
-            <outputDirectory>conf/k8s</outputDirectory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources/kubernetes</directory>
+            <outputDirectory>conf/kubernetes</outputDirectory>
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>
@@ -190,6 +194,17 @@
             </includes>
             <outputDirectory>conf</outputDirectory>
             <fileMode>0755</fileMode>
+        </fileSet>
+        
+        <!-- 添加datasophon-api/src/main/resources/docs目录 -->
+        <fileSet>
+            <directory>${basedir}/src/main/resources/docs</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+            <outputDirectory>conf/docs</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
         </fileSet>
     </fileSets>
 </assembly>
