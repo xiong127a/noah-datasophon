@@ -3,10 +3,10 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.KubernetesGenerateHostTagCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
@@ -29,7 +29,7 @@ public class KubernetesHostTagHandler extends ServiceHandler {
         kubernetesGenerateHostTagCommand.setCommandType(serviceRoleInfo.getCommandType());
         Integer clusterId = serviceRoleInfo.getClusterId();
         ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         kubernetesGenerateHostTagCommand.setClusterId(clusterId);
         kubernetesGenerateHostTagCommand.setKubeConfig(kubeConfig);

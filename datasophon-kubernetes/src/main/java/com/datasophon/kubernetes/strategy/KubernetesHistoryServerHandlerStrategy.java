@@ -17,15 +17,14 @@
 
 package com.datasophon.kubernetes.strategy;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
+import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;
-import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
@@ -60,7 +59,7 @@ public class KubernetesHistoryServerHandlerStrategy extends KubernetesAbstractHa
                     hdfsCmdPrefix + "-chmod 777 /tmp\")\n";
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())){
                 KubernetesUtil.runCmd(
-                        Constants.DATASOPHON,
+                        command.getNamespace(),
                         kubeClient,
                         "hdfs-namenode",
                         command.getNnHost(),

@@ -4,11 +4,11 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.datasophon.common.model.ServiceConfig;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -82,12 +82,12 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
         for (ServiceConfig config : list) {
             String name = config.getName();
             Object value = config.getValue();
-
+            String namespace = getKubernetesNamespace(clusterId);
             // 处理ResourceManager相关配置
             switch (name) {
                 case "yarn.resourcemanager.hostname.rm1": {
                     // ResourceManager1主机名使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -95,7 +95,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.hostname.rm2": {
                     // ResourceManager2主机名使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -103,7 +103,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.address.rm1": {
                     // ResourceManager1地址使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8032";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -111,7 +111,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.address.rm2": {
                     // ResourceManager2地址使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8032";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -119,7 +119,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.scheduler.address.rm1": {
                     // ResourceManager1调度器地址使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8030";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -127,7 +127,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.scheduler.address.rm2": {
                     // ResourceManager2调度器地址使用完整的FQDN格式
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8030";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -135,7 +135,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.resource-tracker.address.rm1": {
                     // ResourceManager1 资源跟踪地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8031";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -143,7 +143,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.resource-tracker.address.rm2": {
                     // ResourceManager2 资源跟踪地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8031";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -151,7 +151,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.webapp.address.rm1": {
                     // ResourceManager1 Web地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-0." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8088";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -159,7 +159,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.resourcemanager.webapp.address.rm2": {
                     // ResourceManager2 Web地址
-                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = RESOURCEMANAGER_SERVICE + "-1." + RESOURCEMANAGER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8088";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -174,7 +174,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                                 .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
@@ -183,7 +183,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "mapreduce.jobhistory.address": {
                     // JobHistoryServer RPC地址
-                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":10020";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -191,7 +191,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "mapreduce.jobhistory.webapp.address": {
                     // JobHistoryServer Web UI地址
-                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":19888";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -200,7 +200,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 case "yarn.log.server.url": {
                     // HistoryServer日志服务URL
                     String newValue = "http://" + HISTORYSERVER_SERVICE + "-0." + HISTORYSERVER_SERVICE + "."
-                            + NAMESPACE
+                            + namespace
                             + "." + CLUSTER_DOMAIN + ":19888/jobhistory/logs";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -208,7 +208,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.timeline-service.hostname": {
                     // TimelineServer主机名
-                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -216,7 +216,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.timeline-service.address": {
                     // TimelineServer地址
-                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":10200";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -224,7 +224,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.timeline-service.webapp.address": {
                     // TimelineServer Web地址
-                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8188";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -232,7 +232,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.timeline-service.webapp.https.address": {
                     // TimelineServer HTTPS Web地址
-                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    String newValue = TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8190";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -240,14 +240,14 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
                 }
                 case "yarn.timeline-service.bind-host": {
                     // TimelineServer绑定主机
-                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
                 }
                 case "yarn.timeline-service.address.application.history.bind-host": {
                     // ApplicationHistoryService绑定主机
-                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + NAMESPACE + "."
+                    config.setValue(TIMELINESERVER_SERVICE + "-0." + TIMELINESERVER_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;

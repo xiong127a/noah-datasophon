@@ -19,6 +19,7 @@ public class KubernetesScaleServiceActor extends UntypedActor {
             logger.info("start scale service role {}", command.getServiceRoleName());
             KubernetesScaleServiceHandler serviceHandler = new KubernetesScaleServiceHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.scaleService(
+                    command.getNamespace(),
                     command.getKubeConfig(),
                     command.getCommandType()
             );

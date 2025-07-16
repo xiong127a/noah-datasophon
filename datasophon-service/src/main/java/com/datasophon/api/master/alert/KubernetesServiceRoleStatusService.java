@@ -3,14 +3,15 @@ package com.datasophon.api.master.alert;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.actor.KubernetesStatusServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +39,11 @@ public class KubernetesServiceRoleStatusService {
         kubernetesServiceRoleOperateCommand.setServiceName(roleInstanceEntity.getServiceName());
         kubernetesServiceRoleOperateCommand.setServiceRoleName(roleInstanceEntity.getServiceRoleName());
         kubernetesServiceRoleOperateCommand.setHostname(roleInstanceEntity.getHostname());
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
         kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
-
+    String namespace = ClusterInfoUtils.getKubernetesNamespace(roleInstanceEntity.getClusterId());
+        kubernetesServiceRoleOperateCommand.setNamespace(namespace);
 
         //调用查询状态
         ActorRef startActor = ActorUtils.getLocalActor(KubernetesStatusServiceActor.class, ActorUtils.getActorRefName(KubernetesStatusServiceActor.class));

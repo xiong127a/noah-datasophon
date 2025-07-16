@@ -3,10 +3,10 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.Generators;
@@ -36,7 +36,7 @@ public class KubernetesServiceInstallHandler extends ServiceHandler {
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+                SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
                 serviceRoleInfo.getHostname(), serviceRoleInfo.getClusterId());
         Map<Generators, List<ServiceConfig>> configFileMap = serviceRoleInfo.getConfigFileMap();

@@ -7,7 +7,10 @@ import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.util.*;
+import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
+import com.datasophon.kubernetes.util.KubernetesMinaUtils;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
@@ -47,7 +50,7 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
             logger.info(jobCmd);
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 KubernetesUtil.runCmd(
-                        Constants.DATASOPHON,
+                        command.getNamespace(),
                         kubeClient,
                         "hdfs-namenode",
                         command.getNnHost(),

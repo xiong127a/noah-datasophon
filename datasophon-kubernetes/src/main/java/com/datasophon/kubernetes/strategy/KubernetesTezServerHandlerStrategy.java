@@ -24,8 +24,8 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.util.KubernetesUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +52,7 @@ public class KubernetesTezServerHandlerStrategy extends KubernetesAbstractHandle
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult = serviceHandler.start(command);
+        Integer clusterId = command.getClusterId();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             if (BooleanUtil.isFalse(startResult.getExecResult())) {
                 logger.error("start tez server failed");
@@ -104,7 +105,7 @@ public class KubernetesTezServerHandlerStrategy extends KubernetesAbstractHandle
 
                 // 执行拼接后的命令
                 KubernetesUtil.runCmd(
-                        Constants.DATASOPHON,
+                        command.getNamespace(),
                         kubeClient,
                         (command.getServiceName() + "-" + command.getServiceRoleName()).toLowerCase(),
                         command.getHostname(),

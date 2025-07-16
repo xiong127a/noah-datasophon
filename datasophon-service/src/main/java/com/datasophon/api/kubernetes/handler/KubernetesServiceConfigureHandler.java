@@ -10,6 +10,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.actor.KubernetesConfigureServiceActor;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -33,6 +34,8 @@ public class KubernetesServiceConfigureHandler extends ServiceHandler {
         if ("zkserver".equalsIgnoreCase(serviceRoleInfo.getName())) {
             generateServiceConfigCommand.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
         }
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
+        generateServiceConfigCommand.setNamespace(namespace);
         generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
         generateServiceConfigCommand.setHostName(serviceRoleInfo.getHostname());
         ActorRef actorRef = ActorUtils.getLocalActor(KubernetesConfigureServiceActor.class,

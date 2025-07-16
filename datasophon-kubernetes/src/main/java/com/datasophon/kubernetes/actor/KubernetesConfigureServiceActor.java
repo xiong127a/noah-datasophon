@@ -19,6 +19,7 @@ public class KubernetesConfigureServiceActor extends UntypedActor {
             logger.info("start configure {}", command.getServiceName());
             KubernetesConfigureServiceHandler serviceHandler = new KubernetesConfigureServiceHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.configure(
+                    command.getNamespace(),
                     command.getCofigFileMap(),
                     command.getDecompressPackageName(),
                     command.getMyid(),

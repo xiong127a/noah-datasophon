@@ -36,6 +36,7 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
@@ -206,6 +207,8 @@ public class ClusterServiceRoleInstanceServiceImpl
         if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             KubernetesGetLogCommand kubernetesGetLogCommand = new KubernetesGetLogCommand();
             kubernetesGetLogCommand.setLogFile(logFile);
+            String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterInfo.getId());
+            kubernetesGetLogCommand.setNamespace(namespace);
             kubernetesGetLogCommand.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
             kubernetesGetLogCommand.setHostname(roleInstance.getHostname());
             kubernetesGetLogCommand.setKubeConfig(kubeConfig);

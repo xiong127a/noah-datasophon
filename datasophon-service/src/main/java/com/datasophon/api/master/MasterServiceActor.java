@@ -20,11 +20,11 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.enums.CommandType;
@@ -62,9 +62,9 @@ public class MasterServiceActor extends UntypedActor {
         if (message instanceof ExecuteServiceRoleCommand) {
             ExecuteServiceRoleCommand executeServiceRoleCommand = (ExecuteServiceRoleCommand) message;
 
-            ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringTool.getApplicationContext()
+            ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
                     .getBean(ClusterServiceRoleGroupConfigService.class);
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();

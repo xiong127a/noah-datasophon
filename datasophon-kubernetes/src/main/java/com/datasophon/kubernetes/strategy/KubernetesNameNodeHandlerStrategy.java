@@ -69,7 +69,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
         if (list.isEmpty()) {
             return;
         }
-
+        String namespace = getKubernetesNamespace(clusterId);
         // 动态获取ZK节点数量 - 直接从缓存获取，不再使用备用逻辑
         int zkNodeCount = 0;
         String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
@@ -125,7 +125,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
             switch (name) {
                 case "dfs.namenode.rpc-address.nameservice1.nn1": {
                     // NameNode1 RPC地址使用pod-0的FQDN格式
-                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -133,7 +133,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 }
                 case "dfs.namenode.rpc-address.nameservice1.nn2": {
                     // NameNode2 RPC地址使用pod-1的FQDN格式
-                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -141,7 +141,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 }
                 case "dfs.namenode.http-address.nameservice1.nn1": {
                     // NameNode1 HTTP地址使用pod-0的FQDN格式
-                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                    String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -149,7 +149,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 }
                 case "dfs.namenode.http-address.nameservice1.nn2": {
                     // NameNode2 HTTP地址使用pod-1的FQDN格式
-                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + NAMESPACE + "."
+                    String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
@@ -165,7 +165,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                         }
                         newValue.append(JOURNALNODE_SERVICE).append("-").append(i)
                                 .append(".").append(JOURNALNODE_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":8485");
                     }
                     newValue.append("/nameservice1");
@@ -183,7 +183,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                                 .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
@@ -200,7 +200,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                                 .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
@@ -210,7 +210,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 // 处理DataNode数据传输地址 - 使用完整的FQDN格式
                 case "dfs.datanode.address": {
                     // 使用DataNode服务的完整FQDN
-                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1026";
+                    String newValue = DATANODE_SERVICE + "." + namespace + "." + CLUSTER_DOMAIN + ":1026";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;
@@ -218,7 +218,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 // 处理DataNode HTTP地址 - 使用完整的FQDN格式
                 case "dfs.datanode.http.address": {
                     // 使用DataNode服务的完整FQDN
-                    String newValue = DATANODE_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN + ":1025";
+                    String newValue = DATANODE_SERVICE + "." + namespace + "." + CLUSTER_DOMAIN + ":1025";
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;

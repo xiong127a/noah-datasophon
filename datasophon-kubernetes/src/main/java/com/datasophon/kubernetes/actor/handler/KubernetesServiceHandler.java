@@ -14,9 +14,9 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.ColorLogUtils;
 import com.datasophon.kubernetes.util.CommonUtil;
+import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.datasophon.kubernetes.util.KubeUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.fabric8.kubernetes.api.model.*;
@@ -52,12 +52,12 @@ import java.util.stream.Collectors;
 import static com.datasophon.common.Constants.DEPLOYMENT;
 import static com.datasophon.common.Constants.KUBERNETES_CLUSTERIP_MAPPING;
 import static com.datasophon.common.Constants.KUBERNETES_CLUSTER_IP;
-import static com.datasophon.common.Constants.KUBERNETES_NODEPORT_MAPPING;
-import static com.datasophon.common.Constants.KUBERNETES_NODE_PORT;
 import static com.datasophon.common.Constants.KUBERNETES_CONFIG_SERVICES;
-import static com.datasophon.common.Constants.STATEFULSET;
 import static com.datasophon.common.Constants.KUBERNETES_LOADBALANCER_MAPPING;
 import static com.datasophon.common.Constants.KUBERNETES_LOAD_BALANCER;
+import static com.datasophon.common.Constants.KUBERNETES_NODEPORT_MAPPING;
+import static com.datasophon.common.Constants.KUBERNETES_NODE_PORT;
+import static com.datasophon.common.Constants.STATEFULSET;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
@@ -81,7 +81,8 @@ public class KubernetesServiceHandler {
     public static void saveConfigMapYaml(ConfigMap configMap) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "kubernetesYaml",
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
+                    "kubernetesYaml",
                     "configmaps");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
@@ -100,7 +101,8 @@ public class KubernetesServiceHandler {
 
             LoggerFactory.getLogger(KubernetesServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
         } catch (Exception e) {
-            LoggerFactory.getLogger(KubernetesServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
+            LoggerFactory.getLogger(KubernetesServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(),
+                    e);
         }
     }
 
@@ -163,11 +165,11 @@ public class KubernetesServiceHandler {
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
             logger.info("kind: {}", kind);
-
+            String namespace = command.getNamespace();
             if (DEPLOYMENT.equals(kind)) {
-                handleDeployment(client, yamlData, yamlInputStream, configFileMap);
+                handleDeployment(namespace, client, yamlData, yamlInputStream, configFileMap);
             } else if (STATEFULSET.equals(kind)) {
-                handleStatefulSet(client, yamlData, yamlInputStream, configFileMap);
+                handleStatefulSet(namespace, client, yamlData, yamlInputStream, configFileMap);
             } else {
                 throw new IllegalArgumentException("Unsupported resource kind: " + kind);
             }
@@ -462,7 +464,7 @@ public class KubernetesServiceHandler {
      * @param kind         资源类型
      * @param client       Kubernetes客户端
      */
-    private void handleNewSvc(ArrayList<ServicePort> servicePorts,
+    private void handleNewSvc(String namespace, ArrayList<ServicePort> servicePorts,
             String kind,
             KubernetesClient client) {
         if (servicePorts == null || servicePorts.isEmpty()) {
@@ -512,24 +514,24 @@ public class KubernetesServiceHandler {
 
         // 创建基础服务
         if (STATEFULSET.equals(kind)) {
-            createHeadlessService(basePorts, client);
+            createHeadlessService(namespace, basePorts, client);
         } else {
-            createClusterIPService(basePorts, client);
+            createClusterIPService(namespace, basePorts, client);
         }
 
         // 创建独立NodePort服务
         if (!nodePorts.isEmpty()) {
-            createNodePortServices(nodePorts, client);
+            createNodePortServices(namespace, nodePorts, client);
         }
 
         // 创建LoadBalancer服务
         if (!loadBalancerPorts.isEmpty()) {
-            createLoadBalancerServices(loadBalancerPorts, client);
+            createLoadBalancerServices(namespace, loadBalancerPorts, client);
         }
     }
 
     // 创建 Headless Service（StatefulSet）
-    private void createHeadlessService(List<ServicePort> ports, KubernetesClient client) {
+    private void createHeadlessService(String namespace, List<ServicePort> ports, KubernetesClient client) {
         ServiceSpec spec = new ServiceSpecBuilder()
                 .withClusterIP("None")
                 .withPublishNotReadyAddresses(true)
@@ -542,7 +544,7 @@ public class KubernetesServiceHandler {
                 .withNewMetadata()
                 .withName(serviceRoleFullName)
                 .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                .withNamespace(namespace)
                 .endMetadata()
                 .withSpec(spec)
                 .build();
@@ -550,11 +552,11 @@ public class KubernetesServiceHandler {
         // 保存YAML文件到本地
         saveServiceYaml(service, "headless");
 
-        executeServiceCreation(client, service);
+        executeServiceCreation(namespace, client, service);
     }
 
     // 创建 ClusterIP Service（Deployment）
-    private void createClusterIPService(List<ServicePort> ports, KubernetesClient client) {
+    private void createClusterIPService(String namespace, List<ServicePort> ports, KubernetesClient client) {
         ServiceSpec spec = new ServiceSpecBuilder()
                 .withType(KUBERNETES_CLUSTER_IP)
                 .withSelector(Collections.singletonMap("app", serviceRoleFullName))
@@ -566,7 +568,7 @@ public class KubernetesServiceHandler {
                 .withNewMetadata()
                 .withName(serviceRoleFullName)
                 .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                .withNamespace(namespace)
                 .endMetadata()
                 .withSpec(spec)
                 .build();
@@ -574,13 +576,13 @@ public class KubernetesServiceHandler {
         // 保存YAML文件到本地
         saveServiceYaml(service, "clusterip");
 
-        executeServiceCreation(client, service);
+        executeServiceCreation(namespace, client, service);
     }
 
     /**
      * 创建NodePort服务（通用）
      */
-    private void createNodePortServices(List<ServicePort> ports, KubernetesClient client) {
+    private void createNodePortServices(String namespace, List<ServicePort> ports, KubernetesClient client) {
         // 定义NodePort的有效范围常量
         final int MIN_NODEPORT = 30000;
         final int MAX_NODEPORT = 32767;
@@ -650,7 +652,7 @@ public class KubernetesServiceHandler {
                     .withNewMetadata()
                     .withName(serviceName)
                     .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                    .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .withNamespace(namespace)
                     .endMetadata()
                     .withSpec(specBuilder.build())
                     .build();
@@ -659,7 +661,7 @@ public class KubernetesServiceHandler {
             saveServiceYaml(service, "nodeport");
 
             // 在集群上创建服务
-            executeServiceCreation(client, service);
+            executeServiceCreation(namespace, client, service);
         }
     }
 
@@ -667,7 +669,7 @@ public class KubernetesServiceHandler {
      * 创建LoadBalancer服务，为StatefulSet中的每个Pod创建独立的LoadBalancer服务
      * 并将分配的外部IP存入ConfigMap
      */
-    private void createLoadBalancerServices(List<ServicePort> ports, KubernetesClient client) {
+    private void createLoadBalancerServices(String namespace, List<ServicePort> ports, KubernetesClient client) {
         if (ports == null || ports.isEmpty()) {
             logger.info("没有需要创建的LoadBalancer端口");
             return;
@@ -709,7 +711,7 @@ public class KubernetesServiceHandler {
                         .withNewMetadata()
                         .withName(serviceName)
                         .withLabels(Collections.singletonMap("app", serviceRoleFullName + "-svc"))
-                        .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .withNamespace(namespace)
                         .endMetadata()
                         .withSpec(specBuilder.build())
                         .build();
@@ -718,10 +720,10 @@ public class KubernetesServiceHandler {
                 saveServiceYaml(service, "loadbalancer");
 
                 // 在集群上创建服务
-                service = executeServiceCreationWithReturnValue(client, service);
+                service = executeServiceCreationWithReturnValue(namespace, client, service);
 
                 // 等待LoadBalancer分配外部IP
-                String externalIP = waitForLoadBalancerIP(client, serviceName);
+                String externalIP = waitForLoadBalancerIP(namespace, client, serviceName);
                 if (externalIP != null) {
                     logger.info("为Pod {} 创建LoadBalancer服务 {} 映射端口 {}，分配的外部IP: {}",
                             podName, serviceName, port.getPort(), externalIP);
@@ -736,7 +738,7 @@ public class KubernetesServiceHandler {
 
         // 创建或更新ConfigMap，存储Pod名称到外部IP的映射
         if (!externalIpMap.isEmpty()) {
-            createOrUpdateExternalIpConfigMap(client, configMapName, externalIpMap);
+            createOrUpdateExternalIpConfigMap(namespace, client, configMapName, externalIpMap);
         } else {
             logger.warn("没有获取到任何外部IP，不创建ConfigMap");
         }
@@ -745,14 +747,14 @@ public class KubernetesServiceHandler {
     /**
      * 执行服务创建并返回创建的服务对象
      */
-    private Service executeServiceCreationWithReturnValue(KubernetesClient client, Service service) {
+    private Service executeServiceCreationWithReturnValue(String namespace, KubernetesClient client, Service service) {
         try {
             // 创建Service
-            Service createdService = client.services().inNamespace(Constant.KUBERNETES_NAMESPACE).createOrReplace(service);
+            Service createdService = client.services().inNamespace(namespace).createOrReplace(service);
             logger.info("成功创建服务: {}", service.getMetadata().getName());
 
             // 添加彩色日志输出
-            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.KUBERNETES_NAMESPACE);
+            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), namespace);
 
             return createdService;
         } catch (Exception e) {
@@ -765,14 +767,14 @@ public class KubernetesServiceHandler {
     /**
      * 等待LoadBalancer服务分配外部IP
      */
-    private String waitForLoadBalancerIP(KubernetesClient client, String serviceName) {
+    private String waitForLoadBalancerIP(String namespace, KubernetesClient client, String serviceName) {
         logger.info("等待LoadBalancer服务 {} 分配外部IP...", serviceName);
 
         final int MAX_RETRIES = 60; // 最大重试次数
         final int RETRY_INTERVAL_SECONDS = 5; // 重试间隔（秒）
 
         for (int i = 0; i < MAX_RETRIES; i++) {
-            Service service = client.services().inNamespace(Constant.KUBERNETES_NAMESPACE).withName(serviceName).get();
+            Service service = client.services().inNamespace(namespace).withName(serviceName).get();
 
             if (service != null && service.getStatus() != null && service.getStatus().getLoadBalancer() != null) {
                 List<LoadBalancerIngress> ingresses = service.getStatus().getLoadBalancer().getIngress();
@@ -808,12 +810,12 @@ public class KubernetesServiceHandler {
     /**
      * 创建或更新ConfigMap，存储Pod名称到外部IP的映射
      */
-    private void createOrUpdateExternalIpConfigMap(KubernetesClient client, String configMapName,
+    private void createOrUpdateExternalIpConfigMap(String namespace, KubernetesClient client, String configMapName,
             Map<String, String> externalIpMap) {
         try {
             // 检查ConfigMap是否已存在
             ConfigMap existingConfigMap = client.configMaps()
-                    .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .inNamespace(namespace)
                     .withName(configMapName)
                     .get();
 
@@ -823,7 +825,7 @@ public class KubernetesServiceHandler {
                 // 更新现有ConfigMap
                 existingConfigMap.setData(externalIpMap);
                 client.configMaps()
-                        .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .inNamespace(namespace)
                         .withName(configMapName)
                         .replace(existingConfigMap);
 
@@ -831,7 +833,7 @@ public class KubernetesServiceHandler {
                 saveConfigMapYaml(existingConfigMap);
 
                 logger.info("成功更新ConfigMap: {}", configMapName);
-                ColorLogUtils.printResourceUpdated("ConfigMap", configMapName, Constant.KUBERNETES_NAMESPACE);
+                ColorLogUtils.printResourceUpdated("ConfigMap", configMapName, namespace);
             } else {
                 logger.info("创建新的ConfigMap: {}", configMapName);
 
@@ -839,20 +841,20 @@ public class KubernetesServiceHandler {
                 ConfigMap configMap = new ConfigMapBuilder()
                         .withNewMetadata()
                         .withName(configMapName)
-                        .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .withNamespace(namespace)
                         .endMetadata()
                         .withData(externalIpMap)
                         .build();
 
                 client.configMaps()
-                        .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .inNamespace(namespace)
                         .createOrReplace(configMap);
 
                 // 保存ConfigMap的YAML文件
                 saveConfigMapYaml(configMap);
 
                 logger.info("成功创建ConfigMap: {}", configMapName);
-                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.KUBERNETES_NAMESPACE);
+                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, namespace);
             }
         } catch (Exception e) {
             logger.error("创建或更新ConfigMap失败: {}", e.getMessage(), e);
@@ -869,22 +871,25 @@ public class KubernetesServiceHandler {
         }
     }
 
-    private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
+    private void handleDeployment(String namespace, KubernetesClient client, Map<String, Object> yamlData,
+            InputStream yamlInputStream,
             Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
-        handleResource(client, yamlData, yamlInputStream, client.apps().deployments()
-                .inNamespace(Constant.KUBERNETES_NAMESPACE)
+        handleResource(namespace, client, yamlData, yamlInputStream, client.apps().deployments()
+                .inNamespace(namespace)
                 .withName(serviceRoleFullName), DEPLOYMENT, configFileMap);
 
     }
 
-    private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
+    private void handleStatefulSet(String namespace, KubernetesClient client, Map<String, Object> yamlData,
+            InputStream yamlInputStream,
             Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
-        handleResource(client, yamlData, yamlInputStream, client.apps().statefulSets()
-                .inNamespace(Constant.KUBERNETES_NAMESPACE)
+        handleResource(namespace, client, yamlData, yamlInputStream, client.apps().statefulSets()
+                .inNamespace(namespace)
                 .withName(serviceRoleFullName), STATEFULSET, configFileMap);
     }
 
-    private <T extends HasMetadata> void handleResource(KubernetesClient client, Map<String, Object> yamlData,
+    private <T extends HasMetadata> void handleResource(String namespace, KubernetesClient client,
+            Map<String, Object> yamlData,
             InputStream yamlInputStream,
             RollableScalableResource<T> resource, String resourceKind,
             Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
@@ -893,9 +898,9 @@ public class KubernetesServiceHandler {
 
         if (isExistingResource) {
             if (DEPLOYMENT.equals(resourceKind)) {
-                handleExistingDeployment(yamlData, client, (Deployment) existingResource);
+                handleExistingDeployment(namespace, yamlData, client, (Deployment) existingResource);
             } else if (STATEFULSET.equals(resourceKind)) {
-                handleExistingStatefulSet(yamlData, client, (StatefulSet) existingResource);
+                handleExistingStatefulSet(namespace, yamlData, client, (StatefulSet) existingResource);
             }
         } else {
             addProcessStatus();
@@ -904,14 +909,14 @@ public class KubernetesServiceHandler {
                 // 确保ConfigMap在其他资源之前创建
                 logger.info("开始创建ConfigMap...");
 
-                handleConfigMap(client, serviceRoleFullName);
+                handleConfigMap(namespace, client, serviceRoleFullName);
 
                 // 生成服务配置和创建服务
                 ArrayList<ServicePort> ServicePorts = generateSvcConfig(configFileMap);
-                handleNewSvc(ServicePorts, resourceKind, client);
+                handleNewSvc(namespace, ServicePorts, resourceKind, client);
 
                 // 创建共享PVC
-                handlePvc(client, configFileMap);
+                handlePvc(namespace, client, configFileMap);
 
                 // 直接使用原始YAML创建资源，不修改挂载配置
 
@@ -920,20 +925,20 @@ public class KubernetesServiceHandler {
                     logger.info("ZKFC作为NameNode Pod的Sidecar容器部署，不创建资源");
                     return;
                 }
-                handleNewResource(client, yamlInputStream, resource);
+                handleNewResource(namespace, client, yamlInputStream, resource);
             }
         }
     }
 
-    private void handleConfigMap(KubernetesClient client, String serviceRoleFullName) {
+    private void handleConfigMap(String namespace, KubernetesClient client, String serviceRoleFullName) {
         // 创建ConfigMap
-        KubernetesFreeMakerUtils.createConfigMap(serviceRoleFullName, client);
+        KubernetesFreeMakerUtils.createConfigMap(namespace, serviceRoleFullName, client);
 
         // 创建Secret(如果有)
-        KubernetesFreeMakerUtils.createSecrets(serviceRoleFullName, client);
+        KubernetesFreeMakerUtils.createSecrets(namespace, serviceRoleFullName, client);
     }
 
-    private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
+    private void handleExistingDeployment(String namespace, Map<String, Object> yamlData, KubernetesClient client,
             Deployment existingDeployment) throws IOException {
         int replicas = existingDeployment.getSpec().getReplicas() != null
                 ? existingDeployment.getSpec().getReplicas()
@@ -957,15 +962,15 @@ public class KubernetesServiceHandler {
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
             // 使用 client.load 加载资源并更新
             client.load(updatedYamlInputStream)
-                    .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .inNamespace(namespace)
                     .createOrReplace();
 
             // 添加彩色日志
-            ColorLogUtils.printResourceUpdated("Deployment", serviceRoleFullName, Constant.KUBERNETES_NAMESPACE);
+            ColorLogUtils.printResourceUpdated("Deployment", serviceRoleFullName, namespace);
         }
     }
 
-    private void handleExistingStatefulSet(Map<String, Object> yamlData, KubernetesClient client,
+    private void handleExistingStatefulSet(String namespace, Map<String, Object> yamlData, KubernetesClient client,
             StatefulSet existingStatefulSet) throws IOException {
         int replicas = existingStatefulSet.getSpec().getReplicas() != null
                 ? existingStatefulSet.getSpec().getReplicas()
@@ -989,32 +994,34 @@ public class KubernetesServiceHandler {
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
             // 使用 client.load 加载资源并更新
             client.load(updatedYamlInputStream)
-                    .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .inNamespace(namespace)
                     .createOrReplace();
 
             // 添加彩色日志
-            ColorLogUtils.printResourceUpdated("StatefulSet", serviceRoleFullName, Constant.KUBERNETES_NAMESPACE);
+            ColorLogUtils.printResourceUpdated("StatefulSet", serviceRoleFullName, namespace);
         }
     }
 
-    private <T extends HasMetadata> void handleNewResource(KubernetesClient client, InputStream yamlInputStream,
+    private <T extends HasMetadata> void handleNewResource(String namespace, KubernetesClient client,
+            InputStream yamlInputStream,
             RollableScalableResource<T> resource) {
 
         logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-        List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.KUBERNETES_NAMESPACE).create();
+        List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(namespace).create();
         String resourceName = metadata.get(0).getMetadata().getName();
         String resourceKind = metadata.get(0).getKind();
-        logger.info("在kubernetes上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.KubernetesYamlFilePath(serviceRoleFullName));
+        logger.info("在kubernetes上启动资源: {} ,使用本地资源文件: {}", resourceName,
+                CommonUtil.KubernetesYamlFilePath(serviceRoleFullName));
 
         // 添加彩色日志
-        ColorLogUtils.printResourceCreated(resourceKind, resourceName, Constant.KUBERNETES_NAMESPACE);
+        ColorLogUtils.printResourceCreated(resourceKind, resourceName, namespace);
 
         resource.waitUntilReady(10, TimeUnit.MINUTES);
 
         // 获取Pod列表（新增代码）
         List<Pod> pods = client.pods()
-                .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                .inNamespace(namespace)
                 .withLabel("app", serviceRoleFullName) // 与Service/Deployment共享的标签
                 .list()
                 .getItems();
@@ -1035,7 +1042,7 @@ public class KubernetesServiceHandler {
         execResult.setExecResult(false);
     }
 
-    public ExecResult stop(String kubeConfig) {
+    public ExecResult stop(KubernetesServiceRoleOperateCommand command) {
         ExecResult execResult = new ExecResult();
         String yamlFile = CommonUtil.KubernetesYamlFilePath(serviceRoleFullName);
         logger.info("本地资源文件: {}", yamlFile);
@@ -1051,18 +1058,21 @@ public class KubernetesServiceHandler {
         } else {
             logger.info("在Kubernetes上停止deployment ,使用本地资源文件: {}", yamlFile);
             if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
-                String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl delete -f " + yamlFile);
+                String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().get(0),
+                        "kubectl delete -f " + yamlFile);
                 logger.info("stop operator: {}", s);
                 execResult.setExecResult(true);
                 return execResult;
             }
+            String namespace = command.getNamespace();
+            String kubeConfig = command.getKubeConfig();
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
                     FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
-                        .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .inNamespace(namespace)
                         .delete();
                 client.services()
-                        .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                        .inNamespace(namespace)
                         .withLabelSelector("app=" + serviceRoleFullName + "-svc")
                         .delete();
                 execResult.setExecResult(true);
@@ -1101,7 +1111,8 @@ public class KubernetesServiceHandler {
     private void saveServiceYaml(Service service, String serviceType) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "kubernetesYaml",
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
+                    "kubernetesYaml",
                     "servers");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
@@ -1128,7 +1139,8 @@ public class KubernetesServiceHandler {
     private void savePvcYaml(PersistentVolumeClaim pvc) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "kubernetesYaml",
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
+                    "kubernetesYaml",
                     "volumes");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
@@ -1156,7 +1168,8 @@ public class KubernetesServiceHandler {
      *
      * @param client Kubernetes客户端
      */
-    private void handlePvc(KubernetesClient client, Map<Generators, List<ServiceConfig>> configFileMap) {
+    private void handlePvc(String namespace, KubernetesClient client,
+            Map<Generators, List<ServiceConfig>> configFileMap) {
         try {
             // 在配置映射中寻找PVC配置生成器
             Generators pvcConfigGenerator = null;
@@ -1223,7 +1236,7 @@ public class KubernetesServiceHandler {
             PersistentVolumeClaim pvc = new PersistentVolumeClaimBuilder()
                     .withNewMetadata()
                     .withName(pvcName)
-                    .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .withNamespace(namespace)
                     .withLabels(Collections.singletonMap("app", serviceRoleFullName))
                     .endMetadata()
                     .withNewSpec()
@@ -1241,7 +1254,7 @@ public class KubernetesServiceHandler {
 
             // 检查PVC是否已存在
             PersistentVolumeClaim existingPvc = client.persistentVolumeClaims()
-                    .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .inNamespace(namespace)
                     .withName(pvcName)
                     .get();
 
@@ -1262,18 +1275,18 @@ public class KubernetesServiceHandler {
 
             // 在Kubernetes集群上创建PVC
             PersistentVolumeClaim createdPvc = client.persistentVolumeClaims()
-                    .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .inNamespace(namespace)
                     .createOrReplace(pvc);
 
             // 在日志中添加有关共享PVC方法的说明
             logger.info("已创建共享PVC：{}。Pod将挂载子路径：{}/[pod名称]",
-                    createdPvc.getMetadata().getName(), Constant.KUBERNETES_NAMESPACE);
+                    createdPvc.getMetadata().getName(), namespace);
 
             // 添加彩色日志输出
             ColorLogUtils.printResourceCreated(
                     "PersistentVolumeClaim",
                     createdPvc.getMetadata().getName(),
-                    Constant.KUBERNETES_NAMESPACE);
+                    namespace);
 
             // 将PVC名称和挂载路径存储在缓存中，以便后续使用
             CacheUtils.put(serviceRoleFullName + "_PVC_NAME", pvcName);
@@ -1291,14 +1304,14 @@ public class KubernetesServiceHandler {
      * @param client  Kubernetes客户端
      * @param service 要创建的服务
      */
-    private void executeServiceCreation(KubernetesClient client, Service service) {
+    private void executeServiceCreation(String namespace, KubernetesClient client, Service service) {
         try {
             // 创建Service
-            client.services().inNamespace(Constant.KUBERNETES_NAMESPACE).createOrReplace(service);
+            client.services().inNamespace(namespace).createOrReplace(service);
             logger.info("成功创建服务: {}", service.getMetadata().getName());
 
             // 添加彩色日志输出
-            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.KUBERNETES_NAMESPACE);
+            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), namespace);
 
             // 保存Service的YAML文件
             String serviceType = service.getSpec().getType();

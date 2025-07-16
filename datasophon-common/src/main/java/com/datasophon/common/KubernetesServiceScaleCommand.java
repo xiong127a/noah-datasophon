@@ -17,5 +17,6 @@ public class KubernetesServiceScaleCommand implements Serializable {
     private String serviceRoleName;
 
     private CommandType commandType;
+    private  String namespace;
 
 }

@@ -17,7 +17,6 @@
 
 package com.datasophon.kubernetes.strategy;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
@@ -41,6 +40,7 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         startResult = serviceHandler.start(command);
+        Integer clusterId = command.getClusterId();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("add cn to cluster");
             if (startResult.getExecResult()) {
@@ -48,7 +48,7 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
                     // 获取当前循环索引、总循环次数和角色安装数量
                     int currentRoleLoopIndex = getCurrentRoleLoopIndex();
                     int totalRoleLoopCount = getTotalRoleLoopCount();
-                    Integer roleInstallCount = getRoleInstallCount(command.getClusterId());
+                    Integer roleInstallCount = getRoleInstallCount(clusterId);
 
                     // 计算已经存在的节点数量
                     int existingNodesCount = roleInstallCount - totalRoleLoopCount;
@@ -83,9 +83,11 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String cnHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
-                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(
+                                                clusterId));
                                 String cnHost = String.format("%s-%d.%s.%s.svc.cluster.local",
-                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(
+                                                clusterId));
 
                                 logger.info("添加CN节点 {}: {}:{}", i - startPodIndex + 1, cnHost, "9050");
 
@@ -103,7 +105,7 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
 
                     // 使用executeMySqlInPod批量执行SQL语句
                     startResult = executeMySqlInPod(
-                            Constants.DATASOPHON,
+                            clusterId,
                             kubeClient,
                             "starrocks-srfe-0", // 使用第一个FE节点执行命令
                             sqlStatements);

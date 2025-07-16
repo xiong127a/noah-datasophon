@@ -70,7 +70,7 @@ public class KubernetesConfigureServiceHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap,
+    public ExecResult configure(String namespace,Map<Generators, List<ServiceConfig>> configFileMap,
                                 String decompressPackageName,
                                 Integer myid,
                                 String serviceRoleName,
@@ -206,13 +206,14 @@ public class KubernetesConfigureServiceHandler {
 //                                );
 //                    } else {
                         KubernetesFreeMakerUtils.generateConfigFile(
+                                namespace,
                                 generators,
                                 configs,
                                 serviceRoleName,serviceRoleFullName);
 //                    }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String configMapName = generateConfigMapName(serviceRoleFullName,generators);
-                    KubernetesFreeMakerUtils.cacheConfigMap(configMapName, "", generators.getFilename(),serviceRoleFullName);
+                    KubernetesFreeMakerUtils.cacheConfigMap(namespace,configMapName, "", generators.getFilename(),serviceRoleFullName);
                 }
 
                 execResult.setExecOut("configure success");

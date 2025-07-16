@@ -22,7 +22,7 @@ public class KubernetesStatusServiceActor extends UntypedActor {
 
             //执行状态检查
             KubernetesStatusHandler kubernetesStatusHandler = new KubernetesStatusHandler(command.getServiceName(), command.getServiceRoleName());
-            ExecResult startResult = kubernetesStatusHandler.status(command.getKubeConfig(), command.getHostname());
+            ExecResult startResult = kubernetesStatusHandler.status(command.getNamespace(),command.getKubeConfig(), command.getHostname());
 
             //回调
             getSender().tell(startResult, getSelf());

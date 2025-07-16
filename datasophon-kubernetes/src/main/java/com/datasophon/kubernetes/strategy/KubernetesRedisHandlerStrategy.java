@@ -8,8 +8,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.constants.Constant;
-import com.datasophon.kubernetes.util.KubernetesUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.sql.SQLException;
@@ -44,7 +44,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
             commands.add(workPath + "/redis-cluster.sh");
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 startResult= KubernetesUtil.runCmd(
-                        Constants.DATASOPHON,
+                        command.getNamespace(),
                         kubeClient,
                         (command.getServiceName() + "-" + command.getServiceRoleName()).toLowerCase(),
                         command.getHostname(),

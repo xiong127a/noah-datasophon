@@ -8,7 +8,11 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.util.*;
+import com.datasophon.kubernetes.util.DockerImageUtils;
+import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
+import com.datasophon.kubernetes.util.KubernetesMinaUtils;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
@@ -46,7 +50,7 @@ public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrat
             VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 KubernetesUtil.runJob(
-                        Constants.DATASOPHON,
+                        getKubernetesNamespace(command.getClusterId()),
                         "hue-database-init",
                         kubeClient,
                         volumeMounts,

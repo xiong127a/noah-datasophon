@@ -72,7 +72,7 @@ public class KubernetesScaleServiceHandler {
         currentMap.put(keys[keys.length - 1], newValue);
     }
 
-    public ExecResult scaleService(String kubeConfig, CommandType commandType) {
+    public ExecResult scaleService(String namespace,String kubeConfig, CommandType commandType) {
         ExecResult execResult = new ExecResult();
         String yamlFile = CommonUtil.KubernetesYamlFilePath(serviceRoleFullName);
         if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
@@ -88,12 +88,12 @@ public class KubernetesScaleServiceHandler {
                 case INSTALL_SERVICE:
                     // 安装服务时增加副本
                     System.out.println(ANSI_CYAN + "ℹ️ 执行服务安装操作，增加副本数" + ANSI_RESET);
-                    handleResourceScaling(client, yamlFile, true);
+                    handleResourceScaling(namespace,client, yamlFile, true);
                     break;
                 case UNINSTALL_SERVICE:
                     // 卸载服务时减少副本
                     System.out.println(ANSI_CYAN + "ℹ️ 执行服务卸载操作，减少副本数" + ANSI_RESET);
-                    handleResourceScaling(client, yamlFile, false);
+                    handleResourceScaling(namespace,client, yamlFile, false);
                     break;
                 case STOP_SERVICE:
                 case START_SERVICE:
@@ -123,7 +123,7 @@ public class KubernetesScaleServiceHandler {
      * @param yamlFile  YAML文件路径
      * @param isScaleUp 是否扩容（true表示扩容，false表示缩容）
      */
-    private void handleResourceScaling(KubernetesClient client, String yamlFile, boolean isScaleUp) throws IOException {
+    private void handleResourceScaling(String namespace,KubernetesClient client, String yamlFile, boolean isScaleUp) throws IOException {
         String kind = "Deployment"; // 默认为Deployment
 
         if (!yamlFile.toLowerCase().contains("operator")) {
@@ -137,16 +137,16 @@ public class KubernetesScaleServiceHandler {
         if ("Deployment".equals(kind)) {
             logger.info("{} Deployment: {}", isScaleUp ? "Scaling up" : "Scaling down", serviceRoleFullName);
             if (isScaleUp) {
-                scaleResourceUp(client, client.apps().deployments(), "Deployment");
+                scaleResourceUp(namespace, client.apps().deployments(), "Deployment");
             } else {
-                scaleResourceDown(client, client.apps().deployments(), "Deployment");
+                scaleResourceDown(namespace, client.apps().deployments(), "Deployment");
             }
         } else if ("StatefulSet".equals(kind)) {
             logger.info("{} StatefulSet: {}", isScaleUp ? "Scaling up" : "Scaling down", serviceRoleFullName);
             if (isScaleUp) {
-                scaleResourceUp(client, client.apps().statefulSets(), "StatefulSet");
+                scaleResourceUp(namespace, client.apps().statefulSets(), "StatefulSet");
             } else {
-                scaleResourceDown(client, client.apps().statefulSets(), "StatefulSet");
+                scaleResourceDown(namespace, client.apps().statefulSets(), "StatefulSet");
             }
         } else {
             String errorMsg = "Unsupported resource kind: " + kind;
@@ -157,12 +157,12 @@ public class KubernetesScaleServiceHandler {
 
     // 重构扩容方法 - 统一使用scale接口
     private synchronized <T> void scaleResourceUp(
-            KubernetesClient client,
+            String namespace,
             MixedOperation<T, ?, RollableScalableResource<T>> resourceApi,
             String resourceType) {
 
         RollableScalableResource<T> resource = resourceApi
-                .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                .inNamespace(namespace)
                 .withName(serviceRoleFullName);
 
         T existingResource = resource.get();
@@ -204,12 +204,12 @@ public class KubernetesScaleServiceHandler {
 
     // 通用缩容方法（支持Deployment/StatefulSet）
     private synchronized <T> void scaleResourceDown(
-            KubernetesClient client,
+            String namespace,
             MixedOperation<T, ?, RollableScalableResource<T>> resourceApi,
             String resourceType) {
 
         RollableScalableResource<T> resource = resourceApi
-                .inNamespace(Constant.KUBERNETES_NAMESPACE)
+                .inNamespace(namespace)
                 .withName(serviceRoleFullName);
 
         T existingResource = resource.get();

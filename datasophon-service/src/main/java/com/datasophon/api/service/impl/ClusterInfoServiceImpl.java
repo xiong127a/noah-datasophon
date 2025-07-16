@@ -377,4 +377,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             return Result.error("更新Kubernetes配置失败: " + e.getMessage());
         }
     }
+
+    @Override
+    public String getKubernetesNamespace(Integer clusterId) {
+        return getById(clusterId).getNamespace();
+    }
 }

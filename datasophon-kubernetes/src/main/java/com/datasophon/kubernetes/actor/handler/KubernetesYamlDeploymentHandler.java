@@ -25,6 +25,7 @@ import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.DockerImageUtils;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -67,8 +68,8 @@ public class KubernetesYamlDeploymentHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    private static void volumeLog(Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname,
-            String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
+    private static void volumeLog(Map<Generators, List<ServiceConfig>> configFileMap, String logFile,
+            String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream().flatMap(List::stream)
                 .collect(Collectors.toMap(t -> "${" + t.getName() + "}", t -> Convert.toStr(t.getValue()),
@@ -181,9 +182,9 @@ public class KubernetesYamlDeploymentHandler {
         }
     }
 
-    public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
+    public ExecResult configure(Integer clusterId,Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
             ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
-            String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost,
+            String decompressPackageName, String logFile, String serviceRoleName, String masterHost,
             boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
 
         ExecResult execResult = new ExecResult();
@@ -197,13 +198,13 @@ public class KubernetesYamlDeploymentHandler {
 
             volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName, volumeConfigMapSet);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
+            volumeLog(configFileMap, logFile, appHome, volumePathSet, serviceName);
 
             volumeHadoopConfig(volumeConfigMapSet);
 
-            volumeEnableKerberosConfig(volumeConfigMapSet, appHome, serviceRoleName, enableKerberos);
+            volumeEnableKerberosConfig(volumeConfigMapSet, serviceRoleName, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome,
+            Map<String, Object> data = prepareTemplateMap(clusterId,runAs, startRunner, statusRunner, roleNodeCnt, appHome,
                     volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin,
                     logFile, commandType);
             if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
@@ -225,7 +226,7 @@ public class KubernetesYamlDeploymentHandler {
         return execResult;
     }
 
-    private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumeConfigMapSet, String appHome,
+    private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumeConfigMapSet,
             String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             addConfigFile(volumeConfigMapSet, "keytab", "/etc/security/keytab/");
@@ -300,7 +301,6 @@ public class KubernetesYamlDeploymentHandler {
 
         // 处理所有配置值并放入缓存
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
-            Generators generators = entry.getKey();
             List<ServiceConfig> configList = entry.getValue();
 
             // 使用FreemarkerUtils处理配置列表，确保正确处理特殊类型
@@ -340,14 +340,14 @@ public class KubernetesYamlDeploymentHandler {
         return resultConfigMap;
     }
 
-    private Map<String, Object> prepareTemplateMap(RunAs runAs, ServiceRoleRunner startRunner,
+    private Map<String, Object> prepareTemplateMap(Integer clusterId,RunAs runAs, ServiceRoleRunner startRunner,
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
             String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
             CommandType commandType) {
         // 获取参数映射，使用runAs中的用户名，在Kubernetes环境中使用$(hostname)
         Map<String, String> paramMap = createParamMap(runAs.getUser(), true);
-
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         // 处理logFile
         String processedLogFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
         String logFilePath = FileUtils.concatPath(appHome, processedLogFile);
@@ -368,7 +368,7 @@ public class KubernetesYamlDeploymentHandler {
         data.put("volumeConfigMapSet", new ArrayList<>(volumeConfigMapSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
         data.put("serviceName", serviceName);
-        data.put("namespace", Constant.KUBERNETES_NAMESPACE);
+        data.put("namespace", namespace);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         if (StrUtil.equals(serviceRoleFullName, "starrocks-srcn")) {
             data.put("dockerRoleImage", DockerImageUtils.getString("starrocks-srbe"));
@@ -405,7 +405,7 @@ public class KubernetesYamlDeploymentHandler {
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
 
         // 调用处理特定服务配置的方法
-        processServiceSpecificConfigs(paramMap);
+        processServiceSpecificConfigs(namespace);
 
         return data;
     }
@@ -413,9 +413,9 @@ public class KubernetesYamlDeploymentHandler {
     /**
      * 处理特定服务的配置
      * 
-     * @param paramMap 参数映射
+     * @param namespace 命名空间
      */
-    private void processServiceSpecificConfigs(Map<String, String> paramMap) {
+    private void processServiceSpecificConfigs(String namespace) {
         if ("HDFS".equals(serviceName)) {
             populateDataWithConfig("dfs.namenode.name.dir", "nn_name_dir");
             populateDataWithConfig("dfs.namenode.shared.edits.dir", "nn_shared_edits_dir");
@@ -453,7 +453,7 @@ public class KubernetesYamlDeploymentHandler {
         if ("HIVE".equals(serviceName)) {
             populateDataWithConfig("hive.metastore.uris", "metastore_uris");
             // 提取数据库连接信息，以便创建Secret
-            extractHiveDatabaseInfo();
+            extractHiveDatabaseInfo(namespace);
         }
         if ("REDIS".equals(serviceName)) {
             String redisMasterAddr = (String) CONFIG_CACHE.get("RedisMasterAddr").getValue();
@@ -478,7 +478,7 @@ public class KubernetesYamlDeploymentHandler {
             // 查找FE节点的服务角色全名
             // 设置FE master节点地址
             String feMasterHost = String.format("starrocks-srfe-0.starrocks-srfe.%s.svc.cluster.local",
-                    Constant.KUBERNETES_NAMESPACE);
+                    namespace);
             data.put("fe_master_host", feMasterHost);
             populateDataWithConfig("edit_log_port", "fe_master_port");
 
@@ -664,14 +664,13 @@ public class KubernetesYamlDeploymentHandler {
      * 此方法从配置中提取数据库连接信息和HDFS路径配置，并创建Secret
      *
      */
-    private void extractHiveDatabaseInfo() {
+    private void extractHiveDatabaseInfo(String namespace) {
         logger.info("正在提取Hive数据库连接信息和HDFS路径配置用于创建Secret...");
 
         // 尝试从缓存中获取数据库连接配置
         ServiceConfig dbUrlConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionURL");
         ServiceConfig dbUserConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionUserName");
         ServiceConfig dbPassConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionPassword");
-        ServiceConfig dbDriverConfig = CONFIG_CACHE.get("javax.jdo.option.ConnectionDriverName");
 
         // 获取HDFS路径配置
         ServiceConfig warehouseConfig = CONFIG_CACHE.get("hive.metastore.warehouse.dir");
@@ -687,9 +686,6 @@ public class KubernetesYamlDeploymentHandler {
         String dbUser = dbUserConfig != null && dbUserConfig.getValue() != null ? dbUserConfig.getValue().toString()
                 : "";
         String dbPass = dbPassConfig != null && dbPassConfig.getValue() != null ? dbPassConfig.getValue().toString()
-                : "";
-        String dbDriver = dbDriverConfig != null && dbDriverConfig.getValue() != null
-                ? dbDriverConfig.getValue().toString()
                 : "";
 
         // 获取HDFS路径值，如果未配置则使用默认值
@@ -768,7 +764,7 @@ public class KubernetesYamlDeploymentHandler {
             secretData.put("temp-storage", tempStorage);
 
             // 缓存Secret，将在Kubernetes集群中创建
-            KubernetesFreeMakerUtils.cacheDatabaseSecret(serviceRoleFullName, secretData, "-db-secret");
+            KubernetesFreeMakerUtils.cacheDatabaseSecret(namespace,serviceRoleFullName, secretData, "-db-secret");
 
             logger.info("成功提取数据库连接信息和HDFS路径配置并创建Secret");
             logger.info("数据库信息: 类型={}, 主机={}, 端口={}, 数据库名={}",

@@ -20,6 +20,7 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.service.ClusterInfoService;
@@ -27,7 +28,6 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -62,7 +62,7 @@ public class AlertManagersActor extends UntypedActor {
 
         //更新所有集群的通知组
         //获取alertManager的所有实例
-        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         List<ClusterServiceRoleInstanceEntity> roleInstanceEntitys = roleInstanceService.listServiceRoleByName("AlertManager");
         if (CollectionUtils.isEmpty(roleInstanceEntitys)) {
             return;
@@ -73,7 +73,7 @@ public class AlertManagersActor extends UntypedActor {
         for (Integer clusterId : clusterRoules.keySet()) {
 
             //查询集群框架
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             String getServiceDcPackageName = PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), SERVICENAME);
 
@@ -81,7 +81,7 @@ public class AlertManagersActor extends UntypedActor {
             for (ClusterServiceRoleInstanceEntity alertManager : roleInstanceEntitys) {
 
                 //通过实例的配置组id查询配置的详细信息，
-                ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringTool.getApplicationContext().getBean(ClusterServiceRoleGroupConfigService.class);
+                ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil.getBean(ClusterServiceRoleGroupConfigService.class);
                 ClusterServiceRoleGroupConfig roleGroupConfig = roleGroupConfigService.getConfigByRoleGroupId(alertManager.getRoleGroupId());
 
                 //准备配置参数·       ·

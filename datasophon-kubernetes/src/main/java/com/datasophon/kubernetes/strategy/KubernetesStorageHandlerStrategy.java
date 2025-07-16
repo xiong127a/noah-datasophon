@@ -22,8 +22,8 @@ import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.util.KubernetesUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.util.ArrayList;
@@ -64,7 +64,7 @@ public class KubernetesStorageHandlerStrategy extends KubernetesAbstractHandlerS
             if (startResult.getExecResult()) {
                 try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                     KubernetesUtil.runCmd(
-                            Constants.DATASOPHON,
+                            command.getNamespace(),
                             kubeClient,
                             "nebulagraph-graph",
                             command.getGraphHost(),

@@ -20,7 +20,7 @@ public class KubernetesStopServiceActor extends UntypedActor {
             ExecResult startResult = new ExecResult();
             KubernetesServiceHandler serviceHandler =
                     new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
-            startResult = serviceHandler.stop(command.getKubeConfig());
+            startResult = serviceHandler.stop(command);
 
             getSender().tell(startResult, getSelf());
             logger.info("service role {} stop on Kubernetes result {}", command.getServiceRoleName(),

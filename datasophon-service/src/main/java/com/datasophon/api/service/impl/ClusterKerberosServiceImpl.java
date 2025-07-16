@@ -20,15 +20,16 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterKerberosService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,12 +139,13 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             String keytabFilePath,
             String principal
     ) {
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         String hostname =GetMasterHost().get(0);
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            runCmd(Constants.DATASOPHON,
+            runCmd(namespace,
                     client,
                     "kerberos-kadmin",
                     hostname,

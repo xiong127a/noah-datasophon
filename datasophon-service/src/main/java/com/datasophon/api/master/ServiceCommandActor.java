@@ -19,6 +19,7 @@ package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterAlertQuotaService;
@@ -27,7 +28,6 @@ import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
@@ -84,13 +84,13 @@ public class ServiceCommandActor extends UntypedActor {
         if (msg instanceof UpdateCommandHostMessage) {
             UpdateCommandHostMessage message = (UpdateCommandHostMessage) msg;
 
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
-            ClusterServiceCommandHostCommandService service = SpringTool.getApplicationContext()
+            ClusterServiceCommandHostCommandService service = SpringUtil
                     .getBean(ClusterServiceCommandHostCommandService.class);
-            ClusterServiceCommandHostService commandHostService = SpringTool.getApplicationContext()
+            ClusterServiceCommandHostService commandHostService = SpringUtil
                     .getBean(ClusterServiceCommandHostService.class);
-            ClusterServiceCommandService commandService = SpringTool.getApplicationContext()
+            ClusterServiceCommandService commandService = SpringUtil
                     .getBean(ClusterServiceCommandService.class);
 
             ClusterServiceCommandHostEntity commandHost = commandHostService
@@ -202,7 +202,7 @@ public class ServiceCommandActor extends UntypedActor {
     }
 
     private void enableAlertConfig(String serviceName, Integer clusterId) {
-        ClusterAlertQuotaService alertQuotaService = SpringTool.getApplicationContext()
+        ClusterAlertQuotaService alertQuotaService = SpringUtil
                 .getBean(ClusterAlertQuotaService.class);
         List<ClusterAlertQuota> list = alertQuotaService.listAlertQuotaByServiceName(serviceName);
         List<Integer> ids = list.stream().map(ClusterAlertQuota::getId).collect(Collectors.toList());
@@ -213,7 +213,7 @@ public class ServiceCommandActor extends UntypedActor {
     private void updateHDFSWebUi(Integer clusterId, Integer serviceInstanceId) {
         Map<String, String> variables = GlobalVariables.get(clusterId);
         if (variables.containsKey(ENABLE_HDFS_KERBEROS)) {
-            ClusterServiceRoleInstanceWebuisService webuisService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceWebuisService.class);
             List<ClusterServiceRoleInstanceWebuis> webUis = webuisService
                     .listWebUisByServiceInstanceId(serviceInstanceId);

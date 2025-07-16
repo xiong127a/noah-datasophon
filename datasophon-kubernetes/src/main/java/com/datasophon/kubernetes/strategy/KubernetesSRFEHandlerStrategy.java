@@ -17,7 +17,6 @@
 
 package com.datasophon.kubernetes.strategy;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.ServiceConfig;
@@ -112,9 +111,9 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String followerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
-                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(clusterId));
                                 String followerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
-                                        serviceRoleFullName, i, serviceRoleFullName, Constants.DATASOPHON);
+                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(clusterId));
 
                                 logger.info("添加follower节点: {}", followerAddr);
 
@@ -132,7 +131,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
 
                     // 使用executeMySqlInPod批量执行SQL语句
                     startResult = executeMySqlInPod(
-                            Constants.DATASOPHON,
+                            clusterId,
                             kubeClient,
                             serviceRoleFullName + "-0", // 使用第一个FE节点执行命令
                             sqlStatements);

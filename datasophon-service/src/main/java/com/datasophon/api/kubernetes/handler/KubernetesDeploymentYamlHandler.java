@@ -3,11 +3,11 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesGenerateDeploymentYamlCommand;
 import com.datasophon.common.model.RunAs;
@@ -60,7 +60,7 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
             kubernetesGenerateDeploymentYamlCommand.setRunAs(runAs);
         }
 
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
         String hostMapKey =
                 clusterInfo.getClusterCode()

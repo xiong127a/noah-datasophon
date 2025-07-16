@@ -17,13 +17,13 @@
 
 package com.datasophon.kubernetes.strategy;
 
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.datasophon.common.cache.CacheUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -81,7 +81,7 @@ public class KubernetesKafkaHandlerStrategy extends KubernetesAbstractHandlerStr
         final String ZOOKEEPER_SERVICE = "zookeeper-zkserver";
 
         // 当前服务角色名称
-
+        String namespace = getKubernetesNamespace(clusterId);
         // 遍历所有配置
         for (ServiceConfig config : list) {
             String name = config.getName();
@@ -98,7 +98,7 @@ public class KubernetesKafkaHandlerStrategy extends KubernetesAbstractHandlerStr
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                                 .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     zkServers.append("/kafka");
@@ -115,7 +115,7 @@ public class KubernetesKafkaHandlerStrategy extends KubernetesAbstractHandlerStr
                         }
                         zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                                 .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                                .append(NAMESPACE).append(".")
+                                .append(namespace).append(".")
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     zkServers.append("/kafka");
@@ -150,7 +150,7 @@ public class KubernetesKafkaHandlerStrategy extends KubernetesAbstractHandlerStr
                 }
                 case "efak.worknode.master.host": {
                     // EFAK主节点地址，使用服务名称
-                    String newValue = KAFKA_EFAK_SERVICE + "." + NAMESPACE + "." + CLUSTER_DOMAIN;
+                    String newValue = KAFKA_EFAK_SERVICE + "." + namespace + "." + CLUSTER_DOMAIN;
                     config.setValue(newValue);
                     logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
                     break;

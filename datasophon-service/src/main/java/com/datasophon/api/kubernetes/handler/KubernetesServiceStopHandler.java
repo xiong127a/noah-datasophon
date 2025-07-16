@@ -3,10 +3,10 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -33,7 +33,7 @@ public class KubernetesServiceStopHandler extends ServiceHandler {
         kubernetesServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
 
         ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
 

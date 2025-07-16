@@ -17,13 +17,15 @@
 
 package com.datasophon.api.master;
 
+import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
@@ -32,17 +34,12 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.baomidou.mybatisplus.core.toolkit.Constants;
-
-import akka.actor.UntypedActor;
 
 public class RackActor extends UntypedActor {
 
@@ -54,10 +51,10 @@ public class RackActor extends UntypedActor {
             GenerateRackPropCommand command = (GenerateRackPropCommand) msg;
 
             ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-            ClusterHostService hostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+                    SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+            ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
             ClusterInfoService clusterInfoService =
-                    SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                    SpringUtil.getBean(ClusterInfoService.class);
             // update rack table
             List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
                     .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), "NameNode");

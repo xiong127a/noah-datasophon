@@ -3,15 +3,16 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.actor.KubernetesStartServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,23 +50,23 @@ public class KubernetesServiceStartHandler extends ServiceHandler {
         kubernetesServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceRoleOperateCommand.setConfigFileMap(serviceRoleInfo.getConfigFileMap());
         kubernetesServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
-
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
+        kubernetesServiceRoleOperateCommand.setNamespace(namespace);
         kubernetesServiceRoleOperateCommand.setRunAs(serviceRoleInfo.getRunAs());
         kubernetesServiceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
         kubernetesServiceRoleOperateCommand.setServiceRoleType(serviceRoleInfo.getRoleType());
-        ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
         kubernetesServiceRoleOperateCommand.setGraphHost(globalVariables.get("${nebulaGraphHost}"));
         kubernetesServiceRoleOperateCommand.setNnHost(globalVariables.get("${nn1}"));
-        Boolean enableKerberos = enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName());
+        Boolean enableKerberos = enableKerberos(serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         kubernetesServiceRoleOperateCommand.setEnableKerberos(enableKerberos);
 
-
-        List<String> needClientService = Arrays.asList("SPARK3", "FLINK", "FLUME","JUICEFS","LOGSTASH");
-        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT&&!needClientService.contains(serviceRoleInfo.getParentName())) {
+        List<String> needClientService = Arrays.asList("SPARK3", "FLINK", "FLUME", "JUICEFS", "LOGSTASH");
+        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT
+                && !needClientService.contains(serviceRoleInfo.getParentName())) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);
             if (Objects.nonNull(getNext())) {
@@ -74,8 +75,8 @@ public class KubernetesServiceStartHandler extends ServiceHandler {
             return execResult;
         }
 
-        ActorRef startActor =
-                ActorUtils.getLocalActor(KubernetesStartServiceActor.class, ActorUtils.getActorRefName(KubernetesStartServiceActor.class));
+        ActorRef startActor = ActorUtils.getLocalActor(KubernetesStartServiceActor.class,
+                ActorUtils.getActorRefName(KubernetesStartServiceActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> startFuture = Patterns.ask(startActor, kubernetesServiceRoleOperateCommand, timeout);
         try {

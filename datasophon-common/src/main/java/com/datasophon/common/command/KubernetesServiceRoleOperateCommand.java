@@ -39,6 +39,7 @@ public class KubernetesServiceRoleOperateCommand extends BaseCommand implements 
     private String hostname;
 
     private String nnHost;
+    private String namespace;
 
     private Map<Generators, List<ServiceConfig>> configFileMap;
 

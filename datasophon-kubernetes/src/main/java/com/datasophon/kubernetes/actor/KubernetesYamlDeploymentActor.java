@@ -18,6 +18,7 @@ public class KubernetesYamlDeploymentActor extends UntypedActor {
             logger.info("start configure {} Kubernetes yaml file", command.getServiceRoleName());
             KubernetesYamlDeploymentHandler serviceHandler = new KubernetesYamlDeploymentHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.configure(
+                    command.getClusterId(),
                     command.getCofigFileMap(),
                     command.getRunAs(),
                     command.getStartRunner(),
@@ -25,7 +26,6 @@ public class KubernetesYamlDeploymentActor extends UntypedActor {
                     command.getRoleNodeCnt(),
                     command.getDecompressPackageName(),
                     command.getLogFile(),
-                    command.getHostName(),
                     command.getServiceRoleName(),
                     command.getMasterHost(),
                     command.getEnableKerberos(),

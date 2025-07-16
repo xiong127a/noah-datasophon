@@ -1,20 +1,21 @@
 package com.datasophon.api.service.impl;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
-import static com.datasophon.kubernetes.constants.Constant.KUBERNETES_NAMESPACE;
+
 
 
 @Service
@@ -25,7 +26,7 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     private static final int DEFAULT_SCALE_DOWN_REPLICAS = 1;
 
     private ClusterInfoService getClusterInfoService() {
-        return SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        return SpringUtil.getBean(ClusterInfoService.class);
     }
 
     private boolean isAutoScaleEnabled(int clusterId) {
@@ -40,9 +41,10 @@ public class AutoScaleServiceImpl implements AutoScaleService {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
         KubernetesUtil.scaleStatefulSet(
                 kubeConfig,
-                KUBERNETES_NAMESPACE,
+                namespace,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_UP_REPLICAS,
                 "工作日早9点扩容"
@@ -57,9 +59,10 @@ public class AutoScaleServiceImpl implements AutoScaleService {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
         KubernetesUtil.scaleStatefulSet(
                 kubeConfig,
-                KUBERNETES_NAMESPACE,
+                namespace,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_DOWN_REPLICAS,
                 "工作日晚6点缩容"

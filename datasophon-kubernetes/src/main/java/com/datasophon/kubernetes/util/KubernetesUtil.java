@@ -3,12 +3,19 @@ package com.datasophon.kubernetes.util;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
+import io.fabric8.kubernetes.api.model.HostPathVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobStatus;
@@ -147,7 +154,7 @@ public class KubernetesUtil {
     public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig,
             ExecuteCmdCommand cmdCommand) {
         KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(kubeConfig);
-        return runCmd(Constants.DATASOPHON,
+        return runCmd(getKubernetesNamespace(roleInstanceEntity.getClusterId()),
                 kubeClient,
                 (roleInstanceEntity.getServiceName() + "-" + roleInstanceEntity.getServiceRoleName()).toLowerCase(),
                 roleInstanceEntity.getHostname(),
@@ -620,6 +627,11 @@ public class KubernetesUtil {
     public static ExecResult runCmdInPod(String namespace, KubernetesClient client, String podName, String cmd) {
         List<String> commands = handlerCommand(cmd);
         return executeCommandInPod(namespace, client, podName, commands);
+    }
+
+    public static String getKubernetesNamespace(Integer clusterId) {
+
+        return "data";
     }
 
 }

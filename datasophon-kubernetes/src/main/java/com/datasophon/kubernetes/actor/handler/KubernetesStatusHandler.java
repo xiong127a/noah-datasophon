@@ -39,13 +39,12 @@ public class KubernetesStatusHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public ExecResult status(String kubeConfig, String hostname) {
+    public ExecResult status(String namespace,String kubeConfig, String hostname) {
 
         ExecResult execResult = new ExecResult();
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-
             //获取服务对应的所有pod
-            List<Pod> pods = client.pods().inNamespace(Constant.KUBERNETES_NAMESPACE).withLabel("app", serviceRoleFullName).list().getItems();
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", serviceRoleFullName).list().getItems();
 
             //没有对应的pod ，状态为 false
             List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());

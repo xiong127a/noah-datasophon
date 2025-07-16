@@ -58,7 +58,7 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
                     int podIndex = serverId - 1;
 
                     // 修改为 FQDN DNS 名称
-                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + "." + NAMESPACE + "."
+                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + "." + getKubernetesNamespace(clusterId) + "."
                             + CLUSTER_DOMAIN + ":2888:3888";
                     config.setValue(newValue);
 

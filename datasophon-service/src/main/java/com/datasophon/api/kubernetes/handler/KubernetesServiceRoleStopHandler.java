@@ -3,14 +3,15 @@ package com.datasophon.api.kubernetes.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.actor.KubernetesStopRolePodActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +34,10 @@ public class KubernetesServiceRoleStopHandler extends ServiceHandler {
         kubernetesServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         kubernetesServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
         kubernetesServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
-
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
+        kubernetesServiceRoleOperateCommand.setNamespace(namespace);
         ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
 

@@ -18,12 +18,12 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ConnectionInfo;
@@ -127,7 +127,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         @Override
         public void getConfig(Integer clusterId, List<ServiceConfig> list) {
                 // add server.x config
-                ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+                ClusterInfoService clusterInfoService = SpringUtil
                                 .getBean(ClusterInfoService.class);
                 ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 

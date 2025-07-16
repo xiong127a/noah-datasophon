@@ -34,7 +34,7 @@ public final class Constants {
         public static final String INSTALL_TYPE = "install_type";
         public static final String TOTAL = "total";
 
-        public static final String DATASOPHON = "datasophon";
+
         public static final String DEPLOYMENT = "Deployment";
         public static final String STATEFULSET = "StatefulSet";
 

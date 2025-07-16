@@ -22,6 +22,7 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
@@ -116,7 +117,7 @@ public interface ServiceRoleStrategy {
     }
 
     default String getKubeConfig(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
     }
 
@@ -154,7 +155,7 @@ public interface ServiceRoleStrategy {
         if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
                 "NameNode",
                 "ResourceManager")) {
-            ClusterServiceRoleInstanceWebuisService webuisService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceWebuisService.class);
             if (execResult.getExecResult()) {
                 if (execResult.getExecOut().contains(ACTIVE)) {

@@ -33,10 +33,10 @@ public class KubernetesStopRolePodHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public ExecResult stop(String kubeConfig, String hostname) {
+    public ExecResult stop(String namespace,String kubeConfig, String hostname) {
         ExecResult execResult = new ExecResult();
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            List<Pod> pods = client.pods().inNamespace(Constant.KUBERNETES_NAMESPACE).withLabel("app", serviceRoleFullName).list().getItems();
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", serviceRoleFullName).list().getItems();
             if (CollUtil.isNotEmpty(pods)) {
                 List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
                 if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {

@@ -20,12 +20,12 @@
 package com.datasophon.api.master.alert;
 
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -43,7 +43,7 @@ public class ServiceRoleCheckActor extends UntypedActor {
     @Override
     public void onReceive(Object msg) throws Throwable {
         if (msg instanceof ServiceRoleCheckCommand) {
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
 
             //查询服务实例
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(

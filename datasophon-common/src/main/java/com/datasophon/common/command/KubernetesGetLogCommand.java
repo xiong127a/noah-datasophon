@@ -33,4 +33,5 @@ public class KubernetesGetLogCommand implements Serializable {
     private String kubeConfig;
 
     private String serviceRoleFullName;
+    private String namespace;
 }

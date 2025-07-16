@@ -3,6 +3,7 @@ package com.datasophon.api.utils;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
@@ -101,7 +102,7 @@ public class ConfigGroupUtils {
 
         try {
             // 从Spring上下文获取服务
-            FrameServiceService frameServiceService = SpringTool.getApplicationContext()
+            FrameServiceService frameServiceService = SpringUtil
                     .getBean(FrameServiceService.class);
 
             // 获取服务定义
@@ -335,7 +336,7 @@ public class ConfigGroupUtils {
      */
     private static void processJmxPorts(List<ServiceConfig> processedConfigs) {
         // 从Spring上下文获取服务
-        FrameServiceService frameServiceService = SpringTool.getApplicationContext()
+        FrameServiceService frameServiceService = SpringUtil
                 .getBean(FrameServiceService.class);
 
         // 收集所有角色配置映射
@@ -547,7 +548,7 @@ public class ConfigGroupUtils {
 
         try {
             // 从Spring上下文获取服务
-            FrameServiceService frameServiceService = SpringTool.getApplicationContext()
+            FrameServiceService frameServiceService = SpringUtil
                     .getBean(FrameServiceService.class);
 
             // 获取服务定义

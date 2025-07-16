@@ -114,4 +114,6 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
      * @return 更新结果
      */
     Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
+
+    String getKubernetesNamespace(Integer clusterId);
 }

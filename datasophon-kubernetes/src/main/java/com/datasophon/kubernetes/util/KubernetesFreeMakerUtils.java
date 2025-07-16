@@ -24,7 +24,6 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.constants.Constant;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.FileTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
@@ -91,7 +90,7 @@ public class KubernetesFreeMakerUtils {
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
 
-    public static void generateConfigFile(Generators generators,
+    public static void generateConfigFile(String namespace,Generators generators,
             List<ServiceConfig> configs,
             String extPath, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
@@ -133,7 +132,7 @@ public class KubernetesFreeMakerUtils {
 
         // 3.产生输出
         String configMapName = generateConfigMapName(serviceRoleFullName, generators);
-        writeToConfigMap(template, data, configMapName, generators.getFilename(), serviceRoleFullName);
+        writeToConfigMap(namespace,template, data, configMapName, generators.getFilename(), serviceRoleFullName);
     }
 
     /**
@@ -160,7 +159,7 @@ public class KubernetesFreeMakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToConfigMap(Template template, Map<String, Object> data,
+    public static void writeToConfigMap(String namespace,Template template, Map<String, Object> data,
             String configMapName,
             String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
@@ -168,7 +167,7 @@ public class KubernetesFreeMakerUtils {
         String generatedContent = FreemarkerUtils.renderTemplateToString(template, data);
 
         // 将内容创建为 ConfigMap
-        cacheConfigMap(configMapName, generatedContent, fileName, serviceRoleFullName);
+        cacheConfigMap(namespace,configMapName, generatedContent, fileName, serviceRoleFullName);
     }
 
     /**
@@ -177,7 +176,7 @@ public class KubernetesFreeMakerUtils {
      * @param configMapName    ConfigMap 的名称
      * @param generatedContent 渲染后的配置内容
      */
-    public static void cacheConfigMap(String configMapName, String generatedContent,
+    public static void cacheConfigMap(String namespace,String configMapName, String generatedContent,
             String fileName, String serviceRoleFullName) {
         if (StrUtil.startWith(fileName, Constants.KUBERNETES_CONFIG_PREFIX)) {
             return;
@@ -193,7 +192,7 @@ public class KubernetesFreeMakerUtils {
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
         configMap.getMetadata().setName(configMapName); // 设置 ConfigMap 名称
-        configMap.getMetadata().setNamespace(Constant.KUBERNETES_NAMESPACE); // 设置 ConfigMap 命名空间
+        configMap.getMetadata().setNamespace(namespace); // 设置 ConfigMap 命名空间
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();
             if (labels == null) {
@@ -212,13 +211,13 @@ public class KubernetesFreeMakerUtils {
         configMapCache.put(serviceRoleFullName, cache);
     }
 
-    public static void createConfigMap(String serviceRoleFullName, KubernetesClient client) {
+    public static void createConfigMap(String namespace,String serviceRoleFullName, KubernetesClient client) {
         Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
         if (cache == null || cache.isEmpty()) {
             log.info("No ConfigMaps found for {}", serviceRoleFullName);
             return;
         }
-
+        
         Set<String> keySet = cache.keySet();
         for (String configMapName : keySet) {
             ConfigMap configMap = cache.get(configMapName);
@@ -227,11 +226,11 @@ public class KubernetesFreeMakerUtils {
             // 创建新的 ConfigMap
             try {
                 // 使用 createOrReplace 创建或替换ConfigMap
-                client.configMaps().inNamespace(Constant.KUBERNETES_NAMESPACE).createOrReplace(configMap);
-                log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, Constant.KUBERNETES_NAMESPACE);
+                client.configMaps().inNamespace(namespace).createOrReplace(configMap);
+                log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, namespace);
 
                 // 添加彩色日志输出
-                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.KUBERNETES_NAMESPACE);
+                ColorLogUtils.printResourceCreated("ConfigMap", configMapName, namespace);
             } catch (Exception e) {
                 log.error("创建ConfigMap时出错: {}", e.getMessage());
                 ColorLogUtils.printError("创建ConfigMap " + configMapName + " 失败：" + e.getMessage());
@@ -248,7 +247,7 @@ public class KubernetesFreeMakerUtils {
      * @param secretData          包含Secret数据的Map
      * @param secretSuffix        Secret名称后缀，通常为"-db-secret"
      */
-    public static void cacheDatabaseSecret(String serviceRoleFullName, Map<String, String> secretData,
+    public static void cacheDatabaseSecret(String namespace,String serviceRoleFullName, Map<String, String> secretData,
             String secretSuffix) {
         if (secretData == null || secretData.isEmpty()) {
             log.warn("数据库凭据为空，不创建Secret");
@@ -268,7 +267,7 @@ public class KubernetesFreeMakerUtils {
         Secret secret = new Secret();
         secret.setMetadata(new ObjectMeta());
         secret.getMetadata().setName(secretName);
-        secret.getMetadata().setNamespace(Constant.KUBERNETES_NAMESPACE);
+        secret.getMetadata().setNamespace(namespace);
 
         // 设置标签
         Map<String, String> labels = new HashMap<>();
@@ -296,7 +295,7 @@ public class KubernetesFreeMakerUtils {
      * @param serviceRoleFullName 服务角色全名
      * @param client              Kubernetes客户端
      */
-    public static void createSecrets(String serviceRoleFullName, KubernetesClient client) {
+    public static void createSecrets(String namespace,String serviceRoleFullName, KubernetesClient client) {
         Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
         if (cache == null || cache.isEmpty()) {
             log.info("No Secrets found for {}", serviceRoleFullName);
@@ -309,11 +308,11 @@ public class KubernetesFreeMakerUtils {
 
             try {
                 // 使用createOrReplace创建或替换Secret
-                client.secrets().inNamespace(Constant.KUBERNETES_NAMESPACE).createOrReplace(secret);
-                log.info("Secret {} 已成功创建在命名空间 {}", secretName, Constant.KUBERNETES_NAMESPACE);
+                client.secrets().inNamespace(namespace).createOrReplace(secret);
+                log.info("Secret {} 已成功创建在命名空间 {}", secretName, namespace);
 
                 // 添加彩色日志输出
-                ColorLogUtils.printResourceCreated("Secret", secretName, Constant.KUBERNETES_NAMESPACE);
+                ColorLogUtils.printResourceCreated("Secret", secretName, namespace);
             } catch (Exception e) {
                 log.error("创建Secret时出错: {}", e.getMessage());
                 ColorLogUtils.printError("创建Secret " + secretName + " 失败：" + e.getMessage());
@@ -394,14 +393,13 @@ public class KubernetesFreeMakerUtils {
      * @param client  Kubernetes客户端
      * @param jobName Job名称
      */
-    private static void watchJobCompletion(KubernetesClient client, String jobName) {
+    private static void watchJobCompletion(String namespace,KubernetesClient client, String jobName) {
         try {
             // 等待Job完成，最多等待30秒
             int maxRetries = 30;
             int retryCount = 0;
-
             while (retryCount < maxRetries) {
-                Job job = client.batch().jobs().inNamespace(Constant.KUBERNETES_NAMESPACE).withName(jobName).get();
+                Job job = client.batch().jobs().inNamespace(namespace).withName(jobName).get();
                 if (job == null) {
                     log.warn("Job {} 不存在", jobName);
                     break;
@@ -421,11 +419,11 @@ public class KubernetesFreeMakerUtils {
                         log.error("更新Prometheus配置文件 {} 失败", "批量配置文件");
                         // 获取Job的Pod日志
                         try {
-                            PodList podList = client.pods().inNamespace(Constant.KUBERNETES_NAMESPACE)
+                            PodList podList = client.pods().inNamespace(namespace)
                                     .withLabel("job-name", jobName).list();
                             if (podList != null && !podList.getItems().isEmpty()) {
                                 String podName = podList.getItems().get(0).getMetadata().getName();
-                                String logs = client.pods().inNamespace(Constant.KUBERNETES_NAMESPACE)
+                                String logs = client.pods().inNamespace(namespace)
                                         .withName(podName).getLog();
                                 log.error("Job Pod {} 日志: {}", podName, logs);
                             }
@@ -456,7 +454,7 @@ public class KubernetesFreeMakerUtils {
      * @param kubeConfig          Kubernetes配置
      * @param serviceRoleFullName 服务角色全名
      */
-    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName) {
+    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName,Integer clusterId) {
         // 获取该服务角色的配置缓存
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
         if (StrUtil.equals("prometheus-update", serviceRoleFullName)) {
@@ -474,7 +472,7 @@ public class KubernetesFreeMakerUtils {
 
             // 创建临时Job来更新Prometheus配置文件
             String jobName = "prometheus-configs-updater-" + System.currentTimeMillis();
-
+            String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
             // 确定PVC名称
             String pvcName = serviceRoleFullName;
 
@@ -529,9 +527,9 @@ public class KubernetesFreeMakerUtils {
             Job job = new JobBuilder()
                     .withNewMetadata()
                     .withName(jobName)
-                    .withNamespace(Constant.KUBERNETES_NAMESPACE)
+                    .withNamespace(namespace)
                     .addToLabels("app", serviceRoleFullName)
-                    .addToLabels("managed-by", "datasophon")
+                    .addToLabels("managed-by", namespace)
                     .addToLabels("job-type", "config-update-batch")
                     .endMetadata()
                     .withNewSpec()
@@ -551,7 +549,7 @@ public class KubernetesFreeMakerUtils {
                     .endEnv()
                     .addNewEnv()
                     .withName("POD_NAMESPACE")
-                    .withValue(Constant.KUBERNETES_NAMESPACE)
+                    .withValue(namespace)
                     .endEnv()
                     .withCommand("/bin/sh", "-c")
                     .withArgs(scriptBuilder.toString())
@@ -574,12 +572,12 @@ public class KubernetesFreeMakerUtils {
                     .build();
 
             // 提交Job到Kubernetes
-            client.batch().jobs().inNamespace(Constant.KUBERNETES_NAMESPACE).createOrReplace(job);
+            client.batch().jobs().inNamespace(namespace).createOrReplace(job);
 
             log.info("创建批量配置更新Job: {}, 写入 {} 个配置文件", jobName, configsCache.size());
 
             // 监控Job执行状态
-            watchJobCompletion(client, jobName);
+            watchJobCompletion(namespace,client, jobName);
 
             // 清空缓存
             prometheusConfigCache.remove(serviceRoleFullName);
@@ -588,59 +586,5 @@ public class KubernetesFreeMakerUtils {
             log.error("批量保存Prometheus配置到PVC时出错: {}", e.getMessage(), e);
             throw new RuntimeException("批量保存Prometheus配置失败", e);
         }
-    }
-
-    /**
-     * 便捷方法：直接使用服务配置和生成器渲染模板并生成ConfigMap
-     * 这个方法简化了从配置到ConfigMap的整个过程
-     *
-     * @param generators          配置生成器
-     * @param configs             服务配置列表
-     * @param serviceRoleFullName 服务角色全名
-     * @throws IOException       IO异常
-     * @throws TemplateException 模板异常
-     */
-    public static void renderTemplateToConfigMap(Generators generators,
-            List<ServiceConfig> configs,
-            String serviceRoleFullName) throws IOException, TemplateException {
-        // 获取主机名和IP用于变量替换
-        Map<String, String> paramMap = new HashMap<>();
-        try {
-            String hostName = InetAddress.getLocalHost().getHostName();
-            String ip = cn.hutool.core.net.NetUtil.getIpByHost(hostName);
-            paramMap.put("${hostname}", hostName);
-            paramMap.put("${ip}", ip);
-            paramMap.put("${user}", "root");
-        } catch (Exception e) {
-            logger.error("获取主机信息失败: {}", e.getMessage());
-        }
-
-        // 使用FreemarkerUtils处理配置
-        Map<String, Object> data = FreemarkerUtils.prepareRenderData(generators, configs, paramMap, logger);
-
-        // 使用FreemarkerUtils渲染模板
-        String templateName = FreemarkerUtils.determineTemplateName(generators);
-        if (templateName == null) {
-            throw new IllegalArgumentException("不支持的配置格式: " + generators.getConfigFormat());
-        }
-
-        // 创建模板配置
-        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-        config.setClassForTemplateLoading(KubernetesFreeMakerUtils.class, "/worker/templates");
-
-        // 获取模板
-        Template template = config.getTemplate(templateName);
-        if (template == null) {
-            throw new IOException("无法加载模板: " + templateName);
-        }
-
-        // 渲染模板并生成内容
-        String renderedContent = FreemarkerUtils.renderTemplateToString(template, data);
-
-        // 生成ConfigMap名称
-        String configMapName = generateConfigMapName(serviceRoleFullName, generators);
-
-        // 缓存ConfigMap
-        cacheConfigMap(configMapName, renderedContent, generators.getFilename(), serviceRoleFullName);
     }
 }

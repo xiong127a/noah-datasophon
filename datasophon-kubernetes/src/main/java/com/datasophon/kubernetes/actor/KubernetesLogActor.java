@@ -18,12 +18,11 @@
 package com.datasophon.kubernetes.actor;
 
 import akka.actor.UntypedActor;
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesGetLogCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.kubernetes.util.KubernetesUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,7 @@ public class KubernetesLogActor extends UntypedActor {
             ExecResult logResult = new ExecResult();
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 logResult = KubernetesUtil.getContainerLog(
-                        Constants.DATASOPHON,
+                        command.getNamespace(),
                         kubeClient,
                         command.getServiceRoleFullName(),
                         command.getHostname(),

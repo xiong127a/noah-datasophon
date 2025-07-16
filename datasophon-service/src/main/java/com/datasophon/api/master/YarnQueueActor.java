@@ -2,10 +2,10 @@ package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
@@ -27,7 +27,7 @@ public class YarnQueueActor extends UntypedActor {
         if (message instanceof TenantFrameResource) {
             TenantYarnResource tenantYarnResource = (TenantYarnResource) message;
             ClusterYarnSchedulerService clusterYarnSchedulerService =
-                    SpringTool.getApplicationContext().getBean(ClusterYarnSchedulerService.class);
+                    SpringUtil.getBean(ClusterYarnSchedulerService.class);
             ClusterYarnScheduler scheduler = clusterYarnSchedulerService.getScheduler(tenantYarnResource.getClusterId());
             if ("capacity".equals(scheduler.getScheduler())) {
                 operateCapacityQueue(tenantYarnResource);
@@ -56,7 +56,7 @@ public class YarnQueueActor extends UntypedActor {
 
     private void createCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringTool.getApplicationContext().getBean(ClusterQueueCapacityService.class);
+                SpringUtil.getBean(ClusterQueueCapacityService.class);
 
         List<ClusterQueueCapacity> list = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
@@ -83,7 +83,7 @@ public class YarnQueueActor extends UntypedActor {
 
     private void updateCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringTool.getApplicationContext().getBean(ClusterQueueCapacityService.class);
+                SpringUtil.getBean(ClusterQueueCapacityService.class);
         ClusterQueueCapacity queue = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
                         .eq(Constants.CLUSTER_ID, clusterId)
@@ -104,7 +104,7 @@ public class YarnQueueActor extends UntypedActor {
 
     private void deleteCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringTool.getApplicationContext().getBean(ClusterQueueCapacityService.class);
+                SpringUtil.getBean(ClusterQueueCapacityService.class);
         ClusterQueueCapacity queue = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
                         .eq(Constants.CLUSTER_ID, clusterId)
@@ -121,7 +121,7 @@ public class YarnQueueActor extends UntypedActor {
 //     */
 //    private void createFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
 //        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringTool.getApplicationContext().getBean(ClusterYarnQueueService.class);
+//                SpringUtil.getBean(ClusterYarnQueueService.class);
 //        ClusterYarnQueue clusterYarnQueue = new ClusterYarnQueue();
 //        clusterYarnQueue.setAllowPreemption(1);
 //        clusterYarnQueue.setAmShare("0.1");
@@ -143,7 +143,7 @@ public class YarnQueueActor extends UntypedActor {
 //     */
 //    private void updateFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
 //        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringTool.getApplicationContext().getBean(ClusterYarnQueueService.class);
+//                SpringUtil.getBean(ClusterYarnQueueService.class);
 //        ClusterYarnQueue clusterYarnQueue = clusterYarnQueueService.getQueueByName(clusterId, yarnResource.getYarnQueueName());
 //        clusterYarnQueue.setClusterId(clusterId);
 //        clusterYarnQueue.setMaxCore(Integer.valueOf(yarnResource.getYarnCpu()));
@@ -158,7 +158,7 @@ public class YarnQueueActor extends UntypedActor {
 //     */
 //    private void deleteFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
 //        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringTool.getApplicationContext().getBean(ClusterYarnQueueService.class);
+//                SpringUtil.getBean(ClusterYarnQueueService.class);
 //        ClusterYarnQueue clusterYarnQueue = clusterYarnQueueService.getQueueByName(clusterId, yarnResource.getYarnQueueName());
 //        clusterYarnQueueService.removeById(clusterYarnQueue.getId());
 //        clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());

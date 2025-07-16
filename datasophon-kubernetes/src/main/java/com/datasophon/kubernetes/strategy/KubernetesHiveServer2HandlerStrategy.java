@@ -33,7 +33,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
             logger.warn("配置列表为空，无法更新HiveMetaStore服务地址");
             return;
         }
-
+        String namespace = getKubernetesNamespace(clusterId);
         // 动态获取ZK节点数量 - 直接从缓存获取，不再使用备用逻辑
         int zkNodeCount = 0;
         String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
@@ -59,7 +59,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
             metastoreUris.append("thrift://")
                     .append(METASTORE_SERVICE).append("-").append(i)
                     .append(".").append(METASTORE_SERVICE).append(".")
-                    .append(NAMESPACE).append(".")
+                    .append(namespace).append(".")
                     .append(CLUSTER_DOMAIN).append(":9083");
         }
         
@@ -79,7 +79,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
                     }
                     zkServers.append(ZOOKEEPER_SERVICE).append("-").append(i)
                             .append(".").append(ZOOKEEPER_SERVICE).append(".")
-                            .append(NAMESPACE).append(".")
+                            .append(namespace).append(".")
                             .append(CLUSTER_DOMAIN);
                 }
                 logger.info("检测到hive.zookeeper.quorum，将值从 {} 更新为 Kubernetes 服务地址 {}", config.getValue(), zkServers.toString());

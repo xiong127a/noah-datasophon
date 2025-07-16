@@ -25,6 +25,7 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
@@ -34,7 +35,6 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
@@ -48,7 +48,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.kubernetes.constants.Constant;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import org.slf4j.Logger;
@@ -77,9 +77,11 @@ public class PrometheusActor extends UntypedActor {
         if (msg instanceof GeneratePrometheusConfigCommand) {
 
             GeneratePrometheusConfigCommand command = (GeneratePrometheusConfigCommand) msg;
-            ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+            Integer clusterId = command.getClusterId();
+            String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
+            ClusterServiceInstanceService serviceInstanceService = SpringUtil
                     .getBean(ClusterServiceInstanceService.class);
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
                     .getById(command.getServiceInstanceId());
@@ -88,11 +90,12 @@ public class PrometheusActor extends UntypedActor {
                             serviceInstance.getId());
 
             ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
-                    "Prometheus", null, command.getClusterId());
+                    "Prometheus", null, clusterId);
 
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
-            String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
+
+            String depType = clusterInfoService.getById(clusterId).getDepType();
             boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
             logger.info("start to generate {} prometheus config", serviceInstance.getServiceName());
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -127,12 +130,12 @@ public class PrometheusActor extends UntypedActor {
                                 .generateServiceRoleFullName(roleInstanceEntity.getServiceName(), namenodeRoleName);
                         // ZKFC使用与NameNode相同的索引
                         hostname = namenodeFullName + "-" + roleIndex + "." + namenodeFullName + "."
-                                + Constant.KUBERNETES_NAMESPACE + ".svc.cluster.local";
+                                + namespace + ".svc.cluster.local";
                         logger.info("Using NameNode's FQDN for ZKFC: {} for service role {}", hostname,
                                 roleInstanceEntity.getServiceRoleName());
                     } else {
                         hostname = serviceRoleFullName + "-" + roleIndex + "." + serviceRoleFullName + "."
-                                + Constant.KUBERNETES_NAMESPACE + ".svc.cluster.local";
+                                + namespace + ".svc.cluster.local";
                         logger.info("Using Kubernetes FQDN with role-specific index: {} for service role {}", roleIndex,
                                 roleInstanceEntity.getServiceRoleName());
                     }
@@ -179,7 +182,7 @@ public class PrometheusActor extends UntypedActor {
                 configFileMap.put(generators, serviceConfigs);
             }
             ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
-            serviceRoleInfo.setClusterId(command.getClusterId());
+            serviceRoleInfo.setClusterId(clusterId);
             serviceRoleInfo.setName(symbolName);
             serviceRoleInfo.setParentName("PROMETHEUS");
             serviceRoleInfo.setConfigFileMap(configFileMap);
@@ -193,10 +196,10 @@ public class PrometheusActor extends UntypedActor {
             GenerateHostPrometheusConfig command = (GenerateHostPrometheusConfig) msg;
             Integer clusterId = command.getClusterId();
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-            ClusterHostService hostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+            ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             List<ClusterHostDO> hostList = hostService.list(
@@ -273,11 +276,11 @@ public class PrometheusActor extends UntypedActor {
         } else if (msg instanceof GenerateAlertConfigCommand) {
 
             GenerateAlertConfigCommand command = (GenerateAlertConfigCommand) msg;
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
             ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
                     "Prometheus", null, command.getClusterId());
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             if (Objects.nonNull(prometheusInstance)) {
@@ -303,9 +306,9 @@ public class PrometheusActor extends UntypedActor {
 
         } else if (msg instanceof GenerateSRPromConfigCommand) {
             GenerateSRPromConfigCommand command = (GenerateSRPromConfigCommand) msg;
-            ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+            ClusterServiceInstanceService serviceInstanceService = SpringUtil
                     .getBean(ClusterServiceInstanceService.class);
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
                     .getById(command.getServiceInstanceId());
@@ -316,7 +319,7 @@ public class PrometheusActor extends UntypedActor {
             ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
                     "Prometheus", null, command.getClusterId());
 
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
             String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
 
@@ -384,7 +387,7 @@ public class PrometheusActor extends UntypedActor {
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceEntity prometheusInstance,
             boolean isKubernetes,
             ServiceRoleInfo serviceRoleInfo) throws Exception {
-
+        Integer clusterId = serviceRoleInfo.getClusterId();
         // Validate critical parameters
         if (prometheusInstance == null || prometheusInstance.getHostname() == null) {
             throw new IllegalArgumentException("Invalid prometheus instance");
@@ -398,9 +401,9 @@ public class PrometheusActor extends UntypedActor {
             execResult = configureHandler.handlerRequest(serviceRoleInfo);
         }
 
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
-        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,"prometheus-update");
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig,"prometheus-update",clusterId);
         if (execResult != null && execResult.getExecResult()) {
             String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isKubernetes);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);

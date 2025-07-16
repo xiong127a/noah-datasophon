@@ -1,7 +1,6 @@
 package com.datasophon.kubernetes.strategy;
 
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
@@ -19,14 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
-import static com.datasophon.common.Constants.UNDERLINE;
 
 @Data
 public class KubernetesAbstractHandlerStrategy {
@@ -36,10 +31,13 @@ public class KubernetesAbstractHandlerStrategy {
 
     public String serviceRoleFullName;
 
-    public final String NAMESPACE = "datasophon";
     public final String CLUSTER_DOMAIN = "svc.cluster.local";
 
     public Logger logger;
+
+    public String getKubernetesNamespace(Integer clusterId) {
+        return KubernetesUtil.getKubernetesNamespace(clusterId);
+    }
 
     public KubernetesAbstractHandlerStrategy(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
@@ -140,131 +138,20 @@ public class KubernetesAbstractHandlerStrategy {
         return volumeList.toArray(new VolumeMountDTO[0]);
     }
 
-    /**
-     * 根据基础端口和节点数量生成端口映射字符串
-     *
-     * @param basePort  基础端口号
-     * @param nodeCount 节点数量
-     * @return 逗号分隔的端口映射字符串，例如：30092,30093,30094
-     */
-    public String generatePortMappings(int basePort, int nodeCount) {
-        StringBuilder portMappings = new StringBuilder();
-        for (int i = 0; i < nodeCount; i++) {
-            if (i > 0) {
-                portMappings.append(",");
-            }
-            portMappings.append(basePort + i);
-        }
-        return portMappings.toString();
-    }
 
-    /**
-     * 处理NodePort特殊绑定
-     * 根据节点数量和配置生成端口映射并缓存，是一个通用方法
-     */
-    public void processNodePortMappings(Integer clusterId, List<ServiceConfig> serviceConfigList) {
-        // 获取节点数量
 
-        Object obj = CacheUtils.get(
-                clusterId
-                        + UNDERLINE
-                        + SERVICE_ROLE_HOST_MAPPING);
-        JSONObject parseObj = JSONUtil.parseObj(obj);
-        JSONArray jsonArray = parseObj.getJSONArray(serviceRoleName);
-        int nodeCount = jsonArray.size();
 
-        // 获取基础端口值
-        int baseNodePort = 30092; // 默认基础端口号
-
-        // 从serviceConfigList中查找配置了nodePort的任意配置项
-        for (ServiceConfig config : serviceConfigList) {
-            if (StrUtil.equalsIgnoreCase(config.getName(), serviceRoleName + "_node_port_mappings")) {
-                try {
-                    // 将配置值解析为JSON数组
-                    String jsonStr = JSONUtil.toJsonStr(config.getValue());
-                    logger.info("端口映射配置原始值: {}", jsonStr);
-                    JSONArray portMappingsArray = JSONUtil.parseArray(jsonStr);
-
-                    // 创建一个新的JSON数组来存储处理后的结果
-                    JSONArray resultArray = new JSONArray();
-                    boolean hasValidMapping = false;
-
-                    // 遍历JSON数组，处理每个端口映射
-                    for (int i = 0; i < portMappingsArray.size(); i++) {
-                        JSONObject portMapping = portMappingsArray.getJSONObject(i);
-
-                        // 每个对象只有一个键值对，获取键(内部端口)和值(NodePort)
-                        String internalPort = null;
-                        String nodePortStr = null;
-
-                        for (String key : portMapping.keySet()) {
-                            internalPort = key;
-                            nodePortStr = portMapping.getStr(key);
-                            break;
-                        }
-
-                        if (internalPort != null && nodePortStr != null) {
-                            try {
-                                int nodePort = Integer.parseInt(nodePortStr);
-                                // 为当前NodePort生成端口映射序列
-                                String mappings = generatePortMappings(nodePort, nodeCount);
-
-                                // 创建新的JSON对象，保持原始的内部端口作为key，生成的NodePort序列作为value
-                                JSONObject resultMapping = new JSONObject();
-                                resultMapping.set(internalPort, mappings);
-                                resultArray.add(resultMapping);
-
-                                logger.info("处理端口映射: 内部端口 {} -> NodePort {} -> 生成序列 {}",
-                                        internalPort, nodePort, mappings);
-
-                                hasValidMapping = true;
-                            } catch (NumberFormatException e) {
-                                logger.warn("解析NodePort值[{}]失败，跳过此端口映射", nodePortStr, e);
-                            }
-                        }
-                    }
-
-                    // 如果成功生成了端口映射，则更新配置值
-                    if (hasValidMapping) {
-                        config.setValue(resultArray);
-                        logger.info("生成节点端口映射: {} -> {}", config.getName(), resultArray);
-                    } else {
-                        // 如果没有成功解析任何端口映射，保留原始配置
-                        logger.info("未能解析任何有效的端口映射，保留原始配置: {}", config.getName());
-                    }
-                    break;
-                } catch (Exception e) {
-                    logger.warn("解析配置[{}]的端口映射失败，保留原始配置", config.getName(), e);
-                }
-            }
-        }
-    }
-
-    /**
-     * 直接在指定Pod中执行MySQL SQL命令
-     *
-     * @param namespace    Kubernetes命名空间
-     * @param kubeClient   Kubernetes客户端
-     * @param podName      Pod名称(如: starrocks-srfe-0)
-     * @param sqlStatement SQL语句(如: "ALTER SYSTEM ADD FOLLOWER \"xxx\"")
-     * @return 执行结果
-     */
-    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
-                                        String podName, String sqlStatement) {
-        // 调用批量执行方法，但只传入一条SQL语句
-        return executeMySqlInPod(namespace, kubeClient, podName, Collections.singletonList(sqlStatement));
-    }
 
     /**
      * 直接在指定Pod中批量执行MySQL SQL命令
      *
-     * @param namespace     Kubernetes命名空间
+     * @param clusterId     集群id
      * @param kubeClient    Kubernetes客户端
      * @param podName       Pod名称(如: starrocks-srfe-0)
      * @param sqlStatements SQL语句列表
      * @return 执行结果
      */
-    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
+    public ExecResult executeMySqlInPod(Integer clusterId, KubernetesClient kubeClient,
                                         String podName, List<String> sqlStatements) {
         if (cn.hutool.core.collection.CollUtil.isEmpty(sqlStatements)) {
             logger.warn("没有提供SQL语句，无法执行");
@@ -283,41 +170,7 @@ public class KubernetesAbstractHandlerStrategy {
         String finalCmd = cn.hutool.core.util.StrUtil.join(" && ", mysqlCommands);
 
         logger.info("在Pod [{}] 中执行MySQL命令: {}", podName, finalCmd);
+        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         return KubernetesUtil.runCmdInPod(namespace, kubeClient, podName, finalCmd);
-    }
-
-    /**
-     * 获取StarRocks FE的Master节点hostname
-     * 如果srFeMaster参数有值就返回该值，
-     * 如果没有值就查询{serviceRoleFullName}-0这个pod的hostname
-     *
-     * @param kubeClient          Kubernetes客户端
-     * @param serviceRoleFullName 服务角色全名(例如: starrocks-srfe)
-     * @return FE Master节点的hostname
-     */
-    public String getMasterHost(KubernetesClient kubeClient, String serviceRoleFullName) {
-        // 先从缓存中查询
-        String cacheKey = serviceRoleFullName + "_master_host";
-        if (CacheUtils.constainsKey(cacheKey)) {
-            String cachedMasterHost = (String) CacheUtils.get(cacheKey);
-            logger.info("从缓存中获取到Master节点: {}", cachedMasterHost);
-            return cachedMasterHost;
-        }
-
-        // 否则查询索引为0的Pod所在节点
-        String masterPodName = serviceRoleFullName + "-0";
-        logger.info("尝试获取FE Master Pod [{}] 所在节点", masterPodName);
-
-        String masterNodeName = KubernetesUtil.getPodNodeName(NAMESPACE, kubeClient, masterPodName);
-        if (masterNodeName != null) {
-            logger.info("找到FE Master节点: {}, 并缓存", masterNodeName);
-            // 将结果缓存
-            CacheUtils.put(cacheKey, masterNodeName);
-            return masterNodeName;
-        } else {
-            logger.warn("无法找到FE Master节点，请检查Pod [{}] 是否已创建", masterPodName);
-            // 返回一个可能的默认值或null
-            return null;
-        }
     }
 }

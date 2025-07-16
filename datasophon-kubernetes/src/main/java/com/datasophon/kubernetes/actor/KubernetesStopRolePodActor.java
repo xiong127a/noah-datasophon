@@ -21,7 +21,7 @@ public class KubernetesStopRolePodActor extends UntypedActor {
             KubernetesStopRolePodHandler kubernetesStopRolePodHandler =
                     new KubernetesStopRolePodHandler(command.getServiceName(), command.getServiceRoleName());
 
-            startResult = kubernetesStopRolePodHandler.stop(command.getKubeConfig(), command.getHostname());
+            startResult = kubernetesStopRolePodHandler.stop(command.getNamespace(),command.getKubeConfig(), command.getHostname());
 
             getSender().tell(startResult, getSelf());
             logger.info("service role {} stop on Kubernetes result {}", command.getServiceRoleName(),
