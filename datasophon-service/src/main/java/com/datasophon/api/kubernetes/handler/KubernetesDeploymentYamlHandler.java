@@ -49,7 +49,7 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
         kubernetesGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
         kubernetesGenerateDeploymentYamlCommand.setLogFile(serviceRoleInfo.getLogFile());
         kubernetesGenerateDeploymentYamlCommand.setCommandType(serviceRoleInfo.getCommandType());
-
+        kubernetesGenerateDeploymentYamlCommand.setClusterId(serviceRoleInfo.getClusterId());
         kubernetesGenerateDeploymentYamlCommand.setMasterHost(Objects.nonNull(serviceRoleInfo.getMasterHost())?serviceRoleInfo.getMasterHost():serviceRoleInfo.getHostname());
         if (Objects.nonNull(serviceRoleInfo.getRunAs())) {
             kubernetesGenerateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
