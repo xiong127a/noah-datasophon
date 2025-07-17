@@ -179,7 +179,7 @@ export default {
     getCheckboxProps (record) {
       return {
         props: {
-          disabled: this.depType == 'K8S' ? false : record.installed || record.isRequired //临时
+          disabled: this.depType == 'Kubernetes' ? false : record.installed || record.isRequired //临时
         }
       }
     },
@@ -197,7 +197,7 @@ export default {
         });
       });
       this.selectedRowNames = arr;
-      if (this.depType == 'K8S') { //k8s模式下 配置服务只传重新勾选的serviceName
+      if (this.depType == 'Kubernetes') { //Kubernetes模式下 配置服务只传重新勾选的serviceName
         row.forEach(e => {
           this.selectedRowNamesArr.push({
             serviceId: e.id,
@@ -205,7 +205,7 @@ export default {
           })
         });
       } else {
-        // 非K8S模式下,确保选中的服务被正确记录
+        // 非Kubernetes模式下,确保选中的服务被正确记录
         this.selectedRowNamesArr = arr;
       }
       
@@ -230,7 +230,7 @@ export default {
         let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
         if (arr.length > 0) {
           arr.map(childItem => {
-            if (this.depType !== 'K8S') {
+            if (this.depType !== 'Kubernetes') {
               this.selectedRowKeysArr.push(childItem.id)
               this.selectedRowNamesArr.push({
                 serviceId: childItem.id,
@@ -242,13 +242,13 @@ export default {
 
         // 确保之前选中的服务保持选中状态
         self.steps4Data.serviceIds.map(item => {
-          if (this.depType !== 'K8S' && !this.selectedRowKeysArr.includes(item)) {
+          if (this.depType !== 'Kubernetes' && !this.selectedRowKeysArr.includes(item)) {
             this.selectedRowKeysArr.push(item)
           }
         })
 
         self.steps4Data.serviceNames.map(item => {
-          if (this.depType !== 'K8S' && !this.selectedRowNamesArr.some(x => x.serviceId === item.serviceId)) {
+          if (this.depType !== 'Kubernetes' && !this.selectedRowNamesArr.some(x => x.serviceId === item.serviceId)) {
             this.selectedRowNamesArr.push({
               serviceId: item.serviceId,
               serviceName: item.serviceName

@@ -28,6 +28,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
+import com.datasophon.api.master.HostConnectActor;
 import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
@@ -36,12 +37,12 @@ import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
+import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
@@ -55,11 +56,11 @@ import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.dao.mapper.InstallStepMapper;
+import com.datasophon.kubernetes.util.KubeUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -71,16 +72,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -126,8 +118,6 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result getInstallStep(Integer type) {
-        List<InstallStepEntity> list = stepMapper.selectList(
-                new QueryWrapper<InstallStepEntity>().eq(Constants.INSTALL_TYPE, type));
         List<InstallStepEntity> list = stepMapper
                 .selectList(new QueryWrapper<InstallStepEntity>().eq(Constants.INSTALL_TYPE, type));
         return Result.success(list);
@@ -932,16 +922,18 @@ public class InstallServiceImpl implements InstallService {
         processNumberRangeWithoutOsInfo(prefix, split, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
     }
 
-    private void tellHostCheck(String clusterCode, HostInfo hostInfo) {
-        ActorRef actor = ActorUtils.getLocalActor(HostConnectActor.class, "hostActor-" + hostInfo.getHostname());
-        actor.tell(new HostCheckCommand(hostInfo, clusterCode), ActorRef.noSender());
-    }
-
-    public HostInfo createHostInfo(
-            String host, Integer sshPort, String sshUser, String clusterCode) {
     /**
-     * 处理数字范围的主机名（不执行异步获取操作系统信息）
+     * 处理字母范围的主机名（不执行异步获取操作系统信息）
      */
+    private void processLetterRangeWithoutOsInfo(String prefix, String start, String end, Integer sshPort,
+            String sshUser,
+            String sshPassword, Integer clusterId, Map<String, HostInfo> hostInfoMap) {
+        List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
+        for (String suffix : hostList) {
+            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterId);
+            hostInfoMap.put(hostInfo.getIp(), hostInfo);
+        }
+    }
     private void processNumberRangeWithoutOsInfo(String prefix, String[] range, Integer sshPort, String sshUser,
             String sshPassword,
             Integer clusterId, Map<String, HostInfo> hostInfoMap) {
@@ -1046,20 +1038,12 @@ public class InstallServiceImpl implements InstallService {
     public Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
         // 获取检查结果列表
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-        List<HostInfo> list = new ArrayList<>(map.values());
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
         List<HostInfo> list = map.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toList());
         return Result.success(list);
     }
-
-    @Override
-    public Result dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
-
     public Result rehostCheck(
             Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
 
@@ -1073,10 +1057,9 @@ public class InstallServiceImpl implements InstallService {
         String clusterCode = clusterInfo.getClusterCode();
         String depType = clusterInfo.getDepType();
 
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
 
         if (Constants.KUBERNETES_MODE.equals(depType)) {
-            // K8S模式：直接更新校验结果，不进行SSH连接测试
+            // Kubernetes模式：直接更新校验结果，不进行SSH连接测试
             logger.info("Kubernetes mode detected, updating host check results directly");
 
             for (String hostname : hostnames.split(",")) {
@@ -1215,8 +1198,6 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setSshPort(22);
                 hostInfo.setHostname(ip); // 使用IP作为hostname
             }
-            ActorRef hostActor = ActorUtils.getLocalActor(
-                    DispatcherWorkerActor.class, "dispatcherWorkerActor-" + hostname);
 
             ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
                     "dispatcherWorkerActor-" + hostInfo.getHostname());
@@ -1445,7 +1426,6 @@ public class InstallServiceImpl implements InstallService {
                     .openConnectionWithPassword(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
             MinaUtils.execCmdWithResultObject(session,
                     "service datasophon-worker " + commandType);
-            ClientSession session = MinaUtils.openConnection(clusterHostDO.getHostname(), 22, Constants.ROOT);
             MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);
             if (ObjectUtil.isNotEmpty(session)) {
@@ -1476,8 +1456,6 @@ public class InstallServiceImpl implements InstallService {
         for (ClusterHostDO clusterHostDO : clusterHostList) {
             WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostDO.getHostname(),
                     clusterHostDO.getClusterId(), serviceCommandType);
-            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(
-                    clusterHostDO.getHostname(), clusterHostDO.getClusterId(), serviceCommandType);
             try {
                 ActorRef actor = ActorUtils.getLocalActor(WorkerStartActor.class, "workerStartActor");
                 actor.tell(serviceMessage, ActorRef.noSender());
@@ -1490,7 +1468,7 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * K8S模式：从Kubernetes集群自动获取节点列表
+     * Kubernetes模式：从Kubernetes集群自动获取节点列表
      */
     private Result analysisHostListForKubernetes(Integer clusterId, Integer page, Integer pageSize) {
         try {
@@ -1502,26 +1480,26 @@ public class InstallServiceImpl implements InstallService {
             }
 
             // 从Kubernetes集群获取节点列表
-            List<ClusterHostDO> k8sHosts = KubeUtil.getHostListByConfig(kubeConfig);
+            List<ClusterHostDO> kubernetesHosts = KubeUtil.getHostListByConfig(kubeConfig);
 
             // 转换为HostInfo格式
             List<HostInfo> hostInfoList = new ArrayList<>();
             String clusterCode = clusterInfo.getClusterCode();
 
-            for (ClusterHostDO k8sHost : k8sHosts) {
+            for (ClusterHostDO kubernetesHost : kubernetesHosts) {
                 HostInfo hostInfo = new HostInfo();
-                hostInfo.setHostname(k8sHost.getHostname());
-                hostInfo.setIp(k8sHost.getIp());
-                hostInfo.setSshPort(22); // K8S模式默认SSH端口
-                hostInfo.setSshUser("root"); // K8S模式默认用户
+                hostInfo.setHostname(kubernetesHost.getHostname());
+                hostInfo.setIp(kubernetesHost.getIp());
+                hostInfo.setSshPort(22); // Kubernetes模式默认SSH端口
+                hostInfo.setSshUser("root"); // Kubernetes模式默认用户
                 hostInfo.setClusterCode(clusterCode);
                 hostInfo.setCreateTime(new Date());
 
-                // 从K8S API获取的架构信息
-                hostInfo.setCpuArchitecture(k8sHost.getCpuArchitecture());
+                // 从Kubernetes API获取的架构信息
+                hostInfo.setCpuArchitecture(kubernetesHost.getCpuArchitecture());
 
-                // K8S模式下检查主机受管状态
-                ClusterHostDO existingHost = hostService.getClusterHostByHostname(k8sHost.getHostname());
+                // Kubernetes模式下检查主机受管状态
+                ClusterHostDO existingHost = hostService.getClusterHostByHostname(kubernetesHost.getHostname());
 
                 if (existingHost != null && existingHost.getClusterId().equals(clusterId)) {
                     // 主机已在当前集群中受管 - 重复添加
@@ -1532,7 +1510,7 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
                     logger.info("Host {} is already managed in current Kubernetes cluster {}",
-                            k8sHost.getHostname(), clusterId);
+                            kubernetesHost.getHostname(), clusterId);
                 } else if (existingHost != null) {
                     // 主机已在其他集群中受管
                     hostInfo.setManaged(true);
@@ -1542,16 +1520,16 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
                     logger.info("Host {} is already managed in another cluster {}",
-                            k8sHost.getHostname(), existingHost.getClusterId());
+                            kubernetesHost.getHostname(), existingHost.getClusterId());
                 } else {
-                    // 主机未受管，K8S模式下校验成功，可以添加
+                    // 主机未受管，Kubernetes模式下校验成功，可以添加
                     hostInfo.setManaged(false);
                     hostInfo.setInstallState(InstallState.SUCCESS);
                     hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
-                    logger.info("Host {} is not managed in Kubernetes mode, can be added", k8sHost.getHostname());
+                    logger.info("Host {} is not managed in Kubernetes mode, can be added", kubernetesHost.getHostname());
                 }
 
                 hostInfoList.add(hostInfo);

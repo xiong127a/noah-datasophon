@@ -252,10 +252,6 @@ public final class Constants {
         public static final String JOB_MANAGER = "jobmanager";
         public static final String x86_64 = "x86_64";
         public static final String PROMETHEUS = "prometheus";
-        public static final String TASK_MANAGER = "taskmanager";
-        public static final String JOB_MANAGER = "jobmanager";
-        public static final String x86_64 = "x86_64";
-        public static final String PROMETHEUS = "prometheus";
         public static final String PROMETHEUS_CONFIG = "prometheus-config";
 
         public static final String PrometheusFullName = "prometheus-prometheus";
@@ -283,25 +279,15 @@ public final class Constants {
          * windows hosts file basedir
          */
         public static final String WINDOWS_HOST_DIR = "C:/Windows/System32/drivers";
-        /**
-         * root user
-         */
-        public static final String ROOT = "root";
-
         public static final String DORIS_PW = "";
 
         public static final String PVM_MODE = "PVM";
 
-        public static final String K8S_MODE = "K8S";
-
-        public static final String SERVICE_CHECK_NAMES = "Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
         public static final String KUBERNETES_MODE = "Kubernetes";
 
         public static final String SERVICE_CHECK_NAMES = "Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
 
         public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));
-        public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));
-
         // HiveServer2高可用模式常量
         public static final String HA_MODE_STANDALONE = "standalone";
         public static final String HA_MODE_ZOOKEEPER = "zookeeper";

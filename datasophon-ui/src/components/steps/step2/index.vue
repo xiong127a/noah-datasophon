@@ -1114,7 +1114,7 @@ export default {
                 this.queueStatus = res.queueStatus;
               }
 
-              if (this.depType=='K8S'){
+              if (this.depType=='Kubernetes'){
                 let data = JSON.parse(JSON.stringify(res.data))
                 data && data.forEach(e => {
                   if (e.checkResult.code=='10001'){
@@ -1122,7 +1122,7 @@ export default {
                     delete e.checkResult
                     let arr=[]
                     arr[0] = e
-                    this.saveK8sHostApi(arr)
+                    this.saveKubernetesHostApi(arr)
                   }
                 })
               }
@@ -1289,8 +1289,8 @@ export default {
       // 默认情况：所有项都通过
       return 'SUCCESS';
     },
-    saveK8sHostApi (params){
-      this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
+    saveKubernetesHostApi (params){
+      this.$axiosJsonPost(global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, params).then((res) => {
       });
     },
     //表格选择

@@ -18,14 +18,16 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
-import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.HostCheckService;
+import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.constraints.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
@@ -58,7 +60,7 @@ public class HostInstallController {
             @RequestParam(required = false) String sshPassword,
             @RequestParam Integer page,
             @RequestParam Integer pageSize) {
-        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, page, pageSize);
+        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort,sshPassword, page, pageSize);
     }
 
     /**

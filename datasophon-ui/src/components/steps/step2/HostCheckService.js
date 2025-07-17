@@ -77,14 +77,14 @@ export default {
   },
 
   /**
-   * 保存K8S主机
+   * 保存Kubernetes主机
    * @param {Object} vm Vue实例
    * @param {String} clusterId 集群ID
    * @param {Array} params 主机参数
    * @returns {Promise} 请求Promise
    */
-  saveK8sHost(vm, clusterId, params) {
-    return vm.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + clusterId, params);
+  savekubernetesHost(vm, clusterId, params) {
+    return vm.$axiosJsonPost(global.API.savekubernetesHost + '?clusterId=' + clusterId, params);
   },
 
   /**

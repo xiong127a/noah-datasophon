@@ -162,12 +162,6 @@ public class WorkerStartActor extends UntypedActor {
                 SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService =
                 SpringUtil.getBean(ClusterServiceCommandService.class);
-    private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId, CommandType commandType,
-            boolean needRestart) {
-        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
-                .getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceCommandService serviceCommandService = SpringTool.getApplicationContext()
-                .getBean(ClusterServiceCommandService.class);
 
         List<ClusterServiceRoleInstanceEntity> serviceRoleList = null;
         // 启动服务

@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -156,17 +157,6 @@ public class HostUtils {
                         return num1 - num2;
                     }
                 }
-    //判断服务在线
-    public static boolean isServiceOnline(String host, int port) {
-        try (Socket socket = new Socket(host, port)) {
-            return true;  // 如果能够连接上，说明服务在线
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;  // 如果连接失败，认为服务不在线
-        }
-    }
-
-
                 return 0; // 相等的情况
             } catch (Exception e) {
                 // 处理可能的异常情况（无效IP格式等）
@@ -175,6 +165,16 @@ public class HostUtils {
         });
 
         return sortedIps;
+    }
+
+    //判断服务在线
+    public static boolean isServiceOnline(String host, int port) {
+        try (Socket socket = new Socket(host, port)) {
+            return true;  // 如果能够连接上，说明服务在线
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;  // 如果连接失败，认为服务不在线
+        }
     }
     public static boolean checkServiceOnlineWithRetry(String host, int port, int retries, long waitTime) {
         int attempts = 0;

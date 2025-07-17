@@ -82,7 +82,7 @@ public class HostConnectActor extends UntypedActor {
             boolean isKubernetesMode = Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType());
 
             if (isKubernetesMode) {
-                // K8S模式：不进行SSH连接测试，基于受管状态给出校验结果
+                // Kubernetes模式：不进行SSH连接测试，基于受管状态给出校验结果
                 logger.info("Kubernetes mode detected for host: {}, skipping SSH check", hostInfo.getHostname());
 
                 // 检查主机是否已受管
@@ -115,8 +115,7 @@ public class HostConnectActor extends UntypedActor {
             } else {
                 // PVM模式：进行SSH连接测试
                 logger.info("PVM mode detected for host: {}, performing SSH check", hostInfo.getHostname());
-                ClientSession session = MinaUtils.openConnection(
-                        hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                ClientSession session = MinaUtils.openConnection(hostInfo);
                 if (ObjectUtil.isNotNull(session)) {
                     hostInfo.setCheckResult(
                             new CheckResult(

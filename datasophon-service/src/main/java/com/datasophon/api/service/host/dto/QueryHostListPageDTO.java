@@ -70,7 +70,7 @@ public class QueryHostListPageDTO {
 
     private String nodeLabel;
 
-    private Integer serviceRoleNum;
+    private Long serviceRoleNum;
 
     /**
      * 主机的hosts文件内容

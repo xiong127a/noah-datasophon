@@ -19,6 +19,7 @@ package com.datasophon.api.service.host.impl;
 
 import akka.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -31,7 +32,6 @@ import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
-import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteCmdCommand;
@@ -48,7 +48,6 @@ import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
-import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -57,7 +56,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import scala.concurrent.duration.FiniteDuration;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -194,10 +192,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         String[] ids = hostIds.split(Constants.COMMA);
         for (String hostId : ids) {
             ClusterHostDO host = this.getById(hostId);
-            // 获取主机上安装的服务
-            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
-                    .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                            .eq(Constants.CLUSTER_ID, host.getClusterId())
+
             Integer clusterId = host.getClusterId();
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
                     .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
@@ -247,8 +242,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorUtils.actorSystem.dispatcher(),
                     ActorRef.noSender());
 
-            // remove the host from the cache
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
             String md5 = SecureUtil.md5(host.getHostname());
             Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (Objects.nonNull(map)) {
@@ -322,14 +315,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 clusterHostDO.setHostState(HostState.RUNNING);
                 clusterHostDO.setManaged(MANAGED.YES);
 
-                // K8S模式下使用HostInfo中的架构信息，无需SSH连接
+                // Kubernetes模式下使用HostInfo中的架构信息，无需SSH连接
                 String arch = hostInfo.getCpuArchitecture();
                 if (StringUtils.isBlank(arch)) {
                     // 如果架构信息为空，使用默认值
                     arch = "x86_64";
                     logger.warn("Host {} architecture is empty, using default: {}", hostInfo.getHostname(), arch);
                 } else {
-                    logger.info("Host {} architecture from K8S API: {}", hostInfo.getHostname(), arch);
+                    logger.info("Host {} architecture from Kubernetes API: {}", hostInfo.getHostname(), arch);
                 }
                 clusterHostDO.setCpuArchitecture(arch);
 
