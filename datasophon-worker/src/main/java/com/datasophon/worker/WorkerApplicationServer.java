@@ -168,10 +168,6 @@ public class WorkerApplicationServer {
             ActorSystem system) {
         ActorSelection workerStartActor = system.actorSelection(
                 "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
-        // 创建workerStartActor的ActorSelection
-        ActorSelection workerStartActor = system.actorSelection(
-                "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
-
         // 收集主机信息
         ExecResult result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
         logger.info("host info collect result:{}", result);
@@ -198,7 +194,6 @@ public class WorkerApplicationServer {
         }
 
         // 解析收集到的主机信息
-        StartWorkerMessage startWorkerMessage = JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
         startWorkerMessage.setCpuArchitecture(cpuArchitecture);
         startWorkerMessage.setClusterId(PropertyUtils.getInt("clusterId"));
         startWorkerMessage.setHostname(hostname);
