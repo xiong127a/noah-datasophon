@@ -206,9 +206,22 @@ export default {
 /deep/ .ant-modal {
   top: 62px;
   .ant-modal-content {
-    border-radius: 4px;
+    border-radius: 12px;
     width: 100%;
     overflow: visible;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+    border: none;
+  }
+  
+  .ant-modal-header {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid #D1D1D6;
+    
+    .ant-modal-title {
+      font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-weight: 600;
+      color: #1D1D1F;
+    }
   }
 }
 .card-list {
@@ -226,12 +239,14 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  // cursor: pointer;
   height: 220.48px;
-  padding: 20px 10px 0px;
-  background: #fff;
-  border: 1px solid rgba(227, 228, 230, 1);
-  border-radius: 4px;
+  padding: 24px 16px 0px;
+  background: #FFFFFF;
+  border: 1px solid #D1D1D6;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
   .card-header {
     padding: 0 10px;
     .colony-icon-warp {
@@ -309,9 +324,13 @@ export default {
 }
 .colony-running-card:hover {
   border: 1px solid @running-status-color;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 .colony-configured-card:hover {
   border: 1px solid @configured-status-color;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 .card-avatar {
   width: 48px;
@@ -322,26 +341,72 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border-radius: 2px;
+  align-items: center;
   width: 100%;
   height: 220.48px;
-  border-radius: 2px;
+  border-radius: 12px;
   text-align: center;
   font-size: 16px;
-  border: 1px dashed #e3e4e6;
+  font-weight: 500;
+  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #F2F2F7, #FAFAFA);
+  border: 2px dashed #D1D1D6;
   cursor: pointer;
-  .add-icon {
-    // background-image: url("../../assets/img/colony/add-colony.svg");
-    // background-size: 100% 100%;
-    // margin: 0 auto 20px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: #1D1D1F;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(0, 122, 255, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 10px;
   }
-  &:hover {
-    color: @primary-color;
-    background: rgba(2, 121, 254, 0.03);
-    border: 1px dashed @primary-color;
-    .add-icon {
-      // background-image: url("../../assets/img/colony/add-colony-hover.svg");
+  
+  .add-icon {
+    margin-bottom: 16px;
+    transform: scale(1);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /deep/ .svg-icon {
+      color: #007AFF;
+      font-size: 80px;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
+  }
+  
+  &:hover {
+    color: #007AFF;
+    background: linear-gradient(135deg, #F8F9FA, #FFFFFF);
+    border: 2px dashed #007AFF;
+    box-shadow: 0 8px 24px rgba(0, 122, 255, 0.15);
+    transform: translateY(-4px);
+    
+    &::before {
+      opacity: 1;
+    }
+    
+    .add-icon {
+      transform: scale(1.1);
+      
+      /deep/ .svg-icon {
+        color: #007AFF;
+        transform: rotate(90deg);
+      }
+    }
+  }
+  
+  &:active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.2);
   }
 }
 .meta-content {
