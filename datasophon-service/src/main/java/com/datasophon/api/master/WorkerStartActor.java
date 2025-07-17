@@ -57,31 +57,54 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Master服务中的Worker启动Actor
+ *
+ * 主要职责:
+ * 1. 接收来自Worker的启动消息和心跳消息
+ * 2. 更新主机状态信息
+ * 3. 执行服务自动启动/停止
+ * 4. 同步集群用户和组信息
+ */
 public class WorkerStartActor extends UntypedActor {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerStartActor.class);
 
+    /**
+     * 接收并处理来自Worker的消息
+     * 该方法是Akka Actor的核心方法，用于处理所有接收到的消息
+     * 在Noah大数据平台中，主要处理两种消息:
+     * 1. StartWorkerMessage: Worker的初始启动消息和周期性心跳消息
+     * 2. WorkerServiceMessage: 控制Worker上服务启停的消息
+     *
+     * @param message 接收到的消息对象
+     * @throws Throwable 处理过程中可能抛出的异常
+     */
     @Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof StartWorkerMessage) {
+            // 处理Worker发送的启动消息或心跳消息
             StartWorkerMessage msg = (StartWorkerMessage) message;
             String hostname = msg.getHostname();
+            String ip = msg.getIp();
             Integer clusterId = msg.getClusterId();
-            logger.info("Receive message when worker first start :{}", hostname);
+            logger.info("收到Worker首次启动消息,主机名:{},IP地址:{}", hostname, ip);
 
             ClusterHostService clusterHostService =
                     SpringUtil.getBean(ClusterHostService.class);
             ClusterInfoService clusterInfoService =
                     SpringUtil.getBean(ClusterInfoService.class);
 
-            // is managed?
-            ClusterHostDO hostEntity = clusterHostService.getClusterHostByHostname(hostname);
+
+//            ClusterHostDO hostEntity = clusterHostService.getClusterHostByHostname(hostname);
+            ClusterHostDO hostEntity = clusterHostService.getClusterHostByIp(ip);
             ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
-            logger.info("Host install set to 100%");
-            if (CacheUtils.constainsKey(cluster.getClusterCode() + Constants.HOST_MAP)) {
+            logger.info("收到来自主机 {} ({}) 的Worker启动消息,设置主机安装状态为100%", hostname, ip);
+
+            if (CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)) {
                 HashMap<String, HostInfo> map =
-                        (HashMap<String, HostInfo>) CacheUtils.get(cluster.getClusterCode() + Constants.HOST_MAP);
-                HostInfo hostInfo = map.get(hostname);
+                        (HashMap<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+                HostInfo hostInfo = map.get(ip);
                 if (Objects.nonNull(hostInfo)) {
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setInstallState(InstallState.SUCCESS);
@@ -89,38 +112,49 @@ public class WorkerStartActor extends UntypedActor {
                     hostInfo.setManaged(true);
                 }
             }
+
+            // 如果数据库中不存在该主机,则保存主机信息
             if (ObjectUtil.isNull(hostEntity)) {
-                // save to db
+                // 保存主机安装信息到数据库
                 ProcessUtils.saveHostInstallInfo(msg, cluster.getClusterCode(), clusterHostService);
                 logger.info("Host install save to database");
-                // sync cluster user and group
+                // 同步集群用户和组
                 // syncClusterUserAndGroup(clusterId, hostname);
             } else {
+                // 更新现有主机信息
                 hostEntity.setCpuArchitecture(msg.getCpuArchitecture());
                 hostEntity.setManaged(MANAGED.YES);
                 clusterHostService.updateById(hostEntity);
             }
 
-            // add to prometheus
-            ActorRef prometheusActor =
-                    ActorUtils.getLocalActor(PrometheusActor.class, ActorUtils.getActorRefName(PrometheusActor.class));
+            // 添加到Prometheus监控
+            ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                    ActorUtils.getActorRefName(PrometheusActor.class));
             GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
             prometheusConfigCommand.setClusterId(cluster.getId());
             prometheusActor.tell(prometheusConfigCommand, getSelf());
 
-            // tell to worker what need to start
-//            autoAddServiceOperatorNeeded(msg.getHostname(), cluster.getId(), CommandType.START_SERVICE,false);
-        } else if(message instanceof WorkerServiceMessage) {
+            // 告知worker需要启动的服务
+            // autoAddServiceOperatorNeeded(msg.getHostname(), cluster.getId(),
+            // CommandType.START_SERVICE,false);
+        } else if (message instanceof WorkerServiceMessage) {
+            // 处理服务启停消息
             WorkerServiceMessage msg = (WorkerServiceMessage) message;
-            // tell to worker what need to start/stop
-            autoAddServiceOperatorNeeded(msg.getHostname(), msg.getClusterId(), msg.getCommandType(),true);
+            // 告知worker需要启动/停止的服务
+            autoAddServiceOperatorNeeded(msg.getHostname(), msg.getClusterId(), msg.getCommandType(), true);
         }
     }
 
     /**
-     * Automatically start/stop services that need to be started
+     * 自动启动/停止需要操作的服务
      *
-     * @param clusterId
+     * 该方法会根据命令类型(启动或停止)和主机名查找需要操作的服务角色,
+     * 然后生成相应的服务角色命令并执行
+     *
+     * @param hostname    主机名
+     * @param clusterId   集群ID
+     * @param commandType 命令类型(START_SERVICE或STOP_SERVICE)
+     * @param needRestart 是否需要重启服务
      */
     private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId,CommandType commandType,
         boolean needRestart) {
@@ -128,14 +162,20 @@ public class WorkerStartActor extends UntypedActor {
                 SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService =
                 SpringUtil.getBean(ClusterServiceCommandService.class);
+    private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId, CommandType commandType,
+            boolean needRestart) {
+        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceCommandService serviceCommandService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceCommandService.class);
 
         List<ClusterServiceRoleInstanceEntity> serviceRoleList = null;
         // 启动服务
         if (CommandType.START_SERVICE.equals(commandType)) {
             serviceRoleList = roleInstanceService
-                .listStoppedServiceRoleListByHostnameAndClusterId(hostname, clusterId);
+                    .listStoppedServiceRoleListByHostnameAndClusterId(hostname, clusterId);
             // 重启时重刷服务配置以支持磁盘故障等问题
-            if(needRestart){
+            if (needRestart) {
                 roleInstanceService.updateToNeedRestartByHost(hostname);
             }
         }
@@ -153,13 +193,14 @@ public class WorkerStartActor extends UntypedActor {
             return;
         }
 
+        // 构建服务角色映射(服务ID -> 角色ID列表)
         Map<Integer, List<String>> serviceRoleMap = serviceRoleList.stream()
                 .collect(
                         groupingBy(
                                 ClusterServiceRoleInstanceEntity::getServiceId,
                                 mapping(i -> String.valueOf(i.getId()), toList())));
-        Result result =
-                serviceCommandService.generateServiceRoleCommands(clusterId, commandType, serviceRoleMap);
+        // 生成并执行服务角色命令
+        Result result = serviceCommandService.generateServiceRoleCommands(clusterId, commandType, serviceRoleMap);
         if (result.getCode() == 200) {
             logger.info("Auto-start services successful");
         } else {
@@ -167,6 +208,12 @@ public class WorkerStartActor extends UntypedActor {
         }
     }
 
+    /**
+     * 同步集群用户和组到指定主机
+     *
+     * @param clusterId 集群ID
+     * @param hostname  主机名
+     */
     private void syncClusterUserAndGroup(Integer clusterId, String hostname) {
         ClusterGroupService clusterGroupService = SpringUtil.getBean(ClusterGroupService.class);
         ClusterUserService clusterUserService = SpringUtil.getBean(ClusterUserService.class);

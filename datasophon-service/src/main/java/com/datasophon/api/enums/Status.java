@@ -40,8 +40,10 @@ public enum Status {
     IP_IS_EMPTY(10125, "ip is empty", "IP地址不能为空"),
     DELETE_USER_BY_ID_ERROR(10093, "delete user by id error", "删除用户错误"),
 
+    WAITING_CHECK_HOST(9999, "waiting check host", "等待主机校验"),
     START_CHECK_HOST(10000, "start check host", "开始主机校验"),
     CHECK_HOST_SUCCESS(10001, "check host success", "主机校验成功"),
+    CHECK_HOST_FAILED(10043, "check host failed", "主机校验不通过"),
     NEED_JAVA_ENVIRONMENT(10002, "need java environment", "缺少Java环境"),
     CONNECTION_FAILED(10003, "connection failed", "主机连接失败"),
     NEED_HOSTNAME(10004, "need hostname", "无法获取主机名"),
@@ -69,7 +71,6 @@ public enum Status {
     ROLE_GROUP_HAS_NO_OUTDATED_SERVICE(10026, "this role group has no outdated service", "该角色组没有过时服务"),
     DUPLICATE_USER_NAME(10027, "duplicate user name", "用户名重复"),
     QUEUE_NAME_ALREADY_EXISTS(10028, "the queue name already exists", "队列名已存在"),
-    THREE_JOURNALNODE_DEPLOYMENTS_REQUIRED(10030, "three JournalNode deployments are required", "JournalNode需要部署三台"),
     TWO_NAMENODES_NEED_TO_BE_DEPLOYED(10031, "two Namenodes need to be deployed", "NameNode需要部署两台"),
     TWO_ZKFC_DEVICES_ARE_REQUIRED(10032, "two ZKFC devices are required", "ZKFC需要部署两台"),
     TWO_RESOURCEMANAGER_ARE_DEPLOYED(10033, "two ResourceManager are deployed", "ResourceManager需要部署两台"),
@@ -88,6 +89,8 @@ public enum Status {
     ODD_NUMBER_ARE_REQUIRED_FOR_DORISFE(10040, "The Number of DorisFE must be an odd number.", "DorisFE个数必须是奇数"),
     NO_SERVICE_ROLE_SELECTED(10041, "No service role selected", "未选择需要安装的服务实例"),
     TWO_KYUUBISERVERS_NEED_TO_BE_DEPLOYED(10042, "two kyuubiServer deployments are required", "KyuubiServer需要两个节点"),
+    JOURNALNODE_REQUIREMENTS(10043, "JournalNode requires at least 3 nodes and must be an odd number",
+            "JournalNode需要至少3台且必须是奇数"),
 
     SERVICE_NOT_FOUND(10043, "service not found", "未找到服务"),
 

@@ -91,7 +91,7 @@ public class HostCheckActor extends UntypedActor {
 
           String promUrl = "http://" + prometheusInstance.getHostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostDO clusterHostDO : list) {
-            if (hostInfo != null && !StringUtils.equals(clusterHostDO.getHostname(), hostInfo.getHostname())) {
+            if (hostInfo != null && !StringUtils.equals(clusterHostDO.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }
@@ -151,7 +151,7 @@ public class HostCheckActor extends UntypedActor {
           List<ClusterHostDO> hosts = clusterHostService.getHostListByClusterId(clusterId);
           List<ClusterHostDO> checkedHosts = new ArrayList<>(hosts.size());
           for (ClusterHostDO host : hosts) {
-            if (hostInfo != null && !StringUtils.equals(host.getHostname(), hostInfo.getHostname())) {
+            if (hostInfo != null && !StringUtils.equals(host.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }

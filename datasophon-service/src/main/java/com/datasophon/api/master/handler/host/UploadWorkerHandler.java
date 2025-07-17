@@ -47,7 +47,7 @@ public class UploadWorkerHandler implements DispatcherWorkerHandler {
         } else {
             hostInfo.setMessage(
                     MessageResolverUtils.getMessage("distributed.host.management.agent.installation.package.fail"));
-            hostInfo.setErrMsg("dispatcher host agent to " + hostInfo.getHostname() + " failed");
+            hostInfo.setErrMsg("dispatcher host agent to " + hostInfo.getIp() + " failed");
             CommonUtils.updateInstallState(InstallState.FAILED, hostInfo);
         }
         return uploadFile;

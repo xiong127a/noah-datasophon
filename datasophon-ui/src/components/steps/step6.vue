@@ -25,12 +25,25 @@
  * @FilePath: \ddh-ui\src\components\steps\step6.vue
 -->
 <template>
-  <div class="steps6 steps">
-    <div class="steps-title flex-bewteen-container">
-      <span>分配服务Worker与Client角色</span>
+  <div class="steps6 steps apple-style-container">
+    <div class="steps-header">
+      <div class="steps-title">
+        <span>分配服务Worker与Client角色</span>
+      </div>
+      <div class="steps-subtitle">
+        <span>请为每个服务的Worker和Client角色选择部署的主机</span>
+      </div>
     </div>
-    <div class="table-info mgt16 steps-body">
-      <a-table :pagination="false" :columns="columns" :loading="loading" rowKey="id" :dataSource="dataSource"></a-table>
+    
+    <div class="table-container">
+      <a-table 
+        :pagination="false" 
+        :columns="columns" 
+        :loading="loading" 
+        rowKey="id" 
+        :dataSource="dataSource"
+        class="apple-table"
+      ></a-table>
     </div>
   </div>
 </template>
@@ -61,11 +74,11 @@ export default {
           width: 70,
           customRender: (text, row, index) => {
             return (
-              <span>
+                <span>
                 {parseInt(
-                  this.pagination.current === 1
-                    ? index + 1
-                    : index +
+                    this.pagination.current === 1
+                        ? index + 1
+                        : index +
                         1 +
                         this.pagination.pageSize * (this.pagination.current - 1)
                 )}
@@ -99,8 +112,8 @@ export default {
       }
       // 等待网络请求结束
       let res = await this.$axiosJsonPost(
-        global.API.saveServiceRoleHostMapping + `/${this.clusterId}`,
-        saveParam
+          global.API.saveServiceRoleHostMapping + `/${this.clusterId}`,
+          saveParam
       );
       // 网络请求结束后才执行下边的语句  如果传入的callback方法为空或者没传内容也不会去执行，这样也不会影响此方法在别处的调用
       if (callback) {
@@ -125,29 +138,30 @@ export default {
           this.columns.push({
             title: (text, row, index) => {
               return (
-                <div>
-                  <a-checkbox
-                    class="mgr12"
-                    checked={this.getAllCheckedStatus(item.serviceRoleName)}
-                    indeterminate={this.getCheckedStatus(item.serviceRoleName)}
-                    onChange={() => this.changeheaderHost(item.serviceRoleName)}
-                  />
-                  {item.serviceRoleName}
-                </div>
+                  <div class="column-header-with-checkbox">
+                    <a-checkbox
+                        class="column-header-checkbox"
+                        checked={this.getAllCheckedStatus(item.serviceRoleName)}
+                        indeterminate={this.getCheckedStatus(item.serviceRoleName)}
+                        onChange={() => this.changeheaderHost(item.serviceRoleName)}
+                    />
+                    <span class="column-header-text">{item.serviceRoleName}</span>
+                  </div>
               );
             },
             key: item.serviceRoleName,
             dataIndex: item.serviceRoleName,
             customRender: (text, row, index) => {
               return (
-                <div>
-                  <a-checkbox
-                    checked={row[`${item.serviceRoleName}`]}
-                    onChange={() =>
-                      this.changeHost(row, index, item.serviceRoleName)
-                    }
-                  ></a-checkbox>
-                </div>
+                  <div class="centered-checkbox">
+                    <a-checkbox
+                        class="apple-checkbox"
+                        checked={row[`${item.serviceRoleName}`]}
+                        onChange={() =>
+                            this.changeHost(row, index, item.serviceRoleName)
+                        }
+                    ></a-checkbox>
+                  </div>
               );
             },
           });
@@ -243,4 +257,171 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 苹果设计风格颜色变量
+@apple-white: #ffffff;
+@apple-blue: #0071e3;
+@apple-blue-light: rgba(0, 113, 227, 0.1);
+@apple-gray-100: #f5f5f7;
+@apple-gray-200: #e5e5ea;
+@apple-gray-300: #d2d2d7;
+@apple-gray-400: #86868b;
+@apple-gray-500: #6e6e73;
+@apple-text: #1d1d1f;
+@apple-border: rgba(0, 0, 0, 0.1);
+
+.apple-style-container {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+  color: @apple-text;
+  margin: 0;
+  padding: 0;
+  background-color: @apple-white;
+}
+
+.steps-header {
+  padding: 0 0 24px 0;
+  border-bottom: 1px solid @apple-border;
+  margin-bottom: 24px;
+  
+  .steps-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: @apple-text;
+  }
+  
+  .steps-subtitle {
+    font-size: 16px;
+    color: @apple-gray-500;
+  }
+}
+
+.table-container {
+  margin-top: 12px;
+  
+  .apple-table {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    
+    :deep(.ant-table-thead > tr > th) {
+      background-color: @apple-gray-100;
+      color: @apple-text;
+      font-weight: 500;
+      border-bottom: 1px solid @apple-border;
+      padding: 16px 12px;
+      
+      &:first-child {
+        border-top-left-radius: 12px;
+      }
+      
+      &:last-child {
+        border-top-right-radius: 12px;
+      }
+    }
+    
+    :deep(.ant-table-tbody > tr > td) {
+      border-bottom: 1px solid @apple-border;
+      padding: 14px 12px;
+      transition: background 0.3s;
+    }
+    
+    :deep(.ant-table-tbody > tr) {
+      &:hover > td {
+        background-color: @apple-gray-100;
+      }
+      
+      &:last-child > td {
+        border-bottom: none;
+        
+        &:first-child {
+          border-bottom-left-radius: 12px;
+        }
+        
+        &:last-child {
+          border-bottom-right-radius: 12px;
+        }
+      }
+    }
+  }
+}
+
+// 表头中的复选框样式
+.column-header-with-checkbox {
+  display: flex;
+  align-items: center;
+  
+  .column-header-checkbox {
+    margin-right: 8px;
+    
+    :deep(.ant-checkbox) {
+      .ant-checkbox-inner {
+        border-radius: 4px;
+        border-color: @apple-gray-300;
+        transition: all 0.3s;
+        
+        &:hover {
+          border-color: @apple-blue;
+        }
+      }
+      
+      &.ant-checkbox-checked .ant-checkbox-inner {
+        background-color: @apple-blue;
+        border-color: @apple-blue;
+      }
+      
+      &.ant-checkbox-indeterminate .ant-checkbox-inner::after {
+        background-color: @apple-blue;
+      }
+    }
+  }
+  
+  .column-header-text {
+    font-weight: 500;
+    color: @apple-text;
+  }
+}
+
+// 表格中的复选框样式
+.centered-checkbox {
+  display: flex;
+  justify-content: center;
+  
+  .apple-checkbox {
+    :deep(.ant-checkbox) {
+      .ant-checkbox-inner {
+        border-radius: 4px;
+        border-color: @apple-gray-300;
+        transition: all 0.3s;
+        width: 18px;
+        height: 18px;
+        
+        &:hover {
+          border-color: @apple-blue;
+        }
+      }
+      
+      &.ant-checkbox-checked .ant-checkbox-inner {
+        background-color: @apple-blue;
+        border-color: @apple-blue;
+        
+        &::after {
+          transform: rotate(45deg) scale(1) translate(-50%, -60%);
+        }
+      }
+    }
+  }
+}
+
+// 加载状态
+:deep(.ant-spin) {
+  .ant-spin-dot {
+    .ant-spin-dot-item {
+      background-color: @apple-blue;
+    }
+  }
+  
+  .ant-spin-text {
+    color: @apple-blue;
+  }
+}
 </style>

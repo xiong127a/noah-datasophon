@@ -67,8 +67,8 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                 .list();
         // 校验是否已安装依赖的服务
         // 校验是否已安装Prometheus,Grafana,AlertManager
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String key = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        String key = clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
 
         for (FrameServiceRoleEntity role : list) {
             FrameServiceEntity frameServiceEntity = frameService.getById(role.getServiceId());
@@ -113,7 +113,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                 .in(FrameServiceRoleEntity::getServiceId, ids)
                 .list();
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String key = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+        String key = clusterInfo.getId() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         List<String> hosts = new ArrayList<>();
         for (FrameServiceRoleEntity role : list) {
             FrameServiceEntity frameServiceEntity = frameService.getById(role.getServiceId());

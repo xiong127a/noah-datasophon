@@ -19,13 +19,13 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.InstallService;
+import com.datasophon.api.service.HostCheckService;
 import com.datasophon.common.utils.Result;
-
-import javax.validation.constraints.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.constraints.*;
 
 @Validated
 @RestController
@@ -34,6 +34,9 @@ public class HostInstallController {
 
     @Autowired
     private InstallService installService;
+
+    @Autowired
+    private HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤
@@ -52,6 +55,7 @@ public class HostInstallController {
             @RequestParam(required = false) String hosts,
             @RequestParam(required = false) String sshUser,
             @RequestParam(required = false) Integer sshPort,
+            @RequestParam(required = false) String sshPassword,
             @RequestParam Integer page,
             @RequestParam Integer pageSize) {
         return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, page, pageSize);
@@ -67,21 +71,37 @@ public class HostInstallController {
     }
 
     /**
-     * 重新进行主机环境校验
-     */
-    @PostMapping("/rehostCheck")
-    @UserPermission
-    public Result rehostCheck(Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
-        return installService.rehostCheck(clusterId, hostnames, sshUser, sshPort);
-    }
-
-    /**
      * 查询主机校验是否全部完成
      */
     @PostMapping("/hostCheckCompleted")
     @UserPermission
-    public Result hostCheckCompleted(Integer clusterId) {
+    public Result hostCheckCompleted(@RequestParam("clusterId") Integer clusterId) {
         return installService.hostCheckCompleted(clusterId);
+    }
+
+    /**
+     * 清理主机检查资源
+     * 在hostCheckCompleted返回成功且hostCheckCompleted为true后调用
+     * 用于释放与检查任务和修复任务相关的资源
+     *
+     * @param clusterId 集群ID
+     * @return 清理结果
+     */
+    @PostMapping("/cleanupHostCheckResources")
+    @UserPermission
+    public Result cleanupHostCheckResources(@RequestParam("clusterId") Integer clusterId) {
+        return installService.cleanupHostCheckResources(clusterId);
+    }
+
+    /**
+     * 清理主机环境校验缓存
+     *
+     * @return 清理结果
+     */
+    @GetMapping("/clearHostEnvCheckCache")
+    @UserPermission
+    public Result clearHostEnvCheckCache() {
+        return installService.clearHostEnvCheckCache();
     }
 
     /**
@@ -102,25 +122,25 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result cancelDispatcherHostAgent(Integer clusterId, String hostname, Integer installStateCode) {
-        return installService.cancelDispatcherHostAgent(clusterId, hostname, installStateCode);
+    public Result cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode) {
+        return installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
     }
 
     /**
      * 主机管理agent分发安装重试
      *
      * @param clusterId
-     * @param hostnames
+     * @param ips
      * @return
      */
     @PostMapping("/reStartDispatcherHostAgent")
-    public Result reStartDispatcherHostAgent(Integer clusterId, String hostnames) {
-        return installService.reStartDispatcherHostAgent(clusterId, hostnames);
+    public Result reStartDispatcherHostAgent(Integer clusterId, String ips) {
+        return installService.reStartDispatcherHostAgent(clusterId, ips);
     }
 
     /**
      * 主机管理agent操作(启动(start)、停止(stop)、重启(restart))
-     * 
+     *
      * @param clusterHostIds
      * @param commandType
      * @return
@@ -134,7 +154,7 @@ public class HostInstallController {
 
     /**
      * 启动/停止 主机上服务启动
-     * 
+     *
      * @param clusterHostIds
      * @param commandType
      * @return
@@ -144,6 +164,33 @@ public class HostInstallController {
             @RequestParam String clusterHostIds,
             @RequestParam String commandType) throws Exception {
         return installService.generateHostServiceCommand(clusterHostIds, commandType);
+    }
+
+    /**
+     * 开始主机检查
+     *
+     * @param clusterId 集群ID
+     * @return 开始检查结果
+     */
+    @PostMapping("/startHostCheck")
+    @UserPermission
+    public Result startHostCheck(@RequestParam Integer clusterId) {
+        return hostCheckService.startHostCheck(clusterId);
+    }
+
+    /**
+     * 获取主机最近日志
+     * 当鼠标悬浮在主机状态信息上时调用此接口
+     *
+     * @param ip        主机IP
+     * @param clusterId 集群ID
+     * @return 主机最近日志内容
+     */
+    @GetMapping("/getWorkerLog")
+    @UserPermission
+    public Result getWorkerLog(@RequestParam("ip") String ip,
+            @RequestParam("clusterId") Integer clusterId) {
+        return installService.getWorkerLog(ip, clusterId);
     }
 
 }

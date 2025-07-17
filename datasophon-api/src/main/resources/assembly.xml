@@ -45,6 +45,7 @@
                 <include>logback-api.xml</include>
                 <include>application.conf</include>
                 <include>application.yml</include>
+                <include>checker-config.yml</include>
             </includes>
             <outputDirectory>conf</outputDirectory>
             <fileMode>0755</fileMode>
@@ -195,7 +196,7 @@
             <outputDirectory>conf</outputDirectory>
             <fileMode>0755</fileMode>
         </fileSet>
-        
+
         <!-- 添加datasophon-api/src/main/resources/docs目录 -->
         <fileSet>
             <directory>${basedir}/src/main/resources/docs</directory>

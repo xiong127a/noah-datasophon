@@ -19,7 +19,6 @@ package com.datasophon.api.service.host.impl;
 
 import akka.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -27,13 +26,12 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.RackActor;
-import com.datasophon.api.service.ClusterRackService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteCmdCommand;
@@ -42,13 +40,12 @@ import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterHostMapper;
+import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
@@ -97,6 +94,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
+    public ClusterHostDO getClusterHostByIp(String ip) {
+        return hostMapper.selectOne(new QueryWrapper<ClusterHostDO>().eq(IP, ip));
+    }
+
+
+    @Override
     public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
@@ -114,6 +117,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
+
+        // 获取集群代码，用于查询主机信息缓存
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//        String clusterCode = clusterInfo.getClusterCode();
+        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
             BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
@@ -123,6 +132,25 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
             queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
+
+            // 从缓存中获取hosts文件内容和操作系统类型
+            if (hostInfoMap != null) {
+                HostInfo hostInfo = hostInfoMap.get(clusterHostDO.getHostname());
+                if (hostInfo != null) {
+                    // 设置hosts文件内容
+                    if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDnsInfo() != null) {
+                        queryHostListPageDTO.setHostsFile(hostInfo.getOsInfo().getDnsInfo().getHostsFileContent());
+                    } else {
+                        queryHostListPageDTO.setHostsFile(null);
+                    }
+
+                    // 设置操作系统类型
+                    if (hostInfo.getOsInfo() != null) {
+                        queryHostListPageDTO.setOsType(hostInfo.getOsInfo().getDistribution());
+                    }
+                }
+            }
+
             hostListPageDTOS.add(queryHostListPageDTO);
         }
         long count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
@@ -170,6 +198,10 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
                     .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                             .eq(Constants.CLUSTER_ID, host.getClusterId())
+            Integer clusterId = host.getClusterId();
+            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                    .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+                            .eq(Constants.CLUSTER_ID, clusterId)
                             .eq(Constants.HOSTNAME, host.getHostname())
                             .eq(Constants.SERVICE_ROLE_STATE, ServiceRoleState.RUNNING)
                             .ne(Constants.ROLE_TYPE, RoleType.CLIENT));
@@ -178,9 +210,10 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             if (!list.isEmpty()) {
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(host.getClusterId());
-            String clusterCode = clusterInfo.getClusterCode();
-            String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
+
+//            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//            String clusterCode = clusterInfo.getClusterCode();
+            String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
             if (CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
                 CacheUtils.removeKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname());
             }
@@ -205,7 +238,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
             // Prometheus 移除 hosts 信息
             GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
-            prometheusConfigCommand.setClusterId(clusterInfo.getId());
+            prometheusConfigCommand.setClusterId(clusterId);
 
             ActorUtils.actorSystem.scheduler().scheduleOnce(
                     FiniteDuration.apply(3L, TimeUnit.SECONDS),
@@ -217,12 +250,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             // remove the host from the cache
             Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
             String md5 = SecureUtil.md5(host.getHostname());
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
-            }
-            if (CacheUtils.constainsKey(clusterCode + Constants.HOST_MD5)
-                    && md5.equals(CacheUtils.getString(clusterCode + Constants.HOST_MD5))) {
-                CacheUtils.removeKey(clusterCode + Constants.HOST_MD5);
             }
         }
         return Result.success();
@@ -281,12 +311,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     public Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
-            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
+            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getIp());
             if (ObjectUtil.isNull(hostEntity)) {
                 ClusterHostDO clusterHostDO = new ClusterHostDO();
                 clusterHostDO.setClusterId(clusterId);
                 clusterHostDO.setCreateTime(hostInfo.getCreateTime());
-                clusterHostDO.setHostname(hostInfo.getHostname());
+                clusterHostDO.setHostname(hostInfo.getIp());
                 clusterHostDO.setIp(hostInfo.getIp());
                 clusterHostDO.setRack("/default-rack");
                 clusterHostDO.setHostState(HostState.RUNNING);

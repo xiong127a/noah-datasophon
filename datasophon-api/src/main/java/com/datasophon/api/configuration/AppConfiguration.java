@@ -107,8 +107,9 @@ public class AppConfiguration implements WebMvcConfigurer {
                         "/ssoEnable",
                         "/saveSsoUser",
                         "/sso/*",
+                        "/lic/**",
                         "/actuator/**",
-                        "/api/cluster/grafana/metrics");
+                        "/api/cluster/grafana/kerberos/*");
     }
 
     @Override

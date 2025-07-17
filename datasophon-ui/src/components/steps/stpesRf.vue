@@ -1,5 +1,4 @@
 <!--
-/*
  *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -48,7 +47,7 @@
 import { mapState, mapMutations, mapActions } from "vuex";
 
 import Steps1 from "./step1.vue";
-import Steps2 from "./step2.vue";
+import Index from "./step2/index.vue";
 import Steps3 from "./step3.vue";
 import Steps4 from "./step4.vue";
 import Steps5 from "./step5.vue";
@@ -62,7 +61,7 @@ export default {
   name: "StepsContainer",
   components: {
     Steps1,
-    Steps2,
+    Steps2: Index,
     Steps3,
     Steps4,
     Steps5,
@@ -79,6 +78,7 @@ export default {
         hosts: "",
         sshUser: "",
         sshPort: "",
+        sshPassword: "",
       },
       steps4Data: {
         serviceIds: [],
@@ -88,7 +88,7 @@ export default {
   },
   watch: {
     currentSteps(val) {
-      // 当从其他步骤返回到步骤1时，不清空数据（保留恢复机制）
+      console.log(val, "asdsdsa");
     },
     stepsType: {
       handler (val) {
@@ -99,27 +99,21 @@ export default {
       immediate: true
     }
   },
-  mounted() {
-    if (this.currentSteps === 1 && this.clusterId === undefined) {
-      this.steps1Data.kubeConfigContent = undefined;
-      this.steps1Data.namespace = undefined;
-    }
-  },
   computed: {
     stepsNumber () {
-      if (this.currentSteps === 4 && this.depType === 'Kubernetes'){
+      if (this.currentSteps === 4 && this.depType == 'K8S'){
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 5 && this.depType === 'Kubernetes') {
+      if (this.currentSteps === 5 && this.depType == 'K8S') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 6 && this.depType === 'Kubernetes') {
+      if (this.currentSteps === 6 && this.depType == 'K8S') {
         return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 7 && this.depType === 'Kubernetes') {
+      if (this.currentSteps === 7 && this.depType == 'K8S') {
       return this.currentSteps + 1
       }//暂时的
-      if (this.currentSteps === 3 && this.depType === 'Kubernetes'){
+      if (this.currentSteps === 3 && this.depType == 'K8S'){
         return this.currentSteps + 1
       }else{
         return this.currentSteps + this.interval
@@ -139,68 +133,48 @@ export default {
       // this.nextLoading = true
       let flag = true;
       if (this.stepsNumber === 1) {
-        try {
-          const values = await new Promise((resolve, reject) => {
-            this.$refs.steps1Ref.form.validateFields((err, values) => {
-              if (!err) {
-                resolve(values);
-              } else {
-                reject(err);
-              }
-            });
-          });
-          
-          // 如果是K8S集群，需要先保存K8S配置
-          if (this.$refs.steps1Ref.isK8sCluster) {
-            const saveResult = await this.$refs.steps1Ref.saveKubernetesConfig();
-            if (!saveResult) {
-              flag = false;
-              return;
-            }
-            
-            // K8S模式下，为steps1Data提供默认值，因为不需要用户输入主机信息
-            this.steps1Data = {
-              hosts: '', // K8S模式下会自动从集群获取，这里设为空字符串
-              sshUser: 'root', // 默认用户
-              sshPort: 22, // 默认端口
-              kubeConfigContent: values.kubeConfigContent,
-              namespace: values.namespace
-            };
-          } else {
-            // PVM模式使用用户输入的值
+        this.$refs.steps1Ref.form.validateFields((err, values) => {
+          if (!err) {
+            flag = true;
             this.steps1Data = values;
+            
+            // 直接进入下一步，不再调用clearHostEnvCheckCache
+            this.currentStepsAdd();
+          } else {
+            flag = false;
           }
-          
-          flag = true;
-        } catch (error) {
-          flag = false;
-        }
+        });
+        return; // 添加return，防止下方的代码执行
       }
       if (this.stepsNumber === 2) {
         const self = this;
-        
-        // K8S模式下先进行兜底保存
-        if (this.depType === 'Kubernetes') {
-          const successfulHosts = this.$refs.steps2Ref.getSuccessfulHosts();
-          
-          // 强制测试接口调用（无论是否有主机）
-          try {
-            const saveResult = await this.$axiosJsonPost(
-              global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, 
-              successfulHosts
-            );
-          } catch (error) {
-            // 不阻断流程，因为可能已经在轮询中保存过了
-          }
-        }
-        
-        // 然后执行原有的完成状态检查
         this.$refs.steps2Ref.hostCheckCompleted((res) => {
           this.nextLoading = false;
           flag = res.hostCheckCompleted;
-          if (!flag) self.$message.warning("存在为未检验成功的主机");
+          if (!flag) self.$message.warning(res.data || "存在未检验成功的主机");
           if (!flag) return false;
-          self.currentStepsAdd();
+          
+          // 主机检查完成后，直接分析主机列表
+          this.$axiosPost(global.API.analysisHostList, {
+            clusterId: this.clusterId,
+            ips: this.steps1Data.hosts,
+            sshUser: this.steps1Data.sshUser,
+            sshPort: this.steps1Data.sshPort,
+            sshPassword: this.steps1Data.sshPassword,
+            page: 1,
+            pageSize: 10 // 使用与第三步相同的默认pageSize
+          }).then((analysisRes) => {
+            if (analysisRes.code !== 200) {
+              console.warn("分析主机列表失败:", analysisRes.msg);
+              self.$message.warning("分析主机列表失败，请检查主机状态");
+            }
+            // 无论分析结果如何，都进入下一步
+            this.currentStepsAdd();
+          }).catch((err) => {
+            console.error("分析主机列表出错:", err);
+            // 即使分析出错，也进入下一步
+            this.currentStepsAdd();
+          });
         });
       }
       if (this.stepsNumber === 3) {
@@ -220,12 +194,20 @@ export default {
       }
       if (this.stepsNumber === 4) {
         //  这个地方过滤掉已经回显的服务 只传递给下一步新选的服务
+        console.log('Step 4 data before processing:', {
+          selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeysArr,
+          selectedRowKeys: this.$refs.steps4Ref.selectedRowKeys,
+          selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNamesArr,
+          selectedRowNames: this.$refs.steps4Ref.selectedRowNames
+        });
+
         this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
         this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
-        this.steps4Data.serviceType = this.$refs.steps4Ref.params.type || '';
+        
+        console.log('Step 4 data after processing:', this.steps4Data);
         
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        if (this.depType!=='Kubernetes'){
+        if (this.depType!=='K8S'){
           arr.map((item, index) => {
             let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
             if (curIndex !== -1) {
@@ -236,35 +218,15 @@ export default {
             }
           })
         }
-        
+
         // 确保数据不为空
-        this.steps4Data.serviceIds = [...new Set(this.steps4Data.serviceIds)];
-        
-        if (this.steps4Data.serviceIds.length < 1) {
+        if (!this.steps4Data.serviceIds.length || !this.steps4Data.serviceNames.length) {
           this.$message.warning("请至少选择一个服务");
           flag = false;
           return;
         }
-        
-        // 检查服务依赖关系
-        if (flag) {
-          try {
-            const res = await this.$axiosPost('/ddh/service/install/checkServiceDependency', {
-              clusterId: this.clusterId,
-              serviceIds: this.steps4Data.serviceIds.join(',')
-            });
-            
-            if (res.code !== 200) {
-              this.$message.error(res.msg || '服务依赖检查失败');
-              flag = false;
-              return;
-            }
-          } catch (error) {
-            this.$message.error('服务依赖检查异常: ' + (error.message || '未知错误'));
-            flag = false;
-            return;
-          }
-        }
+
+        console.log('Final Step 4 data:', this.steps4Data);
       }
       if (this.stepsNumber === 5) {
         // flag = this.$refs.steps5Ref.handleSubmit();
@@ -341,60 +303,121 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 苹果设计系统颜色
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 .steps-rf {
   height: 100%;
-  width: 100%;
   display: flex;
   justify-content: space-between;
   flex-direction: column;
-  box-sizing: border-box;
+  
+  // 添加通用的steps类样式
+  :deep(.steps) {
+    padding-bottom: 30px; // 为所有步骤组件添加底部内边距，给footer留出空间
+  }
   
   .steps-rf-container {
-    width: 100%;
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0; /* 确保容器可以缩小 */
-    box-sizing: border-box;
-    padding: 0 20px; /* 添加一些内边距，避免内容太靠边 */
+    overflow-y: auto;
+    padding-bottom: 16px; // 减小底部padding，因为footer不再是固定定位
   }
   
   .footer {
-    // margin: 0 32px 0 auto;
-    // margin: 0 32px 0 0;
-    // margin: 0 auto;
     width: 100%;
-    height: 64px;
-    background: rgba(242, 244, 247, 0.5);
+    height: 80px;
+    background: rgba(255, 255, 255, 0.85); // 稍微调整透明度
+    backdrop-filter: blur(20px); // 增强模糊效果
+    -webkit-backdrop-filter: blur(20px);
+    border-top: none; // 移除分割线
     display: flex;
     justify-content: center;
     align-items: center;
-    box-sizing: border-box;
-    padding: 0 20px; /* 与内容区域保持一致的内边距 */
-    button {
-      width: 86px;
-    }
-    /deep/
-      .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
-      padding-left: 20px;
-    }
-  }
-  
-  /* 添加媒体查询以处理不同的屏幕尺寸 */
-  @media screen and (max-width: 1300px) {
-    .footer {
-      padding: 0 16px;
-    }
-  }
-  
-  /* 确保所有步骤组件都能正确适应容器 */
-  /deep/ .steps {
-    width: 100%;
-    box-sizing: border-box;
+    position: relative;
+    margin-top: 20px;
+    z-index: 10;
+    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.03); // 更微妙的阴影
     
-    /* 在小屏幕上保持一致的布局 */
-    @media screen and (max-width: 992px) {
-      min-width: max-content; /* 确保内容可以完全显示 */
+    button {
+      height: 44px;
+      min-width: 120px; // 确保按钮宽度一致
+      padding: 0 24px;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 22px;
+      transition: all 0.25s cubic-bezier(0.2, 0.1, 0, 1); // 苹果风格的过渡效果
+      margin: 0 10px;
+      letter-spacing: -0.01em; // 微调字间距
+      
+      // 取消按钮样式 - 轻色调设计
+      &.ant-btn {
+        background: transparent; // 透明背景
+        border: 1px solid rgba(0, 0, 0, 0.1); // 微妙的边框
+        color: @apple-black;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.03);
+          border-color: rgba(0, 0, 0, 0.15);
+          transform: translateY(-1px);
+        }
+        
+        &:active {
+          background: rgba(0, 0, 0, 0.06);
+          transform: translateY(0);
+          transition: all 0.1s;
+        }
+      }
+      
+      // 下一步按钮样式 - 主要操作按钮
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 113, 227, 0.2); // 蓝色阴影效果
+        
+        &:hover {
+          background: @apple-blue-hover;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+        
+        &:active {
+          background: darken(@apple-blue, 5%);
+          transform: translateY(0);
+          box-shadow: 0 1px 4px rgba(0, 113, 227, 0.2);
+          transition: all 0.1s;
+        }
+        
+        &.ant-btn-loading {
+          opacity: 0.9;
+          pointer-events: none;
+          box-shadow: 0 2px 6px rgba(0, 113, 227, 0.15);
+          
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
+    }
+    
+    /deep/ .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
+      padding-left: 24px;
+      
+      .anticon {
+        margin-right: 6px;
+      }
     }
   }
 }

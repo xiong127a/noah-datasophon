@@ -25,23 +25,34 @@
  * @FilePath: \ddh-ui\src\components\steps\step5.vue
 -->
 <template>
-  <a-spin :spinning="loading" style="min-height: 600px">
-    <div class="steps5 steps">
-      <div class="steps-title flex-bewteen-container">
-        <span>分配服务Master角色</span>
+  <a-spin :spinning="loading" class="apple-spin-container">
+    <div class="steps5 steps apple-style-container">
+      <div class="steps-header">
+        <div class="steps-title">
+          <span>分配服务Master角色</span>
+        </div>
+        <div class="steps-subtitle">
+          <span>请为每个服务的Master角色分配合适的主机</span>
+        </div>
       </div>
-      <div class="mgt16 steps-body">
-        <FixedCommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
+      
+      <div class="content-container">
+        <CommonTemplate 
+          ref="commonTemplateRef" 
+          :steps4Data="steps4Data" 
+          :templateData="templateData"
+          class="apple-template" 
+        />
       </div>
     </div>
   </a-spin>
 </template>
 <script>
-import FixedCommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
+import CommonTemplate from "@/components/commonTemplate/index";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: { FixedCommonTemplate },
+  components: { CommonTemplate },
   props: {
     steps4Data: Object,
   },
@@ -50,7 +61,7 @@ export default {
       loading: false,
       templateData: [],
       saveData: [],
-      hostList: []
+      hostList: [],
     };
   },
   methods: {
@@ -77,7 +88,7 @@ export default {
               }
             } else {
               if (
-                Object.prototype.toString.call(values[k]) === "[object Array]"
+                  Object.prototype.toString.call(values[k]) === "[object Array]"
               ) {
                 formData[`${k}`] = values[k];
               } else {
@@ -98,8 +109,8 @@ export default {
           }
           // 等待网络请求结束
           let res = await this.$axiosJsonPost(
-            global.API.saveServiceRoleHostMapping + `/${this.clusterId}`,
-            saveParam
+              global.API.saveServiceRoleHostMapping + `/${this.clusterId}`,
+              saveParam
           );
           // 网络请求结束后才执行下边的语句  如果传入的callback方法为空或者没传内容也不会去执行，这样也不会影响此方法在别处的调用
           if (callback) {
@@ -161,4 +172,148 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 苹果设计风格颜色变量
+@apple-white: #ffffff;
+@apple-blue: #0071e3;
+@apple-blue-light: rgba(0, 113, 227, 0.1);
+@apple-gray-100: #f5f5f7;
+@apple-gray-200: #e5e5ea;
+@apple-gray-300: #d2d2d7;
+@apple-gray-400: #86868b;
+@apple-gray-500: #6e6e73;
+@apple-text: #1d1d1f;
+@apple-border: rgba(0, 0, 0, 0.1);
+
+.apple-spin-container {
+  min-height: 600px;
+  
+  :deep(.ant-spin) {
+    .ant-spin-dot {
+      .ant-spin-dot-item {
+        background-color: @apple-blue;
+      }
+    }
+    
+    .ant-spin-text {
+      color: @apple-blue;
+    }
+  }
+}
+
+.apple-style-container {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+  color: @apple-text;
+  margin: 0;
+  padding: 0;
+  background-color: @apple-white;
+}
+
+.steps-header {
+  padding: 0 0 24px 0;
+  border-bottom: 1px solid @apple-border;
+  margin-bottom: 24px;
+  
+  .steps-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: @apple-text;
+  }
+  
+  .steps-subtitle {
+    font-size: 16px;
+    color: @apple-gray-500;
+  }
+}
+
+.content-container {
+  background-color: @apple-white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 24px;
+  
+  :deep(.apple-template) {
+    // 表单项标签样式
+    .ant-form-item-label label {
+      color: @apple-text;
+      font-weight: 500;
+    }
+    
+    // 表单项控件样式
+    .ant-form-item-control {
+      // 选择器样式
+      .ant-select {
+        .ant-select-selection {
+          border-radius: 8px;
+          border-color: @apple-gray-300;
+          transition: all 0.3s;
+          
+          &:hover {
+            border-color: @apple-blue;
+          }
+          
+          .ant-select-selection__rendered {
+            margin-left: 12px;
+          }
+        }
+        
+        &.ant-select-focused .ant-select-selection,
+        .ant-select-selection:focus,
+        .ant-select-selection:active {
+          border-color: @apple-blue;
+          box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+        }
+      }
+      
+      // 多选选择器样式
+      .ant-select-selection--multiple {
+        .ant-select-selection__choice {
+          background-color: @apple-gray-100;
+          border-color: @apple-gray-300;
+          border-radius: 4px;
+          margin-top: 6px;
+          margin-bottom: 6px;
+          
+          .ant-select-selection__choice__content {
+            margin-right: 6px;
+          }
+          
+          .ant-select-selection__choice__remove {
+            color: @apple-gray-500;
+            
+            &:hover {
+              color: @apple-text;
+            }
+          }
+        }
+      }
+      
+      // 下拉菜单样式
+      :deep(.ant-select-dropdown) {
+        border-radius: 8px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        
+        .ant-select-dropdown-menu-item {
+          padding: 10px 12px;
+          transition: all 0.2s;
+          
+          &:hover {
+            background-color: @apple-gray-100;
+          }
+          
+          &-selected {
+            color: @apple-blue;
+            font-weight: 500;
+            background-color: @apple-blue-light;
+          }
+        }
+      }
+    }
+    
+    // 表单项间距
+    .ant-form-item {
+      margin-bottom: 24px;
+    }
+  }
+}
 </style>

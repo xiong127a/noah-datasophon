@@ -50,6 +50,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class WorkerApplicationServer {
 
@@ -146,6 +150,16 @@ public class WorkerApplicationServer {
         eventStream.subscribe(remoteEventActor, DisassociatedEvent.class);
     }
 
+    /**
+     * 向Master发送Worker状态信息
+     * 发送成功后Master会更新主机状态为"安装成功"
+     *
+     * @param hostname        主机名
+     * @param workDir         工作目录
+     * @param masterHost      Master主机地址
+     * @param cpuArchitecture CPU架构
+     * @param system          Actor系统
+     */
     private static void tellToMaster(
             String hostname,
             String workDir,
@@ -154,13 +168,80 @@ public class WorkerApplicationServer {
             ActorSystem system) {
         ActorSelection workerStartActor = system.actorSelection(
                 "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
+        // 创建workerStartActor的ActorSelection
+        ActorSelection workerStartActor = system.actorSelection(
+                "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
+
+        // 收集主机信息
         ExecResult result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
         logger.info("host info collect result:{}", result);
+        StartWorkerMessage startWorkerMessage = JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
+        logger.info("主机信息收集结果: {}", result);
+
+        // 如果信息收集失败,重试最多3次
+        int retryCount = 0;
+        while (result.getExecOut() == null && retryCount < 3) {
+            logger.warn("主机信息收集失败,第{}次重试...", retryCount + 1);
+            try {
+                // 等待2秒后重试
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
+            retryCount++;
+        }
+
+        if (result.getExecOut() == null) {
+            logger.error("主机信息收集失败,无法向Master报告状态");
+            return;
+        }
+
+        // 解析收集到的主机信息
         StartWorkerMessage startWorkerMessage = JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
         startWorkerMessage.setCpuArchitecture(cpuArchitecture);
         startWorkerMessage.setClusterId(PropertyUtils.getInt("clusterId"));
         startWorkerMessage.setHostname(hostname);
+
+        // 从配置文件中读取IP并设置
+        final String hostIp = getHostIp();
+        logger.info("使用IP地址: {}", hostIp);
+        startWorkerMessage.setIp(hostIp);
+
+        // 向Master发送Worker状态信息
+        logger.info("向Master({})发送Worker状态信息", masterHost);
         workerStartActor.tell(startWorkerMessage, ActorRef.noSender());
+
+        // 在后台线程中定期发送心跳,确保Master能够收到消息
+        ScheduledExecutorService heartbeatExecutor = new ScheduledThreadPoolExecutor(1);
+        final AtomicInteger heartbeatCount = new AtomicInteger(0);
+
+        heartbeatExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                // 最多发送3次心跳
+                if (heartbeatCount.incrementAndGet() > 3) {
+                    heartbeatExecutor.shutdown();
+                    return;
+                }
+
+                logger.info("发送第{}次心跳消息", heartbeatCount.get());
+                // 复制原消息作为心跳消息
+                StartWorkerMessage heartbeatMessage = new StartWorkerMessage();
+                heartbeatMessage.setHostname(hostname);
+                heartbeatMessage.setClusterId(PropertyUtils.getInt("clusterId"));
+
+                // 确保心跳消息也包含IP信息
+                heartbeatMessage.setIp(hostIp);
+
+                workerStartActor.tell(heartbeatMessage, ActorRef.noSender());
+            } catch (Exception e) {
+                logger.error("发送心跳消息失败", e);
+                heartbeatExecutor.shutdown();
+            }
+        }, 5, 10, TimeUnit.SECONDS);
+
+        // 注册关闭钩子,确保线程池正确关闭
+        Runtime.getRuntime().addShutdownHook(new Thread(heartbeatExecutor::shutdown));
     }
 
     public static void close(String cause) {
@@ -190,5 +271,15 @@ public class WorkerApplicationServer {
         commands.add(operate);
         commands.add(NODE);
         ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 60L, logger);
+    }
+
+    /**
+     * 获取主机IP地址
+     * 从配置文件读取
+     *
+     * @return 主机IP地址
+     */
+    private static String getHostIp() {
+        return PropertyUtils.getString("ip");
     }
 }

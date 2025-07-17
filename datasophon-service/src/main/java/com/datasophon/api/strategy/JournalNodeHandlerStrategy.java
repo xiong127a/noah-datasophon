@@ -25,17 +25,34 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JournalNodeHandlerStrategy implements ServiceRoleStrategy {
+    private static final Logger logger = LoggerFactory.getLogger(JournalNodeHandlerStrategy.class);
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() >= 3) {
+            // 为保持向后兼容，仍单独设置前三个节点变量
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode1}", hosts.get(0));
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode2}", hosts.get(1));
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode3}", hosts.get(2));
+
+            // 生成包含所有JournalNode的URL
+            StringBuilder journalNodesUrl = new StringBuilder("qjournal://");
+            for (int i = 0; i < hosts.size(); i++) {
+                if (i > 0)
+                    journalNodesUrl.append(";");
+                journalNodesUrl.append(hosts.get(i)).append(":8485");
+            }
+            journalNodesUrl.append("/meta");
+
+            // 设置完整的JournalNode URL变量
+            String journalUrl = journalNodesUrl.toString();
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNodesUrl}", journalUrl);
+            logger.info("Generated dynamic JournalNode URL: {}", journalUrl);
         }
     }
-
 }

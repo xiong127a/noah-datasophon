@@ -17,10 +17,14 @@
 
 package com.datasophon.common.model;
 
+import java.io.Serializable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+public class CheckResult implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 @NoArgsConstructor
 public class CheckResult {
 

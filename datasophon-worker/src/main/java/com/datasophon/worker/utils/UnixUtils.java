@@ -89,7 +89,7 @@ public class UnixUtils {
     }
 
     public static boolean isGroupExists(String groupName) {
-        ExecResult execResult = ShellUtils.exceShell("egrep \"" + groupName + "\" /etc/group >& /dev/null");
+        ExecResult execResult = ShellUtils.exceShell("egrep \"" + groupName + "\" /etc/group > /dev/null 2>&1");
         return execResult.getExecResult();
     }
 

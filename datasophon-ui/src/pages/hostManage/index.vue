@@ -266,6 +266,11 @@ export default {
           dataIndex: "cpuArchitecture",
         },
         {
+          title: "操作系统",
+          key: "osType",
+          dataIndex: "osType",
+        },
+        {
           title: "角色",
           key: "serviceRoleNum",
           dataIndex: "serviceRoleNum",

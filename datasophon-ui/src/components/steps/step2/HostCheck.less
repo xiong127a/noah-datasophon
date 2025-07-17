@@ -1,0 +1,287 @@
+/* 苹果设计系统颜色 */
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #30d158;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
+@apple-purple: #5856d6;
+
+/* 主机检查页面样式 */
+.host-check-container {
+  padding: 24px;
+  background: @apple-white;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  
+  /* 表格样式 */
+  .host-table {
+    margin-top: 16px;
+    
+    .ant-table-thead > tr > th {
+      background-color: @apple-gray-light;
+      font-weight: 500;
+      color: @apple-black;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    
+    .ant-table-tbody > tr > td {
+      padding: 12px 16px;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+    
+    .ant-table-tbody > tr:hover:not(.ant-table-expanded-row):not(.ant-table-row-selected) > td {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .ant-table-row-expand-icon {
+      border: 1px solid #d9d9d9;
+      background: @apple-white;
+      border-radius: 4px;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .ant-table-row-expand-icon-expanded {
+      transform: rotate(90deg);
+    }
+  }
+  
+  /* 按钮样式 */
+  .action-button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    
+    .anticon {
+      margin-right: 6px;
+    }
+    
+    &.primary {
+      background-color: @apple-blue;
+      color: @apple-white;
+      
+      &:hover {
+        background-color: @apple-blue-hover;
+      }
+      
+      &:active {
+        transform: scale(0.98);
+      }
+      
+      &[disabled], &.disabled {
+        background-color: rgba(0, 113, 227, 0.5);
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+    
+    &.secondary {
+      background-color: @apple-gray-light;
+      color: @apple-black;
+      
+      &:hover {
+        background-color: darken(@apple-gray-light, 3%);
+      }
+      
+      &:active {
+        transform: scale(0.98);
+      }
+      
+      &[disabled], &.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+    
+    &.danger {
+      background-color: @apple-red;
+      color: @apple-white;
+      
+      &:hover {
+        background-color: darken(@apple-red, 5%);
+      }
+    }
+    
+    &.success {
+      background-color: @apple-green;
+      color: @apple-white;
+      
+      &:hover {
+        background-color: darken(@apple-green, 5%);
+      }
+    }
+  }
+  
+  /* 状态样式 */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    
+    .anticon {
+      margin-right: 6px;
+    }
+    
+    &.success-status {
+      background-color: rgba(52, 199, 89, 0.1);
+      color: #34c759;
+    }
+    
+    &.failed-status {
+      background-color: rgba(255, 59, 48, 0.1);
+      color: #ff3b30;
+    }
+    
+    &.checking-status {
+      background-color: rgba(0, 122, 255, 0.1);
+      color: #007aff;
+    }
+    
+    &.waiting-status {
+      background-color: rgba(255, 149, 0, 0.1);
+      color: #ff9500;
+    }
+    
+    &.skipped-status {
+      background-color: rgba(142, 142, 147, 0.1);
+      color: #8e8e93;
+    }
+    
+    &.fixing-status {
+      background-color: rgba(88, 86, 214, 0.1);
+      color: #5856d6;
+    }
+  }
+  
+  /* 头部操作区域 */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: @apple-black;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+  }
+  
+  /* 搜索和过滤区域 */
+  .filter-section {
+    margin-bottom: 20px;
+    padding: 16px;
+    background-color: @apple-gray-light;
+    border-radius: 12px;
+    
+    .ant-form-item {
+      margin-bottom: 12px;
+    }
+  }
+  
+  /* 日志查看模态框 */
+  .log-viewer-modal {
+    .ant-modal-content {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .ant-modal-header {
+      padding: 16px 24px;
+      background-color: @apple-gray-light;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    
+    .ant-modal-body {
+      padding: 20px;
+    }
+    
+    .ant-modal-footer {
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 12px 24px;
+    }
+  }
+  
+  /* 主机名编辑对话框 */
+  .hostname-edit-modal {
+    .ant-modal-content {
+      border-radius: 12px;
+    }
+    
+    .ant-input {
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+  }
+
+  /* 展开图标自定义样式 */
+  .apple-expand-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .expand-icon-inner {
+      transform: rotate(0deg);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    &.expanded {
+      .expand-icon-inner {
+        transform: rotate(90deg);
+      }
+    }
+  }
+  
+  /* Hosts文件预览样式 */
+  .hosts-file-preview-modal {
+    .ant-modal-content {
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    
+    .ant-modal-body {
+      padding: 0;
+    }
+  }
+  
+  /* 处理长文本溢出 */
+  .ellipsis-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+} 

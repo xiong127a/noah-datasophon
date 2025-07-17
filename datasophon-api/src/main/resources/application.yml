@@ -13,6 +13,8 @@ arthas:
   http-port: -1
 # mysql
 spring:
+  config:
+    import: classpath:checker-config.yml
   datasource:
     driver-class-name: ${datasource.driver:com.mysql.cj.jdbc.Driver}
     type: com.alibaba.druid.pool.DruidDataSource
@@ -67,8 +69,22 @@ spring:
     allow-circular-references: true
   web:
     resources:
-      static-locations: classpath:/front/views/
-      
+      static-locations:
+        classpath:/META-INF/resources/,
+        classpath:/resources/,
+        classpath:/static/,
+        classpath:/public/,
+        classpath:/front/views/,
+        classpath*:/lic/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # 暴露所有端点（生产环境慎用）
+        # include: health,info,metrics  # 按需指定
+      base-path: /monitor  # 自定义基础路径（默认/actuator）
+
 # Jasypt加密配置
 jasypt:
   encryptor:
@@ -76,7 +92,7 @@ jasypt:
     # 加密密钥可以通过环境变量或启动参数设置: -Djasypt.encryptor.password=your_key
     password: ${JASYPT_PASSWORD}
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
-      
+
 # Prometheus监控配置
 management:
   endpoints:
@@ -101,7 +117,7 @@ management:
       logback: true
       process: true
       system: true
-      
+
 #mybatis
 mybatis-plus:
   mapper-locations: classpath*:/mapper/*.xml
