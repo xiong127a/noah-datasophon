@@ -28,10 +28,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
-import java.util.Map;
 
 @RestController
 @RequestMapping("api/cluster")
@@ -119,12 +119,8 @@ public class ClusterInfoController {
      * 获取Kubernetes命名空间列表
      */
     @PostMapping("/namespaces")
-    public Result getKubernetesNamespaces(@RequestBody Map<String, String> requestBody) {
-        String kubeConfig = requestBody.get("kubeConfigContent");
-        if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
-            return Result.error("请提供Kubernetes配置内容");
-        }
-        return clusterInfoService.getKubernetesNamespaces(kubeConfig);
+    public Result getKubernetesNamespaces(@RequestParam(name = "kubeConfigContent") String kubeConfigContent) {
+        return clusterInfoService.getKubernetesNamespaces(kubeConfigContent);
     }
 
     /**
