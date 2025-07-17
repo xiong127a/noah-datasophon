@@ -74,22 +74,22 @@
           </div>
           <div class="card-content">
             <a-form-item label="集群框架" class="apple-form-item" style="margin-bottom: 24px;">
-              <a-select
+                <a-select 
                 v-decorator="[
                   'clusterFrame',
                   { rules: [{ required: true, message: '集群框架不能为空!' }] },
                 ]"
-                placeholder="请选择集群框架"
-                class="apple-select"
-                size="large"
-              >
-                <a-select-option :value="item.frameCode" v-for="(item, index) in frameList" :key="index">
-                  {{ item.frameCode }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item label="集群部署方式" class="apple-form-item deployment-type">
+                  placeholder="请选择集群框架"
+                  class="apple-select"
+                  size="large"
+                >
+                  <a-select-option :value="item.frameCode" v-for="(item, index) in frameList" :key="index">
+                    {{ item.frameCode }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+              
+              <a-form-item label="集群部署方式" class="apple-form-item deployment-type">
               <!-- 隐藏的表单字段用于验证 -->
               <a-input
                 v-decorator="['depType', { rules: [{ required: true, message: '请选择集群部署方式!' }] }]"
@@ -140,15 +140,15 @@
                     <div class="info-text">
                       <div v-if="selectedDepType === 'PVM'">
                         <strong>裸金属/虚拟机部署：</strong>适用于需要并行处理大规模计算任务的场景，支持将多个计算机资源组合成一个强大的计算集群，提供最佳的性能和资源控制。
-                      </div>
+                          </div>
                       <div v-else-if="selectedDepType === 'Kubernetes'">
                         <strong>Kubernetes部署：</strong>适用于需要管理和部署容器化应用程序的场景，强调的是自动化、可扩展和高可用的应用程序管理，支持微服务架构。
-                      </div>
-                    </div>
+                          </div>
+                        </div>
+                  </div>
                   </div>
                 </div>
-              </div>
-            </a-form-item>
+              </a-form-item>
           </div>
         </div>
       </a-form>
@@ -437,7 +437,7 @@ export default {
             background: rgba(0, 122, 255, 0.05);
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(0, 122, 255, 0.15);
-            
+        
             .card-check {
               opacity: 1;
               transform: scale(1);
@@ -460,7 +460,7 @@ export default {
           }
           
           .card-content {
-            flex: 1;
+          flex: 1;
             
             .card-title {
               .apple-font();
@@ -469,8 +469,8 @@ export default {
               color: @apple-text-primary;
               margin: 0 0 8px 0;
               line-height: 1.2;
-            }
-            
+        }
+        
             .card-description {
               .apple-font();
               font-size: 0.9rem;
@@ -507,8 +507,8 @@ export default {
             align-items: flex-start;
             gap: 12px;
             
-            .info-icon {
-              color: @apple-blue;
+          .info-icon {
+            color: @apple-blue;
               font-size: 16px;
               margin-top: 2px;
             }
