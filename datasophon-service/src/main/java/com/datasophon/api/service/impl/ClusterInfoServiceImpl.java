@@ -289,7 +289,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public Result getKubernetesNamespaces(Integer clusterId, String kubeConfig) {
+    public Result getKubernetesNamespaces(String kubeConfig) {
         if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
             return Result.error("Kubernetes配置不能为空");
         }

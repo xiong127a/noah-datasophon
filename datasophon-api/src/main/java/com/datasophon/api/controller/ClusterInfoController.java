@@ -118,14 +118,13 @@ public class ClusterInfoController {
     /**
      * 获取Kubernetes命名空间列表
      */
-    @PostMapping("/namespaces/{clusterId}")
-    public Result getKubernetesNamespaces(@PathVariable("clusterId") Integer clusterId,
-            @RequestBody Map<String, String> requestBody) {
-        String kubeConfig = requestBody.get("kubeConfig");
+    @PostMapping("/namespaces")
+    public Result getKubernetesNamespaces(@RequestBody Map<String, String> requestBody) {
+        String kubeConfig = requestBody.get("kubeConfigContent");
         if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
             return Result.error("请提供Kubernetes配置内容");
         }
-        return clusterInfoService.getKubernetesNamespaces(clusterId, kubeConfig);
+        return clusterInfoService.getKubernetesNamespaces(kubeConfig);
     }
 
     /**

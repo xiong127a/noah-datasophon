@@ -102,7 +102,7 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
      * @param kubeConfig The Kubernetes configuration content.
      * @return A Result object containing the list of namespaces.
      */
-    Result getKubernetesNamespaces(Integer clusterId, String kubeConfig);
+    Result getKubernetesNamespaces(String kubeConfig);
 
     /**
      * 更新集群Kubernetes配置

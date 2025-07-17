@@ -46,9 +46,7 @@ const loginIgnore = {
  * @returns {VueRouter}
  */
 function initRouter(isAsync) {
-  const options = isAsync
-    ? require('./config-cluster').default
-    : require('./config').default
+  const options = require('./config').default
   formatRoutes(options.routes)
   const router = new Router({...options,mode:'hash'})
 

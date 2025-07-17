@@ -26,84 +26,236 @@
 -->
 <template>
   <div class="steps1 steps">
-    <div class="hero-section">
-      <h1 class="hero-title">创建您的集群</h1>
-      <p class="hero-subtitle">输入主机信息，开始构建您的大数据平台</p>
+    <!-- 加载状态 -->
+    <div v-if="clusterInfoLoading" class="loading-container">
+      <div class="loading-card">
+        <div class="loading-spinner">
+          <div class="spinner-circle"></div>
+          <div class="spinner-inner">
+            <div class="spinner-dot"></div>
+          </div>
+        </div>
+        
+        <h2 class="loading-title">配置您的集群</h2>
+        <p class="loading-desc">正在准备集群配置环境</p>
+        
+        <div class="loading-progress">
+          <div class="progress-bar" :style="{ width: `${loadingProgress}%` }"></div>
+        </div>
+      </div>
     </div>
-    
-    <div class="form-wrapper">
-      <div class="form-content">
-        <a-form :form="form" layout="vertical">
-          <div class="host-input-section">
-            <h2 class="section-title">主机列表</h2>
-            <p class="section-description">
-              使用IP或主机名输入主机列表，按逗号分隔或使用主机域批量添加，例如：10.3.144.[19-23]
-            </p>
-            <div class="host-input-container">
-              <a-form-item>
-                <a-textarea 
-                  v-decorator="[
-                    'hosts',
-                    {initialValue: steps1.hosts, rules: [{ required: true, message: '请输入主机列表' }] },
-                  ]" 
-                  placeholder="例如：192.168.1.1,192.168.1.2 或 10.3.144.[19-23]" 
-                  :autosize="{ minRows: 4, maxRows: 8 }"
-                  class="host-input"
-                />
-              </a-form-item>
-            </div>
-          </div>
-          
-          <div class="credentials-section">
-            <h2 class="section-title">连接凭证</h2>
-            <p class="section-description">
-              提供SSH连接信息以便系统能够连接并部署服务
-            </p>
-            <div class="credentials-grid">
-              <a-form-item label="SSH用户名" class="form-item">
-                <a-input 
-                  v-decorator="[
-                    'sshUser',
-                    { initialValue: steps1.sshUser, rules: [{ required: true, message: '请输入SSH用户名' }] },
-                  ]" 
-                  placeholder="root" 
-                  class="input"
-                />
-              </a-form-item>
+
+    <!-- 主要内容 -->
+    <div v-else>
+      <div class="hero-section">
+        <h1 class="hero-title">创建您的集群</h1>
+        <p class="hero-subtitle">输入主机信息，开始构建您的大数据平台</p>
+      </div>
+      
+      <div class="form-wrapper">
+        <div class="form-content">
+          <a-form :form="form" layout="vertical">
+            
+            <!-- K8S集群配置 -->
+            <template v-if="clusterType === 'kubernetes'">
+              <div class="k8s-config-section">
+                <h2 class="section-title">Kubernetes配置</h2>
+                <p class="section-description">
+                  上传或输入Kubernetes配置文件，然后选择命名空间
+                </p>
+                
+                <div class="k8s-config-container">
+                  <a-form-item label="Kubernetes配置">
+                    <div class="config-actions">
+                      <a-button 
+                        type="dashed" 
+                        size="small" 
+                        @click="triggerFileInput"
+                        :loading="fileLoading"
+                        class="apple-button"
+                      >
+                        <a-icon type="folder-open" />
+                        从文件载入
+                      </a-button>
+                    </div>
+                    <div class="textarea-wrapper">
+                      <a-textarea
+                        v-decorator="[
+                          'kubeConfigContent',
+                          { rules: [{ required: true, message: 'Kubernetes配置不能为空!' }] }
+                        ]"
+                        placeholder="请输入Kubernetes配置内容，或点击上方按钮从文件载入...
+支持标准的 ~/.kube/config 文件（无扩展名）"
+                        :rows="8"
+                        @change="onKubeConfigChange"
+                        class="apple-textarea"
+                      />
+                      <a-icon
+                        v-if="kubeConfigContent"
+                        type="close-circle"
+                        theme="filled"
+                        class="clear-btn"
+                        @click="clearConfig"
+                      />
+                    </div>
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      @change="handleFileSelect"
+                      style="display: none"
+                    />
+                  </a-form-item>
+                  
+                  <a-form-item label="命名空间">
+                    <div class="namespace-selector-container">
+                      <!-- 选择命名空间模式 -->
+                      <a-select
+                        v-if="!isCreatingNewNamespace"
+                        v-decorator="[
+                          'namespace',
+                          { 
+                            rules: [{ required: true, message: '请选择命名空间!' }] 
+                          }
+                        ]"
+                        :placeholder="!kubeConfigContent ? '请先输入Kubernetes配置' : '请选择或搜索命名空间'"
+                        :loading="namespacesLoading"
+                        :disabled="!kubeConfigContent || !kubeConfigContent.trim()"
+                        show-search
+                        :filter-option="false"
+                        @search="onNamespaceSearch"
+                        @select="onNamespaceSelect"
+                        @click="onNamespaceDropdownClick"
+                        @focus="onNamespaceDropdownClick"
+                        :dropdown-match-select-width="true"
+                        class="apple-select"
+                      >
+                        <a-select-option key="__create_new__" value="__create_new__" class="create-namespace-option-wrapper">
+                          <div class="create-namespace-option">
+                            <a-icon type="plus" />
+                            <span class="create-namespace-text">创建新的命名空间</span>
+                          </div>
+                        </a-select-option>
+                        <a-select-option key="divider" disabled v-if="filteredNamespaces.length > 0">
+                          <div class="namespace-divider"></div>
+                        </a-select-option>
+                        <a-select-option 
+                          v-for="ns in filteredNamespaces" 
+                          :key="ns" 
+                          :value="ns"
+                        >
+                          {{ ns }}
+                        </a-select-option>
+                      </a-select>
+                      
+                      <!-- 创建命名空间模式 -->
+                      <a-input
+                        v-if="isCreatingNewNamespace"
+                        v-decorator="[
+                          'namespace',
+                          { 
+                            rules: [{ required: true, message: '请输入命名空间名称!' }] 
+                          }
+                        ]"
+                        placeholder="请输入新的命名空间名称"
+                        @change="onNamespaceInputChange"
+                      >
+                        <a-icon slot="suffix" type="close-circle" @click="cancelCreateNamespace" style="cursor: pointer; color: #ccc;" />
+                      </a-input>
+                      
+                      <!-- 命名空间操作提示信息 -->
+                      <div v-if="isCreatingNewNamespace && customNamespaceInput" 
+                           :class="isNamespaceExists ? 'namespace-use-tip' : 'namespace-creation-tip'">
+                        <a-icon 
+                          :type="isNamespaceExists ? 'check-circle' : 'info-circle'" 
+                          :style="{ 
+                            color: isNamespaceExists ? '#52c41a' : '#1890ff', 
+                            marginRight: '4px' 
+                          }" 
+                        />
+                        {{ isNamespaceExists ? '将使用命名空间' : '将创建命名空间' }} 
+                        <span :style="{ 
+                          color: isNamespaceExists ? '#52c41a' : '#1890ff', 
+                          fontWeight: '500' 
+                        }">{{ customNamespaceInput }}</span>
+                      </div>
+                    </div>
+                  </a-form-item>
+                </div>
+              </div>
+            </template>
+            
+            <!-- 传统集群配置 -->
+            <template v-else>
+              <div class="host-input-section">
+                <h2 class="section-title">主机列表</h2>
+                <p class="section-description">
+                  使用IP或主机名输入主机列表，按逗号分隔或使用主机域批量添加，例如：10.3.144.[19-23]
+                </p>
+                <div class="host-input-container">
+                  <a-form-item>
+                    <a-textarea 
+                      v-decorator="[
+                        'hosts',
+                        {initialValue: steps1.hosts, rules: [{ required: true, message: '请输入主机列表' }] },
+                      ]" 
+                      placeholder="例如：192.168.1.1,192.168.1.2 或 10.3.144.[19-23]" 
+                      :autosize="{ minRows: 4, maxRows: 8 }"
+                      class="apple-textarea"
+                    />
+                  </a-form-item>
+                </div>
+              </div>
               
-              <a-form-item label="SSH端口" class="form-item">
-                <a-input-number 
-                  v-decorator="[
-                    'sshPort', 
-                    {initialValue: steps1.sshPort || 22, rules: [{ required: true, message: 'SSH端口不能为空' }] }
-                  ]" 
-                  :min="1" 
-                  :max="65535" 
-                  placeholder="22" 
-                  class="input"
-                />
-              </a-form-item>
-              
-              <a-form-item label="SSH密码" class="form-item">
-                <a-input-password 
-                  v-decorator="[
-                    'sshPassword', 
-                    {initialValue: steps1.sshPassword, rules: [{ required: true, message: 'SSH密码不能为空' }] }
-                  ]" 
-                  placeholder="输入密码" 
-                  class="input"
-                />
-              </a-form-item>
+              <div class="credentials-section">
+                <h2 class="section-title">连接凭证</h2>
+                <p class="section-description">
+                  提供SSH连接信息以便系统能够连接并部署服务
+                </p>
+                <div class="credentials-grid">
+                  <a-form-item label="SSH用户名" class="form-item">
+                    <a-input 
+                      v-decorator="[
+                        'sshUser',
+                        { initialValue: steps1.sshUser, rules: [{ required: true, message: '请输入SSH用户名' }] },
+                      ]" 
+                      placeholder="root"
+                    />
+                  </a-form-item>
+                  
+                  <a-form-item label="SSH端口" class="form-item">
+                    <a-input-number 
+                      v-decorator="[
+                        'sshPort', 
+                        {initialValue: steps1.sshPort || 22, rules: [{ required: true, message: 'SSH端口不能为空' }] }
+                      ]" 
+                      :min="1" 
+                      :max="65535" 
+                      placeholder="22"
+                    />
+                  </a-form-item>
+                  
+                  <a-form-item label="SSH密码" class="form-item">
+                    <a-input-password 
+                      v-decorator="[
+                        'sshPassword', 
+                        {initialValue: steps1.sshPassword, rules: [{ required: true, message: 'SSH密码不能为空' }] }
+                      ]" 
+                      placeholder="输入密码"
+                    />
+                  </a-form-item>
+                </div>
+              </div>
+            </template>
+            
+            <div class="tips-section">
+              <a-icon type="info-circle" class="tips-icon" />
+              <div class="tips-content">
+                <p v-if="clusterType === 'traditional'">确保所有主机可通过SSH连接，且密码一致。如需使用不同密码，请分批添加主机。</p>
+                <p v-else>确保Kubernetes集群配置正确，且具有足够的权限来创建和管理资源。</p>
+              </div>
             </div>
-          </div>
-          
-          <div class="tips-section">
-            <a-icon type="info-circle" class="tips-icon" />
-            <div class="tips-content">
-              <p>确保所有主机可通过SSH连接，且密码一致。如需使用不同密码，请分批添加主机。</p>
-            </div>
-          </div>
-        </a-form>
+          </a-form>
+        </div>
       </div>
     </div>
   </div>
@@ -111,28 +263,389 @@
 
 <script>
 export default {
-  inject: ["handleCancel", "currentStepsAdd", "currentStepsSub"],
+  inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
     steps1: Object,
+    clusterInfo: {
+      type: Object,
+      default: () => ({})
+    }
   },
   data() {
     return {
       form: this.$form.createForm(this),
+      
+      // 集群类型选择
+      clusterType: 'traditional',
+      
+      // K8S相关数据
+      kubeConfigContent: '',
+      namespaces: [],
+      selectedNamespace: '',
+      namespacesLoading: false,
+      showCustomNamespace: false,
+      fileLoading: false,
+      isCreatingNewNamespace: false,
+      customNamespaceInput: '',
+      namespaceSearchText: '',
+      clusterInfoLoading: true, // 新增：加载状态
+      loadingProgress: 0, // 新增：加载进度
     };
   },
+  
+  computed: {
+    filteredNamespaces() {
+      if (!this.namespaceSearchText) {
+        return this.namespaces;
+      }
+      return this.namespaces.filter(ns => 
+        ns.toLowerCase().includes(this.namespaceSearchText.toLowerCase())
+      );
+    },
+    
+    isNamespaceExists() {
+      if (!this.customNamespaceInput || !this.namespaces.length) {
+        return false;
+      }
+      return this.namespaces.includes(this.customNamespaceInput);
+    }
+  },
+  
+  watch: {
+    steps1: {
+      handler(newVal) {
+        if (newVal && newVal.clusterType) {
+          this.clusterType = newVal.clusterType;
+        }
+        if (newVal && newVal.kubeConfigContent) {
+          this.kubeConfigContent = newVal.kubeConfigContent;
+        }
+        if (newVal && newVal.namespace) {
+          this.selectedNamespace = newVal.namespace;
+        }
+      },
+      immediate: true
+    },
+    
+    clusterInfo: {
+      handler(newVal) {
+        if (newVal && Object.keys(newVal).length > 0) {
+          this.initializeWithClusterInfo(newVal);
+        }
+      },
+      immediate: true
+    }
+  },
+  
   created() {
+    console.log('Step1 created, clusterId:', this.clusterId);
     // 设置默认值
     setTimeout(() => {
       this.form.setFieldsValue({
-        // hosts: '192.168.200.[21-24],192.168.30.[200-208]',
-        // hosts: '192.168.200.22,192.168.30.200,192.168.30.201,192.168.30.202,192.168.30.203,192.168.30.204,192.168.30.206,192.168.30.207,192.168.200.21',
-        // hosts: '192.168.30.[200-204]',
         hosts: '192.168.30.[200-204],192.168.30.206',
         sshUser: 'root',
         sshPort: 22,
         sshPassword: 'root'
       });
     });
+  },
+  
+  mounted() {
+    console.log('Step1 mounted, 开始获取集群信息');
+    // 获取集群信息以确定集群类型
+    this.getClusterInfo();
+  },
+  
+  methods: {
+    // 获取集群信息
+    async getClusterInfo() {
+      console.log('开始获取集群信息，clusterId:', this.clusterId);
+      const startTime = Date.now();
+      const minLoadingTime = 2000; // 最少显示2秒加载状态
+      
+      // 启动进度条动画
+      this.startLoadingProgress();
+      
+      try {
+        if (!this.clusterId) {
+          console.warn('clusterId 未提供，使用默认集群类型');
+          this.clusterType = 'traditional';
+        } else {
+          const res = await this.$axiosGet(`/ddh/api/cluster/detail/${this.clusterId}`);
+          if (res.code === 200 && res.data) {
+            console.log('获取到集群信息:', res.data);
+            // 将后端的depType映射为前端的clusterType
+            if (res.data.depType === 'Kubernetes') {
+              this.clusterType = 'kubernetes';
+              // 如果是K8S集群且已有配置，加载已保存的配置
+              if (res.data.kubeConfig) {
+                this.kubeConfigContent = res.data.kubeConfig;
+                this.form.setFieldsValue({
+                  kubeConfigContent: res.data.kubeConfig
+                });
+                this.loadNamespaces();
+              }
+              if (res.data.namespace) {
+                this.selectedNamespace = res.data.namespace;
+                this.form.setFieldsValue({
+                  namespace: res.data.namespace
+                });
+              }
+            } else {
+              this.clusterType = 'traditional';
+            }
+          } else {
+            console.error('获取集群信息失败:', res.msg);
+            this.clusterType = 'traditional'; // 默认为传统集群
+          }
+        }
+      } catch (error) {
+        console.error('获取集群信息异常:', error);
+        this.clusterType = 'traditional'; // 默认为传统集群
+      } finally {
+        // 计算已经过去的时间
+        const elapsed = Date.now() - startTime;
+        console.log(`集群信息获取完成，耗时: ${elapsed}ms，集群类型:`, this.clusterType);
+        
+        // 如果时间不足minLoadingTime，则等待剩余时间
+        if (elapsed < minLoadingTime) {
+          const waitTime = minLoadingTime - elapsed;
+          console.log(`等待剩余时间: ${waitTime}ms`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        // 完成加载进度条
+        this.loadingProgress = 100;
+        
+        // 等待进度条动画完成后，隐藏加载状态
+        setTimeout(() => {
+          console.log('隐藏加载状态，显示主界面');
+          this.clusterInfoLoading = false;
+        }, 500);
+      }
+    },
+    
+    // 启动进度条动画
+    startLoadingProgress() {
+      console.log('开始进度条动画');
+      this.loadingProgress = 0;
+      const interval = setInterval(() => {
+        if (this.loadingProgress < 90) {
+          this.loadingProgress += Math.floor(Math.random() * 10) + 1;
+          if (this.loadingProgress > 90) {
+            this.loadingProgress = 90;
+          }
+        } else {
+          clearInterval(interval);
+        }
+      }, 200);
+    },
+
+    // 根据集群信息初始化组件
+    initializeWithClusterInfo(clusterInfo) {
+      console.log('正在根据集群信息初始化step1:', clusterInfo);
+      
+      // 设置集群类型
+      if (clusterInfo.depType === 'Kubernetes') {
+        this.clusterType = 'kubernetes';
+        
+        // 如果是K8S集群且已有配置，加载已保存的配置
+        if (clusterInfo.kubeConfig) {
+          this.kubeConfigContent = clusterInfo.kubeConfig;
+          this.form.setFieldsValue({
+            kubeConfigContent: clusterInfo.kubeConfig
+          });
+          this.loadNamespaces();
+        }
+        
+        if (clusterInfo.namespace) {
+          this.selectedNamespace = clusterInfo.namespace;
+          this.form.setFieldsValue({
+            namespace: clusterInfo.namespace
+          });
+        }
+      } else {
+        this.clusterType = 'traditional';
+      }
+    },
+    
+    // K8S配置文件相关方法
+    triggerFileInput() {
+      this.$refs.fileInput.click();
+    },
+    
+    handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      this.fileLoading = true;
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        this.kubeConfigContent = e.target.result;
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            kubeConfigContent: this.kubeConfigContent
+          });
+          // 确保在设置完表单值后再调用onKubeConfigChange
+          this.$nextTick(() => {
+            this.onKubeConfigChange();
+            this.fileLoading = false;
+          });
+        });
+      };
+      
+      reader.onerror = () => {
+        this.$message.error('文件读取失败');
+        this.fileLoading = false;
+      };
+      
+      reader.readAsText(file);
+    },
+    
+    clearConfig() {
+      this.kubeConfigContent = '';
+      this.namespaces = [];
+      this.selectedNamespace = '';
+      this.isCreatingNewNamespace = false;
+      this.customNamespaceInput = '';
+      this.$nextTick(() => {
+        this.form.setFieldsValue({
+          kubeConfigContent: '',
+          namespace: ''
+        });
+      });
+    },
+    
+    onKubeConfigChange() {
+      const content = this.form.getFieldValue('kubeConfigContent');
+      if (content && content.trim()) {
+        this.kubeConfigContent = content;
+        this.loadNamespaces();
+      }
+    },
+    
+    // 命名空间相关方法
+    async loadNamespaces() {
+      if (!this.kubeConfigContent || !this.kubeConfigContent.trim()) {
+        return;
+      }
+      
+      this.namespacesLoading = true;
+      try {
+        const res = await this.$axiosPost('/ddh/api/cluster/namespaces', {
+          kubeConfigContent: this.kubeConfigContent
+        });
+        if (res.code === 200) {
+          this.namespaces = res.data.namespaces || [];
+          const defaultNamespace = res.data.defaultNamespace;
+          
+          // 如果有默认命名空间，自动选中或设置创建模式
+          if (defaultNamespace) {
+            if (this.namespaces.includes(defaultNamespace)) {
+              // 默认命名空间存在，直接选中
+              this.selectedNamespace = defaultNamespace;
+              this.$nextTick(() => {
+                this.form.setFieldsValue({ namespace: defaultNamespace });
+              });
+            } else {
+              // 默认命名空间不存在，进入创建模式
+              this.isCreatingNewNamespace = true;
+              this.customNamespaceInput = defaultNamespace;
+              this.$nextTick(() => {
+                this.form.setFieldsValue({ namespace: defaultNamespace });
+              });
+            }
+          }
+        } else {
+          this.$message.error(res.msg || '获取命名空间失败');
+        }
+      } catch (error) {
+        console.error('获取命名空间失败:', error);
+        this.$message.error('获取命名空间失败');
+      } finally {
+        this.namespacesLoading = false;
+      }
+    },
+    
+    onNamespaceSearch(value) {
+      this.namespaceSearchText = value;
+    },
+    
+    onNamespaceSelect(value) {
+      if (value === '__create_new__') {
+        this.isCreatingNewNamespace = true;
+        this.customNamespaceInput = '';
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: ''
+          });
+        });
+      } else {
+        this.selectedNamespace = value;
+        this.isCreatingNewNamespace = false;
+        this.customNamespaceInput = '';
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: value
+          });
+        });
+      }
+    },
+    
+    onNamespaceDropdownClick() {
+      if (!this.namespaces.length && this.kubeConfigContent) {
+        this.loadNamespaces();
+      }
+    },
+    
+    onNamespaceInputChange(e) {
+      this.customNamespaceInput = e.target.value;
+    },
+    
+    cancelCreateNamespace() {
+      this.isCreatingNewNamespace = false;
+      this.customNamespaceInput = '';
+      this.$nextTick(() => {
+        this.form.setFieldsValue({
+          namespace: ''
+        });
+      });
+    },
+    
+    // 保存K8S配置
+    async saveKubernetesConfig() {
+      try {
+        const values = await new Promise((resolve, reject) => {
+          this.form.validateFields((err, values) => {
+            if (!err) {
+              resolve(values);
+            } else {
+              reject(err);
+            }
+          });
+        });
+        
+        const params = {
+          clusterId: this.clusterId,
+          kubeConfigContent: values.kubeConfigContent,
+          namespace: values.namespace
+        };
+        
+        const res = await this.$axiosPost('/ddh/api/cluster/kube-config', params);
+        if (res.code === 200) {
+          this.$message.success('Kubernetes配置保存成功');
+          return true;
+        } else {
+          this.$message.error(res.msg || 'Kubernetes配置保存失败');
+          return false;
+        }
+      } catch (error) {
+        console.error('保存Kubernetes配置失败:', error);
+        this.$message.error('保存Kubernetes配置失败');
+        return false;
+      }
+    }
   }
 };
 </script>
@@ -159,6 +672,102 @@ export default {
   overflow: hidden;
   animation: fadeIn 0.8s ease-out;
   
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px; /* Adjust as needed */
+    background-color: @apple-white;
+  }
+
+  .loading-card {
+    background-color: @apple-white;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    padding: 2.5rem;
+    text-align: center;
+    width: 400px;
+    max-width: 90%;
+  }
+
+  .loading-spinner {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: @apple-blue;
+    animation: spin 1s linear infinite;
+  }
+
+  .spinner-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: @apple-blue;
+    animation: spin 1s linear infinite;
+  }
+
+  .spinner-inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: @apple-blue;
+    animation: spin 1s linear infinite;
+  }
+
+  .spinner-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: @apple-blue;
+  }
+
+  .loading-title {
+    .apple-font();
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: @apple-black;
+    margin-bottom: 0.8rem;
+  }
+
+  .loading-desc {
+    .apple-font();
+    font-size: 1rem;
+    color: @apple-gray;
+    margin-bottom: 1.5rem;
+  }
+
+  .loading-progress {
+    width: 100%;
+    height: 8px;
+    background-color: @apple-gray-light;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(to right, @apple-blue, @apple-blue-hover);
+    border-radius: 4px;
+    transition: width 0.3s ease-in-out;
+  }
+
   .hero-section {
     text-align: center;
     margin-bottom: 3.5rem;
@@ -219,6 +828,342 @@ export default {
     margin: 0 0 1.5rem 0;
   }
   
+
+  
+  // K8S配置区域
+  .k8s-config-section {
+    margin-bottom: 3rem;
+    
+    .k8s-config-container {
+      .config-actions {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        
+        .apple-button {
+          border-radius: 8px;
+          border: 1px dashed @apple-blue;
+          color: @apple-blue;
+          height: 32px;
+          padding: 0 16px;
+          font-size: 14px;
+          
+          &:hover {
+            border-color: @apple-blue-hover;
+            color: @apple-blue-hover;
+            background: rgba(24, 144, 255, 0.06);
+          }
+        }
+        
+        .apple-link-button {
+          color: #ff4d4f;
+          border: 1px solid #ffccc7;
+          background: #fff2f0;
+          border-radius: 6px;
+          height: 32px;
+          padding: 0 12px;
+          font-size: 13px;
+          transition: all 0.3s;
+          
+          &:hover {
+            color: #ff7875;
+            border-color: #ff7875;
+            background: #ffebee;
+          }
+          
+          &:focus {
+            color: #ff4d4f;
+            border-color: #ff4d4f;
+          }
+          
+          .anticon {
+            margin-right: 4px;
+            font-size: 12px;
+          }
+        }
+      }
+      
+      // K8S配置文本域样式
+      /deep/ .apple-textarea {
+        .apple-font();
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace !important;
+        resize: none !important;
+        border: none !important;
+        background-color: @apple-gray-light !important;
+        border-radius: 1rem !important;
+        padding: 1.2rem !important;
+        transition: all 0.3s;
+        
+        &:hover {
+          background-color: darken(@apple-gray-light, 2%) !important;
+          border: none !important;
+        }
+        
+        &:focus {
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+          background-color: @apple-white !important;
+          border: none !important;
+        }
+        
+        &::placeholder {
+          color: @apple-gray !important;
+          font-weight: 400;
+        }
+      }
+      
+      // 通用输入框样式
+      /deep/ .ant-input {
+        .apple-font();
+        resize: none !important;
+        border: none !important;
+        background-color: @apple-gray-light !important;
+        border-radius: 1rem !important;
+        padding: 1.2rem !important;
+        transition: all 0.3s;
+        
+        &:hover {
+          background-color: darken(@apple-gray-light, 2%) !important;
+          border: none !important;
+        }
+        
+        &:focus {
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+          background-color: @apple-white !important;
+          border: none !important;
+        }
+        
+        &::placeholder {
+          color: @apple-gray !important;
+          font-weight: 400;
+        }
+      }
+      
+      .namespace-selector-container {
+        // 命名空间选择器样式
+        /deep/ .apple-select {
+          width: 100%;
+          
+          .ant-select-selector {
+            .apple-font();
+            border: none !important;
+            background-color: @apple-gray-light !important;
+            border-radius: 1rem !important;
+            padding: 0.8rem 1rem !important;
+            transition: all 0.3s;
+            min-height: 48px !important;
+            display: flex;
+            align-items: center;
+            
+            &:hover {
+              background-color: darken(@apple-gray-light, 2%) !important;
+            }
+          }
+          
+          &.ant-select-focused .ant-select-selector {
+            background-color: @apple-white !important;
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+          }
+          
+          .ant-select-selection-placeholder {
+            color: @apple-gray !important;
+            font-weight: 400;
+          }
+          
+          .ant-select-arrow {
+            color: @apple-gray !important;
+            transition: transform 0.3s;
+          }
+          
+          &.ant-select-open .ant-select-arrow {
+            transform: rotate(180deg);
+          }
+        }
+        
+        // 通用选择器样式（用于兼容性）
+        /deep/ .ant-select:not(.apple-select) {
+          width: 100%;
+          
+          .ant-select-selector {
+            .apple-font();
+            border: none !important;
+            background-color: @apple-gray-light !important;
+            border-radius: 1rem !important;
+            padding: 0.8rem 1rem !important;
+            transition: all 0.3s;
+            min-height: 48px !important;
+            display: flex;
+            align-items: center;
+            
+            &:hover {
+              background-color: darken(@apple-gray-light, 2%) !important;
+            }
+          }
+          
+          &.ant-select-focused .ant-select-selector {
+            background-color: @apple-white !important;
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+          }
+          
+          .ant-select-selection-placeholder {
+            color: @apple-gray !important;
+            font-weight: 400;
+          }
+        }
+        
+        // 下拉菜单样式
+        /deep/ .ant-select-dropdown {
+          border-radius: 12px !important;
+          overflow: hidden;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid rgba(0, 0, 0, 0.06) !important;
+          padding: 6px !important;
+          animation: dropdownFadeIn 0.2s ease-out !important;
+          
+          .ant-select-item {
+            padding: 10px 12px !important;
+            transition: all 0.2s;
+            border-radius: 8px !important;
+            margin: 2px 0 !important;
+            .apple-font();
+            
+            &:hover {
+              background-color: rgba(0, 113, 227, 0.05) !important;
+            }
+            
+            &-option-selected {
+              background-color: rgba(0, 113, 227, 0.1) !important;
+              font-weight: 500 !important;
+              color: @apple-blue !important;
+            }
+          }
+          
+          // 搜索框样式
+          .ant-select-item-empty {
+            padding: 8px !important;
+            
+            .ant-empty-image {
+              height: 40px !important;
+            }
+            
+            .ant-empty-description {
+              color: @apple-gray !important;
+              font-size: 13px !important;
+            }
+          }
+        }
+        
+        @keyframes dropdownFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        // 命名空间输入框样式
+        /deep/ .ant-input {
+          .apple-font();
+          border: none !important;
+          background-color: @apple-gray-light !important;
+          border-radius: 1rem !important;
+          padding: 0.8rem 1rem !important;
+          transition: all 0.3s;
+          min-height: 48px !important;
+          
+          &:hover {
+            background-color: darken(@apple-gray-light, 2%) !important;
+          }
+          
+          &:focus {
+            background-color: @apple-white !important;
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+            outline: none !important;
+          }
+          
+          &::placeholder {
+            color: @apple-gray !important;
+            font-weight: 400;
+          }
+        }
+        
+        .create-namespace-option {
+          display: flex;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid #e8f4fd;
+          margin-bottom: 8px;
+          padding-bottom: 12px;
+          
+          .anticon {
+            margin-right: 8px;
+            font-size: 14px;
+            color: @apple-blue;
+          }
+          
+          .create-namespace-text {
+            color: @apple-blue;
+            font-weight: 600;
+          }
+        }
+        
+        .namespace-divider {
+          height: 1px;
+          background-color: rgba(0, 113, 227, 0.15);
+          margin: 4px 0;
+        }
+        
+        .namespace-use-tip,
+        .namespace-creation-tip {
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          background-color: rgba(0, 113, 227, 0.05);
+          font-size: 0.9rem;
+        }
+      }
+      .textarea-wrapper {
+        position: relative;
+
+        .clear-btn {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          color: rgba(0, 0, 0, 0.25);
+          cursor: pointer;
+          font-size: 16px;
+          transition: color 0.3s;
+          z-index: 10;
+
+          &:hover {
+            color: rgba(0, 0, 0, 0.45);
+          }
+        }
+      }
+      
+      // 输入框后缀图标样式
+      /deep/ .ant-input-suffix {
+        z-index: 5;
+        
+        .anticon {
+          color: rgba(0, 0, 0, 0.25);
+          cursor: pointer;
+          font-size: 16px;
+          transition: color 0.3s;
+          
+          &:hover {
+            color: rgba(0, 0, 0, 0.45);
+          }
+        }
+      }
+    }
+  }
+  
   .host-input-section {
     margin-bottom: 3rem;
   }
@@ -228,121 +1173,242 @@ export default {
       margin-bottom: 0;
     }
     
-    .host-input {
+    // 主机输入框样式
+    /deep/ .ant-input {
       .apple-font();
       font-size: 1rem;
-      font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
-      resize: none;
-      border: none;
-      background-color: @apple-gray-light;
-      border-radius: 1rem;
-      padding: 1.2rem;
+      font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace !important;
+      resize: none !important;
+      border: none !important;
+      background-color: @apple-gray-light !important;
+      border-radius: 1rem !important;
+      padding: 1.2rem !important;
       transition: all 0.3s;
+      min-height: 120px !important;
+      
+      &:hover {
+        background-color: darken(@apple-gray-light, 2%) !important;
+        border: none !important;
+      }
       
       &:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+        background-color: @apple-white !important;
+        border: none !important;
       }
       
       &::placeholder {
-        color: @apple-gray;
+        color: @apple-gray !important;
+        font-weight: 400;
       }
     }
   }
   
   .credentials-section {
-    margin-bottom: 2.5rem;
-  }
-  
-  .credentials-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1.5rem;
+    margin-bottom: 3rem;
     
-    .form-item {
-      margin-bottom: 0;
+    .credentials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
       
-      label {
-        .apple-font();
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: @apple-black;
-        margin-bottom: 0.5rem;
-      }
-      
-      .input {
-        .apple-font();
-        font-size: 1rem;
-        height: 3rem;
-        border: none;
-        background-color: @apple-gray-light;
-        border-radius: 0.75rem;
-        padding: 0 1rem;
-        width: 100%;
-        transition: all 0.3s;
+      // 平板端布局
+      @media (max-width: 1024px) and (min-width: 769px) {
+        grid-template-columns: repeat(2, 1fr);
         
-        &:focus, &:hover {
-          outline: none;
-          box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
-        }
-        
-        &::placeholder {
-          color: @apple-gray;
+        .form-item:last-child {
+          grid-column: 1 / -1;
+          max-width: 50%;
         }
       }
       
-      // 数字输入框特殊处理
-      /deep/ .ant-input-number {
-        width: 100%;
-        border: none;
-        background-color: @apple-gray-light;
-        
-        .ant-input-number-input {
-          height: 3rem;
-          padding: 0 1rem;
-        }
-        
-        .ant-input-number-handler-wrap {
-          opacity: 0;
-          transition: opacity 0.3s;
-        }
-        
-        &:hover .ant-input-number-handler-wrap {
-          opacity: 1;
-        }
+      // 手机端布局
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
       }
       
-      // 密码输入框特殊处理
-      /deep/ .ant-input-password {
-        background-color: @apple-gray-light;
-        border: none;
-        border-radius: 0.75rem;
+      .form-item {
+        margin-bottom: 0;
         
-        .ant-input {
-          height: 3rem;
-          background-color: transparent;
-          border: none;
-          padding: 0 1rem;
-          .apple-font();
-          font-size: 1rem;
-        }
-        
-        .ant-input-suffix {
-          margin-right: 0.5rem;
+        // Ant Design 表单标签样式
+        /deep/ .ant-form-item-label {
+          padding-bottom: 0.5rem;
           
-          .anticon {
-            color: @apple-gray;
-            transition: color 0.3s;
-          }
-          
-          &:hover .anticon {
-            color: @apple-blue;
+          label {
+            .apple-font();
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: @apple-black;
+            line-height: 1.4;
+            
+            &::after {
+              display: none; // 移除冒号
+            }
           }
         }
         
-        &:focus-within {
-          box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
-        }
+                 // 基础输入框样式
+         /deep/ .ant-input {
+           .apple-font();
+           font-size: 1rem;
+           border: none !important;
+           background-color: @apple-gray-light !important;
+           border-radius: 0.5rem !important;
+           padding: 0.6rem 1rem !important;
+           transition: all 0.3s;
+           height: 2.4rem !important;
+           line-height: 1.2 !important;
+           
+           &:hover {
+             background-color: darken(@apple-gray-light, 2%) !important;
+             border: none !important;
+           }
+           
+           &:focus {
+             outline: none !important;
+             box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+             background-color: @apple-white !important;
+             border: none !important;
+           }
+           
+           &::placeholder {
+             color: @apple-gray !important;
+             font-weight: 400;
+           }
+         }
+         
+         // 数字输入框完整重写
+         /deep/ .ant-input-number {
+           .apple-font();
+           width: 100% !important;
+           height: 2.4rem !important;
+           border: none !important;
+           background-color: @apple-gray-light !important;
+           border-radius: 0.5rem !important;
+           transition: all 0.3s;
+           
+           &:hover {
+             background-color: darken(@apple-gray-light, 2%) !important;
+             border: none !important;
+           }
+           
+           &:focus-within {
+             outline: none !important;
+             box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+             background-color: @apple-white !important;
+             border: none !important;
+           }
+           
+           // 内部输入框
+           .ant-input-number-input {
+             .apple-font();
+             font-size: 1rem !important;
+             border: none !important;
+             background: transparent !important;
+             padding: 0.6rem 1rem !important;
+             height: 2.4rem !important;
+             line-height: 1.2 !important;
+             box-shadow: none !important;
+             
+             &:focus {
+               border: none !important;
+               box-shadow: none !important;
+               outline: none !important;
+             }
+             
+             &::placeholder {
+               color: @apple-gray !important;
+               font-weight: 400;
+             }
+           }
+           
+           // 控制按钮组
+           .ant-input-number-handler-wrap {
+             background: transparent !important;
+             border: none !important;
+             border-radius: 0 !important;
+             opacity: 0.7;
+             transition: opacity 0.3s;
+           }
+           
+           &:hover .ant-input-number-handler-wrap {
+             opacity: 1;
+           }
+           
+           .ant-input-number-handler {
+             border: none !important;
+             background: transparent !important;
+             width: 16px !important;
+             height: 12px !important;
+             color: @apple-gray !important;
+             
+             &:hover {
+               background: @apple-blue !important;
+               color: @apple-white !important;
+               border-radius: 2px !important;
+             }
+           }
+         }
+         
+         // 密码输入框完整重写
+         /deep/ .ant-input-password {
+           .apple-font();
+           border: none !important;
+           background-color: @apple-gray-light !important;
+           border-radius: 0.5rem !important;
+           transition: all 0.3s;
+           height: 2.4rem !important;
+           
+           &:hover {
+             background-color: darken(@apple-gray-light, 2%) !important;
+             border: none !important;
+           }
+           
+           &:focus-within {
+             outline: none !important;
+             box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+             background-color: @apple-white !important;
+             border: none !important;
+           }
+           
+           // 内部输入框
+           .ant-input {
+             .apple-font();
+             font-size: 1rem !important;
+             border: none !important;
+             background: transparent !important;
+             padding: 0.6rem 1rem !important;
+             height: 2.4rem !important;
+             line-height: 1.2 !important;
+             box-shadow: none !important;
+             
+             &:focus {
+               border: none !important;
+               box-shadow: none !important;
+               outline: none !important;
+               background: transparent !important;
+             }
+             
+             &::placeholder {
+               color: @apple-gray !important;
+               font-weight: 400;
+             }
+           }
+           
+           // 眼睛图标
+           .ant-input-suffix {
+             .ant-input-password-icon {
+               color: @apple-gray !important;
+               transition: color 0.3s;
+               
+               &:hover {
+                 color: @apple-blue !important;
+               }
+             }
+           }
+         }
       }
     }
   }
@@ -350,18 +1416,15 @@ export default {
   .tips-section {
     display: flex;
     align-items: flex-start;
-    padding: 1.2rem;
     background-color: @apple-gray-light;
     border-radius: 1rem;
-    animation: fadeIn 0.8s ease-out;
-    animation-delay: 0.5s;
-    animation-fill-mode: both;
+    padding: 1.2rem;
     
     .tips-icon {
-      font-size: 1.2rem;
       color: @apple-blue;
-      margin-right: 1rem;
-      margin-top: 0.2rem;
+      font-size: 1.2rem;
+      margin-right: 0.8rem;
+      margin-top: 0.1rem;
     }
     
     .tips-content {
@@ -378,17 +1441,8 @@ export default {
   }
 }
 
-// 动画
+// 动画效果
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -399,22 +1453,51 @@ export default {
   }
 }
 
-// 响应式设计
-@media (max-width: 768px) {
-  .steps1 {
-    .hero-section {
-      .hero-title {
-        font-size: 2.2rem;
-      }
-      
-      .hero-subtitle {
-        font-size: 1.1rem;
-      }
-    }
-    
-    .credentials-grid {
-      grid-template-columns: 1fr;
-    }
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.apple-form-container {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+    /deep/ .create-namespace-option-wrapper {
+      .ant-select-item-option-content {
+        padding: 4px 0 !important;
+      }
+
+      .create-namespace-option {
+        display: flex;
+        align-items: center;
+        padding: 6px 0;
+        
+        .anticon {
+          margin-right: 8px;
+          color: @apple-blue;
+          font-size: 14px;
+        }
+        
+        .create-namespace-text {
+          color: @apple-blue;
+          font-weight: 600;
+        }
+      }
+    }
+
 </style>
