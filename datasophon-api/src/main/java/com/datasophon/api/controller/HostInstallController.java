@@ -53,14 +53,16 @@ public class HostInstallController {
      */
     @PostMapping("/analysisHostList")
     @UserPermission
-    public Result analysisHostList(@RequestParam Integer clusterId,
-            @RequestParam(required = false) String hosts,
-            @RequestParam(required = false) String sshUser,
-            @RequestParam(required = false) Integer sshPort,
-            @RequestParam(required = false) String sshPassword,
-            @RequestParam Integer page,
-            @RequestParam Integer pageSize) {
-        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort,sshPassword, page, pageSize);
+    public Result analysisHostList(@RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "kubeConfigContent", required = false) String kubeConfigContent,
+            @RequestParam(name = "hosts", required = false) String hosts,
+            @RequestParam(name = "sshUser", required = false) String sshUser,
+            @RequestParam(name = "sshPort", required = false) Integer sshPort,
+            @RequestParam(name = "sshPassword", required = false) String sshPassword,
+            @RequestParam(name = "page") Integer page,
+            @RequestParam(name = "pageSize") Integer pageSize) {
+        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, sshPassword, kubeConfigContent, page,
+                pageSize);
     }
 
     /**

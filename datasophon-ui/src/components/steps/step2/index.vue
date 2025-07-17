@@ -43,15 +43,15 @@
               <template slot="status" slot-scope="text, record">
                 <div class="status-indicator">
                   <a-icon 
-                    :type="record.managed ? 'check-circle' : 'close-circle'"
+                    :type="!record.managed ? 'check-circle' : 'exclamation-circle'"
                     :style="{ 
-                      color: record.managed ? '#52c41a' : '#ff4d4f',
+                      color: !record.managed ? '#52c41a' : '#ff4d4f',
                       fontSize: '16px',
                       marginRight: '8px'
                     }"
                   />
                   <span :style="{ 
-                    color: record.managed ? '#52c41a' : '#ff4d4f',
+                    color: !record.managed ? '#52c41a' : '#ff4d4f',
                     fontWeight: '500'
                   }">
                     {{ record.managed ? '已受管' : '未受管' }}
@@ -74,11 +74,11 @@
                 </div>
                 <div class="summary-item">
                   <span class="item-label">已受管：</span>
-                  <span class="item-value success">{{ managedCount }}</span>
+                  <span class="item-value error">{{ managedCount }}</span>
                 </div>
                 <div class="summary-item">
                   <span class="item-label">未受管：</span>
-                  <span class="item-value error">{{ unmanagedCount }}</span>
+                  <span class="item-value success">{{ unmanagedCount }}</span>
                 </div>
               </div>
             </div>
@@ -296,10 +296,10 @@ export default {
           dataIndex: "note",
           customRender: (text, record) => {
             const h = this.$createElement;
-            if (record.managed) {
-              return h('span', { style: { color: '#52c41a' } }, ['可正常部署']);
+            if (!record.managed) {
+              return h('span', { style: { color: '#52c41a', fontWeight: '500' } }, ['可正常部署']);
             } else {
-              return h('span', { style: { color: '#ff4d4f' } }, ['需要先受管']);
+              return h('span', { style: { color: '#ff4d4f', fontWeight: '500' } }, ['已被其他集群使用']);
             }
           },
         }
@@ -475,7 +475,8 @@ export default {
     
     hasFailedItems() {
       if (this.depType === 'Kubernetes') {
-        return this.unmanagedCount > 0;
+        // K8S模式下，已受管的主机才是失败项
+        return this.managedCount > 0;
       }
       // PVM模式的失败项检查逻辑
       return this.dataSource.some(host => {
@@ -597,9 +598,9 @@ export default {
     // 获取所有校验成功的主机列表（K8S模式）
     getSuccessfulHosts() {
       if (this.depType === 'Kubernetes') {
-        // K8S模式下只返回受管的主机
+        // K8S模式下只返回未受管的主机（可以部署的主机）
         return this.dataSource
-          .filter(host => host.managed)
+          .filter(host => !host.managed)
           .map(host => ({
             hostname: host.hostname,
             ip: host.ip,
@@ -656,11 +657,11 @@ export default {
     // 主机环境校验是否完成（K8S模式简化）
     async hostCheckCompleted(callback) {
       if (this.depType === 'Kubernetes') {
-        // K8S模式下，只要有受管的主机就算完成
-        const managedHosts = this.dataSource.filter(host => host.managed);
+        // K8S模式下，只要有未受管的主机就算完成
+        const unmanagedHosts = this.dataSource.filter(host => !host.managed);
         const result = {
-          hostCheckCompleted: managedHosts.length > 0,
-          data: managedHosts.length > 0 ? 'K8S主机校验完成' : '没有可用的受管主机'
+          hostCheckCompleted: unmanagedHosts.length > 0,
+          data: unmanagedHosts.length > 0 ? 'K8S主机校验完成' : '没有可用的未受管主机'
         };
         
         if (callback) {

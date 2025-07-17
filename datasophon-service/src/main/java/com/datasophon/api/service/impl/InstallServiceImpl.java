@@ -127,23 +127,56 @@ public class InstallServiceImpl implements InstallService {
      * 解析主机列表并进行环境检测
      * <p>
      * 处理流程：
-     * 1. 获取全局变量并设置SSH用户
-     * 2. 检查缓存中是否存在主机列表
-     * 3. 解析主机列表（支持IP、主机名、IP域格式）
-     * 4. 对未受管主机进行环境检测
-     * 5. 分页返回结果
+     * 1. 获取集群信息，判断集群类型（K8S或传统）
+     * 2. K8S模式：从K8S API获取节点列表和架构信息
+     * 3. 传统模式：解析用户输入的主机列表并进行SSH检测
+     * 4. 分页返回结果
      *
      * @param clusterId   集群ID
-     * @param ips         主机列表字符串，支持格式：单个IP/主机名，逗号分隔的列表，IP域如[1-5]
-     * @param sshUser     SSH用户名
-     * @param sshPort     SSH端口
-     * @param sshPassword SSH密码
+     * @param ips         主机列表字符串（K8S模式下可为空）
+     * @param sshUser     SSH用户名（K8S模式下可为空）
+     * @param sshPort     SSH端口（K8S模式下可为空）
+     * @param sshPassword SSH密码（K8S模式下可为空）
      * @param page        当前页码
      * @param pageSize    每页大小
      * @return 分页后的主机列表结果
      */
     @Override
-    public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
+    public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,String kubeConfigContent,
+            Integer page, Integer pageSize) {
+        try {
+            // 获取集群信息以判断集群类型
+            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+            if (clusterInfo == null) {
+                return Result.error("集群不存在");
+            }
+
+            String depType = clusterInfo.getDepType();
+            logger.info("集群ID: {}, 部署类型: {}", clusterId, depType);
+
+            // 根据部署类型路由到不同的处理方法
+            if ("Kubernetes".equals(depType)) {
+                logger.info("检测到Kubernetes集群，使用K8S API获取节点列表");
+                return analysisHostListForKubernetes(clusterId,kubeConfigContent, page, pageSize);
+            } else {
+                logger.info("检测到传统集群，使用SSH方式获取主机列表");
+                return analysisHostListForTraditional(clusterId, ips, sshUser, sshPort, sshPassword, page, pageSize);
+            }
+
+        } catch (Exception e) {
+            logger.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
+            Result success = Result.success();
+            success.put("data", Collections.emptyList());
+            success.put(Constants.TOTAL, 0L);
+            return success;
+        }
+    }
+
+    /**
+     * 传统集群模式的主机列表解析
+     */
+    private Result analysisHostListForTraditional(Integer clusterId, String ips, String sshUser, Integer sshPort,
+            String sshPassword,
             Integer page, Integer pageSize) {
         try {
             if (StringUtils.isBlank(ips)) {
@@ -155,7 +188,6 @@ public class InstallServiceImpl implements InstallService {
                     pageSize);
 
             // 如果没有获取到主机信息,返回错误提示
-
             List<HostInfo> hostList = new ArrayList<>(hostMap.values());
 
             // 使用HostUtils的统一排序方法对IP进行排序
@@ -204,7 +236,7 @@ public class InstallServiceImpl implements InstallService {
             return success;
 
         } catch (Exception e) {
-            logger.error(ExceptionUtil.getSimpleMessage(e));
+            logger.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
             Result success = Result.success();
             success.put("data", Collections.emptyList());
             success.put(Constants.TOTAL, 0L);
@@ -369,7 +401,7 @@ public class InstallServiceImpl implements InstallService {
      * @param pageSize    每页大小
      */
     private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
-                                               String sshPassword, Integer page, Integer pageSize) {
+            String sshPassword, Integer page, Integer pageSize) {
         // 定义已收集主机集合的缓存键
         String collectedHostsKey = clusterId + "_COLLECTED_HOSTS";
         // 定义正在收集中的主机集合的缓存键（防止并发重复收集）
@@ -854,7 +886,7 @@ public class InstallServiceImpl implements InstallService {
      * @return 主机信息映射，IP为键
      */
     private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, Integer sshPort,
-                                                  String sshUser, String sshPassword) {
+            String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
         logger.info("解析主机列表");
@@ -934,6 +966,7 @@ public class InstallServiceImpl implements InstallService {
             hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
     }
+
     private void processNumberRangeWithoutOsInfo(String prefix, String[] range, Integer sshPort, String sshUser,
             String sshPassword,
             Integer clusterId, Map<String, HostInfo> hostInfoMap) {
@@ -1044,6 +1077,7 @@ public class InstallServiceImpl implements InstallService {
                 .collect(Collectors.toList());
         return Result.success(list);
     }
+
     public Result rehostCheck(
             Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
 
@@ -1056,7 +1090,6 @@ public class InstallServiceImpl implements InstallService {
                 .collect(Collectors.toList());
         String clusterCode = clusterInfo.getClusterCode();
         String depType = clusterInfo.getDepType();
-
 
         if (Constants.KUBERNETES_MODE.equals(depType)) {
             // Kubernetes模式：直接更新校验结果，不进行SSH连接测试
@@ -1468,23 +1501,36 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * Kubernetes模式：从Kubernetes集群自动获取节点列表
+     * Kubernetes集群模式的主机列表解析
+     * 从K8S API获取节点信息，包括CPU架构
      */
-    private Result analysisHostListForKubernetes(Integer clusterId, Integer page, Integer pageSize) {
+    private Result analysisHostListForKubernetes(Integer clusterId,String kubeConfig, Integer page, Integer pageSize) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-            String kubeConfig = clusterInfo.getKubeConfig();
+
 
             if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
                 return Result.error("Kubernetes配置不能为空，请先完成集群配置");
             }
 
+            logger.info("开始从Kubernetes API获取节点列表，集群ID: {}", clusterId);
+
             // 从Kubernetes集群获取节点列表
             List<ClusterHostDO> kubernetesHosts = KubeUtil.getHostListByConfig(kubeConfig);
+
+            if (kubernetesHosts.isEmpty()) {
+                logger.warn("未从Kubernetes集群获取到任何节点");
+                return Result.error("未找到任何Kubernetes节点，请检查集群配置");
+            }
+
+            logger.info("从Kubernetes API获取到 {} 个节点", kubernetesHosts.size());
 
             // 转换为HostInfo格式
             List<HostInfo> hostInfoList = new ArrayList<>();
             String clusterCode = clusterInfo.getClusterCode();
+
+            // 获取检查项列表（K8S模式下也需要检查项用于环境验证）
+            List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
 
             for (ClusterHostDO kubernetesHost : kubernetesHosts) {
                 HostInfo hostInfo = new HostInfo();
@@ -1493,10 +1539,18 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setSshPort(22); // Kubernetes模式默认SSH端口
                 hostInfo.setSshUser("root"); // Kubernetes模式默认用户
                 hostInfo.setClusterCode(clusterCode);
+                hostInfo.setClusterId(clusterId);
                 hostInfo.setCreateTime(new Date());
 
-                // 从Kubernetes API获取的架构信息
-                hostInfo.setCpuArchitecture(kubernetesHost.getCpuArchitecture());
+                // 重要：从Kubernetes API获取的CPU架构信息
+                String cpuArchitecture = kubernetesHost.getCpuArchitecture();
+                hostInfo.setCpuArchitecture(cpuArchitecture);
+
+                logger.info("节点 {} (IP: {}) 的CPU架构: {}",
+                        kubernetesHost.getHostname(), kubernetesHost.getIp(), cpuArchitecture);
+
+                // 设置检查项列表
+                hostInfo.setCheckItems(checkItems);
 
                 // Kubernetes模式下检查主机受管状态
                 ClusterHostDO existingHost = hostService.getClusterHostByHostname(kubernetesHost.getHostname());
@@ -1509,6 +1563,8 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("主机已受管");
                     logger.info("Host {} is already managed in current Kubernetes cluster {}",
                             kubernetesHost.getHostname(), clusterId);
                 } else if (existingHost != null) {
@@ -1519,6 +1575,8 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("主机已在其他集群受管");
                     logger.info("Host {} is already managed in another cluster {}",
                             kubernetesHost.getHostname(), existingHost.getClusterId());
                 } else {
@@ -1529,24 +1587,60 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setCheckResult(
                             new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
-                    logger.info("Host {} is not managed in Kubernetes mode, can be added", kubernetesHost.getHostname());
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setMessage("K8S节点验证成功，可以添加");
+                    logger.info("Host {} is not managed in Kubernetes mode, can be added",
+                            kubernetesHost.getHostname());
+                }
+
+                // 初始化检查项状态（K8S模式下某些检查项可能不适用）
+                if (hostInfo.getCheckItems() != null) {
+                    for (CheckItem checkItem : hostInfo.getCheckItems()) {
+                        // K8S模式下，某些检查项设置为成功（如SSH连接等）
+                        if ("SSH连接检查".equals(checkItem.getItemName()) ||
+                                "主机名检查".equals(checkItem.getItemName()) ||
+                                "操作系统检查".equals(checkItem.getItemName())) {
+                            checkItem.setStatus(CheckItem.Status.SUCCESS);
+                            checkItem.setMessage("K8S模式自动通过");
+                        }
+                    }
                 }
 
                 hostInfoList.add(hostInfo);
             }
 
+            // 使用HostUtils的统一排序方法对IP进行排序
+            List<String> sortedIps = HostUtils.sortIpAddresses(hostInfoList.stream()
+                    .map(HostInfo::getIp)
+                    .collect(Collectors.toList()));
+
+            // 按照排序后的IP顺序重新组织主机列表
+            List<HostInfo> sortedHostList = new ArrayList<>();
+            for (String ip : sortedIps) {
+                hostInfoList.stream()
+                        .filter(host -> ip.equals(host.getIp()))
+                        .findFirst()
+                        .ifPresent(sortedHostList::add);
+            }
+
             // 缓存主机列表
             HashMap<String, HostInfo> hostMap = new HashMap<>();
-            for (HostInfo hostInfo : hostInfoList) {
-                hostMap.put(hostInfo.getHostname(), hostInfo);
+            for (HostInfo hostInfo : sortedHostList) {
+                hostMap.put(hostInfo.getIp(), hostInfo);
             }
-            CacheUtils.put(clusterCode + Constants.HOST_MAP, hostMap);
+            CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
+
+            logger.info("已缓存K8S集群主机列表，共{}台主机", hostMap.size());
 
             // 分页处理
-            Integer offset = (page - 1) * pageSize;
-            List<HostInfo> pagedResult = getListPage(hostInfoList, offset, pageSize);
+            int offset = (page - 1) * pageSize;
+            int end = Math.min(offset + pageSize, sortedHostList.size());
+            List<HostInfo> pagedResult = sortedHostList.subList(offset, end);
 
-            return Result.success(pagedResult).put(Constants.TOTAL, hostInfoList.size());
+            Result success = Result.success();
+            success.put("data", pagedResult);
+            success.put(Constants.TOTAL, (long) sortedHostList.size());
+            return success;
 
         } catch (Exception e) {
             logger.error("获取Kubernetes节点列表失败", e);

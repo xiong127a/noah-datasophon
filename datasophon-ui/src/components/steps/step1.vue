@@ -269,6 +269,28 @@
               </div>
             </template>
             
+            <!-- K8S模式主机信息自动获取说明 -->
+            <div class="k8s-host-info-section">
+              <h2 class="section-title">主机信息</h2>
+              <div class="k8s-auto-info">
+                <div class="auto-info-card">
+                  <div class="auto-info-icon">
+                    <a-icon type="cloud-server" />
+                  </div>
+                  <div class="auto-info-content">
+                    <h3>自动获取节点信息</h3>
+                    <p>系统将从Kubernetes API自动获取以下信息：</p>
+                    <ul class="info-list">
+                      <li><span class="info-label">节点列表：</span>包含集群中所有可用的worker节点</li>
+                      <li><span class="info-label">CPU架构：</span>自动识别每个节点的处理器架构(x86_64/arm64等)</li>
+                      <li><span class="info-label">节点状态：</span>实时获取节点运行状态和资源信息</li>
+                      <li><span class="info-label">网络配置：</span>节点的IP地址和主机名映射关系</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="tips-section">
               <a-icon type="info-circle" class="tips-icon" />
               <div class="tips-content">
@@ -383,7 +405,7 @@ export default {
     async getClusterInfo() {
       console.log('开始获取集群信息，clusterId:', this.clusterId);
       const startTime = Date.now();
-      const minLoadingTime = 2000; // 最少显示2秒加载状态
+      const minLoadingTime = 500; // 最少显示2秒加载状态
       
       // 启动进度条动画
       this.startLoadingProgress();
@@ -1606,10 +1628,79 @@ export default {
              }
            }
          }
+       }
+     }
+   }
+ 
+   .k8s-host-info-section {
+    margin-bottom: 3rem;
+    
+    .k8s-auto-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      background-color: @apple-gray-light;
+      border-radius: 1rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+      .auto-info-card {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        padding: 1rem;
+        background-color: @apple-white;
+        border-radius: 0.8rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .auto-info-icon {
+          font-size: 2.4rem;
+          color: @apple-blue;
+        }
+
+        .auto-info-content {
+          flex: 1;
+
+          h3 {
+            .apple-font();
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: @apple-black;
+            margin-bottom: 0.5rem;
+          }
+
+          p {
+            .apple-font();
+            font-size: 0.9rem;
+            color: @apple-gray;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+          }
+
+          .info-list {
+            .apple-font();
+            font-size: 0.85rem;
+            color: @apple-text-secondary;
+            line-height: 1.6;
+            padding-left: 1.5rem;
+
+            .info-label {
+              font-weight: 500;
+              color: @apple-text-primary;
+              margin-right: 0.5rem;
+            }
+          }
+        }
       }
     }
   }
-  
+
   .tips-section {
     display: flex;
     align-items: flex-start;

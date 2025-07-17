@@ -23,7 +23,7 @@ public interface InstallService {
 
     Result getInstallStep(Integer type);
 
-    Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
+    Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,String kubeConfigContent,
             Integer page,
             Integer pageSize);
 
