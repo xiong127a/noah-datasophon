@@ -19,20 +19,19 @@ package com.datasophon.api;
 
 import cn.hutool.extra.spring.EnableSpringUtil;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.utils.NodeExportUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import org.mybatis.spring.annotation.MapperScan;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.event.EventListener;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -80,6 +79,5 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
      */
     public static void shutdown() {
         ActorUtils.shutdown();
-        NodeExportUtils.stopNodeExporter();
     }
 }
