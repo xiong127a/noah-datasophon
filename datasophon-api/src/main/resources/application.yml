@@ -77,14 +77,6 @@ spring:
         classpath:/front/views/,
         classpath*:/lic/
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"  # 暴露所有端点（生产环境慎用）
-        # include: health,info,metrics  # 按需指定
-      base-path: /monitor  # 自定义基础路径（默认/actuator）
-
 # Jasypt加密配置
 jasypt:
   encryptor:
