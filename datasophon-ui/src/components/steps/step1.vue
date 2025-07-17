@@ -112,7 +112,7 @@
                       <a-select
                         v-if="!isCreatingNewNamespace"
                         v-decorator="[
-                          'namespace',
+                          'namespaceSelect',
                           { 
                             rules: [{ required: true, message: '请选择命名空间!' }] 
                           }
@@ -127,56 +127,78 @@
                         @click="onNamespaceDropdownClick"
                         @focus="onNamespaceDropdownClick"
                         :dropdown-match-select-width="true"
-                        class="apple-select"
+                        class="apple-namespace-select"
+                        size="large"
                       >
-                        <a-select-option key="__create_new__" value="__create_new__" class="create-namespace-option-wrapper">
-                          <div class="create-namespace-option">
-                            <a-icon type="plus" />
-                            <span class="create-namespace-text">创建新的命名空间</span>
+                        <a-select-option key="__create_new__" value="__create_new__" class="create-new-option">
+                          <div class="create-new-content">
+                            <a-icon type="plus" class="create-icon" />
+                            <span class="create-text">创建新的命名空间</span>
                           </div>
                         </a-select-option>
-                        <a-select-option key="divider" disabled v-if="filteredNamespaces.length > 0">
+                        <a-select-option key="divider" disabled v-if="filteredNamespaces.length > 0" class="divider-option">
                           <div class="namespace-divider"></div>
                         </a-select-option>
                         <a-select-option 
                           v-for="ns in filteredNamespaces" 
                           :key="ns" 
                           :value="ns"
+                          class="namespace-option"
                         >
-                          {{ ns }}
+                          <div class="namespace-item">
+                            <a-icon type="database" class="namespace-icon" />
+                            <span class="namespace-name">{{ ns }}</span>
+                          </div>
                         </a-select-option>
                       </a-select>
                       
                       <!-- 创建命名空间模式 -->
+                      <div v-if="isCreatingNewNamespace" class="create-namespace-input-container">
+                        <a-input
+                          v-decorator="[
+                            'namespaceInput',
+                            { 
+                              rules: [{ required: true, message: '请输入命名空间名称!' }] 
+                            }
+                          ]"
+                          placeholder="请输入新的命名空间名称"
+                          @change="onNamespaceInputChange"
+                          class="apple-namespace-input"
+                          size="large"
+                        >
+                          <a-icon 
+                            slot="suffix" 
+                            type="close-circle" 
+                            @click="cancelCreateNamespace" 
+                            class="cancel-create-icon"
+                          />
+                        </a-input>
+                      </div>
+                      
+                      <!-- 隐藏字段，用于最终提交的namespace值 -->
                       <a-input
-                        v-if="isCreatingNewNamespace"
                         v-decorator="[
                           'namespace',
                           { 
-                            rules: [{ required: true, message: '请输入命名空间名称!' }] 
+                            rules: [{ required: true, message: '请选择或输入命名空间!' }] 
                           }
                         ]"
-                        placeholder="请输入新的命名空间名称"
-                        @change="onNamespaceInputChange"
-                      >
-                        <a-icon slot="suffix" type="close-circle" @click="cancelCreateNamespace" style="cursor: pointer; color: #ccc;" />
-                      </a-input>
+                        style="display: none;"
+                      />
                       
                       <!-- 命名空间操作提示信息 -->
                       <div v-if="isCreatingNewNamespace && customNamespaceInput" 
-                           :class="isNamespaceExists ? 'namespace-use-tip' : 'namespace-creation-tip'">
+                           class="namespace-tip"
+                           :class="isNamespaceExists ? 'namespace-exists-tip' : 'namespace-create-tip'">
                         <a-icon 
                           :type="isNamespaceExists ? 'check-circle' : 'info-circle'" 
-                          :style="{ 
-                            color: isNamespaceExists ? '#52c41a' : '#1890ff', 
-                            marginRight: '4px' 
-                          }" 
+                          class="tip-icon"
+                          :class="isNamespaceExists ? 'exists-icon' : 'create-icon'"
                         />
-                        {{ isNamespaceExists ? '将使用命名空间' : '将创建命名空间' }} 
-                        <span :style="{ 
-                          color: isNamespaceExists ? '#52c41a' : '#1890ff', 
-                          fontWeight: '500' 
-                        }">{{ customNamespaceInput }}</span>
+                        <span class="tip-text">
+                          {{ isNamespaceExists ? '将使用现有命名空间' : '将创建新命名空间' }} 
+                          <span class="namespace-value">{{ customNamespaceInput }}</span>
+                        </span>
                       </div>
                     </div>
                   </a-form-item>
@@ -460,9 +482,23 @@ export default {
         
         if (clusterInfo.namespace) {
           this.selectedNamespace = clusterInfo.namespace;
-          this.form.setFieldsValue({
-            namespace: clusterInfo.namespace
-          });
+          // 根据命名空间是否存在决定显示模式
+          if (this.namespaces.includes(clusterInfo.namespace)) {
+            this.isCreatingNewNamespace = false;
+            this.form.setFieldsValue({
+              namespaceSelect: clusterInfo.namespace,
+              namespace: clusterInfo.namespace,
+              namespaceInput: ''
+            });
+          } else {
+            this.isCreatingNewNamespace = true;
+            this.customNamespaceInput = clusterInfo.namespace;
+            this.form.setFieldsValue({
+              namespaceInput: clusterInfo.namespace,
+              namespace: clusterInfo.namespace,
+              namespaceSelect: undefined
+            });
+          }
         }
       } else {
         this.clusterType = 'traditional';
@@ -533,7 +569,8 @@ export default {
       
       this.namespacesLoading = true;
       try {
-        const res = await this.$axiosPost('/ddh/api/cluster/namespaces', {
+        // 使用$axiosJsonPost确保发送JSON格式
+        const res = await this.$axiosJsonPost('/ddh/api/cluster/namespaces', {
           kubeConfigContent: this.kubeConfigContent
         });
         if (res.code === 200) {
@@ -545,15 +582,24 @@ export default {
             if (this.namespaces.includes(defaultNamespace)) {
               // 默认命名空间存在，直接选中
               this.selectedNamespace = defaultNamespace;
+              this.isCreatingNewNamespace = false;
               this.$nextTick(() => {
-                this.form.setFieldsValue({ namespace: defaultNamespace });
+                this.form.setFieldsValue({ 
+                  namespaceSelect: defaultNamespace,
+                  namespace: defaultNamespace,
+                  namespaceInput: ''
+                });
               });
             } else {
               // 默认命名空间不存在，进入创建模式
               this.isCreatingNewNamespace = true;
               this.customNamespaceInput = defaultNamespace;
               this.$nextTick(() => {
-                this.form.setFieldsValue({ namespace: defaultNamespace });
+                this.form.setFieldsValue({ 
+                  namespaceInput: defaultNamespace,
+                  namespace: defaultNamespace,
+                  namespaceSelect: undefined
+                });
               });
             }
           }
@@ -576,8 +622,11 @@ export default {
       if (value === '__create_new__') {
         this.isCreatingNewNamespace = true;
         this.customNamespaceInput = '';
+        // 清空所有相关字段
         this.$nextTick(() => {
           this.form.setFieldsValue({
+            namespaceSelect: undefined,
+            namespaceInput: '',
             namespace: ''
           });
         });
@@ -587,7 +636,9 @@ export default {
         this.customNamespaceInput = '';
         this.$nextTick(() => {
           this.form.setFieldsValue({
-            namespace: value
+            namespaceSelect: value,
+            namespaceInput: '',
+            namespace: value  // 设置最终的namespace值
           });
         });
       }
@@ -601,6 +652,12 @@ export default {
     
     onNamespaceInputChange(e) {
       this.customNamespaceInput = e.target.value;
+      // 同时更新隐藏的namespace字段
+      this.$nextTick(() => {
+        this.form.setFieldsValue({
+          namespace: e.target.value
+        });
+      });
     },
     
     cancelCreateNamespace() {
@@ -608,6 +665,8 @@ export default {
       this.customNamespaceInput = '';
       this.$nextTick(() => {
         this.form.setFieldsValue({
+          namespaceSelect: undefined,
+          namespaceInput: '',
           namespace: ''
         });
       });
@@ -629,10 +688,11 @@ export default {
         const params = {
           clusterId: this.clusterId,
           kubeConfigContent: values.kubeConfigContent,
-          namespace: values.namespace
+          namespace: values.namespace  // 使用最终的namespace字段
         };
         
-        const res = await this.$axiosPost('/ddh/api/cluster/kube-config', params);
+        // 使用$axiosJsonPost确保发送JSON格式
+        const res = await this.$axiosJsonPost('/ddh/api/cluster/kube-config', params);
         if (res.code === 200) {
           this.$message.success('Kubernetes配置保存成功');
           return true;
@@ -658,6 +718,30 @@ export default {
 @apple-gray: #86868b;
 @apple-blue: #0071e3;
 @apple-blue-hover: #147CE5;
+@apple-text-primary: #1d1d1f;
+@apple-text-secondary: #86868b;
+
+// 强制全局下拉框圆角样式
+/deep/ .ant-select-selector {
+  border-radius: 1rem !important;
+}
+
+/deep/ .ant-select-single .ant-select-selector {
+  border-radius: 1rem !important;
+}
+
+// 强制下拉选项蓝色字体样式 - 全局生效
+/deep/ .ant-select-dropdown .create-new-option {
+  .create-new-content {
+    .create-text {
+      color: #0071e3 !important;
+      font-weight: 600 !important;
+    }
+    .create-icon {
+      color: #0071e3 !important;
+    }
+  }
+}
 
 // 苹果设计系统字体
 .apple-font() {
@@ -943,7 +1027,7 @@ export default {
       
       .namespace-selector-container {
         // 命名空间选择器样式
-        /deep/ .apple-select {
+        /deep/ .apple-namespace-select {
           width: 100%;
           
           .ant-select-selector {
@@ -952,7 +1036,7 @@ export default {
             background-color: @apple-gray-light !important;
             border-radius: 1rem !important;
             padding: 0.8rem 1rem !important;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             min-height: 48px !important;
             display: flex;
             align-items: center;
@@ -982,17 +1066,15 @@ export default {
           }
         }
         
-        // 通用选择器样式（用于兼容性）
-        /deep/ .ant-select:not(.apple-select) {
-          width: 100%;
-          
+        // 全局下拉框样式修复 - 确保圆角正确应用
+        /deep/ .ant-select {
           .ant-select-selector {
             .apple-font();
             border: none !important;
             background-color: @apple-gray-light !important;
             border-radius: 1rem !important;
             padding: 0.8rem 1rem !important;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             min-height: 48px !important;
             display: flex;
             align-items: center;
@@ -1006,125 +1088,240 @@ export default {
             background-color: @apple-white !important;
             box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
           }
-          
-          .ant-select-selection-placeholder {
-            color: @apple-gray !important;
-            font-weight: 400;
-          }
         }
         
-        // 下拉菜单样式
+        // 下拉菜单样式优化
         /deep/ .ant-select-dropdown {
           border-radius: 12px !important;
           overflow: hidden;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
           border: 1px solid rgba(0, 0, 0, 0.06) !important;
-          padding: 6px !important;
+          padding: 8px !important;
           animation: dropdownFadeIn 0.2s ease-out !important;
           
-          .ant-select-item {
-            padding: 10px 12px !important;
-            transition: all 0.2s;
-            border-radius: 8px !important;
-            margin: 2px 0 !important;
-            .apple-font();
+          // 创建新命名空间选项
+          .create-new-option {
+            margin-bottom: 8px !important;
             
-            &:hover {
-              background-color: rgba(0, 113, 227, 0.05) !important;
+            .ant-select-item-option-content {
+              padding: 0 !important;
             }
             
-            &-option-selected {
-              background-color: rgba(0, 113, 227, 0.1) !important;
-              font-weight: 500 !important;
-              color: @apple-blue !important;
+            .create-new-content {
+              display: flex;
+              align-items: center;
+              padding: 12px 16px;
+              background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+              border: 2px solid @apple-blue;
+              border-radius: 8px;
+              transition: all 0.3s;
+              
+              &:hover {
+                background: linear-gradient(135deg, #bbdefb, #e3f2fd);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
+              }
+              
+              .create-icon {
+                color: @apple-blue !important;
+                font-size: 16px;
+                margin-right: 8px;
+              }
+              
+              .create-text {
+                color: @apple-blue !important;
+                font-weight: 600 !important;
+                .apple-font();
+                font-size: 14px;
+              }
+            }
+            
+            // 覆盖默认选中样式
+            &.ant-select-item-option-selected {
+              background-color: transparent !important;
+              
+              .create-new-content {
+                background: linear-gradient(135deg, @apple-blue, lighten(@apple-blue, 5%)) !important;
+                
+                .create-icon,
+                .create-text {
+                  color: @apple-white !important;
+                }
+              }
             }
           }
           
-          // 搜索框样式
-          .ant-select-item-empty {
-            padding: 8px !important;
-            
-            .ant-empty-image {
-              height: 40px !important;
+          // 分隔线选项
+          .divider-option {
+            .ant-select-item-option-content {
+              padding: 0 !important;
+              margin: 8px 0 !important;
             }
             
-            .ant-empty-description {
-              color: @apple-gray !important;
-              font-size: 13px !important;
+            .namespace-divider {
+              height: 2px;
+              background: linear-gradient(90deg, transparent, @apple-blue, transparent);
+              margin: 0;
+              opacity: 0.3;
+            }
+          }
+          
+          // 普通命名空间选项
+          .namespace-option {
+            .ant-select-item-option-content {
+              padding: 0 !important;
+            }
+            
+            .namespace-item {
+              display: flex;
+              align-items: center;
+              padding: 10px 16px;
+              transition: all 0.2s;
+              border-radius: 6px;
+              margin: 2px 0;
+              
+              &:hover {
+                background-color: rgba(0, 113, 227, 0.05);
+              }
+              
+              .namespace-icon {
+                color: @apple-gray;
+                font-size: 14px;
+                margin-right: 8px;
+              }
+              
+              .namespace-name {
+                color: @apple-text-primary;
+                .apple-font();
+                font-weight: 400;
+              }
+            }
+          }
+          
+          // 选中状态
+          .ant-select-item-option-selected {
+            background-color: rgba(0, 113, 227, 0.1) !important;
+            
+            .namespace-item {
+              .namespace-icon {
+                color: @apple-blue;
+              }
+              
+              .namespace-name {
+                color: @apple-blue;
+                font-weight: 500;
+              }
             }
           }
         }
         
-        @keyframes dropdownFadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+        // 创建命名空间输入框容器
+        .create-namespace-input-container {
+          position: relative;
+          
+          .apple-namespace-input {
+            /deep/ .ant-input {
+              .apple-font();
+              border: none !important;
+              background-color: @apple-gray-light !important;
+              border-radius: 1rem !important;
+              padding: 0.8rem 1rem !important;
+              transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              min-height: 48px !important;
+              font-size: 1rem;
+              
+              &:hover {
+                background-color: darken(@apple-gray-light, 2%) !important;
+              }
+              
+              &:focus {
+                background-color: @apple-white !important;
+                box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+                outline: none !important;
+              }
+              
+              &::placeholder {
+                color: @apple-gray !important;
+                font-weight: 400;
+              }
+            }
+            
+            // 关闭按钮样式
+            /deep/ .ant-input-suffix {
+              .cancel-create-icon {
+                color: rgba(0, 0, 0, 0.25);
+                cursor: pointer;
+                font-size: 16px;
+                transition: all 0.3s;
+                
+                &:hover {
+                  color: #ff4d4f;
+                  transform: scale(1.1);
+                }
+              }
+            }
           }
         }
         
-        // 命名空间输入框样式
-        /deep/ .ant-input {
-          .apple-font();
-          border: none !important;
-          background-color: @apple-gray-light !important;
-          border-radius: 1rem !important;
-          padding: 0.8rem 1rem !important;
-          transition: all 0.3s;
-          min-height: 48px !important;
-          
-          &:hover {
-            background-color: darken(@apple-gray-light, 2%) !important;
-          }
-          
-          &:focus {
-            background-color: @apple-white !important;
-            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
-            outline: none !important;
-          }
-          
-          &::placeholder {
-            color: @apple-gray !important;
-            font-weight: 400;
-          }
-        }
-        
-        .create-namespace-option {
+        // 命名空间提示信息
+        .namespace-tip {
+          margin-top: 0.75rem;
+          padding: 0.75rem 1rem;
+          border-radius: 0.75rem;
+          font-size: 0.9rem;
           display: flex;
           align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #e8f4fd;
-          margin-bottom: 8px;
-          padding-bottom: 12px;
+          transition: all 0.3s;
+          animation: fadeInUp 0.3s ease-out;
           
-          .anticon {
+          .tip-icon {
             margin-right: 8px;
-            font-size: 14px;
-            color: @apple-blue;
+            font-size: 16px;
           }
           
-          .create-namespace-text {
-            color: @apple-blue;
-            font-weight: 600;
+          .tip-text {
+            .apple-font();
+            font-weight: 400;
+            
+            .namespace-value {
+              font-weight: 600;
+              margin-left: 4px;
+            }
           }
-        }
-        
-        .namespace-divider {
-          height: 1px;
-          background-color: rgba(0, 113, 227, 0.15);
-          margin: 4px 0;
-        }
-        
-        .namespace-use-tip,
-        .namespace-creation-tip {
-          margin-top: 0.5rem;
-          padding: 0.5rem;
-          border-radius: 0.5rem;
-          background-color: rgba(0, 113, 227, 0.05);
-          font-size: 0.9rem;
+          
+          &.namespace-create-tip {
+            background: linear-gradient(135deg, rgba(0, 113, 227, 0.05), rgba(0, 113, 227, 0.02));
+            border: 1px solid rgba(0, 113, 227, 0.15);
+            
+            .tip-icon.create-icon {
+              color: @apple-blue;
+            }
+            
+            .tip-text {
+              color: @apple-text-primary;
+              
+              .namespace-value {
+                color: @apple-blue;
+              }
+            }
+          }
+          
+          &.namespace-exists-tip {
+            background: linear-gradient(135deg, rgba(82, 196, 26, 0.05), rgba(82, 196, 26, 0.02));
+            border: 1px solid rgba(82, 196, 26, 0.15);
+            
+            .tip-icon.exists-icon {
+              color: #52c41a;
+            }
+            
+            .tip-text {
+              color: @apple-text-primary;
+              
+              .namespace-value {
+                color: #52c41a;
+              }
+            }
+          }
         }
       }
       .textarea-wrapper {
@@ -1473,31 +1670,29 @@ export default {
   }
 }
 
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .apple-form-container {
   animation: fadeInUp 0.6s ease-out;
 }
-
-    /deep/ .create-namespace-option-wrapper {
-      .ant-select-item-option-content {
-        padding: 4px 0 !important;
-      }
-
-      .create-namespace-option {
-        display: flex;
-        align-items: center;
-        padding: 6px 0;
-        
-        .anticon {
-          margin-right: 8px;
-          color: @apple-blue;
-          font-size: 14px;
-        }
-        
-        .create-namespace-text {
-          color: @apple-blue;
-          font-weight: 600;
-        }
-      }
-    }
-
 </style>
