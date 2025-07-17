@@ -577,9 +577,20 @@ export default {
     
     onKubeConfigChange() {
       const content = this.form.getFieldValue('kubeConfigContent');
+      this.kubeConfigContent = content || ''; // 总是更新kubeConfigContent变量
       if (content && content.trim()) {
-        this.kubeConfigContent = content;
         this.loadNamespaces();
+      } else {
+        // 如果内容为空，清空相关数据
+        this.namespaces = [];
+        this.selectedNamespace = '';
+        this.isCreatingNewNamespace = false;
+        this.customNamespaceInput = '';
+        this.$nextTick(() => {
+          this.form.setFieldsValue({
+            namespace: ''
+          });
+        });
       }
     },
     
@@ -592,7 +603,7 @@ export default {
       this.namespacesLoading = true;
       try {
         // 使用$axiosJsonPost确保发送JSON格式
-        const res = await this.$axiosJsonPost('/ddh/api/cluster/namespaces', {
+        const res = await this.$axiosPost('/ddh/api/cluster/namespaces', {
           kubeConfigContent: this.kubeConfigContent
         });
         if (res.code === 200) {
