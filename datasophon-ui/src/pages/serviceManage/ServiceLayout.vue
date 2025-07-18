@@ -78,7 +78,7 @@
                   </div>
                 </div>
                 
-                <div class="service-popover-actions" v-if="service.serviceName !== 'PLATFORM'">
+                <div class="service-popover-actions" v-if="service.serviceName !== 'DATASOPHON'">
                   <div class="button-row">
                     <a-button type="primary" size="small" @click="handleServiceAction({key: 'start'}, service, $event)">
                       <a-icon type="caret-right" />启动
@@ -144,7 +144,7 @@
             </div>
             
             <!-- 展开按钮 -->
-            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'PLATFORM'">
+            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'DATASOPHON'">
               <div class="modern-action-btn">
                 <a-icon type="more" />
               </div>
@@ -354,7 +354,7 @@ export default {
       menuList: [],
       activeMenu: null,
       clusterData: null,
-      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY', 'PLATFORM'],
+      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY', 'DATASOPHON'],
       coreGroupCollapsed: false,
       managementGroupCollapsed: false,
       sidebarCollapsed: false,
@@ -390,8 +390,8 @@ export default {
       const platformService = { 
         id: '0', 
         name: '大数据基础平台', 
-        serviceName: 'PLATFORM', 
-        icon: 'datasophon-overview', 
+        serviceName: 'DATASOPHON', 
+        icon: 'logo', 
         path: '/service-manage', 
         serviceId: '', 
         serviceStateCode: 2, 
@@ -413,7 +413,7 @@ export default {
       });
       
       // 如果没有找到大数据基础平台，添加它
-      const hasPlatform = filteredServices.some(s => (s.serviceName || '').toUpperCase() === 'PLATFORM');
+      const hasPlatform = filteredServices.some(s => (s.serviceName || '').toUpperCase() === 'DATASOPHON');
       if (!hasPlatform) {
         filteredServices.unshift(platformService);
       }
@@ -609,7 +609,7 @@ export default {
       
       const managementServicesList = [
         // 添加大数据基础平台作为管理服务分组的第一个
-        { id: '0', name: '大数据基础平台', serviceName: 'PLATFORM', icon: 'datasophon-overview', path: '/service-manage', serviceId: '', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '0', name: '大数据基础平台', serviceName: 'DATASOPHON', icon: 'logo', path: '/service-manage', serviceId: '', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '7', name: 'ALERTMANAGER 告警管理', serviceName: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '8', name: 'PROMETHEUS 监控系统', serviceName: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '9', name: 'GRAFANA 可视化平台', serviceName: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
