@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import com.datasophon.api.utils.ProcessUtils;
 
 @RestController
 @RequestMapping("cluster/group")
@@ -60,7 +60,7 @@ public class ClusterGroupController {
      */
     @RequestMapping("/save")
     public Result save(Integer clusterId, String groupName) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterGroupService.saveClusterGroup(clusterId, groupName):clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
+        return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.saveClusterGroup(clusterId, groupName):clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
     }
 
     /**
@@ -68,7 +68,7 @@ public class ClusterGroupController {
      */
     @RequestMapping("/delete")
     public Result delete(Integer clusterId,Integer id) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterGroupService.deleteUserGroup(id):clusterGroupService.deleteUserGroupOnKubernetes(id);
+        return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.deleteUserGroup(id):clusterGroupService.deleteUserGroupOnKubernetes(id);
 
     }
 

@@ -62,6 +62,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- Janino dependency for Logback conditional expressions -->
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -139,7 +144,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>2.5.4</version>
+                <version>3.5.3</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
