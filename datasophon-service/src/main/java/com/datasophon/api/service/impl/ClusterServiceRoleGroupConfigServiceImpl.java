@@ -38,7 +38,7 @@ public class ClusterServiceRoleGroupConfigServiceImpl
         LambdaQueryWrapper<ClusterServiceRoleGroupConfig> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ClusterServiceRoleGroupConfig::getRoleGroupId, roleGroupId)
                 .orderByDesc(ClusterServiceRoleGroupConfig::getConfigVersion);
-        return this.getOne(queryWrapper,false);
+        return this.getOne(queryWrapper, false);
     }
 
     @Override
