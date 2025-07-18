@@ -27,6 +27,8 @@ export default {
   rehostCheck: path + '/host/check/rehostCheck', // 重试主机环境校验
   analysisHostList: path + '/host/install/analysisHostList', // 解析主机列表
   saveKubernetesHost: path + '/api/cluster/host/saveKubernetesHost', // 保存Kubernetes主机
+  saveKubernetesHostDirect: path + '/api/cluster/host/saveKubernetesHostDirect', // 直接保存Kubernetes主机（完整信息）
+  getK8sHostsWithHardwareInfo: path + '/api/cluster/host/getK8sHostsWithHardwareInfo', // 获取K8S完整硬件信息
   hostCheckCompleted: path + '/host/install/hostCheckCompleted', // 查询主机环境校验是否完成
   cleanupHostCheckResources: path + '/host/install/cleanupHostCheckResources', // 清理主机检查资源
   dispatcherHostAgentCompleted:

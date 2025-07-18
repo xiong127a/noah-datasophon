@@ -24,7 +24,6 @@ import com.datasophon.dao.entity.ClusterHostDO;
 
 import java.util.List;
 
-
 public interface ClusterHostService extends IService<ClusterHostDO> {
 
     ClusterHostDO getClusterHostByHostname(String hostname);
@@ -32,12 +31,11 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
     ClusterHostDO getClusterHostByIp(String ip);
 
     Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-                      String orderField, String orderType, Integer page, Integer pageSize);
+            String orderField, String orderType, Integer page, Integer pageSize);
 
     List<ClusterHostDO> getHostListByClusterId(Integer id);
 
     Result getRoleListByHostname(Integer clusterId, String hostname);
-
 
     /**
      * 批量删除主机。
@@ -63,4 +61,14 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
     List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack);
 
     Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId);
+
+    /**
+     * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
+     */
+    Result saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId);
+
+    /**
+     * 获取K8S模式下的完整硬件信息
+     */
+    Result getK8sHostsWithHardwareInfo(Integer clusterId);
 }

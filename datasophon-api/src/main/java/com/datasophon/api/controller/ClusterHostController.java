@@ -48,8 +48,8 @@ public class ClusterHostController {
      */
     @RequestMapping("/all")
     public Result all(Integer clusterId) {
-        List<ClusterHostDO> list =
-                clusterHostService.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
+        List<ClusterHostDO> list = clusterHostService
+                .list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
                         .eq(Constants.MANAGED, 1)
                         .orderByAsc(Constants.HOSTNAME));
         return Result.success(list);
@@ -60,7 +60,7 @@ public class ClusterHostController {
      */
     @RequestMapping("/list")
     public Result list(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-                       String orderField, String orderType, Integer page, Integer pageSize) {
+            String orderField, String orderType, Integer page, Integer pageSize) {
         return clusterHostService.listByPage(clusterId, hostname, ip, cpuArchitecture, hostState, orderField, orderType,
                 page, pageSize);
 
@@ -119,7 +119,7 @@ public class ClusterHostController {
      */
     @RequestMapping("/delete")
     public Result delete(String hostIds) {
-        if(StringUtils.isBlank(hostIds)) {
+        if (StringUtils.isBlank(hostIds)) {
             return Result.error("请选择移除的主机!");
         }
         try {
@@ -136,6 +136,23 @@ public class ClusterHostController {
     @RequestMapping(value = "/saveKubernetesHost", method = RequestMethod.POST)
     public Result saveKubernetesHost(@RequestBody List<HostInfo> hostInfoList, @RequestParam Integer clusterId) {
         return clusterHostService.saveKubernetesHost(hostInfoList, clusterId);
+    }
+
+    /**
+     * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
+     */
+    @RequestMapping(value = "/saveKubernetesHostDirect", method = RequestMethod.POST)
+    public Result saveKubernetesHostDirect(@RequestBody List<ClusterHostDO> kubernetesHosts,
+            @RequestParam Integer clusterId) {
+        return clusterHostService.saveKubernetesHostDirect(kubernetesHosts, clusterId);
+    }
+
+    /**
+     * 获取K8S模式下的完整硬件信息
+     */
+    @RequestMapping(value = "/getK8sHostsWithHardwareInfo", method = RequestMethod.GET)
+    public Result getK8sHostsWithHardwareInfo(@RequestParam Integer clusterId) {
+        return clusterHostService.getK8sHostsWithHardwareInfo(clusterId);
     }
 
 }

@@ -154,27 +154,36 @@ export default {
           if (!flag) self.$message.warning(res.data || "存在未检验成功的主机");
           if (!flag) return false;
           
-          // 主机检查完成后，直接分析主机列表
-          this.$axiosPost(global.API.analysisHostList, {
-            clusterId: this.clusterId,
-            ips: this.steps1Data.hosts,
-            sshUser: this.steps1Data.sshUser,
-            sshPort: this.steps1Data.sshPort,
-            sshPassword: this.steps1Data.sshPassword,
-            page: 1,
-            pageSize: 10 // 使用与第三步相同的默认pageSize
-          }).then((analysisRes) => {
-            if (analysisRes.code !== 200) {
-              console.warn("分析主机列表失败:", analysisRes.msg);
-              self.$message.warning("分析主机列表失败，请检查主机状态");
-            }
-            // 无论分析结果如何，都进入下一步
-            this.currentStepsAdd();
-          }).catch((err) => {
-            console.error("分析主机列表出错:", err);
-            // 即使分析出错，也进入下一步
-            this.currentStepsAdd();
-          });
+          // 检查是否为K8S模式
+          if (this.depType === 'Kubernetes') {
+            // K8S模式：保存配置和主机列表
+            this.saveK8sConfigAndHosts().then(() => {
+              this.currentStepsAdd();
+            }).catch((error) => {
+              console.error('保存K8S配置和主机列表失败:', error);
+              self.$message.error('保存配置失败，请重试');
+            });
+          } else {
+            // PVM模式：保持原有逻辑
+            this.$axiosPost(global.API.analysisHostList, {
+              clusterId: this.clusterId,
+              ips: this.steps1Data.hosts,
+              sshUser: this.steps1Data.sshUser,
+              sshPort: this.steps1Data.sshPort,
+              sshPassword: this.steps1Data.sshPassword,
+              page: 1,
+              pageSize: 10
+            }).then((analysisRes) => {
+              if (analysisRes.code !== 200) {
+                console.warn("分析主机列表失败:", analysisRes.msg);
+                self.$message.warning("分析主机列表失败，请检查主机状态");
+              }
+              this.currentStepsAdd();
+            }).catch((err) => {
+              console.error("分析主机列表出错:", err);
+              this.currentStepsAdd();
+            });
+          }
         });
       }
       if (this.stepsNumber === 3) {
@@ -297,6 +306,82 @@ export default {
         this.nextLoading = false;
         if (!flag) return false;
         this.currentStepsAdd();
+      }
+    },
+    
+    // 保存K8S配置和主机列表
+    async saveK8sConfigAndHosts() {
+      try {
+        // 1. 保存K8S配置和命名空间
+        const kubeConfigParams = {
+          clusterId: this.clusterId,
+          kubeConfig: this.steps1Data.kubeConfigContent,
+          namespace: this.steps1Data.namespace
+        };
+        
+        const configRes = await this.$axiosJsonPost(global.API.updateClusterKubeConfig, kubeConfigParams);
+        
+        if (configRes.code !== 200) {
+          throw new Error('保存K8S配置失败: ' + (configRes.msg || '未知错误'));
+        }
+        
+        // 2. 获取选中的主机列表并保存
+        const step2Ref = this.$refs.steps2Ref;
+        if (step2Ref) {
+          const successfulHosts = step2Ref.getSuccessfulHosts();
+          
+          if (successfulHosts && successfulHosts.length > 0) {
+            
+            // 在K8S模式下，获取完整的硬件信息
+            if (this.depType === 'Kubernetes') {
+              const k8sHostsWithHardware = await step2Ref.getK8sHostsWithHardwareInfo();
+              if (k8sHostsWithHardware && k8sHostsWithHardware.length > 0) {
+                // 过滤出选中的主机
+                const selectedK8sHosts = k8sHostsWithHardware.filter(k8sHost => 
+                  successfulHosts.some(host => host.ip === k8sHost.ip)
+                );
+                
+                if (selectedK8sHosts.length > 0) {
+                  const hostRes = await this.$axiosJsonPost(
+                    global.API.saveKubernetesHostDirect + '?clusterId=' + this.clusterId, 
+                    selectedK8sHosts
+                  );
+                  
+                  if (hostRes.code !== 200) {
+                    console.warn('保存K8S主机列表失败:', hostRes.msg);
+                  }
+                }
+              } else {
+                // 如果没有获取到完整硬件信息，使用原来的方法
+                const hostRes = await this.$axiosJsonPost(
+                  global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, 
+                  successfulHosts
+                );
+                
+                if (hostRes.code !== 200) {
+                  console.warn('保存主机列表失败:', hostRes.msg);
+                }
+              }
+            } else {
+              // 传统模式下的保存逻辑
+              const hostRes = await this.$axiosJsonPost(
+                global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, 
+                successfulHosts
+              );
+              
+              if (hostRes.code !== 200) {
+                console.warn('保存主机列表失败:', hostRes.msg);
+              }
+            }
+          }
+        }
+        
+        this.$message.success('配置保存成功');
+        return Promise.resolve();
+        
+      } catch (error) {
+        console.error('保存K8S配置和主机列表失败:', error);
+        throw error;
       }
     },
   },

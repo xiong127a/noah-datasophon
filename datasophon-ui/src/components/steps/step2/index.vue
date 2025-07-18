@@ -554,21 +554,20 @@ export default {
             if (this.depType === 'Kubernetes') {
               let data = JSON.parse(JSON.stringify(res.data));
                 data && data.forEach(e => {
-                if (e.checkResult && e.checkResult.code === '10001') {
+                if (e.checkResult && e.checkResult.code == '10001') {
                   e['CheckResult'] = e.checkResult;
                   delete e.checkResult;
-                  let arr = [];
-                  arr[0] = e;
-                  this.saveKubernetesHostApi(arr);
+                  // 移除轮询保存，只在点击下一步时保存
                   }
               });
               
-              // K8S模式下自动选中所有受管的主机
-              const managedHosts = this.dataSource
-                .filter(host => host.managed)
-                .map(host => host.ip);
-              this.selectedRowKeys = managedHosts;
+              // K8S模式下自动选中所有主机
+              if (this.depType === 'Kubernetes') {
+                // 默认选择所有主机
+                const allHostIps = this.dataSource.map(host => host.ip);
+                this.selectedRowKeys = allHostIps;
               }
+            }
             }
           })
           .catch((error) => {
@@ -580,77 +579,57 @@ export default {
           });
     },
 
-    // K8S模式下的主机保存API
-    saveKubernetesHostApi(params) {
-      this.$axiosJsonPost(global.API.saveKubernetesHost + '?clusterId=' + this.clusterId, params)
+
+
+    // K8S模式下的直接保存API（使用完整硬件信息）
+    saveKubernetesHostDirectApi(kubernetesHosts) {
+      this.$axiosJsonPost(global.API.saveKubernetesHostDirect + '?clusterId=' + this.clusterId, kubernetesHosts)
         .then((res) => {
         if (res.code === 200) {
-            // 保存成功
+            console.log('K8S主机直接保存成功');
         } else {
-            console.warn('K8S主机轮询保存失败:', res.msg);
+            console.warn('K8S主机直接保存失败:', res.msg);
         }
         })
         .catch((error) => {
-          console.warn('K8S主机轮询保存异常:', error);
+          console.warn('K8S主机直接保存异常:', error);
         });
+    },
+
+    // 获取K8S模式下的完整硬件信息
+    async getK8sHostsWithHardwareInfo() {
+      try {
+        // 从后端获取缓存的K8S完整硬件信息
+        const res = await this.$axiosGet(global.API.getK8sHostsWithHardwareInfo + '?clusterId=' + this.clusterId);
+        if (res.code === 200) {
+          return res.data;
+        } else {
+          console.warn('获取K8S硬件信息失败:', res.msg);
+          return [];
+        }
+      } catch (error) {
+        console.warn('获取K8S硬件信息异常:', error);
+        return [];
+      }
     },
 
     // 获取所有校验成功的主机列表（K8S模式）
     getSuccessfulHosts() {
       if (this.depType === 'Kubernetes') {
-        // K8S模式下只返回未受管的主机（可以部署的主机）
-        return this.dataSource
-          .filter(host => !host.managed)
-          .map(host => ({
-            hostname: host.hostname,
-            ip: host.ip,
-            sshUser: host.sshUser || this.steps1Data.sshUser || 'root',
-            sshPort: host.sshPort || this.steps1Data.sshPort || 22,
-            clusterId: this.clusterId,
-            managed: host.managed || false,
-            checkResult: host.checkResult
-          }));
-      } else {
-        // PVM模式下的原有逻辑
-        const successfulHosts = [];
-        
-        this.dataSource.forEach((host, index) => {
-          if (!host || typeof host !== 'object') {
-          return;
-        }
-
-          const hostname = host.hostname;
-          const ip = host.ip;
-          
-          if (!hostname || !ip) {
-            return;
-          }
-          
-          // 检查是否被选中
-          const isSelected = this.selectedRowKeys.includes(hostname);
-          
-          // 检查校验状态 - 使用正确的字段结构
-          const checkResult = host.checkResult;
-          const isCheckSuccessful = checkResult && (
-            checkResult.code === 10001 || 
-            checkResult.code === '10001'
-          );
-          
-          // 只有选中且校验成功的主机才加入列表
-          if (isSelected && isCheckSuccessful) {
-            successfulHosts.push({
-              hostname: hostname,
-              ip: ip,
-              sshUser: host.sshUser || this.steps1Data.sshUser || 'root',
-              sshPort: host.sshPort || this.steps1Data.sshPort || 22,
-              clusterId: this.clusterId,
-              managed: host.managed || false,
-              checkResult: checkResult
-            });
-          }
-        });
+        // 在K8S模式下，只要选中的主机且未被管理即可
+        const successfulHosts = this.dataSource.filter(host => 
+          this.selectedRowKeys.includes(host.ip) && 
+          !host.managed
+        );
         
         return successfulHosts;
+      } else {
+        // 传统模式下的逻辑保持不变
+        return this.dataSource.filter(host => 
+          this.selectedRowKeys.includes(host.ip) && 
+          host.CheckResult && 
+          host.CheckResult.code === '10001'
+        );
       }
     },
 

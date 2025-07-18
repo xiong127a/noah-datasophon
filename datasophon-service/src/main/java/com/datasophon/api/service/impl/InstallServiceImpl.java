@@ -142,7 +142,8 @@ public class InstallServiceImpl implements InstallService {
      * @return 分页后的主机列表结果
      */
     @Override
-    public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,String kubeConfigContent,
+    public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
+            String kubeConfigContent,
             Integer page, Integer pageSize) {
         try {
             // 获取集群信息以判断集群类型
@@ -157,7 +158,7 @@ public class InstallServiceImpl implements InstallService {
             // 根据部署类型路由到不同的处理方法
             if ("Kubernetes".equals(depType)) {
                 logger.info("检测到Kubernetes集群，使用K8S API获取节点列表");
-                return analysisHostListForKubernetes(clusterId,kubeConfigContent, page, pageSize);
+                return analysisHostListForKubernetes(clusterId, kubeConfigContent, page, pageSize);
             } else {
                 logger.info("检测到传统集群，使用SSH方式获取主机列表");
                 return analysisHostListForTraditional(clusterId, ips, sshUser, sshPort, sshPassword, page, pageSize);
@@ -1504,10 +1505,9 @@ public class InstallServiceImpl implements InstallService {
      * Kubernetes集群模式的主机列表解析
      * 从K8S API获取节点信息，包括CPU架构
      */
-    private Result analysisHostListForKubernetes(Integer clusterId,String kubeConfig, Integer page, Integer pageSize) {
+    private Result analysisHostListForKubernetes(Integer clusterId, String kubeConfig, Integer page, Integer pageSize) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-
 
             if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
                 return Result.error("Kubernetes配置不能为空，请先完成集群配置");
@@ -1532,6 +1532,9 @@ public class InstallServiceImpl implements InstallService {
             // 获取检查项列表（K8S模式下也需要检查项用于环境验证）
             List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
 
+            // 保存从K8S API获取的完整节点信息，用于后续保存
+            List<ClusterHostDO> kubernetesHostsForSave = new ArrayList<>();
+
             for (ClusterHostDO kubernetesHost : kubernetesHosts) {
                 HostInfo hostInfo = new HostInfo();
                 hostInfo.setHostname(kubernetesHost.getHostname());
@@ -1546,8 +1549,10 @@ public class InstallServiceImpl implements InstallService {
                 String cpuArchitecture = kubernetesHost.getCpuArchitecture();
                 hostInfo.setCpuArchitecture(cpuArchitecture);
 
-                logger.info("节点 {} (IP: {}) 的CPU架构: {}",
-                        kubernetesHost.getHostname(), kubernetesHost.getIp(), cpuArchitecture);
+                logger.info("节点 {} (IP: {}) 的完整信息: 核心数={}, 总内存={}GB, 总磁盘={}GB, 架构={}",
+                        kubernetesHost.getHostname(), kubernetesHost.getIp(),
+                        kubernetesHost.getCoreNum(), kubernetesHost.getTotalMem(),
+                        kubernetesHost.getTotalDisk(), cpuArchitecture);
 
                 // 设置检查项列表
                 hostInfo.setCheckItems(checkItems);
@@ -1591,6 +1596,9 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setMessage("K8S节点验证成功，可以添加");
                     logger.info("Host {} is not managed in Kubernetes mode, can be added",
                             kubernetesHost.getHostname());
+
+                    // 将可以添加的主机信息保存到列表中，用于后续保存
+                    kubernetesHostsForSave.add(kubernetesHost);
                 }
 
                 // 初始化检查项状态（K8S模式下某些检查项可能不适用）
@@ -1608,6 +1616,9 @@ public class InstallServiceImpl implements InstallService {
 
                 hostInfoList.add(hostInfo);
             }
+
+            // 缓存K8S主机信息，用于后续保存
+            CacheUtils.put(clusterId + "_K8S_HOSTS_FOR_SAVE", kubernetesHostsForSave);
 
             // 使用HostUtils的统一排序方法对IP进行排序
             List<String> sortedIps = HostUtils.sortIpAddresses(hostInfoList.stream()
@@ -1631,6 +1642,7 @@ public class InstallServiceImpl implements InstallService {
             CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
 
             logger.info("已缓存K8S集群主机列表，共{}台主机", hostMap.size());
+            logger.info("已缓存K8S完整硬件信息，共{}台主机", kubernetesHostsForSave.size());
 
             // 分页处理
             int offset = (page - 1) * pageSize;
