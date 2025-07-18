@@ -88,7 +88,7 @@ public class ActorUtils {
         logger.info("已注册模板服务Actor: {}", templateServiceActor.path());
 
         // 节点检测 5m 检测一次
-        actorSystem.scheduler().schedule(
+        actorSystem.scheduler().scheduleWithFixedDelay(
                 FiniteDuration.apply(30L, TimeUnit.SECONDS),
                 FiniteDuration.apply(300L, TimeUnit.SECONDS),
                 hostCheckActor,
@@ -96,7 +96,7 @@ public class ActorUtils {
                 actorSystem.dispatcher(),
                 ActorRef.noSender());
 
-        actorSystem.scheduler().schedule(
+        actorSystem.scheduler().scheduleWithFixedDelay(
                 FiniteDuration.apply(15L, TimeUnit.SECONDS),
                 FiniteDuration.apply(15L, TimeUnit.SECONDS),
                 serviceRoleCheckActor,
@@ -105,7 +105,7 @@ public class ActorUtils {
                 ActorRef.noSender());
 
         // 集群检测 1m 检测一次
-        actorSystem.scheduler().schedule(
+        actorSystem.scheduler().scheduleWithFixedDelay(
                 FiniteDuration.apply(30L, TimeUnit.SECONDS),
                 FiniteDuration.apply(60L, TimeUnit.SECONDS),
                 clusterCheckActor,
@@ -170,7 +170,7 @@ public class ActorUtils {
     public static void shutdown() {
         if (actorSystem != null) {
             try {
-                actorSystem.shutdown();
+                actorSystem.terminate();
             } catch (Exception ignore) {
             }
             actorSystem = null;
