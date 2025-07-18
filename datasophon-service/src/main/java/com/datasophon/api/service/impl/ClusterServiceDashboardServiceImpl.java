@@ -37,38 +37,41 @@ import java.util.Map;
 
 @Service("clusterServiceDashboardService")
 public class ClusterServiceDashboardServiceImpl
-        extends
-        ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
-        implements
-        ClusterServiceDashboardService {
+                extends
+                ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
+                implements
+                ClusterServiceDashboardService {
 
-    @Autowired
-    ClusterServiceDashboardService dashboardService;
+        @Autowired
+        ClusterServiceDashboardService dashboardService;
 
-    @Override
-    public Result getDashboardUrl(Integer clusterId) {
-        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
-        ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
-        String depType = clusterInfoEntity.getDepType();
-        String serviceName = "TOTAL";
-        if(StrUtil.equals(depType, Constants.KUBERNETES_MODE)){
-            serviceName = "KUBERNETES";
+        @Override
+        public Result getDashboardUrl(Integer clusterId) {
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
+                String depType = clusterInfoEntity.getDepType();
+                String serviceName = "TOTAL";
+                if (StrUtil.equals(depType, Constants.KUBERNETES_MODE)) {
+                        serviceName = "KUBERNETES";
+                }
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                ClusterServiceDashboard dashboard = dashboardService
+                                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME,
+                                                serviceName));
+
+                String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
+                                Constants.REGEX_VARIABLE);
+                return Result.success(dashboardUrl);
         }
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterServiceDashboard dashboard = dashboardService
-                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME, serviceName));
-        String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                Constants.REGEX_VARIABLE);
-        return Result.success(dashboardUrl);
-    }
 
-    @Override
-    public Result getDatasophonDashboard(Integer clusterId) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterServiceDashboard dashboard = dashboardService
-                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME, "DATASOPHON"));
-        String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                Constants.REGEX_VARIABLE);
-        return Result.success(dashboardUrl);
-    }
+        @Override
+        public Result getDatasophonDashboard(Integer clusterId) {
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                ClusterServiceDashboard dashboard = dashboardService
+                                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME,
+                                                "DATASOPHON"));
+                String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
+                                Constants.REGEX_VARIABLE);
+                return Result.success(dashboardUrl);
+        }
 }
