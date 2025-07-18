@@ -25,12 +25,39 @@
  * @FilePath: \ddh-ui\src\components\menu\serviceOption.vue
 -->
 <template>
-  <div @click.stop>
-    <a-popover trigger="click" placement="bottomRight" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
-      <button class="more-btn">
-        <a-icon type="ellipsis" />
+  <div @click.stop class="service-option-wrapper">
+    <a-dropdown 
+      :trigger="['click']" 
+      placement="bottomRight" 
+      overlayClassName="apple-style-dropdown" 
+      :getPopupContainer="triggerNode => triggerNode.parentNode"
+    >
+      <button class="apple-style-more-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4C10 5.10457 10.8954 6 12 6Z" fill="#1976d2"/>
+          <path d="M12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14Z" fill="#1976d2"/>
+          <path d="M12 22C13.1046 22 14 21.1046 14 20C14 18.8954 13.1046 18 12 18C10.8954 18 10 18.8954 10 20C10 21.1046 10.8954 22 12 22Z" fill="#1976d2"/>
+        </svg>
       </button>
-    </a-popover>
+      <a-menu slot="overlay" class="apple-style-menu">
+        <a-menu-item key="addService" @click="addService">
+          <a-icon type="plus-circle" />
+          <span>添加服务</span>
+        </a-menu-item>
+        <a-menu-item key="startAll" @click="() => optServices({key: 'startAll'})">
+          <a-icon type="caret-right" />
+          <span>启动所有</span>
+        </a-menu-item>
+        <a-menu-item key="stopAll" @click="() => optServices({key: 'stopAll'})">
+          <a-icon type="pause-circle" />
+          <span>停止所有</span>
+        </a-menu-item>
+        <a-menu-item key="restartAll" @click="() => optServices({key: 'restartAll'})">
+          <a-icon type="reload" />
+          <span>重启所有需要重启的服务</span>
+        </a-menu-item>
+      </a-menu>
+    </a-dropdown>
     <!-- 配置集群的modal -->
     <a-modal v-if="visible" title :visible="visible" class="service-option-modal" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
       <Steps :clusterId="clusterId" stepsType="addService" />
@@ -65,34 +92,6 @@ export default {
     ...mapMutations("setting", ["showClusterSetting"]),
     handleCancel(e) {
       this.visible = false;
-    },
-    getMoreOptions() {
-      let arr = [
-        { name: "添加服务", key: "addService" },
-        { name: "启动所有", key: "startAll" },
-        { name: "停止所有", key: "stopAll" },
-        { name: "重启所有需要重启的服务", key: "restartAll" },
-      ];
-      return arr.map((item, index) => {
-        return (
-          <div key={index}>
-            <a
-              class="more-menu-btn"
-              style="border-width:0px;min-width:100px;"
-              onClick={() => this.optionService(item)}
-            >
-              {item.name}
-            </a>
-          </div>
-        );
-      });
-    },
-    optionService(item) {
-      if (item.key === "addService") {
-        this.addService();
-      } else {
-        this.optServices(item);
-      }
     },
     // 添加服务
     addService() {
@@ -188,16 +187,12 @@ export default {
       color: @primary-color;
     }
   }
-  /deep/ .ant-popover-inner-content {
-    text-align: left;
-    padding: 12px 16px;
-  }
 }
 
-.more-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+.apple-style-more-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -207,19 +202,96 @@ export default {
   padding: 0;
   outline: none;
   cursor: pointer;
+  position: relative;
   
   &:hover {
-    background-color: #f0f6ff;
+    background-color: rgba(25, 118, 210, 0.08);
   }
   
   &:active {
-    background-color: #e6e6e6;
-    box-shadow: none;
+    background-color: rgba(25, 118, 210, 0.16);
+    transform: scale(0.96);
+  }
+  
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 8px;
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.3);
+    transition: box-shadow 0.3s ease;
+  }
+  
+  &:active::after {
+    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
   }
   
   .anticon {
     font-size: 16px;
-    color: #0076ce; /* CDH风格的蓝色 */
+    color: #1976d2;
+  }
+}
+
+.service-option-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+:global(.apple-style-dropdown) {
+  animation: fade-in 0.15s ease-out;
+  
+  .ant-dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+                0 4px 10px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    min-width: 220px;
+    border: 1px solid rgba(233, 233, 233, 0.8);
+    padding: 8px 4px;
+  }
+  
+  .ant-dropdown-menu-item {
+    margin: 2px 4px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    
+    &:hover {
+      background-color: #f0f7ff;
+    }
+    
+    &:active {
+      background-color: #e6f0ff;
+    }
+    
+    .anticon {
+      margin-right: 10px;
+      font-size: 16px;
+      color: #1976d2;
+    }
+    
+    span {
+      color: #333;
+    }
+    
+    &:hover span {
+      color: #1976d2;
+    }
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
