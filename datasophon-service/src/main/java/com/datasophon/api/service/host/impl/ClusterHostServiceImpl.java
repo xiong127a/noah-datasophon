@@ -19,15 +19,13 @@ package com.datasophon.api.service.host.impl;
 
 import akka.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.RackActor;
-import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
@@ -79,54 +77,55 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     ClusterServiceRoleInstanceService roleInstanceService;
 
     @Autowired
-    ClusterInfoService clusterInfoService;
-
-    @Autowired
     ClusterRackService clusterRackService;
-
-    private final String IP = "ip";
 
     @Override
     public ClusterHostDO getClusterHostByHostname(String hostname) {
-        return hostMapper.getClusterHostByHostname(hostname);
+        return hostMapper.selectOne(new LambdaQueryWrapper<ClusterHostDO>().eq(ClusterHostDO::getHostname, hostname));
     }
 
     @Override
     public ClusterHostDO getClusterHostByIp(String ip) {
-        return hostMapper.selectOne(new QueryWrapper<ClusterHostDO>().eq(IP, ip));
+        return hostMapper.selectOne(new LambdaQueryWrapper<ClusterHostDO>().eq(ClusterHostDO::getIp, ip));
     }
-
 
     @Override
     public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
-        List<ClusterHostDO> list = this.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.MANAGED, 1)
-                .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
-                .eq(hostState != null, Constants.HOST_STATE, hostState)
-                .like(StringUtils.isNotBlank(ip), IP, ip)
-                .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
-                .orderByAsc("asc".equals(orderType), orderField)
-                .orderByDesc("desc".equals(orderType), orderField)
-                .last("limit " + offset + "," + pageSize));
+        LambdaQueryWrapper<ClusterHostDO> queryWrapper = new LambdaQueryWrapper<ClusterHostDO>()
+                .eq(ClusterHostDO::getClusterId, clusterId)
+                .eq(ClusterHostDO::getManaged, MANAGED.YES)
+                .eq(StringUtils.isNotBlank(cpuArchitecture), ClusterHostDO::getCpuArchitecture, cpuArchitecture)
+                .eq(hostState != null, ClusterHostDO::getHostState, hostState)
+                .like(StringUtils.isNotBlank(ip), ClusterHostDO::getIp, ip)
+                .like(StringUtils.isNotBlank(hostname), ClusterHostDO::getHostname, hostname);
 
+        if ("asc".equals(orderType)) {
+            queryWrapper.orderByAsc(ClusterHostDO::getHostname);
+        } else {
+            queryWrapper.orderByDesc(ClusterHostDO::getHostname);
+        }
+
+        queryWrapper.last("limit " + offset + "," + pageSize);
+
+        List<ClusterHostDO> list = this.list(queryWrapper);
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
 
         // 获取集群代码，用于查询主机信息缓存
-//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-//        String clusterCode = clusterInfo.getClusterCode();
+        // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        // String clusterCode = clusterInfo.getClusterCode();
         Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
 
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
             BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
             // 查询主机上服务角色数
-            long serviceRoleNum = roleInstanceService.count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                    .eq(Constants.HOSTNAME, clusterHostDO.getHostname()));
+            long serviceRoleNum = roleInstanceService.count(new LambdaQueryWrapper<ClusterServiceRoleInstanceEntity>()
+                    .eq(ClusterServiceRoleInstanceEntity::getHostname, clusterHostDO.getHostname()));
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
             queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
@@ -151,19 +150,20 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
             hostListPageDTOS.add(queryHostListPageDTO);
         }
-        long count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.MANAGED, 1)
-                .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
-                .eq(hostState != null, Constants.HOST_STATE, hostState)
-                .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname));
+        long count = this.count(new LambdaQueryWrapper<ClusterHostDO>()
+                .eq(ClusterHostDO::getClusterId, clusterId)
+                .eq(ClusterHostDO::getManaged, MANAGED.YES)
+                .eq(StringUtils.isNotBlank(cpuArchitecture), ClusterHostDO::getCpuArchitecture, cpuArchitecture)
+                .eq(hostState != null, ClusterHostDO::getHostState, hostState)
+                .like(StringUtils.isNotBlank(hostname), ClusterHostDO::getHostname, hostname));
         return Result.success(hostListPageDTOS).put(Constants.TOTAL, count);
     }
 
     @Override
     public List<ClusterHostDO> getHostListByClusterId(Integer clusterId) {
-        return this.list(new QueryWrapper<ClusterHostDO>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.MANAGED, 1));
+        return this.list(new LambdaQueryWrapper<ClusterHostDO>()
+                .eq(ClusterHostDO::getClusterId, clusterId)
+                .eq(ClusterHostDO::getManaged, MANAGED.YES));
     }
 
     @Override
@@ -182,8 +182,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
      * 其次删除主机 worker，同时移除 Prometheus hosts
      * 然后删除主机运行的实例
      *
-     * @param hostIds
-     * @return
      */
     @Override
     @Transactional
@@ -194,20 +192,20 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             ClusterHostDO host = this.getById(hostId);
 
             Integer clusterId = host.getClusterId();
-            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
-                    .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                            .eq(Constants.CLUSTER_ID, clusterId)
-                            .eq(Constants.HOSTNAME, host.getHostname())
-                            .eq(Constants.SERVICE_ROLE_STATE, ServiceRoleState.RUNNING)
-                            .ne(Constants.ROLE_TYPE, RoleType.CLIENT));
+            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(
+                    new LambdaQueryWrapper<ClusterServiceRoleInstanceEntity>()
+                            .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
+                            .eq(ClusterServiceRoleInstanceEntity::getHostname, host.getHostname())
+                            .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, ServiceRoleState.RUNNING)
+                            .ne(ClusterServiceRoleInstanceEntity::getRoleType, RoleType.CLIENT));
             List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName)
                     .collect(Collectors.toList());
             if (!list.isEmpty()) {
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
 
-//            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-//            String clusterCode = clusterInfo.getClusterCode();
+            // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+            // String clusterCode = clusterInfo.getClusterCode();
             String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
             if (CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
                 CacheUtils.removeKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname());
@@ -242,7 +240,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorUtils.actorSystem.dispatcher(),
                     ActorRef.noSender());
 
-            String md5 = SecureUtil.md5(host.getHostname());
             Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
@@ -262,12 +259,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public void removeHostByClusterId(Integer clusterId) {
-        this.remove(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId));
+        this.remove(new LambdaQueryWrapper<ClusterHostDO>().eq(ClusterHostDO::getClusterId, clusterId));
     }
 
     @Override
     public void updateBatchNodeLabel(List<String> hostIds, String nodeLabel) {
-        List<ClusterHostDO> list = this.lambdaQuery().in(ClusterHostDO::getId, hostIds).list();
+        List<ClusterHostDO> list = this.list(new LambdaQueryWrapper<ClusterHostDO>().in(ClusterHostDO::getId, hostIds));
         for (ClusterHostDO clusterHostDO : list) {
             clusterHostDO.setNodeLabel(nodeLabel);
         }
@@ -276,18 +273,21 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public List<ClusterHostDO> getHostListByIds(List<String> ids) {
-        return this.lambdaQuery().in(ClusterHostDO::getId, ids).or().in(ClusterHostDO::getHostname, ids).list();
+        return this.list(new LambdaQueryWrapper<ClusterHostDO>()
+                .in(ClusterHostDO::getId, ids)
+                .or()
+                .in(ClusterHostDO::getHostname, ids));
     }
 
     @Override
     public Result assignRack(Integer clusterId, String rack, String hostIds) {
         List<String> ids = Arrays.asList(hostIds.split(","));
-        List<ClusterHostDO> list = this.lambdaQuery().in(ClusterHostDO::getId, ids).list();
+        List<ClusterHostDO> list = this.list(new LambdaQueryWrapper<ClusterHostDO>().in(ClusterHostDO::getId, ids));
         for (ClusterHostDO clusterHostDO : list) {
             clusterHostDO.setRack(rack);
         }
         this.updateBatchById(list);
-        // tell rack actor
+
         GenerateRackPropCommand command = new GenerateRackPropCommand();
         command.setClusterId(clusterId);
         ActorRef rackActor = ActorUtils.getLocalActor(RackActor.class, "rackActor");
@@ -297,28 +297,28 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack) {
-        return this.list(new QueryWrapper<ClusterHostDO>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.RACK, rack));
+        return this.list(new LambdaQueryWrapper<ClusterHostDO>()
+                .eq(ClusterHostDO::getClusterId, clusterId)
+                .eq(ClusterHostDO::getRack, rack));
     }
 
     public Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
-            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getIp());
+            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
                 ClusterHostDO clusterHostDO = new ClusterHostDO();
                 clusterHostDO.setClusterId(clusterId);
                 clusterHostDO.setCreateTime(hostInfo.getCreateTime());
-                clusterHostDO.setHostname(hostInfo.getIp());
+                // 使用正确的主机名，而不是IP
+                clusterHostDO.setHostname(hostInfo.getHostname());
                 clusterHostDO.setIp(hostInfo.getIp());
                 clusterHostDO.setRack("/default-rack");
                 clusterHostDO.setHostState(HostState.RUNNING);
                 clusterHostDO.setManaged(MANAGED.YES);
 
-                // Kubernetes模式下使用HostInfo中的架构信息，无需SSH连接
+                // 从K8S API获取的完整信息
                 String arch = hostInfo.getCpuArchitecture();
                 if (StringUtils.isBlank(arch)) {
-                    // 如果架构信息为空，使用默认值
                     arch = "x86_64";
                     logger.warn("Host {} architecture is empty, using default: {}", hostInfo.getHostname(), arch);
                 } else {
@@ -326,9 +326,47 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 }
                 clusterHostDO.setCpuArchitecture(arch);
 
+                // 从OsInfo对象中获取硬件信息
+                if (hostInfo.getOsInfo() != null) {
+                    // 从CPU信息获取核心数
+                    if (hostInfo.getOsInfo().getCpuInfo() != null) {
+                        clusterHostDO.setCoreNum(hostInfo.getOsInfo().getCpuInfo().getCores());
+                    }
+
+                    // 从内存信息获取内存数据
+                    if (hostInfo.getOsInfo().getMemoryInfo() != null) {
+                        // 将MB转换为GB
+                        Long totalMemoryMB = hostInfo.getOsInfo().getMemoryInfo().getTotalMemory();
+                        Long usedMemoryMB = hostInfo.getOsInfo().getMemoryInfo().getUsedMemory();
+                        if (totalMemoryMB != null) {
+                            clusterHostDO.setTotalMem((int) (totalMemoryMB / 1024));
+                        }
+                        if (usedMemoryMB != null) {
+                            clusterHostDO.setUsedMem((int) (usedMemoryMB / 1024));
+                        }
+                    }
+
+                    // 从磁盘信息获取磁盘数据
+                    if (hostInfo.getOsInfo().getDiskInfo() != null) {
+                        Double totalDiskGB = hostInfo.getOsInfo().getDiskInfo().getTotalDiskSpace();
+                        Double usedDiskGB = hostInfo.getOsInfo().getDiskInfo().getUsedDiskSpace();
+                        if (totalDiskGB != null) {
+                            clusterHostDO.setTotalDisk(totalDiskGB.intValue());
+                        }
+                        if (usedDiskGB != null) {
+                            clusterHostDO.setUsedDisk(usedDiskGB.intValue());
+                        }
+                    }
+                }
+
+                // 设置节点标签（如果有的话）
+                clusterHostDO.setNodeLabel("default");
+
                 this.save(clusterHostDO);
-                logger.info("Successfully saved Kubernetes host {} with architecture {}",
-                        hostInfo.getHostname(), arch);
+                logger.info(
+                        "Successfully saved Kubernetes host {} with complete info: hostname={}, ip={}, arch={}, cores={}, mem={}GB, disk={}GB",
+                        hostInfo.getHostname(), hostInfo.getHostname(), hostInfo.getIp(), arch,
+                        clusterHostDO.getCoreNum(), clusterHostDO.getTotalMem(), clusterHostDO.getTotalDisk());
             }
         }
         return Result.success();
