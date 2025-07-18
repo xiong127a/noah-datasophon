@@ -17,11 +17,11 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.HostUtils;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 
 import java.net.InetAddress;
@@ -36,7 +36,7 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaHost}",
-                    HostUtils.getHostName(hosts.get(0)));
+                    CollUtil.getFirst(hosts));
         }
     }
 
