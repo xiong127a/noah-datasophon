@@ -4,7 +4,14 @@
     <div class="service-sidebar cdh-style" :class="{'collapsed': sidebarCollapsed}">
       <!-- 头部标题区域 -->
       <div class="service-title">
-        <span v-if="!sidebarCollapsed">{{ clusterInfo }}</span>
+        <div class="cluster-info" v-if="!sidebarCollapsed && clusterInfo">
+          <div class="cluster-name">{{ clusterInfo.name }}</div>
+          <div class="cluster-details">
+            <span class="cluster-frame">{{ clusterInfo.frame }}</span>
+            <span class="cluster-mode">{{ clusterInfo.mode }}</span>
+          </div>
+        </div>
+        <div class="loading-text" v-if="!sidebarCollapsed && !clusterInfo">加载中...</div>
         <div class="sidebar-controls">
           <service-option class="service-more" v-if="!sidebarCollapsed" />
           <div class="sidebar-collapse-btn" @click.stop="toggleSidebar">
@@ -148,29 +155,10 @@
             </div>
             
             <!-- 展开按钮 -->
-            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'DATASOPHON'">
-              <div class="modern-action-btn">
+            <div class="expand-icon" v-if="service.serviceName !== 'PLATFORM' && service.serviceName !== 'DATASOPHON'">
+              <div class="modern-action-btn" @click.stop="showActionMenuForService(service, $event)">
                 <a-icon type="more" />
               </div>
-              <!-- 服务操作菜单 -->
-              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)" :trigger="['click']" overlayClassName="modern-dropdown">
-                <a class="ant-dropdown-link"></a>
-                <a-menu slot="overlay" class="modern-dropdown-menu">
-                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">
-                    <a-icon type="caret-right" />启动
-                  </a-menu-item>
-                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">
-                    <a-icon type="pause" />停止
-                  </a-menu-item>
-                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">
-                    <a-icon type="reload" />重启
-                  </a-menu-item>
-                  <a-menu-divider />
-                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)" class="danger-item">
-                    <a-icon type="delete" />删除
-                  </a-menu-item>
-                </a-menu>
-              </a-dropdown>
             </div>
           </div>
           </a-popover>
@@ -309,29 +297,10 @@
             </div>
             
             <!-- 展开按钮 -->
-            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'PLATFORM'">
-              <div class="modern-action-btn">
+            <div class="expand-icon" v-if="service.serviceName !== 'PLATFORM' && service.serviceName !== 'DATASOPHON'">
+              <div class="modern-action-btn" @click.stop="showActionMenuForService(service, $event)">
                 <a-icon type="more" />
               </div>
-              <!-- 服务操作菜单 -->
-              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)" :trigger="['click']" overlayClassName="modern-dropdown">
-                <a class="ant-dropdown-link"></a>
-                <a-menu slot="overlay" class="modern-dropdown-menu">
-                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">
-                    <a-icon type="caret-right" />启动
-                  </a-menu-item>
-                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">
-                    <a-icon type="pause" />停止
-                  </a-menu-item>
-                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">
-                    <a-icon type="reload" />重启
-                  </a-menu-item>
-                  <a-menu-divider />
-                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)" class="danger-item">
-                    <a-icon type="delete" />删除
-                  </a-menu-item>
-                </a-menu>
-              </a-dropdown>
             </div>
           </div>
           </a-popover>
@@ -343,6 +312,33 @@
     <div class="service-content">
       <!-- 路由视图 - 用于显示服务详情或总览 -->
       <router-view />
+    </div>
+    
+    <!-- 全局服务操作菜单 -->
+    <div class="service-action-menu" v-if="activeService" v-show="showActionMenu" :style="actionMenuStyle">
+      <div class="menu-header">
+        <span>{{ activeService.name }}</span>
+        <a-icon type="close" @click="hideActionMenu" />
+      </div>
+      <div class="menu-items">
+        <div class="menu-item" @click="handleServiceAction({key: 'start'}, activeService)">
+          <a-icon type="caret-right" />
+          <span>启动</span>
+        </div>
+        <div class="menu-item" @click="handleServiceAction({key: 'stop'}, activeService)">
+          <a-icon type="pause" />
+          <span>停止</span>
+        </div>
+        <div class="menu-item" @click="handleServiceAction({key: 'restart'}, activeService)">
+          <a-icon type="reload" />
+          <span>重启</span>
+        </div>
+        <div class="menu-divider"></div>
+        <div class="menu-item danger" @click="handleServiceAction({key: 'del'}, activeService)">
+          <a-icon type="delete" />
+          <span>删除</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -364,7 +360,21 @@ export default {
       managementGroupCollapsed: false,
       sidebarCollapsed: false,
       popoverTimeoutMap: {}, // 用于存储popover延迟隐藏的定时器
-      switchingService: false // 标记是否正在切换服务，防止在切换过程中显示悬浮窗
+      switchingService: false, // 标记是否正在切换服务，防止在切换过程中显示悬浮窗
+      menuContainer: null, // 存储下拉菜单容器DOM引用
+      activeService: null, // 当前激活的服务
+      showActionMenu: false, // 是否显示全局服务操作菜单
+      actionMenuStyle: { // 全局服务操作菜单样式
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'white',
+        padding: '20px',
+        borderRadius: '10px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        zIndex: 1000
+      }
     };
   },
   computed: {
@@ -374,9 +384,16 @@ export default {
     },
     clusterInfo() {
       if (this.clusterData) {
-        return `${this.clusterData.clusterName} (${this.clusterData.clusterFrame}, ${this.clusterData.depType.toLowerCase()})`;
+        const depTypeDisplay = this.clusterData.depType === 'PVM' ? '物理机模式' : 
+                              this.clusterData.depType === 'K8S' ? 'Kubernetes模式' : 
+                              this.clusterData.depType;
+        return {
+          name: this.clusterData.clusterName,
+          frame: this.clusterData.clusterFrame,
+          mode: depTypeDisplay
+        };
       }
-      return '加载中...';
+      return null;
     },
     coreServices() {
       return this.menuList.filter(service => {
@@ -425,6 +442,9 @@ export default {
     this.getClusterInfo();
     this.loadMenuData();
     
+    // 获取菜单容器DOM引用
+    this.menuContainer = document.querySelector('.cdh-service-page');
+    
     // 从 localStorage 加载折叠状态
     const savedCollapsedState = localStorage.getItem('sidebarCollapsed');
     if (savedCollapsedState !== null) {
@@ -447,9 +467,16 @@ export default {
   beforeDestroy() {
     // 移除事件监听
     document.removeEventListener('click', this.closeAllMenus);
+    document.removeEventListener('click', this.handleOutsideClick);
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    
+    // 修复 getPopupContainer 方法
+    getPopupContainer() {
+      // 确保返回当前组件的DOM元素作为容器，而不是document.body
+      return this.$el;
+    },
     
     // 切换侧边栏折叠状态
     toggleSidebar() {
@@ -469,31 +496,34 @@ export default {
     
     // 获取集群信息
     getClusterInfo() {
-      // 由于API可能无法在开发环境直接访问，我们模拟一个集群数据
-      // 在生产环境可以替换为实际API调用
-      // this.$axios.get('/ddh/api/cluster/runningClusterList')
-      
-      // 模拟API返回的数据
-      const mockClusterData = {
-        id: 1,
-        clusterName: "bdp",
-        clusterCode: "bdp",
-        clusterFrame: "DDP-1.2.1",
-        depType: "PVM",
-        clusterState: "正在运行"
-      };
-      
-      this.clusterData = mockClusterData;
-      
-      /* 实际环境使用下面的代码
+      // 从后端API获取集群信息
       this.$axiosGet('/ddh/api/cluster/runningClusterList').then(res => {
         if (res.code === 200 && res.data && res.data.length > 0) {
           this.clusterData = res.data[0]; // 获取第一个集群数据
+        } else {
+          console.warn('未获取到集群数据，使用默认数据');
+          // 如果API调用失败，使用默认数据作为后备
+          this.clusterData = {
+            id: 1,
+            clusterName: "bdp",
+            clusterCode: "bdp",
+            clusterFrame: "DDP-1.2.1",
+            depType: "PVM",
+            clusterState: "正在运行"
+          };
         }
       }).catch(error => {
         console.error('获取集群数据失败:', error);
+        // API调用失败时使用默认数据
+        this.clusterData = {
+          id: 1,
+          clusterName: "bdp",
+          clusterCode: "bdp",
+          clusterFrame: "DDP-1.2.1",
+          depType: "PVM",
+          clusterState: "正在运行"
+        };
       });
-      */
     },
     
     // 关闭所有菜单
@@ -728,6 +758,9 @@ export default {
         event.stopPropagation();
       }
       
+      // 隐藏菜单
+      this.hideActionMenu();
+      
       this.$confirm({
         width: 450,
         title: () => {
@@ -833,24 +866,32 @@ export default {
       // 关闭所有其他菜单
       this.menuList.forEach(item => {
         if (item !== service) {
-          item.menuVisible = false;
+          this.$set(item, 'menuVisible', false);
         }
       });
       
       // 切换当前菜单的可见性
-      service.menuVisible = !service.menuVisible;
+      this.$set(service, 'menuVisible', !service.menuVisible);
       
       // 如果菜单变为可见，确保任何可能的悬浮窗都被关闭
       if (service.menuVisible) {
-        service.popoverVisible = false;
-        service.popoverInContent = false;
+        this.$set(service, 'popoverVisible', false);
+        this.$set(service, 'popoverInContent', false);
       }
     },
     
     // 处理服务操作菜单的可见性变化
     handleVisibleChange(visible, service) {
+      // 如果下拉菜单变为不可见，更新状态
       if (!visible) {
-        service.menuVisible = false;
+        this.$set(service, 'menuVisible', false);
+      } else {
+        // 如果变为可见，确保其他菜单都已关闭
+        this.menuList.forEach(item => {
+          if (item !== service) {
+            this.$set(item, 'menuVisible', false);
+          }
+        });
       }
     },
     
@@ -975,7 +1016,84 @@ export default {
           service.popoverInContent = false;
         });
       }
-    }
+    },
+    
+    // 显示全局服务操作菜单
+    toggleActionMenu() {
+      this.activeService = this.menuList.find(service => service.serviceId === this.currentServiceId);
+      this.showActionMenu = true;
+    },
+    
+    // 隐藏全局服务操作菜单
+    hideActionMenu() {
+      this.showActionMenu = false;
+    },
+    
+    // 显示服务操作菜单
+    showActionMenuForService(service, event) {
+      // 阻止事件冒泡
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+      
+      // 设置当前激活的服务
+      this.activeService = service;
+      
+      // 计算菜单位置
+      if (event && event.target) {
+        // 获取按钮元素
+        const buttonElement = event.target.closest('.modern-action-btn');
+        if (buttonElement) {
+          const rect = buttonElement.getBoundingClientRect();
+          
+          // 计算菜单位置，确保它显示在按钮的右侧
+          const menuTop = rect.top;
+          const menuLeft = rect.right + 10;
+          
+          // 检查是否超出屏幕边界
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          
+          // 如果超出右侧边界，则显示在左侧
+          const finalLeft = menuLeft + 180 > viewportWidth ? rect.left - 190 : menuLeft;
+          
+          // 如果超出底部边界，则向上移动
+          const finalTop = menuTop + 250 > viewportHeight ? viewportHeight - 260 : menuTop;
+          
+          this.actionMenuStyle = {
+            position: 'fixed',
+            top: `${finalTop}px`,
+            left: `${finalLeft}px`,
+            transform: 'none',
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            padding: '16px',
+            borderRadius: '16px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.6)',
+            zIndex: 1500,
+            minWidth: '180px',
+            animation: 'menu-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)'
+          };
+        }
+      }
+      
+      // 显示菜单
+      this.showActionMenu = true;
+      
+      // 添加点击外部关闭菜单的事件监听
+      setTimeout(() => {
+        document.addEventListener('click', this.handleOutsideClick);
+      }, 0);
+    },
+    
+    // 处理点击外部关闭菜单
+    handleOutsideClick(event) {
+      if (this.showActionMenu && this.$el && !this.$el.querySelector('.service-action-menu').contains(event.target)) {
+        this.hideActionMenu();
+      }
+    },
   }
 };
 </script>
@@ -991,12 +1109,15 @@ export default {
 }
 
 .service-sidebar {
-  width: 240px; /* 增加宽度以显示完整服务名称 */
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
+  width: 280px; /* 增加宽度以显示完整服务名称 */
+  background: linear-gradient(180deg, rgba(248, 249, 250, 0.95), rgba(255, 255, 255, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(224, 224, 224, 0.6);
   overflow-y: auto;
   flex-shrink: 0;
-  transition: width 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.5);
   
   /* 折叠状态 */
   &.collapsed {
@@ -1053,72 +1174,165 @@ export default {
   }
   
   &::-webkit-scrollbar-track {
-    background: transparent;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
   }
   
   &::-webkit-scrollbar-thumb {
-    background: rgba(180, 180, 180, 0.3);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
     backdrop-filter: blur(10px);
   }
   
   &::-webkit-scrollbar-thumb:hover {
-    background: rgba(180, 180, 180, 0.5);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.2));
+    background-clip: content-box;
   }
   
   /* Firefox兼容 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
   
   &.cdh-style {
-    background: #f5f7f8;
-    border-right: 1px solid #dde4e5;
+    background: linear-gradient(180deg, rgba(245, 247, 248, 0.95), rgba(255, 255, 255, 0.95));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(221, 228, 229, 0.6);
     
     .service-title {
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      border-bottom: 1px solid #dde4e5;
+      padding: 20px 16px 16px 24px;
+      border-bottom: 1px solid rgba(221, 228, 229, 0.6);
       position: sticky;
       top: 0;
       z-index: 10;
-      background: #f5f7f8;
+      background: linear-gradient(180deg, rgba(245, 247, 248, 0.95), rgba(255, 255, 255, 0.95));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      color: #0076ce; /* 使用CDH风格的蓝色 */
+      gap: 16px;
       
-      .service-more {
-        margin-left: auto;
+      .cluster-info {
+        flex: 1;
+        min-width: 0; /* 允许flex子项收缩 */
+        
+        .cluster-name {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1D1D1F;
+          letter-spacing: -0.5px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          margin-bottom: 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
+        .cluster-details {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          
+          .cluster-frame {
+            font-size: 13px;
+            font-weight: 600;
+            color: #007AFF;
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 122, 255, 0.2);
+            white-space: nowrap;
+          }
+          
+          .cluster-mode {
+            font-size: 12px;
+            font-weight: 500;
+            color: #34C759;
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(48, 176, 199, 0.1));
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            white-space: nowrap;
+          }
+        }
+      }
+      
+      .loading-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #8E8E93;
+        letter-spacing: -0.3px;
+      }
+      
+      .sidebar-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0; /* 防止控制按钮被压缩 */
       }
     }
     
     .group-title {
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      background-color: #e8eef0;
-      color: #333;
-      border-bottom: 1px solid #dde4e5;
-      border-top: 1px solid #dde4e5;
+      padding: 16px 24px 12px;
+      font-size: 15px;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+      color: #007AFF;
+      border-bottom: 1px solid rgba(221, 228, 229, 0.8);
+      border-top: 1px solid rgba(221, 228, 229, 0.8);
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: relative;
+      letter-spacing: -0.3px;
+      text-shadow: 0 1px 2px rgba(0, 122, 255, 0.1);
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
       
-      &:hover {
-        background-color: #dde4e5;
-      }
-      
-      .group-icon {
-        font-size: 16px;
-        color: #0076ce;
+      &::before {
+        content: '';
+        position: absolute;
+        left: 24px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 16px;
+        background: linear-gradient(180deg, #007AFF, #5856D6);
+        border-radius: 2px;
         margin-right: 8px;
       }
       
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 24px;
+        right: 24px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.3), transparent);
+      }
+      
+      &:hover {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+      }
+      
+      .group-icon {
+        font-size: 18px;
+        color: #007AFF;
+        margin-left: 12px;
+        margin-right: 8px;
+        transition: all 0.3s ease;
+      }
+      
       .collapse-icon {
-        font-size: 12px;
-        color: #666;
+        font-size: 14px;
+        color: #8E8E93;
+        transition: all 0.3s ease;
       }
     }
     
@@ -1129,46 +1343,75 @@ export default {
     .service-item {
       display: flex;
       align-items: center;
-      padding: 6px 12px 6px 16px;
+      padding: 8px 12px 8px 20px;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
       position: relative;
-      height: 36px;
-      border-bottom: 1px solid #e8eef0;
+      min-height: 48px;
+      border-bottom: 1px solid rgba(232, 238, 240, 0.6);
+      margin: 2px 8px;
+      border-radius: 12px;
+      gap: 8px;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        background: linear-gradient(135deg, #007AFF, #5856D6);
+        border-radius: 12px 0 0 12px;
+        transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      }
       
       &:hover {
-        background-color: #edf2f4;
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+        transform: translateX(4px) translateY(-1px);
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.1);
+        
+        &::before {
+          width: 4px;
+        }
       }
       
       &.active {
-        background-color: #d7e8f7;
-        border-left: 3px solid #0076ce; /* CDH风格的蓝色边框 */
-        padding-left: 13px; /* 3px border compensated */
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+        transform: translateX(6px);
+        box-shadow: 0 6px 20px rgba(0, 122, 255, 0.2);
+        
+        &::before {
+          width: 4px;
+        }
       }
       
       .status-indicator {
-        margin-right: 8px;
-        width: 16px;
+        width: 20px;
         text-align: center;
+        flex-shrink: 0;
         
         .status-icon {
-          font-size: 14px;
+          font-size: 16px;
+          transition: all 0.3s ease;
           
           &.success {
-            color: #52c41a;
+            color: #34C759;
+            filter: drop-shadow(0 2px 4px rgba(52, 199, 89, 0.3));
           }
           
           &.warning {
-            color: #f0a400; /* CDH风格的警告黄色 */
+            color: #FF9500;
+            filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.3));
           }
           
           &.error {
-            color: #db1d00; /* CDH风格的错误红色 */
+            color: #FF3B30;
+            filter: drop-shadow(0 2px 4px rgba(255, 59, 48, 0.3));
           }
           
           &.empty {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             display: inline-block;
           }
         }
@@ -1178,113 +1421,180 @@ export default {
         flex: 1;
         display: flex;
         align-items: center;
+        min-width: 0;
+        overflow: hidden;
         
         .service-icon {
-          margin-right: 8px;
-          width: 20px;
-          height: 20px;
+          margin-right: 12px;
+          width: 24px;
+          height: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
+          border-radius: 8px;
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+          transition: all 0.3s ease;
           
           .svg-icon {
-            font-size: 20px;
-            color: #0076ce;
+            font-size: 16px;
+            color: #007AFF;
+            transition: all 0.3s ease;
           }
         }
         
         .service-name {
           flex: 1;
-          font-size: 13px;
-          color: #0076ce; /* 服务名称使用CDH风格的蓝色 */
+          font-size: 14px;
+          color: #1D1D1F;
+          font-weight: 500;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
           padding-right: 8px;
+          letter-spacing: -0.2px;
+          transition: all 0.3s ease;
+        }
+      }
+      
+      &:hover .service-name-container {
+        .service-icon {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+          transform: scale(1.05);
+          
+          .svg-icon {
+            color: #0056CC;
+          }
+        }
+        
+        .service-name {
+          color: #007AFF;
+        }
+      }
+      
+      &.active .service-name-container {
+        .service-icon {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+          
+          .svg-icon {
+            color: #0056CC;
+          }
+        }
+        
+        .service-name {
+          color: #007AFF;
+          font-weight: 600;
         }
       }
       
       .alert-indicators {
         display: flex;
         align-items: center;
-        margin-right: 8px;
+        flex-shrink: 0;
+        gap: 6px;
         
         .alert-badge {
           display: flex;
           align-items: center;
-          margin-right: 4px;
           cursor: pointer;
           line-height: 1;
+          padding: 2px 6px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+          gap: 3px;
+          
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
           
           .error-color {
-            color: #db1d00; /* CDH风格的错误红色 */
+            color: #FF3B30;
             font-size: 14px;
+            filter: drop-shadow(0 1px 2px rgba(255, 59, 48, 0.3));
           }
           
           .warning-color {
-            color: #f0a400; /* CDH风格的警告黄色 */
+            color: #FF9500;
             font-size: 14px;
+            filter: drop-shadow(0 1px 2px rgba(255, 149, 0, 0.3));
           }
           
           .alert-count {
-            font-size: 14px;
-            margin-left: 2px;
-            font-weight: 500;
+            font-size: 12px;
+            font-weight: 600;
             position: relative;
-            top: 1px;
+            top: 0;
             
             &.warning-color {
-              color: #f0a400; /* CDH风格的警告黄色 */
+              color: #FF9500;
             }
             
             &.error-color {
-              color: #db1d00; /* CDH风格的错误红色 */
+              color: #FF3B30;
             }
           }
         }
         
         .restart-icon {
-          font-size: 14px;
-          color: #f0a400; /* CDH风格的警告黄色 */
+          font-size: 16px;
+          color: #FF9500;
           cursor: pointer;
+          padding: 4px;
+          border-radius: 6px;
+          background: rgba(255, 149, 0, 0.1);
+          transition: all 0.3s ease;
+          filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.2));
+          
+          &:hover {
+            background: rgba(255, 149, 0, 0.15);
+            transform: scale(1.1) rotate(90deg);
+          }
         }
       }
       
       .expand-icon {
-        font-size: 12px;
-        color: #999;
-        margin-left: 6px;
+        margin-left: 8px;
         position: relative;
         cursor: pointer;
         display: flex;
         align-items: center;
+        flex-shrink: 0;
         
         .modern-action-btn {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: transparent;
-          border: none;
-          transition: all 0.2s ease;
-          opacity: 0; /* 默认隐藏 */
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.9));
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+          opacity: 1;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
           
           &:hover {
-            background-color: rgba(0, 118, 206, 0.08);
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+            transform: scale(1.05) translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
+            border-color: rgba(0, 122, 255, 0.2);
+            color: #007AFF;
           }
           
           &:active {
-            background-color: rgba(0, 118, 206, 0.12);
-            transform: translateY(0);
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+            transform: scale(0.95);
+            box-shadow: 0 1px 4px rgba(0, 122, 255, 0.2);
           }
           
           .anticon {
             font-size: 16px;
-            color: #0076ce;
+            color: #555;
           }
         }
         
@@ -1312,85 +1622,141 @@ export default {
 
 /* 现代化下拉菜单样式 */
 :deep(.modern-dropdown-menu) {
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
   
   .ant-menu-item {
-    border-radius: 8px;
-    margin: 4px 0;
+    border-radius: 12px;
+    margin: 4px 8px;
     padding: 12px 16px;
     height: auto;
-    line-height: 1.2;
+    line-height: 1.3;
     display: flex;
     align-items: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     font-size: 14px;
+    font-weight: 500;
     position: relative;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(240, 240, 240, 0.8);
+    background-color: transparent;
+    border: none;
     
     &::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 4px;
+      width: 3px;
       height: 100%;
       background: transparent;
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      border-radius: 0 2px 2px 0;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border-radius: 12px;
     }
     
     .anticon {
       margin-right: 12px;
       font-size: 16px;
-      transition: all 0.3s ease;
-      background: rgba(0, 118, 206, 0.08);
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #0076ce;
+      color: #007AFF;
+      position: relative;
+      z-index: 2;
+    }
+    
+    span {
+      position: relative;
+      z-index: 2;
+      color: #1D1D1F;
+      transition: color 0.3s ease;
     }
     
     &:hover {
-      background: rgba(240, 246, 255, 0.9);
-      color: #0076ce;
-      transform: translateX(4px);
-      box-shadow: 0 4px 12px rgba(0, 118, 206, 0.1);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
+      color: #007AFF;
+      transform: translateX(3px) translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
       
       &::before {
-        background: #0076ce;
+        background: linear-gradient(135deg, #007AFF, #5856D6);
+        width: 4px;
+      }
+      
+      &::after {
+        opacity: 1;
       }
       
       .anticon {
-        transform: scale(1.1);
-        background: rgba(0, 118, 206, 0.15);
+        transform: scale(1.1) rotate(5deg);
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+        color: #0056CC;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+      }
+      
+      span {
+        color: #007AFF;
       }
     }
     
     &:active {
-      background-color: rgba(230, 239, 252, 0.9);
-      transform: scale(0.98) translateX(4px);
-      box-shadow: 0 2px 8px rgba(0, 118, 206, 0.08);
+      transform: translateX(2px) scale(0.98);
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
     }
   }
   
   .ant-menu-item-divider {
-    margin: 8px 0;
-    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.08), transparent);
+    margin: 6px 12px;
+    background: #f0f0f0;
     height: 1px;
   }
-}
-
-:deep(.ant-dropdown-menu) {
-  padding: 4px 0;
-  border-radius: 8px;
-  overflow: hidden;
+  
+  /* 菜单项出现动画 */
+  .ant-menu-item:nth-child(1) {
+    animation: menu-item-appear 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation-delay: 0.05s;
+    opacity: 0;
+  }
+  
+  .ant-menu-item:nth-child(2) {
+    animation: menu-item-appear 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation-delay: 0.1s;
+    opacity: 0;
+  }
+  
+  .ant-menu-item:nth-child(3) {
+    animation: menu-item-appear 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation-delay: 0.15s;
+    opacity: 0;
+  }
+  
+  .ant-menu-item:nth-child(5) {
+    animation: menu-item-appear 0.4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation-delay: 0.2s;
+    opacity: 0;
+  }
 }
 
 .service-content {
@@ -1443,26 +1809,63 @@ export default {
 .sidebar-controls {
   display: flex;
   align-items: center;
+  gap: 8px;
+  margin-left: 8px;
 }
 
 .sidebar-collapse-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f6ff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.9));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #0076ce;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  color: #1D1D1F;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 12px;
+  }
   
   &:hover {
-    background-color: #d7e8f7;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+    transform: scale(1.05) translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 122, 255, 0.2);
+    color: #007AFF;
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: scale(0.95);
+    box-shadow: 0 1px 4px rgba(0, 122, 255, 0.2);
   }
   
   .anticon {
     font-size: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
   }
 }
 
@@ -1473,43 +1876,48 @@ export default {
   }
   
   .ant-popover-inner {
-    border-radius: 8px;
-    box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 
-                0 9px 28px 0 rgba(0, 0, 0, 0.05), 
-                0 12px 48px 16px rgba(0, 0, 0, 0.03);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 
+                0 8px 16px rgba(0, 0, 0, 0.1),
+                0 2px 4px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 }
 
 .service-popover-content {
-  width: 260px;
-  background: #fff;
+  width: 280px;
+  background: transparent;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .service-popover-header {
   display: flex;
-  padding: 12px;
+  padding: 16px 20px;
   align-items: center;
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #e8e8e8;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.03), rgba(88, 86, 214, 0.03));
+  border-bottom: 1px solid rgba(232, 232, 232, 0.6);
 }
 
 .service-popover-icon {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background-color: #e6effc;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: 16px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
   
   .svg-icon {
     font-size: 24px;
-    color: #0076ce;
+    color: #007AFF;
   }
 }
 
@@ -1518,26 +1926,37 @@ export default {
 }
 
 .service-popover-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: #222b45;
-  margin-bottom: 2px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
 }
 
 .service-popover-version {
-  font-size: 12px;
-  color: #8f959e;
+  font-size: 13px;
+  color: #8E8E93;
+  font-weight: 500;
 }
 
 .service-popover-info {
-  padding: 12px;
+  padding: 16px 20px;
   
   .service-popover-status, 
   .service-popover-alerts,
   .service-popover-config {
-    margin-bottom: 10px;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(248, 249, 250, 0.8);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(0, 122, 255, 0.05);
+      transform: translateY(-1px);
+    }
     
     &:last-child {
       margin-bottom: 0;
@@ -1545,27 +1964,29 @@ export default {
   }
   
   .info-label {
-    font-size: 13px;
-    color: #5f6369;
-    margin-right: 8px;
-    width: 70px;
+    font-size: 14px;
+    color: #6D6D70;
+    margin-right: 12px;
+    width: 80px;
     flex-shrink: 0;
+    font-weight: 500;
   }
   
   .info-value {
-    font-size: 13px;
-    color: #222b45;
+    font-size: 14px;
+    color: #1D1D1F;
+    font-weight: 500;
     
     &.success {
-      color: #52c41a;
+      color: #34C759;
     }
     
     &.warning {
-      color: #f0a400;
+      color: #FF9500;
     }
     
     &.error {
-      color: #db1d00;
+      color: #FF3B30;
     }
   }
   
@@ -1576,57 +1997,94 @@ export default {
     flex: 1;
     
     .action-button {
-      padding: 0 8px;
-      height: 24px;
+      padding: 4px 12px;
+      height: 28px;
       font-size: 12px;
-      line-height: 24px;
-      border-radius: 12px;
-      background-color: #f0f6ff;
-      color: #0076ce;
-      transition: all 0.3s ease;
+      line-height: 20px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+      color: #007AFF;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      font-weight: 500;
+      border: 1px solid rgba(0, 122, 255, 0.2);
       
       &:hover {
-        background-color: #d7e8f7;
-        color: #0057a6;
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
       }
     }
   }
 }
 
 .service-popover-actions {
-  padding: 12px;
-  background-color: #fafafa;
-  border-top: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(248, 249, 250, 0.8), rgba(255, 255, 255, 0.8));
+  border-top: 1px solid rgba(240, 240, 240, 0.6);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   
   .button-row {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
     
     .ant-btn {
       flex: 1;
-      font-size: 12px;
-      height: 28px;
-      padding: 0 8px;
-      transition: all 0.3s ease;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      font-size: 13px;
+      height: 36px;
+      padding: 0 12px;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      font-weight: 500;
+      border: 1px solid rgba(0, 0, 0, 0.1);
       
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      &.ant-btn-primary {
+        background: linear-gradient(135deg, #007AFF, #5856D6);
+        border-color: transparent;
+        color: white;
+        
+        &:hover {
+          background: linear-gradient(135deg, #0056CC, #4A44B8);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3);
+        }
+      }
+      
+      &.ant-btn-default {
+        background: rgba(255, 255, 255, 0.9);
+        color: #1D1D1F;
+        
+        &:hover {
+          background: rgba(0, 122, 255, 0.05);
+          color: #007AFF;
+          border-color: rgba(0, 122, 255, 0.3);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 6px 16px rgba(0, 122, 255, 0.15);
+        }
+      }
+      
+      &.ant-btn-danger {
+        background: linear-gradient(135deg, #FF3B30, #FF2D55);
+        border-color: transparent;
+        color: white;
+        
+        &:hover {
+          background: linear-gradient(135deg, #D70015, #E6002D);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 6px 16px rgba(255, 59, 48, 0.3);
+        }
       }
       
       &:active {
-        transform: translateY(0);
+        transform: translateY(0) scale(0.98);
       }
       
       .anticon {
-        font-size: 12px;
-        margin-right: 4px;
+        font-size: 14px;
+        margin-right: 6px;
       }
     }
   }
@@ -1672,35 +2130,174 @@ export default {
 /* 现代化下拉菜单容器 */
 :deep(.modern-dropdown) {
   .ant-dropdown-menu {
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 
-                0 9px 28px 0 rgba(0, 0, 0, 0.08), 
-                0 12px 48px 16px rgba(0, 0, 0, 0.05);
-    padding: 8px;
-    animation: dropdown-zoom-in 0.2s ease;
-    background: linear-gradient(145deg, #ffffff, #f8faff);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 4px 8px rgba(0, 0, 0, 0.06),
+                0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 20px 16px;
+    animation: dropdown-smooth-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    overflow: visible;
     transform-origin: top right !important;
-    margin-left: 40px !important;
+    min-width: 200px;
+    z-index: 1500 !important;
+    position: relative;
+    margin-top: 10px;
+  }
+  
+  .ant-menu-item {
+    margin: 6px 8px;
+    border-radius: 18px;
+    padding: 16px 20px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    animation: menu-item-smooth-slide-in 0.4s ease-out;
+    animation-fill-mode: both;
+    
+    &:nth-child(1) { animation-delay: 0.1s; }
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.2s; }
+    &:nth-child(4) { animation-delay: 0.25s; }
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      border-radius: 18px 0 0 18px;
+      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+      transform: translateX(4px) translateY(-1px) scale(1.01);
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.15), 0 3px 10px rgba(0, 122, 255, 0.08);
+      
+      &::before {
+        width: 5px;
+      }
+    }
+    
+    &:active {
+      transform: translateX(2px) scale(0.98);
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+    }
+    
+    .anticon {
+      margin-right: 12px;
+      font-size: 16px;
+      color: #007AFF;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+      transition: all 0.3s ease;
+    }
+    
+    span {
+      color: #1D1D1F;
+      font-weight: 500;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+    
+    &:hover {
+      .anticon {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+        color: #0056CC;
+        transform: scale(1.1);
+      }
+      
+      span {
+        color: #007AFF;
+      }
+    }
   }
 }
 
-@keyframes dropdown-zoom-in {
+@keyframes dropdown-fade-in {
   0% {
     opacity: 0;
-    transform: scale(0.8) translateX(-20px);
+    transform: translateY(12px) scale(0.95) rotateX(-10deg);
+    filter: blur(4px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(4px) scale(0.98) rotateX(-2deg);
+    filter: blur(1px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateX(0);
+    transform: translateY(0) scale(1) rotateX(0deg);
+    filter: blur(0);
   }
 }
 
-@keyframes menu-item-appear {
+@keyframes dropdown-smooth-appear {
   0% {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: scale(0.85) translateY(-15px) rotateX(-10deg);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 0.9;
+    transform: scale(1.05) translateY(-3px) rotateX(-2deg);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotateX(0deg);
+    filter: blur(0);
+  }
+}
+
+@keyframes menu-item-smooth-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px) translateY(10px) scale(0.9);
+    filter: blur(4px);
+  }
+  70% {
+    opacity: 0.8;
+    transform: translateX(3px) translateY(-2px) scale(1.02);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dropdown-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menu-item-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
   }
   100% {
     opacity: 1;
@@ -1708,26 +2305,21 @@ export default {
   }
 }
 
-/* 菜单项出现动画 */
-:deep(.modern-dropdown-menu) {
-  .ant-menu-item:nth-child(1) {
-    animation: menu-item-appear 0.3s ease forwards;
-    animation-delay: 0.05s;
+@keyframes menu-item-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-15px) translateY(5px) scale(0.9);
+    filter: blur(2px);
   }
-  
-  .ant-menu-item:nth-child(2) {
-    animation: menu-item-appear 0.3s ease forwards;
-    animation-delay: 0.1s;
+  60% {
+    opacity: 0.8;
+    transform: translateX(2px) translateY(-1px) scale(1.02);
+    filter: blur(0.5px);
   }
-  
-  .ant-menu-item:nth-child(3) {
-    animation: menu-item-appear 0.3s ease forwards;
-    animation-delay: 0.15s;
-  }
-  
-  .ant-menu-item:nth-child(5) {
-    animation: menu-item-appear 0.3s ease forwards;
-    animation-delay: 0.2s;
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
@@ -1785,29 +2377,255 @@ export default {
 
 /* 危险操作按钮样式 */
 :deep(.modern-dropdown-menu) .ant-menu-item.danger-item {
-  color: #555;
+  color: #1D1D1F;
   
   .anticon {
-    background: rgba(255, 77, 79, 0.08);
-    color: #ff4d4f;
+    background: linear-gradient(135deg, rgba(255, 59, 48, 0.1), rgba(255, 45, 85, 0.1));
+    color: #FF3B30;
+  }
+  
+  span {
+    color: #1D1D1F;
   }
   
   &:hover {
-    background-color: rgba(255, 241, 240, 0.9);
-    color: #ff4d4f;
+    background: linear-gradient(135deg, rgba(255, 59, 48, 0.08), rgba(255, 45, 85, 0.08));
+    color: #FF3B30;
+    transform: translateX(3px) translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2);
     
     &::before {
-      background: #ff4d4f;
+      background: linear-gradient(135deg, #FF3B30, #FF2D55);
+      width: 4px;
+    }
+    
+    &::after {
+      opacity: 1;
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.05), rgba(255, 45, 85, 0.05));
     }
     
     .anticon {
-      color: #ff4d4f;
-      background: rgba(255, 77, 79, 0.15);
+      color: #D70015;
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 45, 85, 0.2));
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
+    }
+    
+    span {
+      color: #FF3B30;
     }
   }
   
   &:active {
-    background-color: rgba(255, 204, 199, 0.9);
+    transform: translateX(2px) scale(0.98);
+    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.25);
   }
 }
-</style> 
+
+:deep(.service-action-dropdown) {
+  z-index: 1500 !important; /* 确保服务操作下拉菜单显示在最上层 */
+  position: fixed !important;
+}
+
+:deep(.modern-dropdown) {
+  .ant-dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+                0 6px 16px rgba(0, 0, 0, 0.08),
+                0 2px 6px rgba(0, 0, 0, 0.06);
+    padding: 8px;
+    animation: dropdown-smooth-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    overflow: visible;
+    transform-origin: top right !important;
+    min-width: 140px;
+    z-index: 1500 !important;
+    position: relative;
+    margin-top: 4px;
+  }
+}
+
+:deep(.ant-dropdown) {
+  z-index: 1500 !important;
+}
+
+:deep(.service-action-dropdown) {
+  z-index: 1500 !important; /* 确保服务操作下拉菜单显示在最上层 */
+  position: absolute !important;
+  top: 40px !important;
+}
+
+.service-action-menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 6px 16px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: 1500;
+  min-width: 180px;
+  animation: menu-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(240, 240, 240, 0.8);
+  
+  span {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1D1D1F;
+    letter-spacing: -0.3px;
+  }
+  
+  .anticon {
+    font-size: 16px;
+    color: #8E8E93;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #1D1D1F;
+      transform: scale(1.1);
+    }
+  }
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: linear-gradient(135deg, #007AFF, #5856D6);
+    border-radius: 12px 0 0 12px;
+    transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  .anticon {
+    font-size: 16px;
+    color: #007AFF;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+  
+  span {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1D1D1F;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+    
+    &::before {
+      width: 4px;
+    }
+    
+    .anticon {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+      transform: scale(1.1);
+      color: #0056CC;
+    }
+    
+    span {
+      color: #007AFF;
+    }
+  }
+  
+  &.danger {
+    .anticon {
+      color: #FF3B30;
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.1), rgba(255, 45, 85, 0.1));
+    }
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(255, 59, 48, 0.05), rgba(255, 45, 85, 0.05));
+      
+      &::before {
+        background: linear-gradient(135deg, #FF3B30, #FF2D55);
+      }
+      
+      .anticon {
+        background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 45, 85, 0.2));
+        color: #D70015;
+      }
+      
+      span {
+        color: #FF3B30;
+      }
+    }
+  }
+}
+
+.menu-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
+  margin: 4px 8px;
+}
+
+@keyframes menu-appear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.95);
+    filter: blur(4px);
+  }
+  70% {
+    opacity: 0.8;
+    transform: translate(-50%, -51%) scale(1.02);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+}
+</style>

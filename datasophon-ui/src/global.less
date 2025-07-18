@@ -30,6 +30,107 @@
   }
 }
 
+/* 全局下拉菜单美化 - 使用:global确保更高优先级 */
+:global(.ant-dropdown) {
+  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  
+  :global(.ant-dropdown-menu) {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+                0 4px 10px rgba(0, 0, 0, 0.06) !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(233, 233, 233, 0.8) !important;
+    padding: 8px 0 !important;
+    background: white !important;
+  }
+  
+  :global(.ant-dropdown-menu-item), 
+  :global(.ant-dropdown-menu-submenu-title) {
+    margin: 2px 8px !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(25, 118, 210, 0.1) 0%, rgba(255, 255, 255, 0) 80%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+      color: #1976d2 !important;
+      transform: translateX(2px);
+      
+      &::after {
+        opacity: 1;
+      }
+    }
+    
+    &:active {
+      background-color: #e6f0ff !important;
+      transform: scale(0.98);
+    }
+    
+    :global(.anticon) {
+      margin-right: 10px !important;
+      font-size: 16px !important;
+      color: #1976d2 !important;
+      transition: transform 0.2s ease !important;
+      position: relative;
+      z-index: 1;
+    }
+    
+    &:hover :global(.anticon) {
+      transform: scale(1.1);
+    }
+  }
+  
+  :global(.ant-dropdown-menu-item-divider) {
+    margin: 6px 12px !important;
+    background: #f0f0f0 !important;
+    height: 1px !important;
+  }
+}
+
+/* Select下拉菜单美化 */
+:global(.ant-select-dropdown) {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(233, 233, 233, 0.8) !important;
+  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  padding: 8px 0 !important;
+  
+  :global(.ant-select-item) {
+    margin: 2px 8px !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s !important;
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+    }
+    
+    &.ant-select-item-option-selected,
+    &.ant-select-item-option-active {
+      background-color: #f0f7ff !important;
+      color: #1976d2 !important;
+      font-weight: 500 !important;
+    }
+  }
+}
+
 /* 操作系统tooltip专用样式 */
 .os-tooltip {
   /* 增大最大宽度 */
@@ -480,6 +581,17 @@ body {
   }
 }
 
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
@@ -550,5 +662,115 @@ body {
     font-size: 12px;
     line-height: 1.5;
     color: #333333;
+  }
+} 
+
+/* 日期选择器下拉菜单美化 */
+:global(.ant-picker-dropdown) {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(233, 233, 233, 0.8) !important;
+  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  padding: 8px 0 !important;
+  
+  :global(.ant-select-item) {
+    margin: 2px 8px !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s !important;
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+    }
+    
+    &.ant-select-item-option-selected,
+    &.ant-select-item-option-active {
+      background-color: #f0f7ff !important;
+      color: #1976d2 !important;
+      font-weight: 500 !important;
+    }
+  }
+  
+  :global(.ant-picker-panel) {
+    border-radius: 8px !important;
+    background: white !important;
+  }
+  
+  :global(.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner) {
+    background: #1976d2 !important;
+  }
+  
+  :global(.ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-range-start):not(.ant-picker-cell-range-end):not(.ant-picker-cell-range-hover-start):not(.ant-picker-cell-range-hover-end) .ant-picker-cell-inner) {
+    background: #f0f7ff !important;
+  }
+  
+  :global(.ant-picker-header button:hover) {
+    color: #1976d2 !important;
+  }
+  
+  :global(.ant-picker-today-btn) {
+    color: #1976d2 !important;
+  }
+}
+
+/* 级联选择器下拉菜单美化 */
+:global(.ant-cascader-dropdown) {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(233, 233, 233, 0.8) !important;
+  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  background: white !important;
+  
+  :global(.ant-cascader-menu) {
+    border-right-color: #f0f0f0 !important;
+    padding: 4px 0 !important;
+  }
+  
+  :global(.ant-cascader-menu-item) {
+    padding: 10px 14px !important;
+    transition: all 0.2s !important;
+    border-radius: 8px !important;
+    margin: 2px 4px !important;
+    
+    &:hover {
+      background-color: #f0f7ff !important;
+      color: #1976d2 !important;
+    }
+    
+    &-active:not(.ant-cascader-menu-item-disabled),
+    &-active:hover:not(.ant-cascader-menu-item-disabled) {
+      background-color: #f0f7ff !important;
+      color: #1976d2 !important;
+      font-weight: 500 !important;
+    }
+    
+    :global(.ant-cascader-menu-item-expand-icon) {
+      color: #1976d2 !important;
+    }
+  }
+}
+
+/* 树形选择下拉菜单美化 */
+:global(.ant-select-tree-dropdown) {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(233, 233, 233, 0.8) !important;
+  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  padding: 8px !important;
+  background: white !important;
+  
+  :global(.ant-select-tree-node-content-wrapper):hover {
+    background-color: #f0f7ff !important;
+  }
+  
+  :global(.ant-select-tree-node-selected) {
+    background-color: #f0f7ff !important;
+    color: #1976d2 !important;
   }
 } 

@@ -29,10 +29,11 @@
     <a-dropdown 
       :trigger="['click']" 
       placement="bottomRight" 
-      overlayClassName="apple-style-dropdown" 
-      :getPopupContainer="triggerNode => triggerNode.parentNode"
+      overlayClassName="apple-style-dropdown service-option-dropdown" 
+      :getPopupContainer="() => document.body"
+      :align="{offset: [-12, 12]}"
     >
-      <button class="apple-style-more-btn">
+      <button class="apple-style-more-btn" @click.stop>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4C10 5.10457 10.8954 6 12 6Z" fill="#1976d2"/>
           <path d="M12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14Z" fill="#1976d2"/>
@@ -81,6 +82,8 @@ export default {
       visible: false,
       confirmLoading: false,
       clusterId: Number(localStorage.getItem("clusterId") || -1),
+      dropdownVisible: false, // 添加控制下拉菜单显示的状态
+      menuContainer: null, // 存储下拉菜单容器DOM引用
     };
   },
   computed: {
@@ -90,6 +93,20 @@ export default {
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    // 修复 getPopupContainer 方法
+    getPopupContainer() {
+      // 确保返回当前组件的DOM元素作为容器，而不是document.body
+      return this.$el;
+    },
+    // 处理下拉菜单可见性变化
+    handleDropdownVisibleChange(visible) {
+      this.dropdownVisible = visible;
+    },
+    // 切换下拉菜单显示状态
+    toggleDropdown(e) {
+      e.stopPropagation();
+      this.dropdownVisible = !this.dropdownVisible;
+    },
     handleCancel(e) {
       this.visible = false;
     },
@@ -172,6 +189,21 @@ export default {
       });
     },
   },
+  mounted() {
+    // 获取菜单容器DOM引用
+    this.menuContainer = document.querySelector('.cdh-service-page');
+    
+    // 添加点击外部关闭下拉菜单的处理
+    document.addEventListener('click', (e) => {
+      if (!this.$el.contains(e.target)) {
+        this.dropdownVisible = false;
+      }
+    });
+  },
+  beforeDestroy() {
+    // 移除事件监听器
+    document.removeEventListener('click', this.handleOutsideClick);
+  }
 };
 </script>
 <style lang="less" scoped>
@@ -190,100 +222,192 @@ export default {
 }
 
 .apple-style-more-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  border: none;
-  transition: all 0.2s ease;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.9));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   padding: 0;
   outline: none;
   cursor: pointer;
   position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   
   &:hover {
-    background-color: rgba(25, 118, 210, 0.08);
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
+    border-color: rgba(0, 122, 255, 0.3);
   }
   
   &:active {
-    background-color: rgba(25, 118, 210, 0.16);
-    transform: scale(0.96);
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
   }
   
   &:focus {
-    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   
-  &::after {
+  &::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 8px;
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.3);
-    transition: box-shadow 0.3s ease;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(0, 122, 255, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.3s ease;
+    opacity: 0;
   }
   
-  &:active::after {
-    box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
+  &:hover::before {
+    width: 60px;
+    height: 60px;
+    opacity: 1;
   }
   
-  .anticon {
-    font-size: 16px;
-    color: #1976d2;
+  svg {
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s ease;
+    z-index: 1;
+    
+    path {
+      fill: #007AFF;
+      transition: fill 0.3s ease;
+    }
+  }
+  
+  &:hover svg {
+    transform: rotate(90deg) scale(1.1);
+    
+    path {
+      fill: #0056CC;
+    }
   }
 }
 
 .service-option-wrapper {
   position: relative;
   display: inline-block;
+  z-index: 100; /* 确保下拉菜单在其他元素之上 */
+}
+
+:global(.service-option-dropdown) {
+  z-index: 1500 !important; /* 提高z-index确保显示在最上层 */
+}
+
+:global(.ant-dropdown) {
+  z-index: 1500 !important;
 }
 
 :global(.apple-style-dropdown) {
-  animation: fade-in 0.15s ease-out;
-  
-  .ant-dropdown-menu {
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-                0 4px 10px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-    min-width: 220px;
-    border: 1px solid rgba(233, 233, 233, 0.8);
-    padding: 8px 4px;
+  animation: dropdown-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  z-index: 1500 !important; /* 提高z-index确保显示在最上层 */
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu) {
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 4px 8px rgba(0, 0, 0, 0.06),
+                0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: visible;
+    min-width: 260px;
+    max-width: 300px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    padding: 20px 16px;
+    transform-origin: top right;
+    z-index: 1500;
+    animation: dropdown-smooth-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    position: relative;
+    margin-top: 10px; /* 增加顶部间距，防止叠在一起 */
   }
   
-  .ant-dropdown-menu-item {
-    margin: 2px 4px;
-    border-radius: 8px;
-    padding: 10px 14px;
+:global(.apple-style-dropdown .ant-dropdown-menu-item) {
+    margin: 6px 8px;
+    border-radius: 18px;
+    padding: 16px 20px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    animation: menu-item-smooth-slide-in 0.4s ease-out;
+    animation-fill-mode: both;
     
-    &:hover {
-      background-color: #f0f7ff;
+    &:nth-child(1) { animation-delay: 0.1s; }
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.2s; }
+    &:nth-child(4) { animation-delay: 0.25s; }
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      border-radius: 18px 0 0 18px;
+      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     
-    &:active {
-      background-color: #e6f0ff;
-    }
-    
-    .anticon {
-      margin-right: 10px;
-      font-size: 16px;
-      color: #1976d2;
-    }
-    
-    span {
-      color: #333;
-    }
-    
-    &:hover span {
-      color: #1976d2;
-    }
-  }
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item:hover) {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+  transform: translateX(4px) translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 20px rgba(0, 122, 255, 0.15), 0 3px 10px rgba(0, 122, 255, 0.08);
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item:hover::before) {
+  width: 5px;
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item:active) {
+  transform: translateX(2px) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item .anticon) {
+  margin-right: 12px;
+  font-size: 16px;
+  color: #007AFF;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
+  transition: all 0.3s ease;
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item span) {
+  color: #1D1D1F;
+  font-weight: 500;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item:hover .anticon) {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+  color: #0056CC;
+  transform: scale(1.1);
+}
+
+:global(.apple-style-dropdown .ant-dropdown-menu-item:hover span) {
+  color: #007AFF;
 }
 
 @keyframes fade-in {
@@ -292,6 +416,68 @@ export default {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes dropdown-smooth-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-15px) rotateX(-10deg);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 0.9;
+    transform: scale(1.05) translateY(-3px) rotateX(-2deg);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotateX(0deg);
+    filter: blur(0);
+  }
+}
+
+@keyframes menu-item-smooth-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px) translateY(10px) scale(0.9);
+    filter: blur(4px);
+  }
+  70% {
+    opacity: 0.8;
+    transform: translateX(3px) translateY(-2px) scale(1.02);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dropdown-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menu-item-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
