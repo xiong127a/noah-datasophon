@@ -40,7 +40,8 @@
               >
                 <div class="service-popover-header">
                   <div class="service-popover-icon">
-                    <svg-icon :icon-class="service.icon || 'service-default'" />
+                    <img v-if="service.serviceName === 'DATASOPHON'" src="~@/assets/img/logo.svg" alt="logo" style="width:24px;height:24px;" />
+                    <svg-icon v-else :icon-class="service.icon || 'service-default'" />
                   </div>
                   <div class="service-popover-title">
                     <div class="service-popover-name">{{ service.name }}</div>
@@ -116,8 +117,11 @@
             <!-- 服务名称(带图标) -->
             <div class="service-name-container">
               <!-- 服务图标 -->
-              <div class="service-icon">
+              <div class="service-icon" v-if="service.serviceName !== 'DATASOPHON'">
                 <svg-icon :icon-class="service.icon || 'service-default'" />
+              </div>
+              <div class="service-icon" v-else>
+                <img src="@/assets/img/logo.svg" alt="logo" style="width:16px;height:16px;" />
               </div>
               
               <!-- 服务名称 -->
@@ -200,7 +204,8 @@
               >
                 <div class="service-popover-header">
                   <div class="service-popover-icon">
-                    <svg-icon :icon-class="service.icon || 'service-default'" />
+                    <img v-if="service.serviceName === 'DATASOPHON'" src="~@/assets/img/logo.svg" alt="logo" style="width:24px;height:24px;" />
+                    <svg-icon v-else :icon-class="service.icon || 'service-default'" />
                   </div>
                   <div class="service-popover-title">
                     <div class="service-popover-name">{{ service.name }}</div>
@@ -382,10 +387,6 @@ export default {
       });
     },
     managementServices() {
-      // 打印整个menuList，帮助调试
-      console.log('全部服务列表:', JSON.stringify(this.menuList.map(s => ({name: s.name, serviceName: s.serviceName})), null, 2));
-      console.log('managementServiceNames:', this.managementServiceNames);
-      
       // 创建硬编码的大数据基础平台服务项
       const platformService = { 
         id: '0', 
@@ -408,7 +409,6 @@ export default {
         // 使用serviceName字段进行过滤，而不是name字段
         const serviceNameForFilter = service.serviceName || service.name;
         const isManagementService = this.managementServiceNames.includes(serviceNameForFilter.toUpperCase());
-        console.log(`服务 ${serviceNameForFilter} 是否在管理服务中:`, isManagementService);
         return isManagementService;
       });
       
