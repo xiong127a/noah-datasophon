@@ -78,7 +78,7 @@
                   </div>
                 </div>
                 
-                <div class="service-popover-actions">
+                <div class="service-popover-actions" v-if="service.serviceName !== 'PLATFORM'">
                   <div class="button-row">
                     <a-button type="primary" size="small" @click="handleServiceAction({key: 'start'}, service, $event)">
                       <a-icon type="caret-right" />启动
@@ -144,7 +144,7 @@
             </div>
             
             <!-- 展开按钮 -->
-            <div class="expand-icon" @click="toggleServiceMenu(service, $event)">
+            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'PLATFORM'">
               <div class="modern-action-btn">
                 <a-icon type="more" />
               </div>
@@ -174,7 +174,7 @@
       </div>
       
       <!-- 管理服务组 -->
-      <div class="service-group management-group" v-if="managementServices.length > 0">
+      <div class="service-group management-group">
         <div class="group-title" @click="toggleGroupCollapse('management')" :title="sidebarCollapsed ? 'Management Service' : ''">
           <a-icon type="control" class="group-icon" />
           <span>Management Service</span>
@@ -238,7 +238,7 @@
                   </div>
                 </div>
                 
-                <div class="service-popover-actions">
+                <div class="service-popover-actions" v-if="service.serviceName !== 'PLATFORM'">
                   <div class="button-row">
                     <a-button type="primary" size="small" @click="handleServiceAction({key: 'start'}, service, $event)">
                       <a-icon type="caret-right" />启动
@@ -304,7 +304,7 @@
             </div>
             
             <!-- 展开按钮 -->
-            <div class="expand-icon" @click="toggleServiceMenu(service, $event)">
+            <div class="expand-icon" @click="toggleServiceMenu(service, $event)" v-if="service.serviceName !== 'PLATFORM'">
               <div class="modern-action-btn">
                 <a-icon type="more" />
               </div>
@@ -354,7 +354,7 @@ export default {
       menuList: [],
       activeMenu: null,
       clusterData: null,
-      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY'],
+      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY', 'PLATFORM'],
       coreGroupCollapsed: false,
       managementGroupCollapsed: false,
       sidebarCollapsed: false,
@@ -377,15 +377,48 @@ export default {
       return this.menuList.filter(service => {
         // 使用serviceName字段进行过滤，而不是name字段
         const serviceNameForFilter = service.serviceName || service.name;
+        // 确保大小写一致的比较
         return !this.managementServiceNames.includes(serviceNameForFilter.toUpperCase());
       });
     },
     managementServices() {
-      return this.menuList.filter(service => {
+      // 打印整个menuList，帮助调试
+      console.log('全部服务列表:', JSON.stringify(this.menuList.map(s => ({name: s.name, serviceName: s.serviceName})), null, 2));
+      console.log('managementServiceNames:', this.managementServiceNames);
+      
+      // 创建硬编码的大数据基础平台服务项
+      const platformService = { 
+        id: '0', 
+        name: '大数据基础平台', 
+        serviceName: 'PLATFORM', 
+        icon: 'datasophon-overview', 
+        path: '/service-manage', 
+        serviceId: '', 
+        serviceStateCode: 2, 
+        alertNum: 0, 
+        needRestart: false, 
+        rawData: {}, 
+        menuVisible: false, 
+        popoverVisible: false, 
+        popoverInContent: false 
+      };
+      
+      // 过滤出管理服务
+      const filteredServices = this.menuList.filter(service => {
         // 使用serviceName字段进行过滤，而不是name字段
         const serviceNameForFilter = service.serviceName || service.name;
-        return this.managementServiceNames.includes(serviceNameForFilter.toUpperCase());
+        const isManagementService = this.managementServiceNames.includes(serviceNameForFilter.toUpperCase());
+        console.log(`服务 ${serviceNameForFilter} 是否在管理服务中:`, isManagementService);
+        return isManagementService;
       });
+      
+      // 如果没有找到大数据基础平台，添加它
+      const hasPlatform = filteredServices.some(s => (s.serviceName || '').toUpperCase() === 'PLATFORM');
+      if (!hasPlatform) {
+        filteredServices.unshift(platformService);
+      }
+      
+      return filteredServices;
     }
   },
   mounted() {
@@ -564,21 +597,32 @@ export default {
     
     // 使用默认菜单数据
     useDefaultMenus() {
-      this.menuList = [
+      // 首先创建不同的服务分组列表
+      const coreServicesList = [
         { id: '1', name: 'HDFS 分布式文件系统', serviceName: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '2', name: 'YARN 资源调度系统', serviceName: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '3', name: 'HBASE 分布式数据库', serviceName: 'HBASE', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '4', name: 'HIVE 数据仓库', serviceName: 'HIVE', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '5', name: 'ZOOKEEPER 分布式协调服务', serviceName: 'ZOOKEEPER', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '6', name: 'SPARK 分布式计算引擎', serviceName: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '6', name: 'SPARK 分布式计算引擎', serviceName: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false }
+      ];
+      
+      const managementServicesList = [
+        // 添加大数据基础平台作为管理服务分组的第一个
+        { id: '0', name: '大数据基础平台', serviceName: 'PLATFORM', icon: 'datasophon-overview', path: '/service-manage', serviceId: '', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '7', name: 'ALERTMANAGER 告警管理', serviceName: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '8', name: 'PROMETHEUS 监控系统', serviceName: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
         { id: '9', name: 'GRAFANA 可视化平台', serviceName: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '10', name: 'PUSHGATEWAY 数据推送', serviceName: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '10', name: 'PUSHGATEWAY 数据推送', serviceName: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false }
       ];
+      
+      // 合并两个列表
+      this.menuList = [...coreServicesList, ...managementServicesList];
       
       // 打印默认图标配置
       console.log('默认菜单数据:', this.menuList);
+      console.log('核心服务列表:', this.coreServices);
+      console.log('管理服务列表:', this.managementServices);
     },
     
     // 判断当前服务是否激活
@@ -834,6 +878,9 @@ export default {
     
     // 处理服务项点击事件
     handleServiceItemClick(service) {
+      // 打印服务信息，帮助调试
+      console.log('点击服务:', service.name, 'serviceName:', service.serviceName, 'path:', service.path);
+      
       // 立即关闭所有服务的悬浮窗
       this.closeAllPopovers();
       

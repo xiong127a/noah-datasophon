@@ -27,17 +27,7 @@ const options = {
       component: TabsView,
       redirect: '/service-manage',
       children: [
-        {
-          path: 'datasophon-overview',
-          name: 'Datasophon总览',
-          meta: {
-            notAlive: true,
-            icon: 'datasophon-overview',
-            isCluster: 'isCluster',
-          },
-          component: () => import('@/pages/overview/datasophon'),
-          children: [],
-        },
+        // 移除了datasophon-overview路由
         {
           path: 'overview',
           name: '集群总览',
@@ -60,10 +50,11 @@ const options = {
           children: [
             {
               path: '',
-              name: '服务总览',
+              name: '大数据基础平台',
               meta: {
                 invisible: true,
-                notShow: true
+                notShow: true,
+                icon: 'datasophon-overview'
               },
               component: () => import('@/pages/serviceManage/ServiceOverview'),
             },

@@ -20,7 +20,7 @@
   <div class="overview-page">
     <div v-if="!dashboardUrl" class="loading-container">
       <a-spin size="large" />
-      <p>正在加载Datasophon总览...</p>
+      <p>正在加载大数据基础平台...</p>
     </div>
     <OverViewComponent v-else :dashboardUrl="dashboardUrl" />
   </div>

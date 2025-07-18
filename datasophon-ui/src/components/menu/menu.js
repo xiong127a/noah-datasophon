@@ -306,9 +306,10 @@ export default {
             item.name = '集群总览'
           }
           if(item.path === 'datasophon-overview') {
-            item.name = 'Datasophon总览'
+            item.name = '大数据基础平台'
             if(item.meta) {
               item.meta.icon = 'datasophon-overview'
+              item.meta.invisible = true // 隐藏此菜单项
             }
           }
         })

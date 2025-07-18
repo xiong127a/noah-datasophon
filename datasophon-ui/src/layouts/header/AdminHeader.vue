@@ -175,8 +175,8 @@ export default {
     },
     regularMenus() {
       if (!this.firstMenu) return [];
-      // 排除集群管理、用户管理
-      const excludePaths = ['colony-manage', 'security-center'];
+      // 排除集群管理、用户管理以及Datasophon总览
+      const excludePaths = ['colony-manage', 'security-center', 'datasophon-overview'];
       return this.firstMenu.filter(item => !excludePaths.includes(item.path));
     },
     adminMenus() {
