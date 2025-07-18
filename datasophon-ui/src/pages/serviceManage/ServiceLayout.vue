@@ -518,16 +518,12 @@ export default {
       if (serviceMenus.length > 0 && serviceMenus[0].children) {
         // 从菜单数据中提取服务列表
         this.menuList = serviceMenus[0].children.map((item, index) => {
-          // 添加控制台日志以便调试
-          console.log('服务数据:', item);
-          
           // 使用label字段作为显示名称，使用name字段作为serviceName
           const displayName = item.label || item.name;
           const serviceName = item.name;
           
           // 将服务名称转为小写作为图标名称
           const iconName = serviceName ? serviceName.toLowerCase() : 'service-default';
-          console.log('使用图标名称:', iconName);
           
           return {
             id: String(index + 1),
@@ -551,18 +547,7 @@ export default {
         try {
           const serviceList = JSON.parse(localStorage.getItem('serviceList') || '[]');
           if (serviceList.length > 0) {
-            // 添加日志，显示服务列表数据结构
-            console.log('服务列表数据结构:', JSON.stringify(serviceList[0], null, 2));
-            console.log('服务列表是否包含label字段:', serviceList.some(item => item.label));
-            
             this.menuList = serviceList.map((item, index) => {
-              // 记录每个服务的数据
-              console.log(`服务${index+1}:`, {
-                id: item.id,
-                serviceName: item.serviceName,
-                label: item.label
-              });
-              
               // 使用label字段作为显示名称，使用serviceName字段作为服务名称
               const displayName = item.label || item.serviceName;
               const serviceName = item.serviceName;
@@ -618,11 +603,6 @@ export default {
       
       // 合并两个列表
       this.menuList = [...coreServicesList, ...managementServicesList];
-      
-      // 打印默认图标配置
-      console.log('默认菜单数据:', this.menuList);
-      console.log('核心服务列表:', this.coreServices);
-      console.log('管理服务列表:', this.managementServices);
     },
     
     // 判断当前服务是否激活
@@ -638,8 +618,6 @@ export default {
     selectMenu(menu) {
       // 更新Vuex中的serviceId
       if (menu.serviceId) {
-        console.log('选择服务菜单 - 设置serviceId:', menu.serviceId, '服务名称:', menu.name);
-        
         // 直接同步设置serviceId
         this.$store.commit('setting/setServiceId', menu.serviceId);
         
@@ -878,9 +856,6 @@ export default {
     
     // 处理服务项点击事件
     handleServiceItemClick(service) {
-      // 打印服务信息，帮助调试
-      console.log('点击服务:', service.name, 'serviceName:', service.serviceName, 'path:', service.path);
-      
       // 立即关闭所有服务的悬浮窗
       this.closeAllPopovers();
       

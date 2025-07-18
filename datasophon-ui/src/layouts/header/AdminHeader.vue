@@ -268,26 +268,19 @@ export default {
     
     // 获取缓存的服务数据
     getCachedServiceData(serviceId) {
-      console.log('获取服务数据 - serviceId:', serviceId);
-      
       // 如果缓存不存在或者serviceId变化，则重新获取
       if (!this.cachedServiceData || this.cachedServiceData.serviceId !== serviceId) {
         const menuData = this.getCachedMenuData();
-        console.log('菜单数据长度:', menuData.length);
         
         const serviceManageMenu = menuData.find(item => item.path === 'service-manage');
-        console.log('服务管理菜单:', serviceManageMenu ? '存在' : '不存在');
         
         if (serviceManageMenu && serviceManageMenu.children) {
-          console.log('服务子菜单数量:', serviceManageMenu.children.length);
           
           // 直接查找匹配的服务
           const service = serviceManageMenu.children.find(
             item => item.meta && item.meta.params && item.meta.params.serviceId === serviceId
           );
           
-          console.log('找到服务:', service ? service.name : '未找到');
-          console.log('服务完整数据:', service);
           
           // 如果没有找到匹配的服务，尝试使用字符串匹配
           if (!service && serviceId) {
@@ -297,76 +290,46 @@ export default {
             );
             
             if (serviceWithStringId) {
-              console.log('通过字符串匹配找到服务:', serviceWithStringId.name);
-              console.log('服务label:', serviceWithStringId.label);
-              
-              // 优先使用label作为显示名称
-              const displayName = serviceWithStringId.label || serviceWithStringId.name;
-              
-              // 创建一个新对象，避免修改原始数据
-              const serviceWithLabel = {...serviceWithStringId, displayName};
-              
               this.cachedServiceData = {
                 serviceId,
-                service: serviceWithLabel
+                service: serviceWithStringId
               };
               return this.cachedServiceData;
             }
-          }
-          
-          if (service) {
-            console.log('服务label:', service.label);
-            
-            // 优先使用label作为显示名称
-            const displayName = service.label || service.name;
-            
-            // 创建一个新对象，避免修改原始数据
-            const serviceWithLabel = {...service, displayName};
-            
+          } else if (service) {
             this.cachedServiceData = {
               serviceId,
-              service: serviceWithLabel
+              service
             };
-          } else {
-            this.cachedServiceData = {
-              serviceId,
-              service: null
-            };
+            return this.cachedServiceData;
           }
         } else {
-          console.log('服务管理菜单不存在或没有子菜单');
-          // 尝试直接从serviceList获取
+          // 从serviceList尝试获取
           try {
             const serviceList = JSON.parse(localStorage.getItem('serviceList') || '[]');
-            console.log('从serviceList获取, 长度:', serviceList.length);
-            
             if (serviceList.length > 0) {
-              const service = serviceList.find(item => item.id && item.id.toString() === serviceId.toString());
+              
+              const service = serviceList.find(s => s.id.toString() === serviceId.toString());
+              
               if (service) {
-                console.log('从serviceList找到服务:', service.serviceName);
-                console.log('服务label:', service.label);
-                
-                // 优先使用label字段作为显示名称
-                const displayName = service.label || service.serviceName;
                 
                 this.cachedServiceData = {
                   serviceId,
                   service: {
-                    name: displayName, // 使用label作为显示名称
-                    serviceName: service.serviceName, // 保存原始serviceName
-                    meta: { obj: { serviceStateCode: service.serviceStateCode || 1 } }
+                    name: service.serviceName,
+                    label: service.label || service.serviceName,
+                    meta: { obj: service }
                   }
                 };
                 return this.cachedServiceData;
               }
             }
           } catch (e) {
-            console.error('获取serviceList失败:', e);
+            // 忽略错误
           }
         }
       }
       
-      console.log('返回缓存服务数据:', this.cachedServiceData);
       return this.cachedServiceData;
     },
     
@@ -442,8 +405,6 @@ export default {
     // 处理子菜单点击
     onSubMenuSelect(subItem, event) {
       // 打印完整的子菜单项对象，以便调试
-      console.log('子菜单项:', subItem.name, subItem.fullPath);
-      
       // 关闭所有下拉菜单
       this.hoveredMenu = '';
       
@@ -488,7 +449,6 @@ export default {
     // 如果当前路径是服务详情页面，预加载服务数据
     if (this.$route.path.includes('/service-manage/service-list/') && this.$route.params.serviceId) {
       const serviceId = this.$route.params.serviceId;
-      console.log('组件创建时加载服务数据 - serviceId:', serviceId);
       
       // 确保serviceId已设置
       if (this.serviceId !== serviceId) {
@@ -500,32 +460,29 @@ export default {
     }
     
     // 添加调试信息
-    console.log('菜单数据:', this.firstMenu);
-    console.log('当前路径:', this.$route.path);
-    console.log('当前serviceId:', this.serviceId);
-    console.log('路由参数:', this.$route.params);
+    // 菜单数据: this.firstMenu
+    // 当前路径: this.$route.path
+    // 当前serviceId: this.serviceId
+    // 路由参数: this.$route.params
     
     setTimeout(() => {
-      console.log('菜单数据(延迟检查):', this.firstMenu);
-      console.log('regularMenus:', this.regularMenus);
-      console.log('当前服务名称:', this.currentServiceName);
-      console.log('当前服务图标:', this.currentServiceIcon);
-      console.log('当前服务状态:', this.currentServiceStatus);
+      // 菜单数据(延迟检查): this.firstMenu
+      // regularMenus: this.regularMenus
+      // 当前服务名称: this.currentServiceName
+      // 当前服务图标: this.currentServiceIcon
+      // 当前服务状态: this.currentServiceStatus
     }, 1000);
   },
   watch: {
     '$route': {
       handler(to) {
-        console.log('路由变化:', to.path);
         
         // 如果路由是服务详情页面，刷新serviceId
         if (to.path.includes('/service-manage/service-list/') && to.params.serviceId) {
           const serviceId = to.params.serviceId;
-          console.log('路由监听器发现serviceId变化:', serviceId);
           
           // 如果当前serviceId不同，则更新
           if (this.serviceId !== serviceId) {
-            console.log('路由监听器更新serviceId:', serviceId);
             this.$store.commit('setting/setServiceId', serviceId);
           }
           
@@ -536,8 +493,7 @@ export default {
           // 预加载服务数据
           this.$nextTick(() => {
             const serviceData = this.getCachedServiceData(serviceId);
-            console.log('路由变化后的服务数据:', serviceData);
-            console.log('当前服务名称:', this.currentServiceName);
+            // 当前服务名称: this.currentServiceName
           });
         }
       },
@@ -546,7 +502,6 @@ export default {
     // 监听serviceId变化
     serviceId: {
       handler(newVal, oldVal) {
-        console.log('serviceId变化:', oldVal, '->', newVal);
         if (newVal && newVal !== oldVal) {
           // 清除缓存，强制重新获取服务数据
           this.cachedServiceData = null;
@@ -554,8 +509,7 @@ export default {
           // 预加载服务数据
           this.$nextTick(() => {
             const serviceData = this.getCachedServiceData(newVal);
-            console.log('serviceId变化后的服务数据:', serviceData);
-            console.log('当前服务名称:', this.currentServiceName);
+            // 当前服务名称: this.currentServiceName
           });
         }
       }
