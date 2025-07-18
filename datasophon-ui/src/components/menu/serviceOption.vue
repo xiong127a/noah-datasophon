@@ -25,40 +25,16 @@
  * @FilePath: \ddh-ui\src\components\menu\serviceOption.vue
 -->
 <template>
-  <div @click.stop class="service-option-wrapper">
-    <a-dropdown 
-      :trigger="['click']" 
-      placement="bottomRight" 
-      overlayClassName="apple-style-dropdown service-option-dropdown" 
-      :getPopupContainer="() => document.body"
-      :align="{offset: [-12, 12]}"
-    >
-      <button class="apple-style-more-btn" @click.stop>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4C10 5.10457 10.8954 6 12 6Z" fill="#1976d2"/>
-          <path d="M12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14Z" fill="#1976d2"/>
-          <path d="M12 22C13.1046 22 14 21.1046 14 20C14 18.8954 13.1046 18 12 18C10.8954 18 10 18.8954 10 20C10 21.1046 10.8954 22 12 22Z" fill="#1976d2"/>
-        </svg>
-      </button>
-      <a-menu slot="overlay" class="apple-style-menu">
-        <a-menu-item key="addService" @click="addService">
-          <a-icon type="plus-circle" />
-          <span>添加服务</span>
-        </a-menu-item>
-        <a-menu-item key="startAll" @click="() => optServices({key: 'startAll'})">
-          <a-icon type="caret-right" />
-          <span>启动所有</span>
-        </a-menu-item>
-        <a-menu-item key="stopAll" @click="() => optServices({key: 'stopAll'})">
-          <a-icon type="pause-circle" />
-          <span>停止所有</span>
-        </a-menu-item>
-        <a-menu-item key="restartAll" @click="() => optServices({key: 'restartAll'})">
-          <a-icon type="reload" />
-          <span>重启所有需要重启的服务</span>
-        </a-menu-item>
-      </a-menu>
-    </a-dropdown>
+  <div class="service-option-wrapper" ref="serviceOptionWrapper">
+    <!-- 菜单按钮 -->
+    <button class="apple-style-more-btn" @click.stop="toggleMenu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4C10 5.10457 10.8954 6 12 6Z" fill="#1976d2"/>
+        <path d="M12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14Z" fill="#1976d2"/>
+        <path d="M12 22C13.1046 22 14 21.1046 14 20C14 18.8954 13.1046 18 12 18C10.8954 18 10 18.8954 10 20C10 21.1046 10.8954 22 12 22Z" fill="#1976d2"/>
+      </svg>
+    </button>
+    
     <!-- 配置集群的modal -->
     <a-modal v-if="visible" title :visible="visible" class="service-option-modal" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
       <Steps :clusterId="clusterId" stepsType="addService" />
@@ -82,39 +58,239 @@ export default {
       visible: false,
       confirmLoading: false,
       clusterId: Number(localStorage.getItem("clusterId") || -1),
-      dropdownVisible: false, // 添加控制下拉菜单显示的状态
-      menuContainer: null, // 存储下拉菜单容器DOM引用
+      menuVisible: false, // 控制下拉菜单显示的状态
+      menuStyle: {} // 菜单样式，将在toggleMenu方法中动态设置
     };
   },
   computed: {
     ...mapState({
-      setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
+      setting: (state) => state.setting,
     }),
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
-    // 修复 getPopupContainer 方法
-    getPopupContainer() {
-      // 确保返回当前组件的DOM元素作为容器，而不是document.body
-      return this.$el;
+    
+    // 切换菜单显示状态
+    toggleMenu(e) {
+      if (e) e.stopPropagation();
+      this.menuVisible = !this.menuVisible;
+      
+      // 如果菜单显示，创建菜单元素并附加到body
+      if (this.menuVisible) {
+        this.$nextTick(() => {
+          // 获取按钮元素
+          const buttonElement = this.$refs.serviceOptionWrapper.querySelector('.apple-style-more-btn');
+          if (buttonElement) {
+            const rect = buttonElement.getBoundingClientRect();
+            const menuWidth = 260; // 菜单宽度约为260px
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            
+            // 计算菜单位置，确保它显示在按钮的右侧
+            const menuTop = rect.top;
+            const menuLeft = rect.right + 10; // 在按钮右侧10px处
+            
+            // 检查是否超出屏幕边界
+            // 如果超出右侧边界，则显示在左侧
+            const finalLeft = menuLeft + menuWidth > screenWidth ? rect.left - menuWidth - 10 : menuLeft;
+            
+            // 如果超出底部边界，则向上移动
+            const finalTop = menuTop + 250 > screenHeight ? screenHeight - 260 : menuTop;
+            
+            // 创建菜单元素
+            const menuElement = document.createElement('div');
+            menuElement.className = 'custom-dropdown-menu';
+            menuElement.id = 'service-option-menu';
+            menuElement.style.position = 'fixed';
+            menuElement.style.top = `${finalTop}px`;
+            menuElement.style.left = `${finalLeft}px`;
+            menuElement.style.zIndex = '9999999'; // 使用非常高的z-index
+            menuElement.style.minWidth = '260px';
+            menuElement.style.maxWidth = '300px';
+            menuElement.style.background = 'rgba(255, 255, 255, 1)';
+            menuElement.style.backdropFilter = 'blur(30px)';
+            menuElement.style.webkitBackdropFilter = 'blur(30px)';
+            menuElement.style.borderRadius = '16px';
+            menuElement.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1)';
+            menuElement.style.border = '2px solid rgba(0, 122, 255, 0.3)';
+            menuElement.style.padding = '12px';
+            menuElement.style.pointerEvents = 'auto';
+            menuElement.style.visibility = 'visible';
+            menuElement.style.overflow = 'visible';
+            
+            // 添加动画效果
+            menuElement.style.opacity = '0';
+            menuElement.style.transform = 'translateX(-10px)';
+            menuElement.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            
+            // 添加菜单项
+            const menuItems = [
+              { icon: 'plus-circle', text: '添加服务', action: 'addService' },
+              { icon: 'caret-right', text: '启动所有', action: 'startAll' },
+              { icon: 'pause-circle', text: '停止所有', action: 'stopAll' },
+              { icon: 'reload', text: '重启所有需要重启的服务', action: 'restartAll' }
+            ];
+            
+            menuItems.forEach(item => {
+              const menuItem = document.createElement('div');
+              menuItem.className = 'menu-item';
+              menuItem.style.display = 'flex';
+              menuItem.style.alignItems = 'center';
+              menuItem.style.padding = '12px 16px';
+              menuItem.style.margin = '4px 0';
+              menuItem.style.borderRadius = '12px';
+              menuItem.style.cursor = 'pointer';
+              menuItem.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+              menuItem.style.position = 'relative';
+              menuItem.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+              
+              // 添加图标
+              const iconDiv = document.createElement('div');
+              iconDiv.className = 'menu-icon';
+              iconDiv.style.marginRight = '12px';
+              iconDiv.style.fontSize = '16px';
+              iconDiv.style.color = '#007AFF';
+              iconDiv.style.width = '32px';
+              iconDiv.style.height = '32px';
+              iconDiv.style.borderRadius = '10px';
+              iconDiv.style.background = 'linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1))';
+              iconDiv.style.display = 'flex';
+              iconDiv.style.alignItems = 'center';
+              iconDiv.style.justifyContent = 'center';
+              iconDiv.style.transition = 'all 0.3s ease';
+              iconDiv.style.position = 'relative';
+              iconDiv.style.zIndex = '1';
+              
+              // 使用Ant Design的图标
+              const icon = document.createElement('i');
+              icon.className = `anticon anticon-${item.icon}`;
+              
+              // 根据不同的图标类型设置不同的SVG内容
+              let svgContent = '';
+              if (item.icon === 'plus-circle') {
+                svgContent = '<svg viewBox="64 64 896 896" data-icon="plus-circle" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M696 480H544V328c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v152H328c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h152v152c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V544h152c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8z"></path><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"></path></svg>';
+              } else if (item.icon === 'caret-right') {
+                svgContent = '<svg viewBox="0 0 1024 1024" data-icon="caret-right" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M715.8 493.5L335 165.1c-14.2-12.2-35-1.2-35 18.5v656.8c0 19.7 20.8 30.7 35 18.5l380.8-328.4c10.9-9.4 10.9-27.6 0-37z"></path></svg>';
+              } else if (item.icon === 'pause-circle') {
+                svgContent = '<svg viewBox="64 64 896 896" data-icon="pause-circle" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372zm-88-532h-48c-4.4 0-8 3.6-8 8v304c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V360c0-4.4-3.6-8-8-8zm224 0h-48c-4.4 0-8 3.6-8 8v304c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V360c0-4.4-3.6-8-8-8z"></path></svg>';
+              } else if (item.icon === 'reload') {
+                svgContent = '<svg viewBox="64 64 896 896" data-icon="reload" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M909.1 209.3l-56.4 44.1C775.8 155.1 656.2 92 521.9 92 290 92 102.3 279.5 102 511.5 101.7 743.7 289.8 932 521.9 932c181.3 0 335.8-115 394.6-276.1 1.5-4.2-.7-8.9-4.9-10.3l-56.7-19.5a8 8 0 0 0-10.1 4.8c-1.8 5-3.8 10-5.9 14.9-17.3 41-42.1 77.8-73.7 109.4A344.77 344.77 0 0 1 655.9 829c-42.3 17.9-87.4 27-133.8 27-46.5 0-91.5-9.1-133.8-27A341.5 341.5 0 0 1 279 755.2a342.16 342.16 0 0 1-73.7-109.4c-17.9-42.4-27-87.4-27-133.9s9.1-91.5 27-133.9c17.3-41 42.1-77.8 73.7-109.4 31.6-31.6 68.4-56.4 109.3-73.8 42.3-17.9 87.4-27 133.8-27 46.5 0 91.5 9.1 133.8 27a341.5 341.5 0 0 1 109.3 73.8c9.9 9.9 19.2 20.4 27.8 31.4l-60.2 47a8 8 0 0 0 3 14.1l175.6 43c5 1.2 9.9-2.6 9.9-7.7l.8-180.9c-.1-6.6-7.8-10.3-13-6.2z"></path></svg>';
+              }
+              
+              icon.innerHTML = svgContent;
+              iconDiv.appendChild(icon);
+              
+              // 添加文本
+              const textSpan = document.createElement('span');
+              textSpan.className = 'menu-text';
+              textSpan.style.color = '#1D1D1F';
+              textSpan.style.fontWeight = '500';
+              textSpan.style.fontSize = '14px';
+              textSpan.style.transition = 'color 0.3s ease';
+              textSpan.style.position = 'relative';
+              textSpan.style.zIndex = '1';
+              textSpan.style.flex = '1';
+              textSpan.textContent = item.text;
+              
+              menuItem.appendChild(iconDiv);
+              menuItem.appendChild(textSpan);
+              
+              // 添加悬停效果
+              menuItem.addEventListener('mouseover', () => {
+                menuItem.style.background = 'linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1))';
+                menuItem.style.transform = 'translateX(4px)';
+                menuItem.style.boxShadow = '0 4px 12px rgba(0, 122, 255, 0.1)';
+                iconDiv.style.background = 'linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2))';
+                iconDiv.style.color = '#0056CC';
+                iconDiv.style.transform = 'scale(1.1)';
+                textSpan.style.color = '#007AFF';
+              });
+              
+              menuItem.addEventListener('mouseout', () => {
+                menuItem.style.background = 'rgba(255, 255, 255, 1)';
+                menuItem.style.transform = 'none';
+                menuItem.style.boxShadow = 'none';
+                iconDiv.style.background = 'linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1))';
+                iconDiv.style.color = '#007AFF';
+                iconDiv.style.transform = 'none';
+                textSpan.style.color = '#1D1D1F';
+              });
+              
+              // 添加点击事件
+              menuItem.addEventListener('click', () => {
+                // 移除菜单
+                document.body.removeChild(menuElement);
+                this.menuVisible = false;
+                
+                // 执行相应的操作
+                if (item.action === 'addService') {
+                  this.addService();
+                } else if (item.action === 'startAll') {
+                  this.optServices({ key: 'startAll' });
+                } else if (item.action === 'stopAll') {
+                  this.optServices({ key: 'stopAll' });
+                } else if (item.action === 'restartAll') {
+                  this.optServices({ key: 'restartAll' });
+                }
+              });
+              
+              menuElement.appendChild(menuItem);
+            });
+            
+            // 将菜单附加到body
+            document.body.appendChild(menuElement);
+            
+            // 触发动画
+            setTimeout(() => {
+              menuElement.style.opacity = '1';
+              menuElement.style.transform = 'translateX(0)';
+            }, 10);
+            
+            // 添加点击外部关闭菜单的事件
+            const handleOutsideClick = (event) => {
+              if (!menuElement.contains(event.target) && !this.$refs.serviceOptionWrapper.contains(event.target)) {
+                document.body.removeChild(menuElement);
+                document.removeEventListener('click', handleOutsideClick);
+                this.menuVisible = false;
+              }
+            };
+            
+            // 延迟添加事件监听器，避免立即触发
+            setTimeout(() => {
+              document.addEventListener('click', handleOutsideClick);
+            }, 0);
+          }
+        });
+      } else {
+        // 如果菜单隐藏，移除菜单元素
+        const menuElement = document.getElementById('service-option-menu');
+        if (menuElement) {
+          document.body.removeChild(menuElement);
+        }
+      }
     },
-    // 处理下拉菜单可见性变化
-    handleDropdownVisibleChange(visible) {
-      this.dropdownVisible = visible;
+    
+    // 处理点击外部关闭菜单
+    handleOutsideClick(e) {
+      if (this.$refs.serviceOptionWrapper && !this.$refs.serviceOptionWrapper.contains(e.target)) {
+        this.menuVisible = false;
+        document.removeEventListener('click', this.handleOutsideClick);
+      }
     },
-    // 切换下拉菜单显示状态
-    toggleDropdown(e) {
-      e.stopPropagation();
-      this.dropdownVisible = !this.dropdownVisible;
-    },
+    
     handleCancel(e) {
       this.visible = false;
     },
+    
     // 添加服务
     addService() {
+      this.menuVisible = false;
       this.visible = true;
     },
+    
     optServices(item) {
+      this.menuVisible = false;
+      
       this.$confirm({
         width: 450,
         title: () => {
@@ -155,8 +331,8 @@ export default {
         },
         closable: true,
       });
-    
     },
+    
     openServices(item) {
       let params = {
         clusterId: this.setting.clusterId,
@@ -189,42 +365,28 @@ export default {
       });
     },
   },
-  mounted() {
-    // 获取菜单容器DOM引用
-    this.menuContainer = document.querySelector('.cdh-service-page');
-    
-    // 添加点击外部关闭下拉菜单的处理
-    document.addEventListener('click', (e) => {
-      if (!this.$el.contains(e.target)) {
-        this.dropdownVisible = false;
-      }
-    });
-  },
   beforeDestroy() {
-    // 移除事件监听器
-    document.removeEventListener('click', this.handleOutsideClick);
-  }
+    // 移除事件监听器和菜单元素
+    // document.removeEventListener('click', this.handleOutsideClick);
+    const menuElement = document.getElementById('service-option-menu');
+    if (menuElement) {
+      document.body.removeChild(menuElement);
+    }
+  },
 };
 </script>
 <style lang="less" scoped>
-.popover-service {
-  // margin-left: 31px;
-  .more-menu-btn {
-    font-size: 14px;
-    color: #555555;
-    letter-spacing: 0.39px;
-    line-height: 32px;
-    font-weight: 400;
-    &:hover {
-      color: @primary-color;
-    }
-  }
+.service-option-wrapper {
+  position: relative;
+  display: inline-block;
+  z-index: 1500; /* 确保下拉菜单在其他元素之上 */
+  overflow: visible; /* 确保子元素不会被裁剪 */
 }
 
 .apple-style-more-btn {
   width: 32px;
   height: 32px;
-  border-radius: 12px;
+  border-radius: 50%; /* 修改为圆形，与ServiceLayout.vue中的按钮一致 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -241,14 +403,14 @@ export default {
   
   &:hover {
     background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
-    border-color: rgba(0, 122, 255, 0.3);
+    transform: scale(1.05) translateY(-1px); /* 修改悬停效果，与ServiceLayout.vue中的按钮一致 */
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 122, 255, 0.2);
   }
   
   &:active {
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+    transform: scale(0.95);
+    box-shadow: 0 1px 4px rgba(0, 122, 255, 0.2);
   }
   
   &:focus {
@@ -293,191 +455,6 @@ export default {
     path {
       fill: #0056CC;
     }
-  }
-}
-
-.service-option-wrapper {
-  position: relative;
-  display: inline-block;
-  z-index: 100; /* 确保下拉菜单在其他元素之上 */
-}
-
-:global(.service-option-dropdown) {
-  z-index: 1500 !important; /* 提高z-index确保显示在最上层 */
-}
-
-:global(.ant-dropdown) {
-  z-index: 1500 !important;
-}
-
-:global(.apple-style-dropdown) {
-  animation: dropdown-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-  z-index: 1500 !important; /* 提高z-index确保显示在最上层 */
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu) {
-    border-radius: 24px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 
-                0 8px 16px rgba(0, 0, 0, 0.08),
-                0 4px 8px rgba(0, 0, 0, 0.06),
-                0 1px 2px rgba(0, 0, 0, 0.04);
-    overflow: visible;
-    min-width: 260px;
-    max-width: 300px;
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    padding: 20px 16px;
-    transform-origin: top right;
-    z-index: 1500;
-    animation: dropdown-smooth-appear 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-    position: relative;
-    margin-top: 10px; /* 增加顶部间距，防止叠在一起 */
-  }
-  
-:global(.apple-style-dropdown .ant-dropdown-menu-item) {
-    margin: 6px 8px;
-    border-radius: 18px;
-    padding: 16px 20px;
-    position: relative;
-    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-    animation: menu-item-smooth-slide-in 0.4s ease-out;
-    animation-fill-mode: both;
-    
-    &:nth-child(1) { animation-delay: 0.1s; }
-    &:nth-child(2) { animation-delay: 0.15s; }
-    &:nth-child(3) { animation-delay: 0.2s; }
-    &:nth-child(4) { animation-delay: 0.25s; }
-    
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 0;
-      background: linear-gradient(135deg, #007AFF, #5856D6);
-      border-radius: 18px 0 0 18px;
-      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item:hover) {
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
-  transform: translateX(4px) translateY(-1px) scale(1.01);
-  box-shadow: 0 6px 20px rgba(0, 122, 255, 0.15), 0 3px 10px rgba(0, 122, 255, 0.08);
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item:hover::before) {
-  width: 5px;
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item:active) {
-  transform: translateX(2px) scale(0.98);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item .anticon) {
-  margin-right: 12px;
-  font-size: 16px;
-  color: #007AFF;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
-  transition: all 0.3s ease;
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item span) {
-  color: #1D1D1F;
-  font-weight: 500;
-  font-size: 14px;
-  transition: color 0.3s ease;
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item:hover .anticon) {
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
-  color: #0056CC;
-  transform: scale(1.1);
-}
-
-:global(.apple-style-dropdown .ant-dropdown-menu-item:hover span) {
-  color: #007AFF;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes dropdown-smooth-appear {
-  0% {
-    opacity: 0;
-    transform: scale(0.85) translateY(-15px) rotateX(-10deg);
-    filter: blur(8px);
-  }
-  60% {
-    opacity: 0.9;
-    transform: scale(1.05) translateY(-3px) rotateX(-2deg);
-    filter: blur(2px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0) rotateX(0deg);
-    filter: blur(0);
-  }
-}
-
-@keyframes menu-item-smooth-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateX(-30px) translateY(10px) scale(0.9);
-    filter: blur(4px);
-  }
-  70% {
-    opacity: 0.8;
-    transform: translateX(3px) translateY(-2px) scale(1.02);
-    filter: blur(1px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes dropdown-appear {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(-10px);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.02) translateY(-2px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes menu-item-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 
