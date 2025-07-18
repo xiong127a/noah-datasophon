@@ -146,7 +146,11 @@
                           class="namespace-option"
                         >
                           <div class="namespace-item">
-                            <a-icon type="database" class="namespace-icon" />
+                            <svg class="namespace-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M9 2C5.13 2 2 3.5 2 5.5V12.5C2 14.5 5.13 16 9 16C12.87 16 16 14.5 16 12.5V5.5C16 3.5 12.87 2 9 2Z" fill="#E8F4FC" stroke="#0071E3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M2 9C2 11 5.13 12.5 9 12.5C12.87 12.5 16 11 16 9" stroke="#0071E3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M2 5.5C2 7.5 5.13 9 9 9C12.87 9 16 7.5 16 5.5" stroke="#0071E3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+                            </svg>
                             <span class="namespace-name">{{ ns }}</span>
                           </div>
                         </a-select-option>
@@ -1214,13 +1218,16 @@ export default {
               margin: 2px 0;
               
               &:hover {
-                background-color: rgba(0, 113, 227, 0.05);
+                background-color: rgba(0, 113, 227, 0.08);
               }
               
               .namespace-icon {
-                color: @apple-gray;
-                font-size: 14px;
-                margin-right: 8px;
+                color: @apple-blue;
+                margin-right: 16px;
+                width: 20px;
+                height: 20px;
+                transition: all 0.3s;
+                filter: drop-shadow(0 1px 2px rgba(0, 113, 227, 0.2));
               }
               
               .namespace-name {

@@ -31,7 +31,7 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
     ClusterHostDO getClusterHostByIp(String ip);
 
     Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-            String orderField, String orderType, Integer page, Integer pageSize);
+                      String orderField, String orderType, Integer page, Integer pageSize);
 
     List<ClusterHostDO> getHostListByClusterId(Integer id);
 

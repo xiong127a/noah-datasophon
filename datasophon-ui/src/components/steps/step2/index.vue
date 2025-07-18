@@ -29,6 +29,22 @@
           <p class="hero-subtitle">验证Kubernetes集群中的主机状态，确保可以正常部署服务</p>
         </div>
 
+        <!-- K8S模式操作按钮区域 -->
+        <div class="k8s-operations-area">
+          <div class="operations-container">
+            <a-button 
+              type="primary" 
+              icon="reload" 
+              :loading="loading"
+              @click="refreshK8sHosts"
+              class="refresh-btn"
+            >
+              重新校验
+            </a-button>
+            <span class="operation-tip">点击重新校验以刷新Kubernetes集群中的主机信息</span>
+          </div>
+        </div>
+
         <div class="k8s-hosts-container">
           <div class="hosts-table-wrapper">
             <a-table
@@ -567,7 +583,7 @@ export default {
                 const allHostIps = this.dataSource.map(host => host.ip);
                 this.selectedRowKeys = allHostIps;
               }
-            }
+              }
             }
           })
           .catch((error) => {
@@ -596,6 +612,12 @@ export default {
         });
     },
 
+    // K8S模式重新校验主机
+    refreshK8sHosts() {
+      console.log('refreshK8sHosts方法被调用了！');
+      this.getEnvironmentList(false);
+    },
+
     // 获取K8S模式下的完整硬件信息
     async getK8sHostsWithHardwareInfo() {
       try {
@@ -603,7 +625,7 @@ export default {
         const res = await this.$axiosGet(global.API.getK8sHostsWithHardwareInfo + '?clusterId=' + this.clusterId);
         if (res.code === 200) {
           return res.data;
-        } else {
+      } else {
           console.warn('获取K8S硬件信息失败:', res.msg);
           return [];
         }
@@ -854,6 +876,43 @@ export default {
         margin: 0;
       max-width: 600px;
         margin: 0 auto;
+    }
+  }
+
+  // K8S操作区域样式
+  .k8s-operations-area {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    padding: 0 1rem;
+
+    .operations-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background-color: @apple-white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      .refresh-btn {
+        height: 40px;
+        padding: 0 1.5rem;
+        border-radius: 20px;
+        font-weight: 500;
+        transition: all 0.25s cubic-bezier(0.2, 0.1, 0, 1);
+        
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+      }
+
+      .operation-tip {
+        .apple-font();
+        font-size: 0.9rem;
+        color: @apple-gray;
+        margin-left: 0.5rem;
+      }
     }
   }
 

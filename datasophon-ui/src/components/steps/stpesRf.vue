@@ -165,24 +165,24 @@ export default {
             });
           } else {
             // PVM模式：保持原有逻辑
-            this.$axiosPost(global.API.analysisHostList, {
-              clusterId: this.clusterId,
-              ips: this.steps1Data.hosts,
-              sshUser: this.steps1Data.sshUser,
-              sshPort: this.steps1Data.sshPort,
-              sshPassword: this.steps1Data.sshPassword,
-              page: 1,
+          this.$axiosPost(global.API.analysisHostList, {
+            clusterId: this.clusterId,
+            ips: this.steps1Data.hosts,
+            sshUser: this.steps1Data.sshUser,
+            sshPort: this.steps1Data.sshPort,
+            sshPassword: this.steps1Data.sshPassword,
+            page: 1,
               pageSize: 10
-            }).then((analysisRes) => {
-              if (analysisRes.code !== 200) {
-                console.warn("分析主机列表失败:", analysisRes.msg);
-                self.$message.warning("分析主机列表失败，请检查主机状态");
-              }
-              this.currentStepsAdd();
-            }).catch((err) => {
-              console.error("分析主机列表出错:", err);
-              this.currentStepsAdd();
-            });
+          }).then((analysisRes) => {
+            if (analysisRes.code !== 200) {
+              console.warn("分析主机列表失败:", analysisRes.msg);
+              self.$message.warning("分析主机列表失败，请检查主机状态");
+            }
+            this.currentStepsAdd();
+          }).catch((err) => {
+            console.error("分析主机列表出错:", err);
+            this.currentStepsAdd();
+          });
           }
         });
       }
