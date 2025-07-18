@@ -415,15 +415,78 @@ export default {
     },
     // 单个标签页的保存
     handleSubmit() {
-      this.templateData = this.templateObj[`${this.serviceNameKey}`];
-      this.$refs[
-          `CommonTemplateRef${this.serviceNameKey}`
-          ][0].form.validateFields(async (err, values) => {
-        if (!err) {
-          let param = _.cloneDeep(this.templateData);
-          const arrayWithData = this.handlearrayWithData(values);
-          const multipleData = this.handleMultipleData(values);
-          const formData = { ...values, ...arrayWithData, ...multipleData };
+      const currentService = this.serviceNameKey;
+      if (!currentService) {
+        this.$message.error("未选择服务");
+        return;
+      }
+
+      // 获取当前服务的所有配置组
+      const groups = this.groupedTemplateData[currentService];
+      if (!groups || Object.keys(groups).length === 0) {
+        this.$message.error("当前服务没有配置项");
+        return;
+      }
+
+      // 使用Promise.all来处理所有表单验证
+      const formValidations = [];
+      const formValues = {};
+
+      // 遍历每个配置组收集表单验证Promise
+      Object.entries(groups).forEach(([groupName, group]) => {
+        // 处理常规配置表单
+        const refName = `CommonTemplateRef_${currentService}_${groupName}`;
+        const formComponent = this.$refs[refName]?.[0];
+        
+        if (formComponent && formComponent.form) {
+          const formPromise = new Promise((resolve, reject) => {
+            formComponent.form.validateFields((err, values) => {
+              if (err) {
+                reject(err);
+              } else {
+                // 合并表单值
+                Object.assign(formValues, values);
+                resolve();
+              }
+            });
+          });
+          formValidations.push(formPromise);
+        }
+        
+        // 处理角色分组内的Kubernetes配置表单
+        if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
+          Object.keys(group.kubernetesSubGroups).forEach(subGroupName => {
+            const kubernetesRefName = `CommonTemplateRef_${currentService}_${groupName}_${subGroupName}`;
+            const kubernetesFormComponent = this.$refs[kubernetesRefName]?.[0];
+            
+            if (kubernetesFormComponent && kubernetesFormComponent.form) {
+              const kubernetesFormPromise = new Promise((resolve, reject) => {
+                kubernetesFormComponent.form.validateFields((err, values) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    // 合并表单值
+                    Object.assign(formValues, values);
+                    resolve();
+                  }
+                });
+              });
+              formValidations.push(kubernetesFormPromise);
+            }
+          });
+        }
+      });
+
+      // 等待所有表单验证完成
+      Promise.all(formValidations)
+        .then(() => {
+          // 处理表单数据
+          const arrayWithData = this.handlearrayWithData(formValues);
+          const multipleData = this.handleMultipleData(formValues);
+          const formData = { ...formValues, ...arrayWithData, ...multipleData };
+          
+          // 更新模板数据
+          let param = _.cloneDeep(this.templateObj[currentService] || []);
           for (let name in formData) {
             param.forEach((item) => {
               if (item.name === name) {
@@ -431,28 +494,38 @@ export default {
               }
             });
           }
+          
+          // 处理名称中的特殊字符
           param.forEach((item) => {
             item.name = item.name.replaceAll("!", ".");
           });
+          
+          // 过滤不必要的项
           let filterParam = param.filter(
-              (item) => !(!item.required && item.hidden)
+            (item) => !(!item.required && item.hidden)
           );
-          // 处理表单数据 将相同的key处理成数组
+          
+          // 构建保存参数
           let saveParam = {
             clusterId: this.setting.clusterId ? this.setting.clusterId : this.clusterId,
-            serviceName: this.serviceNameKey,
+            serviceName: currentService,
             serviceConfig: JSON.stringify(filterParam),
           };
-          // // 等待网络请求结束
-          let res = await this.$axiosPost(
-              global.API.saveServiceConfig,
-              saveParam
-          );
+          
+          // 发送保存请求
+          return this.$axiosPost(global.API.saveServiceConfig, saveParam);
+        })
+        .then(res => {
           if (res.code === 200) {
             this.$message.success("保存成功");
+          } else {
+            this.$message.error(`保存失败: ${res.msg || '未知错误'}`);
           }
-        }
-      });
+        })
+        .catch(err => {
+          console.error('表单验证或保存失败:', err);
+          this.$message.error(`操作失败: ${err.message || '表单验证错误'}`);
+        });
     },
     getServiceConfigOption() {
       if (!this.SERVICENAMES || this.SERVICENAMES.length === 0) {
@@ -658,86 +731,114 @@ export default {
     },
     checkAllForm() {
       const self = this;
-      let hasError = false;
+      
+      return new Promise((resolve) => {
+        // 创建表单验证Promise数组
+        const formValidations = [];
+        let foundError = false;
+        let errorServiceName = null;
+        let errorGroupName = null;
+        let errorSubGroupName = null;
 
-      // 遍历所有服务
-      for (const serviceName of self.SERVICENAMES) {
-        // 获取该服务的所有配置组
-        const groups = self.groupedTemplateData[serviceName] || {};
+        // 遍历所有服务
+        for (const serviceName of self.SERVICENAMES) {
+          // 获取该服务的所有配置组
+          const groups = self.groupedTemplateData[serviceName] || {};
 
-        // 遍历每个配置组
-        for (const groupName of Object.keys(groups)) {
-          const group = groups[groupName];
-          
-          // 验证常规配置表单
-          const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
-          const formComponent = self.$refs[refName]?.[0];
+          // 遍历每个配置组
+          for (const groupName of Object.keys(groups)) {
+            const group = groups[groupName];
+            
+            // 验证常规配置表单
+            const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
+            const formComponent = self.$refs[refName]?.[0];
 
-          if (formComponent) {
-            // 执行表单校验
-            formComponent.form.validateFields((err) => {
-              if (err) {
-                hasError = true;
-                self.serviceNameKey = serviceName; // 切换到错误页签
+            if (formComponent && formComponent.form) {
+              const formPromise = new Promise((resolveForm) => {
+                formComponent.form.validateFields((err) => {
+                  if (err && !foundError) {
+                    foundError = true;
+                    errorServiceName = serviceName;
+                    errorGroupName = groupName;
+                  }
+                  resolveForm();
+                });
+              });
+              formValidations.push(formPromise);
+            }
+            
+            // 验证角色分组内的Kubernetes配置表单
+            if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
+              for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
+                const kubernetesRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+                const kubernetesFormComponent = self.$refs[kubernetesRefName]?.[0];
+                
+                if (kubernetesFormComponent && kubernetesFormComponent.form) {
+                  const kubernetesFormPromise = new Promise((resolveForm) => {
+                    kubernetesFormComponent.form.validateFields((err) => {
+                      if (err && !foundError) {
+                        foundError = true;
+                        errorServiceName = serviceName;
+                        errorGroupName = groupName;
+                        errorSubGroupName = subGroupName;
+                      }
+                      resolveForm();
+                    });
+                  });
+                  formValidations.push(kubernetesFormPromise);
+                }
               }
-            });
-
-            if (hasError) break;
+            }
           }
           
-          // 验证角色分组内的Kubernetes配置表单
-          if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
-            for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
-              const kubernetesRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+          // 验证通用Kubernetes配置
+          if (self.kubernetesGroups[serviceName]) {
+            for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
+              const kubernetesRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
               const kubernetesFormComponent = self.$refs[kubernetesRefName]?.[0];
               
-              if (kubernetesFormComponent) {
-                kubernetesFormComponent.form.validateFields((err) => {
-                  if (err) {
-                    hasError = true;
-                    self.serviceNameKey = serviceName; // 切换到错误页签
-                    // 确保展开包含错误的配置组
-                    self.$set(self.isGroupExpanded, `${serviceName}_${groupName}`, true);
-                    // 设置激活的Kubernetes标签页
-                    self.$set(self.activeKubernetesTabs, `${serviceName}_${groupName}`, subGroupName);
-                  }
+              if (kubernetesFormComponent && kubernetesFormComponent.form) {
+                const kubernetesFormPromise = new Promise((resolveForm) => {
+                  kubernetesFormComponent.form.validateFields((err) => {
+                    if (err && !foundError) {
+                      foundError = true;
+                      errorServiceName = serviceName;
+                      errorSubGroupName = subGroupName;
+                    }
+                    resolveForm();
+                  });
                 });
-
-                if (hasError) break;
+                formValidations.push(kubernetesFormPromise);
               }
             }
-            
-            if (hasError) break;
           }
         }
 
-        if (hasError) break;
-        
-        // 验证通用Kubernetes配置
-        if (self.kubernetesGroups[serviceName]) {
-          for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
-            const kubernetesRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
-            const kubernetesFormComponent = self.$refs[kubernetesRefName]?.[0];
+        // 等待所有表单验证完成
+        Promise.all(formValidations).then(() => {
+          if (foundError) {
+            // 如果有错误，切换到相应的页签和配置组
+            self.serviceNameKey = errorServiceName;
             
-            if (kubernetesFormComponent) {
-              kubernetesFormComponent.form.validateFields((err) => {
-                if (err) {
-                  hasError = true;
-                  self.serviceNameKey = serviceName; // 切换到错误页签
-                  // 设置激活的Kubernetes标签页
-                  self.$set(self.activeKubernetesTabs, serviceName, subGroupName);
-                }
-              });
+            if (errorGroupName) {
+              // 确保展开包含错误的配置组
+              self.$set(self.expandedKeys, errorServiceName, 
+                [...(self.expandedKeys[errorServiceName] || []), errorGroupName]);
               
-              if (hasError) break;
+              if (errorSubGroupName) {
+                // 设置激活的Kubernetes标签页
+                self.$set(self.activeKubernetesTabs, 
+                  `${errorServiceName}_${errorGroupName}`, errorSubGroupName);
+              }
+            } else if (errorSubGroupName) {
+              // 设置激活的Kubernetes标签页（通用配置）
+              self.$set(self.activeKubernetesTabs, errorServiceName, errorSubGroupName);
             }
           }
           
-          if (hasError) break;
-        }
-      }
-
-      return hasError;
+          resolve(foundError);
+        });
+      });
     },
     submitAllServices(callback) {
       const self = this;
@@ -919,14 +1020,25 @@ export default {
     },
     //  从第七步进入第八步的请求
     async nextSteps(callback) {
-      let res = { code: 0 };
-      const flag = this.checkAllForm();
-      if (flag && callback) {
-        callback(res);
-        return false;
+      try {
+        let res = { code: 0 };
+        const hasError = await this.checkAllForm();
+        
+        if (hasError) {
+          if (callback) {
+            callback(res);
+          }
+          return false;
+        }
+        
+        // 如果所有的表单校验成功了 那么就把所有的tab页去保存一下
+        this.submitAllServices(callback);
+      } catch (error) {
+        console.error('验证表单时出错:', error);
+        if (callback) {
+          callback({ code: 500, msg: error.message || '验证表单时出错' });
+        }
       }
-      // 如果所有的表单校验成功了 那么就把所有的tab页去保存一下
-      this.submitAllServices(callback);
     },
     // 辅助方法：格式化子组名称
     formatSubGroupName(subGroupName) {
@@ -1388,6 +1500,103 @@ export default {
   .anticon {
     margin-right: 6px;
     font-size: 14px;
+  }
+}
+
+.enhanced-arrow-container {
+  width: 100%;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transform: translateY(10px); /* 调整箭头垂直位置 */
+}
+
+.enhanced-arrow-line {
+  height: 3px;
+  width: 100%;
+  background-color: rgba(24, 144, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  box-shadow: 0 0 3px rgba(24, 144, 255, 0.5);
+  border-radius: 1.5px;
+}
+
+.enhanced-flow-effect {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50px;
+  background: linear-gradient(to right, rgba(24, 144, 255, 0), rgba(24, 144, 255, 1), rgba(24, 144, 255, 0));
+  animation: enhanced-flow-animation 1s infinite linear;
+  box-shadow: 0 0 15px rgba(24, 144, 255, 0.9);
+  filter: blur(0.5px);
+}
+
+.enhanced-arrow-head {
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid rgba(24, 144, 255, 0.8);
+  margin-left: 0;
+  filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.9));
+}
+
+/* 修复箭头列垂直对齐问题 */
+.arrow-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0;
+  position: relative;
+}
+
+/* 为第一行的箭头添加特殊样式，考虑标签的高度 */
+.port-mapping-row:first-child .arrow-column .enhanced-arrow-container {
+  transform: translateY(25px); /* 为第一行的箭头添加更多的向下偏移 */
+}
+
+/* 为其他行的箭头添加正常的垂直居中样式 */
+.port-mapping-row:not(:first-child) .arrow-column .enhanced-arrow-container {
+  transform: translateY(10px);
+}
+
+/* 添加特定于端口映射的样式 */
+.port-mapping-row {
+  display: flex;
+  align-items: flex-end; /* 改为底部对齐，这样即使有标签也能对齐 */
+  margin-bottom: 16px;
+}
+
+/* 确保输入框容器垂直居中 */
+.port-input-left, .port-input-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* 改为底部对齐 */
+}
+
+/* 确保标签不影响布局 */
+.port-label-wrapper {
+  margin-bottom: 5px;
+  height: 20px; /* 固定标签高度 */
+}
+
+/* 修复箭头动画效果 */
+@keyframes enhanced-flow-animation {
+  0% {
+    left: -50px;
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0.7;
   }
 }
 </style> 
