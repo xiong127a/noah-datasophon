@@ -50,12 +50,35 @@ public class TaskLogFilter extends Filter<ILoggingEvent> {
     @Override
     public FilterReply decide(ILoggingEvent event) {
         FilterReply filterReply = FilterReply.DENY;
-        if ((event.getLoggerName().startsWith(Constant.TASK_LOG_LOGGER_NAME))
-                || event.getLevel().isGreaterOrEqual(level)) {
+
+        // 添加空值检查，防止访问null对象的属性
+        if (event == null) {
+            return filterReply;
+        }
+
+        // 检查日志名称是否以指定前缀开头
+        boolean isTaskLogger = event.getLoggerName() != null &&
+                event.getLoggerName().startsWith(Constant.TASK_LOG_LOGGER_NAME);
+
+        // 检查日志级别是否大于等于配置的级别
+        boolean isLevelAllowed = level != null &&
+                event.getLevel() != null &&
+                event.getLevel().isGreaterOrEqual(level);
+
+        if (isTaskLogger || isLevelAllowed) {
             filterReply = FilterReply.ACCEPT;
         }
-        logger.debug("task log filter, thread name:{}, loggerName:{}, filterReply:{}, level:{}", event.getThreadName(),
-                event.getLoggerName(), filterReply.name(), level);
+
+        // 安全地记录调试信息
+        if (logger.isDebugEnabled()) {
+            String threadName = event.getThreadName() != null ? event.getThreadName() : "unknown";
+            String loggerName = event.getLoggerName() != null ? event.getLoggerName() : "unknown";
+            String levelName = level != null ? level.toString() : "unknown";
+
+            logger.debug("task log filter, thread name:{}, loggerName:{}, filterReply:{}, level:{}",
+                    threadName, loggerName, filterReply.name(), levelName);
+        }
+
         return filterReply;
     }
 }

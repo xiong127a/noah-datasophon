@@ -93,9 +93,6 @@
         </filter>
     </appender>
 
-    <!-- JMX指标导出配置 -->
-    <jmxConfigurator/>
-    
     <!-- 添加Metrics指标收集器 -->
     <appender name="METRICS" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${log.base}/metrics.log</file>
@@ -114,6 +111,14 @@
         <appender-ref ref="METRICS"/>
         <appender-ref ref="STDOUT"/>
     </logger>
+
+    <!-- 移除不再支持的JMX配置器 -->
+    <!-- <jmxConfigurator/> -->
+    
+    <!-- 使用新版Logback支持的JMX配置方式 -->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
 
     <!-- root 级别的配置 -->
     <root level="INFO">

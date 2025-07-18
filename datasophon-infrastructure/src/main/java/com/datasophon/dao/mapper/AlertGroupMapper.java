@@ -32,5 +32,5 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  */
 @Mapper
 public interface AlertGroupMapper extends BaseMapper<AlertGroupEntity> {
-
+    // 确保接口定义正确，不要使用String作为factoryBeanObjectType
 }
