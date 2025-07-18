@@ -20,26 +20,20 @@ package com.datasophon.api.master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.UntypedActor;
-import akka.remote.AssociatedEvent;
-import akka.remote.AssociationErrorEvent;
-import akka.remote.DisassociatedEvent;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 
-public class RemoteEventActor extends UntypedActor {
+public class RemoteEventActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(RemoteEventActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof AssociationErrorEvent) {
-            AssociationErrorEvent aee = (AssociationErrorEvent) msg;
-            logger.info(aee.getLocalAddress() + "-->" + aee.getRemoteAddress() + ": " + aee.getCause());
-        } else if (msg instanceof AssociatedEvent) {
-            AssociatedEvent ae = (AssociatedEvent) msg;
-            logger.info(ae.getLocalAddress() + "-->" + ae.getRemoteAddress() + " associated");
-        } else if (msg instanceof DisassociatedEvent) {
-            DisassociatedEvent de = (DisassociatedEvent) msg;
-            logger.info(de.getLocalAddress() + "-->" + de.getRemoteAddress() + " disassociated");
-        }
+    public Receive createReceive() {
+        return receiveBuilder()
+                .matchAny(msg -> {
+                    // 处理任何与远程连接相关的事件
+                    logger.info("Remote event: {}", msg);
+                })
+                .build();
     }
 }

@@ -17,7 +17,8 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.enums.ServiceRoleType;
@@ -31,60 +32,64 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 
-public class InstallServiceActor extends UntypedActor {
+public class InstallServiceActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(InstallServiceActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof InstallServiceRoleCommand) {
-            InstallServiceRoleCommand command = (InstallServiceRoleCommand) msg;
-            ExecResult installResult = new ExecResult();
-            InstallServiceHandler serviceHandler = new InstallServiceHandler(command.getServiceName(), command.getServiceRoleName());
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(InstallServiceRoleCommand.class, command -> {
+                    ExecResult installResult = new ExecResult();
+                    InstallServiceHandler serviceHandler = new InstallServiceHandler(command.getServiceName(),
+                            command.getServiceRoleName());
 
-            logger.info("Start install package {}", command.getPackageName());
-            if (command.getDecompressPackageName().contains("kerberos")) {
-                ArrayList<String> commands = new ArrayList<>();
-                commands.add("yum");
-                commands.add("install");
-                commands.add("-y");
-                if (ServiceRoleType.MASTER == command.getServiceRoleType()) {
-                    logger.info("Start to {}", commands.toString());
-                    commands.add("krb5-server");
-                    commands.add("krb5-workstation");
-                    commands.add("krb5-libs");
-                } else {
-                    logger.info("Start to {}", commands.toString());
-                    commands.add("krb5-workstation");
-                    commands.add("krb5-libs");
-                }
-                if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
-                    commands.add("--skip-broken");
-                }
-                ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180, logger);
-                if (execResult.getExecResult()) {
-                    if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
-                        ShellUtils.exceShell("sudo sed -i 's/^/#/' /etc/krb5.conf.d/kcm_default_ccache");
-                        ShellUtils.exceShell("sudo systemctl restart krb5kdc");
-                        ShellUtils.exceShell("sudo systemctl restart kadmin");
+                    logger.info("Start install package {}", command.getPackageName());
+                    if (command.getDecompressPackageName().contains("kerberos")) {
+                        ArrayList<String> commands = new ArrayList<>();
+                        commands.add("yum");
+                        commands.add("install");
+                        commands.add("-y");
+                        if (ServiceRoleType.MASTER == command.getServiceRoleType()) {
+                            logger.info("Start to {}", commands.toString());
+                            commands.add("krb5-server");
+                            commands.add("krb5-workstation");
+                            commands.add("krb5-libs");
+                        } else {
+                            logger.info("Start to {}", commands.toString());
+                            commands.add("krb5-workstation");
+                            commands.add("krb5-libs");
+                        }
+                        if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
+                            commands.add("--skip-broken");
+                        }
+                        ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180,
+                                logger);
+                        if (execResult.getExecResult()) {
+                            if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
+                                ShellUtils.exceShell("sudo sed -i 's/^/#/' /etc/krb5.conf.d/kcm_default_ccache");
+                                ShellUtils.exceShell("sudo systemctl restart krb5kdc");
+                                ShellUtils.exceShell("sudo systemctl restart kadmin");
+                            }
+                            installResult = serviceHandler.install(command);
+                        }
+                    } else {
+                        installResult = serviceHandler.install(command);
+                        // 其他服务创建软连接
+                        String appHome = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
+                        String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH
+                                + StringUtils.lowerCase(command.getServiceName());
+                        if (!new File(appLinkHome).exists()) {
+                            ShellUtils
+                                    .exceShell("ln -s " + appHome + " " + appLinkHome);
+                            logger.info("Create symbolic dir: {}", appLinkHome);
+                        }
                     }
-                    installResult = serviceHandler.install(command);
-                }
-            } else {
-                installResult = serviceHandler.install(command);
-                // 其他服务创建软连接
-                String appHome = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
-                String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(command.getServiceName());
-                if (!new File(appLinkHome).exists()) {
-                    ShellUtils
-                            .exceShell("ln -s " + appHome + " " + appLinkHome);
-                    logger.info("Create symbolic dir: {}", appLinkHome);
-                }
-            }
-            getSender().tell(installResult, getSelf());
-            logger.info("Install {} {}", command.getPackageName(), installResult.getExecResult() ? "success" : "failed");
-        } else {
-            unhandled(msg);
-        }
+                    getSender().tell(installResult, getSelf());
+                    logger.info("Install {} {}", command.getPackageName(),
+                            installResult.getExecResult() ? "success" : "failed");
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

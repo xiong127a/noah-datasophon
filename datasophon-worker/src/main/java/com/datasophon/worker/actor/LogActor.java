@@ -17,7 +17,8 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
@@ -33,39 +34,41 @@ import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 
-public class LogActor extends UntypedActor {
+public class LogActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(LogActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof GetLogCommand) {
-            logger.info("get query log command");
-            GetLogCommand command = (GetLogCommand) msg;
-            HashMap<String, String> paramMap = new HashMap<>();
-            String hostName = InetAddress.getLocalHost().getHostName();
-            paramMap.put("${user}", "root");
-            paramMap.put("${hostname}", hostName);
-            String logFileName =
-                    PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap, Constants.REGEX_VARIABLE);
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(GetLogCommand.class, command -> {
+                    logger.info("get query log command");
+                    HashMap<String, String> paramMap = new HashMap<>();
+                    String hostName = InetAddress.getLocalHost().getHostName();
+                    paramMap.put("${user}", "root");
+                    paramMap.put("${hostname}", hostName);
+                    String logFileName = PlaceholderUtils.replacePlaceholders(command.getLogFile(), paramMap,
+                            Constants.REGEX_VARIABLE);
 
-            ExecResult execResult = new ExecResult();
-            String logStr = "can not find log file";
-            if (logFileName.startsWith(StrUtil.SLASH) && FileUtil.exist(logFileName)) {
-                logStr = FileUtils.readLastRows(logFileName, Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-            } else if (FileUtil.exist(Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName()
-                    + Constants.SLASH + logFileName)) {
-                logStr = FileUtils
-                        .readLastRows(
-                                Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName()
-                                        + Constants.SLASH + logFileName,
-                                Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-            }
-            execResult.setExecResult(true);
-            execResult.setExecOut(logStr);
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(msg);
-        }
+                    ExecResult execResult = new ExecResult();
+                    String logStr = "can not find log file";
+                    if (logFileName.startsWith(StrUtil.SLASH) && FileUtil.exist(logFileName)) {
+                        logStr = FileUtils.readLastRows(logFileName, Charset.defaultCharset(),
+                                PropertyUtils.getInt("rows"));
+                    } else if (FileUtil
+                            .exist(Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName()
+                                    + Constants.SLASH + logFileName)) {
+                        logStr = FileUtils
+                                .readLastRows(
+                                        Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName()
+                                                + Constants.SLASH + logFileName,
+                                        Charset.defaultCharset(), PropertyUtils.getInt("rows"));
+                    }
+                    execResult.setExecResult(true);
+                    execResult.setExecOut(logStr);
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

@@ -1,24 +1,26 @@
 package com.datasophon.worker.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.TenantResource.*;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.worker.strategy.tenantResource.AbstractOperateStrategy;
 import com.datasophon.worker.strategy.tenantResource.OperateStrategyFactory;
 
-public class TenantResourceActor extends UntypedActor {
+public class TenantResourceActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof TenantFrameResource) {
-            TenantFrameResource resource = (TenantFrameResource) message;
-            AbstractOperateStrategy operateStrategy = OperateStrategyFactory.createOperateStrategy(resource.getServiceName(), resource);
-            ExecResult execResult = executeOperation(operateStrategy, resource.getType());
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(message);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(TenantFrameResource.class, resource -> {
+                    AbstractOperateStrategy operateStrategy = OperateStrategyFactory
+                            .createOperateStrategy(resource.getServiceName(), resource);
+                    ExecResult execResult = executeOperation(operateStrategy, resource.getType());
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 
     private ExecResult executeOperation(AbstractOperateStrategy operateStrategy, String operationType) {
@@ -39,7 +41,7 @@ public class TenantResourceActor extends UntypedActor {
                 break;
             case DELETE:
                 // 暂时不做资源删除操作
-//                execResult = operateStrategy.deleteSource();
+                // execResult = operateStrategy.deleteSource();
             case NONE:
                 execResult = new ExecResult();
                 execResult.setExecResult(true);
@@ -50,5 +52,4 @@ public class TenantResourceActor extends UntypedActor {
         }
         return execResult;
     }
-
 }

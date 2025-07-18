@@ -18,7 +18,8 @@
 package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -54,31 +55,34 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DAGBuildActor extends UntypedActor {
+public class DAGBuildActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(DAGBuildActor.class);
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof StartExecuteCommandCommand) {
-            DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(StartExecuteCommandCommand.class, this::handleStartExecuteCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
-            StartExecuteCommandCommand executeCommandCommand = (StartExecuteCommandCommand) message;
+    private void handleStartExecuteCommand(StartExecuteCommandCommand executeCommandCommand) {
+        try {
+            DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();
             CommandType commandType = executeCommandCommand.getCommandType();
             logger.info("start execute command");
 
-            ClusterServiceCommandService commandService =
-                    SpringUtil.getBean(ClusterServiceCommandService.class);
-            ClusterServiceCommandHostCommandService hostCommandService =
-                    SpringUtil.getBean(ClusterServiceCommandHostCommandService.class);
-            FrameServiceRoleService frameServiceRoleService =
-                    SpringUtil.getBean(FrameServiceRoleService.class);
+            ClusterServiceCommandService commandService = SpringUtil.getBean(ClusterServiceCommandService.class);
+            ClusterServiceCommandHostCommandService hostCommandService = SpringUtil
+                    .getBean(ClusterServiceCommandHostCommandService.class);
+            FrameServiceRoleService frameServiceRoleService = SpringUtil.getBean(FrameServiceRoleService.class);
             FrameServiceService frameService = SpringUtil.getBean(FrameServiceService.class);
-            ClusterInfoService clusterInfoService =
-                    SpringUtil.getBean(ClusterInfoService.class);
+            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(executeCommandCommand.getClusterId());
-            // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装 HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]
+            // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装
+            // HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]
             List<ClusterServiceCommandEntity> commandList = commandService.lambdaQuery()
                     .in(ClusterServiceCommandEntity::getCommandId, executeCommandCommand.getCommandIds()).list();
 
@@ -90,8 +94,8 @@ public class DAGBuildActor extends UntypedActor {
                     List<ServiceRoleInfo> elseRoles = new ArrayList<>();
                     ServiceNode serviceNode = new ServiceNode();
 
-                    List<ClusterServiceCommandHostCommandEntity> hostCommandList =
-                            hostCommandService.getHostCommandListByCommandId(command.getCommandId());
+                    List<ClusterServiceCommandHostCommandEntity> hostCommandList = hostCommandService
+                            .getHostCommandListByCommandId(command.getCommandId());
 
                     FrameServiceEntity serviceEntity = frameService.getServiceByFrameCodeAndServiceName(
                             clusterInfo.getClusterFrame(), command.getServiceName());
@@ -100,8 +104,8 @@ public class DAGBuildActor extends UntypedActor {
                     serviceNode.setCommandId(command.getCommandId());
                     for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommandList) {
                         logger.info("service role is {}", hostCommand.getServiceRoleName());
-                        FrameServiceRoleEntity frameServiceRoleEntity =
-                                frameServiceRoleService.getServiceRoleByFrameCodeAndServiceRoleName(
+                        FrameServiceRoleEntity frameServiceRoleEntity = frameServiceRoleService
+                                .getServiceRoleByFrameCodeAndServiceRoleName(
                                         clusterInfo.getClusterFrame(), hostCommand.getServiceRoleName());
 
                         ServiceRoleInfo serviceRoleInfo = JSONObject
@@ -115,8 +119,8 @@ public class DAGBuildActor extends UntypedActor {
                         serviceRoleInfo.setCommandType(commandType);
                         serviceRoleInfo.setServiceInstanceId(command.getServiceInstanceId());
 
-                        ServiceRoleStrategy serviceRoleHandler =
-                                ServiceRoleStrategyContext.getServiceRoleHandler(serviceRoleInfo.getName());
+                        ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext
+                                .getServiceRoleHandler(serviceRoleInfo.getName());
                         if (Objects.nonNull(serviceRoleHandler)) {
                             serviceRoleHandler.handlerServiceRoleInfo(serviceRoleInfo, hostCommand.getHostname());
                         }
@@ -171,10 +175,11 @@ public class DAGBuildActor extends UntypedActor {
             submitActiveTaskNodeCommand.setClusterCode(clusterInfo.getClusterCode());
             submitActiveTaskNodeCommand.setRollingRestartInfo(executeCommandCommand.getRollingRestartInfo());
 
-
             ActorRef submitTaskNodeActor = ActorUtils.getLocalActor(SubmitTaskNodeActor.class,
                     ActorUtils.getActorRefName(SubmitTaskNodeActor.class));
             submitTaskNodeActor.tell(submitActiveTaskNodeCommand, getSelf());
+        } catch (Exception e) {
+            logger.error("Error handling StartExecuteCommandCommand", e);
         }
     }
 }

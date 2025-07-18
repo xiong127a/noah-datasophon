@@ -18,7 +18,8 @@
 package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.RollingRestartUtils;
@@ -39,7 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SubmitTaskNodeActor extends UntypedActor {
+public class SubmitTaskNodeActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(SubmitTaskNodeActor.class);
 
@@ -50,10 +51,15 @@ public class SubmitTaskNodeActor extends UntypedActor {
     }
 
     @Override
-    public void onReceive(Object message) throws Throwable {
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(SubmitActiveTaskNodeCommand.class, this::handleSubmitActiveTaskNodeCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
-        if (message instanceof SubmitActiveTaskNodeCommand) {
-            SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand = (SubmitActiveTaskNodeCommand) message;
+    private void handleSubmitActiveTaskNodeCommand(SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand) {
+        try {
             DAGGraph<String, ServiceNode, String> dag = submitActiveTaskNodeCommand.getDag();
             Map<String, ServiceExecuteState> activeTaskList = submitActiveTaskNodeCommand.getActiveTaskList();
             Map<String, String> errorTaskList = submitActiveTaskNodeCommand.getErrorTaskList();
@@ -168,7 +174,8 @@ public class SubmitTaskNodeActor extends UntypedActor {
                     }
                 }
             }
+        } catch (Exception e) {
+            logger.error("处理SubmitActiveTaskNodeCommand消息时出错", e);
         }
     }
-
 }

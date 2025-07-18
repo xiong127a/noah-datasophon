@@ -25,28 +25,29 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.TreeSet;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.io.FileUtil;
 
-public class FileOperateActor extends UntypedActor {
+public class FileOperateActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object msg) throws Throwable, Throwable {
-        if (msg instanceof FileOperateCommand) {
-            ExecResult execResult = new ExecResult();
-            FileOperateCommand fileOperateCommand = (FileOperateCommand) msg;
-            TreeSet<String> lines = fileOperateCommand.getLines();
-            if (Objects.nonNull(lines) && lines.size() > 0) {
-                File file = FileUtil.writeLines(lines, fileOperateCommand.getPath(), Charset.defaultCharset());
-                if (file.exists()) {
-                    execResult.setExecResult(true);
-                }
-            } else {
-                FileUtil.writeUtf8String(fileOperateCommand.getContent(), fileOperateCommand.getPath());
-            }
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(msg);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(FileOperateCommand.class, fileOperateCommand -> {
+                    ExecResult execResult = new ExecResult();
+                    TreeSet<String> lines = fileOperateCommand.getLines();
+                    if (Objects.nonNull(lines) && lines.size() > 0) {
+                        File file = FileUtil.writeLines(lines, fileOperateCommand.getPath(), Charset.defaultCharset());
+                        if (file.exists()) {
+                            execResult.setExecResult(true);
+                        }
+                    } else {
+                        FileUtil.writeUtf8String(fileOperateCommand.getContent(), fileOperateCommand.getPath());
+                    }
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

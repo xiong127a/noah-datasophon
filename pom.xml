@@ -39,7 +39,7 @@
 
     <properties>
         <revision>1.2.1</revision>
-        <akka.version>2.4.20</akka.version>
+        <akka.version>2.10.7-M1</akka.version>
         <commons.httpclient>3.0.1</commons.httpclient>
         <commons.lang>2.6</commons.lang>
         <druid.version>1.2.24</druid.version>
@@ -149,22 +149,22 @@
             </dependency>
             <dependency>
                 <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-actor_2.11</artifactId>
+                <artifactId>akka-actor_3</artifactId>
                 <version>${akka.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-remote_2.11</artifactId>
+                <artifactId>akka-remote_3</artifactId>
                 <version>${akka.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-slf4j_2.11</artifactId>
+                <artifactId>akka-slf4j_3</artifactId>
                 <version>${akka.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-persistence_2.11</artifactId>
+                <artifactId>akka-persistence_3</artifactId>
                 <version>${akka.version}</version>
             </dependency>
             <dependency>

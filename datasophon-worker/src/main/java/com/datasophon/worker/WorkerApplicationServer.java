@@ -24,9 +24,6 @@ import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.event.EventStream;
-import akka.remote.AssociatedEvent;
-import akka.remote.AssociationErrorEvent;
-import akka.remote.DisassociatedEvent;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -86,7 +83,7 @@ public class WorkerApplicationServer {
 
         startNodeExporter(workDir, cpuArchitecture);
 
-        Map<String, String> userMap = new HashMap(16);
+        Map<String, String> userMap = new HashMap<>(16);
         initUserMap(userMap);
 
         createDefaultUser(userMap);
@@ -99,12 +96,11 @@ public class WorkerApplicationServer {
          */
         Runtime.getRuntime()
                 .addShutdownHook(
-                        new Thread(
-                                () -> {
-                                    if (!ServerLifeCycleManager.isStopped()) {
-                                        close("WorkerServer shutdown hook");
-                                    }
-                                }));
+                        new Thread(() -> {
+                            if (!ServerLifeCycleManager.isStopped()) {
+                                close("WorkerServer shutdown hook");
+                            }
+                        }));
     }
 
     private static void initUserMap(Map<String, String> userMap) {
@@ -132,7 +128,8 @@ public class WorkerApplicationServer {
     }
 
     private static ActorSystem initActor(String hostname) {
-        Config config = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=" + hostname);
+        // 使用新的配置方式，适应Akka 2.10.7-M1
+        Config config = ConfigFactory.parseString("akka.remote.artery.canonical.hostname=" + hostname);
         ActorSystem system = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         system.actorOf(Props.create(WorkerActor.class), WORKER);
 
@@ -143,11 +140,12 @@ public class WorkerApplicationServer {
     }
 
     private static void subscribeRemoteEvent(ActorSystem system) {
+        // 使用Props.create()方法创建RemoteEventActor
         ActorRef remoteEventActor = system.actorOf(Props.create(RemoteEventActor.class), "remoteEventActor");
         EventStream eventStream = system.eventStream();
-        eventStream.subscribe(remoteEventActor, AssociationErrorEvent.class);
-        eventStream.subscribe(remoteEventActor, AssociatedEvent.class);
-        eventStream.subscribe(remoteEventActor, DisassociatedEvent.class);
+        // 在Akka 2.10.7-M1中，经典remoting事件已被弃用
+        // 如果需要监控远程连接状态，请使用Akka集群的成员事件
+        eventStream.subscribe(remoteEventActor, Object.class);
     }
 
     /**
@@ -167,7 +165,7 @@ public class WorkerApplicationServer {
             String cpuArchitecture,
             ActorSystem system) {
         ActorSelection workerStartActor = system.actorSelection(
-                "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
+                "akka://datasophon@" + masterHost + ":2551/user/workerStartActor");
         // 收集主机信息
         ExecResult result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
         logger.info("host info collect result:{}", result);

@@ -18,7 +18,8 @@
 package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.extra.spring.SpringUtil;
@@ -53,21 +54,27 @@ import java.util.concurrent.TimeUnit;
 /**
  * 节点状态监测
  */
-public class HostCheckActor extends UntypedActor {
+public class HostCheckActor extends AbstractActor {
 
   private static final Logger logger = LoggerFactory.getLogger(HostCheckActor.class);
 
   @Override
-  public void onReceive(Object msg) throws Throwable {
-    if (msg instanceof HostCheckCommand) {
-      //logger.info("start to check host info");
+  public Receive createReceive() {
+    return ReceiveBuilder.create()
+        .match(HostCheckCommand.class, this::handleHostCheck)
+        .matchAny(this::unhandled)
+        .build();
+  }
+
+  private void handleHostCheck(HostCheckCommand hostCheckCommand) {
+    try {
+      // logger.info("start to check host info");
       ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
       ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
           .getBean(ClusterServiceRoleInstanceService.class);
       ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
       // Host or cluster
-      final HostCheckCommand hostCheckCommand = (HostCheckCommand) msg;
       final HostInfo hostInfo = hostCheckCommand.getHostInfo();
 
       // 获取当前安装并且正在运行的集群
@@ -80,7 +87,7 @@ public class HostCheckActor extends UntypedActor {
         String depType = clusterInfoEntity.getDepType();
         String prometheusPort = "9090";
         if (Constants.KUBERNETES_MODE.equals(depType)) {
-          prometheusPort="30909";
+          prometheusPort = "30909";
         }
 
         ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole("Prometheus", "",
@@ -207,8 +214,8 @@ public class HostCheckActor extends UntypedActor {
           }
         }
       }
-    } else {
-      unhandled(msg);
+    } catch (Exception e) {
+      logger.error("Error handling HostCheckCommand", e);
     }
   }
 }

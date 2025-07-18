@@ -21,20 +21,22 @@ import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.worker.handler.ServiceHandler;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 
-public class RestartServiceActor extends UntypedActor {
+public class RestartServiceActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof ServiceRoleOperateCommand) {
-            ServiceRoleOperateCommand command = (ServiceRoleOperateCommand) msg;
-            ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
-            ExecResult startResult =
-                    serviceHandler.reStart(command.getRestartRunner(), command.getDecompressPackageName());
-            getSender().tell(startResult, getSelf());
-        } else {
-            unhandled(msg);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(ServiceRoleOperateCommand.class, command -> {
+                    ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(),
+                            command.getServiceRoleName());
+                    ExecResult startResult = serviceHandler.reStart(command.getRestartRunner(),
+                            command.getDecompressPackageName());
+                    getSender().tell(startResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

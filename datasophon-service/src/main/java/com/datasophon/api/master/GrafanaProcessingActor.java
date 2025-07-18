@@ -1,6 +1,7 @@
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.command.Sqlite3ExecCommand;
 import com.datasophon.common.utils.ExecResult;
@@ -10,19 +11,25 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-public class GrafanaProcessingActor extends UntypedActor {
+public class GrafanaProcessingActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(GrafanaProcessingActor.class);
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(message));
-        if (message instanceof Sqlite3ExecCommand) {
-            Sqlite3ExecCommand command = (Sqlite3ExecCommand) message;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(Sqlite3ExecCommand.class, this::processSqlite3Command)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void processSqlite3Command(Sqlite3ExecCommand command) {
+        try {
+            logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
             ExecResult execResult = new ExecResult();
 
             String dbFilePath = "/opt/datasophon/grafana/data/grafana.db";
-            execResult = Sqlite3Utils.updateDatasource(dbFilePath,command.getUrl());
+            execResult = Sqlite3Utils.updateDatasource(dbFilePath, command.getUrl());
             if (execResult.getExecResult()) {
                 logger.info(command.getGrafanaIp() + " update success");
             } else {
@@ -33,7 +40,7 @@ public class GrafanaProcessingActor extends UntypedActor {
                 try {
                     TimeUnit.SECONDS.sleep(10L);
 
-                    execResult = Sqlite3Utils.updateDatasource(dbFilePath,command.getUrl());
+                    execResult = Sqlite3Utils.updateDatasource(dbFilePath, command.getUrl());
 
                     if (execResult.getExecResult()) {
                         logger.info(command.getGrafanaIp() + " update success");
@@ -46,8 +53,8 @@ public class GrafanaProcessingActor extends UntypedActor {
                     logger.info("The SR operate be sleep operation failed");
                 }
             }
-        } else {
-            unhandled(message);
+        } catch (Throwable e) {
+            logger.error("Error processing Sqlite3ExecCommand", e);
         }
     }
 }

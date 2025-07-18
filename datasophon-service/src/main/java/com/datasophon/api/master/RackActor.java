@@ -17,7 +17,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
@@ -41,54 +42,54 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class RackActor extends UntypedActor {
+public class RackActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(RackActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof GenerateRackPropCommand) {
-            GenerateRackPropCommand command = (GenerateRackPropCommand) msg;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(GenerateRackPropCommand.class, command -> {
+                    ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                            .getBean(ClusterServiceRoleInstanceService.class);
+                    ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
+                    ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                    // update rack table
+                    List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                            .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), "NameNode");
+                    ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
+                    // build config file map
+                    HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
+                    Generators generators = new Generators();
+                    generators.setFilename("rack.properties");
+                    generators.setOutputDirectory("etc/hadoop");
+                    generators.setConfigFormat("properties2");
 
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
-            ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
-            ClusterInfoService clusterInfoService =
-                    SpringUtil.getBean(ClusterInfoService.class);
-            // update rack table
-            List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
-                    .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), "NameNode");
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
-            // build config file map
-            HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-            Generators generators = new Generators();
-            generators.setFilename("rack.properties");
-            generators.setOutputDirectory("etc/hadoop");
-            generators.setConfigFormat("properties2");
-
-            ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
-            List<ClusterHostDO> hostList = hostService.list();
-            for (ClusterHostDO clusterHostDO : hostList) {
-                ServiceConfig serviceConfig = ProcessUtils.createServiceConfig(clusterHostDO.getIp(),
-                        Constants.SLASH + clusterHostDO.getRack(), "input");
-                serviceConfigs.add(serviceConfig);
-            }
-            configFileMap.put(generators, serviceConfigs);
-            for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleList) {
-                // generate rack.properties
-                ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
-                serviceRoleInfo.setName("NameNode");
-                serviceRoleInfo.setParentName("HDFS");
-                serviceRoleInfo.setConfigFileMap(configFileMap);
-                serviceRoleInfo.setDecompressPackageName(
-                        PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "HDFS"));
-                serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
-                ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-                ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
-                if (!execResult.getExecResult()) {
-                    logger.error("generate rack.properties failed");
-                }
-            }
-        }
+                    ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
+                    List<ClusterHostDO> hostList = hostService.list();
+                    for (ClusterHostDO clusterHostDO : hostList) {
+                        ServiceConfig serviceConfig = ProcessUtils.createServiceConfig(clusterHostDO.getIp(),
+                                Constants.SLASH + clusterHostDO.getRack(), "input");
+                        serviceConfigs.add(serviceConfig);
+                    }
+                    configFileMap.put(generators, serviceConfigs);
+                    for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleList) {
+                        // generate rack.properties
+                        ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+                        serviceRoleInfo.setName("NameNode");
+                        serviceRoleInfo.setParentName("HDFS");
+                        serviceRoleInfo.setConfigFileMap(configFileMap);
+                        serviceRoleInfo.setDecompressPackageName(
+                                PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "HDFS"));
+                        serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
+                        ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
+                        ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
+                        if (!execResult.getExecResult()) {
+                            logger.error("generate rack.properties failed");
+                        }
+                    }
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

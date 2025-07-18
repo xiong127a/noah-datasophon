@@ -1,6 +1,7 @@
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -18,24 +19,36 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class YarnQueueActor extends UntypedActor {
+public class YarnQueueActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(YarnQueueActor.class);
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof TenantFrameResource) {
-            TenantYarnResource tenantYarnResource = (TenantYarnResource) message;
-            ClusterYarnSchedulerService clusterYarnSchedulerService =
-                    SpringUtil.getBean(ClusterYarnSchedulerService.class);
-            ClusterYarnScheduler scheduler = clusterYarnSchedulerService.getScheduler(tenantYarnResource.getClusterId());
-            if ("capacity".equals(scheduler.getScheduler())) {
-                operateCapacityQueue(tenantYarnResource);
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(TenantFrameResource.class, this::handleTenantFrameResource)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void handleTenantFrameResource(TenantFrameResource message) {
+        try {
+            if (message instanceof TenantYarnResource) {
+                TenantYarnResource tenantYarnResource = (TenantYarnResource) message;
+                ClusterYarnSchedulerService clusterYarnSchedulerService = SpringUtil
+                        .getBean(ClusterYarnSchedulerService.class);
+                ClusterYarnScheduler scheduler = clusterYarnSchedulerService
+                        .getScheduler(tenantYarnResource.getClusterId());
+                if ("capacity".equals(scheduler.getScheduler())) {
+                    operateCapacityQueue(tenantYarnResource);
+                } else {
+                    unhandled(message);
+                }
             } else {
                 unhandled(message);
             }
-        } else {
-            unhandled(message);
+        } catch (Exception e) {
+            logger.error("Error handling TenantFrameResource", e);
         }
     }
 
@@ -55,8 +68,7 @@ public class YarnQueueActor extends UntypedActor {
     }
 
     private void createCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-        ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringUtil.getBean(ClusterQueueCapacityService.class);
+        ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
 
         List<ClusterQueueCapacity> list = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
@@ -82,8 +94,7 @@ public class YarnQueueActor extends UntypedActor {
     }
 
     private void updateCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-        ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringUtil.getBean(ClusterQueueCapacityService.class);
+        ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
         ClusterQueueCapacity queue = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
                         .eq(Constants.CLUSTER_ID, clusterId)
@@ -103,8 +114,7 @@ public class YarnQueueActor extends UntypedActor {
     }
 
     private void deleteCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-        ClusterQueueCapacityService clusterQueueCapacityService =
-                SpringUtil.getBean(ClusterQueueCapacityService.class);
+        ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
         ClusterQueueCapacity queue = clusterQueueCapacityService
                 .list(new QueryWrapper<ClusterQueueCapacity>()
                         .eq(Constants.CLUSTER_ID, clusterId)
@@ -116,52 +126,58 @@ public class YarnQueueActor extends UntypedActor {
         logger.info("delete yarn queue {} success , please restart yarn", yarnResource.getQueueName());
     }
 
-//    /**
-//     * 创建公平队列yarn队列及设置限额
-//     */
-//    private void createFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-//        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringUtil.getBean(ClusterYarnQueueService.class);
-//        ClusterYarnQueue clusterYarnQueue = new ClusterYarnQueue();
-//        clusterYarnQueue.setAllowPreemption(1);
-//        clusterYarnQueue.setAmShare("0.1");
-//        clusterYarnQueue.setAppNum(100);
-//        clusterYarnQueue.setClusterId(clusterId);
-//        clusterYarnQueue.setMaxCore(Integer.valueOf(yarnResource.getYarnCpu()));
-//        clusterYarnQueue.setMinCore(1);
-//        clusterYarnQueue.setMinMem(1);
-//        clusterYarnQueue.setMaxMem(Integer.valueOf(yarnResource.getYarnMemory()));
-//        clusterYarnQueue.setQueueName(yarnResource.getYarnQueueName());
-//        clusterYarnQueue.setSchedulePolicy("fifo");
-//        clusterYarnQueue.setWeight(1);
-//        clusterYarnQueueService.saveQueue(clusterYarnQueue);
-//        clusterYarnQueueService.refreshQueues(clusterId);
-//    }
-//
-//    /**
-//     * 更新公平队列yarn队列配置
-//     */
-//    private void updateFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-//        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringUtil.getBean(ClusterYarnQueueService.class);
-//        ClusterYarnQueue clusterYarnQueue = clusterYarnQueueService.getQueueByName(clusterId, yarnResource.getYarnQueueName());
-//        clusterYarnQueue.setClusterId(clusterId);
-//        clusterYarnQueue.setMaxCore(Integer.valueOf(yarnResource.getYarnCpu()));
-//        clusterYarnQueue.setMaxMem(Integer.valueOf(yarnResource.getYarnMemory()));
-//        clusterYarnQueue.setQueueName(yarnResource.getYarnQueueName());
-//        clusterYarnQueueService.updateById(clusterYarnQueue);
-//        clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());
-//    }
-//
-//    /**
-//     * 删除公平队列yarn队列配置
-//     */
-//    private void deleteFireYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
-//        ClusterYarnQueueService clusterYarnQueueService =
-//                SpringUtil.getBean(ClusterYarnQueueService.class);
-//        ClusterYarnQueue clusterYarnQueue = clusterYarnQueueService.getQueueByName(clusterId, yarnResource.getYarnQueueName());
-//        clusterYarnQueueService.removeById(clusterYarnQueue.getId());
-//        clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());
-//    }
-
+    // /**
+    // * 创建公平队列yarn队列及设置限额
+    // */
+    // private void createFireYarnQueue(TenantYarnResource yarnResource, Integer
+    // clusterId) throws Exception {
+    // ClusterYarnQueueService clusterYarnQueueService =
+    // SpringUtil.getBean(ClusterYarnQueueService.class);
+    // ClusterYarnQueue clusterYarnQueue = new ClusterYarnQueue();
+    // clusterYarnQueue.setAllowPreemption(1);
+    // clusterYarnQueue.setAmShare("0.1");
+    // clusterYarnQueue.setAppNum(100);
+    // clusterYarnQueue.setClusterId(clusterId);
+    // clusterYarnQueue.setMaxCore(Integer.valueOf(yarnResource.getYarnCpu()));
+    // clusterYarnQueue.setMinCore(1);
+    // clusterYarnQueue.setMinMem(1);
+    // clusterYarnQueue.setMaxMem(Integer.valueOf(yarnResource.getYarnMemory()));
+    // clusterYarnQueue.setQueueName(yarnResource.getYarnQueueName());
+    // clusterYarnQueue.setSchedulePolicy("fifo");
+    // clusterYarnQueue.setWeight(1);
+    // clusterYarnQueueService.saveQueue(clusterYarnQueue);
+    // clusterYarnQueueService.refreshQueues(clusterId);
+    // }
+    //
+    // /**
+    // * 更新公平队列yarn队列配置
+    // */
+    // private void updateFireYarnQueue(TenantYarnResource yarnResource, Integer
+    // clusterId) throws Exception {
+    // ClusterYarnQueueService clusterYarnQueueService =
+    // SpringUtil.getBean(ClusterYarnQueueService.class);
+    // ClusterYarnQueue clusterYarnQueue =
+    // clusterYarnQueueService.getQueueByName(clusterId,
+    // yarnResource.getYarnQueueName());
+    // clusterYarnQueue.setClusterId(clusterId);
+    // clusterYarnQueue.setMaxCore(Integer.valueOf(yarnResource.getYarnCpu()));
+    // clusterYarnQueue.setMaxMem(Integer.valueOf(yarnResource.getYarnMemory()));
+    // clusterYarnQueue.setQueueName(yarnResource.getYarnQueueName());
+    // clusterYarnQueueService.updateById(clusterYarnQueue);
+    // clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());
+    // }
+    //
+    // /**
+    // * 删除公平队列yarn队列配置
+    // */
+    // private void deleteFireYarnQueue(TenantYarnResource yarnResource, Integer
+    // clusterId) throws Exception {
+    // ClusterYarnQueueService clusterYarnQueueService =
+    // SpringUtil.getBean(ClusterYarnQueueService.class);
+    // ClusterYarnQueue clusterYarnQueue =
+    // clusterYarnQueueService.getQueueByName(clusterId,
+    // yarnResource.getYarnQueueName());
+    // clusterYarnQueueService.removeById(clusterYarnQueue.getId());
+    // clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());
+    // }
 }

@@ -18,7 +18,8 @@
 package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
@@ -36,15 +37,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ServiceExecuteResultActor extends UntypedActor {
+public class ServiceExecuteResultActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceExecuteResultActor.class);
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof ServiceExecuteResultMessage) {
-            ServiceExecuteResultMessage result = (ServiceExecuteResultMessage) message;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(ServiceExecuteResultMessage.class, this::handleServiceExecuteResult)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
+    private void handleServiceExecuteResult(ServiceExecuteResultMessage result) {
+        try {
             DAGGraph<String, ServiceNode, String> dag = result.getDag();
             Map<String, ServiceExecuteState> activeTaskList = result.getActiveTaskList();
             Map<String, String> errorTaskList = result.getErrorTaskList();
@@ -102,8 +108,8 @@ public class ServiceExecuteResultActor extends UntypedActor {
                             completeTaskList, submitTaskNodeActor, node);
                 }
             }
-        } else {
-            unhandled(message);
+        } catch (Exception e) {
+            logger.error("Error handling ServiceExecuteResultMessage", e);
         }
     }
 
@@ -119,13 +125,13 @@ public class ServiceExecuteResultActor extends UntypedActor {
     }
 
     private void tellToSubmitActiveTaskNode(ServiceExecuteResultMessage result,
-                                            DAGGraph<String, ServiceNode, String> dag,
-                                            Map<String, ServiceExecuteState> activeTaskList,
-                                            Map<String, String> errorTaskList,
-                                            Map<String, String> readyToSubmitTaskList,
-                                            Map<String, String> completeTaskList,
-                                            ActorRef submitTaskNodeActor,
-                                            String node) {
+            DAGGraph<String, ServiceNode, String> dag,
+            Map<String, ServiceExecuteState> activeTaskList,
+            Map<String, String> errorTaskList,
+            Map<String, String> readyToSubmitTaskList,
+            Map<String, String> completeTaskList,
+            ActorRef submitTaskNodeActor,
+            String node) {
         Set<String> subsequentNodes = dag.getSubsequentNodes(node);
         logger.info("{}'s subsequent nodes is {}", node, subsequentNodes.toString());
         for (String subsequentNode : subsequentNodes) {
@@ -144,5 +150,4 @@ public class ServiceExecuteResultActor extends UntypedActor {
 
         submitTaskNodeActor.tell(submitActiveTaskNodeCommand, getSelf());
     }
-
 }

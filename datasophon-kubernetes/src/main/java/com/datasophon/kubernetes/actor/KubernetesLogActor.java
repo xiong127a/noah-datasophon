@@ -17,7 +17,8 @@
 
 package com.datasophon.kubernetes.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.command.KubernetesGetLogCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
@@ -27,35 +28,33 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class KubernetesLogActor extends UntypedActor {
+public class KubernetesLogActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesLogActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof KubernetesGetLogCommand) {
-            logger.info("get query log command");
-            KubernetesGetLogCommand command = (KubernetesGetLogCommand) msg;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(KubernetesGetLogCommand.class, command -> {
+                    logger.info("get query log command");
 
-            ExecResult logResult = new ExecResult();
-            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                logResult = KubernetesUtil.getContainerLog(
-                        command.getNamespace(),
-                        kubeClient,
-                        command.getServiceRoleFullName(),
-                        command.getHostname(),
-                        PropertyUtils.getInt("rows")
-                );
-                getSender().tell(logResult, getSelf());
-            } catch (Exception e) {
-                logger.error("Get container log error: ", e);
-                logResult.setExecResult(false);
-                logResult.setExecErrOut("Failed to get container log: " + e.getMessage());
-                getSender().tell(logResult, getSelf());
-            }
-
-        } else {
-            unhandled(msg);
-        }
+                    ExecResult logResult = new ExecResult();
+                    try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+                        logResult = KubernetesUtil.getContainerLog(
+                                command.getNamespace(),
+                                kubeClient,
+                                command.getServiceRoleFullName(),
+                                command.getHostname(),
+                                PropertyUtils.getInt("rows"));
+                        getSender().tell(logResult, getSelf());
+                    } catch (Exception e) {
+                        logger.error("Get container log error: ", e);
+                        logResult.setExecResult(false);
+                        logResult.setExecErrOut("Failed to get container log: " + e.getMessage());
+                        getSender().tell(logResult, getSelf());
+                    }
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

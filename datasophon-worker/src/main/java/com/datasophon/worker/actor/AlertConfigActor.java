@@ -17,7 +17,8 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
@@ -27,23 +28,23 @@ import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import java.util.HashMap;
 import java.util.List;
 
-public class AlertConfigActor extends UntypedActor {
+public class AlertConfigActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object message) throws Throwable, Throwable {
-        if (message instanceof GenerateAlertConfigCommand) {
-            GenerateAlertConfigCommand command = (GenerateAlertConfigCommand) message;
-            ExecResult execResult = new ExecResult();
-            HashMap<Generators, List<AlertItem>> configFileMap = command.getConfigFileMap();
-            for (Generators generators : configFileMap.keySet()) {
-                List<AlertItem> alertItems = configFileMap.get(generators);
-                WorkerFreemarkerUtils.generatePromAlertFile(generators, alertItems,
-                        generators.getFilename().replace(".yml", "").toUpperCase());
-            }
-            execResult.setExecResult(true);
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(message);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(GenerateAlertConfigCommand.class, command -> {
+                    ExecResult execResult = new ExecResult();
+                    HashMap<Generators, List<AlertItem>> configFileMap = command.getConfigFileMap();
+                    for (Generators generators : configFileMap.keySet()) {
+                        List<AlertItem> alertItems = configFileMap.get(generators);
+                        WorkerFreemarkerUtils.generatePromAlertFile(generators, alertItems,
+                                generators.getFilename().replace(".yml", "").toUpperCase());
+                    }
+                    execResult.setExecResult(true);
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

@@ -40,10 +40,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ObjectUtil;
 
-public class HostConnectActor extends UntypedActor {
+public class HostConnectActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(HostConnectActor.class);
 
@@ -54,9 +55,15 @@ public class HostConnectActor extends UntypedActor {
     }
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof HostCheckCommand) {
-            HostCheckCommand hostCheckCommand = (HostCheckCommand) message;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(HostCheckCommand.class, this::handleHostCheck)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void handleHostCheck(HostCheckCommand hostCheckCommand) {
+        try {
             HostInfo hostInfo = hostCheckCommand.getHostInfo();
             String clusterCode = hostCheckCommand.getClusterCode();
 
@@ -131,8 +138,8 @@ public class HostConnectActor extends UntypedActor {
             }
 
             logger.info("end host check: {}", hostInfo.getHostname());
-        } else {
-            unhandled(message);
+        } catch (Exception e) {
+            logger.error("Error handling HostCheckCommand", e);
         }
     }
 }

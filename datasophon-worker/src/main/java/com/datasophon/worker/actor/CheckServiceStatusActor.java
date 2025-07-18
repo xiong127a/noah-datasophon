@@ -24,25 +24,27 @@ import com.datasophon.worker.handler.ServiceHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 
-public class CheckServiceStatusActor extends UntypedActor {
+public class CheckServiceStatusActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(CheckServiceStatusActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof InstallServiceRoleCommand) {
-            InstallServiceRoleCommand command = (InstallServiceRoleCommand) msg;
-            ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
-            ExecResult statusResult =
-                    serviceHandler.status(command.getStatusRunner(), command.getDecompressPackageName());
-            if (!statusResult.getExecResult()) {
-                logger.info("{} status failed", command.getDecompressPackageName());
-                statusResult.setExecResult(false);
-            }
-        } else {
-            unhandled(msg);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(InstallServiceRoleCommand.class, command -> {
+                    ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(),
+                            command.getServiceRoleName());
+                    ExecResult statusResult = serviceHandler.status(command.getStatusRunner(),
+                            command.getDecompressPackageName());
+                    if (!statusResult.getExecResult()) {
+                        logger.info("{} status failed", command.getDecompressPackageName());
+                        statusResult.setExecResult(false);
+                    }
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

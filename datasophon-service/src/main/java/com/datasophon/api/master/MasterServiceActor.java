@@ -19,7 +19,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
@@ -47,21 +48,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class MasterServiceActor extends UntypedActor {
+public class MasterServiceActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(MasterServiceActor.class);
 
     @Override
     public void postStop() {
-
         logger.info("{} service actor stopped ", getSelf().path().toString());
     }
 
     @Override
-    public void onReceive(Object message) {
-        if (message instanceof ExecuteServiceRoleCommand) {
-            ExecuteServiceRoleCommand executeServiceRoleCommand = (ExecuteServiceRoleCommand) message;
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(ExecuteServiceRoleCommand.class, this::handleExecuteServiceRoleCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
+    private void handleExecuteServiceRoleCommand(ExecuteServiceRoleCommand executeServiceRoleCommand) {
+        try {
             ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
                     .getBean(ClusterServiceRoleGroupConfigService.class);
             ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
@@ -285,20 +290,17 @@ public class MasterServiceActor extends UntypedActor {
                     default:
                         break;
                 }
-                ProcessUtils.handleCommandResult(
-                        serviceRoleInfo.getHostCommandId(),
-                        execResult.getExecResult(),
-                        execResult.getExecOut());
             }
-        } else {
-            unhandled(message);
+        } catch (Exception e) {
+            logger.error("处理ExecuteServiceRoleCommand消息时出错", e);
         }
     }
 
     private boolean isEnableRangerPlugin(Integer clusterId, String serviceName) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        return globalVariables.containsKey("${enable" + serviceName + "Plugin}")
-                && "true".equals(globalVariables.get("${enable" + serviceName + "Plugin}"));
+        Map<String, String> variables = GlobalVariables.get(clusterId);
+        if (variables.containsKey("enableRangerPlugin")) {
+            return "true".equals(variables.get("enableRangerPlugin"));
+        }
+        return false;
     }
-
 }

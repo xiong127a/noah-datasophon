@@ -18,7 +18,8 @@
 package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
@@ -51,7 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ServiceCommandActor extends UntypedActor {
+public class ServiceCommandActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceCommandActor.class);
 
@@ -80,10 +81,15 @@ public class ServiceCommandActor extends UntypedActor {
     }
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof UpdateCommandHostMessage) {
-            UpdateCommandHostMessage message = (UpdateCommandHostMessage) msg;
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(UpdateCommandHostMessage.class, this::handleUpdateCommandHostMessage)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
+    private void handleUpdateCommandHostMessage(UpdateCommandHostMessage message) {
+        try {
             ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
             ClusterServiceCommandHostCommandService service = SpringUtil
@@ -198,6 +204,8 @@ public class ServiceCommandActor extends UntypedActor {
             }
             commandService.lambdaUpdate().eq(ClusterServiceCommandEntity::getCommandId, command.getCommandId())
                     .update(command);
+        } catch (Exception e) {
+            logger.error("处理UpdateCommandHostMessage消息时出错", e);
         }
     }
 
@@ -231,5 +239,4 @@ public class ServiceCommandActor extends UntypedActor {
             }
         }
     }
-
 }

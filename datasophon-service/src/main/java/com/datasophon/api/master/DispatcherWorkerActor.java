@@ -19,7 +19,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.api.master.handler.host.CheckWorkerMd5Handler;
 import com.datasophon.api.master.handler.host.DecompressWorkerHandler;
@@ -35,7 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
 
-public class DispatcherWorkerActor extends UntypedActor {
+public class DispatcherWorkerActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(DispatcherWorkerActor.class);
 
@@ -46,24 +47,27 @@ public class DispatcherWorkerActor extends UntypedActor {
     }
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        DispatcherHostAgentCommand command = (DispatcherHostAgentCommand) message;
-        HostInfo hostInfo = command.getHostInfo();
-        logger.info("start dispatcher host agent :{}", hostInfo.getIp());
-        hostInfo.setMessage(
-                MessageResolverUtils.getMessage(
-                        "distributed.host.management.agent.installation.package"));
-        ClientSession session =
-                MinaUtils.openConnectionWithPassword(hostInfo);
-        DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
-        handlerChain.addHandler(new UploadWorkerHandler());
-        handlerChain.addHandler(new CheckWorkerMd5Handler());
-        handlerChain.addHandler(new DecompressWorkerHandler());
-        handlerChain.addHandler(
-                new StartWorkerHandler(command.getClusterId(), command.getClusterFrame()));
-        handlerChain.handle(session, hostInfo);
-        if (ObjectUtil.isNotEmpty(session)) {
-            session.close();
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(DispatcherHostAgentCommand.class, command -> {
+                    HostInfo hostInfo = command.getHostInfo();
+                    logger.info("start dispatcher host agent :{}", hostInfo.getIp());
+                    hostInfo.setMessage(
+                            MessageResolverUtils.getMessage(
+                                    "distributed.host.management.agent.installation.package"));
+                    ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo);
+                    DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
+                    handlerChain.addHandler(new UploadWorkerHandler());
+                    handlerChain.addHandler(new CheckWorkerMd5Handler());
+                    handlerChain.addHandler(new DecompressWorkerHandler());
+                    handlerChain.addHandler(
+                            new StartWorkerHandler(command.getClusterId(), command.getClusterFrame()));
+                    handlerChain.handle(session, hostInfo);
+                    if (ObjectUtil.isNotEmpty(session)) {
+                        session.close();
+                    }
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

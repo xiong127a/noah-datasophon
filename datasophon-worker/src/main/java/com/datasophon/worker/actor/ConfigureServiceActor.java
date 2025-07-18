@@ -24,30 +24,31 @@ import com.datasophon.worker.handler.ConfigureServiceHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 
-public class ConfigureServiceActor extends UntypedActor {
+public class ConfigureServiceActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(ConfigureServiceActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof GenerateServiceConfigCommand) {
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(GenerateServiceConfigCommand.class, command -> {
+                    logger.info("start configure {}", command.getServiceName());
+                    ConfigureServiceHandler serviceHandler = new ConfigureServiceHandler(command.getServiceName(),
+                            command.getServiceRoleName());
+                    ExecResult startResult = serviceHandler.configure(command.getCofigFileMap(),
+                            command.getDecompressPackageName(),
+                            command.getMyid(),
+                            command.getServiceRoleName(),
+                            command.getRunAs());
+                    getSender().tell(startResult, getSelf());
 
-            GenerateServiceConfigCommand command = (GenerateServiceConfigCommand) msg;
-            logger.info("start configure {}", command.getServiceName());
-            ConfigureServiceHandler serviceHandler = new ConfigureServiceHandler(command.getServiceName(), command.getServiceRoleName());
-            ExecResult startResult = serviceHandler.configure(command.getCofigFileMap(),
-                    command.getDecompressPackageName(),
-                    command.getMyid(),
-                    command.getServiceRoleName(),
-                    command.getRunAs());
-            getSender().tell(startResult, getSelf());
-
-            logger.info("{} configure result {}", command.getServiceName(),
-                    startResult.getExecResult() ? "success" : "failed");
-        } else {
-            unhandled(msg);
-        }
+                    logger.info("{} configure result {}", command.getServiceName(),
+                            startResult.getExecResult() ? "success" : "failed");
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

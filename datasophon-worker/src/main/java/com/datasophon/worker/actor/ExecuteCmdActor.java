@@ -22,18 +22,20 @@ import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 
-public class ExecuteCmdActor extends UntypedActor {
+public class ExecuteCmdActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof ExecuteCmdCommand) {
-            ExecuteCmdCommand command = (ExecuteCmdCommand) msg;
-            ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, command.getCommands(), 60L);
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(msg);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(ExecuteCmdCommand.class, command -> {
+                    ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, command.getCommands(),
+                            60L);
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }

@@ -17,7 +17,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.model.TemplateRequestMessage;
 import com.datasophon.common.model.TemplateResponseMessage;
@@ -31,31 +32,30 @@ import org.springframework.context.annotation.Scope;
 
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @Slf4j
-public class TemplateServiceActor extends UntypedActor {
-
+public class TemplateServiceActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object message) throws Exception {
-        if (message instanceof TemplateRequestMessage) {
-            TemplateRequestMessage request = (TemplateRequestMessage) message;
-            TemplateResponseMessage response = new TemplateResponseMessage();
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(TemplateRequestMessage.class, this::handleTemplateRequest)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
-            try {
+    private void handleTemplateRequest(TemplateRequestMessage request) {
+        TemplateResponseMessage response = new TemplateResponseMessage();
 
-                // 处理获取模板内容请求
-                handleContentRequest(request, response);
-
-            } catch (Exception e) {
-                log.error("处理模板请求时发生错误", e);
-                response.setSuccess(false);
-                response.setErrorMessage("处理请求时发生错误: " + e.getMessage());
-            }
-
-            // 回复请求
-            getSender().tell(response, getSelf());
-        } else {
-            unhandled(message);
+        try {
+            // 处理获取模板内容请求
+            handleContentRequest(request, response);
+        } catch (Exception e) {
+            log.error("处理模板请求时发生错误", e);
+            response.setSuccess(false);
+            response.setErrorMessage("处理请求时发生错误: " + e.getMessage());
         }
+
+        // 回复请求
+        getSender().tell(response, getSelf());
     }
 
     /**

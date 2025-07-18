@@ -1,6 +1,7 @@
 package com.datasophon.api.master.alert;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.api.service.ClusterAlertHistoryService;
@@ -25,7 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-public class AlertActor extends UntypedActor {
+public class AlertActor extends AbstractActor {
 
     private static final String FIRING = "firing";
 
@@ -38,15 +39,23 @@ public class AlertActor extends UntypedActor {
     private static final String RESOLVED = "resolved";
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof String) {
-            String alertMessage = (String) msg;
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(String.class, this::handleAlertMessage)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void handleAlertMessage(String alertMessage) {
+        try {
             AlertMessage alertMes = JSONObject.parseObject(alertMessage, AlertMessage.class);
             AlertHistoryGateway alertHistoryGateway = SpringUtil.getBean(AlertHistoryGateway.class);
             ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
             ClusterAlertHistoryService alertHistoryService = SpringUtil.getBean(ClusterAlertHistoryService.class);
-            ClusterServiceInstanceService serviceInstanceService = SpringUtil.getBean(ClusterServiceInstanceService.class);
-            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceInstanceService serviceInstanceService = SpringUtil
+                    .getBean(ClusterServiceInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceService.class);
 
             List<Alerts> alerts = alertMes.getAlerts();
             for (Alerts alertInfo : alerts) {
@@ -58,11 +67,13 @@ public class AlertActor extends UntypedActor {
                 String hostname = instance.split(":")[0];
                 String serviceRoleName = labels.getServiceRoleName();
                 if (FIRING.equals(status)) {
-                    Boolean hasEnabledAlertHistory = alertHistoryGateway.hasEnabledAlertHistory(alertname, clusterId, hostname);
+                    Boolean hasEnabledAlertHistory = alertHistoryGateway.hasEnabledAlertHistory(alertname, clusterId,
+                            hostname);
                     // 查询服务实例，服务角色实例
                     if (NODE.equals(serviceRoleName)) {
                         ClusterHostDO clusterHost = hostService.getClusterHostByHostname(hostname);
-                        clusterHost.setHostState(EXCEPTION.equals(labels.getSeverity()) ? HostState.OFFLINE : HostState.EXISTS_ALARM);
+                        clusterHost.setHostState(
+                                EXCEPTION.equals(labels.getSeverity()) ? HostState.OFFLINE : HostState.EXISTS_ALARM);
                         if (!hasEnabledAlertHistory) {
                             ClusterAlertHistory clusterAlertHistory = ClusterAlertHistory.builder()
                                     .clusterId(clusterId)
@@ -70,7 +81,8 @@ public class AlertActor extends UntypedActor {
                                     .alertTargetName(alertname)
                                     .createTime(new Date())
                                     .updateTime(new Date())
-                                    .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN : AlertLevel.EXCEPTION)
+                                    .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN
+                                            : AlertLevel.EXCEPTION)
                                     .alertInfo(alertInfo.getAnnotations().getDescription())
                                     .alertAdvice(alertInfo.getAnnotations().getSummary())
                                     .hostname(hostname)
@@ -80,9 +92,11 @@ public class AlertActor extends UntypedActor {
                         }
                         hostService.updateById(clusterHost);
                     } else {
-                        ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService.getOneServiceRole(serviceRoleName, hostname, clusterId);
+                        ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                                .getOneServiceRole(serviceRoleName, hostname, clusterId);
                         if (Objects.nonNull(roleInstance)) {
-                            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(roleInstance.getServiceId());
+                            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                                    .getById(roleInstance.getServiceId());
                             serviceInstance.setServiceState(ServiceState.EXISTS_ALARM);
                             roleInstance.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
                             if (!hasEnabledAlertHistory) {
@@ -94,7 +108,8 @@ public class AlertActor extends UntypedActor {
                                         .serviceRoleInstanceId(roleInstance.getId())
                                         .createTime(new Date())
                                         .updateTime(new Date())
-                                        .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN : AlertLevel.EXCEPTION)
+                                        .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN
+                                                : AlertLevel.EXCEPTION)
                                         .alertInfo(alertInfo.getAnnotations().getDescription())
                                         .alertAdvice(alertInfo.getAnnotations().getSummary())
                                         .hostname(hostname)
@@ -114,19 +129,23 @@ public class AlertActor extends UntypedActor {
 
                 }
                 if (RESOLVED.equals(status)) {
-                    AlertHistory alertHistory = alertHistoryGateway.getEnabledAlertHistory(alertname, clusterId, hostname);
-                    if(Objects.nonNull(alertHistory)){
-                        boolean nodeHasWarnAlertList = alertHistoryGateway.nodeHasWarnAlertList(hostname, serviceRoleName, alertHistory.getId());
+                    AlertHistory alertHistory = alertHistoryGateway.getEnabledAlertHistory(alertname, clusterId,
+                            hostname);
+                    if (Objects.nonNull(alertHistory)) {
+                        boolean nodeHasWarnAlertList = alertHistoryGateway.nodeHasWarnAlertList(hostname,
+                                serviceRoleName, alertHistory.getId());
 
                         if (EXCEPTION.equals(labels.getSeverity())) {// 异常告警处理
                             if (NODE.equals(serviceRoleName)) {
                                 // 置为正常
                                 ClusterHostDO clusterHost = hostService.getClusterHostByHostname(hostname);
-                                clusterHost.setHostState(nodeHasWarnAlertList ? HostState.EXISTS_ALARM : HostState.RUNNING);
+                                clusterHost.setHostState(
+                                        nodeHasWarnAlertList ? HostState.EXISTS_ALARM : HostState.RUNNING);
                                 hostService.updateById(clusterHost);
                             } else {
                                 // 查询服务角色实例
-                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService.getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
+                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                                        .getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
                                 if (roleInstance.getServiceRoleState() != ServiceRoleState.RUNNING) {
                                     roleInstance.setServiceRoleState(ServiceRoleState.RUNNING);
                                     if (nodeHasWarnAlertList) {
@@ -140,11 +159,13 @@ public class AlertActor extends UntypedActor {
                             if (NODE.equals(serviceRoleName)) {
                                 // 置为正常
                                 ClusterHostDO clusterHost = hostService.getClusterHostByHostname(hostname);
-                                clusterHost.setHostState(nodeHasWarnAlertList ? HostState.EXISTS_ALARM : HostState.RUNNING);
+                                clusterHost.setHostState(
+                                        nodeHasWarnAlertList ? HostState.EXISTS_ALARM : HostState.RUNNING);
                                 hostService.updateById(clusterHost);
                             } else {
                                 // 查询服务角色实例
-                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService.getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
+                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                                        .getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
                                 if (roleInstance.getServiceRoleState() != ServiceRoleState.RUNNING) {
                                     if (nodeHasWarnAlertList) {
                                         roleInstance.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
@@ -159,10 +180,8 @@ public class AlertActor extends UntypedActor {
                     }
                 }
             }
-        } else {
-            unhandled(msg);
+        } catch (Exception e) {
+            throw new RuntimeException("处理告警消息时出错", e);
         }
     }
 }
-
-

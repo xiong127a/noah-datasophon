@@ -17,7 +17,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
@@ -33,28 +34,33 @@ import java.util.stream.Collectors;
 /**
  * Used to manage hdfs capacity expansion and reduction
  */
-public class HdfsECActor extends UntypedActor {
+public class HdfsECActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(HdfsECActor.class);
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof HdfsEcCommand) {
-            HdfsEcCommand hdfsEcCommand = (HdfsEcCommand) msg;
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(HdfsEcCommand.class, this::handleHdfsEcCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void handleHdfsEcCommand(HdfsEcCommand hdfsEcCommand) {
+        try {
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceService.class);
             // list datanode
             List<ClusterServiceRoleInstanceEntity> datanodes = roleInstanceService.lambdaQuery()
                     .eq(ClusterServiceRoleInstanceEntity::getServiceId, hdfsEcCommand.getServiceInstanceId())
                     .eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, "DataNode")
                     .list();
-            TreeSet<String> list =
-                    datanodes.stream().map(e -> e.getHostname()).collect(Collectors.toCollection(TreeSet::new));
+            TreeSet<String> list = datanodes.stream().map(e -> e.getHostname())
+                    .collect(Collectors.toCollection(TreeSet::new));
             ProcessUtils.hdfsEcMethond(hdfsEcCommand.getServiceInstanceId(), roleInstanceService, list, "whitelist",
                     "NameNode");
-        } else {
-            unhandled(msg);
+        } catch (Exception e) {
+            logger.error("Error handling HdfsEcCommand", e);
         }
     }
-
 }

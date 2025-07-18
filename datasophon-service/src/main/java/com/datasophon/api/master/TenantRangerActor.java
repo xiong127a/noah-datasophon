@@ -1,6 +1,7 @@
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.api.utils.ranger.client.RangerClient;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.Role;
@@ -16,16 +17,23 @@ import java.util.*;
 
 import static com.datasophon.api.utils.ranger.client.RangerUtil.getRangerClient;
 
-public class TenantRangerActor extends UntypedActor {
+public class TenantRangerActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantRangerActor.class);
 
     private static final List<String> SUPPORT_SERVICE = Arrays.asList("HDFS", "HIVE", "HBASE", "YARN");
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        if (message instanceof TenantRangerCommand) {
-            TenantRangerCommand rangerCommand = (TenantRangerCommand) message;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(TenantRangerCommand.class, this::handleTenantRangerCommand)
+                .match(TenantResource.class, this::handleTenantResource)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void handleTenantRangerCommand(TenantRangerCommand rangerCommand) {
+        try {
             ExecResult execResult;
             switch (rangerCommand.getOperateType()) {
                 case CREATE_SERVICE:
@@ -41,14 +49,27 @@ public class TenantRangerActor extends UntypedActor {
                     getSender().tell(execResult, getSelf());
                     break;
                 default:
-                    unhandled(message);
+                    unhandled(rangerCommand);
             }
-        } else if (message instanceof TenantResource) {
-            TenantResource resource = (TenantResource) message;
+        } catch (Exception e) {
+            logger.error("Error handling TenantRangerCommand", e);
+            ExecResult errorResult = new ExecResult();
+            errorResult.setExecResult(false);
+            errorResult.setExecErrOut(e.getMessage());
+            getSender().tell(errorResult, getSelf());
+        }
+    }
+
+    private void handleTenantResource(TenantResource resource) {
+        try {
             ExecResult execResult = operateRangerPolicy(resource);
             getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(message);
+        } catch (Exception e) {
+            logger.error("Error handling TenantResource", e);
+            ExecResult errorResult = new ExecResult();
+            errorResult.setExecResult(false);
+            errorResult.setExecErrOut(e.getMessage());
+            getSender().tell(errorResult, getSelf());
         }
     }
 
@@ -91,7 +112,8 @@ public class TenantRangerActor extends UntypedActor {
 
         // 操作组件策略
         for (String serviceName : SUPPORT_SERVICE) {
-            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, resource.getClusterId());
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName,
+                    resource.getClusterId());
             rangerStrategy.deletePolicy(resource.getTenantName());
             execResult = rangerStrategy.operatePolicy(resource);
             if (!execResult.getExecResult()) {
@@ -137,5 +159,4 @@ public class TenantRangerActor extends UntypedActor {
             logger.error(e.getMessage());
         }
     }
-
 }

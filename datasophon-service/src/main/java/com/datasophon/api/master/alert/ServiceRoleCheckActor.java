@@ -19,7 +19,8 @@
 
 package com.datasophon.api.master.alert;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -38,57 +39,63 @@ import java.util.stream.Collectors;
 /**
  * 检查指定组件状态
  */
-public class ServiceRoleCheckActor extends UntypedActor {
+public class ServiceRoleCheckActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof ServiceRoleCheckCommand) {
-            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+    public Receive createReceive() {
+        return receiveBuilder()
+                .match(ServiceRoleCheckCommand.class, this::handleServiceRoleCheckCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
 
-            //查询服务实例
+    private void handleServiceRoleCheckCommand(ServiceRoleCheckCommand msg) {
+        try {
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceService.class);
+
+            // 查询服务实例
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(
                     new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                            .in(Constants.SERVICE_ROLE_NAME, Constants.STATUS_CHECK_SERVICES)
-            );
+                            .in(Constants.SERVICE_ROLE_NAME, Constants.STATUS_CHECK_SERVICES));
 
-            //集群类型map
+            // 集群类型map
             Map<Integer, String> allClusterIdAndType = ProcessUtils.getAllClusterIdAndType();
 
             if (!list.isEmpty()) {
                 Map<String, ClusterServiceRoleInstanceEntity> map = translateListToMap(list);
 
                 for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
-                    ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(roleInstanceEntity.getServiceRoleName());
+                    ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext
+                            .getServiceRoleHandler(roleInstanceEntity.getServiceRoleName());
 
-                    //服务集群部署模式
+                    // 服务集群部署模式
                     String depType = allClusterIdAndType.get(roleInstanceEntity.getClusterId());
                     switch (depType) {
                         case Constants.PVM_MODE:
-                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
+                            Optional.ofNullable(serviceRoleHandler)
+                                    .ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         case Constants.KUBERNETES_MODE:
                             handlerKubernetesServiceRoleCheck(roleInstanceEntity, map);
-                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
+                            Optional.ofNullable(serviceRoleHandler).ifPresent(
+                                    handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         default:
                             break;
                     }
-
-
                 }
-            } else {
-                unhandled(msg);
             }
-
+        } catch (Exception e) {
+            throw new RuntimeException("处理ServiceRoleCheckCommand消息时出错", e);
         }
     }
 
-
-    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         KubernetesServiceRoleStatusService kubernetesServiceRoleStatusService = new KubernetesServiceRoleStatusService();
         kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceEntity);
     }
-
 
     private Map<String, ClusterServiceRoleInstanceEntity> translateListToMap(
             List<ClusterServiceRoleInstanceEntity> list) {
@@ -99,5 +106,4 @@ public class ServiceRoleCheckActor extends UntypedActor {
                                 e -> e,
                                 (v1, v2) -> v1));
     }
-
 }

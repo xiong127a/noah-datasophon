@@ -1,6 +1,7 @@
 package com.datasophon.api.master;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.command.OlapSqlExecCommand;
 import com.datasophon.common.utils.ExecResult;
@@ -10,15 +11,21 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-public class MasterNodeProcessingActor extends UntypedActor {
+public class MasterNodeProcessingActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(MasterNodeProcessingActor.class);
 
     @Override
-    public void onReceive(Object message) throws Throwable {
-        logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(message) );
-        if (message instanceof OlapSqlExecCommand) {
-            OlapSqlExecCommand command = (OlapSqlExecCommand) message;
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(OlapSqlExecCommand.class, this::processOlapSqlCommand)
+                .matchAny(this::unhandled)
+                .build();
+    }
+
+    private void processOlapSqlCommand(OlapSqlExecCommand command) {
+        try {
+            logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
             ExecResult execResult = new ExecResult();
             String tip = command.getOpsType().getDesc();
             switch (command.getOpsType()) {
@@ -69,8 +76,8 @@ public class MasterNodeProcessingActor extends UntypedActor {
                     logger.info("The SR operate be sleep operation failed");
                 }
             }
-        } else {
-            unhandled(message);
+        } catch (Throwable e) {
+            logger.error("Error processing OlapSqlExecCommand", e);
         }
     }
 }

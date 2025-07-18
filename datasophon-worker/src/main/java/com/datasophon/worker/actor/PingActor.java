@@ -17,31 +17,28 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
+import akka.japi.pf.ReceiveBuilder;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.utils.ExecResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 发送 ping，返回 pong
  *
  * @author zhenqin
  */
-public class PingActor extends UntypedActor {
-
-    private static final Logger logger = LoggerFactory.getLogger(PingActor.class);
+public class PingActor extends AbstractActor {
 
     @Override
-    public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof PingCommand) {
-            PingCommand command = (PingCommand) msg;
-            ExecResult execResult = new ExecResult();
-            execResult.setExecResult(true);
-            execResult.setExecOut("pong");
-            getSender().tell(execResult, getSelf());
-        } else {
-            unhandled(msg);
-        }
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
+                .match(PingCommand.class, command -> {
+                    ExecResult execResult = new ExecResult();
+                    execResult.setExecResult(true);
+                    execResult.setExecOut("pong");
+                    getSender().tell(execResult, getSelf());
+                })
+                .matchAny(this::unhandled)
+                .build();
     }
 }
