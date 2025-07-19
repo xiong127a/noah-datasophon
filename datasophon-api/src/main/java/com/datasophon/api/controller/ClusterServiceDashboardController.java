@@ -22,6 +22,7 @@ import com.datasophon.common.utils.Result;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -41,7 +42,7 @@ public class ClusterServiceDashboardController {
      * @return Result
      */
     @RequestMapping("/getDashboardUrl")
-    public Result getDashboardUrl(Integer clusterId) {
+    public Result getDashboardUrl(@RequestParam("clusterId")Integer clusterId) {
 
         return clusterServiceDashboardService.getDashboardUrl(clusterId);
     }
@@ -53,7 +54,7 @@ public class ClusterServiceDashboardController {
      * @return Result
      */
     @RequestMapping("/getDatasophonDashboard")
-    public Result getDatasophonDashboard(Integer clusterId) {
+    public Result getDatasophonDashboard(@RequestParam("clusterId") Integer clusterId) {
 
         return clusterServiceDashboardService.getDatasophonDashboard(clusterId);
     }

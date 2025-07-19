@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller;
 
+import cn.hutool.core.util.EnumUtil;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterServiceCommandService;
@@ -24,19 +25,16 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
-
 import org.apache.commons.lang.StringUtils;
-
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import cn.hutool.core.util.EnumUtil;
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("api/cluster/service/command")
@@ -49,7 +47,9 @@ public class ClusterServiceCommandController {
      * 查询集群服务指令列表
      */
     @RequestMapping("/getServiceCommandlist")
-    public Result list(Integer clusterId, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
         return clusterServiceCommandService.getServiceCommandlist(clusterId, page, pageSize);
     }
 
@@ -58,7 +58,9 @@ public class ClusterServiceCommandController {
      */
     @UserPermission
     @RequestMapping("/generateCommand")
-    public Result generateCommand(Integer clusterId, String commandType, String serviceNames) {
+    public Result generateCommand(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("commandType") String commandType,
+            @RequestParam("serviceNames") String serviceNames) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         List<String> list = Arrays.asList(serviceNames.split(","));
         return clusterServiceCommandService.generateCommand(clusterId, command, list);
@@ -69,7 +71,9 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/generateServiceCommand")
     @UserPermission
-    public Result generateServiceCommand(Integer clusterId, String commandType, String serviceInstanceIds) {
+    public Result generateServiceCommand(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("commandType") String commandType,
+            @RequestParam("serviceInstanceIds") String serviceInstanceIds) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         if (StringUtils.isNotBlank(serviceInstanceIds)) {
             List<String> ids = Arrays.asList(serviceInstanceIds.split(","));
@@ -85,16 +89,19 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/generateServiceRoleCommand")
     @UserPermission
-    public Result generateServiceRoleCommand(Integer clusterId, String commandType, Integer serviceInstanceId,
-                                             String serviceRoleInstancesIds,
-                                             String rollingParam
+    public Result generateServiceRoleCommand(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("commandType") String commandType,
+            @RequestParam("serviceInstanceId") Integer serviceInstanceId,
+            @RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
+            @RequestParam(value = "rollingParam", required = false) String rollingParam
 
     ) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         List<String> ids = Arrays.asList(serviceRoleInstancesIds.split(","));
         RollingRestartInfo rollingRestartInfo = RollingRestartInfo.parse(rollingParam);
 
-        return clusterServiceCommandService.generateServiceRoleCommand(clusterId, command, serviceInstanceId, ids,rollingRestartInfo);
+        return clusterServiceCommandService.generateServiceRoleCommand(clusterId, command, serviceInstanceId, ids,
+                rollingRestartInfo);
 
     }
 
@@ -103,13 +110,15 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/startExecuteCommand")
     @UserPermission
-    public Result startExecuteCommand(Integer clusterId, String commandType, String commandIds) {
+    public Result startExecuteCommand(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("commandType") String commandType,
+            @RequestParam("commandIds") String commandIds) {
         clusterServiceCommandService.startExecuteCommand(clusterId, commandType, commandIds);
         return Result.success();
     }
 
     @RequestMapping("/cancelCommand")
-    public Result cancelCommand(String commandId) {
+    public Result cancelCommand(@RequestParam("commandId") String commandId) {
         clusterServiceCommandService.cancelCommand(commandId);
         return Result.success();
     }

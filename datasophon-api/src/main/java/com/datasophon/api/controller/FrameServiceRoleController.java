@@ -22,14 +22,14 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
-
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("api/frame/service/role")
@@ -45,17 +45,17 @@ public class FrameServiceRoleController {
      * 查询服务对应的角色列表
      */
     @RequestMapping("/getServiceRoleList")
-    public Result getServiceRoleOfMaster(Integer clusterId, String serviceIds, Integer serviceRoleType) {
+    public Result getServiceRoleOfMaster(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceIds") String serviceIds,@RequestParam("serviceRoleType") Integer serviceRoleType) {
         return frameServiceRoleService.getServiceRoleList(clusterId, serviceIds, serviceRoleType);
     }
 
     @RequestMapping("/getNonMasterRoleList")
-    public Result getNonMasterRoleList(Integer clusterId, String serviceIds) {
+    public Result getNonMasterRoleList(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceIds") String serviceIds) {
         return frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
     }
 
     @RequestMapping("/getServiceRoleByServiceName")
-    public Result getServiceRoleByServiceName(Integer clusterId, Integer alertGroupId) {
+    public Result getServiceRoleByServiceName(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceName") Integer alertGroupId) {
         AlertGroupEntity alertGroupEntity = alertGroupService.getById(alertGroupId);
         return frameServiceRoleService.getServiceRoleByServiceName(clusterId, alertGroupEntity.getAlertGroupCategory());
     }

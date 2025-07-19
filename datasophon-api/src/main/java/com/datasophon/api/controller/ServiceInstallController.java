@@ -17,22 +17,24 @@
 
 package com.datasophon.api.controller;
 
+import com.alibaba.fastjson.JSONArray;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.common.model.HostServiceRoleMapping;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.utils.Result;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.List;
-
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import com.alibaba.fastjson.JSONArray;
 
 @RestController
 @RequestMapping("service/install")
@@ -40,12 +42,14 @@ public class ServiceInstallController {
 
     @Autowired
     ServiceInstallService serviceInstallService;
+    @Autowired
+    private HttpServletResponse httpServletResponse;
 
     /**
      * 根据服务角色名称查询服务配置选项
      */
     @RequestMapping("/getServiceConfigOption")
-    public Result getServiceConfigOption(Integer clusterId, String serviceName) {
+    public Result getServiceConfigOption(@RequestParam("clusterId") Integer clusterId, @RequestParam("serviceName") String serviceName) {
         return serviceInstallService.getServiceConfigOption(clusterId, serviceName);
     }
 
@@ -54,8 +58,8 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveServiceConfig")
     @UserPermission
-    public Result saveServiceConfig(Integer clusterId, String serviceName, String serviceConfig, Integer roleGroupId,
-            String description, Integer userId, String username) {
+    public Result saveServiceConfig(@RequestParam("clusterId") Integer clusterId, @RequestParam("serviceName") String serviceName, @RequestParam("serviceConfig") String serviceConfig, @RequestParam(name = "roleGroupId", required = false) Integer roleGroupId,
+                                    @RequestParam(name = "description", required = false) String description, @RequestParam(name = "userId",required = false) Integer userId, @RequestParam(name = "username",required = false) String username) {
         JSONArray jsonArray = JSONArray.parseArray(serviceConfig);
         List<ServiceConfig> list = jsonArray.toJavaList(ServiceConfig.class);
         return serviceInstallService.saveServiceConfig(clusterId, serviceName, list, roleGroupId, description, userId, username);
@@ -66,7 +70,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveServiceRoleHostMapping/{clusterId}")
     public Result saveServiceRoleHostMapping(@RequestBody List<ServiceRoleHostMapping> list,
-            @PathVariable("clusterId") Integer clusterId) {
+                                             @PathVariable("clusterId") Integer clusterId) {
         return serviceInstallService.saveServiceRoleHostMapping(clusterId, list);
     }
 
@@ -75,7 +79,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/getServiceRoleHostMapping")
     @UserPermission
-    public Result getServiceRoleHostMapping(Integer clusterId) {
+    public Result getServiceRoleHostMapping(@RequestParam("clusterId") Integer clusterId) {
         return serviceInstallService.getServiceRoleHostMapping(clusterId);
     }
 
@@ -84,7 +88,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveHostServiceRoleMapping/{clusterId}")
     public Result saveHostServiceRoleMapping(@PathVariable("clusterId") Integer clusterId,
-            @RequestBody List<HostServiceRoleMapping> list) {
+                                             @RequestBody List<HostServiceRoleMapping> list) {
 
         return serviceInstallService.saveHostServiceRoleMapping(clusterId, list);
     }
@@ -93,7 +97,7 @@ public class ServiceInstallController {
      * 服务部署总览
      */
     @RequestMapping("/getServiceRoleDeployOverview")
-    public Result getServiceRoleDeployOverview(Integer clusterId) {
+    public Result getServiceRoleDeployOverview(@RequestParam("clusterId") Integer clusterId) {
         return serviceInstallService.getServiceRoleDeployOverview(clusterId);
     }
 
@@ -102,7 +106,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/startInstallService/{clusterId}")
     public Result startInstallService(@PathVariable("clusterId") Integer clusterId,
-            @RequestBody List<String> commandIds) {
+                                      @RequestBody List<String> commandIds) {
 
         return serviceInstallService.startInstallService(clusterId, commandIds);
     }
@@ -111,8 +115,8 @@ public class ServiceInstallController {
      * 下载安装包
      */
     @GetMapping("/downloadPackage")
-    public void downloadPackage(String packageName, String cpuArchitecture,
-            HttpServletResponse response) throws IOException {
+    public void downloadPackage(@RequestParam("packageName") String packageName, @RequestParam("cpuArchitecture") String cpuArchitecture,
+                                HttpServletResponse response) throws IOException {
 
         serviceInstallService.downloadPackage(packageName, response);
     }
@@ -121,7 +125,7 @@ public class ServiceInstallController {
      * 服务部署总览
      */
     @RequestMapping("/checkServiceDependency")
-    public Result checkServiceDependency(Integer clusterId, String serviceIds) {
+    public Result checkServiceDependency(@RequestParam("clusterId") Integer clusterId, @RequestParam("serviceIds") String serviceIds) {
         return serviceInstallService.checkServiceDependency(clusterId, serviceIds);
     }
 

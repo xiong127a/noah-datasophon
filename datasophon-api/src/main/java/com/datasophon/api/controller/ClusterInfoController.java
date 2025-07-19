@@ -76,7 +76,8 @@ public class ClusterInfoController {
     }
 
     @RequestMapping("/updateClusterState")
-    public Result updateClusterState(Integer clusterId, Integer clusterState) {
+    public Result updateClusterState(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("clusterState") Integer clusterState) {
 
         return clusterInfoService.updateClusterState(clusterId, clusterState);
     }

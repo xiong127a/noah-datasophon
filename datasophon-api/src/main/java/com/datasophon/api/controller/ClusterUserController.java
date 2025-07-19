@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
@@ -40,7 +41,10 @@ public class ClusterUserController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId, String username, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("username") String username,
+            @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
 
         return clusterUserService.listPage(clusterId, username, page, pageSize);
     }
@@ -59,8 +63,13 @@ public class ClusterUserController {
      * 保存
      */
     @RequestMapping("/create")
-    public Result save(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds):clusterUserService.createOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
+    public Result save(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("username") String username,
+            @RequestParam("mainGroupId") Integer mainGroupId,
+            @RequestParam("otherGroupIds") String otherGroupIds) {
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))
+                ? clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds)
+                : clusterUserService.createOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
     }
 
     /**
@@ -78,8 +87,10 @@ public class ClusterUserController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer clusterId,Integer id) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.deleteClusterUser(id):clusterUserService.deleteClusterUserOnkubernetes(id);
+    public Result delete(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("id") Integer id) {
+        return Constants.PVM_MODE.equals(getDepMode(clusterId)) ? clusterUserService.deleteClusterUser(id)
+                : clusterUserService.deleteClusterUserOnkubernetes(id);
     }
 
 }

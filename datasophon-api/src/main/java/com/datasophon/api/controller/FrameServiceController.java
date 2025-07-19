@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
@@ -57,7 +58,7 @@ public class FrameServiceController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId) {
+    public Result list(@RequestParam("clusterId") Integer clusterId) {
         return frameVersionServiceService.getAllFrameService(clusterId);
     }
 
@@ -65,7 +66,7 @@ public class FrameServiceController {
      * 自定义模式列表和数据湖模式列表，包含必选组件
      */
     @RequestMapping("/listWithRequired")
-    public Result listWithRequired(Integer clusterId, String type) {
+    public Result listWithRequired(@RequestParam("clusterId") Integer clusterId,@RequestParam("type") String type) {
         return frameVersionServiceService.getAllFrameServiceWithRequired(clusterId, type);
     }
 
@@ -73,7 +74,7 @@ public class FrameServiceController {
      * 根据servce id列表查询服务
      */
     @RequestMapping("/getServiceListByServiceIds")
-    public Result getServiceListByServiceIds(List<Integer> serviceIds) {
+    public Result getServiceListByServiceIds(@RequestParam("serviceIds") List<Integer> serviceIds) {
         return frameVersionServiceService.getServiceListByServiceIds(serviceIds);
     }
 

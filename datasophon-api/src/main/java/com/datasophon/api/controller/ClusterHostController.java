@@ -47,7 +47,7 @@ public class ClusterHostController {
      * 查询集群所有主机
      */
     @RequestMapping("/all")
-    public Result all(Integer clusterId) {
+    public Result all(@RequestParam("clusterId") Integer clusterId) {
         List<ClusterHostDO> list = clusterHostService
                 .list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
                         .eq(Constants.MANAGED, 1)
@@ -59,27 +59,37 @@ public class ClusterHostController {
      * 查询集群所有主机
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-            String orderField, String orderType, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
+            @RequestParam("cpuArchitecture") String cpuArchitecture,
+            @RequestParam("hostState") Integer hostState,
+            @RequestParam("orderField") String orderField,
+            @RequestParam("orderType") String orderType,
+            @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
         return clusterHostService.listByPage(clusterId, hostname, ip, cpuArchitecture, hostState, orderField, orderType,
                 page, pageSize);
 
     }
 
     @RequestMapping("/getRoleListByHostname")
-    public Result getRoleListByHostname(Integer clusterId, String hostname) {
+    public Result getRoleListByHostname(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("hostname") String hostname) {
         return clusterHostService.getRoleListByHostname(clusterId, hostname);
 
     }
 
     @RequestMapping("/getRack")
-    public Result getRack(Integer clusterId) {
+    public Result getRack(@RequestParam("clusterId") Integer clusterId) {
         return clusterHostService.getRack(clusterId);
 
     }
 
     @RequestMapping("/assignRack")
-    public Result assignRack(Integer clusterId, String rack, String hostIds) {
+    public Result assignRack(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("rack") String rack,
+            @RequestParam("hostIds") String hostIds) {
         return clusterHostService.assignRack(clusterId, rack, hostIds);
 
     }
@@ -118,7 +128,7 @@ public class ClusterHostController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(String hostIds) {
+    public Result delete(@RequestParam("hostIds") String hostIds) {
         if (StringUtils.isBlank(hostIds)) {
             return Result.error("请选择移除的主机!");
         }
@@ -134,7 +144,8 @@ public class ClusterHostController {
      * Kubernetes配置集群时添加主机
      */
     @RequestMapping(value = "/saveKubernetesHost", method = RequestMethod.POST)
-    public Result saveKubernetesHost(@RequestBody List<HostInfo> hostInfoList, @RequestParam Integer clusterId) {
+    public Result saveKubernetesHost(@RequestBody List<HostInfo> hostInfoList,
+            @RequestParam("clusterId") Integer clusterId) {
         return clusterHostService.saveKubernetesHost(hostInfoList, clusterId);
     }
 
@@ -143,7 +154,7 @@ public class ClusterHostController {
      */
     @RequestMapping(value = "/saveKubernetesHostDirect", method = RequestMethod.POST)
     public Result saveKubernetesHostDirect(@RequestBody List<ClusterHostDO> kubernetesHosts,
-            @RequestParam Integer clusterId) {
+            @RequestParam("clusterId") Integer clusterId) {
         return clusterHostService.saveKubernetesHostDirect(kubernetesHosts, clusterId);
     }
 
@@ -151,7 +162,7 @@ public class ClusterHostController {
      * 获取K8S模式下的完整硬件信息
      */
     @RequestMapping(value = "/getK8sHostsWithHardwareInfo", method = RequestMethod.GET)
-    public Result getK8sHostsWithHardwareInfo(@RequestParam Integer clusterId) {
+    public Result getK8sHostsWithHardwareInfo(@RequestParam("clusterId") Integer clusterId) {
         return clusterHostService.getK8sHostsWithHardwareInfo(clusterId);
     }
 
