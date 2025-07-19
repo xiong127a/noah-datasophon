@@ -18,15 +18,17 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.service.ClusterKerberosService;
-
-import java.io.IOException;
-
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("cluster/kerberos")
@@ -39,7 +41,7 @@ public class ClusterKerberosController {
      * download user keytab
      */
     @GetMapping("/downloadUserKeytab")
-    public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
+    public void downloadUserKeytab(Integer clusterId, @RequestParam("username") String username, HttpServletResponse response) throws IOException {
         kerberosService.downloadUserKeytab(clusterId, username, response);
     }
 
@@ -47,7 +49,7 @@ public class ClusterKerberosController {
      * download keytab
      */
     @GetMapping("/downloadKeytab")
-    public void downloadKeytab(Integer clusterId, String principal, String keytabName, String hostname,
+    public void downloadKeytab(Integer clusterId, @RequestParam("principal") String principal, @RequestParam("keytabName") String keytabName, @RequestParam("hostname") String hostname,
                                HttpServletResponse response) throws IOException {
         kerberosService.downloadKeytab(clusterId, principal, keytabName, hostname, response);
     }
@@ -56,8 +58,8 @@ public class ClusterKerberosController {
      * upload keytab
      */
     @PostMapping(value = "/uploadKeytab", produces = MediaType.APPLICATION_JSON_VALUE)
-    public void uploadFile(@RequestParam(value = "file") MultipartFile file, String hostname,
-                           String keytabFileName) throws IOException {
+    public void uploadFile(@RequestParam(value = "file") MultipartFile file, @RequestParam("hostname") String hostname,
+                           @RequestParam("keytabFileName") String keytabFileName) throws IOException {
         kerberosService.uploadKeytab(file, hostname, keytabFileName);
     }
 

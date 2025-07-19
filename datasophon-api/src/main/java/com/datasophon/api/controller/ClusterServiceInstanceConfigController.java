@@ -20,13 +20,13 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
-
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("cluster/service/instance/config")
@@ -39,7 +39,7 @@ public class ClusterServiceInstanceConfigController {
      * 列表
      */
     @RequestMapping("/getConfigVersion")
-    public Result getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
+    public Result getConfigVersion(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("roleGroupId") Integer roleGroupId) {
         return clusterServiceInstanceConfigService.getConfigVersion(serviceInstanceId, roleGroupId);
     }
 
@@ -47,8 +47,8 @@ public class ClusterServiceInstanceConfigController {
      * 信息
      */
     @RequestMapping("/info")
-    public Result info(Integer serviceInstanceId, Integer version, Integer roleGroupId, Integer page,
-                       Integer pageSize) {
+    public Result info(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("version") Integer version, @RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("page") Integer page,
+                       @RequestParam("pageSize") Integer pageSize) {
         return clusterServiceInstanceConfigService.getServiceInstanceConfig(serviceInstanceId, version, roleGroupId,
                 page, pageSize);
     }

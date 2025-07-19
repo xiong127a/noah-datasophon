@@ -20,14 +20,14 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterAlertHistory;
-
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("cluster/alert/history")
@@ -40,7 +40,7 @@ public class ClusterAlertHistoryController {
      * 列表
      */
     @RequestMapping("/getAlertList")
-    public Result getAlertList(Integer serviceInstanceId) {
+    public Result getAlertList(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         return clusterAlertHistoryService.getAlertList(serviceInstanceId);
     }
 
@@ -48,7 +48,7 @@ public class ClusterAlertHistoryController {
      * 列表
      */
     @RequestMapping("/getAllAlertList")
-    public Result getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
+    public Result getAllAlertList(@RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return clusterAlertHistoryService.getAllAlertList(clusterId, page, pageSize);
     }
 

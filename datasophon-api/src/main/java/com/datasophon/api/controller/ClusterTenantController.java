@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -20,7 +21,7 @@ public class ClusterTenantController {
      * 查询租户列表
      */
     @RequestMapping("/listTenant")
-    public Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
+    public Result listTenant(@RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("size") Integer size, @RequestParam("tenantName") String tenantName) {
         return clusterTenantService.listTenant(clusterId, page, size, tenantName);
     }
 
@@ -44,7 +45,7 @@ public class ClusterTenantController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer id) {
+    public Result delete(@RequestParam("id") Integer id) {
         return clusterTenantService.deleteTenantById(id);
     }
 

@@ -18,16 +18,15 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.service.ClusterGroupService;
+import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterGroup;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.datasophon.api.utils.ProcessUtils;
 
 @RestController
 @RequestMapping("cluster/group")
@@ -40,7 +39,7 @@ public class ClusterGroupController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(String groupName, Integer clusterId, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("groupName") String groupName, @RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
 
         return clusterGroupService.listPage(groupName, clusterId, page, pageSize);
     }
@@ -59,7 +58,7 @@ public class ClusterGroupController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(Integer clusterId, String groupName) {
+    public Result save(@RequestParam("clusterId") Integer clusterId, @RequestParam("groupName") String groupName) {
         return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.saveClusterGroup(clusterId, groupName):clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
     }
 
@@ -67,7 +66,7 @@ public class ClusterGroupController {
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result delete(Integer clusterId,Integer id) {
+    public Result delete(@RequestParam("clusterId") Integer clusterId,@RequestParam("id") Integer id) {
         return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.deleteUserGroup(id):clusterGroupService.deleteUserGroupOnKubernetes(id);
 
     }
@@ -76,7 +75,7 @@ public class ClusterGroupController {
      * 刷新用户组到主机
      */
     @RequestMapping("/refreshUserGroupToHost")
-    public Result refreshUserGroupToHost(Integer clusterId) {
+    public Result refreshUserGroupToHost(@RequestParam("clusterId") Integer clusterId) {
 
         clusterGroupService.refreshUserGroupToHost(clusterId);
 

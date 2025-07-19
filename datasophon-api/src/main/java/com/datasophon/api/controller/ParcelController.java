@@ -44,6 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
@@ -209,7 +210,7 @@ public class ParcelController implements DisposableBean {
                             }
 
                             @Override
-                            public void progress(long total, long progressSize) {
+                            public void progress(long total, @RequestParam("progressSize") long progressSize) {
                                 float p = progressSize * 1.0f / total;
                                 if (p > process.get()) {
                                     // 每 10% 推送一次进度
@@ -401,7 +402,7 @@ public class ParcelController implements DisposableBean {
      * @param resourceName
      * @return
      */
-    private String getParcelPath(String url, String resourceName) {
+    private String getParcelPath(String url, @RequestParam("resourceName") String resourceName) {
         final URI uri = URI.create(url);
         final Path urlParentPath = Paths.get(uri.getPath()).getParent();
 

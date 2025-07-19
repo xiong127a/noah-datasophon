@@ -2,15 +2,16 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
-import com.datasophon.api.service.checker.queue.QueueManagerServiceImpl;
 import com.datasophon.api.service.checker.AsyncCheckService;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
-import com.datasophon.common.model.ScheduledTasksStatus;
-import com.datasophon.common.model.ScheduleConfigResult;
+import com.datasophon.api.service.checker.queue.QueueManagerServiceImpl;
 import com.datasophon.common.model.QueueSystemStatus;
-import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.model.QueueTaskDetailResult;
+import com.datasophon.common.model.QueueTaskInfo;
+import com.datasophon.common.model.ScheduleConfigResult;
+import com.datasophon.common.model.ScheduledTasksStatus;
 import com.datasophon.common.utils.Result;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

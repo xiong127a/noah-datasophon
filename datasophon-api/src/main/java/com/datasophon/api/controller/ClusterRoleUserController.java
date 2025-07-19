@@ -21,16 +21,15 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
-
-import java.util.Arrays;
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/cluster/user")
@@ -63,7 +62,7 @@ public class ClusterRoleUserController {
      */
     @RequestMapping("/saveClusterManager")
     @UserPermission
-    public Result saveClusterManager(Integer clusterId, String userIds) {
+    public Result saveClusterManager(@RequestParam("clusterId") Integer clusterId, @RequestParam("userIds") String userIds) {
         return clusterRoleUserService.saveClusterManager(clusterId, userIds);
     }
 

@@ -44,7 +44,7 @@ public class HostInstallController {
      * 获取安装步骤
      */
     @GetMapping("/getInstallStep")
-    public Result getInstallStep(Integer type) {
+    public Result getInstallStep(@RequestParam("type") Integer type) {
         return installService.getInstallStep(type);
     }
 
@@ -70,7 +70,7 @@ public class HostInstallController {
      */
     @PostMapping("/getHostCheckStatus")
     @UserPermission
-    public Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
+    public Result getHostCheckStatus(@RequestParam("clusterId") Integer clusterId, @RequestParam("sshUser") String sshUser, @RequestParam("sshPort") Integer sshPort) {
         return installService.getHostCheckStatus(clusterId, sshUser, sshPort);
     }
 
@@ -113,12 +113,12 @@ public class HostInstallController {
      */
     @PostMapping("/dispatcherHostAgentList")
     @UserPermission
-    public Result dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
+    public Result dispatcherHostAgentList(@RequestParam("clusterId") Integer clusterId, @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return installService.dispatcherHostAgentList(clusterId, installStateCode, page, pageSize);
     }
 
     @PostMapping("/dispatcherHostAgentCompleted")
-    public Result dispatcherHostAgentCompleted(Integer clusterId) {
+    public Result dispatcherHostAgentCompleted(@RequestParam("clusterId") Integer clusterId) {
         return installService.dispatcherHostAgentCompleted(clusterId);
     }
 
@@ -126,7 +126,7 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode) {
+    public Result cancelDispatcherHostAgent(@RequestParam("clusterId") Integer clusterId, @RequestParam("ip") String ip, @RequestParam("installStateCode") Integer installStateCode) {
         return installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
     }
 
@@ -138,7 +138,7 @@ public class HostInstallController {
      * @return
      */
     @PostMapping("/reStartDispatcherHostAgent")
-    public Result reStartDispatcherHostAgent(Integer clusterId, String ips) {
+    public Result reStartDispatcherHostAgent(@RequestParam("clusterId") Integer clusterId, @RequestParam("ips") String ips) {
         return installService.reStartDispatcherHostAgent(clusterId, ips);
     }
 

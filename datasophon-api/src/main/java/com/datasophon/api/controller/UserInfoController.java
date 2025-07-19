@@ -17,24 +17,22 @@
 
 package com.datasophon.api.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.utils.EncryptionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("api/user")
@@ -47,7 +45,7 @@ public class UserInfoController {
      * 列表带分页
      */
     @RequestMapping("/list")
-    public Result list(String username, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("username") String username, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return userInfoService.getUserListByPage(username, page, pageSize);
     }
 

@@ -17,21 +17,17 @@
 
 package com.datasophon.api.controller;
 
-import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.ClusterYarnQueueService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterYarnQueue;
-
-import java.util.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("cluster/yarn/queue")
@@ -44,7 +40,7 @@ public class ClusterYarnQueueController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return clusterYarnQueueService.listByPage(clusterId, page, pageSize);
     }
 
@@ -52,7 +48,7 @@ public class ClusterYarnQueueController {
      * 刷新队列
      */
     @RequestMapping("/refreshQueues")
-    public Result refreshQueues(Integer clusterId) throws Exception {
+    public Result refreshQueues(@RequestParam("clusterId") Integer clusterId) throws Exception {
         return clusterYarnQueueService.refreshQueues(clusterId);
     }
 

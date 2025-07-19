@@ -1,5 +1,6 @@
 package com.datasophon.api.controller;
 
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,8 +12,14 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import jakarta.annotation.Resource;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -49,8 +56,7 @@ public class ApiDocController {
                 HandlerMethod method = entry.getValue();
 
                 try {
-                    String controllerName = method.getBeanType() != null ? method.getBeanType().getSimpleName()
-                            : "UnknownController";
+                    String controllerName = method.getBeanType().getSimpleName();
 
                     // 跳过自身控制器，避免无限递归
                     if (controllerName.equals(this.getClass().getSimpleName())) {
@@ -64,8 +70,7 @@ public class ApiDocController {
                     Set<String> httpMethods = extractHttpMethods(info);
 
                     // 获取处理方法名
-                    final String methodName = method.getMethod() != null ? method.getMethod().getName()
-                            : "unknownMethod";
+                    final String methodName = method.getMethod().getName();
 
                     // 收集信息
                     for (String pattern : patterns) {
@@ -155,7 +160,7 @@ public class ApiDocController {
             // 尝试使用getPatternsCondition获取路径
             if (info.getPatternsCondition() != null) {
                 Set<String> directPatterns = info.getPatternsCondition().getPatterns();
-                if (directPatterns != null && !directPatterns.isEmpty()) {
+                if (!directPatterns.isEmpty()) {
                     // 处理路径，添加上下文前缀
                     patterns.addAll(directPatterns.stream()
                             .map(this::normalizeAndPrefixPath)
@@ -224,7 +229,7 @@ public class ApiDocController {
         Set<String> httpMethods = new HashSet<>();
 
         try {
-            if (info != null && info.getMethodsCondition() != null) {
+            if (info != null) {
                 if (info.getMethodsCondition().getMethods().isEmpty()) {
                     httpMethods.add("ALL");
                 } else {

@@ -19,6 +19,7 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
@@ -55,7 +56,7 @@ public class OperationLogController {
      * 当前集群所有服务名称
      */
     @RequestMapping("/serviceNameList")
-    public Result serviceNameList(Integer clusterId) {
+    public Result serviceNameList(@RequestParam("clusterId") Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
         List<FrameServiceEntity> list = frameServiceService.lambdaQuery()

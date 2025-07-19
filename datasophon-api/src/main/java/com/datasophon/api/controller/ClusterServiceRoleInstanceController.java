@@ -20,14 +20,14 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("cluster/service/role/instance")
@@ -40,8 +40,8 @@ public class ClusterServiceRoleInstanceController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer serviceInstanceId, String hostname, Integer serviceRoleState, String serviceRoleName,
-                       Integer roleGroupId, Integer page, Integer pageSize) {
+    public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("hostname") String hostname, @RequestParam("serviceRoleState") Integer serviceRoleState, @RequestParam("serviceRoleName") String serviceRoleName,
+                       @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return clusterServiceRoleInstanceService.listAll(serviceInstanceId, hostname, serviceRoleState, serviceRoleName,
                 roleGroupId, page, pageSize);
     }
@@ -50,7 +50,7 @@ public class ClusterServiceRoleInstanceController {
      * 信息
      */
     @RequestMapping("/getLog")
-    public Result getLog(Integer serviceRoleInstanceId) throws Exception {
+    public Result getLog(@RequestParam("serviceRoleInstanceId") Integer serviceRoleInstanceId) throws Exception {
         return clusterServiceRoleInstanceService.getLog(serviceRoleInstanceId);
     }
 
@@ -58,7 +58,7 @@ public class ClusterServiceRoleInstanceController {
      * 退役
      */
     @RequestMapping("/decommissionNode")
-    public Result decommissionNode(String serviceRoleInstanceIds, String serviceName) throws Exception {
+    public Result decommissionNode(@RequestParam("serviceRoleInstanceIds") String serviceRoleInstanceIds, @RequestParam("serviceName") String serviceName) throws Exception {
         return clusterServiceRoleInstanceService.decommissionNode(serviceRoleInstanceIds, serviceName);
     }
 
@@ -66,7 +66,7 @@ public class ClusterServiceRoleInstanceController {
      * 重启过时服务
      */
     @RequestMapping("/restartObsoleteService")
-    public Result restartObsoleteService(Integer roleGroupId) throws Exception {
+    public Result restartObsoleteService(@RequestParam("roleGroupId") Integer roleGroupId) throws Exception {
         return clusterServiceRoleInstanceService.restartObsoleteService(roleGroupId);
     }
 
@@ -93,7 +93,7 @@ public class ClusterServiceRoleInstanceController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(String serviceRoleInstancesIds) {
+    public Result delete(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds) {
         List<String> idList = Arrays.asList(serviceRoleInstancesIds.split(","));
         return clusterServiceRoleInstanceService.deleteServiceRole(idList);
     }

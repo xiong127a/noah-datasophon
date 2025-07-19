@@ -20,11 +20,11 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,7 +38,7 @@ public class ClusterQueueCapacityController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId) {
+    public Result list(@RequestParam("clusterId") Integer clusterId) {
 
         return clusterQueueCapacityService.listCapacityQueue(clusterId);
 
@@ -79,7 +79,7 @@ public class ClusterQueueCapacityController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer id) {
+    public Result delete(@RequestParam("id") Integer id) {
         clusterQueueCapacityService.removeById(id);
 
         return Result.success();
@@ -89,7 +89,7 @@ public class ClusterQueueCapacityController {
      * 删除
      */
     @RequestMapping("/refreshToYarn")
-    public Result refreshToYarn(Integer clusterId) throws Exception {
+    public Result refreshToYarn(@RequestParam("clusterId") Integer clusterId) throws Exception {
         return clusterQueueCapacityService.refreshToYarn(clusterId);
     }
 }

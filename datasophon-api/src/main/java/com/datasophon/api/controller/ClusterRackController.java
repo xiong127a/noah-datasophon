@@ -20,13 +20,13 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterRack;
-
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("cluster/rack")
@@ -39,7 +39,7 @@ public class ClusterRackController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId) {
+    public Result list(@RequestParam("clusterId") Integer clusterId) {
         List<ClusterRack> list = clusterRackService.queryClusterRack(clusterId);
         return Result.success(list);
     }
@@ -58,7 +58,7 @@ public class ClusterRackController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(Integer clusterId, String rack) {
+    public Result save(@RequestParam("clusterId") Integer clusterId, @RequestParam("rack") String rack) {
         return clusterRackService.saveRack(clusterId, rack);
 //        return Result.success();
     }
@@ -67,7 +67,7 @@ public class ClusterRackController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer clusterId, Integer rackId) {
+    public Result delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("rackId") Integer rackId) {
         return clusterRackService.deleteRack(rackId);
     }
 
