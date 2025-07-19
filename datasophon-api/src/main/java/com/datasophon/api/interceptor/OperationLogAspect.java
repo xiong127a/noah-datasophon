@@ -16,12 +16,15 @@ import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.model.OperationLogProp;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.OperationLog;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -30,10 +33,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
@@ -250,20 +249,22 @@ public class OperationLogAspect {
         }
         try {
             Map<String, Object> params = new HashMap<>();
-            String[] parameterNames = ((MethodSignature) point.getSignature()).getParameterNames();
-            for (int i = 0; i < parameterNames.length; i++) {
+            int i=0;
+            for (Map.Entry<String, Object> stringObjectEntry : requestParam.entrySet()) {
                 Object arg = args[i];
+                i++;
                 // 过滤不能转换成JSON的参数
                 if ((arg instanceof ServletRequest) || (arg instanceof ServletResponse)) {
                     continue;
                 } else if ((arg instanceof MultipartFile)) {
                     arg = arg.toString();
                 }
-                params.put(parameterNames[i], arg);
+                params.put(stringObjectEntry.getKey(), arg);
 
                 //从方法参数中查找
                 clusterParam(op, arg);
             }
+
 
             //设置请求参数
             op.setParam(JSONObject.toJSONString(params));
