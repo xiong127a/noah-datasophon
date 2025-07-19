@@ -41,7 +41,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @RequestMapping("/list")
     public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("hostname") String hostname, @RequestParam("serviceRoleState") Integer serviceRoleState, @RequestParam("serviceRoleName") String serviceRoleName,
-                       @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+                       @RequestParam("roleGroupId") Integer roleGroupId,@RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return clusterServiceRoleInstanceService.listAll(serviceInstanceId, hostname, serviceRoleState, serviceRoleName,
                 roleGroupId, page, pageSize);
     }
