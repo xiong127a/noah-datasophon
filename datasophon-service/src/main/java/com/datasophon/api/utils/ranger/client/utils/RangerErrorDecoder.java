@@ -1,29 +1,41 @@
 package com.datasophon.api.utils.ranger.client.utils;
 
-import feign.Response;
-import feign.Util;
-import feign.codec.ErrorDecoder;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestClientException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
-import static java.lang.String.format;
-
-public class RangerErrorDecoder implements ErrorDecoder {
+public class RangerErrorDecoder extends DefaultResponseErrorHandler {
 
     @Override
-    public Exception decode(String methodKey, Response response) {
-        return new RangerClientException(response.status(), errorMessage(methodKey, response));
+    public void handleError(ClientHttpResponse response) throws IOException {
+        try {
+            String statusText = response.getStatusText();
+            int statusCode = response.getStatusCode().value();
+            String responseBody = readResponseBodyAsString(response);
+
+            throw new RangerClientException(
+                    statusCode,
+                    String.format("Status %s (%d); content: %s",
+                            statusText,
+                            statusCode,
+                            responseBody));
+        } catch (IOException e) {
+            throw new RestClientException("Error reading response", e);
+        }
     }
 
-    public static String errorMessage(String methodKey, Response response) {
-        String message = format("status %s reading %s", response.status(), methodKey);
-        try {
-            if (response.body() != null) {
-                String body = Util.toString(response.body().asReader());
-                message += "; content:\n" + body;
-            }
-        } catch (IOException ignored) { // NOPMD
+    private String readResponseBodyAsString(ClientHttpResponse response) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        } catch (IOException e) {
+            return "[Could not read response body]";
         }
-        return message;
     }
 }

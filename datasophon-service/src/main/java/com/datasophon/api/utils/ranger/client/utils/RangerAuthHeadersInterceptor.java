@@ -1,14 +1,18 @@
 package com.datasophon.api.utils.ranger.client.utils;
 
-import feign.RequestInterceptor;
-import feign.RequestTemplate;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
-public class RangerAuthHeadersInterceptor implements RequestInterceptor {
+public class RangerAuthHeadersInterceptor implements ClientHttpRequestInterceptor {
 
-    private String username;
-    private String password;
+    private final String username;
+    private final String password;
 
     public RangerAuthHeadersInterceptor(String username, String password) {
         this.username = username;
@@ -16,18 +20,17 @@ public class RangerAuthHeadersInterceptor implements RequestInterceptor {
     }
 
     @Override
-    public void apply(RequestTemplate template) {
-        template.header("Accept", "application/json");
-        template.header("Content-Type", "application/json");
-        template.header("Authorization", getAuthorization());
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
+            throws IOException {
+        request.getHeaders().set("Accept", "application/json");
+        request.getHeaders().set("Content-Type", "application/json");
+        request.getHeaders().set("Authorization", getAuthorization());
+        return execution.execute(request, body);
     }
 
     private String getAuthorization() {
-        byte[] auth = (username + ":" + password).getBytes(Charset.forName("utf-8"));
-        char[] encode = Base64.encode(auth);
-        StringBuilder builder = new StringBuilder("Basic ");
-        builder.append(encode);
-        return builder.toString();
+        byte[] auth = (username + ":" + password).getBytes(StandardCharsets.UTF_8);
+        String encoded = Base64.getEncoder().encodeToString(auth);
+        return "Basic " + encoded;
     }
-
 }

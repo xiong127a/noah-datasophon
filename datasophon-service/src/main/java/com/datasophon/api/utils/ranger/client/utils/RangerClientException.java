@@ -12,6 +12,18 @@ public class RangerClientException extends RuntimeException {
         this.message = message;
     }
 
+    public RangerClientException(String message) {
+        this.status = 500;
+        this.message = message;
+    }
+
+    public RangerClientException(String message, Throwable cause) {
+        super(message, cause);
+        this.status = 500;
+        this.message = message;
+        this.cause = cause;
+    }
+
     /**
      * Gets the HTTP status code of the failure, such as 404.
      */

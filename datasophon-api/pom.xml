@@ -186,8 +186,8 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <inputDir>${project.build.outputDirectory}</inputDir>
-                            <outputDir>${project.build.outputDirectory}</outputDir>
+                            <inputDir>${project.build.directory}</inputDir>
+                            <outputDir>${project.build.directory}</outputDir>
                             <rules>
                                 <rule>
                                     <type>jakarta</type>

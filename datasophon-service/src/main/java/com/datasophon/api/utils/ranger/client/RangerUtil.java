@@ -12,7 +12,6 @@ import com.datasophon.api.utils.ranger.client.model.PolicyItemAccess;
 import com.datasophon.api.utils.ranger.client.model.Role;
 import com.datasophon.api.utils.ranger.client.model.RoleMember;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
-import feign.Logger;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -42,7 +41,8 @@ public class RangerUtil {
                 policyName = "all - path";
                 break;
             case "hivedev":
-                accessTypeList = Arrays.asList("select", "update", "create", "drop", "alter", "index", "lock", "all", "read", "write", "repladmin", "serviceadmin", "tempudfadmin", "refresh");
+                accessTypeList = Arrays.asList("select", "update", "create", "drop", "alter", "index", "lock", "all",
+                        "read", "write", "repladmin", "serviceadmin", "tempudfadmin", "refresh");
                 policyName = "all - database";
                 break;
             case "yarndev":
@@ -54,7 +54,8 @@ public class RangerUtil {
                 policyName = "all - table, column-family, column";
                 break;
             case "kmsdev":
-                accessTypeList = Arrays.asList("create", "delete", "rollover", "setkeymaterial", "get", "getkeys", "getmetadata", "generateeek", "decrypteek");
+                accessTypeList = Arrays.asList("create", "delete", "rollover", "setkeymaterial", "get", "getkeys",
+                        "getmetadata", "generateeek", "decrypteek");
                 policyName = "all - keyname";
                 policyItem.setUsers(CollUtil.newHashSet("keyadmin", "rangeradmin"));
                 policyItem.setRoles(null);
@@ -62,7 +63,6 @@ public class RangerUtil {
             default:
                 return;
         }
-
 
         Policy defaultPolicy = rangerClient.getPolicies().getPolicyByName(serviceName, policyName);
         policyItem.setDelegateAdmin(true);
@@ -102,7 +102,8 @@ public class RangerUtil {
         Role role = new Role();
         role.setName(SUPER_ROLE_NAME);
         List<RoleMember> defaultRoleMembers = new ArrayList<>();
-        List<String> defaultUsers = Arrays.asList("root", "hdfs", "yarn", "hive", "hbase", "mapred", "admin", "elastic", "hue");
+        List<String> defaultUsers = Arrays.asList("root", "hdfs", "yarn", "hive", "hbase", "mapred", "admin", "elastic",
+                "hue");
         for (String defaultUser : defaultUsers) {
             RoleMember roleMember = new RoleMember();
             roleMember.setName(defaultUser);
@@ -113,8 +114,8 @@ public class RangerUtil {
         return role;
     }
 
-
-    public static void setRoleUser(RangerClient rangerClient, String roleName, List<String> userList) throws RangerClientException {
+    public static void setRoleUser(RangerClient rangerClient, String roleName, List<String> userList)
+            throws RangerClientException {
         Role role = rangerClient.getRoles().getRoleByName(roleName);
         List<RoleMember> defaultRoleMembers = new ArrayList<>();
         for (String user : userList) {
@@ -135,7 +136,8 @@ public class RangerUtil {
         return getCachedOrNewClient(clusterTenant, "keyadmin", "admin123", clientKmsCache);
     }
 
-    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password, Cache<Integer, RangerClient> clientCache) throws Exception {
+    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password,
+            Cache<Integer, RangerClient> clientCache) throws Exception {
         if (clusterTenant == null) {
             throw new IllegalArgumentException("Cluster tenant cannot be null");
         }
@@ -158,7 +160,7 @@ public class RangerUtil {
         RangerClientConfig clientConfig = RangerClientConfig.builder()
                 .connectTimeoutMillis(1000)
                 .readTimeoutMillis(1000)
-                .logLevel(Logger.Level.BASIC)
+                .loggingLevel("INFO")
                 .authConfig(RangerAuthConfig.builder()
                         .username(username)
                         .password(password)
