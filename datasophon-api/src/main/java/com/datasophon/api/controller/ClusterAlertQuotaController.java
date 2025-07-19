@@ -24,10 +24,10 @@ import com.datasophon.dao.enums.QuotaState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
-import java.util.List;
 
 @RestController
 @RequestMapping("cluster/alert/quota")
@@ -40,15 +40,22 @@ public class ClusterAlertQuotaController {
      * list alert quota
      */
     @RequestMapping("/list")
-    public Result info(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page, Integer pageSize) {
-        return clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId,noticeGroupId, quotaName, page, pageSize);
+    public Result info(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("alertGroupId") Integer alertGroupId,
+            @RequestParam("noticeGroupId") Integer noticeGroupId,
+            @RequestParam("quotaName") String quotaName,
+            @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
+        return clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId, noticeGroupId, quotaName, page,
+                pageSize);
     }
 
     /**
      * enable alert quota
      */
     @RequestMapping("/start")
-    public Result start(Integer clusterId, String alertQuotaIds) {
+    public Result start(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.start(clusterId, alertQuotaIds);
         return Result.success();
     }
@@ -57,7 +64,8 @@ public class ClusterAlertQuotaController {
      * disable alert quota
      */
     @RequestMapping("/stop")
-    public Result stop(Integer clusterId, String alertQuotaIds) {
+    public Result stop(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.stop(clusterId, alertQuotaIds);
         return Result.success();
     }
