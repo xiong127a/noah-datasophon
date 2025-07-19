@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -46,7 +47,7 @@ public class ClusterServiceInstanceController {
      * 获取服务角色类型列表
      */
     @RequestMapping("/getServiceRoleType")
-    public Result getServiceRoleType(Integer serviceInstanceId) {
+    public Result getServiceRoleType(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         return clusterServiceInstanceService.getServiceRoleType(serviceInstanceId);
     }
 
@@ -54,7 +55,7 @@ public class ClusterServiceInstanceController {
      * 获取服务角色类型列表
      */
     @RequestMapping("/configVersionCompare")
-    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,Boolean showOnlyDifferences) {
+    public Result configVersionCompare(@RequestParam("serviceInstanceId") Integer serviceInstanceId,@RequestParam("roleGroupId") Integer roleGroupId,@RequestParam("showOnlyDifferences")Boolean showOnlyDifferences) {
         return clusterServiceInstanceService.configVersionCompare(serviceInstanceId, roleGroupId,showOnlyDifferences);
     }
 
@@ -72,7 +73,7 @@ public class ClusterServiceInstanceController {
      * 信息
      */
     @RequestMapping("/downloadClientConfig")
-    public Result downloadClientConfig(Integer clusterId, String serviceName) {
+    public Result downloadClientConfig(@RequestParam("clusterId")Integer clusterId,@RequestParam("serviceName") String serviceName) {
 
         return clusterServiceInstanceService.downloadClientConfig(clusterId, serviceName);
     }
@@ -101,7 +102,7 @@ public class ClusterServiceInstanceController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer serviceInstanceId) {
+    public Result delete(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         return clusterServiceInstanceService.delServiceInstance(serviceInstanceId);
     }
 
@@ -109,7 +110,7 @@ public class ClusterServiceInstanceController {
      * 获取服务连接信息
      */
     @RequestMapping("/getConnectionInfo")
-    public Result getConnectionInfo(Integer serviceInstanceId) {
+    public Result getConnectionInfo(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         return clusterServiceInstanceService.getConnectionInfo(serviceInstanceId);
     }
 
