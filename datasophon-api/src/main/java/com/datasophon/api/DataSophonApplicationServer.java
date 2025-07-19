@@ -40,8 +40,11 @@ import java.security.NoSuchAlgorithmException;
 
 
 @SpringBootApplication
+@ComponentScan(basePackages = {
+        "com.datasophon",                  // 原项目包
+        "com.norinrd"       // 新增 JAR 包的包路径
+})
 @ServletComponentScan
-@ComponentScan("com.datasophon")
 @MapperScan("com.datasophon.dao")
 @EnableSpringUtil
 @EnableScheduling
