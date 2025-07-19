@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,7 +39,7 @@ public class ClusterNodeLabelController {
      * save node label
      */
     @RequestMapping("/list")
-    public Result list(Integer clusterId) {
+    public Result list(@RequestParam("clusterId") Integer clusterId) {
         List<ClusterNodeLabelEntity> list = nodeLabelService.queryClusterNodeLabel(clusterId);
         return Result.success(list);
     }
@@ -47,7 +48,8 @@ public class ClusterNodeLabelController {
      * save node label
      */
     @RequestMapping("/save")
-    public Result save(Integer clusterId, String nodeLabel) {
+    public Result save(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("nodeLabel") String nodeLabel) {
         return nodeLabelService.saveNodeLabel(clusterId, nodeLabel);
     }
 
@@ -55,7 +57,7 @@ public class ClusterNodeLabelController {
      * delete node label
      */
     @RequestMapping("/delete")
-    public Result delete(Integer nodeLabelId) {
+    public Result delete(@RequestParam("nodeLabelId") Integer nodeLabelId) {
         return nodeLabelService.deleteNodeLabel(nodeLabelId);
     }
 
@@ -63,7 +65,8 @@ public class ClusterNodeLabelController {
      * assign node label
      */
     @RequestMapping("/assign")
-    public Result assign(Integer nodeLabelId, String hostIds) {
+    public Result assign(@RequestParam("nodeLabelId") Integer nodeLabelId,
+            @RequestParam("hostIds") String hostIds) {
         return nodeLabelService.assignNodeLabel(nodeLabelId, hostIds);
     }
 }
