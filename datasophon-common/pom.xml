@@ -29,8 +29,8 @@
     <properties>
         <hadoop.version>3.3.5</hadoop.version>
 
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
     </properties>
     <dependencies>
         <dependency>
@@ -255,7 +255,7 @@
 <!--        <dependency>-->
 <!--            <groupId>com.dameng</groupId>-->
 <!--            <artifactId>jdbc8</artifactId>-->
-<!--            <version>17</version>-->
+<!--            <version>21</version>-->
 <!--        </dependency>-->
         <dependency>
             <groupId>com.dameng</groupId>
