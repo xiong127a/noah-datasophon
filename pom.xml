@@ -54,14 +54,14 @@
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
         <mybatis.spring.version>3.0.5</mybatis.spring.version>
         <mybatis-plus-join>1.5.4</mybatis-plus-join>
-        <mysql.connector.version>8.0.33</mysql.connector.version>
+        <mysql.connector.version>8.4.0</mysql.connector.version>
         <sqlite.connector.version>3.48.0.0</sqlite.connector.version>
         <org.apache.sshd.version>2.9.2</org.apache.sshd.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spotless.ratchetFrom>origin/dev</spotless.ratchetFrom>
         <spotless.version>2.27.1</spotless.version>
-        <spring.boot.version>3.5.3</spring.boot.version>
+        <spring.boot.version>3.4.7</spring.boot.version>
         <spring.version>6.2.8</spring.version>
         <spotless.version>2.27.2</spotless.version>
         <versions-maven-plugin.version>2.14.2</versions-maven-plugin.version>
@@ -92,9 +92,10 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
             <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
                 <version>${mysql.connector.version}</version>
             </dependency>
             <dependency>
@@ -269,6 +270,16 @@
                 <groupId>net.sf.sevenzipjbinding</groupId>
                 <artifactId>sevenzipjbinding-all-platforms</artifactId>
                 <version>${sevenzip4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-spring-boot-starter</artifactId>
+                <version>1.7.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dtflys.forest</groupId>
+                <artifactId>forest-core</artifactId>
+                <version>1.7.3</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
