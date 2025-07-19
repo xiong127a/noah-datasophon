@@ -40,8 +40,8 @@ public class ClusterServiceRoleInstanceController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("hostname") String hostname, @RequestParam("serviceRoleState") Integer serviceRoleState, @RequestParam("serviceRoleName") String serviceRoleName,
-                       @RequestParam("roleGroupId") Integer roleGroupId,@RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+    public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam(name = "hostname",required = false) String hostname, @RequestParam(name = "serviceRoleState",required = false) Integer serviceRoleState, @RequestParam("serviceRoleName") String serviceRoleName,
+                       @RequestParam(name = "roleGroupId",required = false) Integer roleGroupId,@RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return clusterServiceRoleInstanceService.listAll(serviceInstanceId, hostname, serviceRoleState, serviceRoleName,
                 roleGroupId, page, pageSize);
     }
