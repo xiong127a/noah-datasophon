@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 /**
@@ -58,7 +57,7 @@ public class NoticeGroupController {
         List<String> existGroup = noticeGroupService.list()
                 .stream()
                 .map(NoticeGroupEntity::getNoticeGroupName)
-                .collect(Collectors.toList());
+                .toList();
         if (existGroup.contains(noticeGroup.getNoticeGroupName())) {
             return Result.error("通知组名称重复");
         }
