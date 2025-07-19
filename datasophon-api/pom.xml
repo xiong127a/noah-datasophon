@@ -175,6 +175,28 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.eclipse.transformer</groupId>
+                <artifactId>transformer-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase> <!-- 在编译后执行 -->
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <inputDir>${project.build.outputDirectory}</inputDir>
+                            <outputDir>${project.build.outputDirectory}</outputDir>
+                            <rules>
+                                <rule>
+                                    <type>jakarta</type>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -218,7 +240,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    
+
                     <!-- 使用ant插件复制Dockerfile-api -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -234,14 +256,14 @@
                                 <configuration>
                                     <target>
                                         <copy file="../Dockerfile-api"
-                                              tofile="${project.build.directory}/docker-context/Dockerfile-api" />
+                                              tofile="${project.build.directory}/docker-context/Dockerfile-api"/>
                                         <echo>Copied Dockerfile-api to ${project.build.directory}/docker-context/</echo>
                                     </target>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
-                    
+
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>
