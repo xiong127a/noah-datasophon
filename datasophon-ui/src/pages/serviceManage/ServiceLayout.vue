@@ -23,9 +23,11 @@
       <!-- 核心服务组 -->
       <div class="service-group">
         <div class="group-title" @click="toggleGroupCollapse('core')" :title="sidebarCollapsed ? 'Core Service' : ''">
-          <a-icon type="appstore" class="group-icon" />
+          <a-icon type="cluster" class="group-icon" />
           <span>Core Service</span>
-          <a-icon :type="coreGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
+          <div class="collapse-icon-wrapper">
+            <a-icon :type="coreGroupCollapsed ? 'caret-right' : 'caret-down'" class="collapse-icon" />
+          </div>
         </div>
         <div class="service-list" v-show="!coreGroupCollapsed">
           <a-popover 
@@ -169,10 +171,12 @@
       
       <!-- 管理服务组 -->
       <div class="service-group management-group">
-        <div class="group-title" @click="toggleGroupCollapse('management')" :title="sidebarCollapsed ? 'Management Service' : ''">
+        <div class="group-title" @click="toggleGroupCollapse('management')" :title="sidebarCollapsed ? 'Management' : ''">
           <a-icon type="control" class="group-icon" />
-          <span>Management Service</span>
-          <a-icon :type="managementGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
+          <span>Management</span>
+          <div class="collapse-icon-wrapper">
+            <a-icon :type="managementGroupCollapsed ? 'caret-right' : 'caret-down'" class="collapse-icon" />
+          </div>
         </div>
         <div class="service-list" v-show="!managementGroupCollapsed">
           <a-popover 
@@ -929,14 +933,22 @@ export default {
         return;
       }
       
-      // 清除已存在的定时器
+      // 关闭所有其他服务的悬浮框
+      this.closeAllPopoversExcept(service.id);
+      
+      // 清除当前服务的定时器
       if (this.popoverTimeoutMap[service.id]) {
         clearTimeout(this.popoverTimeoutMap[service.id]);
         delete this.popoverTimeoutMap[service.id];
       }
       
-      // 设置当前服务的popoverVisible为true
-      service.popoverVisible = true;
+      // 延迟显示悬浮框，避免快速移动时频繁触发
+      this.popoverTimeoutMap[service.id] = setTimeout(() => {
+        if (!this.switchingService) {
+          service.popoverVisible = true;
+        }
+        delete this.popoverTimeoutMap[service.id];
+      }, 200);
     },
     
     // 处理服务项鼠标离开事件
@@ -947,13 +959,19 @@ export default {
         return;
       }
       
+      // 清除显示定时器
+      if (this.popoverTimeoutMap[service.id]) {
+        clearTimeout(this.popoverTimeoutMap[service.id]);
+        delete this.popoverTimeoutMap[service.id];
+      }
+      
       // 设置延迟关闭
       this.popoverTimeoutMap[service.id] = setTimeout(() => {
         if (!service.popoverInContent) {
           service.popoverVisible = false;
         }
         delete this.popoverTimeoutMap[service.id];
-      }, 100);
+      }, 300);
     },
     
     // 处理Popover可见性变化
@@ -1016,6 +1034,27 @@ export default {
         this.menuList.forEach(service => {
           service.popoverVisible = false;
           service.popoverInContent = false;
+        });
+      }
+    },
+    
+    // 关闭除指定服务外的所有悬浮框
+    closeAllPopoversExcept(exceptServiceId) {
+      // 清除其他服务的计时器
+      Object.keys(this.popoverTimeoutMap).forEach(id => {
+        if (id !== exceptServiceId.toString()) {
+          clearTimeout(this.popoverTimeoutMap[id]);
+          delete this.popoverTimeoutMap[id];
+        }
+      });
+      
+      // 关闭其他服务的悬浮窗
+      if (this.menuList && this.menuList.length > 0) {
+        this.menuList.forEach(service => {
+          if (service.id !== exceptServiceId) {
+            service.popoverVisible = false;
+            service.popoverInContent = false;
+          }
         });
       }
     },
@@ -1152,50 +1191,234 @@ export default {
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.5);
   
-  /* 折叠状态 */
+  /* 折叠状态 - 彻底重构 */
   &.collapsed {
-    width: 64px;
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+    overflow: hidden !important;
     
     .service-title {
-      padding: 12px 8px;
-      justify-content: center;
+      padding: 12px 8px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      
+      .cluster-info,
+      .loading-text {
+        display: none !important;
+      }
+      
+      .sidebar-controls {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 !important;
+        
+        .sidebar-toggle {
+          width: 44px !important;
+          height: 44px !important;
+          min-width: 44px !important;
+          min-height: 44px !important;
+          border-radius: 12px !important;
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08)) !important;
+          backdrop-filter: blur(10px) !important;
+          -webkit-backdrop-filter: blur(10px) !important;
+          border: 1px solid rgba(0, 122, 255, 0.1) !important;
+          box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+          transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          
+          &:hover {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15)) !important;
+            transform: scale(1.05) !important;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2) !important;
+            border-color: rgba(0, 122, 255, 0.2) !important;
+          }
+          
+          .anticon {
+            color: #007AFF !important;
+            font-size: 18px !important;
+            filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2)) !important;
+          }
+        }
+      }
     }
     
     .group-title {
-      padding: 10px 8px;
-      justify-content: center;
+      padding: 8px !important;
+      margin: 8px 2px 12px 2px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      min-height: 48px !important;
+      border-radius: 12px !important;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05)) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      border: 1px solid rgba(0, 122, 255, 0.08) !important;
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.08) !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+      cursor: pointer !important;
+      position: relative !important;
       
-      span, .collapse-icon {
-        display: none;
+      span {
+        display: none !important;
+      }
+      
+      .collapse-icon,
+      .collapse-icon-wrapper {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 10px !important;
+        color: #007AFF !important;
+        position: absolute !important;
+        top: 6px !important;
+        right: 6px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 50% !important;
+        outline: none !important;
+      }
+      
+      .collapse-icon-wrapper .anticon,
+      .collapse-icon.anticon {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 50% !important;
+        box-shadow: none !important;
+        outline: none !important;
       }
       
       .group-icon {
-        margin-right: 0;
-        font-size: 18px; /* 折叠状态下稍微增大图标尺寸 */
+        margin: 0 !important;
+        font-size: 20px !important;
+        color: #007AFF !important;
+        filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2)) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+      }
+      
+      &:hover {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1)) !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15) !important;
+        border-color: rgba(0, 122, 255, 0.15) !important;
+        
+        .group-icon {
+          color: #0056CC !important;
+          transform: scale(1.1) !important;
+        }
       }
     }
     
     .service-item {
-      padding: 6px 8px;
-      justify-content: center;
+      padding: 0 !important;
+      margin: 2px 2px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      min-height: 48px !important;
+      border-radius: 12px !important;
+      position: relative !important;
+      overflow: visible !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
       
-      .status-indicator, 
-      .alert-indicators, 
-      .expand-icon {
-        display: none !important; /* 强制隐藏这些元素 */
-      }
-      
-      &.active {
-        padding-left: 5px;
+      .status-indicator,
+      .alert-indicators,
+      .modern-action-btn {
+        display: none !important;
       }
       
       .service-name-container {
-        justify-content: center;
-        margin-right: 0; /* 移除右侧边距 */
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 44px !important;
+        max-width: none !important;
+        padding: 0 !important;
+        
+        .service-name {
+          display: none !important;
+        }
+        
+        .service-icon {
+          margin: 0 auto !important;
+          width: 44px !important;
+          height: 44px !important;
+          min-width: 44px !important;
+          min-height: 44px !important;
+          border-radius: 12px !important;
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08)) !important;
+          backdrop-filter: blur(10px) !important;
+          -webkit-backdrop-filter: blur(10px) !important;
+          border: 1px solid rgba(0, 122, 255, 0.1) !important;
+          box-shadow: 0 2px 6px rgba(0, 122, 255, 0.1) !important;
+          transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          overflow: visible !important;
+          position: relative !important;
+          
+          .svg-icon,
+          img {
+            font-size: 20px !important;
+            width: 20px !important;
+            height: 20px !important;
+            color: #007AFF !important;
+            filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2)) !important;
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+            flex-shrink: 0 !important;
+            display: block !important;
+            margin: 0 auto !important;
+            vertical-align: middle !important;
+          }
+        }
       }
       
-      .service-icon {
-        margin-right: 0; /* 移除图标右侧边距 */
+      &:hover {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.06), rgba(88, 86, 214, 0.06)) !important;
+        transform: scale(1.02) !important;
+        
+        .service-icon {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15)) !important;
+          transform: scale(1.05) !important;
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2) !important;
+          border-color: rgba(0, 122, 255, 0.2) !important;
+          
+          .svg-icon,
+          img {
+            color: #0056CC !important;
+            transform: scale(1.05) !important;
+            width: 20px !important;
+            height: 20px !important;
+          }
+        }
+      }
+      
+      &.active {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1)) !important;
+        
+        .service-icon {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2)) !important;
+          box-shadow: 0 3px 10px rgba(0, 122, 255, 0.25) !important;
+          border-color: rgba(0, 122, 255, 0.25) !important;
+          
+          .svg-icon {
+            color: #0056CC !important;
+            width: 20px !important;
+            height: 20px !important;
+          }
+        }
       }
     }
   }
@@ -1309,63 +1532,161 @@ export default {
     }
     
     .group-title {
-      padding: 16px 24px 12px;
-      font-size: 15px;
-      font-weight: 600;
-      background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
-      color: #007AFF;
-      border-bottom: 1px solid rgba(221, 228, 229, 0.8);
-      border-top: 1px solid rgba(221, 228, 229, 0.8);
+      padding: 20px 24px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.95));
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      color: #1D1D1F;
+      border: none;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: relative;
-      letter-spacing: -0.3px;
-      text-shadow: 0 1px 2px rgba(0, 122, 255, 0.1);
-      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      letter-spacing: -0.4px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+      margin: 8px 12px;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      overflow: hidden;
       
+      /* 苹果风格的动态背景 */
       &::before {
         content: '';
         position: absolute;
-        left: 24px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 16px;
-        background: linear-gradient(180deg, #007AFF, #5856D6);
-        border-radius: 2px;
-        margin-right: 8px;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.03), rgba(88, 86, 214, 0.03));
+        opacity: 0;
+        transition: opacity 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        border-radius: 16px;
       }
       
+      /* 苹果风格的左侧装饰条 */
       &::after {
         content: '';
         position: absolute;
-        bottom: 0;
-        left: 24px;
-        right: 24px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.3), transparent);
+        left: 0;
+        top: 20%;
+        bottom: 20%;
+        width: 4px;
+        background: linear-gradient(180deg, #007AFF, #5856D6, #AF52DE);
+        border-radius: 0 2px 2px 0;
+        opacity: 0;
+        transform: scaleY(0);
+        transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
       }
       
       &:hover {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 249, 250, 0.98));
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(0, 122, 255, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 122, 255, 0.2);
+        
+        &::before {
+          opacity: 1;
+        }
+        
+        &::after {
+          opacity: 1;
+          transform: scaleY(1);
+        }
+        
+        .group-icon {
+          transform: scale(1.15) rotate(5deg);
+          color: #007AFF;
+          filter: drop-shadow(0 2px 4px rgba(0, 122, 255, 0.3));
+        }
+        
+        .collapse-icon {
+          transform: scale(1.1) rotate(180deg);
+          color: #007AFF;
+        }
+        
+        span {
+          color: #007AFF;
+        }
+      }
+      
+      &:active {
+        transform: translateY(-1px) scale(0.98);
+        box-shadow: 0 4px 15px rgba(0, 122, 255, 0.15), 0 2px 5px rgba(0, 0, 0, 0.1);
       }
       
       .group-icon {
-        font-size: 18px;
-        color: #007AFF;
-        margin-left: 12px;
-        margin-right: 8px;
-        transition: all 0.3s ease;
+        font-size: 20px;
+        color: #34C759;
+        margin-right: 12px;
+        transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(48, 176, 199, 0.1));
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 2px 8px rgba(52, 199, 89, 0.2);
       }
       
-      .collapse-icon {
-        font-size: 14px;
-        color: #8E8E93;
-        transition: all 0.3s ease;
+      span {
+        position: relative;
+        z-index: 2;
+        transition: color 0.3s ease;
+        font-weight: 700;
+      }
+      
+      .collapse-icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 122, 255, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+        transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+        
+        &:hover {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+          transform: scale(1.1) rotate(5deg);
+          box-shadow: 0 6px 20px rgba(0, 122, 255, 0.25);
+          border-color: rgba(0, 122, 255, 0.2);
+        }
+        
+        .collapse-icon {
+          font-size: 14px;
+          color: #007AFF;
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+          filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2));
+        }
+      }
+    }
+    
+    /* 管理服务组的特殊样式 */
+    .management-group .group-title {
+      .group-icon {
+        color: #FF9500;
+        background: linear-gradient(135deg, rgba(255, 149, 0, 0.1), rgba(255, 204, 0, 0.1));
+        box-shadow: 0 2px 8px rgba(255, 149, 0, 0.2);
+      }
+      
+      &:hover .group-icon {
+        color: #FF9500;
+        filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.3));
       }
     }
     
@@ -1376,76 +1697,173 @@ export default {
     .service-item {
       display: flex;
       align-items: center;
-      padding: 8px 12px 8px 20px;
+      padding: 12px 16px;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
       position: relative;
-      min-height: 48px;
-      border-bottom: 1px solid rgba(232, 238, 240, 0.6);
-      margin: 2px 8px;
-      border-radius: 12px;
-      gap: 8px;
+      min-height: 56px;
+      border: none;
+      margin: 4px 12px;
+      border-radius: 16px;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 249, 250, 0.8));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      overflow: hidden;
       
+      /* 苹果风格的动态背景层 */
       &::before {
         content: '';
         position: absolute;
-        left: 0;
         top: 0;
+        left: 0;
+        right: 0;
         bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.03), rgba(88, 86, 214, 0.03));
+        opacity: 0;
+        transition: opacity 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        border-radius: 16px;
+      }
+      
+      /* 苹果风格的左侧激活条 */
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 25%;
+        bottom: 25%;
         width: 0;
-        background: linear-gradient(135deg, #007AFF, #5856D6);
-        border-radius: 12px 0 0 12px;
-        transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        background: linear-gradient(180deg, #007AFF, #5856D6, #AF52DE);
+        border-radius: 0 3px 3px 0;
+        transition: width 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        box-shadow: 2px 0 8px rgba(0, 122, 255, 0.3);
       }
       
       &:hover {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.05), rgba(88, 86, 214, 0.05));
-        transform: translateX(4px) translateY(-1px);
-        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.1);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.95));
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(0, 122, 255, 0.15), 0 3px 8px rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 122, 255, 0.2);
         
         &::before {
-          width: 4px;
+          opacity: 1;
+        }
+        
+        &::after {
+          width: 5px;
         }
       }
       
+      &:active {
+        transform: translateY(-1px) scale(0.98);
+        box-shadow: 0 4px 15px rgba(0, 122, 255, 0.2), 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      
       &.active {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
-        transform: translateX(6px);
-        box-shadow: 0 6px 20px rgba(0, 122, 255, 0.2);
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
+        border-color: rgba(0, 122, 255, 0.3);
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.08);
         
         &::before {
-          width: 4px;
+          opacity: 1;
+        }
+        
+        &::after {
+          width: 5px;
         }
       }
       
       .status-indicator {
-        width: 20px;
+        width: 24px;
         text-align: center;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         
         .status-icon {
           font-size: 16px;
-          transition: all 0.3s ease;
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+          position: relative;
           
           &.success {
             color: #34C759;
             filter: drop-shadow(0 2px 4px rgba(52, 199, 89, 0.3));
+            
+            &::before {
+              content: '';
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 20px;
+              height: 20px;
+              background: radial-gradient(circle, rgba(52, 199, 89, 0.15) 0%, transparent 70%);
+              border-radius: 50%;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+            
+            &:hover::before {
+              opacity: 1;
+            }
           }
           
           &.warning {
             color: #FF9500;
             filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.3));
+            
+            &::before {
+              content: '';
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 20px;
+              height: 20px;
+              background: radial-gradient(circle, rgba(255, 149, 0, 0.15) 0%, transparent 70%);
+              border-radius: 50%;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+            
+            &:hover::before {
+              opacity: 1;
+            }
           }
           
           &.error {
             color: #FF3B30;
             filter: drop-shadow(0 2px 4px rgba(255, 59, 48, 0.3));
+            
+            &::before {
+              content: '';
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 20px;
+              height: 20px;
+              background: radial-gradient(circle, rgba(255, 59, 48, 0.15) 0%, transparent 70%);
+              border-radius: 50%;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+            
+            &:hover::before {
+              opacity: 1;
+            }
           }
           
           &.empty {
             width: 16px;
             height: 16px;
             display: inline-block;
+            background: linear-gradient(135deg, rgba(142, 142, 147, 0.1), rgba(174, 174, 178, 0.1));
+            border-radius: 50%;
+            border: 1px solid rgba(142, 142, 147, 0.2);
           }
         }
       }
@@ -1456,22 +1874,45 @@ export default {
         align-items: center;
         min-width: 0;
         overflow: hidden;
+        max-width: 160px;
         
         .service-icon {
           margin-right: 12px;
-          width: 24px;
-          height: 24px;
+          width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 8px;
-          background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
-          transition: all 0.3s ease;
+          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+          border: 1px solid rgba(0, 122, 255, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+          position: relative;
+          overflow: hidden;
+          
+          &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(248, 249, 250, 0.2));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 12px;
+          }
           
           .svg-icon {
             font-size: 16px;
             color: #007AFF;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2));
           }
         }
         
@@ -1479,34 +1920,68 @@ export default {
           flex: 1;
           font-size: 14px;
           color: #1D1D1F;
-          font-weight: 500;
+          font-weight: 600;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          padding-right: 8px;
+          padding-right: 4px;
           letter-spacing: -0.2px;
-          transition: all 0.3s ease;
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          min-width: 0;
+          max-width: 120px;
         }
       }
       
-      &:hover .service-name-container {
-        .service-icon {
-          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
-          transform: scale(1.05);
+      &:hover {
+        .status-indicator .status-icon {
+          transform: scale(1.2);
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+        
+        .service-name-container {
+          .service-icon {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+            border-color: rgba(0, 122, 255, 0.2);
+            
+            &::before {
+              opacity: 1;
+            }
+            
+            .svg-icon {
+              color: #0056CC;
+              transform: scale(1.1);
+            }
+          }
           
-          .svg-icon {
-            color: #0056CC;
+          .service-name {
+            color: #007AFF;
+            transform: translateX(2px);
           }
         }
         
-        .service-name {
-          color: #007AFF;
+        .alert-indicators {
+          transform: translateX(-2px);
+        }
+        
+        .modern-action-btn {
+          transform: scale(1.1) rotate(90deg);
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
         }
       }
       
       &.active .service-name-container {
         .service-icon {
           background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.2));
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+          border-color: rgba(0, 122, 255, 0.3);
+          
+          &::before {
+            opacity: 1;
+          }
           
           .svg-icon {
             color: #0056CC;
@@ -1515,7 +1990,7 @@ export default {
         
         .service-name {
           color: #007AFF;
-          font-weight: 600;
+          font-weight: 700;
         }
       }
       
@@ -1530,42 +2005,101 @@ export default {
           align-items: center;
           cursor: pointer;
           line-height: 1;
-          padding: 2px 6px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(10px);
-          transition: all 0.3s ease;
-          gap: 3px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.9));
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+          gap: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+          position: relative;
+          overflow: hidden;
+          
+          &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(248, 249, 250, 0.3));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 12px;
+          }
           
           &:hover {
+            transform: scale(1.1) translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+            border-color: rgba(255, 255, 255, 0.8);
+            
+            &::before {
+              opacity: 1;
+            }
+          }
+          
+          &:active {
             transform: scale(1.05);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
           }
           
           .error-color {
             color: #FF3B30;
             font-size: 14px;
             filter: drop-shadow(0 1px 2px rgba(255, 59, 48, 0.3));
+            transition: all 0.3s ease;
           }
           
           .warning-color {
             color: #FF9500;
             font-size: 14px;
             filter: drop-shadow(0 1px 2px rgba(255, 149, 0, 0.3));
+            transition: all 0.3s ease;
           }
           
           .alert-count {
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             position: relative;
             top: 0;
+            transition: all 0.3s ease;
             
             &.warning-color {
               color: #FF9500;
+              text-shadow: 0 1px 2px rgba(255, 149, 0, 0.2);
             }
             
             &.error-color {
               color: #FF3B30;
+              text-shadow: 0 1px 2px rgba(255, 59, 48, 0.2);
+            }
+          }
+          
+          &:hover {
+            .error-color {
+              color: #E6342A;
+              transform: scale(1.1);
+              filter: drop-shadow(0 2px 4px rgba(255, 59, 48, 0.4));
+            }
+            
+            .warning-color {
+              color: #E6850E;
+              transform: scale(1.1);
+              filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.4));
+            }
+            
+            .alert-count {
+              transform: scale(1.05);
+              
+              &.warning-color {
+                color: #E6850E;
+              }
+              
+              &.error-color {
+                color: #E6342A;
+              }
             }
           }
         }
@@ -1574,15 +2108,45 @@ export default {
           font-size: 16px;
           color: #FF9500;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 6px;
-          background: rgba(255, 149, 0, 0.1);
-          transition: all 0.3s ease;
+          padding: 6px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, rgba(255, 149, 0, 0.12), rgba(255, 193, 7, 0.08));
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 149, 0, 0.2);
+          transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
           filter: drop-shadow(0 2px 4px rgba(255, 149, 0, 0.2));
+          position: relative;
+          overflow: hidden;
+          
+          &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 149, 0, 0.2), rgba(255, 193, 7, 0.15));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 10px;
+          }
           
           &:hover {
-            background: rgba(255, 149, 0, 0.15);
-            transform: scale(1.1) rotate(90deg);
+            background: linear-gradient(135deg, rgba(255, 149, 0, 0.18), rgba(255, 193, 7, 0.12));
+            transform: scale(1.15) rotate(180deg);
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.08);
+            border-color: rgba(255, 149, 0, 0.4);
+            color: #E6850E;
+            
+            &::before {
+              opacity: 1;
+            }
+          }
+          
+          &:active {
+            transform: scale(1.05) rotate(180deg);
+            box-shadow: 0 2px 8px rgba(255, 149, 0, 0.4);
           }
         }
       }
@@ -1921,22 +2485,35 @@ export default {
   }
 }
 
-/* 服务提示样式 */
+/* 苹果风格服务提示样式 */
 :deep(.service-popover) {
   .ant-popover-inner-content {
     padding: 0;
   }
   
   .ant-popover-inner {
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 
-                0 8px 16px rgba(0, 0, 0, 0.1),
-                0 2px 4px rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    box-shadow: 0 32px 64px rgba(0, 0, 0, 0.12), 
+                0 16px 32px rgba(0, 0, 0, 0.08),
+                0 8px 16px rgba(0, 0, 0, 0.04),
+                0 2px 8px rgba(0, 0, 0, 0.02);
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  
+  &.ant-popover-open .ant-popover-inner {
+    transform: scale(1);
+    opacity: 1;
+  }
+  
+  .ant-popover-arrow {
+    display: none;
   }
 }
 
