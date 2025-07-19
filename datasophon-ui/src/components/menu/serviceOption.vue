@@ -248,8 +248,36 @@ export default {
             
             // 添加点击外部关闭菜单的事件
             const handleOutsideClick = (event) => {
-              if (!menuElement.contains(event.target) && !this.$refs.serviceOptionWrapper.contains(event.target)) {
-                document.body.removeChild(menuElement);
+              try {
+                // 首先检查所有变量是否存在
+                if (!menuElement || !this.$refs.serviceOptionWrapper) {
+                  console.warn('菜单元素或包装元素不存在，取消事件监听');
+                  document.removeEventListener('click', handleOutsideClick);
+                  this.menuVisible = false;
+                  return;
+                }
+                
+                // 确保menuElement和this.$refs.serviceOptionWrapper不是null或undefined再调用contains方法
+                const isClickInsideMenu = menuElement && menuElement.contains && menuElement.contains(event.target);
+                const isClickInsideButton = this.$refs.serviceOptionWrapper && 
+                                           this.$refs.serviceOptionWrapper.contains && 
+                                           this.$refs.serviceOptionWrapper.contains(event.target);
+                
+                if (!isClickInsideMenu && !isClickInsideButton) {
+                  // 添加安全检查，确保元素存在且是document.body的子元素
+                  if (menuElement && menuElement.parentNode === document.body) {
+                    try {
+                      document.body.removeChild(menuElement);
+                    } catch (error) {
+                      console.warn('移除菜单时出错:', error);
+                    }
+                  }
+                  document.removeEventListener('click', handleOutsideClick);
+                  this.menuVisible = false;
+                }
+              } catch (error) {
+                console.error('handleOutsideClick发生错误:', error);
+                // 出现任何错误，都移除事件监听并设置菜单为不可见
                 document.removeEventListener('click', handleOutsideClick);
                 this.menuVisible = false;
               }
@@ -264,8 +292,12 @@ export default {
       } else {
         // 如果菜单隐藏，移除菜单元素
         const menuElement = document.getElementById('service-option-menu');
-        if (menuElement) {
-          document.body.removeChild(menuElement);
+        if (menuElement && menuElement.parentNode === document.body) {
+          try {
+            document.body.removeChild(menuElement);
+          } catch (error) {
+            console.warn('移除菜单时出错:', error);
+          }
         }
       }
     },
@@ -369,8 +401,12 @@ export default {
     // 移除事件监听器和菜单元素
     // document.removeEventListener('click', this.handleOutsideClick);
     const menuElement = document.getElementById('service-option-menu');
-    if (menuElement) {
-      document.body.removeChild(menuElement);
+    if (menuElement && menuElement.parentNode === document.body) {
+      try {
+        document.body.removeChild(menuElement);
+      } catch (error) {
+        console.warn('移除菜单时出错:', error);
+      }
     }
   },
 };

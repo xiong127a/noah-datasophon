@@ -156,7 +156,9 @@
             
             <!-- 展开按钮 -->
             <div class="expand-icon" v-if="service.serviceName !== 'PLATFORM' && service.serviceName !== 'DATASOPHON'">
-              <div class="modern-action-btn" @click.stop="showActionMenuForService(service, $event)">
+              <div class="modern-action-btn" 
+                   :class="{ 'menu-active': service.menuVisible }" 
+                   @click.stop="showActionMenuForService(service, $event)">
                 <a-icon type="more" />
               </div>
             </div>
@@ -298,7 +300,7 @@
             
             <!-- 展开按钮 -->
             <div class="expand-icon" v-if="service.serviceName !== 'PLATFORM' && service.serviceName !== 'DATASOPHON'">
-              <div class="modern-action-btn" @click.stop="showActionMenuForService(service, $event)">
+              <div class="modern-action-btn" :class="{'menu-active': service.menuVisible}" @click.stop="showActionMenuForService(service, $event)">
                 <a-icon type="more" />
               </div>
             </div>
@@ -1027,6 +1029,19 @@ export default {
     // 隐藏全局服务操作菜单
     hideActionMenu() {
       this.showActionMenu = false;
+      // 关闭所有服务的菜单状态
+      if (this.activeService) {
+        this.$set(this.activeService, 'menuVisible', false);
+      }
+      this.coreServices.forEach(item => {
+        this.$set(item, 'menuVisible', false);
+      });
+      this.managementServices.forEach(item => {
+        this.$set(item, 'menuVisible', false);
+      });
+      this.activeService = null;
+      // 移除事件监听器
+      document.removeEventListener('click', this.handleOutsideClick);
     },
     
     // 显示服务操作菜单
@@ -1035,6 +1050,24 @@ export default {
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
+      
+      // 如果当前服务的菜单已经显示，则关闭它（二次点击关闭功能）
+      if (service.menuVisible && this.activeService === service) {
+        this.$set(service, 'menuVisible', false);
+        this.hideActionMenu();
+        return;
+      }
+      
+      // 关闭其他所有服务的菜单
+      this.coreServices.forEach(item => {
+        this.$set(item, 'menuVisible', false);
+      });
+      this.managementServices.forEach(item => {
+        this.$set(item, 'menuVisible', false);
+      });
+      
+      // 设置当前服务菜单为显示状态
+      this.$set(service, 'menuVisible', true);
       
       // 设置当前激活的服务
       this.activeService = service;
@@ -1578,6 +1611,7 @@ export default {
           position: relative;
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+          cursor: pointer;
           
           &:hover {
             background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.1));
@@ -1585,6 +1619,11 @@ export default {
             box-shadow: 0 4px 16px rgba(0, 122, 255, 0.15), 0 2px 4px rgba(0, 0, 0, 0.08);
             border-color: rgba(0, 122, 255, 0.2);
             color: #007AFF;
+            
+            .anticon {
+              transform: rotate(90deg) scale(1.1);
+              color: #007AFF;
+            }
           }
           
           &:active {
@@ -1592,9 +1631,22 @@ export default {
             box-shadow: 0 1px 4px rgba(0, 122, 255, 0.2);
           }
           
+          // 当菜单显示时的激活状态
+          &.menu-active {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.15));
+            border-color: rgba(0, 122, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.08);
+            
+            .anticon {
+              transform: rotate(90deg) scale(1.1);
+              color: #007AFF;
+            }
+          }
+          
           .anticon {
             font-size: 16px;
             color: #555;
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
           }
         }
         
