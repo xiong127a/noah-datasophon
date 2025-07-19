@@ -18,9 +18,13 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 
@@ -28,6 +32,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
+
+import static com.datasophon.common.Constants.KUBERNETES_NODEPORT_MAPPING;
 
 public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
 
@@ -64,9 +70,22 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
         // 获取上下文路径（context-path）
         String contextPath = serverProperties.getServlet().getContextPath();
 
-        String url =  "http://" + localHostName + ":" + port + contextPath+"/api/cluster/grafana/kerberos/";
+        String url = "http://" + localHostName + ":" + port + contextPath + "/api/cluster/grafana/kerberos/";
         serviceRoleInfo.setExtendConfig(url);
         serviceRoleInfo.setMasterHost(globalVariables.get(key));
     }
 
+    @Override
+    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        for (ServiceConfig serviceConfig : list) {
+            if (StrUtil.equals(serviceConfig.getName(), "grafana_" + KUBERNETES_NODEPORT_MAPPING)) {
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                Object configValue = serviceConfig.getValue();
+                JSONObject jsonObject = JSONUtil.parseObj(configValue);
+                String port = jsonObject.getStr("3000");
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaPort}", port);
+                break;
+            }
+        }
+    }
 }
