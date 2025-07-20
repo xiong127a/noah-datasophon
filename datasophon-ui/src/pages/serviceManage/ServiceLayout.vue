@@ -445,8 +445,8 @@ export default {
     }
   },
   mounted() {
-    this.getClusterInfo();
-    this.loadMenuData();
+    // 先获取集群信息，然后加载服务列表
+    this.initializeData();
     
     // 获取菜单容器DOM引用
     this.menuContainer = document.querySelector('.cdh-service-page');
@@ -500,15 +500,45 @@ export default {
       }
     },
     
+    // 初始化数据
+    async initializeData() {
+      try {
+        // 先获取集群信息
+        await this.getClusterInfo();
+        // 然后加载服务列表
+        this.loadMenuData();
+      } catch (error) {
+        console.error('初始化数据失败:', error);
+        // 即使集群信息获取失败，也要尝试加载服务列表
+        this.loadMenuData();
+      }
+    },
+    
     // 获取集群信息
     getClusterInfo() {
-      // 从后端API获取集群信息
-      this.$axiosGet('/ddh/api/cluster/runningClusterList').then(res => {
-        if (res.code === 200 && res.data && res.data.length > 0) {
-          this.clusterData = res.data[0]; // 获取第一个集群数据
-        } else {
-          console.warn('未获取到集群数据，使用默认数据');
-          // 如果API调用失败，使用默认数据作为后备
+      return new Promise((resolve, reject) => {
+        // 从后端API获取集群信息
+        this.$axiosGet('/ddh/api/cluster/runningClusterList').then(res => {
+          if (res.code === 200 && res.data && res.data.length > 0) {
+            this.clusterData = res.data[0]; // 获取第一个集群数据
+            console.log('成功获取集群信息:', this.clusterData);
+            resolve(this.clusterData);
+          } else {
+            console.warn('未获取到集群数据，使用默认数据');
+            // 如果API调用失败，使用默认数据作为后备
+            this.clusterData = {
+              id: 1,
+              clusterName: "bdp",
+              clusterCode: "bdp",
+              clusterFrame: "DDP-1.2.1",
+              depType: "PVM",
+              clusterState: "正在运行"
+            };
+            resolve(this.clusterData);
+          }
+        }).catch(error => {
+          console.error('获取集群数据失败:', error);
+          // API调用失败时使用默认数据
           this.clusterData = {
             id: 1,
             clusterName: "bdp",
@@ -517,18 +547,8 @@ export default {
             depType: "PVM",
             clusterState: "正在运行"
           };
-        }
-      }).catch(error => {
-        console.error('获取集群数据失败:', error);
-        // API调用失败时使用默认数据
-        this.clusterData = {
-          id: 1,
-          clusterName: "bdp",
-          clusterCode: "bdp",
-          clusterFrame: "DDP-1.2.1",
-          depType: "PVM",
-          clusterState: "正在运行"
-        };
+          reject(error);
+        });
       });
     },
     
@@ -543,6 +563,57 @@ export default {
     
     // 加载菜单数据
     loadMenuData() {
+      // 首先尝试从后端API获取服务列表
+      this.loadServiceListFromAPI();
+    },
+    
+    // 从后端API加载服务列表
+    loadServiceListFromAPI() {
+      // 获取当前集群ID
+      const clusterId = this.clusterId || this.clusterData?.id || 1;
+      
+      // 调用后端API获取服务实例列表
+      this.$axiosGet(`/ddh/cluster/service/instance/list?clusterId=${clusterId}`)
+        .then(res => {
+          if (res.code === 200 && res.data && Array.isArray(res.data)) {
+            // 将后端返回的服务数据转换为前端需要的格式
+            this.menuList = res.data.map((item, index) => {
+              const serviceName = item.serviceName || item.name;
+              // 优先使用label字段作为显示名称，如果没有label则使用serviceName
+              const displayName = item.label || serviceName;
+              
+              return {
+                id: String(item.id || index + 1),
+                name: displayName,
+                serviceName: serviceName,
+                icon: serviceName ? serviceName.toLowerCase() : 'service-default',
+                serviceId: String(item.id),
+                path: `/service-manage/service-list/${item.id}`,
+                serviceStateCode: item.serviceStateCode || 2,
+                alertNum: item.alertNum || 0,
+                needRestart: item.needRestart || false,
+                rawData: item,
+                menuVisible: false,
+                popoverVisible: false,
+                popoverInContent: false
+              };
+            });
+            
+            console.log('从后端API成功加载服务列表:', this.menuList);
+          } else {
+            console.warn('后端API返回数据格式异常，使用默认服务列表');
+            this.useDefaultMenus();
+          }
+        })
+        .catch(error => {
+          console.error('从后端API加载服务列表失败:', error);
+          // API调用失败时，尝试从localStorage获取缓存数据
+          this.loadMenuDataFromCache();
+        });
+    },
+    
+    // 从缓存加载菜单数据（作为后备方案）
+    loadMenuDataFromCache() {
       // 尝试从localStorage获取菜单数据
       const menuData = JSON.parse(localStorage.getItem('menuData') || '[]');
       
@@ -554,28 +625,25 @@ export default {
       if (serviceMenus.length > 0 && serviceMenus[0].children) {
         // 从菜单数据中提取服务列表
         this.menuList = serviceMenus[0].children.map((item, index) => {
-          // 使用label字段作为显示名称，使用name字段作为serviceName
+          // 优先使用label字段作为显示名称
           const displayName = item.label || item.name;
           const serviceName = item.name;
-          
-          // 将服务名称转为小写作为图标名称
           const iconName = serviceName ? serviceName.toLowerCase() : 'service-default';
           
           return {
             id: String(index + 1),
-            name: displayName, // 使用label字段作为显示名称
-            serviceName: serviceName, // 保留原始服务名称
+            name: displayName,
+            serviceName: serviceName,
             path: item.fullPath,
-            icon: iconName, // 使用小写服务名称作为图标名
+            icon: iconName,
             serviceId: (item.meta && item.meta.params && item.meta.params.serviceId) || '',
-            // 添加服务状态相关的属性
             serviceStateCode: item.meta && item.meta.obj ? item.meta.obj.serviceStateCode : 1,
             alertNum: item.meta && item.meta.obj ? item.meta.obj.alertNum : 0,
             needRestart: item.meta && item.meta.obj ? item.meta.obj.needRestart : false,
             rawData: item.meta && item.meta.obj ? item.meta.obj : {},
             menuVisible: false,
-            popoverVisible: false, // 提示框可见性控制
-            popoverInContent: false, // 标记鼠标是否在提示框内容区域
+            popoverVisible: false,
+            popoverInContent: false
           };
         });
       } else {
@@ -584,25 +652,24 @@ export default {
           const serviceList = JSON.parse(localStorage.getItem('serviceList') || '[]');
           if (serviceList.length > 0) {
             this.menuList = serviceList.map((item, index) => {
-              // 使用label字段作为显示名称，使用serviceName字段作为服务名称
+              // 优先使用label字段作为显示名称，如果没有label则使用serviceName
               const displayName = item.label || item.serviceName;
               const serviceName = item.serviceName;
               
               return {
                 id: String(index + 1),
-                name: displayName, // 使用label字段作为显示名称
-                serviceName: serviceName, // 使用serviceName字段作为服务名称
-                icon: serviceName ? serviceName.toLowerCase() : 'service-default', // 图标名称使用serviceName
+                name: displayName,
+                serviceName: serviceName,
+                icon: serviceName ? serviceName.toLowerCase() : 'service-default',
                 serviceId: item.id,
                 path: `/service-manage/service-list/${item.id}`,
-                // 添加服务状态相关的默认属性
                 serviceStateCode: 1,
                 alertNum: 0,
                 needRestart: false,
                 rawData: {},
                 menuVisible: false,
-                popoverVisible: false, // 提示框可见性控制
-                popoverInContent: false, // 标记鼠标是否在提示框内容区域
+                popoverVisible: false,
+                popoverInContent: false
               };
             });
           } else {
@@ -610,35 +677,34 @@ export default {
             this.useDefaultMenus();
           }
         } catch (e) {
-          console.error('加载服务列表失败:', e);
+          console.error('加载缓存服务列表失败:', e);
           this.useDefaultMenus();
         }
       }
     },
+  
     
-    // 使用默认菜单数据
+    // 使用默认菜单数据（仅在API和缓存都失败时使用）
     useDefaultMenus() {
-      // 首先创建不同的服务分组列表
-      const coreServicesList = [
-        { id: '1', name: 'HDFS 分布式文件系统', serviceName: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '2', name: 'YARN 资源调度系统', serviceName: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '3', name: 'HBASE 分布式数据库', serviceName: 'HBASE', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '4', name: 'HIVE 数据仓库', serviceName: 'HIVE', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '5', name: 'ZOOKEEPER 分布式协调服务', serviceName: 'ZOOKEEPER', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '6', name: 'SPARK 分布式计算引擎', serviceName: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false }
+      console.warn('使用默认菜单数据，建议检查后端API连接');
+      // 只保留基础平台服务作为默认项
+      this.menuList = [
+        { 
+          id: '0', 
+          name: '大数据基础平台', 
+          serviceName: 'DATASOPHON', 
+          icon: 'logo', 
+          path: '/service-manage', 
+          serviceId: '', 
+          serviceStateCode: 2, 
+          alertNum: 0, 
+          needRestart: false, 
+          rawData: {}, 
+          menuVisible: false, 
+          popoverVisible: false, 
+          popoverInContent: false 
+        }
       ];
-      
-      const managementServicesList = [
-        // 添加大数据基础平台作为管理服务分组的第一个
-        { id: '0', name: '大数据基础平台', serviceName: 'DATASOPHON', icon: 'logo', path: '/service-manage', serviceId: '', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '7', name: 'ALERTMANAGER 告警管理', serviceName: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '8', name: 'PROMETHEUS 监控系统', serviceName: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '9', name: 'GRAFANA 可视化平台', serviceName: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
-        { id: '10', name: 'PUSHGATEWAY 数据推送', serviceName: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false }
-      ];
-      
-      // 合并两个列表
-      this.menuList = [...coreServicesList, ...managementServicesList];
     },
     
     // 判断当前服务是否激活
@@ -1181,7 +1247,7 @@ export default {
 }
 
 .service-sidebar {
-  width: 280px; /* 增加宽度以显示完整服务名称 */
+  width: 340px; /* 进一步增加宽度以显示完整服务名称 */
   background: linear-gradient(180deg, rgba(248, 249, 250, 0.95), rgba(255, 255, 255, 0.95));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1697,21 +1763,22 @@ export default {
     .service-item {
       display: flex;
       align-items: center;
-      padding: 12px 16px;
+      padding: 10px 12px; /* 减少内边距 */
       cursor: pointer;
       transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
       position: relative;
-      min-height: 56px;
+      min-height: 48px; /* 减少最小高度 */
       border: none;
-      margin: 4px 12px;
-      border-radius: 16px;
-      gap: 12px;
+      margin: 3px 8px; /* 减少外边距 */
+      border-radius: 12px; /* 减小圆角 */
+      gap: 8px; /* 减少间距 */
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 249, 250, 0.8));
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.6);
       overflow: hidden;
+      width: calc(100% - 16px); /* 确保有足够宽度 */
       
       /* 苹果风格的动态背景层 */
       &::before {
@@ -1874,16 +1941,16 @@ export default {
         align-items: center;
         min-width: 0;
         overflow: hidden;
-        max-width: 160px;
+        max-width: none; /* 移除宽度限制 */
         
         .service-icon {
-          margin-right: 12px;
-          width: 28px;
-          height: 28px;
+          margin-right: 8px; /* 减少右边距 */
+          width: 24px; /* 减小图标尺寸 */
+          height: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 12px;
+          border-radius: 8px; /* 减小圆角 */
           background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.08));
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
@@ -1892,6 +1959,7 @@ export default {
           box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
           position: relative;
           overflow: hidden;
+          flex-shrink: 0; /* 防止图标被压缩 */
           
           &::before {
             content: '';
@@ -1903,11 +1971,11 @@ export default {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(248, 249, 250, 0.2));
             opacity: 0;
             transition: opacity 0.3s ease;
-            border-radius: 12px;
+            border-radius: 8px;
           }
           
           .svg-icon {
-            font-size: 16px;
+            font-size: 14px; /* 减小图标字体大小 */
             color: #007AFF;
             transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
             position: relative;
@@ -1918,18 +1986,19 @@ export default {
         
         .service-name {
           flex: 1;
-          font-size: 14px;
+          font-size: 14px; /* 增加字体大小 */
           color: #1D1D1F;
           font-weight: 600;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          padding-right: 4px;
-          letter-spacing: -0.2px;
+          padding-right: 12px; /* 增加右边距 */
+          letter-spacing: -0.1px;
           transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
           min-width: 0;
-          max-width: 120px;
+          max-width: none; /* 移除最大宽度限制 */
+          line-height: 1.3; /* 增加行高 */
         }
       }
       
