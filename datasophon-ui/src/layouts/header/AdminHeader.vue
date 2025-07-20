@@ -190,16 +190,19 @@
           </ul>
         </nav>
         
-        <!-- 快捷操作区域 -->
+        <!-- 快捷操作区域 - 重新设计 -->
+
         <div class="quick-actions">
-          <!-- 集群选择器 -->
-          <a-dropdown class="action-dropdown cluster-selector" placement="bottomRight">
-            <div class="action-button">
-              <div class="action-icon">
-                <svg-icon icon-class="cluster" />
+          <!-- 集群选择器 - 简化设计 -->
+          <a-dropdown class="cluster-dropdown" placement="bottomRight" v-if="isCluster === 'isCluster'">
+            <div class="cluster-selector">
+              <div class="cluster-info">
+                <div class="cluster-icon">
+                  <svg-icon icon-class="cluster" />
+                </div>
+                <span class="cluster-name">{{ currentCluster.name || 'bdp' }}</span>
               </div>
-              <span class="action-text">{{ currentCluster.name || 'bdp' }}</span>
-              <div class="action-arrow">
+              <div class="dropdown-arrow">
                 <a-icon type="down" />
               </div>
             </div>
@@ -219,19 +222,22 @@
             </a-menu>
           </a-dropdown>
 
-          <!-- 设置按钮 -->
-          <div class="action-button settings-action" v-if="isCluster === 'isCluster'">
-            <cluster-setting />
-          </div>
+          <!-- 操作按钮组 -->
+          <div class="action-buttons">
+            <!-- 设置按钮 -->
+            <div class="action-btn settings-btn" v-if="isCluster === 'isCluster'" title="集群设置">
+              <cluster-setting />
+            </div>
 
-          <!-- 告警按钮 -->
-          <div class="action-button alarm-action" v-if="isCluster === 'isCluster'">
-            <alarm-manage />
-          </div>
+            <!-- 告警按钮 -->
+            <div class="action-btn alarm-btn" v-if="isCluster === 'isCluster'" title="告警管理">
+              <alarm-manage />
+            </div>
 
-          <!-- 用户头像 -->
-          <div class="action-button user-action">
-            <header-avatar />
+            <!-- 用户信息区域 - 重新设计 -->
+            <div class="user-section">
+              <header-avatar />
+            </div>
           </div>
         </div>
       </div>
@@ -731,8 +737,8 @@ export default {
   display: flex;
   align-items: center;
   position: absolute;
-  left: 24px;
-  gap: 24px;
+  left: 16px;
+  gap: 16px;
 }
 
 /* Logo区域样式 */
@@ -740,7 +746,7 @@ export default {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: 6px 8px;
   border-radius: 10px;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   
@@ -756,11 +762,11 @@ export default {
 }
 
 .logo-wrapper {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   overflow: hidden;
-  margin-right: 10px;
+  margin-right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -775,7 +781,7 @@ export default {
 
 .brand-info {
   .brand-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: #1a1a1a;
     margin: 0;
@@ -792,7 +798,7 @@ export default {
     list-style: none;
     margin: 0;
     padding: 0;
-    gap: 2px;
+    gap: 1px;
   }
   
   .nav-item {
@@ -801,42 +807,75 @@ export default {
     &.active .nav-link {
       background: linear-gradient(135deg, #007aff 0%, #0056d3 100%);
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+      box-shadow: 
+        0 4px 16px rgba(0, 122, 255, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
       
       .nav-icon {
         color: #ffffff;
+        transform: scale(1.1);
       }
       
       .nav-arrow {
         color: #ffffff;
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
       }
     }
     
     &.expanded .nav-link {
-      background: rgba(0, 122, 255, 0.1);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.15) 100%);
       color: #007aff;
+      box-shadow: 
+        0 2px 12px rgba(0, 122, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      transform: translateY(-1px);
       
       .nav-icon {
         color: #007aff;
+        transform: scale(1.05);
       }
       
       .nav-arrow {
         color: #007aff;
+        background: rgba(0, 122, 255, 0.15);
+        box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
         transform: rotate(180deg);
       }
     }
     
     &:hover:not(.active):not(.expanded) .nav-link {
-      background: rgba(0, 0, 0, 0.04);
-      transform: translateY(-1px);
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.06) 100%);
+      transform: translateY(-2px);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 2px 6px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      
+      .nav-icon {
+        transform: scale(1.05);
+        color: #007aff;
+      }
+      
+      .nav-arrow {
+        background: rgba(0, 122, 255, 0.1);
+        color: #007aff;
+      }
+    }
+    
+    &:active .nav-link {
+      transform: translateY(0) scale(0.98);
+      transition: all 0.15s ease;
     }
   }
   
   .nav-link {
     display: flex;
     align-items: center;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
     text-decoration: none;
     color: #2c2c2c;
     font-size: 14px;
@@ -844,7 +883,24 @@ export default {
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
     gap: 8px;
-    min-height: 40px;
+    min-height: 36px;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transition: left 0.6s ease;
+    }
+    
+    &:hover::before {
+      left: 100%;
+    }
     
     &:hover {
       text-decoration: none;
@@ -900,22 +956,27 @@ export default {
   .service-card {
     display: flex;
     align-items: center;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 122, 255, 0.15);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     border-radius: 20px;
-    padding: 12px 20px;
+    padding: 8px 16px;
     box-shadow: 
-      0 4px 20px rgba(0, 122, 255, 0.08),
-      0 1px 3px rgba(0, 0, 0, 0.05);
-    gap: 12px;
+      0 2px 12px rgba(0, 0, 0, 0.06),
+      0 1px 4px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    gap: 10px;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    min-height: 40px;
     
     &:hover {
+      background: rgba(255, 255, 255, 0.8);
       transform: translateY(-1px);
       box-shadow: 
-        0 6px 25px rgba(0, 122, 255, 0.12),
-        0 2px 8px rgba(0, 0, 0, 0.08);
+        0 4px 20px rgba(0, 0, 0, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 122, 255, 0.1);
     }
   }
   
@@ -924,27 +985,28 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #007aff 0%, #0056d3 100%);
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+    width: 28px;
+    height: 28px;
+    background: rgba(0, 122, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.3s ease;
   }
   
   .service-icon {
-    font-size: 18px;
-    color: #ffffff;
+    font-size: 16px;
+    color: #007aff;
+    transition: all 0.3s ease;
   }
   
   .service-status-dot {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 12px;
-    height: 12px;
+    top: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    border: 2px solid #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
     
     &.status-running {
       background: #34c759;
@@ -965,21 +1027,22 @@ export default {
   .service-details {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
   }
   
   .service-title {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: #1d1d1f;
     white-space: nowrap;
     line-height: 1.2;
+    letter-spacing: -0.1px;
   }
   
   .service-subtitle {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
-    color: #666666;
+    color: #86868b;
     white-space: nowrap;
     line-height: 1.2;
   }
@@ -990,8 +1053,8 @@ export default {
   display: flex;
   align-items: center;
   position: absolute;
-  right: 24px;
-  gap: 20px;
+  right: 16px;
+  gap: 12px;
 }
 
 /* 右对齐管理菜单 */
@@ -1009,51 +1072,152 @@ export default {
     position: relative;
     
     &.active .admin-link {
-      background: linear-gradient(135deg, #007aff 0%, #0056d3 100%);
-      color: #ffffff;
-      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.12) 0%, rgba(0, 122, 255, 0.18) 100%);
+      color: #007aff;
+      box-shadow: 
+        0 2px 12px rgba(0, 122, 255, 0.15),
+        0 1px 4px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+      border: 1px solid rgba(0, 122, 255, 0.2);
       
       .admin-icon {
-        color: #ffffff;
+        color: #007aff;
+        transform: scale(1.05);
       }
       
       .admin-arrow {
-        color: #ffffff;
+        color: #007aff;
+        background: rgba(0, 122, 255, 0.15);
+        box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
       }
     }
     
     &.expanded .admin-link {
-      background: rgba(0, 122, 255, 0.1);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.15) 100%);
       color: #007aff;
+      box-shadow: 
+        0 2px 12px rgba(0, 122, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      transform: translateY(-1px);
       
       .admin-icon {
         color: #007aff;
+        transform: scale(1.05);
       }
       
       .admin-arrow {
         color: #007aff;
+        background: rgba(0, 122, 255, 0.15);
+        box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
         transform: rotate(180deg);
       }
     }
     
+
+
+
     &:hover:not(.active):not(.expanded) .admin-link {
-      background: rgba(0, 0, 0, 0.04);
-      transform: translateY(-1px);
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.25) 0%, rgba(0, 86, 211, 0.35) 50%, rgba(0, 122, 255, 0.25) 100%);
+      transform: translateY(-8px) scale(1.15) rotateX(5deg);
+      box-shadow: 
+        0 20px 60px rgba(0, 122, 255, 0.4),
+        0 12px 32px rgba(0, 122, 255, 0.25),
+        0 6px 16px rgba(0, 0, 0, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        inset 0 2px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -1px 0 rgba(0, 122, 255, 0.3);
+      border: 2px solid rgba(0, 122, 255, 0.4);
+      animation: pulse-glow 1.5s ease-in-out infinite alternate;
+      
+      .admin-icon {
+        transform: scale(1.4) rotate(15deg) translateZ(10px);
+        color: #ffffff;
+        filter: drop-shadow(0 4px 12px rgba(0, 122, 255, 0.6)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+        animation: icon-bounce 0.6s ease-out;
+      }
+      
+      .admin-text {
+        transform: translateX(6px) scale(1.05);
+        color: #ffffff;
+        font-weight: 700;
+        text-shadow: 0 2px 8px rgba(0, 122, 255, 0.5), 0 0 16px rgba(255, 255, 255, 0.3);
+        animation: text-glow 1s ease-in-out infinite alternate;
+      }
+      
+      .admin-arrow {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(0, 122, 255, 0.6) 100%);
+        color: #ffffff;
+        transform: scale(1.3) rotate(180deg);
+        box-shadow: 
+          0 4px 16px rgba(0, 122, 255, 0.5),
+          0 0 20px rgba(255, 255, 255, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        animation: arrow-spin 2s linear infinite;
+      }
+      
+      &::before {
+        background: linear-gradient(90deg, 
+          transparent, 
+          rgba(255, 255, 255, 0.8), 
+          rgba(0, 122, 255, 0.3), 
+          rgba(255, 255, 255, 0.8), 
+          transparent);
+        animation: shimmer 2s ease-in-out infinite;
+      }
+      
+      &::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, 
+          rgba(0, 122, 255, 0.3), 
+          rgba(255, 255, 255, 0.2), 
+          rgba(0, 122, 255, 0.3));
+        border-radius: 14px;
+        z-index: -1;
+        animation: border-glow 2s ease-in-out infinite alternate;
+      }
+    }
+    
+    &:active .admin-link {
+      transform: translateY(0) scale(0.98);
+      transition: all 0.15s ease;
     }
   }
   
   .admin-link {
     display: flex;
     align-items: center;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 12px 16px;
+    border-radius: 12px;
     color: #2c2c2c;
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
-    gap: 8px;
+    gap: 10px;
     min-height: 40px;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transition: left 0.6s ease;
+    }
+    
+    &:hover::before {
+      left: 100%;
+    }
   }
   
   .admin-icon {
@@ -1093,131 +1257,501 @@ export default {
   }
 }
 
-/* 快捷操作区域 */
+/* 超级交互动画效果 */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 
+      0 20px 60px rgba(0, 122, 255, 0.4),
+      0 12px 32px rgba(0, 122, 255, 0.25),
+      0 6px 16px rgba(0, 0, 0, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.08),
+      inset 0 2px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(0, 122, 255, 0.3);
+  }
+  100% {
+    box-shadow: 
+      0 25px 80px rgba(0, 122, 255, 0.6),
+      0 15px 40px rgba(0, 122, 255, 0.4),
+      0 8px 20px rgba(0, 0, 0, 0.2),
+      0 3px 12px rgba(0, 0, 0, 0.12),
+      inset 0 3px 0 rgba(255, 255, 255, 1),
+      inset 0 -2px 0 rgba(0, 122, 255, 0.5);
+  }
+}
+
+@keyframes icon-bounce {
+  0% { transform: scale(1.15) rotate(5deg); }
+  30% { transform: scale(1.5) rotate(20deg) translateY(-3px); }
+  60% { transform: scale(1.35) rotate(12deg) translateY(-1px); }
+  100% { transform: scale(1.4) rotate(15deg) translateZ(10px); }
+}
+
+@keyframes text-glow {
+  0% {
+    text-shadow: 0 2px 8px rgba(0, 122, 255, 0.5), 0 0 16px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    text-shadow: 0 3px 12px rgba(0, 122, 255, 0.8), 0 0 24px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes arrow-spin {
+  0% { transform: scale(1.3) rotate(180deg); }
+  25% { transform: scale(1.4) rotate(270deg); }
+  50% { transform: scale(1.3) rotate(360deg); }
+  75% { transform: scale(1.4) rotate(450deg); }
+  100% { transform: scale(1.3) rotate(540deg); }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: -100%; }
+}
+
+@keyframes border-glow {
+  0% {
+    background: linear-gradient(45deg, 
+      rgba(0, 122, 255, 0.3), 
+      rgba(255, 255, 255, 0.2), 
+      rgba(0, 122, 255, 0.3));
+    opacity: 0.8;
+  }
+  100% {
+    background: linear-gradient(45deg, 
+      rgba(0, 122, 255, 0.6), 
+      rgba(255, 255, 255, 0.5), 
+      rgba(0, 122, 255, 0.6));
+    opacity: 1;
+  }
+}
+
+/* 快捷操作区域 - 全新苹果风格设计 */
 .quick-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  /* 强制所有操作按钮内容居中 */
+  .action-btn * {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+  min-width: 0 !important;
+  flex-shrink: 0 !important;
   
-  .action-dropdown {
-    &.cluster-selector {
-      .action-button {
-        background: rgba(0, 0, 0, 0.04);
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        padding: 8px 12px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        min-height: 40px;
+  /* 强制所有直接子元素不换行 */
+  > * {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+  
+  /* 集群选择器 - 重新设计 */
+  .cluster-dropdown,
+  .ant-dropdown.cluster-dropdown {
+    .cluster-selector {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        border-radius: 20px !important;
+        padding: 4px 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 2px !important;
+        cursor: pointer !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        box-shadow: 
+          0 4px 20px rgba(0, 0, 0, 0.06),
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+        min-width: 85px !important;
+        max-width: 120px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+      
+      &:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 254, 0.98) 100%) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.1),
+          0 4px 16px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+        border-color: rgba(0, 122, 255, 0.2) !important;
         
-        &:hover {
-          background: rgba(0, 0, 0, 0.06);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        .dropdown-arrow {
+          background: rgba(0, 122, 255, 0.1) !important;
+          color: #007aff !important;
+          
+          .anticon {
+            color: #007aff !important;
+          }
+        }
+      }
+      
+      &:active {
+        transform: translateY(-1px) scale(1.01) !important;
+        transition: all 0.15s ease !important;
+      }
+      
+      .cluster-info {
+          display: flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          flex: 1 !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+        
+        .cluster-icon {
+            width: 20px !important;
+            height: 20px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          background: linear-gradient(135deg, #007aff 0%, #0056d3 100%) !important;
+          border-radius: 8px !important;
+          flex-shrink: 0 !important;
+          
+          .svg-icon {
+            font-size: 14px !important;
+            color: #ffffff !important;
+          }
         }
         
-        .action-icon {
-          font-size: 14px;
-          color: #666666;
-          width: 16px;
-          height: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
+        .cluster-name {
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #1d1d1f !important;
+          letter-spacing: -0.2px !important;
+          line-height: 1.2 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          flex: 1 !important;
+          max-width: 40px !important;
         }
+      }
+      
+      .dropdown-arrow {
+        font-size: 10px !important;
+        color: #999999 !important;
+        transition: all 0.3s ease !important;
+        margin-left: 4px !important;
+        width: 12px !important;
+        height: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 3px !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+        flex-shrink: 0 !important;
         
-        .action-text {
-          font-size: 13px;
-          font-weight: 500;
-          color: #2c2c2c;
-          white-space: nowrap;
+        .anticon {
+          transition: transform 0.3s ease !important;
+          font-size: 8px !important;
+          color: #999999 !important;
         }
+      }
+      
+      &:hover .dropdown-arrow {
+        background: rgba(0, 122, 255, 0.1) !important;
+        color: #007aff !important;
         
-        .action-arrow {
-          font-size: 10px;
-          color: #999999;
-          transition: transform 0.3s ease;
+        .anticon {
+          color: #007aff !important;
         }
       }
     }
   }
   
-  .action-button {
-    &.settings-action,
-    &.alarm-action,
-    &.user-action {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      cursor: pointer;
-      
-      &:hover {
-        background: rgba(0, 0, 0, 0.06);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 操作按钮组 */
+  .action-buttons {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+    
+    .action-btn,
+    div.action-btn {
+      &.settings-btn,
+      &.alarm-btn {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%) !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        cursor: pointer !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        box-shadow: 
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          0 1px 3px rgba(0, 0, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        
+        &:hover {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 
+            0 8px 24px rgba(0, 0, 0, 0.12),
+            0 4px 12px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          
+          &::before {
+            opacity: 1;
+          }
+        }
+        
+        &:active {
+          transform: translateY(-1px) scale(1.02);
+          transition: all 0.15s ease;
+        }
+        
+        .anticon,
+        .svg-icon {
+          font-size: 16px !important;
+          color: #007aff !important;
+          transition: all 0.3s ease !important;
+          z-index: 1 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        
+        /* 确保子组件内的图标居中 */
+        > * {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+        
+        /* 强制子组件内的所有元素居中 */
+        * {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        
+        /* 针对Vue组件的深度选择器 */
+        :deep(*) {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        
+        /* 强制覆盖子组件样式 */
+        :deep(.cluster-setting) {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          height: 100% !important;
+          
+          .icon-wrapper,
+          .icon-gj,
+          .cluster-setting-icon {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* 强制所有嵌套元素居中 */
+          * {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+        }
+        
+        /* 额外的强制居中规则 */
+        :deep(*) {
+          &.cluster-setting,
+          &.icon-wrapper,
+          &.icon-gj,
+          &.cluster-setting-icon {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+        
+        /* 确保所有子元素都居中 */
+        > div,
+        > span,
+        > i,
+        > svg {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+        
+        &:hover .anticon,
+        &:hover .svg-icon {
+          color: #0056d3;
+          transform: scale(1.1);
+        }
       }
+    }
+    
+    /* 用户信息区域 */
+    .user-section {
+      margin-left: 8px;
       
-      .anticon,
-      .svg-icon {
-        font-size: 16px;
-        color: #666666;
-        width: 18px;
-        height: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      /* 重置用户头像组件的样式 */
+      .header-avatar {
+        padding: 10px 16px !important;
+        border-radius: 16px !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        box-shadow: 
+          0 4px 20px rgba(0, 0, 0, 0.06),
+          0 2px 8px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        min-width: auto !important;
+        max-width: none !important;
+        
+        &:hover {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 254, 0.98) 100%) !important;
+          transform: translateY(-2px) scale(1.02) !important;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            0 4px 16px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+          border-color: rgba(0, 122, 255, 0.2) !important;
+        }
+        
+        &:active {
+          transform: translateY(-1px) scale(1.01) !important;
+          transition: all 0.15s ease !important;
+        }
+        
+        .avatar-icon {
+          font-size: 16px !important;
+          margin-right: 16px !important;
+          color: #007aff !important;
+          width: 20px !important;
+          height: 20px !important;
+        }
+        
+        .name {
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          color: #1d1d1f !important;
+          letter-spacing: -0.1px !important;
+          white-space: nowrap !important;
+        }
       }
     }
   }
 }
 
-/* 集群选择下拉菜单 */
+/* 集群选择下拉菜单 - 苹果风格重新设计 */
 .cluster-menu {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  padding: 8px !important;
+  min-width: 200px !important;
+  
+  .ant-menu-item {
+    border-radius: 12px !important;
+    margin-bottom: 4px !important;
+    padding: 0 !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    
+    &:last-child {
+      margin-bottom: 0 !important;
+    }
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.12) 100%) !important;
+      transform: translateX(4px) !important;
+    }
+    
+    &.selected {
+      background: linear-gradient(135deg, #007aff 0%, #0056d3 100%) !important;
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.25) !important;
+      
+      .cluster-item {
+        .svg-icon {
+          color: #ffffff !important;
+        }
+        
+        span {
+          color: #ffffff !important;
+          font-weight: 600 !important;
+        }
+        
+        .check-icon {
+          color: #ffffff !important;
+        }
+      }
+    }
+  }
+  
   .cluster-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 12px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
     
     .svg-icon {
-      font-size: 14px;
-      color: #666666;
+      font-size: 16px;
+      color: #007aff;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
     }
     
     span {
       flex: 1;
       font-size: 14px;
-      color: #2c2c2c;
+      font-weight: 500;
+      color: #1d1d1f;
+      letter-spacing: -0.2px;
+      transition: all 0.3s ease;
     }
     
     .check-icon {
-      font-size: 12px;
+      font-size: 14px;
       color: #007aff;
-    }
-  }
-  
-  .ant-menu-item.selected {
-    background: rgba(0, 122, 255, 0.08);
-    
-    .cluster-item {
-      .svg-icon {
-        color: #007aff;
-      }
-      
-      span {
-        color: #007aff;
-        font-weight: 500;
-      }
+      transition: all 0.3s ease;
     }
   }
 }
@@ -1744,12 +2278,6 @@ export default {
   
   .quick-actions {
     gap: 6px;
-    
-    .action-dropdown.cluster-selector .action-button {
-      .action-text {
-        display: none;
-      }
-    }
   }
 }
 
@@ -1781,12 +2309,7 @@ export default {
   }
   
   .quick-actions {
-    gap: 4px;
-    
-    .action-button {
-      width: 36px;
-      height: 36px;
-    }
+    gap: 4px !important;
   }
 }
 
@@ -1805,12 +2328,7 @@ export default {
   }
   
   .quick-actions {
-    gap: 2px;
-    
-    .action-button {
-      width: 32px;
-      height: 32px;
-    }
+    gap: 2px !important;
   }
 }
 
@@ -1927,42 +2445,7 @@ export default {
     }
   }
   
-  .quick-actions {
-    .action-dropdown.cluster-selector .action-button {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.12);
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.12);
-      }
-      
-      .action-icon {
-        color: #8e8e93;
-      }
-      
-      .action-text {
-        color: #f2f2f7;
-      }
-      
-      .action-arrow {
-        color: #8e8e93;
-      }
-    }
-    
-    .action-button {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.08);
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.12);
-      }
-      
-      .anticon,
-      .svg-icon {
-        color: #8e8e93;
-      }
-    }
-  }
+  /* 深色模式下的快捷操作样式已移至主样式中 */
   
   .cluster-menu {
     background: rgba(28, 28, 30, 0.95);
