@@ -586,6 +586,13 @@ export default {
       // 打印完整的子菜单项对象，以便调试
       // 关闭所有下拉菜单
       this.hoveredMenu = '';
+      this.expandedMenu = '';
+      
+      // 清除所有菜单定时器
+      Object.keys(this.menuTimeouts).forEach(key => {
+        clearTimeout(this.menuTimeouts[key]);
+        delete this.menuTimeouts[key];
+      });
       
       // 设置当前激活的一级菜单
       const parentMenu = this.firstMenu.find(item => 
@@ -1117,69 +1124,28 @@ export default {
 
 
 
-    &:hover:not(.active):not(.expanded) .admin-link {
-      background: linear-gradient(135deg, rgba(0, 122, 255, 0.25) 0%, rgba(0, 86, 211, 0.35) 50%, rgba(0, 122, 255, 0.25) 100%);
-      transform: translateY(-8px) scale(1.15) rotateX(5deg);
+    &:hover .admin-link {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.12) 100%);
+      transform: translateY(-2px) scale(1.02);
       box-shadow: 
-        0 20px 60px rgba(0, 122, 255, 0.4),
-        0 12px 32px rgba(0, 122, 255, 0.25),
-        0 6px 16px rgba(0, 0, 0, 0.15),
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        inset 0 2px 0 rgba(255, 255, 255, 0.95),
-        inset 0 -1px 0 rgba(0, 122, 255, 0.3);
-      border: 2px solid rgba(0, 122, 255, 0.4);
-      animation: pulse-glow 1.5s ease-in-out infinite alternate;
+        0 4px 12px rgba(0, 122, 255, 0.15),
+        0 2px 6px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 122, 255, 0.2);
       
       .admin-icon {
-        transform: scale(1.4) rotate(15deg) translateZ(10px);
-        color: #ffffff;
-        filter: drop-shadow(0 4px 12px rgba(0, 122, 255, 0.6)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
-        animation: icon-bounce 0.6s ease-out;
+        transform: scale(1.1);
+        color: #007aff;
       }
       
       .admin-text {
-        transform: translateX(6px) scale(1.05);
-        color: #ffffff;
-        font-weight: 700;
-        text-shadow: 0 2px 8px rgba(0, 122, 255, 0.5), 0 0 16px rgba(255, 255, 255, 0.3);
-        animation: text-glow 1s ease-in-out infinite alternate;
+        color: #007aff;
+        font-weight: 600;
       }
       
       .admin-arrow {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(0, 122, 255, 0.6) 100%);
-        color: #ffffff;
-        transform: scale(1.3) rotate(180deg);
-        box-shadow: 
-          0 4px 16px rgba(0, 122, 255, 0.5),
-          0 0 20px rgba(255, 255, 255, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.8);
-        animation: arrow-spin 2s linear infinite;
-      }
-      
-      &::before {
-        background: linear-gradient(90deg, 
-          transparent, 
-          rgba(255, 255, 255, 0.8), 
-          rgba(0, 122, 255, 0.3), 
-          rgba(255, 255, 255, 0.8), 
-          transparent);
-        animation: shimmer 2s ease-in-out infinite;
-      }
-      
-      &::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, 
-          rgba(0, 122, 255, 0.3), 
-          rgba(255, 255, 255, 0.2), 
-          rgba(0, 122, 255, 0.3));
-        border-radius: 14px;
-        z-index: -1;
-        animation: border-glow 2s ease-in-out infinite alternate;
+        background: rgba(0, 122, 255, 0.1);
+        color: #007aff;
+        transform: scale(1.1);
       }
     }
     
@@ -1257,74 +1223,9 @@ export default {
   }
 }
 
-/* 超级交互动画效果 */
-@keyframes pulse-glow {
-  0% {
-    box-shadow: 
-      0 20px 60px rgba(0, 122, 255, 0.4),
-      0 12px 32px rgba(0, 122, 255, 0.25),
-      0 6px 16px rgba(0, 0, 0, 0.15),
-      0 2px 8px rgba(0, 0, 0, 0.08),
-      inset 0 2px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 rgba(0, 122, 255, 0.3);
-  }
-  100% {
-    box-shadow: 
-      0 25px 80px rgba(0, 122, 255, 0.6),
-      0 15px 40px rgba(0, 122, 255, 0.4),
-      0 8px 20px rgba(0, 0, 0, 0.2),
-      0 3px 12px rgba(0, 0, 0, 0.12),
-      inset 0 3px 0 rgba(255, 255, 255, 1),
-      inset 0 -2px 0 rgba(0, 122, 255, 0.5);
-  }
-}
 
-@keyframes icon-bounce {
-  0% { transform: scale(1.15) rotate(5deg); }
-  30% { transform: scale(1.5) rotate(20deg) translateY(-3px); }
-  60% { transform: scale(1.35) rotate(12deg) translateY(-1px); }
-  100% { transform: scale(1.4) rotate(15deg) translateZ(10px); }
-}
 
-@keyframes text-glow {
-  0% {
-    text-shadow: 0 2px 8px rgba(0, 122, 255, 0.5), 0 0 16px rgba(255, 255, 255, 0.3);
-  }
-  100% {
-    text-shadow: 0 3px 12px rgba(0, 122, 255, 0.8), 0 0 24px rgba(255, 255, 255, 0.6);
-  }
-}
 
-@keyframes arrow-spin {
-  0% { transform: scale(1.3) rotate(180deg); }
-  25% { transform: scale(1.4) rotate(270deg); }
-  50% { transform: scale(1.3) rotate(360deg); }
-  75% { transform: scale(1.4) rotate(450deg); }
-  100% { transform: scale(1.3) rotate(540deg); }
-}
-
-@keyframes shimmer {
-  0% { left: -100%; }
-  50% { left: 100%; }
-  100% { left: -100%; }
-}
-
-@keyframes border-glow {
-  0% {
-    background: linear-gradient(45deg, 
-      rgba(0, 122, 255, 0.3), 
-      rgba(255, 255, 255, 0.2), 
-      rgba(0, 122, 255, 0.3));
-    opacity: 0.8;
-  }
-  100% {
-    background: linear-gradient(45deg, 
-      rgba(0, 122, 255, 0.6), 
-      rgba(255, 255, 255, 0.5), 
-      rgba(0, 122, 255, 0.6));
-    opacity: 1;
-  }
-}
 
 /* 快捷操作区域 - 全新苹果风格设计 */
 .quick-actions {
