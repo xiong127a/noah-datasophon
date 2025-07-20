@@ -17,11 +17,11 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.Terminated;
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.actor.Props;
+import org.apache.pekko.actor.Terminated;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.model.StartWorkerMessage;
 import org.apache.commons.lang.StringUtils;

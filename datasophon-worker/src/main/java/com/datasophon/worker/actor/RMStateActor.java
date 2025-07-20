@@ -4,8 +4,8 @@ import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 
 public class RMStateActor extends AbstractActor {
 

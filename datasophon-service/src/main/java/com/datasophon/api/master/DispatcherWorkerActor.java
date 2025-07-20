@@ -19,8 +19,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.api.master.handler.host.CheckWorkerMd5Handler;
 import com.datasophon.api.master.handler.host.DecompressWorkerHandler;

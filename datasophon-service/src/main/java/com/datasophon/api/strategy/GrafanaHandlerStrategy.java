@@ -77,15 +77,17 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        String port = "3000";
         for (ServiceConfig serviceConfig : list) {
             if (StrUtil.equals(serviceConfig.getName(), "grafana_" + KUBERNETES_NODEPORT_MAPPING)) {
-                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 Object configValue = serviceConfig.getValue();
                 JSONObject jsonObject = JSONUtil.parseObj(configValue);
-                String port = jsonObject.getStr("3000");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaPort}", port);
+                 port = jsonObject.getStr("3000");
                 break;
             }
         }
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+
+        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaPort}", port);
     }
 }

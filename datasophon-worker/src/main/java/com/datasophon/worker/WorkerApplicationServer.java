@@ -19,11 +19,6 @@
 
 package com.datasophon.worker;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.event.EventStream;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -39,6 +34,11 @@ import com.datasophon.worker.utils.UnixUtils;
 import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.actor.Props;
+import org.apache.pekko.event.EventStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -21,8 +21,8 @@ import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.worker.handler.ServiceHandler;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 
 public class RestartServiceActor extends AbstractActor {
 

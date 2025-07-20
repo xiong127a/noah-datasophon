@@ -17,8 +17,8 @@
 
 package com.datasophon.worker.actor;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.utils.ExecResult;
 

@@ -19,7 +19,7 @@
 
 package com.datasophon.api.load;
 
-import akka.actor.Props;
+import org.apache.pekko.actor.Props;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;

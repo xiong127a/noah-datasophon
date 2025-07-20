@@ -25,8 +25,8 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.TreeSet;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.io.FileUtil;
 
 public class FileOperateActor extends AbstractActor {

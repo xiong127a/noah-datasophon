@@ -116,20 +116,20 @@
         <!--            <artifactId>spring-context</artifactId>-->
         <!--        </dependency>-->
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_3</artifactId>
+            <groupId>org.apache.pekko</groupId>
+            <artifactId>pekko-actor_3</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-remote_3</artifactId>
+            <groupId>org.apache.pekko</groupId>
+            <artifactId>pekko-remote_3</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-slf4j_3</artifactId>
+            <groupId>org.apache.pekko</groupId>
+            <artifactId>pekko-slf4j_3</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-persistence_3</artifactId>
+            <groupId>org.apache.pekko</groupId>
+            <artifactId>pekko-persistence_3</artifactId>
         </dependency>
         <dependency>
             <groupId>com.datasophon</groupId>

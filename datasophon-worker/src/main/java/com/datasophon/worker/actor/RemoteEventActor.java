@@ -20,8 +20,8 @@ package com.datasophon.worker.actor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 
 /**
  * Actor for handling remote events in Akka Artery remoting.

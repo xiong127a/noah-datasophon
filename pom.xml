@@ -39,7 +39,7 @@
 
     <properties>
         <revision>1.2.1</revision>
-        <akka.version>2.10.6</akka.version>
+        <pekko.version>1.1.5</pekko.version>
         <commons.httpclient>3.0.1</commons.httpclient>
         <commons.lang>2.6</commons.lang>
         <druid.version>1.2.24</druid.version>
@@ -150,24 +150,24 @@
                 <version>${commons.httpclient}</version>
             </dependency>
             <dependency>
-                <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-actor_3</artifactId>
-                <version>${akka.version}</version>
+                <groupId>org.apache.pekko</groupId>
+                <artifactId>pekko-actor_3</artifactId>
+                <version>${pekko.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-remote_3</artifactId>
-                <version>${akka.version}</version>
+                <groupId>org.apache.pekko</groupId>
+                <artifactId>pekko-remote_3</artifactId>
+                <version>${pekko.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-slf4j_3</artifactId>
-                <version>${akka.version}</version>
+                <groupId>org.apache.pekko</groupId>
+                <artifactId>pekko-slf4j_3</artifactId>
+                <version>${pekko.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.typesafe.akka</groupId>
-                <artifactId>akka-persistence_3</artifactId>
-                <version>${akka.version}</version>
+                <groupId>org.apache.pekko</groupId>
+                <artifactId>pekko-persistence_3</artifactId>
+                <version>${pekko.version}</version>
             </dependency>
             <dependency>
                 <groupId>ch.qos.logback</groupId>

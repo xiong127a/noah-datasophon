@@ -17,7 +17,7 @@
 
 package com.datasophon.worker.strategy;
 
-import akka.actor.ActorRef;
+import org.apache.pekko.actor.ActorRef;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.OlapOpsType;

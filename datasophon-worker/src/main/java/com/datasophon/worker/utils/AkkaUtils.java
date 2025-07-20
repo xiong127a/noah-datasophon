@@ -17,10 +17,10 @@
 
 package com.datasophon.worker.utils;
 
-import akka.actor.ActorSelection;
-import akka.actor.ActorSystem;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import com.datasophon.common.model.TemplateRequestMessage;
 import com.datasophon.common.model.TemplateResponseMessage;
 import lombok.extern.slf4j.Slf4j;

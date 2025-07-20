@@ -17,7 +17,7 @@
 
 package com.datasophon.api.strategy;
 
-import akka.actor.ActorRef;
+import org.apache.pekko.actor.ActorRef;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.api.load.GlobalVariables;

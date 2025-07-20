@@ -17,8 +17,8 @@
 
 package com.datasophon.api.master;
 
-import akka.actor.AbstractActor;
-import akka.japi.pf.ReceiveBuilder;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.model.TemplateRequestMessage;
 import com.datasophon.common.model.TemplateResponseMessage;

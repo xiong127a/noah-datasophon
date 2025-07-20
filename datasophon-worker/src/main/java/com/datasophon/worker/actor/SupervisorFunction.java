@@ -17,27 +17,34 @@
 
 package com.datasophon.worker.actor;
 
+import org.apache.pekko.actor.SupervisorStrategy;
+import org.apache.pekko.japi.Function;
+
 import java.sql.SQLException;
 
-import akka.actor.SupervisorStrategy;
-import akka.japi.Function;
 
 public class SupervisorFunction implements Function<Throwable, SupervisorStrategy.Directive> {
 
     @Override
     public SupervisorStrategy.Directive apply(Throwable param) throws Exception {
-        if (param instanceof ArithmeticException) {
-            System.out.println("meet ArithmeticException,just resume");
-            return SupervisorStrategy.resume();
-        } else if (param instanceof NullPointerException) {
-            System.out.println("meet NullPointerException,restart");
-            return SupervisorStrategy.restart();
-        } else if (param instanceof IllegalArgumentException) {
-            return SupervisorStrategy.stop();
-        } else if (param instanceof SQLException) {
-            return SupervisorStrategy.restart();
-        } else {
-            return SupervisorStrategy.escalate();
+        switch (param) {
+            case ArithmeticException arithmeticException -> {
+                System.out.println("meet ArithmeticException,just resume");
+                return SupervisorStrategy.resume();
+            }
+            case NullPointerException nullPointerException -> {
+                System.out.println("meet NullPointerException,restart");
+                return SupervisorStrategy.restart();
+            }
+            case IllegalArgumentException illegalArgumentException -> {
+                return SupervisorStrategy.stop();
+            }
+            case SQLException throwables -> {
+                return SupervisorStrategy.restart();
+            }
+            case null, default -> {
+                return SupervisorStrategy.escalate();
+            }
         }
     }
 }
