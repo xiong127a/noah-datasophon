@@ -1,28 +1,11 @@
-const client = require('webpack-theme-color-replacer/client')
 const {theme} = require('../config')
-const {getMenuColors, getAntdColors, getThemeToggleColors, getFunctionalColors} = require('../utils/colors')
+const {getMenuColors, getAntdColors, getFunctionalColors} = require('../utils/colors')
 const {ANTD} = require('../config/default')
 
-function getThemeColors(color, $theme) {
-  const _color = color || theme.color
-  const mode = $theme || theme.mode
-  const replaceColors = getThemeToggleColors(_color, mode)
-  const themeColors = [
-    ...replaceColors.mainColors,
-    ...replaceColors.subColors,
-    ...replaceColors.menuColors,
-    ...replaceColors.contentColors,
-    ...replaceColors.rgbColors,
-    ...replaceColors.functionalColors.success,
-    ...replaceColors.functionalColors.warning,
-    ...replaceColors.functionalColors.error,
-  ]
-  return themeColors
-}
-
+// Theme color changing functionality removed
 function changeThemeColor(newColor, $theme) {
-  let promise = client.changer.changeColor({newColors: getThemeColors(newColor, $theme)})
-  return promise
+  console.warn('Theme color changing has been disabled')
+  return Promise.resolve()
 }
 
 function modifyVars(color) {
@@ -66,12 +49,8 @@ function modifyVars(color) {
 }
 
 function loadLocalTheme(localSetting) {
-  if (localSetting && localSetting.theme) {
-    let {color, mode} = localSetting.theme
-    color = color || theme.color
-    mode = mode || theme.mode
-    changeThemeColor(color, mode)
-  }
+  // Theme loading functionality disabled
+  console.warn('Theme loading has been disabled')
 }
 
 /**
@@ -94,7 +73,6 @@ function getLocalSetting(loadTheme) {
 }
 
 module.exports = {
-  getThemeColors,
   changeThemeColor,
   modifyVars,
   loadLocalTheme,

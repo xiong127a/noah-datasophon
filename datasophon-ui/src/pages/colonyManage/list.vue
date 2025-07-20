@@ -1322,112 +1322,342 @@ export default {
   }
 }
 
-/* 授权弹窗专用样式 */
+/* 授权弹窗专用样式 - 完全重构的苹果风格 */
 /deep/ .apple-auth-modal {
+  /* 覆盖全局下拉选项样式 */
+  .ant-select-dropdown {
+    border-radius: var(--apple-radius-large) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: var(--apple-shadow-large) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    padding: 12px 0 !important;
+    animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    .ant-select-item {
+      margin: 4px 12px !important;
+      padding: 12px 16px !important;
+      border-radius: var(--apple-radius-medium) !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      font-size: 15px !important;
+      font-weight: 400 !important;
+      color: var(--apple-text-primary) !important;
+      background: transparent !important;
+      
+      &:hover {
+        background: var(--apple-blue-light-bg) !important;
+        color: var(--apple-blue) !important;
+        transform: translateX(4px) !important;
+      }
+      
+      &.ant-select-item-option-selected {
+        background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        box-shadow: var(--apple-shadow-small) !important;
+        
+        &:hover {
+          background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+          transform: translateX(4px) scale(1.02) !important;
+        }
+      }
+      
+      &.ant-select-item-option-active {
+        background: var(--apple-blue-light-bg) !important;
+        color: var(--apple-blue) !important;
+      }
+      
+      /* 用户选项特殊样式 */
+      .user-option {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        
+        .user-avatar {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 50% !important;
+          background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          color: white !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          box-shadow: var(--apple-shadow-small) !important;
+          flex-shrink: 0 !important;
+        }
+        
+        .user-name {
+          font-size: 15px !important;
+          font-weight: 500 !important;
+          color: inherit !important;
+          flex: 1 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+        }
+      }
+    }
+    
+    /* 空状态样式 */
+    .ant-empty {
+      margin: 20px 0 !important;
+      
+      .ant-empty-description {
+        color: var(--apple-text-tertiary) !important;
+        font-size: 14px !important;
+      }
+    }
+    
+    /* 滚动条样式 */
+    &::-webkit-scrollbar {
+      width: 6px !important;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent !important;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1) !important;
+      border-radius: 3px !important;
+      
+      &:hover {
+        background: rgba(0, 0, 0, 0.2) !important;
+      }
+    }
+  }
+  
+  /* 下拉动画 */
+  @keyframes apple-dropdown-fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  /* 下拉箭头旋转动画 */
+  .ant-select-open .ant-select-arrow {
+    transform: rotate(180deg) !important;
+  }
   .ant-modal {
     .ant-modal-content {
-      border-radius: 20px;
+      border-radius: 24px;
       background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(30px);
+      backdrop-filter: blur(40px);
       box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.15),
-        0 8px 25px rgba(0, 0, 0, 0.08),
-        0 4px 12px rgba(0, 0, 0, 0.04);
+        0 32px 80px rgba(0, 0, 0, 0.12),
+        0 16px 40px rgba(0, 0, 0, 0.08),
+        0 8px 20px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .ant-modal-header {
-      background: linear-gradient(135deg, 
-        rgba(74, 144, 226, 0.08) 0%, 
-        rgba(255, 255, 255, 0.95) 100%);
-      border-bottom: 1px solid rgba(74, 144, 226, 0.12);
+      background: transparent;
+      border-bottom: none;
+      padding: 0;
       
       .ant-modal-title {
-        color: #2c5aa0;
-        font-weight: 600;
-        font-size: 18px;
+        display: none; /* 隐藏默认标题，使用组件内部的标题 */
       }
     }
     
     .ant-modal-body {
-      padding: 24px 28px;
+      padding: 0;
       
-      .ant-select {
-        border-radius: 12px;
-        border: 1.5px solid rgba(74, 144, 226, 0.2);
-        background: rgba(255, 255, 255, 0.9);
-        transition: all 0.3s ease;
+      /* 重置所有可能影响的样式 */
+      .apple-auth-container {
+        padding: 32px;
+      }
+      
+      /* 确保苹果风格样式不被覆盖 */
+      .apple-select {
+        border: 1px solid var(--apple-border) !important;
+        border-radius: var(--apple-radius-large) !important;
+        background: var(--apple-background) !important;
+        min-height: 52px !important;
         
         &:hover {
-          border-color: rgba(74, 144, 226, 0.4);
-          box-shadow: 0 4px 12px rgba(74, 144, 226, 0.1);
+          border-color: var(--apple-blue) !important;
+          box-shadow: 0 0 0 1px var(--apple-blue) !important;
         }
         
         &.ant-select-focused {
-          border-color: #4a90e2;
-          box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+          border-color: var(--apple-blue) !important;
+          box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
         }
         
         .ant-select-selector {
           border: none !important;
           background: transparent !important;
           box-shadow: none !important;
-          padding: 8px 16px;
+          padding: 12px 20px !important;
+          min-height: 50px !important;
+          border-radius: var(--apple-radius-large) !important;
           
           .ant-select-selection-placeholder {
-            color: rgba(74, 144, 226, 0.6);
-            font-size: 14px;
+            color: var(--apple-text-tertiary) !important;
+            font-size: 15px !important;
+            line-height: 26px !important;
+            font-weight: 400 !important;
           }
           
           .ant-select-selection-item {
-            color: #2c5aa0;
-            font-weight: 500;
+            background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: var(--apple-radius-medium) !important;
+            padding: 6px 14px !important;
+            margin: 3px 6px 3px 0 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            height: auto !important;
+            line-height: 1.4 !important;
+            box-shadow: var(--apple-shadow-small) !important;
+            
+            .ant-select-selection-item-remove {
+              color: rgba(255, 255, 255, 0.8) !important;
+              font-size: 13px !important;
+              margin-left: 8px !important;
+              border-radius: 50% !important;
+              width: 16px !important;
+              height: 16px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              transition: all 0.2s ease !important;
+              
+              &:hover {
+                color: white !important;
+                background: rgba(255, 255, 255, 0.2) !important;
+              }
+            }
+          }
+          
+          .ant-select-selection-search {
+            margin-left: 0 !important;
+            
+            .ant-select-selection-search-input {
+              height: 26px !important;
+              line-height: 26px !important;
+              font-size: 15px !important;
+            }
+          }
+        }
+        
+        .ant-select-arrow {
+          color: var(--apple-text-secondary) !important;
+          font-size: 16px !important;
+          right: 20px !important;
+          transition: all 0.2s ease !important;
+          
+          &:hover {
+            color: var(--apple-blue) !important;
+          }
+        }
+      }
+      
+      .apple-btn {
+        border-radius: var(--apple-radius-medium) !important;
+        font-weight: 600 !important;
+        height: 44px !important;
+        padding: 0 28px !important;
+        font-size: 15px !important;
+        border: none !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+        letter-spacing: -0.01em !important;
+        cursor: pointer !important;
+        
+        &.apple-btn-primary {
+          background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+          color: white !important;
+          box-shadow: var(--apple-shadow-medium) !important;
+          
+          &:hover {
+            background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4) !important;
+          }
+          
+          &:active {
+            transform: translateY(-1px) !important;
+            box-shadow: var(--apple-shadow-medium) !important;
+          }
+          
+          &.ant-btn-loading {
+            background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+            
+            .ant-btn-loading-icon {
+              color: white !important;
+            }
+          }
+        }
+        
+        &.apple-btn-secondary {
+          background: var(--apple-background-secondary) !important;
+          border: 1px solid var(--apple-border) !important;
+          color: var(--apple-text-primary) !important;
+          
+          &:hover {
+            background: var(--apple-gray-1) !important;
+            border-color: var(--apple-gray-3) !important;
+            color: var(--apple-text-primary) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--apple-shadow-small) !important;
+          }
+          
+          &:active {
+            transform: translateY(-1px) !important;
+            background: var(--apple-gray-2) !important;
           }
         }
       }
       
       .ant-form-item-label {
         label {
-          color: #2c5aa0;
-          font-weight: 600;
-          font-size: 15px;
+          color: var(--apple-text-primary) !important;
+          font-weight: 600 !important;
+          font-size: 16px !important;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+          letter-spacing: -0.01em !important;
         }
       }
     }
     
     .ant-modal-footer {
-      background: linear-gradient(135deg, 
-        rgba(248, 250, 252, 0.95) 0%, 
-        rgba(255, 255, 255, 0.9) 100%);
-      border-top: 1px solid rgba(74, 144, 226, 0.08);
+      display: none; /* 隐藏默认footer，使用组件内部的按钮 */
+    }
+    
+    .ant-modal-close {
+      top: 24px;
+      right: 24px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
       
-      .ant-btn {
-        border-radius: 10px;
-        font-weight: 600;
-        height: 40px;
-        padding: 0 24px;
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+        transform: scale(1.1);
+      }
+      
+      .ant-modal-close-x {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        font-size: 16px;
+        color: var(--apple-text-secondary);
         
-        &.ant-btn-primary {
-          background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-          border: none;
-          box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-          
-          &:hover {
-            background: linear-gradient(135deg, #357abd 0%, #2c5aa0 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
-          }
-        }
-        
-        &.ant-btn-default {
-          background: rgba(255, 255, 255, 0.8);
-          border: 1.5px solid rgba(74, 144, 226, 0.2);
-          color: #4a90e2;
-          
-          &:hover {
-            background: rgba(74, 144, 226, 0.05);
-            border-color: rgba(74, 144, 226, 0.4);
-            color: #357abd;
-          }
+        &:hover {
+          color: var(--apple-text-primary);
         }
       }
     }

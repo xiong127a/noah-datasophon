@@ -1,5 +1,5 @@
 <template>
-  <div class="apple-style-table-container" :class="{ 'dark-mode': darkMode }">
+  <div class="apple-style-table-container">
     <a-card 
       class="table-card" 
       :bordered="bordered" 
@@ -25,11 +25,7 @@
             </a-button>
           </a-tooltip>
           
-          <a-tooltip title="切换表格主题">
-            <a-button type="link" @click="toggleTheme">
-              <theme-outlined />
-            </a-button>
-          </a-tooltip>
+          <!-- Theme toggle removed -->
         </div>
       </div>
       
@@ -96,7 +92,7 @@
 </template>
 
 <script>
-import { SettingOutlined, SwapOutlined, ThemeOutlined } from '@ant-design/icons-vue'
+import { SettingOutlined, SwapOutlined } from '@ant-design/icons-vue'
 import RotatedHeader from './RotatedHeader.vue'
 
 /**
@@ -108,8 +104,7 @@ export default {
   components: {
     RotatedHeader,
     SettingOutlined,
-    SwapOutlined,
-    ThemeOutlined
+    SwapOutlined
   },
   props: {
     // 表格标题
@@ -198,8 +193,7 @@ export default {
       columnSettingVisible: false,
       // 所选列的键
       selectedColumnKeys: [],
-      // 是否暗黑模式
-      darkMode: false
+      // darkMode removed
     }
   },
   computed: {
@@ -245,11 +239,7 @@ export default {
       this.headerDirection = this.headerDirection === 'horizontal' ? 'vertical' : 'horizontal'
       this.$emit('direction-change', this.headerDirection)
     },
-    // 切换主题
-    toggleTheme() {
-      this.darkMode = !this.darkMode
-      this.$emit('theme-change', this.darkMode)
-    },
+    // toggleTheme method removed
     // 切换列设置抽屉可见性
     toggleColumnSettingVisible() {
       this.columnSettingVisible = !this.columnSettingVisible
@@ -433,4 +423,4 @@ export default {
     }
   }
 }
-</style> 
+</style>

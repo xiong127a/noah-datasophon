@@ -1103,38 +1103,41 @@ export default {
           }
         }
         
-        // 全局下拉框样式修复 - 确保圆角正确应用
+        // 全局下拉框样式修复 - 使用CSS变量确保一致性
         /deep/ .ant-select {
           .ant-select-selector {
             .apple-font();
-            border: none !important;
-            background-color: @apple-gray-light !important;
-            border-radius: 1rem !important;
-            padding: 0.8rem 1rem !important;
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            min-height: 48px !important;
+            border: 1px solid var(--apple-border) !important;
+            background-color: var(--apple-background) !important;
+            border-radius: var(--apple-radius-large) !important;
+            padding: 12px 16px !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            min-height: 44px !important;
             display: flex;
             align-items: center;
             
             &:hover {
-              background-color: darken(@apple-gray-light, 2%) !important;
+              border-color: var(--apple-blue) !important;
+              box-shadow: 0 0 0 1px var(--apple-blue) !important;
             }
           }
           
           &.ant-select-focused .ant-select-selector {
-            background-color: @apple-white !important;
-            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+            border-color: var(--apple-blue) !important;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
           }
         }
         
-        // 下拉菜单样式优化
+        // 下拉菜单样式优化 - 使用CSS变量
         /deep/ .ant-select-dropdown {
-          border-radius: 12px !important;
+          border-radius: var(--apple-radius-large) !important;
+          background: rgba(255, 255, 255, 0.98) !important;
+          backdrop-filter: blur(20px) !important;
           overflow: hidden;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
-          border: 1px solid rgba(0, 0, 0, 0.06) !important;
+          box-shadow: var(--apple-shadow-large) !important;
+          border: 1px solid var(--apple-border) !important;
           padding: 8px !important;
-          animation: dropdownFadeIn 0.2s ease-out !important;
+          animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
           
           // 创建新命名空间选项
           .create-new-option {
@@ -1145,47 +1148,47 @@ export default {
             }
             
             .create-new-content {
-              display: flex;
-              align-items: center;
-              padding: 12px 16px;
-              background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
-              border: 2px solid @apple-blue;
-              border-radius: 8px;
-              transition: all 0.3s;
-              
-              &:hover {
-                background: linear-gradient(135deg, #bbdefb, #e3f2fd);
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
-              }
-              
-              .create-icon {
-                color: @apple-blue !important;
-                font-size: 16px;
-                margin-right: 8px;
-              }
-              
-              .create-text {
-                color: @apple-blue !important;
-                font-weight: 600 !important;
-                .apple-font();
-                font-size: 14px;
-              }
-            }
-            
-            // 覆盖默认选中样式
-            &.ant-select-item-option-selected {
-              background-color: transparent !important;
-              
-              .create-new-content {
-                background: linear-gradient(135deg, @apple-blue, lighten(@apple-blue, 5%)) !important;
+                display: flex;
+                align-items: center;
+                padding: 12px 16px;
+                background: var(--apple-blue-light-bg);
+                border: 2px solid var(--apple-blue);
+                border-radius: var(--apple-radius-medium);
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 
-                .create-icon,
+                &:hover {
+                  background: var(--apple-blue-light-bg);
+                  transform: translateY(-1px);
+                  box-shadow: var(--apple-shadow-small);
+                }
+                
+                .create-icon {
+                  color: var(--apple-blue) !important;
+                  font-size: 16px;
+                  margin-right: 8px;
+                }
+                
                 .create-text {
-                  color: @apple-white !important;
+                  color: var(--apple-blue) !important;
+                  font-weight: 600 !important;
+                  .apple-font();
+                  font-size: 14px;
                 }
               }
-            }
+            
+            // 覆盖默认选中样式
+              &.ant-select-item-option-selected {
+                background-color: transparent !important;
+                
+                .create-new-content {
+                  background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+                  
+                  .create-icon,
+                  .create-text {
+                    color: white !important;
+                  }
+                }
+              }
           }
           
           // 分隔线选项
@@ -1197,7 +1200,7 @@ export default {
             
             .namespace-divider {
               height: 2px;
-              background: linear-gradient(90deg, transparent, @apple-blue, transparent);
+              background: linear-gradient(90deg, transparent, var(--apple-blue), transparent);
               margin: 0;
               opacity: 0.3;
             }
@@ -1210,44 +1213,44 @@ export default {
             }
             
             .namespace-item {
-              display: flex;
-              align-items: center;
-              padding: 10px 16px;
-              transition: all 0.2s;
-              border-radius: 6px;
-              margin: 2px 0;
-              
-              &:hover {
-                background-color: rgba(0, 113, 227, 0.05);
-              }
-              
-              .namespace-icon {
-                color: @apple-gray;
-                margin-right: 8px;
-                width: 16px;
-                height: 16px;
+                display: flex;
+                align-items: center;
+                padding: 10px 16px;
                 transition: all 0.2s;
+                border-radius: var(--apple-radius-medium);
+                margin: 2px 0;
+                
+                &:hover {
+                  background-color: var(--apple-blue-light-bg);
+                }
+                
+                .namespace-icon {
+                  color: var(--apple-text-secondary);
+                  margin-right: 8px;
+                  width: 16px;
+                  height: 16px;
+                  transition: all 0.2s;
+                }
+                
+                .namespace-name {
+                  color: var(--apple-text-primary);
+                  .apple-font();
+                  font-weight: 400;
+                }
               }
-              
-              .namespace-name {
-                color: @apple-text-primary;
-                .apple-font();
-                font-weight: 400;
-              }
-            }
           }
           
           // 选中状态
           .ant-select-item-option-selected {
-            background-color: rgba(0, 113, 227, 0.1) !important;
+            background-color: var(--apple-blue-light-bg) !important;
             
             .namespace-item {
               .namespace-icon {
-                color: @apple-blue;
+                color: var(--apple-blue);
               }
               
               .namespace-name {
-                color: @apple-blue;
+                color: var(--apple-blue);
                 font-weight: 500;
               }
             }
@@ -1261,26 +1264,27 @@ export default {
           .apple-namespace-input {
             /deep/ .ant-input {
               .apple-font();
-              border: none !important;
-              background-color: @apple-gray-light !important;
-              border-radius: 1rem !important;
-              padding: 0.8rem 1rem !important;
-              transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-              min-height: 48px !important;
-              font-size: 1rem;
+              border: 1px solid var(--apple-border) !important;
+              background-color: var(--apple-background) !important;
+              border-radius: var(--apple-radius-large) !important;
+              padding: 12px 16px !important;
+              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+              min-height: 44px !important;
+              font-size: 15px;
               
               &:hover {
-                background-color: darken(@apple-gray-light, 2%) !important;
+                border-color: var(--apple-blue) !important;
+                box-shadow: 0 0 0 1px var(--apple-blue) !important;
               }
               
               &:focus {
-                background-color: @apple-white !important;
-                box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+                border-color: var(--apple-blue) !important;
+                box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
                 outline: none !important;
               }
               
               &::placeholder {
-                color: @apple-gray !important;
+                color: var(--apple-text-tertiary) !important;
                 font-weight: 400;
               }
             }
@@ -1329,32 +1333,32 @@ export default {
           }
           
           &.namespace-create-tip {
-            background: linear-gradient(135deg, rgba(0, 113, 227, 0.05), rgba(0, 113, 227, 0.02));
-            border: 1px solid rgba(0, 113, 227, 0.15);
+            background: var(--apple-blue-light-bg);
+            border: 1px solid var(--apple-blue);
             
             .tip-icon.create-icon {
-              color: @apple-blue;
+              color: var(--apple-blue);
             }
             
             .tip-text {
-              color: @apple-text-primary;
+              color: var(--apple-text-primary);
               
               .namespace-value {
-                color: @apple-blue;
+                color: var(--apple-blue);
               }
             }
           }
           
           &.namespace-exists-tip {
-            background: linear-gradient(135deg, rgba(82, 196, 26, 0.05), rgba(82, 196, 26, 0.02));
-            border: 1px solid rgba(82, 196, 26, 0.15);
+            background: rgba(82, 196, 26, 0.08);
+            border: 1px solid rgba(82, 196, 26, 0.2);
             
             .tip-icon.exists-icon {
               color: #52c41a;
             }
             
             .tip-text {
-              color: @apple-text-primary;
+              color: var(--apple-text-primary);
               
               .namespace-value {
                 color: #52c41a;
@@ -1412,30 +1416,29 @@ export default {
     // 主机输入框样式
     /deep/ .ant-input {
       .apple-font();
-      font-size: 1rem;
+      font-size: 15px;
       font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace !important;
       resize: none !important;
-      border: none !important;
-      background-color: @apple-gray-light !important;
-      border-radius: 1rem !important;
-      padding: 1.2rem !important;
-      transition: all 0.3s;
+      border: 1px solid var(--apple-border) !important;
+      background-color: var(--apple-background) !important;
+      border-radius: var(--apple-radius-large) !important;
+      padding: 16px !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
       min-height: 120px !important;
       
       &:hover {
-        background-color: darken(@apple-gray-light, 2%) !important;
-        border: none !important;
+        border-color: var(--apple-blue) !important;
+        box-shadow: 0 0 0 1px var(--apple-blue) !important;
       }
       
       &:focus {
         outline: none !important;
-        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
-        background-color: @apple-white !important;
-        border: none !important;
+        border-color: var(--apple-blue) !important;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
       }
       
       &::placeholder {
-        color: @apple-gray !important;
+        color: var(--apple-text-tertiary) !important;
         font-weight: 400;
       }
     }

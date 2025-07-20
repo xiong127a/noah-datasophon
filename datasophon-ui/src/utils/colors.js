@@ -1,4 +1,4 @@
-const varyColor = require('webpack-theme-color-replacer/client/varyColor')
+// varyColor dependency removed
 const {generate} =  require('@ant-design/colors')
 const {ADMIN, ANTD} = require('../config/default')
 const Config = require('../config')
@@ -36,35 +36,25 @@ function getMenuColors(color, mode) {
   } else if (color == ANTD.primary.color) {
     return ANTD.primary.dark.menuColors
   } else {
-    return [varyColor.darken(color, 0.93), varyColor.darken(color, 0.83), varyColor.darken(color, 0.73)]
+    // Simplified menu colors without varyColor dependency
+    return ['#001529', '#002140', '#003a8c']
   }
 }
 
-// 获取主题模式切换色系
+// Theme toggle colors function removed (was used by ThemeColorReplacer)
 function getThemeToggleColors(color, mode) {
-  //主色系
-  const mainColors = getAntdColors(color, mode)
-  const primary = mainColors[5]
-  //辅助色系，因为 antd 目前没针对夜间模式设计，所以增加辅助色系以保证夜间模式的正常切换
-  const subColors = getAntdColors(primary, themeMode.LIGHT)
-  //菜单色系
-  const menuColors = getMenuColors(color, mode)
-  //内容色系（包含背景色、文字颜色等）
-  const themeCfg = ANTD.theme[mode]
-  let contentColors = Object.keys(themeCfg)
-    .map(key => themeCfg[key])
-    .map(color => isHex(color) ? color : toNum3(color).join(','))
-  // 内容色去重
-  contentColors = [...new Set(contentColors)]
-  // rgb 格式的主题色
-  let rgbColors = [toNum3(primary).join(',')]
-  let functionalColors = getFunctionalColors(mode)
-  return {primary, mainColors, subColors, menuColors, contentColors, rgbColors, functionalColors}
+  console.warn('getThemeToggleColors function is deprecated')
+  return {}
 }
 
 function toNum3(color) {
+  // Simplified color conversion without varyColor dependency
   if (isHex(color)) {
-    return varyColor.toNum3(color)
+    const hex = color.replace('#', '')
+    const r = parseInt(hex.substr(0, 2), 16)
+    const g = parseInt(hex.substr(2, 2), 16)
+    const b = parseInt(hex.substr(4, 2), 16)
+    return [r, g, b]
   }
   let colorStr = ''
   if (isRgb(color)) {

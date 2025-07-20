@@ -48,26 +48,7 @@
             <div class="title-section">
               <span class="code-title">{{ getFileType(fileName) }}</span>
             </div>
-            <div class="header-actions">
-              <div class="theme-toggle-container">
-                <button
-                    class="theme-toggle-btn"
-                    :class="{ 'active': previewTheme === 'dark' }"
-                    @click="previewTheme = 'dark'"
-                >
-                  <a-icon type="moon" />
-                  <span>深色</span>
-                </button>
-                <button
-                    class="theme-toggle-btn"
-                    :class="{ 'active': previewTheme === 'light' }"
-                    @click="previewTheme = 'light'"
-                >
-                  <a-icon type="bulb" />
-                  <span>浅色</span>
-                </button>
-              </div>
-            </div>
+            <!-- Theme toggle removed -->
           </div>
 
           <div class="code-content">
@@ -164,7 +145,7 @@ export default {
     return {
       visible: false,
       content: '',
-      previewTheme: 'dark',
+      // previewTheme removed
       editorReady: false,
       cmOptions: {
         mode: 'text/x-yaml',
@@ -213,12 +194,7 @@ export default {
         });
       }
     },
-    previewTheme(val) {
-      this.cmOptions.theme = val === 'dark' ? 'dracula' : 'eclipse';
-      this.$nextTick(() => {
-        this.refreshEditor();
-      });
-    },
+    // previewTheme watcher removed
     fileName(val) {
       if (val) {
         this.updateCodeMirrorMode(val);

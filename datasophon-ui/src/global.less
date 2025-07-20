@@ -8,6 +8,128 @@
     filter: brightness(1.05);
     transform: translateY(-1px);
   }
+
+/* ========== 终极样式覆盖 - 确保苹果风格生效 ========== */
+/* 使用最高优先级选择器，确保不被任何主题插件覆盖 */
+html body div .ant-input,
+html body div .ant-input-affix-wrapper,
+html body div .ant-input-search,
+html body div .ant-input-number,
+html body div .ant-input-password,
+html body div .ant-mentions,
+html body div .ant-textarea,
+html body div input.ant-input,
+html body div input[class*="ant-input"],
+html body div textarea.ant-input {
+  border-radius: 12px !important;
+  border: 1px solid #d1d5db !important;
+  background: #ffffff !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  color: #1f2937 !important;
+  padding: 12px 16px !important;
+  min-height: 44px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.4 !important;
+}
+
+html body div .ant-input::placeholder,
+html body div .ant-input-affix-wrapper::placeholder,
+html body div .ant-input-search::placeholder,
+html body div .ant-input-number::placeholder,
+html body div .ant-input-password::placeholder,
+html body div .ant-mentions::placeholder,
+html body div .ant-textarea::placeholder {
+  color: #9ca3af !important;
+  font-weight: 400 !important;
+}
+
+html body div .ant-input:hover,
+html body div .ant-input-affix-wrapper:hover,
+html body div .ant-input-search:hover,
+html body div .ant-input-number:hover,
+html body div .ant-input-password:hover,
+html body div .ant-mentions:hover,
+html body div .ant-textarea:hover {
+  border-color: #60a5fa !important;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+html body div .ant-input:focus,
+html body div .ant-input-affix-wrapper:focus,
+html body div .ant-input-search:focus,
+html body div .ant-input-number:focus,
+html body div .ant-input-password:focus,
+html body div .ant-mentions:focus,
+html body div .ant-textarea:focus,
+html body div .ant-input.ant-input-focused,
+html body div .ant-input-affix-wrapper.ant-input-focused {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 16px rgba(59, 130, 246, 0.15) !important;
+  outline: none !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 选择器样式覆盖 */
+html body div .ant-select .ant-select-selector,
+html body div .ant-cascader .ant-cascader-input,
+html body div .ant-tree-select .ant-tree-select-selector,
+html body div .ant-auto-complete .ant-auto-complete-input {
+  border-radius: 12px !important;
+  border: 1px solid #d1d5db !important;
+  background: #ffffff !important;
+  min-height: 44px !important;
+  padding: 8px 16px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+html body div .ant-select:hover .ant-select-selector,
+html body div .ant-cascader:hover .ant-cascader-input,
+html body div .ant-tree-select:hover .ant-tree-select-selector {
+  border-color: #60a5fa !important;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+html body div .ant-select.ant-select-focused .ant-select-selector,
+html body div .ant-cascader.ant-cascader-focused .ant-cascader-input,
+html body div .ant-tree-select.ant-tree-select-focused .ant-tree-select-selector {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 16px rgba(59, 130, 246, 0.15) !important;
+  outline: none !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 按钮样式覆盖 */
+html body div .ant-btn {
+  border-radius: 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 15px !important;
+  min-height: 44px !important;
+  padding: 12px 24px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  letter-spacing: -0.01em !important;
+}
+
+html body div .ant-btn-primary {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html body div .ant-btn-primary:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25) !important;
+}
   
   &:active {
     filter: brightness(0.95);
@@ -30,68 +152,66 @@
   }
 }
 
-/* 全局下拉菜单美化 - 使用:global确保更高优先级 */
+/* ========== 苹果风格全局UI重构 ========== */
+
+/* 全局下拉菜单 - Apple Design System */
 :global(.ant-dropdown) {
-  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+  animation: apple-dropdown-appear 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   
   :global(.ant-dropdown-menu) {
-    border-radius: 12px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-                0 4px 10px rgba(0, 0, 0, 0.06) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 
+                0 2px 8px rgba(0, 0, 0, 0.08) !important;
     overflow: hidden !important;
-    border: 1px solid rgba(233, 233, 233, 0.8) !important;
-    padding: 8px 0 !important;
-    background: white !important;
+    border: 1px solid #D1D1D6 !important;
+    padding: 12px !important;
+    background: #FFFFFF !important;
+    backdrop-filter: blur(20px) !important;
+    min-width: 200px !important;
   }
   
   :global(.ant-dropdown-menu-item), 
   :global(.ant-dropdown-menu-submenu-title) {
-    margin: 2px 8px !important;
-    padding: 10px 14px !important;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
+    margin: 0 0 4px 0 !important;
+    padding: 12px 16px !important;
+    border-radius: 12px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: relative !important;
     overflow: hidden !important;
-    
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle, rgba(25, 118, 210, 0.1) 0%, rgba(255, 255, 255, 0) 80%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-    }
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: #000000 !important;
+    border: none !important;
     
     &:hover {
-      background-color: #f0f7ff !important;
-      color: #1976d2 !important;
-      transform: translateX(2px);
-      
-      &::after {
-        opacity: 1;
-      }
+      background: #F2F2F7 !important;
+      color: #000000 !important;
+      transform: scale(1.02) !important;
     }
     
     &:active {
-      background-color: #e6f0ff !important;
-      transform: scale(0.98);
+      background: #E5E5EA !important;
+      transform: scale(0.98) !important;
+    }
+    
+    &.ant-dropdown-menu-item-selected {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(90, 200, 250, 0.05) 100%) !important;
+      color: #007AFF !important;
+      font-weight: 600 !important;
+      border: 1px solid rgba(0, 122, 255, 0.2) !important;
     }
     
     :global(.anticon) {
-      margin-right: 10px !important;
+      margin-right: 12px !important;
       font-size: 16px !important;
-      color: #1976d2 !important;
+      color: #007AFF !important;
       transition: transform 0.2s ease !important;
-      position: relative;
-      z-index: 1;
     }
     
     &:hover :global(.anticon) {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
   }
   
@@ -102,31 +222,1423 @@
   }
 }
 
-/* Select下拉菜单美化 */
-:global(.ant-select-dropdown) {
-  border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-              0 4px 10px rgba(0, 0, 0, 0.06) !important;
-  overflow: hidden !important;
-  border: 1px solid rgba(233, 233, 233, 0.8) !important;
-  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-  padding: 8px 0 !important;
+/* ========== 强制全局输入框美化 - Apple Design System ========== */
+/* 使用最高优先级选择器覆盖所有可能的样式 */
+html body .ant-input,
+html body .ant-input-affix-wrapper,
+html body .ant-input-search,
+html body .ant-input-number,
+html body .ant-input-password,
+html body .ant-mentions,
+html body .ant-textarea,
+html body input.ant-input,
+html body input[class*="ant-input"],
+html body textarea.ant-input,
+:global(.ant-input),
+:global(.ant-input-affix-wrapper),
+:global(.ant-input-search),
+:global(.ant-input-number),
+:global(.ant-input-password),
+:global(.ant-mentions),
+:global(.ant-textarea),
+input.ant-input,
+input[class*="ant-input"],
+textarea.ant-input {
+  border-radius: var(--apple-radius-medium) !important;
+  border: 1px solid var(--apple-border) !important;
+  background: var(--apple-background) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  color: var(--apple-text-primary) !important;
+  padding: 12px 16px !important;
+  min-height: 44px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.4 !important;
   
-  :global(.ant-select-item) {
-    margin: 2px 8px !important;
-    padding: 10px 14px !important;
-    border-radius: 8px !important;
-    transition: all 0.2s !important;
+  &::placeholder {
+    color: var(--apple-text-tertiary) !important;
+    font-weight: 400 !important;
+  }
+  
+  &:hover {
+    border-color: var(--apple-blue-light) !important;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  &:focus,
+  &.ant-input-focused {
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), 0 4px 16px rgba(0, 122, 255, 0.15) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  &:disabled,
+  &.ant-input-disabled {
+    background: var(--apple-gray-1) !important;
+    border-color: var(--apple-gray-3) !important;
+    color: var(--apple-text-tertiary) !important;
+    cursor: not-allowed !important;
     
     &:hover {
-      background-color: #f0f7ff !important;
+      transform: none !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+  }
+}
+
+/* 强制全局选择器美化 - 使用最高优先级选择器 */
+html body .ant-select,
+html body .ant-cascader,
+html body .ant-tree-select,
+html body .ant-auto-complete,
+html body .ant-mentions,
+:global(.ant-select),
+:global(.ant-cascader),
+:global(.ant-tree-select),
+:global(.ant-auto-complete),
+:global(.ant-mentions),
+.ant-select,
+.ant-cascader,
+.ant-tree-select {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  
+  html body .ant-select-selector,
+  html body .ant-cascader-input,
+  html body .ant-tree-select-selector,
+  html body .ant-auto-complete-input,
+  :global(.ant-select-selector),
+  :global(.ant-cascader-input),
+  :global(.ant-tree-select-selector),
+  :global(.ant-auto-complete-input),
+  .ant-select-selector,
+  .ant-cascader-input,
+  .ant-tree-select-selector {
+    border-radius: var(--apple-radius-medium) !important;
+    border: 1px solid var(--apple-border) !important;
+    background: var(--apple-background) !important;
+    min-height: 44px !important;
+    padding: 8px 16px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    
+    &:hover {
+      border-color: var(--apple-blue-light) !important;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+      transform: translateY(-1px) !important;
+    }
+  }
+  
+  &.ant-select-focused,
+  &.ant-cascader-focused,
+  &.ant-tree-select-focused {
+    :global(.ant-select-selector),
+    :global(.ant-cascader-input),
+    :global(.ant-tree-select-selector),
+    .ant-select-selector,
+    .ant-cascader-input,
+    .ant-tree-select-selector {
+      border-color: var(--apple-blue) !important;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), 0 4px 16px rgba(0, 122, 255, 0.15) !important;
+      outline: none !important;
+      transform: translateY(-1px) !important;
+    }
+  }
+  
+  &.ant-select-disabled,
+  &.ant-cascader-disabled,
+  &.ant-tree-select-disabled {
+    :global(.ant-select-selector),
+    :global(.ant-cascader-input),
+    :global(.ant-tree-select-selector),
+    .ant-select-selector,
+    .ant-cascader-input,
+    .ant-tree-select-selector {
+      background: var(--apple-gray-1) !important;
+      border-color: var(--apple-gray-3) !important;
+      cursor: not-allowed !important;
+      
+      &:hover {
+        transform: none !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+      }
+    }
+  }
+  
+  /* 选择器文本样式 */
+  :global(.ant-select-selection-item),
+  :global(.ant-select-selection-placeholder),
+  :global(.ant-cascader-input),
+  :global(.ant-tree-select-selection-item),
+  .ant-select-selection-item,
+  .ant-select-selection-placeholder,
+  .ant-cascader-input,
+  .ant-tree-select-selection-item {
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    color: var(--apple-text-primary) !important;
+    line-height: 1.4 !important;
+    letter-spacing: -0.01em !important;
+  }
+  
+  :global(.ant-select-selection-placeholder),
+  .ant-select-selection-placeholder {
+    color: var(--apple-text-tertiary) !important;
+  }
+  
+  /* 多选标签样式 */
+  :global(.ant-select-selection-item),
+  .ant-select-selection-item {
+    background: var(--apple-blue-light-bg) !important;
+    border: 1px solid rgba(0, 122, 255, 0.2) !important;
+    border-radius: var(--apple-radius-small) !important;
+    color: var(--apple-blue) !important;
+    font-weight: 500 !important;
+    margin: 2px 4px 2px 0 !important;
+    padding: 4px 8px !important;
+    
+    :global(.ant-select-selection-item-remove),
+    .ant-select-selection-item-remove {
+      color: var(--apple-blue) !important;
+      
+      &:hover {
+        color: var(--apple-blue-dark) !important;
+      }
+    }
+  }
+  
+  /* 下拉箭头 */
+  :global(.ant-select-arrow),
+  :global(.ant-cascader-picker-arrow),
+  :global(.ant-tree-select-arrow),
+  .ant-select-arrow,
+  .ant-cascader-picker-arrow,
+  .ant-tree-select-arrow {
+    color: var(--apple-text-secondary) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    &:hover {
+      color: var(--apple-blue) !important;
+    }
+  }
+}
+
+/* ========== 全局下拉菜单美化 - Apple Design System ========== */
+:global(.ant-select-dropdown),
+:global(.ant-cascader-dropdown),
+:global(.ant-tree-select-dropdown),
+:global(.ant-auto-complete-dropdown),
+:global(.ant-mentions-dropdown) {
+  border-radius: var(--apple-radius-large) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: var(--apple-shadow-large) !important;
+  border: 1px solid var(--apple-border) !important;
+  padding: 8px !important;
+  animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  
+  /* 确保所有子元素都有圆角 */
+  * {
+    border-radius: inherit !important;
+  }
+  
+  :global(.ant-select-item),
+  :global(.ant-cascader-menu-item),
+  :global(.ant-tree-select-tree-node-content-wrapper),
+  :global(.ant-auto-complete-option),
+  :global(.ant-mentions-dropdown-menu-item) {
+    margin: 2px 4px !important;
+    padding: 12px 16px !important;
+    border-radius: var(--apple-radius-medium) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    color: var(--apple-text-primary) !important;
+    background: transparent !important;
+    border: none !important;
+    letter-spacing: -0.01em !important;
+    cursor: pointer !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue) !important;
+      transform: translateX(3px) scale(1.02) !important;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
     }
     
     &.ant-select-item-option-selected,
+    &.ant-cascader-menu-item-active,
+    &.ant-tree-select-tree-node-selected,
+    &.ant-auto-complete-option-selected,
+    &.ant-mentions-dropdown-menu-item-selected {
+      background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      box-shadow: var(--apple-shadow-small) !important;
+      
+      &:hover {
+        background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+        transform: translateX(3px) scale(1.05) !important;
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3) !important;
+      }
+    }
+    
+    &.ant-select-item-option-active,
+    &.ant-cascader-menu-item-hover,
+    &.ant-auto-complete-option-active {
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue) !important;
+    }
+    
+    &.ant-select-item-option-disabled,
+    &.ant-cascader-menu-item-disabled {
+      color: var(--apple-text-tertiary) !important;
+      background: transparent !important;
+      cursor: not-allowed !important;
+      
+      &:hover {
+        transform: none !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+  
+  /* 空状态美化 */
+  :global(.ant-empty) {
+    padding: 24px !important;
+    
+    :global(.ant-empty-description) {
+      color: var(--apple-text-tertiary) !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+    }
+    
+    :global(.ant-empty-image) {
+      opacity: 0.6 !important;
+    }
+  }
+}
+
+/* ========== 强制全局表单美化 - Apple Design System ========== */
+:global(.ant-form),
+:global(.ant-form-item),
+.ant-form,
+.ant-form-item {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+}
+
+:global(.ant-form-item-label),
+.ant-form-item-label {
+  > label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--apple-text-primary) !important;
+    letter-spacing: -0.01em !important;
+    margin-bottom: 8px !important;
+    
+    &::after {
+      display: none !important; /* 隐藏冒号 */
+    }
+  }
+}
+
+:global(.ant-form-item-explain),
+:global(.ant-form-item-extra),
+.ant-form-item-explain,
+.ant-form-item-extra {
+  font-size: 13px !important;
+  color: var(--apple-text-tertiary) !important;
+  margin-top: 6px !important;
+  font-weight: 400 !important;
+}
+
+:global(.ant-form-item-explain-error),
+.ant-form-item-explain-error {
+  color: #FF3B30 !important; /* Apple Red */
+  font-weight: 500 !important;
+}
+
+/* ========== 强制全局按钮美化 - Apple Design System ========== */
+:global(.ant-btn),
+button.ant-btn,
+button[class*="ant-btn"],
+.ant-btn {
+  border-radius: var(--apple-radius-medium) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  padding: 12px 24px !important;
+  min-height: 44px !important;
+  border: none !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  
+  /* 默认按钮 */
+  &.ant-btn-default,
+  &:not([class*="ant-btn-"]) {
+    background: var(--apple-background) !important;
+    color: var(--apple-text-primary) !important;
+    border: 1px solid var(--apple-border) !important;
+    box-shadow: var(--apple-shadow-small) !important;
+    
+    &:hover {
+      background: var(--apple-gray-1) !important;
+      border-color: var(--apple-blue-light) !important;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    &:active {
+      background: var(--apple-gray-2) !important;
+      transform: translateY(0) !important;
+      box-shadow: var(--apple-shadow-small) !important;
+    }
+  }
+  
+  /* 主要按钮 */
+  &.ant-btn-primary {
+    background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+    color: white !important;
+    box-shadow: var(--apple-shadow-medium) !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3) !important;
+      transform: translateY(-2px) !important;
+    }
+    
+    &:active {
+      background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue-dark) 100%) !important;
+      transform: translateY(0) !important;
+      box-shadow: var(--apple-shadow-small) !important;
+    }
+  }
+  
+  /* 危险按钮 */
+  &.ant-btn-danger {
+    background: linear-gradient(135deg, #FF3B30 0%, #FF6B6B 100%) !important;
+    color: white !important;
+    box-shadow: var(--apple-shadow-medium) !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, #E60012 0%, #FF3B30 100%) !important;
+      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3) !important;
+      transform: translateY(-2px) !important;
+    }
+    
+    &:active {
+      background: linear-gradient(135deg, #E60012 0%, #E60012 100%) !important;
+      transform: translateY(0) !important;
+      box-shadow: var(--apple-shadow-small) !important;
+    }
+  }
+  
+  /* 幽灵按钮 */
+  &.ant-btn-ghost {
+    background: transparent !important;
+    color: var(--apple-blue) !important;
+    border: 1px solid var(--apple-blue) !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      border-color: var(--apple-blue-dark) !important;
+      color: var(--apple-blue-dark) !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    &:active {
+      background: rgba(0, 122, 255, 0.1) !important;
+      transform: translateY(0) !important;
+    }
+  }
+  
+  /* 文本按钮 */
+  &.ant-btn-text,
+  &.ant-btn-link {
+    background: transparent !important;
+    color: var(--apple-blue) !important;
+    border: none !important;
+    box-shadow: none !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue-dark) !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    &:active {
+      background: rgba(0, 122, 255, 0.1) !important;
+      transform: translateY(0) !important;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-btn-disabled,
+  &:disabled {
+    background: var(--apple-gray-1) !important;
+    color: var(--apple-text-tertiary) !important;
+    border-color: var(--apple-gray-3) !important;
+    cursor: not-allowed !important;
+    
+    &:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+  
+  /* 加载状态 */
+  &.ant-btn-loading {
+    cursor: wait !important;
+    
+    :global(.anticon) {
+      color: inherit !important;
+    }
+  }
+  
+  /* 图标样式 */
+  :global(.anticon) {
+    font-size: 16px !important;
+    transition: transform 0.2s ease !important;
+  }
+  
+  &:hover :global(.anticon) {
+    transform: scale(1.05) !important;
+  }
+  
+  /* 尺寸变体 */
+  &.ant-btn-sm {
+    padding: 8px 16px !important;
+    min-height: 36px !important;
+    font-size: 13px !important;
+  }
+  
+  &.ant-btn-lg {
+    padding: 16px 32px !important;
+    min-height: 52px !important;
+    font-size: 17px !important;
+  }
+  
+  /* 滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px !important;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--apple-gray-3) !important;
+    border-radius: 3px !important;
+    transition: all 0.2s ease !important;
+    
+    &:hover {
+      background: var(--apple-gray-2) !important;
+    }
+  }
+}
+
+/* ========== 全局输入框组件美化 - Apple Design System ========== */
+:global(.ant-input),
+:global(.ant-input-affix-wrapper),
+:global(.ant-input-wrapper),
+:global(.ant-input-group-wrapper),
+:global(.ant-input-search),
+:global(.ant-input-number),
+:global(.ant-input-password),
+:global(.ant-textarea),
+:global(.ant-select-selector),
+:global(.ant-picker),
+:global(.ant-time-picker),
+:global(.ant-date-picker),
+:global(.ant-range-picker),
+:global(.ant-auto-complete),
+:global(.ant-mentions),
+:global(.ant-cascader-picker) {
+  border-radius: var(--apple-radius-medium) !important;
+  border: 1px solid var(--apple-border) !important;
+  background: var(--apple-background) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--apple-text-primary) !important;
+  padding: 12px 16px !important;
+  min-height: 44px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: var(--apple-shadow-small) !important;
+  
+  &:hover {
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 1px var(--apple-blue), var(--apple-shadow-medium) !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  &:focus,
+  &.ant-input-focused,
+  &.ant-select-focused,
+  &.ant-picker-focused,
+  &.ant-input-number-focused {
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15), var(--apple-shadow-medium) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  &::placeholder {
+    color: var(--apple-text-tertiary) !important;
+    font-weight: 400 !important;
+  }
+  
+  &:disabled {
+    background: var(--apple-gray-1) !important;
+    color: var(--apple-text-tertiary) !important;
+    border-color: var(--apple-gray-2) !important;
+    cursor: not-allowed !important;
+    
+    &:hover {
+      transform: none !important;
+      box-shadow: var(--apple-shadow-small) !important;
+    }
+  }
+}
+
+/* 输入框内部元素美化 */
+:global(.ant-input-affix-wrapper) {
+  :global(.ant-input) {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    
+    &:focus {
+      box-shadow: none !important;
+    }
+  }
+  
+  :global(.ant-input-prefix),
+  :global(.ant-input-suffix) {
+    color: var(--apple-text-secondary) !important;
+    
+    .anticon {
+      color: var(--apple-text-secondary) !important;
+      transition: all 0.2s ease !important;
+      
+      &:hover {
+        color: var(--apple-blue) !important;
+      }
+    }
+  }
+}
+
+/* 数字输入框特殊处理 */
+:global(.ant-input-number) {
+  width: 100% !important;
+  
+  :global(.ant-input-number-input) {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    color: var(--apple-text-primary) !important;
+  }
+  
+  :global(.ant-input-number-handler-wrap) {
+    border-left: 1px solid var(--apple-border) !important;
+    border-radius: 0 var(--apple-radius-medium) var(--apple-radius-medium) 0 !important;
+    background: var(--apple-gray-1) !important;
+    
+    :global(.ant-input-number-handler) {
+      border: none !important;
+      background: transparent !important;
+      color: var(--apple-text-secondary) !important;
+      transition: all 0.2s ease !important;
+      
+      &:hover {
+        background: var(--apple-blue-light-bg) !important;
+        color: var(--apple-blue) !important;
+      }
+      
+      &:active {
+        background: var(--apple-blue) !important;
+        color: white !important;
+      }
+    }
+  }
+}
+
+/* 文本域特殊处理 */
+:global(.ant-input) {
+  &[type="textarea"],
+  &.ant-input {
+    resize: vertical !important;
+    min-height: 80px !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* 搜索框特殊处理 */
+:global(.ant-input-search) {
+  :global(.ant-input-search-button) {
+    border: none !important;
+    background: var(--apple-blue) !important;
+    border-radius: 0 var(--apple-radius-medium) var(--apple-radius-medium) 0 !important;
+    color: white !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    
+    &:hover {
+      background: var(--apple-blue-dark) !important;
+      transform: scale(1.05) !important;
+    }
+    
+    &:active {
+      transform: scale(0.95) !important;
+    }
+  }
+}
+
+/* ========== 全局按钮美化 - Apple Design System ========== */
+:global(.ant-btn) {
+  border-radius: var(--apple-radius-medium) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  padding: 10px 24px !important;
+  height: auto !important;
+  min-height: 44px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid var(--apple-border) !important;
+  background: white !important;
+  color: var(--apple-text-primary) !important;
+  box-shadow: var(--apple-shadow-small) !important;
+  letter-spacing: -0.01em !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  
+  &:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: var(--apple-shadow-medium) !important;
+    border-color: var(--apple-blue-light) !important;
+    color: var(--apple-blue) !important;
+    background: rgba(0, 122, 255, 0.05) !important;
+  }
+  
+  &:active {
+    transform: translateY(0) scale(0.98) !important;
+    box-shadow: var(--apple-shadow-small) !important;
+  }
+  
+  &:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+  }
+  
+  /* 主要按钮 */
+  &.ant-btn-primary {
+    background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+    border-color: var(--apple-blue) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+      border-color: var(--apple-blue-dark) !important;
+      color: white !important;
+      box-shadow: 0 8px 25px rgba(0, 122, 255, 0.4) !important;
+    }
+    
+    &:active {
+      background: linear-gradient(135deg, #0051d5 0%, var(--apple-blue-dark) 100%) !important;
+    }
+  }
+  
+  /* 默认按钮 */
+  &.ant-btn-default {
+    background: var(--apple-background) !important;
+    border-color: var(--apple-border) !important;
+    color: var(--apple-text-primary) !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      border-color: var(--apple-blue) !important;
+      color: var(--apple-blue) !important;
+    }
+  }
+  
+  /* 危险按钮 */
+  &.ant-btn-danger {
+    background: linear-gradient(135deg, #ff3b30 0%, #ff6b6b 100%) !important;
+    border-color: #ff3b30 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, #d70015 0%, #ff3b30 100%) !important;
+      border-color: #d70015 !important;
+      color: white !important;
+      box-shadow: 0 8px 25px rgba(255, 59, 48, 0.4) !important;
+    }
+    
+    &:active {
+      background: linear-gradient(135deg, #b8000f 0%, #d70015 100%) !important;
+    }
+  }
+  
+  /* 幽灵按钮 */
+  &.ant-btn-ghost {
+    background: transparent !important;
+    border-color: var(--apple-border) !important;
+    color: var(--apple-text-primary) !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      border-color: var(--apple-blue) !important;
+      color: var(--apple-blue) !important;
+    }
+  }
+  
+  /* 文本按钮 */
+  &.ant-btn-text {
+    background: transparent !important;
+    border: none !important;
+    color: var(--apple-blue) !important;
+    box-shadow: none !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue-dark) !important;
+      transform: translateY(-1px) !important;
+    }
+  }
+  
+  /* 链接按钮 */
+  &.ant-btn-link {
+    background: transparent !important;
+    border: none !important;
+    color: var(--apple-blue) !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    
+    &:hover {
+      color: var(--apple-blue-dark) !important;
+      text-decoration: underline !important;
+      transform: none !important;
+    }
+  }
+  
+  /* 禁用状态 */
+  &:disabled,
+  &.ant-btn-disabled {
+    background: var(--apple-gray-6) !important;
+    border-color: var(--apple-gray-5) !important;
+    color: var(--apple-text-tertiary) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    
+    &:hover {
+      transform: none !important;
+      box-shadow: var(--apple-shadow-small) !important;
+      background: var(--apple-gray-6) !important;
+      border-color: var(--apple-gray-5) !important;
+      color: var(--apple-text-tertiary) !important;
+    }
+  }
+  
+  /* 加载状态 */
+  &.ant-btn-loading {
+    cursor: wait !important;
+    
+    :global(.anticon) {
+      animation: spin 1s linear infinite !important;
+    }
+  }
+  
+  /* 图标按钮 */
+  &.ant-btn-icon-only {
+    width: 44px !important;
+    padding: 0 !important;
+    
+    :global(.anticon) {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* 小尺寸按钮 */
+  &.ant-btn-sm {
+    min-height: 32px !important;
+    padding: 6px 16px !important;
+    font-size: 13px !important;
+    
+    &.ant-btn-icon-only {
+      width: 32px !important;
+      
+      :global(.anticon) {
+        font-size: 14px !important;
+      }
+    }
+  }
+  
+  /* 大尺寸按钮 */
+  &.ant-btn-lg {
+    min-height: 52px !important;
+    padding: 14px 32px !important;
+    font-size: 17px !important;
+    
+    &.ant-btn-icon-only {
+      width: 52px !important;
+      
+      :global(.anticon) {
+        font-size: 18px !important;
+      }
+    }
+  }
+}
+
+/* 模态框组件 - Apple Design System */
+:global(.ant-modal) {
+  :global(.ant-modal-content) {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    backdrop-filter: blur(20px) !important;
+  }
+  
+  :global(.ant-modal-header) {
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #F2F2F7 !important;
+    padding: 24px 24px 16px 24px !important;
+    
+    :global(.ant-modal-title) {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+      font-size: 20px !important;
+      font-weight: 700 !important;
+      letter-spacing: -0.02em !important;
+      color: #000000 !important;
+    }
+  }
+  
+  :global(.ant-modal-body) {
+    padding: 24px !important;
+    background: #FFFFFF !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  }
+  
+  :global(.ant-modal-footer) {
+    background: #F8F9FA !important;
+    border-top: 1px solid #F2F2F7 !important;
+    padding: 16px 24px 24px 24px !important;
+    
+    :global(.ant-btn) {
+      margin-left: 12px !important;
+    }
+  }
+  
+  :global(.ant-modal-close) {
+    top: 16px !important;
+    right: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: #F2F2F7 !important;
+    border: none !important;
+    
+    &:hover {
+      background: #E5E5EA !important;
+    }
+    
+    :global(.ant-modal-close-x) {
+      font-size: 16px !important;
+      color: #8E8E93 !important;
+    }
+  }
+}
+
+/* 确认对话框模态框 - Apple Design System */
+:global(.ant-modal-confirm) {
+  :global(.ant-modal-content) {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    backdrop-filter: blur(20px) !important;
+  }
+  
+  :global(.ant-modal-body) {
+    padding: 24px !important;
+    background: #FFFFFF !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+    
+    :global(.ant-modal-confirm-body-wrapper) {
+      margin: 0 !important;
+      
+      :global(.ant-modal-confirm-body) {
+        :global(.ant-modal-confirm-title) {
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+          font-size: 20px !important;
+          font-weight: 700 !important;
+          letter-spacing: -0.02em !important;
+          color: #000000 !important;
+          padding: 0 !important;
+          margin-bottom: 16px !important;
+        }
+        
+        :global(.ant-modal-confirm-content) {
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+          font-size: 15px !important;
+          color: #000000 !important;
+          line-height: 1.5 !important;
+        }
+      }
+    }
+  }
+  
+  :global(.ant-modal-close) {
+    top: 16px !important;
+    right: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: #F2F2F7 !important;
+    border: none !important;
+    display: block !important;
+    
+    &:hover {
+      background: #E5E5EA !important;
+    }
+    
+    :global(.ant-modal-close-x) {
+      font-size: 16px !important;
+      color: #8E8E93 !important;
+    }
+  }
+  
+  /* 自定义按钮组样式 */
+  :global(.ant-modal-confirm-btns-new) {
+    text-align: right !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 16px 24px 24px 24px !important;
+    justify-content: flex-end !important;
+    margin: 0 !important;
+    background: #F8F9FA !important;
+    border-top: 1px solid #F2F2F7 !important;
+    gap: 12px !important;
+    
+    :global(.ant-btn) {
+      margin: 0 !important;
+    }
+  }
+}
+
+/* 苹果风格CSS变量定义 */
+:root {
+  /* 苹果风格颜色系统 */
+  --apple-blue: #007AFF;
+  --apple-blue-light: #5AC8FA;
+  --apple-blue-dark: #0056CC;
+  --apple-blue-light-bg: rgba(0, 122, 255, 0.08);
+  
+  /* 苹果风格圆角系统 */
+  --apple-radius-small: 8px;
+  --apple-radius-medium: 12px;
+  --apple-radius-large: 16px;
+  --apple-radius-xlarge: 20px;
+  
+  /* 苹果风格阴影系统 */
+  --apple-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --apple-shadow-medium: 0 4px 16px rgba(0, 122, 255, 0.3);
+  --apple-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.12);
+  
+  /* 苹果风格文字颜色 */
+  --apple-text-primary: #1a1a1a;
+  --apple-text-secondary: #666666;
+  --apple-text-tertiary: #8E8E93;
+  
+  /* 苹果风格背景颜色 */
+  --apple-background: #FFFFFF;
+  --apple-background-secondary: #F8F9FA;
+  --apple-border: #D1D1D6;
+  --apple-gray-1: #F2F2F7;
+  --apple-gray-2: #E5E5EA;
+  --apple-gray-3: #C7C7CC;
+}
+
+/* 全局下拉框苹果风格样式 - 最高优先级 */
+:global(.ant-select-dropdown) {
+  border-radius: var(--apple-radius-large) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: var(--apple-shadow-large) !important;
+  border: 1px solid var(--apple-border) !important;
+  padding: 8px !important;
+  animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden !important;
+  
+  /* 确保所有子元素都有圆角 */
+  * {
+    border-radius: inherit !important;
+  }
+  
+  :global(.ant-select-item) {
+    margin: 2px 4px !important;
+    padding: 12px 16px !important;
+    border-radius: var(--apple-radius-medium) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    color: var(--apple-text-primary) !important;
+    background: transparent !important;
+    border: none !important;
+    
+    &:hover {
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue) !important;
+      transform: translateX(2px) !important;
+    }
+    
+    &.ant-select-item-option-selected {
+      background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      box-shadow: var(--apple-shadow-small) !important;
+      
+      &:hover {
+        background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+        transform: translateX(2px) scale(1.02) !important;
+      }
+    }
+    
     &.ant-select-item-option-active {
-      background-color: #f0f7ff !important;
-      color: #1976d2 !important;
+      background: var(--apple-blue-light-bg) !important;
+      color: var(--apple-blue) !important;
+    }
+  }
+  
+  /* 滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px !important;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--apple-gray-3) !important;
+    border-radius: 3px !important;
+    
+    &:hover {
+      background: var(--apple-gray-2) !important;
+    }
+  }
+}
+
+/* 下拉动画 */
+@keyframes apple-dropdown-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========== 全局选择器组件美化 - Apple Design System ========== */
+:global(.ant-select),
+:global(.ant-cascader),
+:global(.ant-tree-select),
+:global(.ant-auto-complete) {
+  border-radius: var(--apple-radius-medium) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  
+  :global(.ant-select-selector),
+  :global(.ant-cascader-picker),
+  :global(.ant-tree-select-selector) {
+    border-radius: var(--apple-radius-medium) !important;
+    border: 1px solid var(--apple-border) !important;
+    background: var(--apple-background) !important;
+    min-height: 44px !important;
+    padding: 8px 16px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: var(--apple-shadow-small) !important;
+    
+    &:hover {
+      border-color: var(--apple-blue) !important;
+      box-shadow: 0 0 0 1px var(--apple-blue), var(--apple-shadow-medium) !important;
+      transform: translateY(-1px) !important;
+    }
+  }
+  
+  &.ant-select-focused :global(.ant-select-selector),
+  &.ant-cascader-focused :global(.ant-cascader-picker),
+  &.ant-tree-select-focused :global(.ant-tree-select-selector) {
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15), var(--apple-shadow-medium) !important;
+    transform: translateY(-1px) !important;
+  }
+  
+  :global(.ant-select-selection-placeholder),
+  :global(.ant-cascader-picker-label),
+  :global(.ant-tree-select-selection-placeholder) {
+    color: var(--apple-text-tertiary) !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+  }
+  
+  :global(.ant-select-selection-item),
+  :global(.ant-tree-select-selection-item) {
+    color: var(--apple-text-primary) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+  }
+  
+  :global(.ant-select-arrow),
+  :global(.ant-cascader-picker-arrow),
+  :global(.ant-tree-select-arrow) {
+    color: var(--apple-text-secondary) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 14px !important;
+    
+    &:hover {
+      color: var(--apple-blue) !important;
+    }
+  }
+  
+  &.ant-select-open :global(.ant-select-arrow),
+  &.ant-cascader-open :global(.ant-cascader-picker-arrow),
+  &.ant-tree-select-open :global(.ant-tree-select-arrow) {
+    transform: rotate(180deg) !important;
+    color: var(--apple-blue) !important;
+  }
+  
+  /* 多选模式美化 */
+  &.ant-select-multiple {
+    :global(.ant-select-selection-item) {
+      background: var(--apple-blue-light-bg) !important;
+      border: 1px solid var(--apple-blue) !important;
+      border-radius: var(--apple-radius-small) !important;
+      color: var(--apple-blue) !important;
+      font-weight: 600 !important;
+      padding: 4px 8px !important;
+      margin: 2px 4px 2px 0 !important;
+      
+      :global(.ant-select-selection-item-remove) {
+        color: var(--apple-blue) !important;
+        transition: all 0.2s ease !important;
+        
+        &:hover {
+          color: var(--apple-blue-dark) !important;
+          background: rgba(0, 122, 255, 0.1) !important;
+          border-radius: 50% !important;
+        }
+      }
+    }
+    
+    :global(.ant-select-selection-overflow) {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-select-disabled {
+    :global(.ant-select-selector) {
+      background: var(--apple-gray-1) !important;
+      color: var(--apple-text-tertiary) !important;
+      border-color: var(--apple-gray-2) !important;
+      cursor: not-allowed !important;
+      
+      &:hover {
+        transform: none !important;
+        box-shadow: var(--apple-shadow-small) !important;
+      }
+    }
+  }
+}
+
+/* 苹果风格模态框确认对话框样式 - 高优先级覆盖 */
+.macos-modal :global(.ant-modal-confirm),
+.apple-auth-modal :global(.ant-modal-confirm),
+.apple-create-modal :global(.ant-modal-confirm) {
+  :global(.ant-modal-content) {
+    border-radius: var(--apple-radius-xlarge) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(40px) !important;
+    -webkit-backdrop-filter: blur(40px) !important;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.12), 0 16px 40px rgba(0, 0, 0, 0.08), 0 8px 20px rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  }
+  
+  :global(.ant-modal-body) {
+    padding: 32px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+    
+    :global(.ant-modal-confirm-title) {
+      font-size: 20px !important;
+      font-weight: 700 !important;
+      color: var(--apple-text-primary) !important;
+      margin-bottom: 12px !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+      letter-spacing: -0.02em !important;
+    }
+    
+    :global(.ant-modal-confirm-content) {
+      font-size: 16px !important;
+      color: var(--apple-text-secondary) !important;
+      line-height: 1.6 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif !important;
+      margin-top: 8px !important;
+    }
+  }
+  
+  :global(.ant-modal-close) {
+    top: 20px !important;
+    right: 20px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: none !important;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.1) !important;
+      transform: scale(1.05) !important;
+    }
+    
+    :global(.ant-modal-close-x) {
+      width: 32px !important;
+      height: 32px !important;
+      line-height: 32px !important;
+      font-size: 16px !important;
+      color: var(--apple-text-secondary) !important;
+      transition: all 0.15s ease !important;
+      
+      &:hover {
+        color: var(--apple-text-primary) !important;
+      }
+    }
+  }
+  
+  :global(.ant-modal-confirm-btns-new) {
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
+    margin-top: 32px !important;
+    
+    .ant-btn {
+      height: 44px !important;
+      padding: 0 28px !important;
+      border-radius: var(--apple-radius-medium) !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+      letter-spacing: -0.01em !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      border: none !important;
+      
+      &.ant-btn-default {
+        background: var(--apple-background-secondary) !important;
+        color: var(--apple-text-primary) !important;
+        
+        &:hover {
+          background: var(--apple-gray-1) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: var(--apple-shadow-small) !important;
+        }
+      }
+      
+      &.ant-btn-primary {
+        background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+        color: white !important;
+        box-shadow: var(--apple-shadow-medium) !important;
+        
+        &:hover {
+          background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4) !important;
+        }
+      }
+      
+      &:active {
+        transform: translateY(-1px) !important;
+      }
+    }
+  }
+}
+
+/* 授权弹窗专用下拉样式 - 苹果风格覆盖 */
+:global(.apple-select-dropdown) {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #D1D1D6 !important;
+  background: #FFFFFF !important;
+  backdrop-filter: blur(20px) !important;
+  padding: 12px !important;
+  
+  /* 用户选项样式 */
+  :global(.user-option) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    
+    :global(.user-avatar) {
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: var(--apple-radius-medium) !important;
+      background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+      color: white !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-weight: 600 !important;
+      font-size: 15px !important;
+      flex-shrink: 0 !important;
+      box-shadow: var(--apple-shadow-small) !important;
+      letter-spacing: -0.01em !important;
+    }
+    
+    :global(.user-name) {
+      font-size: 15px !important;
+      color: var(--apple-text-primary) !important;
       font-weight: 500 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+      letter-spacing: -0.01em !important;
+    }
+  }
+  
+  :global(.ant-empty) {
+    :global(.ant-empty-description) {
+      color: var(--apple-text-tertiary) !important;
+      font-size: 14px !important;
     }
   }
 }
@@ -581,14 +2093,42 @@ body {
   }
 }
 
-@keyframes dropdown-fade-in {
+/* 苹果风格动画效果 */
+@keyframes apple-dropdown-appear {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.97);
+    transform: translateY(-8px) scale(0.95);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes apple-button-press {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes apple-modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
   }
 }
 
@@ -612,23 +2152,70 @@ body {
   }
 }
 
-/* 自定义滚动条样式 */
+/* 苹果风格滚动条样式 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.02);
+  background: transparent;
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: #C7C7CC;
   border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   
   &:hover {
-    background: rgba(0, 0, 0, 0.15);
+    background: #AEAEB2;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  
+  &:active {
+    background: #8E8E93;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* 针对不同容器的滚动条样式 */
+:global(.ant-select-dropdown),
+:global(.ant-cascader-dropdown),
+:global(.ant-picker-dropdown),
+:global(.ant-select-tree-dropdown) {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #C7C7CC;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #AEAEB2;
+    }
+  }
+}
+
+/* 表格滚动条 */
+:global(.ant-table-body) {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #C7C7CC;
+    border-radius: 8px;
+    
+    &:hover {
+      background: #AEAEB2;
+    }
   }
 }
 
@@ -665,115 +2252,502 @@ body {
   }
 } 
 
-/* 日期选择器下拉菜单美化 */
+/* 日期选择器下拉菜单 - Apple Design System */
 :global(.ant-picker-dropdown) {
-  border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  border-radius: var(--apple-radius-large) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: var(--apple-shadow-large) !important;
+  border: 1px solid var(--apple-border) !important;
+  animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 12px !important;
   overflow: hidden !important;
-  border: 1px solid rgba(233, 233, 233, 0.8) !important;
-  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-  padding: 8px 0 !important;
-  
-  :global(.ant-select-item) {
-    margin: 2px 8px !important;
-    padding: 10px 14px !important;
-    border-radius: 8px !important;
-    transition: all 0.2s !important;
-    
-    &:hover {
-      background-color: #f0f7ff !important;
-    }
-    
-    &.ant-select-item-option-selected,
-    &.ant-select-item-option-active {
-      background-color: #f0f7ff !important;
-      color: #1976d2 !important;
-      font-weight: 500 !important;
-    }
-  }
   
   :global(.ant-picker-panel) {
-    border-radius: 8px !important;
-    background: white !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    border: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
   }
   
-  :global(.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner) {
-    background: #1976d2 !important;
+  :global(.ant-picker-header) {
+    border-bottom: 1px solid var(--apple-gray-6) !important;
+    padding: 12px 16px !important;
+    
+    button {
+      border-radius: var(--apple-radius-small) !important;
+      color: var(--apple-blue) !important;
+      font-weight: 600 !important;
+      
+      &:hover {
+        background: var(--apple-gray-6) !important;
+        color: var(--apple-blue) !important;
+      }
+    }
   }
   
-  :global(.ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-range-start):not(.ant-picker-cell-range-end):not(.ant-picker-cell-range-hover-start):not(.ant-picker-cell-range-hover-end) .ant-picker-cell-inner) {
-    background: #f0f7ff !important;
+  :global(.ant-picker-content) {
+    padding: 8px !important;
   }
   
-  :global(.ant-picker-header button:hover) {
-    color: #1976d2 !important;
+  :global(.ant-picker-cell) {
+    :global(.ant-picker-cell-inner) {
+      border-radius: var(--apple-radius-small) !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      font-weight: 500 !important;
+    }
+    
+    &:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-range-start):not(.ant-picker-cell-range-end) {
+      :global(.ant-picker-cell-inner) {
+        background: var(--apple-gray-6) !important;
+        color: var(--apple-blue) !important;
+      }
+    }
+    
+    &.ant-picker-cell-selected {
+      :global(.ant-picker-cell-inner) {
+        background: var(--apple-blue) !important;
+        color: white !important;
+        font-weight: 600 !important;
+      }
+    }
+    
+    &.ant-picker-cell-today {
+      :global(.ant-picker-cell-inner) {
+        border: 1px solid var(--apple-blue) !important;
+        color: var(--apple-blue) !important;
+      }
+    }
   }
   
-  :global(.ant-picker-today-btn) {
-    color: #1976d2 !important;
+  :global(.ant-picker-footer) {
+    border-top: 1px solid var(--apple-gray-6) !important;
+    padding: 12px 16px !important;
+    
+    :global(.ant-picker-today-btn) {
+      color: var(--apple-blue) !important;
+      font-weight: 600 !important;
+      
+      &:hover {
+        color: var(--apple-blue-dark) !important;
+      }
+    }
   }
 }
 
-/* 级联选择器下拉菜单美化 */
+/* 级联选择器下拉菜单 - Apple Design System */
 :global(.ant-cascader-dropdown) {
-  border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  border-radius: var(--apple-radius-large) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: var(--apple-shadow-large) !important;
+  border: 1px solid var(--apple-border) !important;
+  animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   overflow: hidden !important;
-  border: 1px solid rgba(233, 233, 233, 0.8) !important;
-  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-  background: white !important;
   
   :global(.ant-cascader-menu) {
-    border-right-color: #f0f0f0 !important;
-    padding: 4px 0 !important;
+    border-right-color: var(--apple-gray-6) !important;
+    padding: 12px 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
   }
   
   :global(.ant-cascader-menu-item) {
-    padding: 10px 14px !important;
-    transition: all 0.2s !important;
-    border-radius: 8px !important;
-    margin: 2px 4px !important;
+    padding: 12px 16px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-radius: var(--apple-radius-medium) !important;
+    margin: 0 0 4px 0 !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: var(--apple-text-primary) !important;
     
     &:hover {
-      background-color: #f0f7ff !important;
-      color: #1976d2 !important;
+      background: var(--apple-gray-6) !important;
+      color: var(--apple-text-primary) !important;
+      transform: scale(1.02) !important;
     }
     
     &-active:not(.ant-cascader-menu-item-disabled),
     &-active:hover:not(.ant-cascader-menu-item-disabled) {
-      background-color: #f0f7ff !important;
-      color: #1976d2 !important;
-      font-weight: 500 !important;
+      background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      box-shadow: var(--apple-shadow-small) !important;
     }
     
     :global(.ant-cascader-menu-item-expand-icon) {
-      color: #1976d2 !important;
+      color: var(--apple-blue) !important;
+      font-size: 14px !important;
     }
   }
 }
 
-/* 树形选择下拉菜单美化 */
+/* 树形选择下拉菜单 - Apple Design System */
 :global(.ant-select-tree-dropdown) {
-  border-radius: 12px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
-              0 4px 10px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 
+              0 2px 8px rgba(0, 0, 0, 0.08) !important;
   overflow: hidden !important;
-  border: 1px solid rgba(233, 233, 233, 0.8) !important;
-  animation: dropdown-fade-in 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-  padding: 8px !important;
-  background: white !important;
+  border: 1px solid #D1D1D6 !important;
+  animation: apple-dropdown-appear 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 12px !important;
+  background: #FFFFFF !important;
+  backdrop-filter: blur(20px) !important;
   
-  :global(.ant-select-tree-node-content-wrapper):hover {
-    background-color: #f0f7ff !important;
+  :global(.ant-select-tree) {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  }
+  
+  :global(.ant-select-tree-node-content-wrapper) {
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    margin: 2px 0 !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: #000000 !important;
+    
+    &:hover {
+      background: #F2F2F7 !important;
+      transform: scale(1.02) !important;
+    }
   }
   
   :global(.ant-select-tree-node-selected) {
-    background-color: #f0f7ff !important;
-    color: #1976d2 !important;
+    :global(.ant-select-tree-node-content-wrapper) {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(90, 200, 250, 0.05) 100%) !important;
+      color: #007AFF !important;
+      font-weight: 600 !important;
+      border: 1px solid rgba(0, 122, 255, 0.2) !important;
+    }
+  }
+  
+  :global(.ant-select-tree-switcher) {
+    color: #007AFF !important;
   }
 } 
+
+/* ========== 全局表格美化 - Apple Design System ========== */
+:global(.ant-table-wrapper) {
+  border-radius: var(--apple-radius-large) !important;
+  overflow: hidden !important;
+  box-shadow: var(--apple-shadow-medium) !important;
+  border: 1px solid var(--apple-border) !important;
+  background: var(--apple-background) !important;
+}
+
+:global(.ant-table) {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  
+  /* 表头美化 */
+  :global(.ant-table-thead) {
+    :global(.ant-table-cell) {
+      background: var(--apple-gray-1) !important;
+      border-bottom: 1px solid var(--apple-border) !important;
+      font-weight: 700 !important;
+      font-size: 14px !important;
+      color: var(--apple-text-secondary) !important;
+      padding: 16px 20px !important;
+      letter-spacing: -0.01em !important;
+      text-transform: uppercase !important;
+      position: relative !important;
+      
+      &:first-child {
+        border-top-left-radius: var(--apple-radius-large) !important;
+      }
+      
+      &:last-child {
+        border-top-right-radius: var(--apple-radius-large) !important;
+      }
+      
+      /* 排序图标美化 */
+      :global(.ant-table-column-sorter) {
+        color: var(--apple-text-tertiary) !important;
+        transition: all 0.2s ease !important;
+        
+        &:hover {
+          color: var(--apple-blue) !important;
+        }
+      }
+      
+      /* 筛选图标美化 */
+      :global(.ant-table-filter-trigger) {
+        color: var(--apple-text-tertiary) !important;
+        transition: all 0.2s ease !important;
+        
+        &:hover {
+          color: var(--apple-blue) !important;
+        }
+        
+        &.active {
+          color: var(--apple-blue) !important;
+        }
+      }
+    }
+  }
+  
+  /* 表体美化 */
+  :global(.ant-table-tbody) {
+    :global(.ant-table-row) {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      cursor: pointer !important;
+      
+      &:hover {
+        background: var(--apple-blue-light-bg) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1) !important;
+      }
+      
+      &:nth-child(even) {
+        background: rgba(248, 249, 250, 0.5) !important;
+        
+        &:hover {
+          background: var(--apple-blue-light-bg) !important;
+        }
+      }
+      
+      &.ant-table-row-selected {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(90, 200, 250, 0.05) 100%) !important;
+        border-left: 3px solid var(--apple-blue) !important;
+        
+        &:hover {
+          background: linear-gradient(135deg, rgba(0, 122, 255, 0.15) 0%, rgba(90, 200, 250, 0.08) 100%) !important;
+        }
+      }
+      
+      :global(.ant-table-cell) {
+        border-bottom: 1px solid var(--apple-border) !important;
+        padding: 16px 20px !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        color: var(--apple-text-primary) !important;
+        letter-spacing: -0.01em !important;
+        vertical-align: middle !important;
+        
+        /* 操作列美化 */
+        &.ant-table-cell-fix-right {
+          background: inherit !important;
+          
+          :global(.ant-btn) {
+            margin: 0 4px !important;
+          }
+        }
+        
+        /* 展开图标美化 */
+        :global(.ant-table-row-expand-icon) {
+          border: 1px solid var(--apple-border) !important;
+          border-radius: var(--apple-radius-small) !important;
+          background: var(--apple-background) !important;
+          color: var(--apple-text-secondary) !important;
+          transition: all 0.2s ease !important;
+          
+          &:hover {
+            border-color: var(--apple-blue) !important;
+            color: var(--apple-blue) !important;
+            background: var(--apple-blue-light-bg) !important;
+          }
+        }
+      }
+      
+      &:last-child {
+        :global(.ant-table-cell) {
+          border-bottom: none !important;
+        }
+      }
+    }
+  }
+  
+  /* 空状态美化 */
+  :global(.ant-table-placeholder) {
+    padding: 48px 24px !important;
+    
+    :global(.ant-empty) {
+      :global(.ant-empty-description) {
+        color: var(--apple-text-tertiary) !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+      }
+      
+      :global(.ant-empty-image) {
+        opacity: 0.6 !important;
+      }
+    }
+  }
+  
+  /* 固定列美化 */
+  :global(.ant-table-cell-fix-left),
+  :global(.ant-table-cell-fix-right) {
+    background: var(--apple-background) !important;
+    
+    &::before {
+      background: linear-gradient(90deg, transparent 0%, rgba(0, 122, 255, 0.1) 100%) !important;
+    }
+  }
+  
+  /* 分页美化 */
+  :global(.ant-table-pagination) {
+    padding: 16px 20px !important;
+    background: var(--apple-gray-1) !important;
+    border-top: 1px solid var(--apple-border) !important;
+    margin: 0 !important;
+    
+    :global(.ant-pagination-item) {
+      border-radius: var(--apple-radius-small) !important;
+      border: 1px solid var(--apple-border) !important;
+      font-weight: 600 !important;
+      background: var(--apple-background) !important;
+      color: var(--apple-text-primary) !important;
+      transition: all 0.2s ease !important;
+      
+      &:hover {
+        border-color: var(--apple-blue) !important;
+        color: var(--apple-blue) !important;
+        background: var(--apple-blue-light-bg) !important;
+        transform: translateY(-1px) !important;
+      }
+      
+      &.ant-pagination-item-active {
+        background: var(--apple-blue) !important;
+        border-color: var(--apple-blue) !important;
+        color: white !important;
+        font-weight: 700 !important;
+        box-shadow: var(--apple-shadow-small) !important;
+      }
+    }
+    
+    :global(.ant-pagination-prev),
+    :global(.ant-pagination-next) {
+      border-radius: var(--apple-radius-small) !important;
+      border: 1px solid var(--apple-border) !important;
+      background: var(--apple-background) !important;
+      color: var(--apple-text-primary) !important;
+      transition: all 0.2s ease !important;
+      
+      &:hover {
+        border-color: var(--apple-blue) !important;
+        color: var(--apple-blue) !important;
+        background: var(--apple-blue-light-bg) !important;
+        transform: translateY(-1px) !important;
+      }
+      
+      &:disabled {
+        border-color: var(--apple-gray-3) !important;
+        color: var(--apple-text-tertiary) !important;
+        background: var(--apple-gray-1) !important;
+        cursor: not-allowed !important;
+        
+        &:hover {
+          transform: none !important;
+        }
+      }
+    }
+    
+    :global(.ant-pagination-options) {
+      :global(.ant-select) {
+        :global(.ant-select-selector) {
+          border-radius: var(--apple-radius-small) !important;
+          border-color: var(--apple-border) !important;
+        }
+      }
+    }
+  }
+  
+  /* 表格滚动条美化 */
+  :global(.ant-table-body) {
+    &::-webkit-scrollbar {
+      width: 8px !important;
+      height: 8px !important;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: var(--apple-gray-1) !important;
+      border-radius: 4px !important;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: var(--apple-gray-3) !important;
+      border-radius: 4px !important;
+      transition: all 0.2s ease !important;
+      
+      &:hover {
+        background: var(--apple-gray-2) !important;
+      }
+    }
+  }
+}
+
+/* 标签页组件 - Apple Design System */
+:global(.ant-tabs) {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  
+  :global(.ant-tabs-nav) {
+    margin-bottom: 24px !important;
+    
+    &::before {
+      border-bottom: 1px solid #F2F2F7 !important;
+    }
+  }
+  
+  :global(.ant-tabs-tab) {
+    padding: 12px 20px !important;
+    margin-right: 8px !important;
+    border-radius: 12px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: #8E8E93 !important;
+    border: none !important;
+    
+    &:hover {
+      background: #F2F2F7 !important;
+      color: #000000 !important;
+    }
+    
+    &.ant-tabs-tab-active {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(90, 200, 250, 0.05) 100%) !important;
+      color: #007AFF !important;
+      font-weight: 600 !important;
+      border: 1px solid rgba(0, 122, 255, 0.2) !important;
+    }
+  }
+  
+  :global(.ant-tabs-ink-bar) {
+    display: none !important;
+  }
+}
+
+/* 卡片组件 - Apple Design System */
+:global(.ant-card) {
+  border-radius: 16px !important;
+  border: 1px solid #F2F2F7 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
+  
+  :global(.ant-card-head) {
+    background: #F8F9FA !important;
+    border-bottom: 1px solid #F2F2F7 !important;
+    padding: 20px 24px !important;
+    
+    :global(.ant-card-head-title) {
+      font-size: 18px !important;
+      font-weight: 700 !important;
+      color: #000000 !important;
+      letter-spacing: -0.02em !important;
+    }
+  }
+  
+  :global(.ant-card-body) {
+    padding: 24px !important;
+    background: #FFFFFF !important;
+  }
+}
 
 /* 全局下拉菜单动画效果 */
 @keyframes menu-dropdown-appear {
@@ -785,4 +2759,4 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
-} 
+}

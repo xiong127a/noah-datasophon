@@ -17,9 +17,7 @@
 
 let path = require('path')
 const webpack = require('webpack')
-const ThemeColorReplacer = require('webpack-theme-color-replacer')
-const { getThemeColors, modifyVars } = require('./src/utils/themeUtil')
-const { resolveCss } = require('./src/utils/theme-color-replacer-extend')
+const { modifyVars } = require('./src/utils/themeUtil')
 const CompressionWebpackPlugin = require('compression-webpack-plugin')
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
 // const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
@@ -89,14 +87,7 @@ module.exports = {
     config.performance = {
       hints: false,
     }
-    config.plugins.push(
-      new ThemeColorReplacer({
-        fileName: 'css/theme-colors-[contenthash:8].css',
-        matchColors: getThemeColors(),
-        injectCss: true,
-        resolveCss,
-      })
-    )
+    // ThemeColorReplacer plugin removed
     // Ignore all locale files of moment.js
     config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
     // 生产环境下将资源压缩成gzip格式
@@ -153,10 +144,10 @@ module.exports = {
         symbolId: 'icon-[name]',
       })
       .end()
-    // 生产环境下关闭css压缩的 colormin 项，因为此项优化与主题色替换功能冲突
+    // CSS optimization settings
     if (isProd) {
       config.plugin('optimize-css').tap((args) => {
-        args[0].cssnanoOptions.preset[1].colormin = false
+        // CSS optimization can now be enabled since theme replacer is removed
         return args
       })
     }

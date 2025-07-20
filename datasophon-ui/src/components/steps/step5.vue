@@ -172,17 +172,7 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-// 苹果设计风格颜色变量
-@apple-white: #ffffff;
-@apple-blue: #0071e3;
-@apple-blue-light: rgba(0, 113, 227, 0.1);
-@apple-gray-100: #f5f5f7;
-@apple-gray-200: #e5e5ea;
-@apple-gray-300: #d2d2d7;
-@apple-gray-400: #86868b;
-@apple-gray-500: #6e6e73;
-@apple-text: #1d1d1f;
-@apple-border: rgba(0, 0, 0, 0.1);
+// 使用全局CSS变量，确保样式一致性
 
 .apple-spin-container {
   min-height: 600px;
@@ -190,86 +180,99 @@ export default {
   :deep(.ant-spin) {
     .ant-spin-dot {
       .ant-spin-dot-item {
-        background-color: @apple-blue;
+        background-color: var(--apple-blue);
       }
     }
     
     .ant-spin-text {
-      color: @apple-blue;
+      color: var(--apple-blue);
     }
   }
 }
 
 .apple-style-container {
   font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
-  color: @apple-text;
+  color: var(--apple-text-primary);
   margin: 0;
   padding: 0;
-  background-color: @apple-white;
+  background-color: var(--apple-background);
 }
 
 .steps-header {
   padding: 0 0 24px 0;
-  border-bottom: 1px solid @apple-border;
+  border-bottom: 1px solid var(--apple-border);
   margin-bottom: 24px;
   
   .steps-title {
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 8px;
-    color: @apple-text;
+    color: var(--apple-text-primary);
   }
   
   .steps-subtitle {
     font-size: 16px;
-    color: @apple-gray-500;
+    color: var(--apple-text-secondary);
   }
 }
 
 .content-container {
-  background-color: @apple-white;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  background-color: var(--apple-background);
+  border-radius: var(--apple-radius-large);
+  box-shadow: var(--apple-shadow-small);
   padding: 24px;
   
   :deep(.apple-template) {
     // 表单项标签样式
     .ant-form-item-label label {
-      color: @apple-text;
+      color: var(--apple-text-primary);
       font-weight: 500;
     }
     
     // 表单项控件样式
     .ant-form-item-control {
-      // 选择器样式
+      // 下拉选择器样式
       .ant-select {
+        border-radius: var(--apple-radius-medium) !important;
+        border: 1px solid var(--apple-border) !important;
+        background-color: var(--apple-background) !important;
+        box-shadow: var(--apple-shadow-small) !important;
+        transition: all 0.2s ease !important;
+        
         .ant-select-selection {
-          border-radius: 8px;
-          border-color: @apple-gray-300;
-          transition: all 0.3s;
-          
-          &:hover {
-            border-color: @apple-blue;
-          }
+          border: none !important;
+          background-color: transparent !important;
+          border-radius: var(--apple-radius-medium) !important;
+          padding: 8px 12px !important;
+          min-height: 40px !important;
+          font-family: var(--apple-font-family) !important;
+          font-size: 14px !important;
           
           .ant-select-selection__rendered {
-            margin-left: 12px;
+            line-height: 24px !important;
+            margin: 0 !important;
           }
+        }
+        
+        &:hover {
+          border-color: var(--apple-blue) !important;
+          box-shadow: var(--apple-shadow-medium) !important;
         }
         
         &.ant-select-focused .ant-select-selection,
         .ant-select-selection:focus,
         .ant-select-selection:active {
-          border-color: @apple-blue;
-          box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+          border-color: var(--apple-blue);
+          box-shadow: 0 0 0 3px var(--apple-blue-light-bg);
+          outline: none;
         }
       }
       
       // 多选选择器样式
       .ant-select-selection--multiple {
         .ant-select-selection__choice {
-          background-color: @apple-gray-100;
-          border-color: @apple-gray-300;
+          background-color: var(--apple-gray-100);
+          border-color: var(--apple-gray-300);
           border-radius: 4px;
           margin-top: 6px;
           margin-bottom: 6px;
@@ -279,10 +282,10 @@ export default {
           }
           
           .ant-select-selection__choice__remove {
-            color: @apple-gray-500;
+            color: var(--apple-gray-500);
             
             &:hover {
-              color: @apple-text;
+              color: var(--apple-text-primary);
             }
           }
         }
@@ -290,21 +293,34 @@ export default {
       
       // 下拉菜单样式
       :deep(.ant-select-dropdown) {
-        border-radius: 8px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        border-radius: var(--apple-radius-medium) !important;
+        border: 1px solid var(--apple-border) !important;
+        background-color: var(--apple-background) !important;
+        box-shadow: var(--apple-shadow-large) !important;
+        padding: 4px !important;
         
-        .ant-select-dropdown-menu-item {
-          padding: 10px 12px;
-          transition: all 0.2s;
+        .ant-select-dropdown-menu {
+          border-radius: var(--apple-radius-small) !important;
           
-          &:hover {
-            background-color: @apple-gray-100;
-          }
-          
-          &-selected {
-            color: @apple-blue;
-            font-weight: 500;
-            background-color: @apple-blue-light;
+          .ant-select-dropdown-menu-item {
+            border-radius: var(--apple-radius-small) !important;
+            margin: 2px !important;
+            padding: 8px 12px !important;
+            font-family: var(--apple-font-family) !important;
+            font-size: 14px !important;
+            color: var(--apple-text-primary) !important;
+            transition: all 0.2s ease !important;
+            
+            &:hover {
+              background-color: var(--apple-blue-light-bg) !important;
+              color: var(--apple-blue) !important;
+            }
+            
+            &.ant-select-dropdown-menu-item-selected {
+              background-color: var(--apple-blue) !important;
+              color: white !important;
+              font-weight: 500 !important;
+            }
           }
         }
       }

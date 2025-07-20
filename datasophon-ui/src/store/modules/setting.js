@@ -2,11 +2,11 @@ import config from '@/config'
 import {ADMIN} from '@/config/default'
 import {formatFullPath} from '@/utils/i18n'
 import {filterMenu} from '@/utils/authority-utils'
-import {getLocalSetting} from '@/utils/themeUtil'
+// getLocalSetting import removed
 import deepClone from 'lodash.clonedeep'
 
 
-const localSetting = getLocalSetting(true)
+const localSetting = {} // Local setting removed
 const customTitlesStr = sessionStorage.getItem(process.env.VUE_APP_TBAS_TITLES_KEY)
 const customTitles = (customTitlesStr && JSON.parse(customTitlesStr)) || []
 let timer = null
@@ -200,9 +200,7 @@ export default {
     setDevice (state, isMobile) {
       state.isMobile = isMobile
     },
-    setTheme (state, theme) {
-      state.theme = theme
-    },
+    // setTheme mutation removed
     setLayout (state, layout) {
       state.layout = layout
     },
