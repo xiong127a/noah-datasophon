@@ -271,16 +271,22 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-// Apple设计系统颜色变量
-@apple-blue: #007AFF;
-@apple-gray: #F2F2F7;
-@apple-white: #FFFFFF;
-@apple-black: #1D1D1F;
-@apple-text-primary: #1D1D1F;
-@apple-text-secondary: #86868B;
-@apple-border: #D1D1D6;
-@apple-radius: 12px;
-@apple-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+// Apple设计系统颜色变量 - 优化版
+@apple-blue: #34c759;
+@apple-blue-hover: #248a3d;
+@apple-blue-light: rgba(52, 199, 89, 0.1);
+@apple-gray: #f8f9fa;
+@apple-gray-light: #fafbfc;
+@apple-white: #ffffff;
+@apple-black: #1a1a1a;
+@apple-text-primary: #1a1a1a;
+@apple-text-secondary: #6b7280;
+@apple-border: rgba(52, 199, 89, 0.15);
+@apple-border-light: rgba(0, 0, 0, 0.08);
+@apple-radius: 16px;
+@apple-radius-large: 20px;
+@apple-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+@apple-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12);
 
 // Apple字体
 .apple-font() {
@@ -291,83 +297,91 @@ export default {
 
 .apple-form-container {
   .apple-font();
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 32px;
-  background: @apple-white;
+  padding: 40px;
+  background: linear-gradient(135deg, @apple-gray-light 0%, @apple-white 100%);
+  border-radius: @apple-radius-large;
+  box-shadow: @apple-shadow;
   
   .form-header {
     text-align: center;
-    margin-bottom: 48px;
+    margin-bottom: 56px;
     
     .form-title {
       .apple-font();
-      font-size: 2.5rem;
-      font-weight: 600;
+      font-size: 2.8rem;
+      font-weight: 700;
       line-height: 1.1;
-      letter-spacing: -0.022em;
+      letter-spacing: -0.025em;
       color: @apple-text-primary;
-      margin-bottom: 12px;
-      background: linear-gradient(135deg, @apple-text-primary, #444);
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-hover 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     
     .form-subtitle {
       .apple-font();
-      font-size: 1.2rem;
-      line-height: 1.4;
+      font-size: 1.3rem;
+      line-height: 1.5;
       color: @apple-text-secondary;
       margin: 0;
-      font-weight: 400;
+      font-weight: 500;
     }
   }
   
   .form-cards {
     .form-card {
       background: @apple-white;
-      border: 1px solid @apple-border;
+      border: 1px solid @apple-border-light;
       border-radius: @apple-radius;
       box-shadow: @apple-shadow;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
       overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      backdrop-filter: blur(10px);
       
       &:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
+        box-shadow: @apple-shadow-hover;
+        transform: translateY(-4px);
+        border-color: @apple-border;
       }
       
       .card-header {
-        padding: 24px 32px 16px;
-        background: linear-gradient(135deg, @apple-gray, #fafafa);
-        border-bottom: 1px solid @apple-border;
+        padding: 28px 36px 20px;
+        background: linear-gradient(135deg, @apple-blue-light 0%, rgba(255, 255, 255, 0.8) 100%);
+        border-bottom: 1px solid @apple-border-light;
         
         .card-title {
           .apple-font();
-          font-size: 1.4rem;
-          font-weight: 600;
-          color: @apple-text-primary;
-          margin: 0 0 8px 0;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: @apple-blue-hover;
+          margin: 0 0 10px 0;
           line-height: 1.2;
+          letter-spacing: -0.01em;
         }
         
         .card-description {
           .apple-font();
-          font-size: 0.95rem;
+          font-size: 1rem;
           color: @apple-text-secondary;
           margin: 0;
-          line-height: 1.4;
+          line-height: 1.5;
+          font-weight: 500;
         }
       }
       
       .card-content {
-        padding: 32px;
+        padding: 36px;
+        background: rgba(255, 255, 255, 0.6);
         
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 24px;
+          gap: 28px;
           
           @media (max-width: 768px) {
             grid-template-columns: 1fr;
@@ -420,23 +434,24 @@ export default {
         .deployment-card {
           position: relative;
           background: @apple-white;
-          border: 2px solid @apple-border;
+          border: 2px solid @apple-border-light;
           border-radius: @apple-radius;
-          padding: 20px;
+          padding: 24px;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          backdrop-filter: blur(10px);
           
           &:hover {
             border-color: @apple-blue;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.15);
           }
           
           &.selected {
             border-color: @apple-blue;
-            background: rgba(0, 122, 255, 0.05);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.15);
+            background: @apple-blue-light;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.2);
         
             .card-check {
               opacity: 1;
@@ -595,69 +610,73 @@ export default {
   .form-actions {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    margin-top: 48px;
-    padding-top: 32px;
-    border-top: 1px solid @apple-border;
+    gap: 20px;
+    margin-top: 56px;
+    padding-top: 36px;
+    border-top: 1px solid @apple-border-light;
     
     .apple-button {
       .apple-font();
-      border-radius: 8px;
-      font-weight: 500;
-      font-size: 1rem;
-      padding: 12px 32px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      padding: 16px 40px;
       height: auto;
-      min-width: 140px;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      min-width: 160px;
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       border: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      letter-spacing: -0.01em;
       
       &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       }
       
       &:active {
-        transform: translateY(0);
+        transform: translateY(-1px);
       }
       
       &.primary {
-        background: linear-gradient(135deg, @apple-blue, lighten(@apple-blue, 5%));
+        background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-hover 100%);
         color: @apple-white;
+        box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
         
         &:hover {
-          background: linear-gradient(135deg, darken(@apple-blue, 5%), @apple-blue);
+          background: linear-gradient(135deg, @apple-blue-hover 0%, darken(@apple-blue-hover, 8%) 100%);
           color: @apple-white;
           border-color: transparent;
+          box-shadow: 0 10px 28px rgba(52, 199, 89, 0.4);
         }
         
         &:focus {
-          background: linear-gradient(135deg, darken(@apple-blue, 5%), @apple-blue);
+          background: linear-gradient(135deg, @apple-blue-hover 0%, darken(@apple-blue-hover, 8%) 100%);
           color: @apple-white;
           border-color: transparent;
         }
       }
       
       &.secondary {
-        background: @apple-gray;
+        background: rgba(255, 255, 255, 0.9);
         color: @apple-text-primary;
+        border: 2px solid @apple-border-light;
         
         &:hover {
-          background: darken(@apple-gray, 5%);
+          background: @apple-gray;
           color: @apple-text-primary;
-          border-color: transparent;
+          border-color: @apple-border;
         }
         
         &:focus {
-          background: darken(@apple-gray, 5%);
+          background: @apple-gray;
           color: @apple-text-primary;
-          border-color: transparent;
+          border-color: @apple-border;
         }
       }
       
       .anticon {
-        margin-right: 8px;
-        font-size: 14px;
+        margin-right: 10px;
+        font-size: 16px;
       }
     }
   }
