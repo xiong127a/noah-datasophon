@@ -17,7 +17,6 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONObject;
@@ -42,7 +41,7 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaHost}",
-                    CollUtil.getFirst(hosts));
+                    hosts.getFirst());
         }
     }
 
