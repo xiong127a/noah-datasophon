@@ -64,3 +64,4 @@ node/
 /datasophon-ui/.yarn/
 /kubernetesYaml/
 /.cursor/
+/datasophon-ui/.cursor/
