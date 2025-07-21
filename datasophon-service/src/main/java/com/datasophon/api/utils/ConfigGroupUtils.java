@@ -6,8 +6,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.TypeReference;
-import com.alibaba.fastjson2.parser.Feature;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
@@ -433,69 +433,50 @@ public class ConfigGroupUtils {
             List<Map<String, String>> portMappings = new ArrayList<>();
 
             // 解析当前值
-            if (currentValue == null) {
-                // 保持空列表
-            } else if (currentValue instanceof String) {
-                try {
-                    portMappings = JSONObject.parseObject((String) currentValue,
-                            new TypeReference<List<Map<String, String>>>() {
-                            });
-                } catch (Exception e) {
-                    logger.warn("解析端口映射字符串失败，尝试其他格式: {}", e.getMessage());
-                    // 尝试解析为JSONArray
-                    JSONArray jsonArray = JSONObject.parseArray((String) currentValue);
-                    for (int i = 0; i < jsonArray.size(); i++) {
-                        Object item = jsonArray.get(i);
-                        if (item instanceof JSONObject) {
-                            Map<String, String> mapping = new HashMap<>();
-                            JSONObject jsonObj = (JSONObject) item;
-                            for (String key : jsonObj.keySet()) {
-                                mapping.put(key, jsonObj.getString(key));
-                            }
-                            portMappings.add(mapping);
-                        }
-                    }
+            switch (currentValue) {
+                case null -> {
+                    // 保持空列表
                 }
-            } else if (currentValue instanceof List) {
-                // 尝试转换List中的每个元素
-                List<?> rawList = (List<?>) currentValue;
-                for (Object item : rawList) {
-                    if (item instanceof Map) {
-                        Map<?, ?> rawMap = (Map<?, ?>) item;
-                        Map<String, String> convertedMap = new HashMap<>();
-                        for (Object key : rawMap.keySet()) {
-                            if (key != null) {
-                                Object val = rawMap.get(key);
-                                convertedMap.put(key.toString(), val != null ? val.toString() : "");
+                case String s -> {
+                    try {
+                        portMappings = JSONObject.parseObject(s,
+                                new TypeReference<>() {
+                                });
+                    } catch (Exception e) {
+                        logger.warn("解析端口映射字符串失败，尝试其他格式: {}", e.getMessage());
+                        // 尝试解析为JSONArray
+                        JSONArray jsonArray = JSONArray.parseArray(s);
+                        for (Object item : jsonArray) {
+                            if (item instanceof JSONObject jsonObj) {
+                                Map<String, String> mapping = new HashMap<>();
+                                for (String key : jsonObj.keySet()) {
+                                    mapping.put(key, jsonObj.getString(key));
+                                }
+                                portMappings.add(mapping);
                             }
                         }
-                        portMappings.add(convertedMap);
-                    } else if (item instanceof JSONObject) {
-                        JSONObject jsonObj = (JSONObject) item;
-                        Map<String, String> mapping = new HashMap<>();
-                        for (String key : jsonObj.keySet()) {
-                            mapping.put(key, jsonObj.getString(key));
-                        }
-                        portMappings.add(mapping);
                     }
                 }
-            } else if (currentValue instanceof JSONArray) {
-                JSONArray jsonArray = (JSONArray) currentValue;
-                for (int i = 0; i < jsonArray.size(); i++) {
-                    Object item = jsonArray.get(i);
-                    if (item instanceof JSONObject) {
-                        Map<String, String> mapping = new HashMap<>();
-                        JSONObject jsonObj = (JSONObject) item;
-                        for (String key : jsonObj.keySet()) {
-                            mapping.put(key, jsonObj.getString(key));
+                case List<?> rawList -> {
+                    // 尝试转换List中的每个元素
+                    for (Object item : rawList) {
+                        if (item instanceof Map<?, ?> rawMap) {
+                            Map<String, String> convertedMap = new HashMap<>();
+                            for (Object key : rawMap.keySet()) {
+                                if (key != null) {
+                                    Object val = rawMap.get(key);
+                                    convertedMap.put(key.toString(), val != null ? val.toString() : "");
+                                }
+                            }
+                            portMappings.add(convertedMap);
                         }
-                        portMappings.add(mapping);
                     }
                 }
-            } else {
-                logger.warn("无法处理的端口映射值类型: {}", currentValue.getClass().getName());
-                logger.debug("端口映射值内容: {}", currentValue);
-                return;
+                default -> {
+                    logger.warn("无法处理的端口映射值类型: {}", currentValue.getClass().getName());
+                    logger.debug("端口映射值内容: {}", currentValue);
+                    return;
+                }
             }
 
             // 检查是否已存在相同的端口映射
@@ -738,7 +719,7 @@ public class ConfigGroupUtils {
                 String configGroup = config.getConfigGroup();
                 String configLevel = config.getConfigLevel();
                 String configTargetRoles = config.getConfigTargetRoles();
-                String groupKey = GENERAL;
+                String groupKey = "";
 
                 // 处理kubernetes.config类型的配置组
                 if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
@@ -766,10 +747,8 @@ public class ConfigGroupUtils {
                     String levelPrefix = configLevel.toLowerCase() + "_";
 
                     // 直接将configLevel和configGroup用下划线连接
-                    if (configGroup.startsWith(levelPrefix)) {
+                    if (configGroup != null && configGroup.startsWith(levelPrefix)) {
                         groupKey = configGroup;
-                    } else {
-                        groupKey = levelPrefix + configGroup;
                     }
 
                     // 将配置添加到对应分组
@@ -879,7 +858,7 @@ public class ConfigGroupUtils {
         }
 
         // 4. 从configJson获取配置值并应用到configFileMap
-        List<ServiceConfig> configs = JSONObject.parseArray(config.getConfigJson(), ServiceConfig.class);
+        List<ServiceConfig> configs = JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
 
         if (CollUtil.isNotEmpty(configs)) {
             logger.info("从configJson解析出 {} 个配置项", configs.size());
@@ -922,8 +901,8 @@ public class ConfigGroupUtils {
      */
     private static Map<JSONObject, JSONArray> parseConfigJson(String configFileJson) {
         return JSONObject.parseObject(configFileJson,
-                new TypeReference<Map<JSONObject, JSONArray>>() {
-                }, Feature.SupportAutoType);
+                new TypeReference<>() {
+                }, JSONReader.Feature.SupportAutoType);
     }
 
     /**
