@@ -2,9 +2,9 @@ package com.datasophon.api.utils;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import lombok.experimental.UtilityClass;

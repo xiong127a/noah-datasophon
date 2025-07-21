@@ -2,7 +2,7 @@
 package com.datasophon.api.controller;
 
 import cn.hutool.core.io.FileUtil;
-import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson2.JSONArray;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.OperationLogService;

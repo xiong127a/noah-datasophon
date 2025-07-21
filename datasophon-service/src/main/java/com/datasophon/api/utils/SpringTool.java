@@ -18,7 +18,7 @@
 package com.datasophon.api.utils;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson2.JSONArray;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;

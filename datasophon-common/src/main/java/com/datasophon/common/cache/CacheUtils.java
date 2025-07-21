@@ -19,8 +19,8 @@ package com.datasophon.common.cache;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.TypeReference;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
 import org.apache.commons.lang.StringUtils;
