@@ -245,13 +245,34 @@ export default {
       this.form.validateFields((err, values) => {
         console.log(values);
         if (!err) {
+          // 获取当前登录用户信息
+          const userStr = localStorage.getItem(process.env.VUE_APP_USER_KEY);
+          const currentUser = userStr ? JSON.parse(userStr) : null;
+          
           const params = {
             "clusterName": values.clusterName,
             "clusterCode": values.clusterCode,
             "clusterFrame": values.clusterFrame,
             "depType": values.depType,
+          };
+          
+          // 添加创建者信息
+          if (currentUser) {
+            // 设置createBy为当前用户名
+            params.createBy = currentUser.username;
+            
+            // 如果需要将当前用户添加为集群管理员，构造clusterManagerList
+            if (currentUser.id) {
+              // 构造符合List<UserInfoEntity>格式的数据结构
+              params.clusterManagerList = [{
+                id: currentUser.id // UserInfoEntity的id字段
+              }];
+            }
           }
+          
+          // 如果当前是编辑模式，添加集群ID
           if (this.isEdit) params.id = this.detail.id;
+          
           this.loading = true;
           const ajaxApi = this.isEdit ? global.API.updateColony : global.API.saveColony;
           

@@ -24,27 +24,17 @@
  * @FilePath: \ddh-ui\src\pages\colonyManage\commponents\delectColony.vue
 -->
 <template>
-  <div>
-    <a-form
-      :label-col="labelCol"
-      :wrapper-col="wrapperCol"
-      :form="form"
-      class="p0-32"
-    >
-      <a-form-item :wrapper-col="{ span: 19, offset: 2 }" style="16px;">
-        <div>
-          <span>确认删除当前 {{ sysTypeTxt }}？</span>
-        </div>
-      </a-form-item>
-    </a-form>
-    <div class="ant-modal-confirm-btns-new">
+  <div class="compact-confirm-dialog">
+    <div class="confirm-content">
+      <span>确认删除当前{{ sysTypeTxt }}？</span>
+    </div>
+    <div class="confirm-buttons">
       <a-button
-        style="margin-right: 10px"
         type="primary"
+        class="mac-btn primary-btn"
         @click.stop="handleSubmit"
-        >确定</a-button
-      >
-      <a-button @click.stop="formCancel">取消</a-button>
+        >确定</a-button>
+      <a-button class="mac-btn" @click.stop="formCancel">取消</a-button>
     </div>
   </div>
 </template>
@@ -57,14 +47,6 @@ export default {
   },
   data() {
     return {
-      labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
-      },
-      wrapperCol: {
-        xs: { span: 24 },
-        sm: { span: 16 },
-      },
       form: this.$form.createForm(this),
     };
   },
@@ -92,17 +74,54 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-.steps-content {
-  margin-top: 16px;
-  border: 1px dashed #e9e9e9;
-  border-radius: 6px;
-  background-color: #fafafa;
-  min-height: 200px;
-  text-align: center;
-  padding-top: 80px;
-}
-
-.steps-action {
-  margin-top: 24px;
+.compact-confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  
+  .confirm-content {
+    padding: 5px 15px 20px;
+    text-align: center;
+    font-size: 15px;
+    
+    span {
+      white-space: nowrap;
+    }
+  }
+  
+  .confirm-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 10px;
+    
+    .ant-btn {
+      min-width: 80px;
+      border-radius: 10px;
+      transition: all 0.3s;
+      
+      &.mac-btn {
+        height: 32px;
+        font-size: 14px;
+        border-radius: 10px;
+        
+        &.primary-btn {
+          background: #1890ff;
+          border-color: #1890ff;
+          color: white;
+          
+          &:hover {
+            background: #40a9ff;
+            border-color: #40a9ff;
+          }
+        }
+        
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+  }
 }
 </style>

@@ -53,8 +53,8 @@
               type="primary"
               class="mac-btn primary-btn"
               @click="getInto(item)"
-              :disabled="item.clusterStateCode === 1"
-            >
+                :disabled="item.clusterStateCode === 1"
+              >
               <span>进入集群</span>
             </a-button>
             
@@ -91,21 +91,21 @@
       
       <!-- 创建新集群卡片 - 放在最后位置 -->
       <div class="cluster-card create-card" @click="addColony({})">
-        <div class="create-icon">
+          <div class="create-icon">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
+            </svg>
+          </div>
         <div class="create-content">
           <h3 class="create-title">创建新集群</h3>
           <p class="create-desc">快速部署一个全新的大数据集群环境</p>
         </div>
-        <div class="create-features">
+          <div class="create-features">
           <span class="feature-tag">一键部署</span>
           <span class="feature-tag">智能配置</span>
           <span class="feature-tag">高效运维</span>
-        </div>
+            </div>
       </div>
     </div>
 
@@ -415,7 +415,7 @@ export default {
     },
     delectColony(obj) {
       const self = this;
-      let width = 400;
+      let width = 300;
       let content = (
         <DelectColony
           sysTypeTxt="集群"
@@ -425,22 +425,16 @@ export default {
       );
       this.$confirm({
         width: width,
-        title: () => {
-          return (
-            <div>
-              <a-icon
-                type="question-circle"
-                style="color:#2F7FD1 !important;margin-right:10px"
-              />
-              提示
-            </div>
-          );
-        },
-        content,
+        title: '提示',
+        content: content,
         closable: true,
-        icon: () => {
-          return <div />;
-        },
+        icon: () => null, // 移除图标
+        wrapClassName: 'clean-modal delete-confirm compact-modal', // 添加自定义类名
+        maskClosable: false,
+        centered: true,
+        okButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
+        cancelButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
+        bodyStyle: { padding: 0 },
       });
       // 关闭下拉菜单
       this.activeDropdown = null;
@@ -1115,20 +1109,20 @@ export default {
   text-align: center;
   transition: all 0.3s ease;
   cursor: pointer;
-  position: relative;
+      position: relative;
   overflow: hidden;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.03);
-
-  &::before {
+      
+      &::before {
     content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
     height: 0;
     background: linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(104, 189, 255, 0.1) 100%);
     transition: height 0.3s ease;
-    z-index: -1;
+        z-index: -1;
   }
 
   &:hover {
@@ -1209,7 +1203,7 @@ export default {
     background: rgba(24, 144, 255, 0.1);
     color: #1890ff;
     border-radius: 12px;
-    font-size: 12px;
+          font-size: 12px;
     font-weight: 500;
   }
 }
@@ -1223,7 +1217,7 @@ export default {
   border: 1px solid #E5E5E5;
   overflow: hidden;
   transition: all 0.3s ease;
-  display: flex;
+          display: flex;
   flex-direction: column;
   min-height: 220px; /* 确保卡片高度足够 */
   
@@ -1309,9 +1303,9 @@ body.colony-manage-page .ant-btn.mac-btn {
   border-radius: 10px !important;
   font-weight: 600 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
   padding: 0 16px !important;
   min-width: 120px !important;
   position: relative !important;
@@ -1488,9 +1482,9 @@ body.colony-manage-page .ant-btn.mac-btn {
 .auth-cluster-modal .ant-modal-confirm-body {
   padding: 0 !important;
   margin: 0 !important;
-  display: flex !important;
+              display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;
+              align-items: center !important;
   width: 100% !important;
 }
 
@@ -1522,7 +1516,7 @@ body.colony-manage-page .ant-btn.mac-btn {
   min-width: 120px !important;
   height: 40px !important;
   border-radius: 10px !important;
-  font-weight: 600 !important;
+        font-weight: 600 !important;
   font-size: 14px !important;
   letter-spacing: 0.3px !important;
   display: inline-flex !important;
@@ -1537,7 +1531,7 @@ body.colony-manage-page .ant-btn.mac-btn {
 .auth-cluster-modal .auth-btns .ant-btn-type-primary {
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
   border: none !important;
-  color: white !important;
+          color: white !important;
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
 }
 
@@ -1545,7 +1539,7 @@ body.colony-manage-page .ant-btn.mac-btn {
 .auth-cluster-modal .auth-btns .ant-btn-primary:hover,
 .auth-cluster-modal .auth-btns .ant-btn-type-primary:hover {
   background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
-  transform: translateY(-2px) !important;
+            transform: translateY(-2px) !important;
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
 }
 
@@ -1561,7 +1555,7 @@ body.colony-manage-page .ant-btn.mac-btn {
   background: white !important;
   color: #1890ff !important;
   border-color: #1890ff !important;
-  transform: translateY(-2px) !important;
+            transform: translateY(-2px) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 

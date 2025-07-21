@@ -244,6 +244,273 @@
         top: -9999px !important;
         left: -9999px !important;
       }
+      
+      /* 全局修复确认框和模态框紫色容器问题 */
+      .ant-modal-confirm .ant-modal-body,
+      .ant-modal-confirm .ant-modal-content {
+        padding: 0 !important;
+        background-color: white !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+      }
+      
+      /* 移除模态框和确认框内多余的空间和边距 */
+      .ant-modal-confirm-body-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      
+      /* 移除确认框中的紫色容器 */
+      .ant-modal-confirm-body > .anticon {
+        display: none !important;
+      }
+      
+      /* 确认框标题样式修复 */
+      .ant-modal-confirm-title {
+        padding: 16px 24px !important;
+        margin: 0 !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        font-weight: 600 !important;
+      }
+      
+      /* 确认框内容样式修复 */
+      .ant-modal-confirm-content {
+        margin: 0 !important;
+        padding: 24px !important;
+      }
+      
+      /* 确认框按钮区域样式修复 */
+      .ant-modal-confirm-btns {
+        margin: 0 !important;
+        padding: 16px 24px !important;
+        border-top: 1px solid #f0f0f0 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+      }
+      
+      /* 删除集群确认框特殊样式 */
+      .delete-confirm.ant-modal-confirm .ant-modal-body {
+        padding: 0 !important;
+      }
+      
+      /* 确保所有模态框和确认框的内容区域样式正确 */
+      .ant-modal-confirm-body {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* 修复模态框遮罩层 */
+      .ant-modal-mask,
+      .ant-modal-wrap {
+        z-index: 1050 !important;
+      }
+      
+      /* 增强的问号图标移除 - 包括SVG路径 */
+      path[d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"],
+      path[d="M623.6 316.7C593.6 290.4 554 276 512 276s-81.6 14.5-111.6 40.7C369.2 344 352 380.7 352 420v7.6c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V420c0-44.1 43.1-80 96-80s96 35.9 96 80c0 31.1-22 59.6-56.1 72.7-21.2 8.1-39.2 22.3-52.1 40.9-13.1 19-19.9 41.8-19.9 64.9V620c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-22.7a48.3 48.3 0 0 1 30.9-44.8c59-22.7 97.1-74.7 97.1-132.5.1-39.3-17.1-76-48.3-103.3zM472 732a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"] {
+        display: none !important;
+      }
+      
+      /* 完全覆盖确认框样式 */
+      .ant-modal-confirm {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+      }
+      
+      /* 修复确认框问号图标 - 除了服务管理的启动停止框 */
+      .ant-modal-confirm-body > .anticon-question-circle,
+      .ant-modal-confirm-body > .anticon-info-circle,
+      .ant-modal-confirm-body > .anticon-exclamation-circle,
+      .ant-modal-confirm-body > .anticon {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+      
+      /* 修复标题和内容的对齐 */
+      .ant-modal-confirm-title,
+      .ant-modal-confirm-content {
+        margin-left: 0 !important;
+      }
+      
+      /* 服务管理启动/停止确认框 - 保留原始样式 */
+      .service-action-confirm .ant-modal-confirm-body > .anticon,
+      .service-action-confirm .ant-modal-confirm-title-wrap i.anticon,
+      .service-action-confirm .ant-modal-confirm-body > .anticon-question-circle,
+      .service-action-confirm .ant-modal-confirm-body i.anticon {
+        display: inline-flex !important;
+        width: auto !important;
+        height: auto !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: static !important;
+      }
+      
+      /* 服务管理启动/停止确认框 - 保留标题和内容样式 */
+      .service-action-confirm .ant-modal-confirm-body {
+        padding: 24px !important;
+        margin: initial !important;
+      }
+      
+      .service-action-confirm .ant-modal-confirm-content {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* 恢复服务管理确认框的按钮样式 */
+      .service-action-confirm .ant-modal-confirm-btns {
+        margin: initial !important;
+        padding: initial !important;
+        border-top: none !important;
+        display: block !important;
+      }
+      
+      /* 仅对集群管理模块应用自定义确认框样式 */
+      .colony-manage-page .ant-modal-confirm-content {
+        padding-left: 24px !important;
+      }
+      
+      /* 确认提示框专用样式 - 清除紫色区域 */
+      .ant-modal-confirm-confirm .ant-modal-confirm-body,
+      .ant-modal-confirm-info .ant-modal-confirm-body,
+      .ant-modal-confirm-success .ant-modal-confirm-body,
+      .ant-modal-confirm-warning .ant-modal-confirm-body,
+      .ant-modal-confirm-error .ant-modal-confirm-body {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      
+      /* 重写全局确认框按钮样式 */
+      .ant-modal-confirm-btns .ant-btn {
+        height: 32px !important;
+        border-radius: 4px !important;
+        padding: 0 15px !important;
+      }
+      
+      .ant-modal-confirm-btns .ant-btn-primary {
+        background-color: #1890ff !important;
+        border-color: #1890ff !important;
+      }
+      
+      .ant-modal-confirm-btns .ant-btn-primary:hover {
+        background-color: #40a9ff !important;
+        border-color: #40a9ff !important;
+      }
+      
+      /* 删除集群和授权确认框统一样式 */
+      .clean-modal.delete-confirm .ant-modal-body,
+      .clean-modal.auth-modal .ant-modal-body {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      
+      /* 紧凑型确认框专用样式 */
+      .compact-modal .ant-modal-content {
+        width: auto !important;
+        max-width: 300px !important;
+        margin: 0 auto !important;
+      }
+      
+      .compact-modal .ant-modal-body {
+        padding: 0 !important;
+      }
+      
+      .compact-modal .ant-modal-title {
+        padding: 10px 15px !important;
+        font-size: 16px !important;
+        text-align: center !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+      }
+      
+      /* 重置确认框内部的间距 */
+      .compact-modal .ant-modal-confirm-body-wrapper {
+        padding: 0 !important;
+      }
+      
+      /* 避免文本换行 */
+      .compact-modal .confirm-content span {
+        white-space: nowrap !important;
+      }
+      
+      /* Mac风格按钮全局样式 */
+      .compact-modal .ant-btn.mac-btn {
+        border-radius: 10px !important;
+        height: 34px !important;
+        font-size: 14px !important;
+        padding: 0 16px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.3s !important;
+      }
+      
+      .compact-modal .ant-btn.mac-btn.primary-btn {
+        background: #1890ff !important;
+        border-color: #1890ff !important;
+        color: white !important;
+      }
+      
+      .compact-modal .ant-btn.mac-btn:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+      }
+      
+      .compact-modal .ant-btn.mac-btn.primary-btn:hover {
+        background: #40a9ff !important;
+        border-color: #40a9ff !important;
+      }
+      
+      /* 确保模态框内容和按钮间距合适 */
+      .compact-modal .compact-confirm-dialog {
+        padding: 20px 0 !important;
+      }
+      
+      .compact-modal .confirm-content {
+        padding: 10px 15px 25px !important;
+      }
+      
+      .compact-modal .confirm-buttons {
+        padding-top: 5px !important;
+        margin-bottom: 10px !important;
+      }
+      
+      /* 服务管理启动/停止确认框 - 恢复按钮样式 */
+      .service-action-confirm .ant-btn {
+        height: 32px !important;
+        border-radius: 4px !important;
+        transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.015) !important;
+      }
+      
+      .service-action-confirm .ant-btn-primary {
+        color: #fff !important;
+        background-color: #1890ff !important;
+        border-color: #1890ff !important;
+        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.12) !important;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.045) !important;
+      }
+      
+      .service-action-confirm .ant-btn-primary:hover,
+      .service-action-confirm .ant-btn-primary:focus {
+        color: #fff !important;
+        background-color: #40a9ff !important;
+        border-color: #40a9ff !important;
+      }
+      
+      /* 服务管理弹窗中的问号图标正确显示 */
+      .service-action-confirm .anticon-question-circle,
+      .service-action-confirm i.anticon-question-circle,
+      .service-action-confirm svg[data-icon="question-circle"] {
+        color: #2F7FD1 !important;
+        display: inline-block !important;
+        width: auto !important;
+        height: auto !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: static !important;
+        margin-right: 10px !important;
+      }
     </style>
     <script>
       // 在页面加载完成后添加loaded类

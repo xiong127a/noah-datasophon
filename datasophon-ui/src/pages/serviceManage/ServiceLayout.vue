@@ -711,6 +711,7 @@ export default {
           return <div />;
         },
         closable: true,
+        wrapClassName: 'service-action-confirm', // 添加特殊类名以便应用特定样式
       });
     },
     
