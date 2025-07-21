@@ -42,15 +42,16 @@
       <div class="form-item">
         <div class="label">选择管理员：</div>
         <div class="select-container">
-          <a-form :form="form">
+          <a-form :form="form" v-if="userListLoaded">
             <a-select 
               class="admin-select"
               mode="multiple" 
-              v-decorator="['userIds', { rules: [{ required: false }]}]"
+              :defaultValue="selectedUserIds"
               placeholder="请选择一个或多个集群管理员"
               :dropdownMatchSelectWidth="false"
               :getPopupContainer="triggerNode => triggerNode.parentElement"
               dropdownClassName="admin-dropdown"
+              @change="handleUserSelectionChange"
             >
               <a-select-option 
                 v-for="item in userList" 
@@ -61,6 +62,9 @@
               </a-select-option>
             </a-select>
           </a-form>
+          <div v-else class="loading-placeholder">
+            加载用户列表中...
+          </div>
         </div>
       </div>
     </div>
@@ -88,10 +92,20 @@ export default {
     callBack: Function
   },
   data() {
+    // 提前从props中提取managerIds
+    let selectedUserIds = [];
+    if (this.detail && 
+        this.detail.clusterManagerList && 
+        Array.isArray(this.detail.clusterManagerList)) {
+      selectedUserIds = this.detail.clusterManagerList.map(manager => manager.id);
+    }
+    
     return {
       form: this.$form.createForm(this),
       loading: false,
-      userList: []
+      userList: [],
+      selectedUserIds: selectedUserIds, // 直接初始化为提取的值
+      userListLoaded: false // 标记用户列表是否已加载
     };
   },
   methods: {
@@ -99,28 +113,58 @@ export default {
       // 不再使用$destroyAll()
       this.$emit('cancel');
     },
+    // 处理用户选择变更
+    handleUserSelectionChange(selectedValues) {
+      this.selectedUserIds = selectedValues;
+    },
+    
+    // 查询所有用户
+    queryAllUser() {
+      this.$axiosPost(global.API.queryAllUser, {})
+        .then((res) => {
+          if (res.code === 200) {
+            this.userList = res.data;
+            // 标记用户列表已加载
+            this.$nextTick(() => {
+              this.userListLoaded = true;
+            });
+          }
+        });
+    },
+    
     handleSubmit(e) {
       e.preventDefault();
       const _this = this;
       this.form.validateFields((err, values) => {
         if (!err) {
-          // API需要的是userIds参数
-          const params = {
-            "userIds": values.userIds || []
-          };
-          if (JSON.stringify(this.detail) !== '{}') {
-            params.clusterId = this.detail.id;
+          // 检查clusterId是否存在
+          if (!this.detail || !this.detail.id) {
+            this.$message.error('缺少集群ID参数', 2);
+            return;
           }
           
-          console.log('授权参数:', params); // 调试输出参数
+          // 直接使用this.selectedUserIds，而不是从values中取值
+          // 这样可以确保即使表单获取失败，也能使用组件内部跟踪的值
+          const userIds = this.selectedUserIds || [];
+          let userIdsString = '';
+          
+          // 转换用户ID数组为字符串
+          if (Array.isArray(userIds)) {
+            userIdsString = userIds.join(',');
+          } else {
+            userIdsString = userIds.toString();
+          }
+          
+          // 构建URL查询参数
+          const url = `${global.API.authCluster}?clusterId=${this.detail.id}&userIds=${userIdsString}`;
           
           this.loading = true;
-          // 使用axiosJsonPost而不是axiosPost，因为需要JSON格式提交而非FormData
-          this.$axiosJsonPost(global.API.authCluster, params)
+          // 使用get方法，通过URL传参
+          this.$axiosGet(url)
             .then((res) => {
               this.loading = false;
-              if (res.code === 200) {
-                if (params.userIds && params.userIds.length > 0) {
+              if (res.code === 200) { 
+                if (userIds && userIds.length > 0) {
                   this.$message.success('授权成功', 2);
                 } else {
                   this.$message.success('取消授权成功', 2);
@@ -138,19 +182,10 @@ export default {
             })
             .catch((error) => {
               this.loading = false;
-              console.error('授权请求失败:', error); // 调试输出错误
               this.$message.error('授权失败，请检查网络或参数', 2);
             });
         }
       });
-    },
-    queryAllUser() {
-      this.$axiosPost(global.API.queryAllUser, {})
-        .then((res) => {
-          if (res.code === 200) {
-            this.userList = res.data;
-          }
-        });
     },
     // 在组件内部也添加图标清除逻辑
     removeQuestionIcons() {
@@ -183,6 +218,14 @@ export default {
           }
         });
         });
+    }
+  },
+  created() {
+    // 在created钩子中提取管理员，而不是在mounted后
+    if (this.detail && 
+        this.detail.clusterManagerList && 
+        Array.isArray(this.detail.clusterManagerList)) {
+      this.selectedUserIds = this.detail.clusterManagerList.map(manager => manager.id);
     }
   },
   mounted() {
@@ -361,6 +404,19 @@ export default {
 .popup-container {
   position: absolute;
   z-index: 1060;
+}
+
+/* 添加加载占位符样式 */
+.loading-placeholder {
+  height: 44px;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  background-color: #f9f9f9;
 }
 </style>
 

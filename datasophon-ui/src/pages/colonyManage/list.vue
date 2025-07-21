@@ -45,29 +45,26 @@
             </div>
           </div>
 
-        <!-- 集群操作 -->
+        <!-- 卡片底部按钮区域 -->
         <div class="card-footer">
-          <div class="mac-button-group" ref="buttonContainer">
-            <!-- 进入集群按钮独占一行 -->
-            <a-button 
-              type="primary" 
+          <div :class="buttonGroupClass" ref="macButtonGroup">
+            <!-- 主按钮 - 移除图标 -->
+            <a-button
+              type="primary"
               class="mac-btn primary-btn"
-              @click="getInto(item)" 
-                :disabled="item.clusterStateCode === 1"
-              block
+              @click="getInto(item)"
+              :disabled="item.clusterStateCode === 1"
             >
-              <a-icon type="login" />
               <span>进入集群</span>
             </a-button>
             
-            <!-- 第二行按钮 - 均匀分布 -->
+            <!-- 次要按钮组 - 移除所有图标 -->
             <div class="secondary-buttons">
-              <a-button 
+              <a-button
                 class="mac-btn"
-                @click="addColony(item)" 
+                @click="addColony(item)"
                 :disabled="item.clusterStateCode === 2"
               >
-                <a-icon type="edit" />
                 <span>编辑</span>
               </a-button>
               <a-button 
@@ -75,25 +72,18 @@
                 class="mac-btn"
                 @click="authCluster(item)"
               >
-                <a-icon type="safety" />
                 <span>授权</span>
               </a-button>
-              <a-dropdown :trigger="['click']" placement="bottomRight" overlayClassName="mac-dropdown-overlay">
-                <a-button class="mac-btn more-btn">
-                  <a-icon type="ellipsis" />
+              
+              <!-- 更多按钮 - 重写以解决无反应问题 -->
+              <div class="dropdown-container">
+                <a-button 
+                  class="mac-btn more-btn"
+                  @click.stop="showMoreOptions(item, $event)"
+                >
                   <span>更多</span>
                 </a-button>
-                <a-menu slot="overlay" class="mac-dropdown-menu">
-                  <a-menu-item @click="configCluster(item)" :disabled="item.clusterStateCode === 2">
-                    <a-icon type="setting" />
-                    <span>配置集群</span>
-                  </a-menu-item>
-                  <a-menu-item @click="delectColony(item)" :disabled="item.clusterStateCode === 2" class="danger">
-                    <a-icon type="delete" />
-                    <span>删除集群</span>
-                  </a-menu-item>
-                </a-menu>
-              </a-dropdown>
+              </div>
             </div>
           </div>
         </div>
@@ -155,6 +145,26 @@
         @cancel="handleAuthModalClose"
       />
     </a-modal>
+    
+    <!-- 全局下拉菜单，固定在body上 -->
+    <div v-if="activeDropdown !== null" class="custom-dropdown-container" ref="globalDropdown">
+      <div class="custom-dropdown">
+        <div 
+          class="dropdown-item" 
+          @click="configCluster(activeClusterData)"
+          :class="{ disabled: activeClusterData && activeClusterData.clusterStateCode === 2 }"
+        >
+          配置集群
+        </div>
+        <div 
+          class="dropdown-item danger" 
+          @click="delectColony(activeClusterData)"
+          :class="{ disabled: activeClusterData && activeClusterData.clusterStateCode === 2 }"
+        >
+          删除集群
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -187,10 +197,13 @@ export default {
       confirmLoading: false,
       clusterId: "", // 操作的集群Id
       depType: "",
-      activeDropdown: null,
+      activeDropdown: null, // 当前打开的下拉菜单
+      activeClusterData: null, // 当前选中的集群数据
       dropdownPositions: {}, // 存储每个下拉菜单的位置
       authModalVisible: false,
       currentClusterForAuth: null,
+      // 增加辅助属性，避免直接操作DOM
+      styleConsistencyApplied: false
     };
   },
 
@@ -199,76 +212,169 @@ export default {
     // 过滤掉添加集群的占位项
     filteredDataSource() {
       return this.dataSource.filter(item => !item.add);
+    },
+    // 修复2: 使用计算属性处理样式，而非直接操作DOM
+    buttonGroupClass() {
+      return {
+        'mac-button-group': true
+      };
+    },
+    dropdownClass() {
+      return {
+        'mac-dropdown': true
+      };
     }
   },
 
   mounted() {
+    // 初始化
     this.getColonyList();
+    
     // 确保样式一致性
     document.body.classList.add('colony-manage-page');
-    this.ensureStyleConsistency();
+    this.styleConsistencyApplied = true;
     
     // 添加点击外部关闭下拉菜单事件
     document.addEventListener('click', this.closeDropdownOnOutsideClick);
+    
+    // 在页面加载时修复可访问性问题
+    this.fixAccessibilityIssues();
+    
+    // 使用MutationObserver替代DOMNodeInserted
+    const observer = new MutationObserver((mutations) => {
+      for(const mutation of mutations) {
+        if (mutation.addedNodes.length) {
+          for(const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE &&
+                (node.classList && 
+                 (node.classList.contains('ant-modal-root') || 
+                  node.classList.contains('ant-modal-wrap')))) {
+              this.fixAccessibilityIssues();
+              break;
+            }
+          }
+        }
+      }
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    this.mutationObserver = observer;
+    
+    // 添加窗口大小变化监听，但不使用debounce
+    window.addEventListener('resize', () => {
+      this.styleConsistencyApplied = true;
+    });
+    
+    // 添加路由变化监听，确保导航后样式一致
+    this.$router.afterEach(() => {
+      if (this.$route.path.includes('/colony-manage')) {
+        this.$nextTick(() => {
+          this.ensureStyleConsistency();
+        });
+      }
+    });
   },
   
   beforeDestroy() {
-    // 移除样式标记和事件监听
+    // 移除样式标记
     document.body.classList.remove('colony-manage-page');
+    
+    // 断开点击事件监听
     document.removeEventListener('click', this.closeDropdownOnOutsideClick);
+    
+    // 断开MutationObserver连接
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
   },
 
   methods: {
     ...mapMutations("setting", ["setIsCluster", "setMenuData", "setClusterId"]),
     
-    // 打开/关闭下拉菜单
-    toggleDropdown(index, event) {
-      // 阻止事件冒泡，这样点击事件不会传递到document上
-      event.stopPropagation();
-      
-      if (this.activeDropdown === index) {
+    // 切换下拉菜单
+    toggleDropdown(item, event) {
+      if (this.activeDropdown === item.id) {
         this.activeDropdown = null;
       } else {
-        this.activeDropdown = index;
-        // 设置下拉菜单位置
+        this.activeDropdown = item.id;
+        
+        // 改进的位置计算，考虑屏幕边界
         this.$nextTick(() => {
-          const button = event.target.closest('.more-btn');
-          if (button) {
-            const buttonRect = button.getBoundingClientRect();
-            // 保存位置信息到索引对应的位置
-            this.dropdownPositions[index] = {
-              right: '0px',
-              top: buttonRect.height + 'px'
-            };
+          const buttonElement = event.currentTarget;
+          const dropdown = document.querySelector('.custom-dropdown');
+          
+          if (buttonElement && dropdown) {
+            const rect = buttonElement.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const dropdownWidth = dropdown.offsetWidth || 120;
+            const dropdownHeight = dropdown.offsetHeight || 100;
+            
+            // 默认右对齐，但如果右边超出屏幕则左对齐
+            let posX = rect.right - dropdownWidth;
+            if (posX < 10) posX = rect.left; // 如果左边也不够，则右对齐
+            
+            // 默认显示在按钮下方，但如果下方空间不足则显示在上方
+            let posY = rect.bottom + 5;
+            if (posY + dropdownHeight > viewportHeight - 10) {
+              posY = rect.top - dropdownHeight - 5;
+            }
+            
+            // 应用位置
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = `${posY}px`;
+            dropdown.style.left = `${posX}px`;
+            dropdown.style.right = 'auto';
+            dropdown.style.zIndex = '9999';
+            dropdown.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.08)';
+            dropdown.style.animation = 'dropdown-fade-in 0.2s ease-out';
           }
         });
       }
+      
+      // 阻止事件冒泡，避免立即被document点击事件关闭
+      event.stopPropagation();
     },
     
-    // 获取下拉菜单样式
-    getDropdownStyle(index) {
-      return this.dropdownPositions[index] || { right: '0px', top: '32px' };
+    // 关闭下拉菜单
+    closeDropdown() {
+      this.activeDropdown = null;
     },
     
-    // 点击外部关闭下拉菜单
-    closeDropdownOnOutsideClick(event) {
-      if (this.activeDropdown !== null && !event.target.closest('.dropdown-wrapper')) {
-        this.activeDropdown = null;
+    // 点击外部关闭菜单 - 修正版本
+    closeDropdownOnOutsideClick(e) {
+      // 如果菜单已打开
+      if (this.activeDropdown !== null) {
+        const dropdownContainer = document.querySelector('.custom-dropdown-container');
+        const dropdownButtons = document.querySelectorAll('.more-btn');
+        
+        // 检查点击是否在菜单容器或任何"更多"按钮上
+        let clickOnDropdownOrButton = false;
+        
+        if (dropdownContainer && dropdownContainer.contains(e.target)) {
+          clickOnDropdownOrButton = true;
+        }
+        
+        if (!clickOnDropdownOrButton) {
+          dropdownButtons.forEach(button => {
+            if (button.contains(e.target)) {
+              clickOnDropdownOrButton = true;
+            }
+          });
+        }
+        
+        // 如果点击在菜单外部，则关闭菜单
+        if (!clickOnDropdownOrButton) {
+          this.activeDropdown = null;
+          this.activeClusterData = null;
+        }
       }
     },
     
-    // 确保样式一致性，解决刷新页面样式变化问题
+    // 确保样式一致性，但不直接操作DOM
     ensureStyleConsistency() {
-      // 强制重新计算样式
-      setTimeout(() => {
-        const cards = document.querySelectorAll('.cluster-card');
-        cards.forEach(card => {
-          card.style.display = 'none';
-          setTimeout(() => {
-            card.style.display = '';
-          }, 0);
-        });
-      }, 100);
+      // 仅标记状态变化，不操作DOM
+      this.styleConsistencyApplied = true;
     },
     // 进入
     getInto(row) {
@@ -353,8 +459,14 @@ export default {
     },
     // 集群授权
     authCluster(obj) {
+      // 只更新状态，不触发DOM操作
       this.currentClusterForAuth = obj;
       this.authModalVisible = true;
+      
+      // 使用轻量级修复，不影响DOM结构
+      this.$nextTick(() => {
+        this.fixAccessibilityIssues();
+      });
     },
     
     handleAuthModalClose() {
@@ -450,6 +562,134 @@ export default {
         default: return '未知';
       }
     },
+
+    // 修复aria-hidden警告 - 更彻底的方案
+    fixAccessibilityIssues() {
+      this.$nextTick(() => {
+        // 尝试使用多种方法修复可访问性问题
+        setTimeout(() => {
+          try {
+            // 方法1：移除有问题的元素
+            const trapFocus = document.querySelectorAll('[aria-hidden="true"] [tabindex="0"]');
+            trapFocus.forEach(el => {
+              if (el.parentNode) {
+                el.parentNode.removeChild(el);
+              }
+            });
+            
+            // 方法2：为有aria-hidden的元素添加inert属性
+            const hiddenElements = document.querySelectorAll('[aria-hidden="true"]');
+            hiddenElements.forEach(el => {
+              // 设置inert属性，防止元素获得焦点
+              el.setAttribute('inert', '');
+              
+              // 移除所有tabindex属性
+              const focusables = el.querySelectorAll('[tabindex]');
+              focusables.forEach(focusable => {
+                focusable.removeAttribute('tabindex');
+              });
+            });
+            
+            // 方法3：修复特定的问题元素
+            const specificTrapFocus = document.querySelector('div[tabindex="0"][aria-hidden="true"][style*="width: 0px"]');
+            if (specificTrapFocus && specificTrapFocus.parentNode) {
+              specificTrapFocus.parentNode.removeChild(specificTrapFocus);
+            }
+          } catch (error) {
+            console.error('可访问性修复出错:', error);
+          }
+        }, 300);
+      });
+    },
+    // 获取下拉菜单容器，确保下拉菜单显示在正确位置
+    getPopupContainer(triggerNode) {
+      // 返回按钮的父元素，确保相对于按钮定位
+      return triggerNode.parentElement;
+    },
+    // 新方法：显示更多选项 - 完全重写
+    showMoreOptions(item, event) {
+      console.log('点击更多按钮:', item.id);
+      
+      // 如果当前按钮已激活，则关闭菜单
+      if (this.activeDropdown === item.id) {
+        this.activeDropdown = null;
+        this.activeClusterData = null;
+        return;
+      }
+      
+      // 打开新的下拉菜单
+      this.activeDropdown = item.id;
+      this.activeClusterData = item; // 存储当前操作的集群数据
+      
+      // 使用更可靠的方法设置下拉菜单位置
+      this.$nextTick(() => {
+        const buttonElement = event.currentTarget;
+        
+        if (!buttonElement) {
+          console.error('找不到按钮元素');
+          return;
+        }
+        
+        // 获取按钮位置
+        const rect = buttonElement.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // 创建DOM元素以确保它存在
+        this.$nextTick(() => {
+          // 为确保DOM已更新，添加一个短暂延时
+          setTimeout(() => {
+            const dropdownContainer = this.$refs.globalDropdown;
+            
+            if (!dropdownContainer) {
+              console.error('找不到下拉菜单容器，重试中');
+              return;
+            }
+            
+            // 计算理想位置 - 按钮右下方
+            let left = rect.right - 140; // 默认距右边界140px
+            let top = rect.bottom + 5;   // 默认在按钮下方5px
+            
+            // 确保不超出屏幕边界
+            if (left < 10) left = 10;
+            if (left + 160 > viewportWidth) left = viewportWidth - 170;
+            if (top + 100 > viewportHeight) top = rect.top - 110;
+            
+            // 设置下拉菜单容器样式
+            dropdownContainer.style.position = 'fixed';
+            dropdownContainer.style.top = top + 'px';
+            dropdownContainer.style.left = left + 'px';
+            dropdownContainer.style.zIndex = '9999';
+            dropdownContainer.style.display = 'block';
+            
+            console.log('下拉菜单位置设置完成:', {top, left});
+          }, 50);
+        });
+      });
+      
+      // 阻止事件冒泡
+      event.stopPropagation();
+    },
+  },
+  // 修复1: 先定义debounce函数，不要放在methods里
+  debounce(fn, delay) {
+    let timer = null;
+    return function() {
+      const context = this;
+      const args = arguments;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        fn.apply(context, args);
+        timer = null;
+      }, delay);
+    };
+  },
+
+  // 在页面活动时也确保样式一致性，但简化操作
+  activated() {
+    this.styleConsistencyApplied = true;
   }
 };
 </script>
@@ -1324,10 +1564,104 @@ body.colony-manage-page .ant-btn.mac-btn {
   transform: translateY(-2px) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
+
+/* 样式一致性类 */
+.consistent-style {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.mac-btn {
+  height: 40px !important; /* 使用!important确保覆盖其他样式 */
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 下拉菜单位置修复 */
+.dropdown-right {
+  position: relative;
+}
+
+/* 自定义下拉菜单样式 */
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-dropdown {
+  position: fixed !important; /* 改为固定定位，避免被父元素限制 */
+  z-index: 9999 !important; /* 确保最高层级 */
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 6px 16px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(220, 220, 220, 0.5) !important;
+  border-radius: 12px !important;
+  padding: 6px !important;
+  min-width: 140px !important;
+  overflow: visible !important;
+  animation: dropdown-fade-in 0.25s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+.dropdown-item {
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  color: #333 !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+  margin: 2px 0 !important;
+  font-weight: 400 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  color: #1890ff !important;
+  transform: translateY(-1px) !important;
+}
+
+.dropdown-item.disabled {
+  color: #ccc !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+.dropdown-item.disabled:hover {
+  background-color: transparent !important;
+  color: #ccc !important;
+  transform: none !important;
+}
+
+/* 添加下拉菜单动画 */
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 确保所有按钮宽度相似 */
+.mac-btn {
+  min-width: 80px;
+  padding: 0 16px;
+}
 </style>
 
 <style>
-/* 清除之前的CSS，使用新的样式 */
+/* 模态框样式 */
 .clean-modal .ant-modal-content,
 .clean-modal .ant-modal-body {
   padding: 0 !important;
@@ -1356,38 +1690,153 @@ body.colony-manage-page .ant-btn.mac-btn {
   -webkit-backdrop-filter: blur(10px) !important;
 }
 
-/* 保留其他CSS以防其他地方仍使用$confirm */
-.auth-cluster-modal .ant-modal-confirm-body {
-  display: block !important;
-  width: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* 彻底消除紫色区域 */
-.auth-cluster-modal .ant-modal-confirm-body > .anticon {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  position: absolute !important;
-  left: -9999px !important;
-}
-
-/* 去除所有问号图标相关的空间 */
-.auth-cluster-modal .ant-modal-confirm-btns {
-  display: none !important;
-}
-
 /* 确保内容区域占满宽度 */
-.auth-cluster-modal .ant-modal-confirm-body-wrapper {
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100% !important;
-  display: block !important;
-}
-
 .auth-cluster-modal .ant-modal-body {
   padding: 0 !important;
-}</style>
+}
+
+/* 下拉菜单样式修复 */
+.mac-dropdown-menu {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+  padding: 4px !important;
+  min-width: 140px !important;
+}
+
+.mac-dropdown-menu .ant-dropdown-menu-item {
+  border-radius: 8px !important;
+  margin: 2px 0 !important;
+  padding: 10px 12px !important;
+}
+
+/* 全局样式，修复下拉菜单位置和样式 */
+.mac-dropdown-overlay {
+  position: absolute !important; 
+  z-index: 1050 !important;
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 
+              0 6px 16px 0 rgba(0, 0, 0, 0.08),
+              0 9px 28px 8px rgba(0, 0, 0, 0.05) !important;
+  transform-origin: center top !important;
+}
+
+/* 确保所有按钮的图标可见 */
+.ant-btn.mac-btn .anticon {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* 确保按钮内容居中 */
+.ant-btn.mac-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 按钮图标右侧留白 */
+.ant-btn.mac-btn .anticon + span {
+  margin-left: 4px !important;
+}
+
+/* 防止样式被覆盖 */
+body .ant-btn.mac-btn .anticon {
+  display: inline-block !important;
+}
+
+/* 下拉菜单定位修复 */
+.ant-dropdown {
+  top: auto !important;
+}
+
+.ant-dropdown.ant-dropdown-placement-bottomRight {
+  left: auto !important;
+  right: 0 !important;
+}
+
+/* 去掉小箭头 */
+.ant-dropdown.ant-dropdown-placement-bottomRight > .ant-dropdown-arrow {
+  display: none !important;
+}
+
+/* 确保mac-dropdown-menu内的项正常显示 */
+.mac-dropdown-menu .ant-dropdown-menu-item .anticon {
+  margin-right: 8px !important;
+}
+
+/* 全局下拉菜单容器样式 */
+.custom-dropdown-container {
+  position: fixed;
+  z-index: 9999;
+  display: block;
+}
+
+/* 全局下拉菜单样式 */
+.custom-dropdown {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12),
+              0 6px 16px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(220, 220, 220, 0.5);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 140px;
+  animation: dropdown-fade-in 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.custom-dropdown .dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+  margin: 2px 0;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+}
+
+.custom-dropdown .dropdown-item:hover {
+  background-color: rgba(24, 144, 255, 0.1);
+  color: #1890ff;
+  transform: translateY(-1px);
+}
+
+/* 删除按钮特殊样式 - 增强样式优先级 */
+body .custom-dropdown .dropdown-item.danger {
+  color: #ff4d4f !important;
+}
+
+body .custom-dropdown .dropdown-item.danger:hover {
+  background-color: rgba(255, 77, 79, 0.1) !important;
+  color: #ff4d4f !important;
+  font-weight: 500 !important;
+}
+
+.custom-dropdown .dropdown-item.disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.custom-dropdown .dropdown-item.disabled:hover {
+  background-color: transparent;
+  color: #ccc;
+  transform: none;
+}
+
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
