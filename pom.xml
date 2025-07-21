@@ -74,7 +74,7 @@
         <commons-codec.version>1.15</commons-codec.version>
         <commons-compress.version>1.21</commons-compress.version>
         <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
-        <jackson-annotations.version>2.13.0</jackson-annotations.version>
+        <jackson.version>2.18.4</jackson.version>
         <ant.version>1.10.12</ant.version>
         <jsch.version>0.2.7</jsch.version>
         <commons-collections.version>3.2.2</commons-collections.version>
@@ -218,7 +218,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>${jackson-annotations.version}</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.ant</groupId>
@@ -281,6 +281,11 @@
                 <groupId>com.dtflys.forest</groupId>
                 <artifactId>forest-core</artifactId>
                 <version>1.7.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
