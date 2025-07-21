@@ -47,10 +47,7 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
         List<ClusterRoleUserEntity> list = this.list(new QueryWrapper<ClusterRoleUserEntity>()
                 .eq(Constants.DETAILS_USER_ID, userId)
                 .eq(Constants.CLUSTER_ID, clusterId));
-        if (Objects.nonNull(list) && list.size() == 1) {
-            return true;
-        }
-        return false;
+        return Objects.nonNull(list) && list.size() == 1;
     }
 
     @Override

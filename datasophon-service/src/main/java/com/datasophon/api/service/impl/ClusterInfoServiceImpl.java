@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -50,6 +49,7 @@ import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -124,6 +124,11 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         clusterInfo.setCreateBy(SecurityUtils.getAuthUser().getUsername());
         clusterInfo.setClusterState(ClusterState.NEED_CONFIG);
         this.save(clusterInfo);
+        // 修改这行，从 UserInfoEntity 对象列表中提取用户 ID
+        String managerIds = clusterInfo.getClusterManagerList().stream()
+                .map(user -> user.getId().toString())
+                .collect(Collectors.joining(","));
+        clusterUserService.saveClusterManager(clusterInfo.getId(), managerIds);
         List<AlertGroupEntity> alertGroupList = alertGroupService.list();
         for (AlertGroupEntity alertGroupEntity : alertGroupList) {
             ClusterAlertGroupMap alertGroupMap = new ClusterAlertGroupMap();
@@ -202,7 +207,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         List<ClusterInfoEntity> list = this
                 .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_CODE, clusterInfo.getClusterCode()));
         if (Objects.nonNull(list) && !list.isEmpty()) {
-            ClusterInfoEntity clusterInfoEntity = list.get(0);
+            ClusterInfoEntity clusterInfoEntity = list.getFirst();
             if (!clusterInfoEntity.getId().equals(clusterInfo.getId())) {
                 return Result.error(Status.CLUSTER_CODE_EXISTS.getMsg());
             }
@@ -217,7 +222,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public void deleteCluster(List<Integer> ids) {
-        Integer id = ids.get(0);
+        Integer id = ids.getFirst();
         ClusterInfoEntity clusterInfo = this.getById(id);
 
         if (ClusterState.STOP.equals(clusterInfo.getClusterState())) {
