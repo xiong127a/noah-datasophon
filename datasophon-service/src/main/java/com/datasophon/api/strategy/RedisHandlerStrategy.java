@@ -23,7 +23,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
         @Override
         public void getConfig(Integer clusterId, List<ServiceConfig> list) {
                 List<ServiceConfig> collect = list.stream()
-                        .filter(config -> "redisMasterPort".equals(config.getName()) || "redisSlavePort".equals(config.getName())).collect(Collectors.toList());
+                        .filter(config -> "redisMasterPort".equals(config.getName()) || "redisSlavePort".equals(config.getName())).toList();
                 Map<String, Object> portConfigValues =   collect.stream().collect(Collectors.toMap(
                         ServiceConfig::getName, // 键：配置名称
                         ServiceConfig::getValue // 值：相应的端口值
@@ -36,7 +36,8 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING;
-                HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
+                HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
+                });
 
                 List<String> masterHostList = map.get("RedisMaster");
                 List<String> workerHostList = map.get("RedisWorker");
@@ -59,7 +60,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         }
 
                         // 存在冲突则右移一位
-                        if (conflictFound && !adjustedWorker.isEmpty()) {
+                        if (conflictFound) {
                                 Collections.rotate(adjustedWorker, 1); // 右移
                                 attempts++;
                         }
@@ -85,7 +86,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         }
                         if ("redisMetricHosts".equals(serviceConfig.getName())) {
                                 List<String> masters = masterHostList.stream().map(t -> "\"redis://" + t + ":" + masterPort + "\"").collect(Collectors.toList());
-                                List<String> workers = workerHostList.stream().map(t -> "\"redis://" + t + ":" + slavePort + "\"").collect(Collectors.toList());
+                                List<String> workers = workerHostList.stream().map(t -> "\"redis://" + t + ":" + slavePort + "\"").toList();
                                 masters.addAll(workers);
                                 serviceConfig.setValue(StrUtil.join(",", masters));
                         }
@@ -127,7 +128,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         String slavePort = configMap.getOrDefault("redisSlavePort", "6379");
 
                         // 主节点信息
-                        String masterNode = masterList.get(0);
+                        String masterNode = masterList.getFirst();
                         logger.info("Redis主节点: {}:{}", masterNode, masterPort);
 
                         // 判断是否启用了密码认证

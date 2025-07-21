@@ -442,7 +442,7 @@ public class ClusterServiceInstanceServiceImpl
 
         if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             List<String> serviceRoleList = roleInstanceList.stream()
-                    .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().collect(Collectors.toList());
+                    .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().toList();
             for (String serviceRoleName : serviceRoleList) {
                 KubernetesServiceStopHandler kubernetesServiceStopHandler = new KubernetesServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();

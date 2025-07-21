@@ -147,7 +147,7 @@ public class ClusterServiceRoleInstanceServiceImpl
                 .eq(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
                 .eq(Constants.CLUSTER_ID, id));
         if (Objects.nonNull(list) && !list.isEmpty()) {
-            return list.get(0);
+            return list.getFirst();
         }
         return null;
     }
@@ -430,7 +430,7 @@ public class ClusterServiceRoleInstanceServiceImpl
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.SERVICE_ROLE_NAME, serviceRoleName));
         if (Objects.nonNull(list) && !list.isEmpty()) {
-            return list.get(0);
+            return list.getFirst();
         }
         return null;
     }

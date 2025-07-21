@@ -230,7 +230,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         zkConnectString.append(zkPath);
 
                         // 获取第一个Kafka节点作为主机名
-                        String primaryHostName = brokerList.isEmpty() ? "localhost" : brokerList.get(0);
+                        String primaryHostName = brokerList.isEmpty() ? "localhost" : brokerList.getFirst();
 
                         // 构建基本信息项列表
                         List<InfoItem> basicInfoItems = new ArrayList<>();

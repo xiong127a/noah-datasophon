@@ -48,7 +48,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -123,7 +122,7 @@ public class ParcelController implements DisposableBean {
 
         try {
             JSONObject json = JSON.parseObject(httpGet(url));
-            ParcelInfoVO parcelInfo = JSON.toJavaObject((JSONObject) json.get("parcel"), ParcelInfoVO.class);
+            ParcelInfoVO parcelInfo = json.getObject("parcel", ParcelInfoVO.class);
             if (frameCodeMapping.get(parcelInfo.getMeta()) == null) {
                 // 不支持的框架版本
                 return Result.error("Unsupported frame: " + parcelInfo.getMeta());
@@ -170,7 +169,7 @@ public class ParcelController implements DisposableBean {
                     .collect(Collectors.groupingBy(FrameInfoEntity::getFrameCode));
 
             JSONObject json = JSONObject.parseObject(httpGet(url));
-            final ParcelInfoVO parcelInfo = JSON.toJavaObject((JSONObject) json.get("parcel"), ParcelInfoVO.class);
+            final ParcelInfoVO parcelInfo = json.getObject("parcel", ParcelInfoVO.class);
             parcelInfo.setUrl(url);
             parcelInfo.setLastUpdated(json.getLong("lastUpdated"));
             if (frameCodeMapping.get(parcelInfo.getMeta()) == null) {
@@ -179,13 +178,11 @@ public class ParcelController implements DisposableBean {
             }
 
             if (parcelInfo.getComponents() != null && !parcelInfo.getComponents().isEmpty()) {
-                final List<ComponentVO> componentVOS = parcelInfo.getComponents().stream().filter(it -> {
-                    return info.getParcelName().equals(it.getName());
-                }).collect(Collectors.toList());
+                final List<ComponentVO> componentVOS = parcelInfo.getComponents().stream().filter(it -> info.getParcelName().equals(it.getName())).toList();
                 if (componentVOS.isEmpty()) {
                     throw new IllegalStateException("No component package: " + info.getParcelName());
                 }
-                final ComponentVO componentVO = componentVOS.get(0);
+                final ComponentVO componentVO = componentVOS.getFirst();
                 final String packagePath = getParcelPath(url, componentVO.getPackageName());
                 File ddhTmpDir = new File(SystemUtils.getJavaIoTmpDir(), "jdh");
                 if (!ddhTmpDir.exists()) {
@@ -287,7 +284,7 @@ public class ParcelController implements DisposableBean {
             return Result.error("Unsupported frame: " + vo.getMeta());
         }
         // 当前安装的框架
-        final FrameInfoEntity frameInfo = frameInfoEntityList.get(0);
+        final FrameInfoEntity frameInfo = frameInfoEntityList.getFirst();
 
         // 是否已经安装了组件？
         List<FrameServiceEntity> installService = frameServiceService.list(
@@ -383,12 +380,9 @@ public class ParcelController implements DisposableBean {
 
     /**
      * http get
-     * 
-     * @param url
-     * @return
-     * @throws IOException
+     *
      */
-    private String httpGet(String url) throws IOException {
+    private String httpGet(String url) {
         if (StringUtils.isBlank(url)) {
             throw new IllegalStateException("Invalid DDP Parcel Endpoint!");
         }
@@ -397,10 +391,7 @@ public class ParcelController implements DisposableBean {
 
     /**
      * parcel name
-     * 
-     * @param url
-     * @param resourceName
-     * @return
+     *
      */
     private String getParcelPath(String url, @RequestParam("resourceName") String resourceName) {
         final URI uri = URI.create(url);
@@ -409,18 +400,17 @@ public class ParcelController implements DisposableBean {
         String urlStr = uri.toString();
         String prefix = urlStr.substring(0, urlStr.lastIndexOf(urlParentPath.toString()));
 
-        URI newUrl = "/".equals(urlParentPath.toString()) ? URI.create(prefix + urlParentPath.toString() + resourceName)
-                : URI.create(prefix + urlParentPath.toString() + "/" + resourceName);
+        URI newUrl = "/".equals(urlParentPath.toString()) ? URI.create(prefix + urlParentPath + resourceName)
+                : URI.create(prefix + urlParentPath + "/" + resourceName);
         return newUrl.toString();
     }
 
     /**
      * 当 api-server 停止时，结束没有完成的任务
-     * 
-     * @throws Exception
+     *
      */
     @Override
-    public void destroy() throws Exception {
+    public void destroy() {
         for (Map.Entry<String, CompletableFuture> entry : ASYNC_TASK_CACHE.entrySet()) {
             final CompletableFuture future = entry.getValue();
             try {

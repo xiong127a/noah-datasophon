@@ -69,7 +69,7 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
                 .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
                 .list();
         // 返回第一条数据，或者根据业务需求调整
-        return webuisList.isEmpty() ? null : webuisList.get(0);
+        return webuisList.isEmpty() ? null : webuisList.getFirst();
     }
 
     @Override

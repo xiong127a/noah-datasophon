@@ -51,8 +51,8 @@ public class DorisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         }
 
                         // 获取主节点和从节点信息
-                        String dorisMaster = feNodes.isEmpty() ? "" : feNodes.get(0);
-                        String dorisSlave = feObserverNodes.isEmpty() ? "" : feObserverNodes.get(0);
+                        String dorisMaster = feNodes.isEmpty() ? "" : feNodes.getFirst();
+                        String dorisSlave = feObserverNodes.isEmpty() ? "" : feObserverNodes.getFirst();
 
                         // 获取端口配置
                         String dorisFEPort = configMap.getOrDefault("doris.fe.port", "9030");

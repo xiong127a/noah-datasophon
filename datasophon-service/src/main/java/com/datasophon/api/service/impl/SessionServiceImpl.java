@@ -85,15 +85,15 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createSession(UserInfoEntity user, String ip) {
-        SessionEntity session = null;
+        SessionEntity session;
 
         // logined
         List<SessionEntity> sessionList = sessionMapper.queryByUserId(user.getId());
 
         Date now = new Date();
 
-        /**
-         * if you have logged in and are still valid, return directly
+        /*
+          if you have logged in and are still valid, return directly
          */
         if (CollectionUtils.isNotEmpty(sessionList)) {
             // is session list greater 1 ， delete other ，get one
@@ -102,10 +102,10 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
                     sessionMapper.deleteById(sessionList.get(i).getId());
                 }
             }
-            session = sessionList.get(0);
+            session = sessionList.getFirst();
             if (now.getTime() - session.getLastLoginTime().getTime() <= Constants.SESSION_TIME_OUT * 1000) {
-                /**
-                 * updateProcessInstance the latest login time
+                /*
+                  updateProcessInstance the latest login time
                  */
                 session.setLastLoginTime(now);
                 sessionMapper.updateById(session);
@@ -113,8 +113,8 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
                 return session.getId();
 
             } else {
-                /**
-                 * session expired, then delete this session first
+                /*
+                  session expired, then delete this session first
                  */
                 sessionMapper.deleteById(session.getId());
             }
@@ -143,8 +143,8 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
     @Override
     public void signOut(String ip, UserInfoEntity loginUser) {
         try {
-            /**
-             * query session by user id and ip
+            /*
+              query session by user id and ip
              */
             SessionEntity session = sessionMapper.queryByUserIdAndIp(loginUser.getId(), ip);
 

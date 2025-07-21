@@ -33,8 +33,7 @@ public class YarnQueueActor extends AbstractActor {
 
     private void handleTenantFrameResource(TenantFrameResource message) {
         try {
-            if (message instanceof TenantYarnResource) {
-                TenantYarnResource tenantYarnResource = (TenantYarnResource) message;
+            if (message instanceof TenantYarnResource tenantYarnResource) {
                 ClusterYarnSchedulerService clusterYarnSchedulerService = SpringUtil
                         .getBean(ClusterYarnSchedulerService.class);
                 ClusterYarnScheduler scheduler = clusterYarnSchedulerService
@@ -100,7 +99,7 @@ public class YarnQueueActor extends AbstractActor {
                         .eq(Constants.CLUSTER_ID, clusterId)
                         .eq("parent", yarnResource.getParentQueueName())
                         .eq("queue_name", yarnResource.getQueueName()))
-                .get(0);
+                .getFirst();
         queue.setCapacity(yarnResource.getCapacityPercent());
         queue.setNodeLabel(yarnResource.getNodeLabel());
 
@@ -120,7 +119,7 @@ public class YarnQueueActor extends AbstractActor {
                         .eq(Constants.CLUSTER_ID, clusterId)
                         .eq("parent", yarnResource.getParentQueueName())
                         .eq("queue_name", yarnResource.getQueueName()))
-                .get(0);
+                .getFirst();
         clusterQueueCapacityService.removeById(queue.getId());
         clusterQueueCapacityService.refreshToYarn(clusterId);
         logger.info("delete yarn queue {} success , please restart yarn", yarnResource.getQueueName());

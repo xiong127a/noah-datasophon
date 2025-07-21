@@ -964,7 +964,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             }
                             return ips.stream();
                         })
-                        .collect(Collectors.toList()));
+                        .toList());
             } catch (Exception e) {
                 log.warn("获取节点IP失败: {}", e.getMessage());
             }
@@ -2250,11 +2250,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         !deployment.getSpec().getTemplate().getSpec().getContainers().isEmpty()) {
 
                     // 获取第一个容器的镜像
-                    info.setImage(deployment.getSpec().getTemplate().getSpec().getContainers().get(0).getImage());
+                    info.setImage(deployment.getSpec().getTemplate().getSpec().getContainers().getFirst().getImage());
 
                     // 提取容器的资源请求和限制
                     Container container = deployment.getSpec().getTemplate().getSpec()
-                            .getContainers().get(0);
+                            .getContainers().getFirst();
                     if (container.getResources() != null) {
                         DeploymentInfo.ResourceQuota resourceQuota = new DeploymentInfo.ResourceQuota();
 

@@ -20,7 +20,6 @@ package com.datasophon.api.strategy;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ProcInfo;
-import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -43,7 +42,7 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
         //Prevent FE Observer nodes from starting and FE Master nodes from changing
 //        if (!globalVariables.containsKey("${feMaster}") || ObjUtil.isNull(globalVariables.get("${feMaster}"))) {
         if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.getFirst());
         }
 //        }
     }
@@ -75,7 +74,7 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
             try {
                 List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
 

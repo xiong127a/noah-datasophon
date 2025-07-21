@@ -77,7 +77,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     @Override
     public Result getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
+        int offset = (page - 1) * pageSize;
         List<ClusterAlertHistory> list = this.list(new QueryWrapper<ClusterAlertHistory>()
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.IS_ENABLED, 1)
@@ -91,7 +91,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     @Override
     public void removeAlertByRoleInstanceIds(List<Integer> ids) {
-        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(ids.get(0));
+        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(ids.getFirst());
         ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
         this.remove(new QueryWrapper<ClusterAlertHistory>()
                 .eq(Constants.IS_ENABLED, 1)

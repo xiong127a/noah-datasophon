@@ -72,10 +72,10 @@ public class InstallServiceHandler {
             String packagePath = destDir + packageName;
 
             // 判断是否需要下载包文件
-            Boolean needDownLoad = !GetMasterHost().contains(CacheUtils.get(Constants.HOSTNAME))
+            boolean needDownLoad = !GetMasterHost().contains(CacheUtils.get(Constants.HOSTNAME))
                     && isNeedDownloadPkg(packagePath, command.getPackageMd5());
 
-            if (Boolean.TRUE.equals(needDownLoad)) {
+            if (needDownLoad) {
                 // 下载包文件
                 downloadPkg(packageName, packagePath);
             }
@@ -92,7 +92,7 @@ public class InstallServiceHandler {
 
 
     private Boolean isNeedDownloadPkg(String packagePath, String packageMd5) {
-        Boolean needDownLoad = true;
+        boolean needDownLoad = true;
 
         // 输出远程包的md5
         logger.info("Remote package md5 is {}", packageMd5);
@@ -121,7 +121,7 @@ public class InstallServiceHandler {
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
 
         List<String> masterHosts = GetMasterHost();
-        String downloadUrl = "http://" + masterHosts.get(0) + ":" + masterPort
+        String downloadUrl = "http://" + masterHosts.getFirst() + ":" + masterPort
                 + "/ddh/service/install/downloadPackage?packageName=" + packageName;
 
         logger.info("default download url is {}", downloadUrl);

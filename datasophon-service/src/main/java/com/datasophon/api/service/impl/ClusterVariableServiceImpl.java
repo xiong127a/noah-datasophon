@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterVariableService;
@@ -26,7 +27,6 @@ import com.datasophon.dao.mapper.ClusterVariableMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service("clusterVariableService")
 public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariable>
@@ -37,8 +37,8 @@ public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMappe
     public ClusterVariable getVariableByVariableName(String variableName, Integer clusterId) {
         List<ClusterVariable> list = this.list(new QueryWrapper<ClusterVariable>()
                 .eq(Constants.VARIABLE_NAME, variableName).eq(Constants.CLUSTER_ID, clusterId));
-        if (Objects.nonNull(list) && list.size() >= 1) {
-            return list.get(0);
+        if (CollUtil.isNotEmpty(list)) {
+            return list.getFirst();
         }
         return null;
     }

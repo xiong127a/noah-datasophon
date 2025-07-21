@@ -45,9 +45,9 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         CacheUtils.put("enableHiveServer2HA", false);
         if (CollUtil.isNotEmpty(hosts)) {
             CacheUtils.put("enableHiveServer2HA", true);
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.getFirst());
             ProcessUtils.generateClusterVariable(globalVariables, clusterId,
-                    "${masterHiveServer2Principal}", "hive/" + hosts.get(0) + "@HADOOP.COM");
+                    "${masterHiveServer2Principal}", "hive/" + hosts.getFirst() + "@HADOOP.COM");
         }
     }
 
@@ -168,7 +168,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             // 如果配置中找不到主机名，使用HiveServer2实例的主机名
             if (StrUtil.isBlank(hiveServer2Host) || "${hostname}".equals(hiveServer2Host)) {
                 if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
-                    hiveServer2Host = hiveServer2Hosts.get(0);
+                    hiveServer2Host = hiveServer2Hosts.getFirst();
                 } else {
                     hiveServer2Host = ProcessUtils.getServiceRoleHostname(clusterId, "HIVE", "HiveServer2");
                 }
@@ -197,7 +197,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
 
             // 根据高可用模式生成JDBC URL
             String jdbcUrl;
-            String haDescription = "单实例模式";
+            String haDescription;
 
             if (enableHiveServer2HA) {
                 switch (haMode) {
@@ -307,7 +307,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             // 添加主节点信息（明确标识为主节点）
             if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
                 basicInfoItems
-                        .add(new InfoItem("masterNode", "主节点服务器", hiveServer2Hosts.get(0) + ":" + hiveServer2Port));
+                        .add(new InfoItem("masterNode", "主节点服务器", hiveServer2Hosts.getFirst() + ":" + hiveServer2Port));
             }
 
             // 添加从节点信息

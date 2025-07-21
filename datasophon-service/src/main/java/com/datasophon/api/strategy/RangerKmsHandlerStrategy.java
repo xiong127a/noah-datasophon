@@ -33,7 +33,7 @@ public class RangerKmsHandlerStrategy extends ServiceHandlerAbstract implements 
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
-            String rangerKmsHost = hosts.get(0);
+            String rangerKmsHost = hosts.getFirst();
             logger.info("rangerKmsHost is {}", rangerKmsHost);
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rangerKmsHost}", rangerKmsHost);
         }

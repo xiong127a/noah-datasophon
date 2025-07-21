@@ -22,7 +22,7 @@ public class NebulaGraphHandlerStrategy extends ServiceHandlerAbstract implement
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nebulaGraphHost}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nebulaGraphHost}", hosts.getFirst());
         }
     }
 
@@ -31,7 +31,8 @@ public class NebulaGraphHandlerStrategy extends ServiceHandlerAbstract implement
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
+        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
+        });
         if (Objects.nonNull(hostMap)) {
             List<String> hostList = hostMap.get("Meta");
             for (ServiceConfig serviceConfig : list) {

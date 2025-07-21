@@ -311,22 +311,6 @@ public class HostCheckQueueManager {
         }
     }
 
-    /**
-     * 获取队列管理器状态
-     */
-    public Map<String, Object> getManagerStatus() {
-        Map<String, Object> status = new ConcurrentHashMap<>();
-        status.put("queueProcessingEnabled", isRunning.get());
-        status.put("scheduledTasksEnabled", scheduledTasksEnabled.get());
-        status.put("queueProcessorAlive", queueProcessorThread != null && queueProcessorThread.isAlive());
-        status.put("queueHealthMonitorActive", queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled());
-        status.put("taskTimeoutMonitorActive", taskTimeoutMonitorTask != null && !taskTimeoutMonitorTask.isCancelled());
-
-        // 添加其他状态信息
-        status.putAll(getQueueStatus());
-
-        return status;
-    }
 
     /**
      * 添加主机检查任务
@@ -345,41 +329,6 @@ public class HostCheckQueueManager {
         checkQueue.offer(task);
         taskKeysInQueue.add(taskKey);
         logger.info("已添加检查任务到队列: 主机={}, 任务键={}", hostInfo.getIp(), taskKey);
-    }
-
-    /**
-     * 添加部分检查项的主机检查任务
-     * 仅对指定的检查项进行检查，而不是主机上的所有检查项
-     */
-    public void addPartialCheckTask(Integer clusterId, HostInfo hostInfo, List<CheckItem> itemsToCheck,
-            HostCheckServiceImpl hostCheckService) {
-        ensureSystemRunning();
-        String taskKey = getTaskKey(clusterId, hostInfo.getIp());
-
-        // 检查任务是否已经在队列或正在运行
-        if (taskKeysInQueue.contains(taskKey) || runningTasks.containsKey(taskKey)) {
-            logger.info("任务已经在队列或正在运行中，将取消旧任务并添加新任务: {}", taskKey);
-            // 取消任何正在运行的任务
-            cancelTask(clusterId, hostInfo.getIp());
-        }
-
-        // 创建一个修改后的HostInfo对象，只包含需要检查的项目
-        HostInfo partialHostInfo = new HostInfo();
-        partialHostInfo.setIp(hostInfo.getIp());
-        partialHostInfo.setSshPort(hostInfo.getSshPort());
-        partialHostInfo.setSshUser(hostInfo.getSshUser());
-        partialHostInfo.setSshPassword(hostInfo.getSshPassword());
-        // 复制其他必要的属性，但不包括不存在的sshKeyPath
-        partialHostInfo.setClusterId(hostInfo.getClusterId());
-        partialHostInfo.setCheckItems(new ArrayList<>(itemsToCheck));
-
-        // 使用自定义优先级添加任务，给重试任务更高的优先级
-        CheckTask task = new CheckTask(clusterId, partialHostInfo, hostCheckService, 5); // 优先级5比默认的10高
-        checkQueue.offer(task);
-        taskKeysInQueue.add(taskKey);
-
-        logger.info("已添加部分检查任务到队列: 主机={}, 检查项数量={}, 任务键={}",
-                hostInfo.getIp(), itemsToCheck.size(), taskKey);
     }
 
     /**
@@ -451,59 +400,6 @@ public class HostCheckQueueManager {
         startScheduledTasks();
 
         logger.info("系统组件状态检查完成，所有组件已确保运行");
-    }
-
-    /**
-     * 添加带优先级的检查任务
-     */
-    public void addCheckTaskWithPriority(Integer clusterId, HostInfo hostInfo,
-            HostCheckServiceImpl hostCheckService, int priority) {
-        String taskKey = getTaskKey(clusterId, hostInfo.getIp());
-        try {
-            // 如果任务已在运行，则不添加
-            if (runningTasks.containsKey(taskKey)) {
-                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getIp());
-                return;
-            }
-
-            // 使用Set检查队列中是否已存在该任务
-            if (taskKeysInQueue.contains(taskKey)) {
-                logger.info("主机 {} 的检查任务已在队列中等待执行，跳过本次添加", hostInfo.getIp());
-                return;
-            }
-
-            // 检查队列处理线程状态和其他初始化检查
-            if (queueProcessorThread == null || !queueProcessorThread.isAlive()) {
-                logger.warn("队列处理线程不存在或已停止，尝试重新初始化");
-                startQueueProcessor();
-            }
-
-            // 确保isRunning标志为true
-            if (!isRunning.get()) {
-                logger.warn("队列管理器未运行，尝试重启");
-                resumeQueueProcessing();
-            }
-
-            // 检查线程池状态
-            if (itemCheckExecutorService.isShutdown() || itemCheckExecutorService.isTerminated()) {
-                logger.error("执行线程池已关闭，任务无法执行");
-                return;
-            }
-
-            // 创建带优先级的任务
-            CheckTask newTask = new CheckTask(clusterId, hostInfo, hostCheckService, priority);
-            boolean added = checkQueue.offer(newTask, 10, TimeUnit.SECONDS);
-
-            if (added) {
-                taskKeysInQueue.add(taskKey);
-                logger.info("成功添加主机 {} 的检查任务到队列，优先级: {}, 新队列大小: {}",
-                        hostInfo.getIp(), priority, checkQueue.size());
-            } else {
-                logger.error("添加主机 {} 的检查任务到队列失败，队列可能已满", hostInfo.getIp());
-            }
-        } catch (Exception e) {
-            logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getIp(), e.getMessage(), e);
-        }
     }
 
     public void cancelItemTask(Integer clusterId, String hostname, Integer itemId) {
@@ -598,7 +494,7 @@ public class HostCheckQueueManager {
                             List<String> sortedIps = HostUtils.sortIpAddresses(ips);
 
                             // 如果第一个IP是task1的IP，则task1排在前面，否则task2排在前面
-                            if (sortedIps.get(0).equals(task1.getHostInfo().getIp())) {
+                            if (sortedIps.getFirst().equals(task1.getHostInfo().getIp())) {
                                 return -1;
                             } else {
                                 return 1;
@@ -611,7 +507,7 @@ public class HostCheckQueueManager {
                         }
 
                         logger.info("已完成队列任务排序，按IP排序后第一个任务: {}",
-                                taskList.isEmpty() ? "无" : taskList.get(0).getHostInfo().getIp());
+                                taskList.isEmpty() ? "无" : taskList.getFirst().getHostInfo().getIp());
                     }
                 }
 
@@ -1069,8 +965,7 @@ public class HostCheckQueueManager {
         long fixCompletedTasks = 0;
 
         // 获取修复线程池状态
-        if (fixExecutorService != null && fixExecutorService instanceof ThreadPoolExecutor) {
-            ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
+        if (fixExecutorService != null && fixExecutorService instanceof ThreadPoolExecutor fixExecutor) {
             fixActiveCount = fixExecutor.getActiveCount();
             fixQueueSize = fixExecutor.getQueue().size();
             fixPoolSize = fixExecutor.getPoolSize();
@@ -1251,8 +1146,7 @@ public class HostCheckQueueManager {
                 taskInfo.setDuration(System.currentTimeMillis() - startTime);
                 taskInfo.setFixTask(false);
 
-                if (future instanceof CompletableFuture) {
-                    CompletableFuture<?> cf = (CompletableFuture<?>) future;
+                if (future instanceof CompletableFuture<?> cf) {
                     taskInfo.setExecutorName("checkExecutor");
                     taskInfo.setThreadName(Thread.currentThread().getName());
                 }

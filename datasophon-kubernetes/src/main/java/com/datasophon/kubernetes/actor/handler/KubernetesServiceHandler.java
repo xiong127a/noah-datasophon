@@ -1,6 +1,5 @@
 package com.datasophon.kubernetes.actor.handler;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -148,7 +147,7 @@ public class KubernetesServiceHandler {
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.KubernetesYamlFilePath(serviceRoleFullName);
         if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
-            String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl apply -f " + yamlFile);
+            String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().getFirst(), "kubectl apply -f " + yamlFile);
             execResult.setExecResult(!s.equals(Constants.FAILED));
             logger.info("start operator: {}", s);
             return execResult;
@@ -242,43 +241,6 @@ public class KubernetesServiceHandler {
         );
 
         return servicePorts;
-    }
-
-    /**
-     * 获取服务配置项列表
-     *
-     * @param configFileMap 配置文件映射
-     * @return 配置项列表，如果未找到则返回null
-     */
-    private List<ServiceConfig> getSvcConfigs(Map<Generators, List<ServiceConfig>> configFileMap) {
-        // 防御性校验
-        if (configFileMap == null || configFileMap.isEmpty()) {
-            logger.warn("Empty configFileMap received");
-            return null;
-        }
-
-        // 查找服务配置生成器
-        Generators svcGenerator = null;
-        for (Generators generator : configFileMap.keySet()) {
-            if (generator != null && KUBERNETES_CONFIG_SERVICES.equals(generator.getFilename())) {
-                svcGenerator = generator;
-                break;
-            }
-        }
-
-        if (svcGenerator == null) {
-            logger.warn("No {} configuration generator found", KUBERNETES_CONFIG_SERVICES);
-            return null;
-        }
-
-        // 获取配置项列表
-        List<ServiceConfig> svcConfigs = configFileMap.get(svcGenerator);
-        if (CollUtil.isEmpty(svcConfigs)) {
-            logger.warn("No configurations found under {}", KUBERNETES_CONFIG_SERVICES);
-            return null;
-        }
-
-        return svcConfigs;
     }
 
     /**
@@ -720,7 +682,7 @@ public class KubernetesServiceHandler {
                 saveServiceYaml(service, "loadbalancer");
 
                 // 在集群上创建服务
-                service = executeServiceCreationWithReturnValue(namespace, client, service);
+                executeServiceCreationWithReturnValue(namespace, client, service);
 
                 // 等待LoadBalancer分配外部IP
                 String externalIP = waitForLoadBalancerIP(namespace, client, serviceName);
@@ -780,7 +742,7 @@ public class KubernetesServiceHandler {
                 List<LoadBalancerIngress> ingresses = service.getStatus().getLoadBalancer().getIngress();
 
                 if (ingresses != null && !ingresses.isEmpty()) {
-                    LoadBalancerIngress ingress = ingresses.get(0);
+                    LoadBalancerIngress ingress = ingresses.getFirst();
 
                     // 优先使用IP地址，如果没有则使用主机名
                     if (StrUtil.isNotBlank(ingress.getIp())) {
@@ -1009,8 +971,8 @@ public class KubernetesServiceHandler {
         logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(namespace).create();
-        String resourceName = metadata.get(0).getMetadata().getName();
-        String resourceKind = metadata.get(0).getKind();
+        String resourceName = metadata.getFirst().getMetadata().getName();
+        String resourceKind = metadata.getFirst().getKind();
         logger.info("在kubernetes上启动资源: {} ,使用本地资源文件: {}", resourceName,
                 CommonUtil.KubernetesYamlFilePath(serviceRoleFullName));
 
@@ -1058,7 +1020,7 @@ public class KubernetesServiceHandler {
         } else {
             logger.info("在Kubernetes上停止deployment ,使用本地资源文件: {}", yamlFile);
             if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
-                String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().get(0),
+                String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().getFirst(),
                         "kubectl delete -f " + yamlFile);
                 logger.info("stop operator: {}", s);
                 execResult.setExecResult(true);

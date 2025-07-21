@@ -37,7 +37,7 @@ public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE
                 + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey,
-                new TypeReference<HashMap<String, List<String>>>() {
+                new TypeReference<>() {
                 });
 
         if (Objects.nonNull(hostMap)) {
@@ -86,7 +86,7 @@ public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements
             String databaseName = configMap.getOrDefault("ckDatabase", "default");
 
             // 获取第一个节点作为主要连接节点
-            String primaryNode = clickhouseNodes.get(0);
+            String primaryNode = clickhouseNodes.getFirst();
 
             // 构建基本信息项列表 - 使用InfoItem替代Map
             List<InfoItem> basicInfoItems = new ArrayList<>();

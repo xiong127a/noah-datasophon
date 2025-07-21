@@ -19,33 +19,13 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.load.ServiceInfoMap;
-import com.datasophon.api.load.ServiceRoleMap;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.Constants;
-import com.datasophon.common.command.ExecuteCmdCommand;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.AlertLevel;
 
 import lombok.extern.slf4j.Slf4j;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 
 @Slf4j
 public class Krb5KdcHandlerStrategy implements ServiceRoleStrategy {
@@ -54,7 +34,7 @@ public class Krb5KdcHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (CollUtil.isNotEmpty(hosts)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kdcHost}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kdcHost}", hosts.getFirst());
         }
     }
 

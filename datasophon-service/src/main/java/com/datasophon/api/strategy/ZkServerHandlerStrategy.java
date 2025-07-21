@@ -137,8 +137,8 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                 // CacheOperateUtils.get(hostMapKey);
                 HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
                                 hostMapKey,
-                                new TypeReference<HashMap<String, List<String>>>() {
-                                });
+                        new TypeReference<>() {
+                        });
                 if (Objects.nonNull(hostMap)) {
                         List<String> zkServers = hostMap.get("ZkServer");
 
@@ -208,7 +208,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                         String clientPort = configMap.getOrDefault("clientPort", "2181");
 
                         // 获取第一个ZK服务器作为主主机
-                        String masterNode = zkServerList.get(0);
+                        String masterNode = zkServerList.getFirst();
                         logger.info("ZooKeeper主节点: {}:{}", masterNode, clientPort);
 
                         // 判断是否启用了Kerberos认证
@@ -260,7 +260,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                         List<InfoItem> connectInfoItems = new ArrayList<>();
 
                         // CLI命令
-                        String cliCommand = zkServerList.get(0) + ":" + clientPort + " 2>/dev/null";
+                        String cliCommand = zkServerList.getFirst() + ":" + clientPort + " 2>/dev/null";
                         connectInfoItems.add(new InfoItem("connectString", "ZooKeeper连接字符串", zkConnectString));
 
                         // 构建重要键列表

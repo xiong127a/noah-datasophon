@@ -422,7 +422,7 @@ public class KubernetesFreeMakerUtils {
                             PodList podList = client.pods().inNamespace(namespace)
                                     .withLabel("job-name", jobName).list();
                             if (podList != null && !podList.getItems().isEmpty()) {
-                                String podName = podList.getItems().get(0).getMetadata().getName();
+                                String podName = podList.getItems().getFirst().getMetadata().getName();
                                 String logs = client.pods().inNamespace(namespace)
                                         .withName(podName).getLog();
                                 log.error("Job Pod {} 日志: {}", podName, logs);

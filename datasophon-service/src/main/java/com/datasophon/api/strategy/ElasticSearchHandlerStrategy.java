@@ -55,7 +55,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${seedHosts}", seedHosts);
         if (CollUtil.isNotEmpty(hosts)) {
                         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${esSingleHost}",
-                                        hosts.get(0));
+                                        hosts.getFirst());
         }
 
     }
@@ -105,7 +105,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
                         String securityPassword = configMap.getOrDefault("es_password", "");
 
                         // 获取第一个节点作为主要连接节点
-                        String primaryNode = esNodes.get(0);
+                        String primaryNode = esNodes.getFirst();
                         log.info("ElasticSearch主节点: {}:{}", primaryNode, httpPort);
 
                         // 构建节点列表（用于连接字符串）

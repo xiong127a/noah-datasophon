@@ -43,7 +43,7 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${srFeMaster}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${srFeMaster}", hosts.getFirst());
         }
     }
 
@@ -78,7 +78,7 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
                     frontend.setHostName(hostMap.get(frontend.getHostName()));
                 }
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }

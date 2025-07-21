@@ -161,7 +161,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                                         .split(":")[1];
 
                         // 主节点信息
-                        String masterNode = rmList.isEmpty() ? "localhost" : rmList.get(0);
+                        String masterNode = rmList.isEmpty() ? "localhost" : rmList.getFirst();
 
                         // 构建连接字符串
                         String rmAddress = masterNode + ":" + submissionPort;

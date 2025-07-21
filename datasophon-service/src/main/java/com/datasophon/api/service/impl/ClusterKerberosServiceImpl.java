@@ -24,21 +24,19 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterKerberosService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -55,12 +53,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterKerberosServiceImpl.class);
 
-    private static final String SSHUSER = "SSHUSER";
-
     private static final String KEYTAB_PATH = "/etc/security/keytab";
-
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
     public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
@@ -142,7 +135,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
-        String hostname =GetMasterHost().get(0);
+        String hostname =GetMasterHost().getFirst();
         String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             runCmd(namespace,

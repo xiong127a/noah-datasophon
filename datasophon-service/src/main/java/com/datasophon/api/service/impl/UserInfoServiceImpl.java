@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
@@ -33,7 +34,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 @Service("userInfoService")
 public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEntity> implements UserInfoService {
@@ -63,7 +63,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         // 用户名判重
         List<UserInfoEntity> list =
                 this.list(new QueryWrapper<UserInfoEntity>().eq(Constants.USERNAME, userInfo.getUsername()));
-        if (Objects.nonNull(list) && list.size() >= 1) {
+        if (CollUtil.isNotEmpty(list)) {
             return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
         }
         userInfo.setCreateTime(new Date());
@@ -77,8 +77,8 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         // 用户名判重
         List<UserInfoEntity> list =
                 this.list(new QueryWrapper<UserInfoEntity>().eq(Constants.USERNAME, userInfo.getUsername()));
-        if (Objects.nonNull(list) && list.size() >= 1) {
-            UserInfoEntity userInfoEntity = list.get(0);
+        if (CollUtil.isNotEmpty(list)) {
+            UserInfoEntity userInfoEntity = list.getFirst();
             if (!userInfoEntity.getId().equals(userInfo.getId())) {
                 return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
             }
@@ -91,10 +91,6 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     }
 
     /**
-     * @param userName
-     * @param password
-     * @param email
-     * @param phone
      * @return if check failed return the field, otherwise return null
      */
     private String checkUserParams(String userName, String password, String email, String phone) {

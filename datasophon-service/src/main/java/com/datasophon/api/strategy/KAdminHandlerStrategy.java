@@ -16,7 +16,7 @@ public class KAdminHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (CollUtil.isNotEmpty(hosts)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kadminHost}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kadminHost}", hosts.getFirst());
         }
     }
 

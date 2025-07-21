@@ -262,7 +262,7 @@ public class DatabaseMigration {
             .WHERE("version = '" + migration.getVersion() + "'");
     List<Migration> migrations = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper<>(Migration.class));
     SQL sql = new SQL();
-    if (!CollectionUtils.isEmpty(migrations) && !migrations.get(0).isSuccess()) {
+    if (!CollectionUtils.isEmpty(migrations) && !migrations.getFirst().isSuccess()) {
       sql.UPDATE(schema + "." + MIGRATION_TABLE_NAME)
               .SET("success = " + String.format("'%s'", (migration.isSuccess() ? "1" : "0"))
                       , "execute_date = " + String.format("'%s'", DateFormatUtils.format(new Date(), DEFAULT_DATE_FORMAT)))
@@ -297,7 +297,7 @@ public class DatabaseMigration {
   }
 
   private void printCurrentVersion() {
-    String currentVersion = null, lastVersion = null;
+    String currentVersion = null, lastVersion;
     TreeSet<Migration> migrations = queryMigrationHistory();
     if (!CollectionUtils.isEmpty(migrations)) {
       Migration last = migrations.last();

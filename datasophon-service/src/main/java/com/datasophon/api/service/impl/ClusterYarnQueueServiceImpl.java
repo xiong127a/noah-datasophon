@@ -173,7 +173,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
                         .eq(Constants.QUEUE_NAME, queueName)
                         .eq(Constants.CLUSTER_ID, clusterId));
         if (CollUtil.isNotEmpty(list)) {
-            return list.get(0);
+            return list.getFirst();
         }
 
         return null;

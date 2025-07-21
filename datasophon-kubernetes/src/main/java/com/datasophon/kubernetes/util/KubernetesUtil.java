@@ -52,7 +52,7 @@ public class KubernetesUtil {
             List<String> commands) {
         List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", serviceRoleFullName).list().getItems();
         ExecResult execResult = new ExecResult();
-        List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+        List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).toList();
 
         if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
             log.debug("host {} pods {} is null", hostname, serviceRoleFullName);
@@ -194,7 +194,7 @@ public class KubernetesUtil {
 
         // 使用 Watch 机制监控 Job 的状态变化，判断 Job 是否成功或失败，并相应地记录日志。
         AtomicBoolean isJobEndSuccess = new AtomicBoolean(false);
-        Watcher<Job> watcher = new Watcher<Job>() {
+        Watcher<Job> watcher = new Watcher<>() {
             @Override
             public void eventReceived(Action action, Job job) {
 
@@ -279,7 +279,7 @@ public class KubernetesUtil {
                     .list().getItems();
 
             if (!pods.isEmpty()) {
-                Pod pod = pods.get(0);
+                Pod pod = pods.getFirst();
                 podName = pod.getMetadata().getName();
                 // 检查pod是否正在创建
                 String phase = pod.getStatus().getPhase();
@@ -511,34 +511,6 @@ public class KubernetesUtil {
             execResult.setExecResult(false);
             execResult.setExecOut(errorMsg + ": " + e.getMessage());
             return execResult;
-        } finally {
-            // long duration = System.currentTimeMillis() - startTime;
-            // log.debug("getContainerLog executed in {} ms", duration);
-        }
-    }
-
-    /**
-     * 获取指定Pod所在的节点hostname
-     *
-     * @param namespace Kubernetes命名空间
-     * @param client    Kubernetes客户端
-     * @param podName   Pod名称
-     * @return Pod所在节点的hostname，如果Pod不存在则返回null
-     */
-    public static String getPodNodeName(String namespace, KubernetesClient client, String podName) {
-        try {
-            Pod pod = client.pods().inNamespace(namespace).withName(podName).get();
-            if (pod != null && pod.getSpec() != null && pod.getSpec().getNodeName() != null) {
-                String nodeName = pod.getSpec().getNodeName();
-                log.info("Pod [{}] 运行在节点 [{}] 上", podName, nodeName);
-                return nodeName;
-            } else {
-                log.warn("Pod [{}] 不存在或没有分配节点", podName);
-                return null;
-            }
-        } catch (Exception e) {
-            log.error("获取Pod [{}] 所在节点失败: {}", podName, e.getMessage(), e);
-            return null;
         }
     }
 

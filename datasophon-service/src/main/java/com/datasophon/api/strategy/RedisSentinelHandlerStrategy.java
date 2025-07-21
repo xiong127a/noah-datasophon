@@ -39,7 +39,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
         ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey,
-                new TypeReference<HashMap<String, List<String>>>() {
+                new TypeReference<>() {
                 });
 
         // 获取各角色的主机列表
@@ -54,7 +54,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
                     .filter(config -> "redisSentinelMasterPort".equals(config.getName())
                             || "redisSentinelSlavePort".equals(config.getName())
                             || "redisSentinelPort".equals(config.getName()))
-                    .collect(Collectors.toList());
+                    .toList();
 
             Map<String, Object> portConfigValues = portConfigs.stream().collect(Collectors.toMap(
                     ServiceConfig::getName,
@@ -103,9 +103,9 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
             List<String> masterNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinelMaster");
             List<String> slaveNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinelSlave");
 
-            String primaryNode = masterNodes.isEmpty() ? (sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.get(0))
-                    : masterNodes.get(0);
-            String sentinelHost = sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.get(0);
+            String primaryNode = masterNodes.isEmpty() ? (sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.getFirst())
+                    : masterNodes.getFirst();
+            String sentinelHost = sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.getFirst();
 
             // 获取端口和配置信息
             String sentinelPort = configMap.getOrDefault("redisSentinelPort", "26379");
@@ -146,7 +146,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
 
             // 如果有主节点，添加主节点信息
             if (!masterNodes.isEmpty()) {
-                basicInfoItems.add(new InfoItem("masterHost", "主节点主机", masterNodes.get(0)));
+                basicInfoItems.add(new InfoItem("masterHost", "主节点主机", masterNodes.getFirst()));
                 basicInfoItems.add(new InfoItem("masterPort", "主节点端口", masterPort));
             }
 
@@ -163,7 +163,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
                     String.format("redis://%s:%s", sentinelHost, sentinelPort)));
             if (!masterNodes.isEmpty()) {
                 connectInfoItems.add(new InfoItem("masterUrl", "主节点连接地址",
-                        String.format("redis://%s:%s", masterNodes.get(0), masterPort)));
+                        String.format("redis://%s:%s", masterNodes.getFirst(), masterPort)));
             }
 
             // 构建连接信息对象

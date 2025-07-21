@@ -55,7 +55,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
-            String rangerAdminUrl = "http://" + hosts.get(0) + ":6080";
+            String rangerAdminUrl = "http://" + hosts.getFirst() + ":6080";
             logger.info("rangerAdminUrl is {}", rangerAdminUrl);
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rangerAdminUrl}", rangerAdminUrl);
         }
@@ -70,7 +70,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         // enable ranger plugin
         for (ServiceConfig config : list) {
-            if ("enableHDFSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+            if ("enableHDFSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHdfsPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHDFSPlugin}", "true");
                 enableRangerPlugin(clusterId, "HDFS", "NameNode");
@@ -80,7 +80,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hdfsRangerCommand, ActorRef.noSender());
             }
-            if ("enableYARNPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+            if ("enableYARNPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableYARNPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableYARNPlugin}", "true");
                 enableRangerPlugin(clusterId, "YARN", "ResourceManager");
@@ -90,7 +90,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(yarnRangerCommand, ActorRef.noSender());
             }
-            if ("enableHIVEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+            if ("enableHIVEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHivePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHIVEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HIVE", "HiveServer2");
@@ -100,7 +100,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hiveRangerCommand, ActorRef.noSender());
             }
-            if ("enableHBASEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+            if ("enableHBASEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHbasePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHBASEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HBASE", "HbaseMaster");
@@ -110,7 +110,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
             }
-            if ("enableKMSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+            if ("enableKMSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableKMSPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
                 // enableRangerPlugin(clusterId, "HDFS", "NameNode");
@@ -172,7 +172,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
 
         if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
-            Integer roleGroupId = roleList.get(0).getRoleGroupId();
+            Integer roleGroupId = roleList.getFirst().getRoleGroupId();
 
             ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
             List<ServiceConfig> serviceConfigs = JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);

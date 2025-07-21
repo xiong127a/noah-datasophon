@@ -87,7 +87,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
             logger.info("HBase主节点数量: {}, RegionServer节点数量: {}", masterList.size(), regionServerList.size());
 
             // 获取第一个Master节点作为主节点
-            String masterNode = masterList.get(0);
+            String masterNode = masterList.getFirst();
             String masterPort = configMap.getOrDefault("hbase.master.port", "16000");
             logger.info("HBase主节点: {}:{}", masterNode, masterPort);
 
@@ -104,7 +104,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
             String zkRootNode = configMap.getOrDefault("zookeeper.znode.parent", "/hbase");
 
             // 判断是否启用了高可用
-            boolean isHA = false;
+            boolean isHA;
 
             // 检查是否启用了分布式模式
             boolean isDistributed = "true"

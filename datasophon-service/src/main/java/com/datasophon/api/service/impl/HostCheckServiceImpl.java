@@ -571,7 +571,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 将第一个检查项状态设置为"检查中"
-            CheckItem firstItem = itemsToCheck.get(0);
+            CheckItem firstItem = itemsToCheck.getFirst();
             firstItem.setStatus(CheckItem.Status.CHECKING);
             firstItem.setMessage("正在检查中");
 
@@ -1016,8 +1016,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         logger.info("开始执行新的批量检查，主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
                 ips.size(),
-                ips.isEmpty() ? "无" : ips.get(0),
-                ips.isEmpty() ? "无" : ips.get(ips.size() - 1));
+                ips.isEmpty() ? "无" : ips.getFirst(),
+                ips.isEmpty() ? "无" : ips.getLast());
 
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
@@ -1899,8 +1899,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
                 ipsToCheck.size(),
-                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(0),
-                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(ipsToCheck.size() - 1));
+                ipsToCheck.isEmpty() ? "无" : ipsToCheck.getFirst(),
+                ipsToCheck.isEmpty() ? "无" : ipsToCheck.getLast());
 
         // 调用批量检查方法执行检查
         return batchCheckHosts(clusterId, ipsToCheck);
@@ -2683,7 +2683,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 筛选该主机上所有失败状态的检查项
                 List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
                         .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
-                        .collect(Collectors.toList());
+                        .toList();
 
                 // 先尝试停止所有正在运行的检查项
                 for (CheckItem item : failedItems) {

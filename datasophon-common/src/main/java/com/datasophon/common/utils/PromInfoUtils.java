@@ -17,28 +17,25 @@
 
 package com.datasophon.common.utils;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSON;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.PromMetricInfo;
 import com.datasophon.common.model.PromResponceInfo;
 import com.datasophon.common.model.PromResultInfo;
-
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.alibaba.fastjson2.JSON;
-
-import cn.hutool.http.HttpUtil;
-
 /**
- * @Title: prometheus工具类
- * @Description:
+ * prometheus工具类
+ *
  */
 public class PromInfoUtils {
 
@@ -47,13 +44,13 @@ public class PromInfoUtils {
     public static List<PromResultInfo> getPrometheusMetrics(String promURL, String promQL) {
 
         // log.info("请求地址：{}，请求QL：{}", promURL, promQL);
-        Map param = new HashMap<String, String>();
+        Map<String, Object> param = new HashMap<>();
         param.put(Constants.QUERY, promQL);
         String http = null;
         try {
             http = HttpUtil.get(promURL, param, 10000);
         } catch (Exception e) {
-            log.error("请求地址：{}，请求QL：{}，异常信息：{}", promURL, promQL, e);
+            log.error("请求地址：{}，请求QL：{}，异常信息：", promURL, promQL, e);
         }
         PromResponceInfo responceInfo = JSON.parseObject(http, PromResponceInfo.class);
         // log.info("请求地址：{}，请求QL：{}，返回信息：{}", promURL, promQL, responceInfo);
@@ -65,14 +62,13 @@ public class PromInfoUtils {
                 || !Constants.SUCCESS.equals(status)) {
             return null;
         }
-        List<PromResultInfo> result = responceInfo.getData().getResult();
-        return result;
+        return responceInfo.getData().getResult();
     }
 
     public static String getSinglePrometheusMetric(String promURL, String promQL) {
 
         // log.info("请求地址：{}，请求QL：{}", promURL, promQL);
-        Map param = new HashMap<String, String>();
+        Map<String, Object> param = new HashMap<>();
         param.put(Constants.QUERY, promQL);
         String http = null;
         try {
@@ -92,8 +88,8 @@ public class PromInfoUtils {
             return null;
         }
         List<PromResultInfo> result = responceInfo.getData().getResult();
-        if (result.size() > 0) {
-            return result.get(0).getValue()[1];
+        if (CollUtil.isNotEmpty(result)) {
+            return result.getFirst().getValue()[1];
         }
         return null;
     }

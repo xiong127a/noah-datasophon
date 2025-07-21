@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
@@ -125,8 +126,8 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         commands.add("rmadmin");
         commands.add(type);
         commands.add("\"" + nodeLabel + "\"");
-        if (roleList.size() > 0) {
-            String hostname = roleList.get(0).getHostname();
+        if (CollUtil.isNotEmpty(roleList)) {
+            String hostname = roleList.getFirst().getHostname();
             if (depMode.equals(Constants.PVM_MODE)) {
                 ActorSelection execCmdActor = ActorUtils.actorSystem
                         .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
@@ -216,19 +217,13 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
     private boolean nodeLabelInUse(String nodeLabel) {
         List<ClusterHostDO> list = hostService.list(new QueryWrapper<ClusterHostDO>()
                 .eq(Constants.NODE_LABEL, nodeLabel));
-        if (list.size() > 0) {
-            return true;
-        }
-        return false;
+        return CollUtil.isNotEmpty(list);
     }
 
     private boolean repeatNodeLable(Integer clusterId, String nodeLabel) {
         List<ClusterNodeLabelEntity> list = this.list(new QueryWrapper<ClusterNodeLabelEntity>()
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.NODE_LABEL, nodeLabel));
-        if (list.size() > 0) {
-            return true;
-        }
-        return false;
+        return CollUtil.isNotEmpty(list);
     }
 }

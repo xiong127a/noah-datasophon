@@ -37,11 +37,11 @@ public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
         }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.getFirst());
         }
         String metastoreHosts = StrUtil.join(",",CollUtil.map(hosts,ip -> "thrift://" + ip + ":9083",false));
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.get(0));
+        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.getFirst());
     }
 
     @Override
