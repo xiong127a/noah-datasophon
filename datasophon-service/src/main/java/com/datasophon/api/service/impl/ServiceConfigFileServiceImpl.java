@@ -336,7 +336,8 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
             List<ServiceConfig> configList = pair.getValue();
 
             // 使用FreemarkerUtils确定模板名称
-            Generators generators = JSONObject.toJavaObject(targetGenerator, Generators.class);
+            Generators generators = targetGenerator.toJavaObject(Generators.class);
+
             String templateName = FreemarkerUtils.determineTemplateName(generators);
 
             if (templateName == null) {
