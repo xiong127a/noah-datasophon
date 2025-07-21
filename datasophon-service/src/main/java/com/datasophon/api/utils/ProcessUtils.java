@@ -23,7 +23,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.kubernetes.handler.KubernetesDeploymentYamlHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesHostTagHandler;
@@ -731,7 +731,7 @@ public class ProcessUtils {
     }
 
     public static List<ServiceConfig> getServiceConfig(ClusterServiceRoleGroupConfig config) {
-        return JSONObject.parseArray(config.getConfigJson(), ServiceConfig.class);
+        return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 
     public static ServiceConfig createServiceConfig(String configName, Object configValue, String type) {
