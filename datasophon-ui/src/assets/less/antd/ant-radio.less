@@ -1,0 +1,144 @@
+/* 苹果风格单选框样式 */
+.ant-radio-wrapper {
+  align-items: center;
+  font-size: 14px;
+  color: @text-color;
+  transition: all 0.2s @ease-in-out;
+  margin-right: 16px;
+  
+  /* 悬停时的文字颜色 */
+  &:hover {
+    .ant-radio-inner {
+      border-color: @primary-5;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-radio-wrapper-disabled {
+    color: @disabled-color;
+  }
+}
+
+/* 单选框本体 */
+.ant-radio {
+  top: 0;
+  
+  /* 单选框内部样式 */
+  .ant-radio-inner {
+    width: @checkbox-size;
+    height: @checkbox-size;
+    border-radius: 50%;
+    border: 1.5px solid @border-color-base;
+    transition: all 0.2s @ease-in-out;
+    background-color: rgba(255, 255, 255, 0.8);
+    
+    /* 选中状态下的内部圆点 */
+    &:after {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      background-color: #fff;
+      transition: all 0.3s @ease-in-out;
+    }
+  }
+  
+  /* 选中状态 */
+  &.ant-radio-checked .ant-radio-inner {
+    background-color: @primary-color;
+    border-color: @primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    
+    /* 选中状态下的内部圆点动画 */
+    &:after {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-radio-disabled {
+    .ant-radio-inner {
+      background-color: rgba(245, 245, 247, 0.8);
+      border-color: @border-color-base !important;
+      box-shadow: none;
+      
+      &:after {
+        background-color: @disabled-color;
+      }
+    }
+    
+    &.ant-radio-checked .ant-radio-inner {
+      background-color: rgba(240, 240, 245, 0.9);
+      
+      &:after {
+        background-color: @disabled-color;
+      }
+    }
+  }
+}
+
+/* 单选框按钮样式 */
+.ant-radio-button-wrapper {
+  border: 1px solid @border-color-base;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0 16px;
+  height: 32px;
+  line-height: 30px;
+  color: @text-color;
+  font-size: 14px;
+  transition: all 0.2s @ease-in-out;
+  
+  /* 边框设置 */
+  &:first-child {
+    border-radius: @border-radius-base 0 0 @border-radius-base;
+  }
+  
+  &:last-child {
+    border-radius: 0 @border-radius-base @border-radius-base 0;
+  }
+  
+  /* 选中状态 */
+  &.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+    border-color: @primary-color;
+    color: @primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    background-color: rgba(0, 122, 255, 0.05);
+    z-index: 1;
+    
+    &::before {
+      background-color: @primary-color;
+    }
+  }
+  
+  /* 悬停状态 */
+  &:hover {
+    color: @primary-color;
+    border-color: @primary-color;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* 禁用状态 */
+  &.ant-radio-button-wrapper-disabled {
+    background-color: rgba(245, 245, 247, 0.8);
+    color: @disabled-color;
+    border-color: @border-color-base;
+    
+    &.ant-radio-button-wrapper-checked {
+      background-color: rgba(240, 240, 245, 0.9);
+      border-color: @border-color-base;
+      box-shadow: none;
+      color: @disabled-color;
+    }
+  }
+}
+
+/* 单选框组 */
+.ant-radio-group {
+  display: inline-flex;
+  align-items: center;
+} 

@@ -1,0 +1,106 @@
+/* 苹果风格复选框样式 */
+.ant-checkbox-wrapper {
+  align-items: center;
+  font-size: 14px;
+  color: @text-color;
+  transition: all 0.2s @ease-in-out;
+  
+  /* 悬停时的文字颜色 */
+  &:hover {
+    .ant-checkbox-inner {
+      border-color: @primary-5;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-checkbox-wrapper-disabled {
+    color: @disabled-color;
+  }
+}
+
+/* 复选框本体 */
+.ant-checkbox {
+  top: 0;
+  
+  /* 复选框内部样式 */
+  .ant-checkbox-inner {
+    width: @checkbox-size;
+    height: @checkbox-size;
+    border-radius: 4px;
+    border: 1.5px solid @border-color-base;
+    transition: all 0.2s @ease-in-out;
+    background-color: rgba(255, 255, 255, 0.8);
+    
+    /* 选中状态下的勾号 */
+    &:after {
+      left: 25%;
+      transition: all 0.2s @ease-in-out;
+      border-width: 0 2px 2px 0;
+    }
+  }
+  
+  /* 选中状态 */
+  &.ant-checkbox-checked .ant-checkbox-inner {
+    background-color: @primary-color;
+    border-color: @primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    
+    /* 选中状态下的勾号动画 */
+    &:after {
+      transform: rotate(45deg) scale(1.1);
+      transition: all 0.3s @ease-in-out;
+      border-color: #fff;
+      opacity: 1;
+    }
+  }
+  
+  /* 半选状态 */
+  &.ant-checkbox-indeterminate .ant-checkbox-inner {
+    background-color: @primary-color;
+    border-color: @primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    
+    &:after {
+      transform: scale(0.8);
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 2px;
+      border: 0;
+      background-color: #fff;
+      opacity: 1;
+    }
+  }
+  
+  /* 禁用状态 */
+  &.ant-checkbox-disabled {
+    .ant-checkbox-inner {
+      background-color: rgba(245, 245, 247, 0.8);
+      border-color: @border-color-base !important;
+      box-shadow: none;
+      
+      &:after {
+        border-color: @disabled-color;
+      }
+    }
+    
+    &.ant-checkbox-checked .ant-checkbox-inner {
+      background-color: rgba(240, 240, 245, 0.9);
+      
+      &:after {
+        border-color: @disabled-color;
+      }
+    }
+    
+    &.ant-checkbox-indeterminate .ant-checkbox-inner:after {
+      background-color: @disabled-color;
+    }
+  }
+}
+
+/* 复选框组 */
+.ant-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+} 

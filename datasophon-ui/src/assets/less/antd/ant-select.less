@@ -1,0 +1,123 @@
+/* 苹果风格下拉选择框样式 */
+.ant-select {
+  &-selector {
+    border-radius: @border-radius-base !important;
+    border: 1px solid @border-color-base !important;
+    height: @input-height-base !important;
+    transition: all 0.3s @ease-in-out !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+    padding: 0 @input-padding-horizontal !important;
+    
+    /* 选中项居中显示 */
+    .ant-select-selection-item {
+      line-height: @input-height-base;
+      transition: all 0.3s @ease-in-out;
+      font-size: 14px;
+    }
+    
+    /* 输入搜索项垂直居中 */
+    .ant-select-selection-search-input {
+      height: @input-height-base;
+      line-height: @input-height-base;
+    }
+  }
+  
+  /* 选择框悬停状态 */
+  &:hover .ant-select-selector {
+    border-color: @primary-5 !important;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1) !important;
+  }
+  
+  /* 选择框聚焦状态 */
+  &-focused:not(.ant-select-disabled) .ant-select-selector {
+    border-color: @primary-color !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+    outline: 0 !important;
+  }
+  
+  /* 禁用状态 */
+  &-disabled .ant-select-selector {
+    background-color: rgba(245, 245, 247, 0.8) !important;
+    color: @disabled-color !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+  }
+  
+  /* 箭头图标 */
+  .ant-select-arrow {
+    transition: all 0.3s @ease-in-out;
+    color: @text-color-secondary;
+    font-size: 12px;
+  }
+  
+  /* 清除图标 */
+  .ant-select-clear {
+    background: rgba(255, 255, 255, 0.8);
+    color: @text-color-secondary;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    transition: all 0.3s @ease-in-out;
+    
+    &:hover {
+      color: @text-color;
+      background: rgba(245, 245, 247, 0.95);
+    }
+  }
+}
+
+/* 下拉菜单样式 */
+.ant-select-dropdown {
+  padding: 6px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 
+              0 6px 16px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  
+  /* 下拉选项 */
+  .ant-select-item {
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 2px 0;
+    transition: all 0.2s @ease-in-out;
+    color: @text-color;
+    min-height: 38px;
+    line-height: calc(38px - 16px);
+    
+    /* 选中状态 */
+    &-option-selected:not(.ant-select-item-option-disabled) {
+      background-color: @select-item-selected-bg;
+      color: @primary-color;
+      font-weight: 500;
+      
+      .ant-select-item-option-state {
+        color: @primary-color;
+      }
+    }
+    
+    /* 悬停状态 */
+    &-option-active:not(.ant-select-item-option-disabled) {
+      background-color: @select-item-active-bg;
+      color: @text-color;
+    }
+    
+    /* 禁用状态 */
+    &-option-disabled {
+      color: @disabled-color;
+      cursor: not-allowed;
+    }
+  }
+  
+  /* 空状态 */
+  .ant-empty {
+    margin: 16px 0;
+  }
+} 

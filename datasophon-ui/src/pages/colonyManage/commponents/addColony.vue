@@ -26,8 +26,8 @@
 <template>
   <div class="apple-form-container">
     <div class="form-header">
-      <h1 class="form-title">创建新集群</h1>
-      <p class="form-subtitle">配置您的大数据平台集群信息</p>
+      <h1 class="form-title">{{ isEdit ? '编辑集群' : '创建新集群' }}</h1>
+      <p class="form-subtitle">{{ isEdit ? '修改集群配置信息' : '配置您的大数据平台集群信息' }}</p>
     </div>
     
     <div class="form-cards">
@@ -48,7 +48,6 @@
                   ]" 
                   placeholder="请输入集群名称" 
                   class="apple-input"
-                  size="large"
                 />
               </a-form-item>
               <a-form-item label="集群编码" class="apple-form-item">
@@ -57,9 +56,9 @@
                     'clusterCode',
                     { rules: [{ required: true, message: '集群编码不能为空!' }] },
                   ]" 
+                  :disabled="isEdit"
                   placeholder="请输入集群编码" 
                   class="apple-input"
-                  size="large"
                 />
               </a-form-item>
             </div>
@@ -81,7 +80,7 @@
                 ]"
                   placeholder="请选择集群框架"
                   class="apple-select"
-                  size="large"
+                  :disabled="isEdit"
                 >
                   <a-select-option :value="item.frameCode" v-for="(item, index) in frameList" :key="index">
                     {{ item.frameCode }}
@@ -101,6 +100,7 @@
                     class="deployment-card"
                     :class="{ 'selected': selectedDepType === 'PVM' }"
                     @click="selectDepType('PVM')"
+                    :disabled="isEdit"
                   >
                     <div class="card-icon">
                       <img src="~@/assets/img/os-logos/linux-tux.svg" alt="Bare Metal/VM" />
@@ -118,6 +118,7 @@
                     class="deployment-card"
                     :class="{ 'selected': selectedDepType === 'Kubernetes' }"
                     @click="selectDepType('Kubernetes')"
+                    :disabled="isEdit"
                   >
                     <div class="card-icon k8s-icon">
                       <img src="~@/assets/images/kubernetes-logo.svg" alt="Kubernetes" />
@@ -139,16 +140,16 @@
                     </div>
                     <div class="info-text">
                       <div v-if="selectedDepType === 'PVM'">
-                        <strong>裸金属/虚拟机部署：</strong>适用于需要并行处理大规模计算任务的场景，支持将多个计算机资源组合成一个强大的计算集群，提供最佳的性能和资源控制。
-                          </div>
+                        <strong>裸金属/虚拟机部署：</strong>适用于需要并行处理大规模计算任务的场景。
+                      </div>
                       <div v-else-if="selectedDepType === 'Kubernetes'">
-                        <strong>Kubernetes部署：</strong>适用于需要管理和部署容器化应用程序的场景，强调的是自动化、可扩展和高可用的应用程序管理，支持微服务架构。
-                          </div>
-                        </div>
-                  </div>
+                        <strong>Kubernetes部署：</strong>适用于需要管理和部署容器化应用程序的场景。
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </a-form-item>
+              </div>
+            </a-form-item>
           </div>
         </div>
       </a-form>
@@ -160,15 +161,13 @@
         @click.stop="handleSubmit"
         :loading="loading"
         class="apple-button primary"
-        size="large"
       >
         <a-icon type="check" />
-        创建集群
+        {{ isEdit ? '保存修改' : '创建集群' }}
       </a-button>
       <a-button 
         @click.stop="formCancel"
         class="apple-button secondary"
-        size="large"
       >
         <a-icon type="close" />
         取消
@@ -185,7 +184,7 @@ export default {
         return {};
       },
     },
-    callBack:Function
+    callBack: Function
   },
   data() {
     return {
@@ -200,28 +199,48 @@ export default {
       form: this.$form.createForm(this),
       value1: "",
       loading: false,
-      frameList: [], //集群框架列表
-      depTypeList: ['Kubernetes', 'PVM'], //部署方式列表
-      depType:'',
+      frameList: [], // 集群框架列表
+      depTypeList: ['Kubernetes', 'PVM'], // 部署方式列表
+      depType: '',
       selectedDepType: '', // 当前选中的部署方式
     };
   },
-  watch: {},
+  computed: {
+    // 判断是否为编辑模式
+    isEdit() {
+      return JSON.stringify(this.detail) !== '{}';
+    }
+  },
+  watch: {
+    detail: {
+      immediate: true,
+      handler(val) {
+        if (JSON.stringify(val) !== '{}') {
+          // 编辑模式，设置部署方式
+          this.selectedDepType = val.depType;
+          this.depType = val.depType;
+        }
+      }
+    }
+  },
   methods: {
-    tochange(val){
-      this.depType = val
+    tochange(val) {
+      this.depType = val;
     },
     selectDepType(type) {
-      this.selectedDepType = type
-      this.depType = type
+      // 在编辑模式下不允许更改部署方式
+      if (this.isEdit) return;
+      
+      this.selectedDepType = type;
+      this.depType = type;
       // 手动设置表单字段值
-      this.form.setFieldsValue({ depType: type })
+      this.form.setFieldsValue({ depType: type });
     },
     formCancel() {
       this.$destroyAll();
     },
     handleSubmit(e) {
-      const _this = this
+      const _this = this;
       e.preventDefault();
       this.form.validateFields((err, values) => {
         console.log(values);
@@ -232,99 +251,92 @@ export default {
             "clusterFrame": values.clusterFrame,
             "depType": values.depType,
           }
-          if (JSON.stringify(this.detail) !== '{}') params.id = this.detail.id
+          if (this.isEdit) params.id = this.detail.id;
           this.loading = true;
-          const ajaxApi = JSON.stringify(this.detail) !== '{}' ? global.API.updateColony : global.API.saveColony
-          this.$axiosJsonPost(ajaxApi+"?clusterId="+this.detail.id, params).then((res) => {
+          const ajaxApi = this.isEdit ? global.API.updateColony : global.API.saveColony;
+          
+          this.$axiosJsonPost(ajaxApi + (this.isEdit ? "?clusterId=" + this.detail.id : ""), params).then((res) => {
             this.loading = false;
             if (res.code === 200) {
-              this.$message.success('保存成功', 2)
+              this.$message.success('保存成功', 2);
               this.$destroyAll();
               _this.callBack();
             }
-          }).catch((err) => {});
+          }).catch(() => {
+            this.loading = false;
+          });
         }
       });
     },
     getFrameList() {
       this.$axiosPost(global.API.getFrameList, {}).then((res) => {
         if (res.code === 200) {
-          this.frameList = res.data
-          if (JSON.stringify(this.detail) !== '{}') {
-            this.form.getFieldsValue(['clusterName', 'clusterFrame', 'clusterCode', 'depType'])
+          this.frameList = res.data;
+          if (this.isEdit) {
             this.form.setFieldsValue({
-              clusterName:this.detail.clusterName,
+              clusterName: this.detail.clusterName,
               clusterFrame: this.detail.clusterFrame,
               clusterCode: this.detail.clusterCode,
               depType: this.detail.depType,
-            })
-            this.depType = this.detail.depType
-            this.selectedDepType = this.detail.depType
+            });
           }
         }
-      })
+      });
     }
   },
   mounted() {
-    this.getFrameList()
+    this.getFrameList();
   },
 };
 </script>
 <style lang="less" scoped>
 // Apple设计系统颜色变量 - 优化版
-@apple-blue: #34c759;
-@apple-blue-hover: #248a3d;
-@apple-blue-light: rgba(52, 199, 89, 0.1);
-@apple-gray: #f8f9fa;
+@apple-blue: #0A84FF;
+@apple-blue-hover: #0062CC;
+@apple-blue-light: rgba(10, 132, 255, 0.1);
+@apple-gray: #F2F2F7;
 @apple-gray-light: #fafbfc;
 @apple-white: #ffffff;
 @apple-black: #1a1a1a;
 @apple-text-primary: #1a1a1a;
 @apple-text-secondary: #6b7280;
-@apple-border: rgba(52, 199, 89, 0.15);
+@apple-border: #D1D1D6;
 @apple-border-light: rgba(0, 0, 0, 0.08);
-@apple-radius: 16px;
-@apple-radius-large: 20px;
-@apple-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-@apple-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12);
+@apple-radius: 12px; // 增加圆角值
+@apple-radius-large: 16px;
+@apple-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+@apple-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12);
 
 // Apple字体
 .apple-font() {
-  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .apple-form-container {
   .apple-font();
-  max-width: 1000px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 40px;
-  background: linear-gradient(135deg, @apple-gray-light 0%, @apple-white 100%);
-  border-radius: @apple-radius-large;
-  box-shadow: @apple-shadow;
+  padding: 24px; // 减小内边距
+  border-radius: @apple-radius;
   
   .form-header {
     text-align: center;
-    margin-bottom: 56px;
+    margin-bottom: 32px; // 减小下边距
     
     .form-title {
       .apple-font();
-      font-size: 2.8rem;
-      font-weight: 700;
+      font-size: 1.8rem; // 减小字体大小
+      font-weight: 600;
       line-height: 1.1;
-      letter-spacing: -0.025em;
       color: @apple-text-primary;
-      margin-bottom: 16px;
-      background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-hover 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      margin-bottom: 8px;
     }
     
     .form-subtitle {
       .apple-font();
-      font-size: 1.3rem;
+      font-size: 1rem; // 减小字体大小
       line-height: 1.5;
       color: @apple-text-secondary;
       margin: 0;
@@ -335,53 +347,45 @@ export default {
   .form-cards {
     .form-card {
       background: @apple-white;
-      border: 1px solid @apple-border-light;
+      border: 1px solid @apple-border;
       border-radius: @apple-radius;
-      box-shadow: @apple-shadow;
-      margin-bottom: 28px;
+      margin-bottom: 16px; // 减小卡片间距
       overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      backdrop-filter: blur(10px);
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       
       &:hover {
-        box-shadow: @apple-shadow-hover;
-        transform: translateY(-4px);
-        border-color: @apple-border;
+        box-shadow: @apple-shadow;
       }
       
       .card-header {
-        padding: 28px 36px 20px;
-        background: linear-gradient(135deg, @apple-blue-light 0%, rgba(255, 255, 255, 0.8) 100%);
+        padding: 16px 20px 12px; // 减小内边距
         border-bottom: 1px solid @apple-border-light;
         
         .card-title {
           .apple-font();
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: @apple-blue-hover;
-          margin: 0 0 10px 0;
+          font-size: 1.1rem; // 减小字体大小
+          font-weight: 600;
+          color: @apple-text-primary;
+          margin: 0 0 6px 0;
           line-height: 1.2;
-          letter-spacing: -0.01em;
         }
         
         .card-description {
           .apple-font();
-          font-size: 1rem;
+          font-size: 0.9rem; // 减小字体大小
           color: @apple-text-secondary;
           margin: 0;
-          line-height: 1.5;
-          font-weight: 500;
+          line-height: 1.4;
         }
       }
       
       .card-content {
-        padding: 36px;
-        background: rgba(255, 255, 255, 0.6);
+        padding: 16px 20px; // 减小内边距
         
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 28px;
+          gap: 16px; // 减小表单项间距
           
           @media (max-width: 768px) {
             grid-template-columns: 1fr;
@@ -396,23 +400,47 @@ export default {
     margin-bottom: 0;
     
     /deep/ .ant-form-item-label {
-      padding-bottom: 8px;
+      padding-bottom: 6px;
       
       label {
         .apple-font();
-        font-size: 1rem;
+        font-size: 0.9rem;
         font-weight: 500;
         color: @apple-text-primary;
         
+        // 替换必填星号为更优雅的样式
+        &::before {
+          content: '';
+          display: none;
+        }
+        
         &::after {
           content: '';
+          display: none;
+        }
+        
+        // 必填项标签使用蓝色文字而非星号
+        &.ant-form-item-required {
+          &::before {
+            display: none;
+          }
+          
+          // 可以添加"必填"小标签
+          &::after {
+            content: '必填';
+            display: inline-block;
+            margin-left: 4px;
+            font-size: 0.7rem;
+            padding: 1px 5px;
+            background-color: rgba(10, 132, 255, 0.1);
+            color: @apple-blue;
+            border-radius: 4px;
+            line-height: 1.4;
+            font-weight: normal;
+            vertical-align: middle;
+          }
         }
       }
-    }
-    
-    // 集群框架特殊样式
-    &.cluster-framework {
-      grid-column: 1 / -1;
     }
     
     // 部署方式特殊样式
@@ -423,8 +451,8 @@ export default {
         .deployment-cards {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-          margin-bottom: 16px;
+          gap: 12px;
+          margin-bottom: 12px;
           
           @media (max-width: 768px) {
             grid-template-columns: 1fr;
@@ -432,26 +460,26 @@ export default {
         }
         
         .deployment-card {
+          display: flex;
+          align-items: center;
           position: relative;
           background: @apple-white;
-          border: 2px solid @apple-border-light;
+          border: 1px solid @apple-border;
           border-radius: @apple-radius;
-          padding: 24px;
+          padding: 12px 16px;
           cursor: pointer;
-          transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-          backdrop-filter: blur(10px);
+          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          height: 80px; // 限制卡片高度
           
           &:hover {
             border-color: @apple-blue;
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.15);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.15);
           }
           
           &.selected {
             border-color: @apple-blue;
             background: @apple-blue-light;
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.2);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
         
             .card-check {
               opacity: 1;
@@ -463,32 +491,32 @@ export default {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            width: 36px;
+            height: 36px;
+            margin-right: 12px;
+            flex-shrink: 0;
             
             img {
-              width: 42px;
-              height: 42px;
+              width: 32px;
+              height: 32px;
             }
           }
           
           .card-content {
-          flex: 1;
+            flex: 1;
             
             .card-title {
               .apple-font();
-              font-size: 1.1rem;
+              font-size: 1rem;
               font-weight: 600;
               color: @apple-text-primary;
-              margin: 0 0 8px 0;
+              margin: 0 0 4px 0;
               line-height: 1.2;
-        }
+            }
         
             .card-description {
               .apple-font();
-              font-size: 0.9rem;
+              font-size: 0.8rem;
               color: @apple-text-secondary;
               margin: 0;
               line-height: 1.4;
@@ -497,42 +525,42 @@ export default {
           
           .card-check {
             position: absolute;
-            top: 16px;
-            right: 16px;
+            top: 12px;
+            right: 12px;
             opacity: 0;
             transform: scale(0.8);
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             
             .check-icon {
               color: @apple-blue;
-              font-size: 20px;
+              font-size: 18px;
             }
           }
         }
         
         .deployment-info-panel {
-          background: rgba(0, 122, 255, 0.05);
-          border: 1px solid rgba(0, 122, 255, 0.1);
+          background: rgba(10, 132, 255, 0.05);
+          border: 1px solid rgba(10, 132, 255, 0.1);
           border-radius: @apple-radius;
-          padding: 16px;
-          animation: fadeInUp 0.3s ease-out;
+          padding: 12px;
+          margin-top: 8px;
           
           .info-content {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
+            gap: 8px;
             
-          .info-icon {
-            color: @apple-blue;
-              font-size: 16px;
+            .info-icon {
+              color: @apple-blue;
+              font-size: 14px;
               margin-top: 2px;
             }
             
             .info-text {
               flex: 1;
               .apple-font();
-              font-size: 0.9rem;
-              line-height: 1.5;
+              font-size: 0.85rem;
+              line-height: 1.4;
               color: @apple-text-primary;
               
               strong {
@@ -549,10 +577,11 @@ export default {
   .apple-input {
     /deep/ .ant-input {
       .apple-font();
-      border: 2px solid @apple-border;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 1rem;
+      border: 1px solid @apple-border;
+      border-radius: @apple-radius;
+      padding: 8px 12px;
+      height: 40px;
+      font-size: 0.9rem;
       transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       background: @apple-white;
       
@@ -562,7 +591,7 @@ export default {
       
       &:focus {
         border-color: @apple-blue;
-        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
         outline: none;
       }
       
@@ -575,24 +604,30 @@ export default {
   
   // 选择框样式
   .apple-select {
+    max-width: 260px; // 限制集群框架选择框宽度
+    
     /deep/ .ant-select-selector {
       .apple-font();
-      border: 2px solid @apple-border !important;
-      border-radius: 8px !important;
-      padding: 8px 12px !important;
-      height: auto !important;
-      min-height: 48px !important;
+      border: 1px solid @apple-border !important;
+      border-radius: @apple-radius !important;
+      padding: 4px 8px !important;
+      height: 40px !important;
       transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       
       .ant-select-selection-search-input {
         height: 32px !important;
-        font-size: 1rem;
+        font-size: 0.9rem;
       }
       
       .ant-select-selection-placeholder {
         color: @apple-text-secondary;
         font-weight: 400;
         line-height: 32px;
+      }
+      
+      .ant-select-selection-item {
+        line-height: 32px;
+        font-size: 0.9rem;
       }
     }
     
@@ -602,7 +637,33 @@ export default {
     
     &.ant-select-focused /deep/ .ant-select-selector {
       border-color: @apple-blue !important;
-      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1) !important;
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
+    }
+    
+    // 下拉菜单样式
+    /deep/ .ant-select-dropdown {
+      border-radius: @apple-radius !important;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+      padding: 6px !important;
+      border: 1px solid rgba(0, 0, 0, 0.05) !important;
+      
+      .ant-select-item {
+        padding: 8px 12px !important;
+        border-radius: 6px !important;
+        transition: background 0.2s !important;
+        margin: 2px 0 !important;
+        font-size: 0.9rem !important;
+        
+        &:hover {
+          background-color: #f0f7ff !important;
+        }
+        
+        &-option-selected {
+          background-color: rgba(10, 132, 255, 0.1) !important;
+          color: @apple-blue !important;
+          font-weight: 600 !important;
+        }
+      }
     }
   }
   
@@ -610,27 +671,24 @@ export default {
   .form-actions {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-top: 56px;
-    padding-top: 36px;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
     border-top: 1px solid @apple-border-light;
     
     .apple-button {
       .apple-font();
-      border-radius: 12px;
+      border-radius: @apple-radius;
       font-weight: 600;
-      font-size: 1.1rem;
-      padding: 16px 40px;
-      height: auto;
-      min-width: 160px;
-      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      font-size: 0.95rem;
+      padding: 0 24px;
+      height: 40px;
+      min-width: 120px;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       border: none;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-      letter-spacing: -0.01em;
       
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       }
       
       &:active {
@@ -638,45 +696,38 @@ export default {
       }
       
       &.primary {
-        background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-hover 100%);
+        background: linear-gradient(135deg, #0A84FF 0%, #0062CC 100%);
         color: @apple-white;
-        box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
+        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
         
         &:hover {
-          background: linear-gradient(135deg, @apple-blue-hover 0%, darken(@apple-blue-hover, 8%) 100%);
-          color: @apple-white;
-          border-color: transparent;
-          box-shadow: 0 10px 28px rgba(52, 199, 89, 0.4);
+          box-shadow: 0 6px 16px rgba(10, 132, 255, 0.35);
         }
         
         &:focus {
-          background: linear-gradient(135deg, @apple-blue-hover 0%, darken(@apple-blue-hover, 8%) 100%);
-          color: @apple-white;
-          border-color: transparent;
+          box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
         }
       }
       
       &.secondary {
-        background: rgba(255, 255, 255, 0.9);
+        background: @apple-white;
         color: @apple-text-primary;
-        border: 2px solid @apple-border-light;
+        border: 1px solid @apple-border;
         
         &:hover {
-          background: @apple-gray;
-          color: @apple-text-primary;
-          border-color: @apple-border;
+          background: @apple-gray-light;
+          color: @apple-blue;
+          border-color: @apple-blue;
         }
         
         &:focus {
-          background: @apple-gray;
-          color: @apple-text-primary;
-          border-color: @apple-border;
+          background: @apple-gray-light;
+          border-color: @apple-blue;
         }
       }
       
       .anticon {
-        margin-right: 10px;
-        font-size: 16px;
+        margin-right: 8px;
       }
     }
   }
@@ -714,14 +765,10 @@ export default {
 // 响应式设计
 @media (max-width: 768px) {
   .apple-form-container {
-    padding: 24px 16px;
+    padding: 16px;
     
     .form-header .form-title {
-      font-size: 2rem;
-    }
-    
-    .form-cards .form-card .card-content {
-      padding: 24px 20px;
+      font-size: 1.5rem;
     }
     
     .form-actions {
@@ -730,7 +777,6 @@ export default {
       
       .apple-button {
         width: 100%;
-        max-width: 300px;
       }
     }
   }
@@ -750,5 +796,88 @@ export default {
 
 .apple-form-container {
   animation: fadeInUp 0.6s ease-out;
+}
+
+// 禁用状态样式
+.apple-input {
+  /deep/ .ant-input[disabled] {
+    background-color: #F9F9F9;
+    color: #999;
+    border-color: #E5E5EA;
+    cursor: not-allowed;
+  }
+}
+
+.apple-select {
+  /deep/ .ant-select-disabled {
+    .ant-select-selector {
+      background-color: #F9F9F9 !important;
+      color: #999;
+      border-color: #E5E5EA !important;
+      cursor: not-allowed;
+    }
+    
+    .ant-select-arrow {
+      color: #C7C7CC;
+    }
+  }
+}
+
+.deployment-card[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+</style>
+
+<style>
+/* 确保下拉菜单项有圆角 */
+.ant-select-dropdown-menu-item {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  transition: background 0.2s !important;
+  margin: 4px 0 !important;
+}
+
+.ant-select-dropdown-menu-item:hover {
+  background-color: #f0f7ff !important;
+}
+
+.ant-select-dropdown-menu-item-selected {
+  background-color: rgba(10, 132, 255, 0.1) !important;
+  color: #0A84FF !important;
+  font-weight: 600 !important;
+}
+
+/* 强制应用圆角到下拉框本身 */
+.ant-select-dropdown {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  padding: 6px !important;
+}
+
+/* 选择框样式强化 */
+.ant-select .ant-select-selector {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* 修复集群框架下拉选择器 */
+.apple-select .ant-select-selector {
+  border-radius: 12px !important;
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* 强制覆盖所有选择器样式 */
+.ant-select > .ant-select-selection {
+  border-radius: 12px !important;
+}
+
+/* 修复下拉箭头区域 */
+.ant-select-arrow {
+  right: 11px;
 }
 </style>

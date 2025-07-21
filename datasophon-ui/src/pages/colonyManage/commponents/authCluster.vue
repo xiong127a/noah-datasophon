@@ -24,62 +24,59 @@
  * @FilePath: \ddh-ui\src\pages\colonyManage\commponents\authCluster.vue
 -->
 <template>
-  <div class="apple-auth-container">
-    <div class="auth-description">
-      <div class="auth-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#4a90e2"/>
-          <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="#4a90e2"/>
+  <div class="cluster-auth-content">
+    <div class="auth-top">
+      <div class="blue-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
+          <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="white"/>
         </svg>
       </div>
-      <div class="auth-text">
-        <h3>集群授权管理</h3>
-        <p>为集群 <strong>{{ detail.clusterName || '未知集群' }}</strong> 分配管理员权限</p>
+      <div class="auth-info">
+        <div class="title">集群授权管理</div>
+        <div class="desc">为集群 <span>{{ detail.clusterName || '未知集群' }}</span> 分配管理员权限</div>
       </div>
     </div>
     
-    <a-form
-      :label-col="labelCol"
-      :wrapper-col="wrapperCol"
-      :form="form"
-      class="apple-auth-form"
-    >
-      <a-form-item label="选择管理员">
-        <a-select 
-          mode="multiple" 
-          v-decorator="['userIds', { rules: [{ required: false}]}]"
-          placeholder="请选择一个或多个集群管理员"
-          class="apple-select"
-          dropdown-class-name="apple-select-dropdown"
-        >
-          <a-select-option :value="item.id" v-for="(item,index) in userList" :key="index">
-            <div class="user-option">
-              <div class="user-avatar">{{ item.username.charAt(0).toUpperCase() }}</div>
-              <span class="user-name">{{ item.username }}</span>
-            </div>
-          </a-select-option>
-        </a-select>
-      </a-form-item>
-    </a-form>
-    
-    <div class="apple-auth-actions">
-      <a-button
-        class="apple-btn apple-btn-primary"
-        @click.stop="handleSubmit"
-        :loading="loading"
-      >
-        <span v-if="!loading">确认授权</span>
-        <span v-else>处理中...</span>
+    <div class="auth-form">
+      <div class="form-item">
+        <div class="label">选择管理员：</div>
+        <div class="select-container">
+          <a-form :form="form">
+            <a-select 
+              class="admin-select"
+              mode="multiple" 
+              v-decorator="['userIds', { rules: [{ required: false }]}]"
+              placeholder="请选择一个或多个集群管理员"
+              :dropdownMatchSelectWidth="false"
+              :getPopupContainer="() => $refs.selectContainer"
+              dropdownClassName="admin-dropdown"
+            >
+              <a-select-option 
+                v-for="item in userList" 
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.username }}
+              </a-select-option>
+            </a-select>
+          </a-form>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-btns">
+      <a-button type="primary" @click="handleSubmit" :loading="loading" class="apple-btn apple-btn-primary">
+        确认授权
       </a-button>
-      <a-button 
-        class="apple-btn apple-btn-secondary"
-        @click.stop="formCancel"
-      >
+      <a-button @click="formCancel" class="apple-btn apple-btn-default">
         取消
       </a-button>
     </div>
+    <div ref="selectContainer" class="popup-container"></div>
   </div>
 </template>
+
 <script>
 export default {
   props: {
@@ -89,423 +86,386 @@ export default {
         return {};
       },
     },
-    callBack:Function
+    callBack: Function
   },
   data() {
     return {
-      labelCol: {
-        xs: { span: 24 },
-        sm: { span: 7 },
-      },
-      wrapperCol: {
-        xs: { span: 24 },
-        sm: { span: 17 },
-      },
       form: this.$form.createForm(this),
-      value1: "",
       loading: false,
-      userList: [] //集群管理员列表
+      userList: []
     };
   },
-  watch: {},
   methods: {
     formCancel() {
       this.$destroyAll();
     },
     handleSubmit(e) {
-      const _this = this
       e.preventDefault();
+      const _this = this;
       this.form.validateFields((err, values) => {
-        console.log(values);
         if (!err) {
           const params = {
             "userIds": values.userIds || ""
+          };
+          if (JSON.stringify(this.detail) !== '{}') {
+            params.clusterId = this.detail.id;
           }
-          if (JSON.stringify(this.detail) !== '{}') params.clusterId = this.detail.id
+          
           this.loading = true;
-          this.$axiosPost(global.API.authCluster, params).then((res) => {
-            this.loading = false;
-            if (res.code === 200) {
-              if (params.userIds.length > 0) {
-                this.$message.success('授权成功', 2)
-              }else{
-                this.$message.success('取消授权成功', 2)
+          this.$axiosPost(global.API.authCluster, params)
+            .then((res) => {
+              this.loading = false;
+              if (res.code === 200) {
+                if (params.userIds.length > 0) {
+                  this.$message.success('授权成功', 2);
+                } else {
+                  this.$message.success('取消授权成功', 2);
+                }
+                this.$destroyAll();
+                _this.callBack();
               }
-              this.$destroyAll();
-              _this.callBack();
-            }
-          }).catch((err) => {});
+            })
+            .catch(() => {
+              this.loading = false;
+            });
         }
       });
     },
     queryAllUser() {
-      this.$axiosPost(global.API.queryAllUser, {}).then((res) => {
-        if (res.code === 200) {
-          this.userList = res.data
-        }
-      })
+      this.$axiosPost(global.API.queryAllUser, {})
+        .then((res) => {
+          if (res.code === 200) {
+            this.userList = res.data;
+          }
+        });
     }
   },
   mounted() {
-    this.queryAllUser()
-  },
+    this.queryAllUser();
+  }
 };
 </script>
+
 <style lang="less" scoped>
-// Apple Design System Variables - LESS变量
-@apple-blue: #007AFF;
+@apple-blue: #0A84FF;
 @apple-blue-light: #5AC8FA;
-@apple-blue-dark: #0051D5;
+@apple-blue-dark: #0062CC;
 @apple-gray-1: #F2F2F7;
 @apple-gray-2: #E5E5EA;
 @apple-gray-3: #D1D1D6;
 @apple-gray-4: #C7C7CC;
-@apple-gray-5: #AEAEB2;
-@apple-gray-6: #8E8E93;
-@apple-text-primary: #000000;
-@apple-text-secondary: #3C3C43;
-@apple-text-tertiary: rgba(60, 60, 67, 0.6);
-@apple-background: #FFFFFF;
-@apple-background-secondary: #F2F2F7;
-@apple-border: #D1D1D6;
-@apple-radius-small: 8px;
-@apple-radius-medium: 12px;
-@apple-radius-large: 16px;
-@apple-shadow-small: 0 1px 3px rgba(0, 0, 0, 0.1);
-@apple-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
-@apple-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.12);
-@apple-blue-light-bg: rgba(0, 122, 255, 0.05);
+@apple-radius: 10px;
+@apple-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-.apple-auth-container {
+.cluster-auth-content {
   padding: 0;
-  background: @apple-background;
-  border-radius: @apple-radius-large;
+  position: relative;
+}
+
+.auth-top {
+  display: flex;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
   
-  .auth-description {
+  .blue-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%);
+    margin-right: 16px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 24px 0 28px;
-    border-bottom: 1px solid @apple-gray-2;
-    margin-bottom: 32px;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
     
-    .auth-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: @apple-radius-large;
-      background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-light 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      box-shadow: @apple-shadow-medium;
-      
-      svg {
-        width: 28px;
-        height: 28px;
-        
-        path {
-          fill: white;
-        }
-      }
-    }
-    
-    .auth-text {
-      flex: 1;
-      
-      h3 {
-        margin: 0 0 6px;
-        font-size: 20px;
-        font-weight: 700;
-        color: @apple-text-primary;
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-        letter-spacing: -0.02em;
-      }
-      
-      p {
-        margin: 0;
-        font-size: 15px;
-        color: @apple-text-secondary;
-        line-height: 1.5;
-        font-weight: 400;
-        
-        strong {
-          color: @apple-blue;
-          font-weight: 700;
-        }
-      }
+    svg {
+      width: 24px;
+      height: 24px;
     }
   }
   
-  .apple-auth-form {
-    margin-bottom: 36px;
-    
-    /deep/ .ant-form-item {
-      margin-bottom: 0;
-      
-      .ant-form-item-label {
-        padding-bottom: 16px;
-        
-        label {
-          color: @apple-text-primary;
-          font-weight: 600;
-          font-size: 16px;
-          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-          letter-spacing: -0.01em;
-        }
-      }
-      
-      .ant-form-item-control {
-        .apple-select {
-          min-height: 52px;
-          border-radius: @apple-radius-large;
-          border: 1px solid @apple-border;
-          background: @apple-background;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-          backdrop-filter: blur(20px);
-          
-          &:hover {
-            border-color: @apple-blue;
-            box-shadow: 0 0 0 1px @apple-blue;
-            background: @apple-background;
-          }
-          
-          &.ant-select-focused {
-            border-color: @apple-blue;
-            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
-            background: @apple-background;
-          }
-          
-          .ant-select-selector {
-            border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: 12px 20px;
-            min-height: 50px;
-            border-radius: @apple-radius-large;
-            
-            .ant-select-selection-placeholder {
-              color: @apple-text-tertiary;
-              font-size: 15px;
-              line-height: 26px;
-              font-weight: 400;
-            }
-            
-            .ant-select-selection-item {
-              background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-light 100%);
-              color: white;
-              border: none;
-              border-radius: @apple-radius-medium;
-              padding: 6px 14px;
-              margin: 3px 6px 3px 0;
-              font-weight: 600;
-              font-size: 14px;
-              height: auto;
-              line-height: 1.4;
-              box-shadow: @apple-shadow-small;
-              
-              .ant-select-selection-item-remove {
-                color: rgba(255, 255, 255, 0.8);
-                font-size: 13px;
-                margin-left: 8px;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s ease;
-                
-                &:hover {
-                  color: white;
-                  background: rgba(255, 255, 255, 0.2);
-                }
-              }
-            }
-            
-            .ant-select-selection-search {
-              margin-left: 0;
-              
-              .ant-select-selection-search-input {
-                height: 26px;
-                line-height: 26px;
-                font-size: 15px;
-              }
-            }
-          }
-          
-          .ant-select-arrow {
-            color: @apple-text-secondary;
-            font-size: 16px;
-            right: 20px;
-            transition: all 0.2s ease;
-            
-            &:hover {
-              color: @apple-blue;
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  .apple-auth-actions {
-    display: flex;
-    gap: 16px;
-    justify-content: flex-end;
-    padding-top: 12px;
-    
-    .apple-btn {
-      border-radius: @apple-radius-medium;
+  .auth-info {
+    .title {
+      font-size: 18px;
       font-weight: 600;
-      height: 44px;
-      padding: 0 28px;
-      font-size: 15px;
-      border: none;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-      letter-spacing: -0.01em;
-      cursor: pointer;
-      
-      &.apple-btn-primary {
-        background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-light 100%);
-        color: white;
-        box-shadow: @apple-shadow-medium;
-        
-        &:hover {
-          background: linear-gradient(135deg, @apple-blue-dark 0%, @apple-blue 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4);
-        }
-        
-        &:active {
-          transform: translateY(-1px);
-          box-shadow: @apple-shadow-medium;
-        }
-        
-        &.ant-btn-loading {
-          background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-light 100%);
-          
-          .ant-btn-loading-icon {
-            color: white;
-          }
-        }
-      }
-      
-      &.apple-btn-secondary {
-        background: @apple-background-secondary;
-        border: 1px solid @apple-border !important;
-        color: @apple-text-primary;
-        
-        &:hover {
-          background: @apple-gray-1;
-          border-color: @apple-gray-3 !important;
-          color: @apple-text-primary;
-          transform: translateY(-2px);
-          box-shadow: @apple-shadow-small;
-        }
-        
-        &:active {
-          transform: translateY(-1px);
-          background: @apple-gray-2;
-        }
-      }
+      color: #000000;
+      margin-bottom: 6px;
     }
-  }
-}
-
-/* 下拉选项样式 - 完全圆润的苹果风格 */
-/deep/ .apple-select-dropdown {
-  border-radius: @apple-radius-large;
-  overflow: hidden;
-  box-shadow: @apple-shadow-large;
-  border: 1px solid @apple-border;
-  background: @apple-background;
-  backdrop-filter: blur(20px);
-  
-  .ant-select-dropdown-menu {
-    border-radius: @apple-radius-large;
-    padding: 12px;
-    background: transparent;
     
-    .ant-select-dropdown-menu-item {
-      border-radius: @apple-radius-medium;
-      margin-bottom: 4px;
-      padding: 12px 16px;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      background: transparent;
+    .desc {
+      font-size: 14px;
+      color: #666666;
       
-      &:hover {
-        background: @apple-gray-1;
-        transform: scale(1.02);
-      }
-      
-      &.ant-select-dropdown-menu-item-selected {
-        background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(90, 200, 250, 0.05) 100%);
+      span {
         color: @apple-blue;
-        font-weight: 600;
-        border: 1px solid rgba(0, 122, 255, 0.2);
-      }
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-      
-      .user-option {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        
-        .user-avatar {
-          width: 36px;
-          height: 36px;
-          border-radius: @apple-radius-medium;
-          background: linear-gradient(135deg, @apple-blue 0%, @apple-blue-light 100%);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 700;
-          font-size: 15px;
-          flex-shrink: 0;
-          box-shadow: @apple-shadow-small;
-          letter-spacing: -0.01em;
-        }
-        
-        .user-name {
-          font-size: 15px;
-          color: @apple-text-primary;
-          font-weight: 500;
-          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-          letter-spacing: -0.01em;
-        }
+        font-weight: 500;
       }
     }
   }
 }
 
-/* 全局下拉框箭头动画 */
-/deep/ .ant-select-open .ant-select-arrow {
-  transform: rotate(180deg);
-}
-
-/* 滚动条样式 */
-/deep/ .apple-select-dropdown .ant-select-dropdown-menu {
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
+.auth-form {
+  padding: 24px;
   
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: @apple-gray-4;
-    border-radius: 3px;
+  .form-item {
+    margin-bottom: 16px;
     
-    &:hover {
-      background: @apple-gray-5;
+    .label {
+      margin-bottom: 10px;
+      font-weight: 500;
+      font-size: 15px;
+    }
+    
+    .select-container {
+      position: relative;
+      width: 100%;
     }
   }
+}
+
+.auth-btns {
+  padding: 20px 24px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  background-color: #fafafa;
+}
+
+.popup-container {
+  position: absolute;
+  z-index: 1060;
+}
+</style>
+
+<style>
+/* 全局样式 */
+.auth-cluster-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.auth-cluster-modal .ant-modal-body {
+  padding: 0 !important;
+}
+
+.auth-cluster-modal .ant-modal-confirm-body-wrapper {
+  padding: 0;
+}
+
+.auth-cluster-modal .ant-modal-confirm-body {
+  padding: 0;
+  margin: 0;
+}
+
+.auth-cluster-modal .ant-modal-confirm-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.auth-cluster-modal .ant-modal-confirm-btns {
+  display: none;
+}
+
+/* 修复下拉菜单容器样式 */
+.popup-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1050;
+}
+
+.select-container {
+  position: relative;
+  width: 100%;
+}
+
+/* 下拉菜单样式 */
+.admin-dropdown {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  padding: 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+.admin-dropdown .ant-select-dropdown-menu {
+  max-height: 240px;
+}
+
+.admin-dropdown .ant-select-dropdown-menu-item {
+  padding: 10px 12px !important;
+  transition: all 0.2s !important;
+  border-radius: 8px !important;
+  margin: 2px 4px !important;
+}
+
+.admin-dropdown .ant-select-dropdown-menu-item:hover {
+  background-color: #f0f7ff !important;
+}
+
+.admin-dropdown .ant-select-dropdown-menu-item-selected {
+  background-color: rgba(10, 132, 255, 0.1) !important;
+  color: #0A84FF !important;
+  font-weight: 600 !important;
+}
+
+/* 修复选择框样式 */
+.admin-select {
+  width: 100%;
+}
+
+.admin-select .ant-select-selection {
+  border-radius: 10px;
+  border: 1px solid #D1D1D6;
+  min-height: 44px;
+  padding: 6px 8px 2px;
+  transition: all 0.3s;
+}
+
+.admin-select .ant-select-selection:hover {
+  border-color: #0A84FF;
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15);
+}
+
+.admin-select .ant-select-selection--multiple .ant-select-selection__rendered {
+  margin-left: 4px;
+  margin-bottom: 5px;
+}
+
+.admin-select .ant-select-selection__placeholder {
+  margin-left: 4px;
+  color: #999;
+}
+
+/* 标签样式 - 完全重写 */
+.admin-select .ant-select-selection__choice {
+  background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  margin-top: 3px !important;
+  margin-bottom: 3px !important;
+  margin-right: 8px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  padding-right: 28px !important;
+  padding-left: 12px !important;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.25) !important;
+}
+
+.admin-select .ant-select-selection__choice__content {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 32px !important;
+  text-align: center !important;
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.admin-select .ant-select-selection__choice__remove {
+  position: absolute !important;
+  right: 9px !important;
+  top: 0 !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+  opacity: 0.85 !important;
+}
+
+.admin-select .ant-select-selection__choice__remove:hover {
+  color: white !important;
+  opacity: 1 !important;
+}
+
+/* 确保选择框中的搜索输入框正确对齐 */
+.admin-select .ant-select-search--inline .ant-select-search__field {
+  margin-top: 7px;
+  margin-bottom: 4px;
+  height: 22px;
+}
+
+/* 修正模态框居中问题 */
+.auth-cluster-modal {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-cluster-modal .ant-modal {
+  top: 50%;
+  margin: 0 auto;
+  padding-bottom: 0;
+}
+
+/* 优化按钮区域样式 */
+.auth-btns {
+  padding: 20px 24px !important;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: center !important;
+  gap: 16px !important;
+  background-color: #fafafa;
+}
+
+.apple-btn {
+  min-width: 120px !important;
+  height: 40px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  font-size: 14px;
+  letter-spacing: 0.3px;
+}
+
+.apple-btn-primary {
+  background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3) !important;
+}
+
+.apple-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(10, 132, 255, 0.4) !important;
+  background: linear-gradient(135deg, #0078F0 0%, #30B0FF 100%) !important;
+}
+
+.apple-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.35) !important;
+  background: linear-gradient(135deg, #0062CC 0%, #0A84FF 100%) !important;
+}
+
+.apple-btn-default {
+  background: #ffffff !important;
+  color: #464646 !important;
+  border: 1px solid #D1D1D6 !important;
+}
+
+.apple-btn-default:hover {
+  background: white !important;
+  color: #0A84FF !important;
+  border-color: #0A84FF !important;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.apple-btn-default:active {
+  background: #F2F2F7 !important;
+  color: #0062CC !important;
+  transform: translateY(0);
 }
 </style>

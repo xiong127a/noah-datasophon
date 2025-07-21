@@ -30,91 +30,13 @@
           </div>
         </div>
         <div class="service-list" v-show="!coreGroupCollapsed">
-          <a-popover 
+          <div 
             v-for="(service, index) in coreServices" 
             :key="index"
-            placement="right"
-            :visible="sidebarCollapsed && service.popoverVisible"
-            overlayClassName="service-popover"
-            @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
-            :mouseEnterDelay="0.3"
-            :mouseLeaveDelay="0.1"
-            :title="null"
+            class="service-item" 
+            :class="{'active': isActiveService(service)}"
+            @click="handleServiceItemClick(service)"
           >
-            <template slot="content">
-              <div 
-                class="service-popover-content"
-                @mouseenter="handlePopoverContentEnter(service)"
-                @mouseleave="handlePopoverContentLeave(service)"
-              >
-                <div class="service-popover-header">
-                  <div class="service-popover-icon">
-                    <img v-if="service.serviceName === 'DATASOPHON'" src="~@/assets/img/logo.svg" alt="logo" style="width:24px;height:24px;" />
-                    <svg-icon v-else :icon-class="service.icon || 'service-default'" />
-                  </div>
-                  <div class="service-popover-title">
-                    <div class="service-popover-name">{{ service.name }}</div>
-                    <div class="service-popover-version" v-if="service.rawData && service.rawData.version">{{ service.rawData.version }}</div>
-                  </div>
-                </div>
-                
-                <div class="service-popover-info">
-                  <div class="service-popover-status">
-                    <span class="info-label">状态：</span>
-                    <span v-if="service.serviceStateCode === 2" class="info-value success">正常运行</span>
-                    <span v-else-if="service.serviceStateCode === 3" class="info-value warning">需要注意</span>
-                    <span v-else-if="service.serviceStateCode === 4" class="info-value error">异常</span>
-                    <span v-else class="info-value">未知</span>
-                  </div>
-                  
-                  <div class="service-popover-alerts" v-if="service.alertNum > 0">
-                    <span class="info-label">告警：</span>
-                    <div class="info-value-with-action">
-                      <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
-                      <a-button type="link" size="small" class="action-button" @click="showAlarm(service, $event)">
-                        <a-icon type="eye" /> 查看
-                      </a-button>
-                    </div>
-                  </div>
-                  
-                  <div class="service-popover-config" v-if="service.needRestart">
-                    <span class="info-label">配置变更：</span>
-                    <div class="info-value-with-action">
-                      <span class="info-value warning">需要重启</span>
-                      <a-button type="link" size="small" class="action-button" @click="showConfigCompare(service, $event)">
-                        <a-icon type="eye" /> 查看
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="service-popover-actions" v-if="service.serviceName !== 'DATASOPHON'">
-                  <div class="button-row">
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'start'}, service, $event)">
-                      <a-icon type="caret-right" />启动
-                    </a-button>
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'stop'}, service, $event)">
-                      <a-icon type="pause" />停止
-                    </a-button>
-                  </div>
-                  <div class="button-row">
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'restart'}, service, $event)">
-                      <a-icon type="reload" />重启
-                    </a-button>
-                    <a-button type="danger" size="small" @click="handleServiceAction({key: 'del'}, service, $event)">
-                      <a-icon type="delete" />删除
-                    </a-button>
-                  </div>
-                </div>
-              </div>
-            </template>
-            <div 
-               class="service-item" 
-               :class="{'active': isActiveService(service)}"
-              @click="handleServiceItemClick(service)"
-              @mouseenter="sidebarCollapsed && handleServiceMouseEnter(service)"
-              @mouseleave="sidebarCollapsed && handleServiceMouseLeave(service)"
-            >
             <!-- 状态指示灯 -->
             <div class="status-indicator">
               <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
@@ -126,11 +48,8 @@
             <!-- 服务名称(带图标) -->
             <div class="service-name-container">
               <!-- 服务图标 -->
-              <div class="service-icon" v-if="service.serviceName !== 'DATASOPHON'">
-                <svg-icon :icon-class="service.icon || 'service-default'" />
-              </div>
-              <div class="service-icon" v-else>
-                <img src="@/assets/img/logo.svg" alt="logo" style="width:16px;height:16px;" />
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || (service.serviceName === 'DATASOPHON' ? 'datasophon' : 'service-default')" />
               </div>
               
               <!-- 服务名称 -->
@@ -165,7 +84,6 @@
               </div>
             </div>
           </div>
-          </a-popover>
         </div>
       </div>
       
@@ -179,91 +97,13 @@
           </div>
         </div>
         <div class="service-list" v-show="!managementGroupCollapsed">
-          <a-popover 
+          <div 
             v-for="(service, index) in managementServices" 
             :key="'mgmt-'+index"
-            placement="right"
-            :visible="sidebarCollapsed && service.popoverVisible"
-            overlayClassName="service-popover"
-            @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
-            :mouseEnterDelay="0.3"
-            :mouseLeaveDelay="0.1"
-            :title="null"
+            class="service-item" 
+            :class="{'active': isActiveService(service)}"
+            @click="handleServiceItemClick(service)"
           >
-            <template slot="content">
-              <div 
-                class="service-popover-content"
-                @mouseenter="handlePopoverContentEnter(service)"
-                @mouseleave="handlePopoverContentLeave(service)"
-              >
-                <div class="service-popover-header">
-                  <div class="service-popover-icon">
-                    <img v-if="service.serviceName === 'DATASOPHON'" src="~@/assets/img/logo.svg" alt="logo" style="width:24px;height:24px;" />
-                    <svg-icon v-else :icon-class="service.icon || 'service-default'" />
-                  </div>
-                  <div class="service-popover-title">
-                    <div class="service-popover-name">{{ service.name }}</div>
-                    <div class="service-popover-version" v-if="service.rawData && service.rawData.version">{{ service.rawData.version }}</div>
-                  </div>
-                </div>
-                
-                <div class="service-popover-info">
-                  <div class="service-popover-status">
-                    <span class="info-label">状态：</span>
-                    <span v-if="service.serviceStateCode === 2" class="info-value success">正常运行</span>
-                    <span v-else-if="service.serviceStateCode === 3" class="info-value warning">需要注意</span>
-                    <span v-else-if="service.serviceStateCode === 4" class="info-value error">异常</span>
-                    <span v-else class="info-value">未知</span>
-                  </div>
-                  
-                  <div class="service-popover-alerts" v-if="service.alertNum > 0">
-                    <span class="info-label">告警：</span>
-                    <div class="info-value-with-action">
-                      <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
-                      <a-button type="link" size="small" class="action-button" @click="showAlarm(service, $event)">
-                        <a-icon type="eye" /> 查看
-                      </a-button>
-                    </div>
-                  </div>
-                  
-                  <div class="service-popover-config" v-if="service.needRestart">
-                    <span class="info-label">配置变更：</span>
-                    <div class="info-value-with-action">
-                      <span class="info-value warning">需要重启</span>
-                      <a-button type="link" size="small" class="action-button" @click="showConfigCompare(service, $event)">
-                        <a-icon type="eye" /> 查看
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="service-popover-actions" v-if="service.serviceName !== 'PLATFORM'">
-                  <div class="button-row">
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'start'}, service, $event)">
-                      <a-icon type="caret-right" />启动
-                    </a-button>
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'stop'}, service, $event)">
-                      <a-icon type="pause" />停止
-                    </a-button>
-                  </div>
-                  <div class="button-row">
-                    <a-button type="primary" size="small" @click="handleServiceAction({key: 'restart'}, service, $event)">
-                      <a-icon type="reload" />重启
-                    </a-button>
-                    <a-button type="danger" size="small" @click="handleServiceAction({key: 'del'}, service, $event)">
-                      <a-icon type="delete" />删除
-                    </a-button>
-                  </div>
-                </div>
-              </div>
-            </template>
-            <div 
-               class="service-item" 
-               :class="{'active': isActiveService(service)}"
-              @click="handleServiceItemClick(service)"
-              @mouseenter="sidebarCollapsed && handleServiceMouseEnter(service)"
-              @mouseleave="sidebarCollapsed && handleServiceMouseLeave(service)"
-            >
             <!-- 状态指示灯 -->
             <div class="status-indicator">
               <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
@@ -276,7 +116,7 @@
             <div class="service-name-container">
               <!-- 服务图标 -->
               <div class="service-icon">
-                <svg-icon :icon-class="service.icon || 'service-default'" />
+                <svg-icon :icon-class="service.icon || (service.serviceName === 'DATASOPHON' ? 'datasophon' : 'service-default')" />
               </div>
               
               <!-- 服务名称 -->
@@ -309,7 +149,6 @@
               </div>
             </div>
           </div>
-          </a-popover>
         </div>
       </div>
     </div>

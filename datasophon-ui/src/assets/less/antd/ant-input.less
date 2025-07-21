@@ -1,0 +1,71 @@
+/* 苹果风格输入框样式 */
+.ant-input,
+.ant-input-affix-wrapper {
+  border-radius: @border-radius-base;
+  border: 1px solid @border-color-base;
+  transition: all 0.3s @ease-in-out;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+  font-size: 14px;
+
+  &:hover {
+    border-color: @primary-5;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+  }
+
+  &:focus,
+  &-focused {
+    border-color: @primary-color;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    outline: 0;
+  }
+  
+  &.ant-input-disabled {
+    background-color: rgba(245, 245, 247, 0.8);
+    color: @disabled-color;
+    border-color: @border-color-base;
+  }
+}
+
+/* 输入框内容垂直居中 */
+.ant-input {
+  padding-top: 0;
+  padding-bottom: 0;
+  height: @input-height-base;
+  line-height: @input-height-base;
+}
+
+/* 输入框组 */
+.ant-input-group-addon {
+  background: rgba(250, 250, 252, 0.9);
+  border-radius: @border-radius-base;
+  border-color: @border-color-base;
+  transition: all 0.3s @ease-in-out;
+  padding: 0 12px;
+}
+
+/* 搜索框 */
+.ant-input-search .ant-input-search-button {
+  border-radius: 0 @border-radius-base @border-radius-base 0;
+  height: @input-height-base;
+  line-height: @input-height-base;
+}
+
+/* 文本域 */
+.ant-input-textarea textarea.ant-input {
+  padding: 10px 16px;
+  border-radius: @border-radius-base;
+  line-height: 1.5;
+  transition: all 0.3s @ease-in-out;
+  
+  &:hover {
+    border-color: @primary-5;
+  }
+  
+  &:focus {
+    border-color: @primary-color;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+  }
+} 

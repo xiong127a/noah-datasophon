@@ -1,0 +1,166 @@
+/* 苹果风格表单样式 */
+.ant-form {
+  /* 表单项间距 */
+  .ant-form-item {
+    margin-bottom: @form-item-margin-bottom;
+    
+    /* 表单标签 */
+    .ant-form-item-label {
+      label {
+        color: @text-color;
+        font-size: 14px;
+        font-weight: 500;
+        height: 28px;
+        
+        /* 必填星号 */
+        &.ant-form-item-required:not(.ant-form-item-required-mark-optional)::before {
+          color: @error-color;
+          font-size: 16px;
+          margin-right: 6px;
+        }
+      }
+    }
+    
+    /* 表单控件 */
+    .ant-form-item-control {
+      line-height: 1;
+      
+      /* 表单额外信息 */
+      .ant-form-item-extra {
+        color: @text-color-secondary;
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 4px;
+      }
+      
+      /* 表单校验信息 */
+      .ant-form-item-explain,
+      .ant-form-item-extra {
+        min-height: 20px;
+        font-size: 12px;
+        padding-top: 4px;
+        transition: opacity 0.15s @ease-in-out;
+      }
+      
+      /* 表单错误信息 */
+      .ant-form-item-explain-error {
+        color: @error-color;
+        animation: formErrorAppear 0.3s @ease-in-out;
+      }
+      
+      /* 表单警告信息 */
+      .ant-form-item-explain-warning {
+        color: @warning-color;
+      }
+    }
+    
+    /* 表单项有错误时的输入框样式 */
+    &.ant-form-item-has-error {
+      .ant-input,
+      .ant-input-affix-wrapper,
+      .ant-input-number,
+      .ant-picker,
+      .ant-select-selector {
+        border-color: @error-color !important;
+        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.1) !important;
+        
+        &:focus,
+        &-focused {
+          border-color: @error-color !important;
+          box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2) !important;
+        }
+      }
+      
+      .ant-checkbox-inner,
+      .ant-radio-inner {
+        border-color: @error-color !important;
+      }
+      
+      .ant-checkbox-checked .ant-checkbox-inner,
+      .ant-radio-checked .ant-radio-inner {
+        background-color: @error-color !important;
+        border-color: @error-color !important;
+      }
+    }
+    
+    /* 表单项有警告时的输入框样式 */
+    &.ant-form-item-has-warning {
+      .ant-input,
+      .ant-input-affix-wrapper,
+      .ant-input-number,
+      .ant-picker,
+      .ant-select-selector {
+        border-color: @warning-color !important;
+        box-shadow: 0 0 0 2px rgba(255, 149, 0, 0.1) !important;
+        
+        &:focus,
+        &-focused {
+          border-color: @warning-color !important;
+          box-shadow: 0 0 0 2px rgba(255, 149, 0, 0.2) !important;
+        }
+      }
+    }
+  }
+  
+  /* 紧凑型表单 */
+  &.ant-form-compact {
+    .ant-form-item {
+      margin-bottom: 16px;
+    }
+  }
+  
+  /* 内联表单 */
+  &.ant-form-inline {
+    .ant-form-item {
+      margin-right: 16px;
+      margin-bottom: 16px;
+    }
+  }
+  
+  /* 垂直表单 */
+  &.ant-form-vertical {
+    .ant-form-item-label {
+      padding-bottom: 6px;
+    }
+  }
+  
+  /* 表单按钮组 */
+  .ant-form-item-control-input-content {
+    .ant-btn + .ant-btn {
+      margin-left: 12px;
+    }
+  }
+}
+
+/* 表单错误信息动画 */
+@keyframes formErrorAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 表单校验状态图标 */
+.ant-form-item-control-input {
+  .ant-form-item-children-icon {
+    height: 32px;
+    line-height: 32px;
+    right: 8px;
+    
+    .anticon-check-circle {
+      color: @success-color;
+    }
+    
+    .anticon-close-circle {
+      color: @error-color;
+    }
+    
+    .anticon-exclamation-circle {
+      color: @warning-color;
+    }
+  }
+} 

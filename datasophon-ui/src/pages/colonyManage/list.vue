@@ -246,7 +246,7 @@ export default {
     },
     addColony(obj) {
       const self = this;
-      let width = 1000;
+      let width = 800; // 从1000px减小到800px
       let title = JSON.stringify(obj) !== "{}" ? "编辑集群配置" : "创建新集群";
       let content = (
         <AddColony detail={obj} callBack={() => self.getColonyList()} />
@@ -257,6 +257,16 @@ export default {
         content: content,
         closable: true,
         wrapClassName: 'apple-create-modal',
+        okButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
+        cancelButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
+        maskClosable: false,
+        centered: true,
+        destroyOnClose: true,
+        bodyStyle: { 
+          padding: 0, 
+          maxHeight: 'calc(100vh - 200px)', 
+          overflow: 'auto' 
+        }, // 限制高度并添加滚动
         icon: () => {
           return <div />;
         },
@@ -308,8 +318,8 @@ export default {
     // 集群授权
     authCluster(obj) {
       const self = this;
-      let width = 600;
-      let title = "集群授权管理";
+      let width = 460; // 更宽的模态框
+      let title = null; // 不显示标题
       let content = (
         <AuthCluster detail={obj} callBack={() => self.getColonyList()} />
       );
@@ -318,7 +328,14 @@ export default {
         title: title,
         content: content,
         closable: true,
-        wrapClassName: 'apple-auth-modal',
+        wrapClassName: 'auth-cluster-modal',
+        okButtonProps: { style: { display: 'none' } },
+        cancelButtonProps: { style: { display: 'none' } },
+        maskClosable: false,
+        centered: true,
+        destroyOnClose: true,
+        bodyStyle: { padding: 0 },
+        style: { top: '10%' },
         icon: () => {
           return <div />;
         },
@@ -1833,5 +1850,147 @@ export default {
       }
     }
   }
+}
+</style>
+
+<style scoped>
+/* 确保这个样式在scoped style中添加 */
+</style>
+
+<style>
+/* 全局样式覆盖 */
+.apple-create-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.apple-create-modal .ant-modal-header {
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 20px 24px;
+}
+
+.apple-create-modal .ant-modal-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+}
+
+.apple-create-modal .ant-modal-body {
+  padding: 0;
+}
+
+.apple-create-modal .ant-modal-close {
+  top: 16px;
+  right: 20px;
+}
+
+.apple-create-modal .ant-modal-close-x {
+  width: 48px;
+  height: 48px;
+  line-height: 48px;
+  font-size: 20px;
+}
+
+/* 选择框本身的圆角样式 */
+.ant-select .ant-select-selector {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+/* 确保下拉箭头区域与框体融合 */
+.ant-select .ant-select-arrow {
+  right: 11px;
+}
+
+/* 确保多选模式下的选择框也是圆角的 */
+.ant-select-multiple .ant-select-selector {
+  border-radius: 12px !important;
+  padding: 4px 8px !important;
+}
+
+/* 全局下拉菜单样式 */
+.ant-select-dropdown {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+  padding: 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+/* 下拉菜单项容器 */
+.ant-select-dropdown-menu,
+.ant-select-dropdown ul {
+  max-height: 240px !important;
+  padding: 4px !important;
+}
+
+/* Ant Design Vue 1.7.2版本下拉菜单项样式 */
+.ant-select-dropdown-menu-item,
+.ant-select-dropdown-menu-item-selected,
+.ant-select-dropdown-menu-item-active {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  transition: background 0.2s !important;
+  margin: 4px 0 !important;
+}
+
+/* 下拉菜单项悬停和选中效果 */
+.ant-select-dropdown-menu-item:hover {
+  background-color: #f0f7ff !important;
+}
+
+.ant-select-dropdown-menu-item-selected {
+  background-color: rgba(10, 132, 255, 0.1) !important;
+  color: #0A84FF !important;
+  font-weight: 600 !important;
+}
+
+/* 修复下拉菜单在屏幕外的问题 */
+.ant-select-dropdown {
+  position: fixed !important;
+}
+
+/* 美化表单样式 */
+.ant-form-item-required::before {
+  display: none !important;
+}
+
+.ant-form-item-label > label.ant-form-item-required::after {
+  display: inline-block !important;
+  margin-left: 4px;
+  content: '必填';
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 5px;
+  background-color: rgba(10, 132, 255, 0.1);
+  color: #0A84FF;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
+/* 圆角输入框和选择框 */
+.ant-input,
+.ant-btn {
+  border-radius: 12px !important;
+}
+
+.ant-input:focus, 
+.ant-input-focused {
+  border-color: #0A84FF !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
+}
+
+.ant-input:hover, 
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: #0A84FF !important;
+}
+
+/* 强制应用样式到下拉框选项上 */
+.ant-select-dropdown-menu .ant-select-dropdown-menu-item {
+  border-radius: 8px !important;
 }
 </style>

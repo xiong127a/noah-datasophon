@@ -1,0 +1,232 @@
+/* 苹果风格按钮样式 */
+.ant-btn {
+  border-radius: @btn-border-radius-base;
+  height: @btn-height-base;
+  padding: @btn-padding-base;
+  font-size: 14px;
+  font-weight: @btn-font-weight;
+  transition: all 0.2s @ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  
+  /* 按钮内容垂直居中 */
+  > span {
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  /* 图标按钮 */
+  .anticon {
+    font-size: 14px;
+    
+    + span {
+      margin-left: 8px;
+    }
+  }
+  
+  /* 默认按钮 */
+  &.ant-btn-default {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: @border-color-base;
+    color: @text-color;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-color: @primary-5;
+      color: @primary-color;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    }
+    
+    &:active {
+      background-color: rgba(245, 245, 247, 0.9);
+      border-color: @primary-color;
+      color: @primary-color;
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+    
+    &:focus {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-color: @primary-color;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    }
+  }
+  
+  /* 主按钮 */
+  &.ant-btn-primary {
+    background: linear-gradient(135deg, @primary-color, @primary-7);
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+    
+    &:hover {
+      background: linear-gradient(135deg, @primary-5, @primary-color);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+    }
+    
+    &:active {
+      background: linear-gradient(135deg, @primary-7, @primary-8);
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 122, 255, 0.2);
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2), 0 2px 8px rgba(0, 122, 255, 0.2);
+    }
+  }
+  
+  /* 危险按钮 */
+  &.ant-btn-dangerous {
+    &.ant-btn-primary {
+      background: linear-gradient(135deg, @error-color, #E6002D);
+      border-color: transparent;
+      box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
+      
+      &:hover {
+        background: linear-gradient(135deg, #FF5146, @error-color);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+      }
+      
+      &:active {
+        background: linear-gradient(135deg, #D70015, #B30012);
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(255, 59, 48, 0.2);
+      }
+      
+      &:focus {
+        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2), 0 2px 8px rgba(255, 59, 48, 0.2);
+      }
+    }
+    
+    &.ant-btn-default {
+      color: @error-color;
+      border-color: @error-color;
+      
+      &:hover {
+        color: #FF5146;
+        border-color: #FF5146;
+        background-color: rgba(255, 59, 48, 0.05);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(255, 59, 48, 0.1);
+      }
+      
+      &:active {
+        color: #D70015;
+        border-color: #D70015;
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(255, 59, 48, 0.1);
+      }
+      
+      &:focus {
+        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2);
+      }
+    }
+  }
+  
+  /* 链接按钮 */
+  &.ant-btn-link {
+    color: @primary-color;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    height: auto;
+    padding: 4px 0;
+    
+    &:hover {
+      color: @primary-5;
+      transform: translateY(0);
+    }
+    
+    &:active {
+      color: @primary-7;
+    }
+    
+    &.ant-btn-dangerous {
+      color: @error-color;
+      
+      &:hover {
+        color: #FF5146;
+      }
+      
+      &:active {
+        color: #D70015;
+      }
+    }
+  }
+  
+  /* 文本按钮 */
+  &.ant-btn-text {
+    background: transparent;
+    border-color: transparent;
+    color: @text-color;
+    box-shadow: none;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+      color: @text-color;
+    }
+    
+    &:active {
+      background: rgba(0, 0, 0, 0.08);
+      color: @text-color;
+    }
+    
+    &.ant-btn-dangerous {
+      color: @error-color;
+      
+      &:hover {
+        background: rgba(255, 59, 48, 0.05);
+        color: #FF5146;
+      }
+      
+      &:active {
+        background: rgba(255, 59, 48, 0.1);
+        color: #D70015;
+      }
+    }
+  }
+  
+  /* 大按钮 */
+  &.ant-btn-lg {
+    height: 44px;
+    font-size: 16px;
+    padding: 0 24px;
+  }
+  
+  /* 小按钮 */
+  &.ant-btn-sm {
+    height: 32px;
+    font-size: 12px;
+    padding: 0 12px;
+    border-radius: 6px;
+  }
+  
+  /* 禁用状态 */
+  &.ant-btn-disabled,
+  &.ant-btn-disabled:hover,
+  &.ant-btn-disabled:focus,
+  &.ant-btn-disabled:active {
+    color: @disabled-color !important;
+    background: rgba(245, 245, 247, 0.8) !important;
+    border-color: @border-color-base !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none !important;
+  }
+  
+  /* 加载状态 */
+  &.ant-btn-loading {
+    opacity: 0.8;
+    pointer-events: none;
+    
+    .anticon.anticon-loading {
+      margin-right: 8px;
+    }
+    
+    &:before {
+      display: none;
+    }
+  }
+} 
