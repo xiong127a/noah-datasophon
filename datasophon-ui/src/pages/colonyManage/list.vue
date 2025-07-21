@@ -101,24 +101,20 @@
       
       <!-- 创建新集群卡片 - 放在最后位置 -->
       <div class="cluster-card create-card" @click="addColony({})">
-        <div class="create-card-inner">
-          <div class="create-card-content">
-          <div class="create-icon">
-              <a-icon type="plus" />
-          </div>
+        <div class="create-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="create-content">
           <h3 class="create-title">创建新集群</h3>
-            <p class="create-desc">部署新的大数据集群环境</p>
-          <div class="create-features">
-            <div class="feature-item">
-                <a-icon type="check-circle" theme="filled" />
-              <span>一键部署</span>
-            </div>
-            <div class="feature-item">
-                <a-icon type="check-circle" theme="filled" />
-              <span>智能配置</span>
-            </div>
-            </div>
-          </div>
+          <p class="create-desc">快速部署一个全新的大数据集群环境</p>
+        </div>
+        <div class="create-features">
+          <span class="feature-tag">一键部署</span>
+          <span class="feature-tag">智能配置</span>
+          <span class="feature-tag">高效运维</span>
         </div>
       </div>
     </div>
@@ -865,83 +861,117 @@ export default {
   }
 }
 
-// 创建新集群卡片样式 - 修复丢失的样式
+/* 增强创建新集群卡片的样式 */
 .create-card {
+  height: 100%;
+  border: 2px dashed #e8e8e8;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 250, 255, 0.95) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  transition: all 0.3s ease;
   cursor: pointer;
-  background: white;
-  
-  .create-card-inner {
-    padding: 24px;
-    height: 100%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.03);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0;
+    background: linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(104, 189, 255, 0.1) 100%);
+    transition: height 0.3s ease;
+    z-index: -1;
+  }
+
+  &:hover {
+    border-color: #1890ff;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(24, 144, 255, 0.12);
+
+    &::before {
+      height: 100%;
+    }
+
+    .create-icon {
+      transform: scale(1.1) rotate(180deg);
+      color: #1890ff;
+      box-shadow: 0 6px 16px rgba(24, 144, 255, 0.3);
+    }
+
+    .create-title {
+      color: #1890ff;
+    }
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+
+  .create-icon {
+    width: 64px;
+    height: 64px;
+    background: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box;
+    margin-bottom: 20px;
+    color: #999;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+
+    svg {
+      width: 24px;
+      height: 24px;
+      transition: all 0.3s ease;
     }
-    
-  .create-card-content {
-    text-align: center;
-    max-width: 250px;
   }
-  
-  .create-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 24px;
-    background: #f0f7ff;
-    color: #007aff;
-    font-size: 24px;
-          display: flex;
-    align-items: center;
-          justify-content: center;
-    margin: 0 auto 16px;
+
+  .create-content {
+    margin-bottom: 16px;
   }
-  
+
   .create-title {
     font-size: 18px;
     font-weight: 600;
-    color: #1d1d1f;
-    margin: 0 0 8px;
-          }
-  
+    margin-bottom: 8px;
+    color: #333;
+    transition: color 0.3s ease;
+  }
+
   .create-desc {
     font-size: 14px;
-    color: #86868b;
-    margin: 0 0 20px;
-    line-height: 1.4;
+    color: #888;
+    margin-bottom: 16px;
+    max-width: 220px;
+    line-height: 1.5;
   }
-  
+
   .create-features {
-    text-align: left;
-    
-    .feature-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      
-      .anticon {
-        color: #007aff;
-        font-size: 16px;
-      }
-      
-      span {
-        font-size: 14px;
-        color: #1d1d1f;
-      }
-    }
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
   }
-  
-  &:hover {
-    .create-icon {
-      background: #007aff;
-      color: white;
-    }
-    
-    .create-title {
-      color: #007aff;
-        }
-      }
+
+  .feature-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(24, 144, 255, 0.1);
+    color: #1890ff;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
 }
 
 /* 集群卡片样式 */
