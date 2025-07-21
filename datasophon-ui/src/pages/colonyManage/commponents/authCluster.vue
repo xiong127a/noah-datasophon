@@ -24,7 +24,7 @@
  * @FilePath: \ddh-ui\src\pages\colonyManage\commponents\authCluster.vue
 -->
 <template>
-  <div class="cluster-auth-content">
+  <div class="cluster-auth-content no-question-icons">
     <div class="auth-top">
       <div class="blue-icon">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -49,7 +49,7 @@
               v-decorator="['userIds', { rules: [{ required: false }]}]"
               placeholder="请选择一个或多个集群管理员"
               :dropdownMatchSelectWidth="false"
-              :getPopupContainer="() => $refs.selectContainer"
+              :getPopupContainer="triggerNode => triggerNode.parentElement"
               dropdownClassName="admin-dropdown"
             >
               <a-select-option 
@@ -66,14 +66,13 @@
     </div>
 
     <div class="auth-btns">
-      <a-button type="primary" @click="handleSubmit" :loading="loading" class="apple-btn apple-btn-primary">
+      <a-button type="primary" @click="handleSubmit" :loading="loading" class="auth-btn auth-btn-primary">
         确认授权
       </a-button>
-      <a-button @click="formCancel" class="apple-btn apple-btn-default">
+      <a-button @click="formCancel" class="auth-btn auth-btn-default">
         取消
       </a-button>
     </div>
-    <div ref="selectContainer" class="popup-container"></div>
   </div>
 </template>
 
@@ -97,36 +96,50 @@ export default {
   },
   methods: {
     formCancel() {
-      this.$destroyAll();
+      // 不再使用$destroyAll()
+      this.$emit('cancel');
     },
     handleSubmit(e) {
       e.preventDefault();
       const _this = this;
       this.form.validateFields((err, values) => {
         if (!err) {
+          // API需要的是userIds参数
           const params = {
-            "userIds": values.userIds || ""
+            "userIds": values.userIds || []
           };
           if (JSON.stringify(this.detail) !== '{}') {
             params.clusterId = this.detail.id;
           }
           
+          console.log('授权参数:', params); // 调试输出参数
+          
           this.loading = true;
-          this.$axiosPost(global.API.authCluster, params)
+          // 使用axiosJsonPost而不是axiosPost，因为需要JSON格式提交而非FormData
+          this.$axiosJsonPost(global.API.authCluster, params)
             .then((res) => {
               this.loading = false;
               if (res.code === 200) {
-                if (params.userIds.length > 0) {
+                if (params.userIds && params.userIds.length > 0) {
                   this.$message.success('授权成功', 2);
                 } else {
                   this.$message.success('取消授权成功', 2);
                 }
-                this.$destroyAll();
-                _this.callBack();
+                // 调用callBack并关闭模态框
+                if (this.callBack) {
+                  this.callBack();
+                } else {
+                  // 如果没有传入callBack，则直接触发cancel事件
+                  this.$emit('cancel');
+                }
+              } else {
+                this.$message.error(res.msg || '授权失败', 2);
               }
             })
-            .catch(() => {
+            .catch((error) => {
               this.loading = false;
+              console.error('授权请求失败:', error); // 调试输出错误
+              this.$message.error('授权失败，请检查网络或参数', 2);
             });
         }
       });
@@ -138,10 +151,51 @@ export default {
             this.userList = res.data;
           }
         });
+    },
+    // 在组件内部也添加图标清除逻辑
+    removeQuestionIcons() {
+      const selectors = [
+        '.anticon-question-circle',
+        'i.anticon',
+        'svg[data-icon="question-circle"]',
+        '[aria-label="icon: question-circle"]',
+        '.ant-modal-confirm-title + i',
+        '.ant-modal-confirm-body i',
+        '.ant-modal-header i',
+        '.ant-modal-body i.anticon'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (el && el.parentNode) {
+            try {
+              el.style.display = 'none';
+              el.style.visibility = 'hidden';
+              el.style.width = '0';
+              el.style.height = '0';
+              el.style.position = 'absolute';
+              el.style.top = '-9999px';
+              el.parentNode.removeChild(el);
+            } catch (e) {
+              console.log('移除图标失败，但已隐藏');
+            }
+          }
+        });
+        });
     }
   },
   mounted() {
+    // 原始代码
     this.queryAllUser();
+    
+    // 组件挂载后移除图标
+    this.$nextTick(() => {
+      this.removeQuestionIcons();
+      // 设置多次检查，确保任何动态渲染的图标也被移除
+      setTimeout(() => this.removeQuestionIcons(), 50);
+      setTimeout(() => this.removeQuestionIcons(), 200);
+    });
   }
 };
 </script>
@@ -160,6 +214,12 @@ export default {
 .cluster-auth-content {
   padding: 0;
   position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto; /* 确保居中 */
+  background-color: white;
+  min-width: 316px; /* 确保最小宽度符合设计 */
 }
 
 .auth-top {
@@ -167,6 +227,8 @@ export default {
   padding: 20px 24px;
   border-bottom: 1px solid #f0f0f0;
   align-items: center;
+  width: 100%;
+  justify-content: center;
   
   .blue-icon {
     width: 48px;
@@ -178,6 +240,7 @@ export default {
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
+    flex-shrink: 0;
     
     svg {
       width: 24px;
@@ -186,6 +249,7 @@ export default {
   }
   
   .auth-info {
+    flex: 1;
     .title {
       font-size: 18px;
       font-weight: 600;
@@ -207,14 +271,21 @@ export default {
 
 .auth-form {
   padding: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   
   .form-item {
     margin-bottom: 16px;
+    width: 100%;
+    max-width: 350px; /* 限制表单宽度，更好看 */
     
     .label {
       margin-bottom: 10px;
       font-weight: 500;
       font-size: 15px;
+      text-align: left;
     }
     
     .select-container {
@@ -231,6 +302,60 @@ export default {
   justify-content: center;
   gap: 16px;
   background-color: #fafafa;
+  width: 100%;
+}
+
+.auth-btn {
+  min-width: 120px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  letter-spacing: 0.3px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+}
+
+.auth-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+.auth-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
+}
+
+.auth-btn-primary:active {
+  background: linear-gradient(135deg, #096dd9 0%, #1890ff 100%) !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35) !important;
+}
+
+.auth-btn-default {
+  background: #ffffff !important;
+  color: #464646 !important;
+  border: 1px solid #e6e6e6 !important;
+}
+
+.auth-btn-default:hover {
+  background: white !important;
+  color: #1890ff !important;
+  border-color: #1890ff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.auth-btn-default:active {
+  background: #f2f2f7 !important;
+  color: #096dd9 !important;
+  transform: translateY(0) !important;
 }
 
 .popup-container {
@@ -240,51 +365,47 @@ export default {
 </style>
 
 <style>
-/* 全局样式 */
+/* 全局样式 - 彻底修复紫色容器问题 */
 .auth-cluster-modal .ant-modal-content {
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 .auth-cluster-modal .ant-modal-body {
   padding: 0 !important;
 }
 
-.auth-cluster-modal .ant-modal-confirm-body-wrapper {
-  padding: 0;
+/* 极端处理：直接隐藏所有问号图标，包括蓝色问号 */
+.anticon-question-circle,
+i.anticon-question-circle,
+svg[data-icon="question-circle"],
+[aria-label="icon: question-circle"],
+svg[viewBox="64 64 896 896"][data-icon="question-circle"],
+.ant-modal-confirm-title-wrap i.anticon,
+.ant-modal-header i.anticon,
+.ant-modal-body i.anticon {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }
 
-.auth-cluster-modal .ant-modal-confirm-body {
-  padding: 0;
-  margin: 0;
+/* 特定处理SVG路径 */
+path[d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"] {
+  display: none !important;
 }
 
-.auth-cluster-modal .ant-modal-confirm-content {
-  margin: 0 !important;
-  padding: 0 !important;
+path[d="M623.6 316.7C593.6 290.4 554 276 512 276s-81.6 14.5-111.6 40.7C369.2 344 352 380.7 352 420v7.6c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V420c0-44.1 43.1-80 96-80s96 35.9 96 80c0 31.1-22 59.6-56.1 72.7-21.2 8.1-39.2 22.3-52.1 40.9-13.1 19-19.9 41.8-19.9 64.9V620c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-22.7a48.3 48.3 0 0 1 30.9-44.8c59-22.7 97.1-74.7 97.1-132.5.1-39.3-17.1-76-48.3-103.3zM472 732a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"] {
+  display: none !important;
 }
 
-.auth-cluster-modal .ant-modal-confirm-btns {
-  display: none;
-}
-
-/* 修复下拉菜单容器样式 */
-.popup-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1050;
-}
-
-.select-container {
-  position: relative;
-  width: 100%;
-}
-
-/* 下拉菜单样式 */
+/* 修复下拉菜单样式 */
 .admin-dropdown {
   border-radius: 12px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
@@ -294,7 +415,7 @@ export default {
 }
 
 .admin-dropdown .ant-select-dropdown-menu {
-  max-height: 240px;
+  max-height: 240px !important;
 }
 
 .admin-dropdown .ant-select-dropdown-menu-item {
@@ -316,30 +437,30 @@ export default {
 
 /* 修复选择框样式 */
 .admin-select {
-  width: 100%;
+  width: 100% !important;
 }
 
 .admin-select .ant-select-selection {
-  border-radius: 10px;
-  border: 1px solid #D1D1D6;
-  min-height: 44px;
-  padding: 6px 8px 2px;
-  transition: all 0.3s;
+  border-radius: 10px !important;
+  border: 1px solid #D1D1D6 !important;
+  min-height: 44px !important;
+  padding: 6px 8px 2px !important;
+  transition: all 0.3s !important;
 }
 
 .admin-select .ant-select-selection:hover {
-  border-color: #0A84FF;
-  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15);
+  border-color: #0A84FF !important;
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15) !important;
 }
 
 .admin-select .ant-select-selection--multiple .ant-select-selection__rendered {
-  margin-left: 4px;
-  margin-bottom: 5px;
+  margin-left: 4px !important;
+  margin-bottom: 5px !important;
 }
 
 .admin-select .ant-select-selection__placeholder {
-  margin-left: 4px;
-  color: #999;
+  margin-left: 4px !important;
+  color: #999 !important;
 }
 
 /* 标签样式 - 完全重写 */
@@ -393,79 +514,53 @@ export default {
 
 /* 确保选择框中的搜索输入框正确对齐 */
 .admin-select .ant-select-search--inline .ant-select-search__field {
-  margin-top: 7px;
-  margin-bottom: 4px;
-  height: 22px;
+  margin-top: 7px !important;
+  margin-bottom: 4px !important;
+  height: 22px !important;
+}
+</style>
+
+<style scoped>
+/* 在组件内部也添加清除图标的样式 */
+.no-question-icons :deep(.anticon-question-circle),
+.no-question-icons :deep(i.anticon),
+.no-question-icons :deep(svg[data-icon="question-circle"]),
+.no-question-icons :deep([aria-label="icon: question-circle"]) {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }
 
-/* 修正模态框居中问题 */
-.auth-cluster-modal {
-  display: flex;
-  justify-content: center;
+/* 确保布局正确 */
+.cluster-auth-content {
+  width: 100%;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.auth-cluster-modal .ant-modal {
-  top: 50%;
-  margin: 0 auto;
-  padding-bottom: 0;
+/* 隐藏所有可能显示问号图标的区域 */
+:deep(.ant-modal-confirm-title),
+:deep(.ant-modal-title),
+:deep(.ant-modal-confirm-title-wrap) {
+  position: relative;
 }
 
-/* 优化按钮区域样式 */
-.auth-btns {
-  padding: 20px 24px !important;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: center !important;
-  gap: 16px !important;
-  background-color: #fafafa;
-}
-
-.apple-btn {
-  min-width: 120px !important;
-  height: 40px;
-  border-radius: 10px;
-  font-weight: 600;
-  border: none;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  font-size: 14px;
-  letter-spacing: 0.3px;
-}
-
-.apple-btn-primary {
-  background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%) !important;
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3) !important;
-}
-
-.apple-btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(10, 132, 255, 0.4) !important;
-  background: linear-gradient(135deg, #0078F0 0%, #30B0FF 100%) !important;
-}
-
-.apple-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.35) !important;
-  background: linear-gradient(135deg, #0062CC 0%, #0A84FF 100%) !important;
-}
-
-.apple-btn-default {
-  background: #ffffff !important;
-  color: #464646 !important;
-  border: 1px solid #D1D1D6 !important;
-}
-
-.apple-btn-default:hover {
-  background: white !important;
-  color: #0A84FF !important;
-  border-color: #0A84FF !important;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-}
-
-.apple-btn-default:active {
-  background: #F2F2F7 !important;
-  color: #0062CC !important;
-  transform: translateY(0);
+:deep(.ant-modal-confirm-title)::before,
+:deep(.ant-modal-title)::before,
+:deep(.ant-modal-confirm-title-wrap)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 10;
 }
 </style>

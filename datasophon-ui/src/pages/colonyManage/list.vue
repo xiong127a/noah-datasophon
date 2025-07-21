@@ -1,165 +1,122 @@
 <template>
-  <div class="macos-cluster-container">
-    <!-- 集群网格 - 最大化利用屏幕空间 -->
-    <div class="macos-cluster-grid">
+  <div class="modern-cluster-container">
+    <!-- 页面头部横幅 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="page-title">集群管理</div>
+        <div class="page-description">管理和监控您的大数据集群，快速部署各类服务</div>
+      </div>
+    </div>
+
+    <!-- 集群卡片网格 -->
+    <div class="cluster-grid">
       <!-- 现有集群卡片 -->
       <div 
         v-for="(item, index) in filteredDataSource" 
         :key="index"
-        :class="[
-          'macos-cluster-card',
-          'cluster-card',
-          getClusterTypeClass(item.depType)
-        ]"
+        :class="['cluster-card', getClusterTypeClass(item.depType)]"
       >
-        <!-- 集群信息卡片 -->
-        <div class="cluster-card-content">
-          <!-- 卡片头部 -->
+        <!-- 集群状态标签 -->
+        <div :class="['status-badge', getStatusClass(item.clusterStateCode)]">
+          {{ item.clusterState }}
+        </div>
+
+        <!-- 集群头部 -->
           <div class="card-header">
-            <div class="cluster-info">
-              <div class="cluster-icon" :class="getClusterTypeClass(item.depType)">
+          <div class="cluster-icon">
                 <img v-if="item.depType === 'PVM'" src="~@/assets/img/os-logos/linux-tux.svg" alt="Linux" />
                 <img v-else-if="item.depType === 'Kubernetes'" src="~@/assets/images/kubernetes-logo.svg" alt="Kubernetes" />
-                <svg v-else viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M7 8h10M7 12h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
+            <svg-icon v-else icon-class="colony" />
               </div>
-              <div class="cluster-details">
+          <div class="cluster-info">
                 <h3 class="cluster-name">{{ item.clusterName }}</h3>
-                <div class="cluster-status">
-                  <div :class="['status-indicator', getStatusClass(item.clusterStateCode)]"></div>
-                  <span class="status-text">{{ item.clusterState }}</span>
-                </div>
-                <div class="cluster-type">
-                  <span class="type-badge" :class="getClusterTypeClass(item.depType)">
-                    {{ getClusterTypeText(item.depType) }}
-                  </span>
-                </div>
+            <div class="cluster-meta">
+              <span class="cluster-type">{{ getClusterTypeText(item.depType) }}</span>
+              <span class="cluster-date">{{ formatDate(item.createTime) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- 卡片内容 -->
+        <!-- 集群内容 -->
           <div class="card-body">
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">管理员</span>
-                <span class="info-value">{{ item.userManageName || '未分配' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">创建时间</span>
-                <span class="info-value">{{ formatDate(item.createTime) }}</span>
-              </div>
+          <div class="info-row">
+            <div class="info-label">管理员</div>
+            <div class="info-value">{{ item.userManageName || '未分配' }}</div>
             </div>
           </div>
 
-          <!-- 卡片操作 -->
-          <div class="card-actions">
-            <div class="primary-actions">
-              <button 
-                class="macos-button primary"
-                @click.stop="getInto(item)" 
+        <!-- 集群操作 -->
+        <div class="card-footer">
+          <div class="mac-button-group" ref="buttonContainer">
+            <!-- 进入集群按钮独占一行 -->
+            <a-button 
+              type="primary" 
+              class="mac-btn primary-btn"
+              @click="getInto(item)" 
                 :disabled="item.clusterStateCode === 1"
-              >
-                <svg class="button-icon" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                进入集群
-              </button>
-            </div>
-            <div class="secondary-actions">
-              <button 
-                v-if="user && user.userType === 1" 
-                class="macos-button secondary"
-                @click.stop="authCluster(item)"
-              >
-                <svg class="button-icon" viewBox="0 0 24 24" fill="none">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-                  <path d="M20 8v6M23 11l-3 3-3-3" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                授权
-              </button>
-              <button 
-                class="macos-button secondary"
-                @click.stop="addColony(item)" 
+              block
+            >
+              <a-icon type="login" />
+              <span>进入集群</span>
+            </a-button>
+            
+            <!-- 第二行按钮 - 均匀分布 -->
+            <div class="secondary-buttons">
+              <a-button 
+                class="mac-btn"
+                @click="addColony(item)" 
                 :disabled="item.clusterStateCode === 2"
               >
-                <svg class="button-icon" viewBox="0 0 24 24" fill="none">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                编辑
-              </button>
-              <div class="more-actions">
-                <button class="macos-button icon-only" @click.stop="toggleDropdown(index)">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                    <circle cx="19" cy="12" r="1" fill="currentColor"/>
-                    <circle cx="5" cy="12" r="1" fill="currentColor"/>
-                  </svg>
-                </button>
-                <div v-if="activeDropdown === index" class="dropdown-menu">
-                  <button 
-                    class="dropdown-item"
-                    @click.stop="configCluster(item)"
-                    :disabled="item.clusterStateCode === 2"
-                  >
-                    <svg class="item-icon" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    配置集群
-                  </button>
-                  <button 
-                    class="dropdown-item danger"
-                    @click.stop="delectColony(item)"
-                    :disabled="item.clusterStateCode === 2"
-                  >
-                    <svg class="item-icon" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    删除集群
-                  </button>
-                </div>
-              </div>
+                <a-icon type="edit" />
+                <span>编辑</span>
+              </a-button>
+              <a-button 
+                v-if="user && user.userType === 1"
+                class="mac-btn"
+                @click="authCluster(item)"
+              >
+                <a-icon type="safety" />
+                <span>授权</span>
+              </a-button>
+              <a-dropdown :trigger="['click']" placement="bottomRight" overlayClassName="mac-dropdown-overlay">
+                <a-button class="mac-btn more-btn">
+                  <a-icon type="ellipsis" />
+                  <span>更多</span>
+                </a-button>
+                <a-menu slot="overlay" class="mac-dropdown-menu">
+                  <a-menu-item @click="configCluster(item)" :disabled="item.clusterStateCode === 2">
+                    <a-icon type="setting" />
+                    <span>配置集群</span>
+                  </a-menu-item>
+                  <a-menu-item @click="delectColony(item)" :disabled="item.clusterStateCode === 2" class="danger">
+                    <a-icon type="delete" />
+                    <span>删除集群</span>
+                  </a-menu-item>
+                </a-menu>
+              </a-dropdown>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- 新建集群卡片 - 放在最后 -->
-      <div class="macos-cluster-card create-cluster-card" @click="addColony({})">
-        <div class="create-cluster-content">
+      <!-- 创建新集群卡片 - 放在最后位置 -->
+      <div class="cluster-card create-card" @click="addColony({})">
+        <div class="create-card-inner">
+          <div class="create-card-content">
           <div class="create-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+              <a-icon type="plus" />
           </div>
           <h3 class="create-title">创建新集群</h3>
-          <p class="create-description">快速部署和管理您的大数据集群</p>
+            <p class="create-desc">部署新的大数据集群环境</p>
           <div class="create-features">
             <div class="feature-item">
-              <svg viewBox="0 0 16 16" fill="none">
-                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" fill="currentColor"/>
-              </svg>
+                <a-icon type="check-circle" theme="filled" />
               <span>一键部署</span>
             </div>
             <div class="feature-item">
-              <svg viewBox="0 0 16 16" fill="none">
-                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" fill="currentColor"/>
-              </svg>
+                <a-icon type="check-circle" theme="filled" />
               <span>智能配置</span>
             </div>
-            <div class="feature-item">
-              <svg viewBox="0 0 16 16" fill="none">
-                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" fill="currentColor"/>
-              </svg>
-              <span>高可用</span>
             </div>
           </div>
         </div>
@@ -177,11 +134,30 @@
       :confirm-loading="confirmLoading" 
       @cancel="handleCancel" 
       :footer="null"
-      class="macos-modal"
     >
       <div class="modal-content">
         <Steps :clusterId="clusterId" :depType="depType" />
       </div>
+    </a-modal>
+
+    <!-- 使用a-modal代替$confirm -->
+    <a-modal
+      v-model="authModalVisible"
+      :footer="null"
+      :closable="false"
+      :maskClosable="false"
+      centered
+      destroyOnClose
+      :width="450"
+      :bodyStyle="{ padding: 0 }"
+      class="clean-modal auth-modal auth-cluster-modal"
+    >
+      <AuthCluster 
+        v-if="currentClusterForAuth" 
+        :detail="currentClusterForAuth" 
+        :callBack="handleAuthComplete" 
+        @cancel="handleAuthModalClose"
+      />
     </a-modal>
   </div>
 </template>
@@ -203,7 +179,10 @@ export default {
     };
   },
 
-  components: { Steps },
+  components: {
+    Steps,
+    AuthCluster
+  },
 
   data() {
     return {
@@ -211,7 +190,11 @@ export default {
       dataSource: [],
       confirmLoading: false,
       clusterId: "", // 操作的集群Id
-      activeDropdown: null, // 当前激活的下拉菜单
+      depType: "",
+      activeDropdown: null,
+      dropdownPositions: {}, // 存储每个下拉菜单的位置
+      authModalVisible: false,
+      currentClusterForAuth: null,
     };
   },
 
@@ -225,16 +208,72 @@ export default {
 
   mounted() {
     this.getColonyList();
-    // 点击外部关闭下拉菜单
-    document.addEventListener('click', this.handleClickOutside);
+    // 确保样式一致性
+    document.body.classList.add('colony-manage-page');
+    this.ensureStyleConsistency();
+    
+    // 添加点击外部关闭下拉菜单事件
+    document.addEventListener('click', this.closeDropdownOnOutsideClick);
   },
   
   beforeDestroy() {
-    document.removeEventListener('click', this.handleClickOutside);
+    // 移除样式标记和事件监听
+    document.body.classList.remove('colony-manage-page');
+    document.removeEventListener('click', this.closeDropdownOnOutsideClick);
   },
 
   methods: {
     ...mapMutations("setting", ["setIsCluster", "setMenuData", "setClusterId"]),
+    
+    // 打开/关闭下拉菜单
+    toggleDropdown(index, event) {
+      // 阻止事件冒泡，这样点击事件不会传递到document上
+      event.stopPropagation();
+      
+      if (this.activeDropdown === index) {
+        this.activeDropdown = null;
+      } else {
+        this.activeDropdown = index;
+        // 设置下拉菜单位置
+        this.$nextTick(() => {
+          const button = event.target.closest('.more-btn');
+          if (button) {
+            const buttonRect = button.getBoundingClientRect();
+            // 保存位置信息到索引对应的位置
+            this.dropdownPositions[index] = {
+              right: '0px',
+              top: buttonRect.height + 'px'
+            };
+          }
+        });
+      }
+    },
+    
+    // 获取下拉菜单样式
+    getDropdownStyle(index) {
+      return this.dropdownPositions[index] || { right: '0px', top: '32px' };
+    },
+    
+    // 点击外部关闭下拉菜单
+    closeDropdownOnOutsideClick(event) {
+      if (this.activeDropdown !== null && !event.target.closest('.dropdown-wrapper')) {
+        this.activeDropdown = null;
+      }
+    },
+    
+    // 确保样式一致性，解决刷新页面样式变化问题
+    ensureStyleConsistency() {
+      // 强制重新计算样式
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.cluster-card');
+        cards.forEach(card => {
+          card.style.display = 'none';
+          setTimeout(() => {
+            card.style.display = '';
+          }, 0);
+        });
+      }, 100);
+    },
     // 进入
     getInto(row) {
       this.$axiosPost(global.API.getServiceListByCluster, {
@@ -246,7 +285,7 @@ export default {
     },
     addColony(obj) {
       const self = this;
-      let width = 800; // 从1000px减小到800px
+      let width = 800;
       let title = JSON.stringify(obj) !== "{}" ? "编辑集群配置" : "创建新集群";
       let content = (
         <AddColony detail={obj} callBack={() => self.getColonyList()} />
@@ -257,8 +296,8 @@ export default {
         content: content,
         closable: true,
         wrapClassName: 'apple-create-modal',
-        okButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
-        cancelButtonProps: { style: { display: 'none' } }, // 隐藏默认按钮
+        okButtonProps: { style: { display: 'none' } },
+        cancelButtonProps: { style: { display: 'none' } },
         maskClosable: false,
         centered: true,
         destroyOnClose: true,
@@ -266,7 +305,7 @@ export default {
           padding: 0, 
           maxHeight: 'calc(100vh - 200px)', 
           overflow: 'auto' 
-        }, // 限制高度并添加滚动
+        },
         icon: () => {
           return <div />;
         },
@@ -301,6 +340,8 @@ export default {
           return <div />;
         },
       });
+      // 关闭下拉菜单
+      this.activeDropdown = null;
     },
     getColonyList() {
       this.$axiosPost(global.API.getColonyList, {}).then((res) => {
@@ -312,49 +353,72 @@ export default {
           });
           item["userManageName"] = arr.join(",");
         });
-        // 移除添加集群的占位项，因为不再需要创建集群按钮
       });
     },
     // 集群授权
     authCluster(obj) {
-      const self = this;
-      let width = 460; // 更宽的模态框
-      let title = null; // 不显示标题
-      let content = (
-        <AuthCluster detail={obj} callBack={() => self.getColonyList()} />
-      );
-      this.$confirm({
-        width: width,
-        title: title,
-        content: content,
-        closable: true,
-        wrapClassName: 'auth-cluster-modal',
-        okButtonProps: { style: { display: 'none' } },
-        cancelButtonProps: { style: { display: 'none' } },
-        maskClosable: false,
-        centered: true,
-        destroyOnClose: true,
-        bodyStyle: { padding: 0 },
-        style: { top: '10%' },
-        icon: () => {
-          return <div />;
-        },
+      this.currentClusterForAuth = obj;
+      this.authModalVisible = true;
+    },
+    
+    handleAuthModalClose() {
+      this.authModalVisible = false;
+      this.currentClusterForAuth = null;
+    },
+    
+    handleAuthComplete() {
+      this.getColonyList();
+      this.handleAuthModalClose();
+    },
+    // 独立方法，便于多次调用
+    removeQuestionIcons() {
+      // 定位所有问号图标，包括SVG
+      const iconSelectors = [
+        '.auth-cluster-modal .anticon-question-circle',
+        '.auth-cluster-modal i.anticon',
+        '.auth-cluster-modal svg[data-icon="question-circle"]',
+        '.auth-cluster-modal .ant-modal-confirm-title + i',
+        '.auth-cluster-modal .ant-modal-confirm-body i',
+        '.auth-cluster-modal .ant-modal-header i',
+        '.auth-cluster-modal .ant-modal-body i.anticon',
+        '.auth-cluster-modal .anticon',
+      ];
+      
+      iconSelectors.forEach(selector => {
+        const icons = document.querySelectorAll(selector);
+        icons.forEach(icon => {
+          if (icon && icon.parentNode) {
+            // 1. 首先将其隐藏
+            icon.style.display = 'none';
+            icon.style.visibility = 'hidden';
+            icon.style.width = '0';
+            icon.style.height = '0';
+            icon.style.position = 'absolute';
+            icon.style.top = '-9999px';
+            icon.style.left = '-9999px';
+            
+            // 2. 然后尝试从DOM中移除
+            try {
+              icon.parentNode.removeChild(icon);
+            } catch (e) {
+              console.log('移除图标失败，但已隐藏');
+            }
+          }
+        });
       });
     },
     // 配置集群
     configCluster(row) {
       this.clusterId = row.id;
-      this.setClusterId(row.id)
+      this.setClusterId(row.id);
       this.visible = true;
-      this.depType = row.depType
+      this.depType = row.depType;
+      // 关闭下拉菜单
+      this.activeDropdown = null;
     },
     handleCancel(e) {
       this.visible = false;
-      this.getColonyList()
-    },
-    // 切换下拉菜单
-    toggleDropdown(index) {
-      this.activeDropdown = this.activeDropdown === index ? null : index;
+      this.getColonyList();
     },
     // 获取状态样式类
     getStatusClass(statusCode) {
@@ -373,12 +437,6 @@ export default {
         month: '2-digit',
         day: '2-digit'
       });
-    },
-    // 处理点击外部关闭下拉菜单
-    handleClickOutside(event) {
-      if (!event.target.closest('.more-actions')) {
-        this.activeDropdown = null;
-      }
     },
     // 获取集群类型样式类
     getClusterTypeClass(depType) {
@@ -401,1596 +459,905 @@ export default {
 </script>
 
 <style lang="less" scoped>
-/* 现代化浅色系设计系统 - 与AdminHeader保持一致 */
-.macos-cluster-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+.modern-cluster-container {
   padding: 24px;
-  margin: 0;
-  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: #f6f6f6; // 苹果风格浅灰色背景
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* 现代化浅色系按钮系统 - 增强版 */
-.macos-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
+/* 页面头部样式 - 苹果风格 */
+.page-header {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 32px;
+  border-radius: 16px;
+  margin-bottom: 24px;
   border: none;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  position: relative;
-  overflow: hidden;
-  white-space: nowrap;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   
-  /* 添加微妙的内阴影效果 */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: exclude;
-    -webkit-mask-composite: xor;
-    pointer-events: none;
-  }
-  
-  &.primary {
-    background: linear-gradient(135deg, #007aff 0%, #0051d5 50%, #003db8 100%);
-    color: white;
-    box-shadow: 
-      0 4px 16px rgba(0, 122, 255, 0.25),
-      0 2px 8px rgba(0, 122, 255, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    
-    &:hover:not(:disabled) {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 
-        0 8px 32px rgba(0, 122, 255, 0.35),
-        0 4px 16px rgba(0, 122, 255, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-      background: linear-gradient(135deg, #1a8cff 0%, #1a5ce6 50%, #0051d5 100%);
+  .header-content {
+    .page-title {
+      font-size: 28px;
+      font-weight: 600;
+      color: #1d1d1f; // 苹果典型标题色
+      margin: 0 0 8px 0;
+      letter-spacing: -0.025em;
     }
-    
-    &:active:not(:disabled) {
-      transform: translateY(-1px) scale(1.01);
-      box-shadow: 
-        0 4px 20px rgba(0, 122, 255, 0.4),
-        0 2px 10px rgba(0, 122, 255, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
-      transition-duration: 0.1s;
+
+    .page-description {
+      color: #86868b; // 苹果次要文本色
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.4;
     }
-  }
-  
-  &.secondary {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
-    color: #2c2c2c;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    
-    &:hover {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 252, 255, 0.98) 100%);
-      border-color: rgba(0, 122, 255, 0.25);
-      color: #007aff;
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 
-        0 6px 20px rgba(0, 122, 255, 0.12),
-        0 2px 8px rgba(0, 0, 0, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
-    
-    &:active {
-      background: linear-gradient(135deg, rgba(245, 248, 250, 1) 0%, rgba(240, 245, 251, 0.98) 100%);
-      transform: translateY(-1px) scale(1.005);
-      transition-duration: 0.1s;
-    }
-  }
-  
-  &.icon-only {
-    padding: 10px;
-    min-width: 36px;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.85) 100%);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    gap: 0;
-    box-shadow: 
-      0 2px 6px rgba(0, 0, 0, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.7);
-    
-    &:hover {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 252, 255, 0.95) 100%);
-      border-color: rgba(0, 122, 255, 0.2);
-      color: #007aff;
-      transform: translateY(-2px) scale(1.05);
-      box-shadow: 
-        0 4px 16px rgba(0, 122, 255, 0.08),
-        0 2px 8px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    }
-    
-    &:active {
-      transform: translateY(-1px) scale(1.02);
-      transition-duration: 0.1s;
-    }
-  }
-  
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-  }
-  
-  .button-icon {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-  }
-  
-  svg {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
   }
 }
 
-/* 集群网格 - 最大化利用屏幕空间 */
-.macos-cluster-grid {
+.cluster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
-  width: 100%;
-  max-width: none;
 }
 
-/* 新建集群卡片样式 */
-.create-cluster-card {
-  background: linear-gradient(135deg, 
-    rgba(0, 122, 255, 0.05) 0%, 
-    rgba(0, 122, 255, 0.02) 50%, 
-    rgba(255, 255, 255, 0.95) 100%);
-  border: 2px dashed rgba(0, 122, 255, 0.2);
-  cursor: pointer;
+/* 集群卡片 - 苹果设计风格 */
+.cluster-card {
   position: relative;
+  background: rgba(255, 255, 255, 0.8); // 半透明背景
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, 
-      rgba(0, 122, 255, 0.08) 0%, 
-      rgba(0, 122, 255, 0.03) 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
+  transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1.0);
+  border: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   
   &:hover {
-    transform: translateY(-6px) scale(1.02);
-    border-color: rgba(0, 122, 255, 0.4);
-    box-shadow: 
-      0 12px 40px rgba(0, 122, 255, 0.15),
-      0 4px 16px rgba(0, 122, 255, 0.1);
-    
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  &.linux-type {
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+      height: 100%;
+      width: 4px;
+      background: linear-gradient(to bottom, #ff9500, #ff2d55);
+    }
+  }
+  
+  &.k8s-type {
     &::before {
-      opacity: 1;
-    }
-    
-    .create-icon {
-      transform: scale(1.1) rotate(5deg);
-      
-      svg {
-        color: #007aff;
-      }
-    }
-    
-    .create-title {
-      color: #007aff;
-    }
-    
-    .feature-item {
-      transform: translateX(4px);
-      
-      svg {
-        color: #007aff;
-      }
-    }
-  }
-  
-  &:active {
-    transform: translateY(-3px) scale(1.01);
-    transition-duration: 0.1s;
-  }
-}
-
-.create-cluster-content {
-  padding: 32px 24px;
-  text-align: center;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-
-.create-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%);
-  border-radius: 20px;
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  
-  svg {
-    width: 32px;
-    height: 32px;
-    color: #007aff;
-    transition: all 0.3s ease;
-  }
-}
-
-.create-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #2c2c2c;
-  margin: 0 0 8px 0;
-  transition: color 0.3s ease;
-}
-
-.create-description {
-  font-size: 14px;
-  color: #666666;
-  margin: 0 0 24px 0;
-  line-height: 1.5;
-}
-
-.create-features {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #555555;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  
-  svg {
-    width: 14px;
-    height: 14px;
-    color: #4caf50;
-    flex-shrink: 0;
-    transition: color 0.3s ease;
-  }
-}
-
-/* 集群卡片 - 现代简约风格 */
-.macos-cluster-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  overflow: visible;
-  position: relative;
-  min-height: 260px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  
-  &.cluster-card {
-    &::after {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.1) 0%, 
-        rgba(255, 255, 255, 0.05) 100%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
+  height: 100%;
+      width: 4px;
+      background: linear-gradient(to bottom, #007aff, #5ac8fa);
     }
-    
-    &:hover {
-      transform: translateY(-6px) scale(1.01);
-      box-shadow: 
-        0 16px 48px rgba(0, 0, 0, 0.15),
-        0 8px 24px rgba(0, 0, 0, 0.08);
-      border-color: rgba(0, 122, 255, 0.25);
-      background: rgba(255, 255, 255, 0.98);
-      
-      &::after {
-        opacity: 1;
-      }
-      
-      .cluster-icon {
-        transform: scale(1.05) rotate(2deg);
-        
-        img, svg {
-          filter: brightness(1.1) saturate(1.2);
-        }
-      }
-      
-      .cluster-name {
-        color: #007aff;
-      }
-      
-      .status-indicator {
-        transform: scale(1.2);
+  }
+  
+  &.default-type {
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 4px;
+      background: linear-gradient(to bottom, #8e8e93, #aeaeb2);
+    }
+  }
+}
+
+.status-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 2;
         
         &.running {
-          box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
+    background: rgba(52, 199, 89, 0.15);
+    color: #28a745;
         }
         
         &.error {
-          box-shadow: 0 0 12px rgba(244, 67, 54, 0.5);
+    background: rgba(255, 59, 48, 0.15);
+    color: #ff3b30;
         }
         
         &.configured {
-          box-shadow: 0 0 12px rgba(255, 152, 0, 0.5);
-        }
+    background: rgba(255, 149, 0, 0.15);
+    color: #ff9500;
       }
-      
-      .type-badge {
-        transform: translateY(-1px);
-        
-        &.linux-type {
-          box-shadow: 0 2px 8px rgba(255, 138, 101, 0.2);
-        }
-        
-        &.k8s-type {
-          box-shadow: 0 2px 8px rgba(66, 165, 245, 0.2);
-        }
-        
-        &.default-type {
-          box-shadow: 0 2px 8px rgba(144, 164, 174, 0.2);
-        }
-      }
-      
-      .info-value {
-        color: #007aff;
-      }
-      
-      .card-actions {
-        transform: translateY(-2px);
-      }
-    }
-    
-    &:active {
-      transform: translateY(-3px) scale(1.005);
-      transition-duration: 0.1s;
-    }
-    
-    &.linux-type {
-      border-left: 4px solid #ff8a65;
-      
-      &:hover {
-        border-color: rgba(255, 138, 101, 0.3);
-        box-shadow: 0 8px 24px rgba(255, 138, 101, 0.1);
-      }
-    }
-    
-    &.k8s-type {
-      border-left: 4px solid #42a5f5;
-      
-      &:hover {
-        border-color: rgba(66, 165, 245, 0.3);
-        box-shadow: 0 8px 24px rgba(66, 165, 245, 0.1);
-      }
-    }
-    
-    &.default-type {
-      border-left: 4px solid #90a4ae;
-      
-      &:hover {
-        border-color: rgba(144, 164, 174, 0.3);
-        box-shadow: 0 8px 24px rgba(144, 164, 174, 0.1);
-      }
-    }
-  }
-}
-
-/* 集群卡片内容 */
-.cluster-card-content {
-  padding: 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .card-header {
-  margin-bottom: 14px;
-  padding: 18px 20px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
-  background: linear-gradient(135deg, rgba(250, 251, 252, 0.6) 0%, rgba(248, 249, 250, 0.4) 100%);
-  
-  .cluster-info {
+  padding: 24px;
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
   
   .cluster-icon {
-    width: 42px;
-    height: 42px;
+  width: 40px;
+  height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+  background: transparent;
+  padding: 0;
     
     img {
       width: 36px;
       height: 36px;
       object-fit: contain;
     }
-    
-    svg {
-      width: 32px;
-      height: 32px;
-      color: #666666;
-    }
   }
   
-  .cluster-details {
+.cluster-info {
     flex: 1;
     min-width: 0;
   }
   
   .cluster-name {
+  margin: 0 0 6px;
     font-size: 18px;
     font-weight: 600;
-    color: #2c2c2c;
-    margin: 0 0 6px 0;
-    word-break: break-word;
+  color: #1d1d1f;
     line-height: 1.3;
+  letter-spacing: -0.01em;
   }
   
-  .cluster-status {
+.cluster-meta {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: #86868b;
   }
   
   .cluster-type {
-    margin-top: 4px;
-    
-    .type-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #1d1d1f;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      
-      &.linux-type {
-        background: rgba(255, 138, 101, 0.08);
-        color: #ff8a65;
-        border: 1px solid rgba(255, 138, 101, 0.15);
-      }
-      
-      &.k8s-type {
-        background: rgba(66, 165, 245, 0.08);
-        color: #42a5f5;
-        border: 1px solid rgba(66, 165, 245, 0.15);
-      }
-      
-      &.default-type {
-        background: rgba(144, 164, 174, 0.08);
-        color: #90a4ae;
-        border: 1px solid rgba(144, 164, 174, 0.15);
-      }
-    }
-  }
-  
-  .status-indicator {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
-    
-    &.running {
-      background: #4caf50;
-      box-shadow: 0 0 6px rgba(76, 175, 80, 0.3);
-    }
-    
-    &.error {
-      background: #f44336;
-      box-shadow: 0 0 6px rgba(244, 67, 54, 0.3);
-    }
-    
-    &.configured {
-      background: #ff9800;
-      box-shadow: 0 0 6px rgba(255, 152, 0, 0.3);
-    }
-  }
-  
-  .status-text {
-    font-size: 12px;
-    color: #757575;
-    font-weight: 500;
-  }
+}
+
+.cluster-date {
+  color: #86868b;
 }
 
 .card-body {
-  flex: 1;
-  margin-bottom: 16px;
-  padding: 0 20px 16px;
-  
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
+  padding: 14px 24px;
+  background: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
   
-  .info-item {
+.info-row {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+  align-items: center;
+  margin-bottom: 0;
     
     .info-label {
-      font-size: 12px;
-      color: #888888;
+    width: auto;
+    margin-right: 10px;
+    color: #86868b;
+    font-size: 14px;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      line-height: 1.2;
     }
     
     .info-value {
-      font-size: 13px;
-      color: #333333;
-      font-weight: 600;
-      word-break: break-all;
-      line-height: 1.2;
-    }
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    color: #1d1d1f;
+    font-weight: 500;
+    word-break: break-word;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.025);
+    border-radius: 6px;
   }
 }
 
-.card-actions {
+/* 卡片操作区域 */
+.card-footer {
+  padding: 16px 24px 20px;
+  border-top: none;
+  display: flex;
+  justify-content: flex-start;
+  background: transparent;
+  margin-top: auto; /* 将按钮推到卡片底部 */
+}
+
+/* Mac风格按钮组 */
+.mac-button-group {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 20px 20px;
-  border-top: 1px solid rgba(0, 0, 0, 0.04);
-  background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
-  position: relative;
-  z-index: 10;
-  
-  .primary-actions {
     width: 100%;
+}
     
-    .macos-button {
+/* 二级按钮组 */
+.secondary-buttons {
+  display: flex;
       width: 100%;
-      font-size: 13px;
-      padding: 10px 16px;
-      font-weight: 600;
+  gap: 8px;
+  
+  .mac-btn {
+    flex: 1; /* 让按钮均匀分布 */
+  }
+}
+
+/* 重置 Ant Design 按钮样式 */
+:deep(.mac-btn) {
       height: 36px;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #333333;
       border-radius: 8px;
-      transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
       
-      &.primary {
-        background: linear-gradient(135deg, #007aff 0%, #0056cc 100%);
-        border: 1px solid rgba(0, 122, 255, 0.2);
+  &.ant-btn-primary, &.primary-btn {
+    background: linear-gradient(to bottom, #1890ff, #096dd9);
         color: white;
-        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+    border: none;
+    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
         
-        &:hover:not(:disabled) {
-          background: linear-gradient(135deg, #0056cc 0%, #003d99 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.35);
+    &:hover, &:focus {
+      background: linear-gradient(to bottom, #40a9ff, #1890ff);
+      color: white;
+    }
+    
+    &:active {
+      background: linear-gradient(to bottom, #096dd9, #0050b3);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        &:disabled {
-          background: rgba(0, 0, 0, 0.06);
-          color: rgba(0, 0, 0, 0.3);
-          border-color: rgba(0, 0, 0, 0.04);
+    &[disabled] {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.25);
+      border: 1px solid #d9d9d9;
           box-shadow: none;
-          cursor: not-allowed;
         }
       }
-    }
+  
+  &:hover, &:focus {
+    background: #fafafa;
+    color: #1890ff;
+    border-color: #1890ff;
   }
   
-  .secondary-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 8px;
-    align-items: center;
-    
-    .macos-button {
-      font-size: 12px;
-      padding: 8px 12px;
-      height: 32px;
-      border-radius: 6px;
-      font-weight: 500;
-      
-      &.secondary {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        color: #333333;
-        backdrop-filter: blur(10px);
-        
-        &:hover {
-          background: rgba(255, 255, 255, 1);
-          border-color: rgba(0, 122, 255, 0.15);
-          color: #007aff;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        }
+  &:active {
+    background: #f0f0f0;
+    color: #0050b3;
+    border-color: #0050b3;
       }
       
-      &.icon-only {
-        width: 32px;
-        padding: 6px;
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid rgba(0, 0, 0, 0.06);
-        color: #86868b;
-        
-        &:hover {
-          background: rgba(255, 255, 255, 1);
-          border-color: rgba(0, 122, 255, 0.15);
-          color: #007aff;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        }
-        
-        svg {
-          width: 14px;
-          height: 14px;
-        }
-      }
-    }
+  &[disabled] {
+    background: #f5f5f5;
+    color: rgba(0, 0, 0, 0.25);
+    border-color: #d9d9d9;
   }
   
-  .more-actions {
+  .anticon {
+    font-size: 14px;
+    margin-right: 6px;
+        }
+        
+  &.more-btn {
+    min-width: auto; /* 取消最小宽度限制 */
+        }
+      }
+
+/* 下拉菜单包装器 */
+.dropdown-wrapper {
     position: relative;
-    z-index: 100;
-    
-    .dropdown-trigger {
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      padding: 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(10px);
-      width: 32px;
-      height: 32px;
-      
-      &:hover {
-        background: rgba(255, 255, 255, 1);
-        border-color: rgba(0, 122, 255, 0.15);
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+  display: inline-block;
       }
       
-      svg {
-        width: 12px;
-        height: 12px;
-        color: #86868b;
-      }
-    }
-    
+/* 下拉菜单 */
     .dropdown-menu {
       position: absolute;
-      top: 100%;
       right: 0;
+  top: 100%;
       margin-top: 4px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      min-width: 120px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
       z-index: 1000;
+  border: 1px solid #eee;
       overflow: hidden;
+}
       
       .dropdown-item {
-        display: block;
-        width: 100%;
         padding: 8px 12px;
-        border: none;
-        background: none;
-        text-align: left;
-        font-size: 13px;
-        color: #333333;
+  display: flex;
+  align-items: center;
         cursor: pointer;
-        transition: all 0.15s ease;
-        font-weight: 500;
-        
-        &:hover {
-          background: rgba(0, 122, 255, 0.08);
-          color: #007aff;
+  transition: background 0.2s;
+  
+  .anticon {
+    font-size: 14px;
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
         }
         
-        &:first-child {
-          border-top-left-radius: 8px;
-          border-top-right-radius: 8px;
+  &:hover:not(.disabled) {
+    background: #f5f5f5;
+    color: #0080ff;
         }
         
-        &:last-child {
-          border-bottom-left-radius: 8px;
-          border-bottom-right-radius: 8px;
+  &.danger:hover:not(.disabled) {
+    background: #fff1f0;
+    color: #ff4d4f;
         }
         
-        .item-icon {
-          width: 14px;
-          height: 14px;
-          margin-right: 8px;
-          flex-shrink: 0;
-        }
-        
-        &.danger {
-          color: #ff3b30;
-          
-          &:hover {
-            background: rgba(255, 59, 48, 0.08);
-          }
-        }
-        
-        &:disabled {
-          color: #999999;
+  &.disabled {
+    opacity: 0.5;
           cursor: not-allowed;
-          
-          &:hover {
-            background: none;
-          }
-        }
-      }
-    }
+    color: #bbb;
   }
 }
 
-/* Modal 样式 - 苹果风格设计 */
-/deep/ .macos-modal {
-  .ant-modal {
-    top: 50%;
-    transform: translateY(-50%);
-    
-    .ant-modal-content {
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 
-        0 32px 80px rgba(0, 0, 0, 0.12),
-        0 16px 40px rgba(0, 0, 0, 0.08),
-        0 8px 20px rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      position: relative;
-      
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, 
-          rgba(255, 255, 255, 0.8) 0%, 
-          rgba(255, 255, 255, 0.4) 50%, 
-          rgba(255, 255, 255, 0.6) 100%);
-        border-radius: inherit;
-        pointer-events: none;
-        z-index: -1;
+/* 淡入淡出动画 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
       }
-    }
-    
-    .ant-modal-header {
-      background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.9) 0%, 
-        rgba(248, 250, 252, 0.85) 100%);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      padding: 28px 32px 24px;
-      border-radius: 24px 24px 0 0;
-      
-      .ant-modal-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #1a1a1a;
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-        letter-spacing: -0.02em;
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
       }
-    }
-    
-    .ant-modal-body {
-      padding: 28px 32px;
-      background: rgba(255, 255, 255, 0.6);
-    }
-    
-    .ant-modal-footer {
-      padding: 24px 32px 28px;
-      border-top: 1px solid rgba(0, 0, 0, 0.06);
-      background: linear-gradient(135deg, 
-        rgba(248, 250, 252, 0.9) 0%, 
-        rgba(255, 255, 255, 0.8) 100%);
-      border-radius: 0 0 24px 24px;
-    }
-    
-    .ant-modal-close {
-      top: 24px;
-      right: 24px;
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.04);
-      border: none;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background: rgba(0, 0, 0, 0.08);
-      }
-      
-      .ant-modal-close-x {
-        width: 36px;
-        height: 36px;
-        line-height: 36px;
-        font-size: 18px;
-        color: #757575;
-        transition: all 0.15s ease;
-      }
-    }
-  }
-}
 
-.modal-content {
-  padding: 0;
-}
-
-/* 响应式设计 */
+// 响应式设计
 @media (max-width: 768px) {
-  .macos-cluster-container {
+  .modern-cluster-container {
     padding: 16px;
+    }
+    
+  .page-header {
+    padding: 24px;
+    
+    .header-content {
+      .page-title {
+        font-size: 24px;
+}
+
+      .page-description {
+        font-size: 15px;
+      }
+    }
   }
   
-  .macos-cluster-grid {
+  .cluster-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
   
-  .macos-cluster-card {
-    .cluster-card-content {
-      padding: 20px;
-    }
+  .button-row {
+    flex-wrap: wrap;
+    gap: 8px;
     
-    .card-header {
-      .cluster-info {
-        gap: 12px;
-      }
-      
-      .cluster-icon {
-        width: 40px;
-        height: 40px;
-      }
-      
-      .cluster-name {
-        font-size: 16px;
-      }
-    }
-    
-    .card-actions {
-      padding: 12px 16px 16px;
-      gap: 10px;
-      
-      .primary-actions {
-        .macos-button {
-          height: 34px;
-          font-size: 12px;
-          padding: 8px 14px;
-        }
-      }
-      
-      .secondary-actions {
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        
-        .more-actions {
-          grid-column: span 2;
-          display: flex;
-          justify-content: center;
-        }
-        
-        .macos-button {
-          height: 30px;
-          font-size: 11px;
-          padding: 6px 10px;
-          
-          &.icon-only {
-            width: 30px;
-            padding: 5px;
-          }
-        }
-      }
+    .action-btn {
+      flex-grow: 1;
     }
   }
 }
 
-/* 授权弹窗专用样式 - 完全重构的苹果风格 */
-/deep/ .apple-auth-modal {
-  /* 覆盖全局下拉选项样式 */
-  .ant-select-dropdown {
-    border-radius: var(--apple-radius-large) !important;
-    background: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(20px) !important;
-    box-shadow: var(--apple-shadow-large) !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    padding: 12px 0 !important;
-    animation: apple-dropdown-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    
-    .ant-select-item {
-      margin: 4px 12px !important;
-      padding: 12px 16px !important;
-      border-radius: var(--apple-radius-medium) !important;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      font-size: 15px !important;
-      font-weight: 400 !important;
-      color: var(--apple-text-primary) !important;
-      background: transparent !important;
-      
-      &:hover {
-        background: var(--apple-blue-light-bg) !important;
-        color: var(--apple-blue) !important;
-        transform: translateX(4px) !important;
-      }
-      
-      &.ant-select-item-option-selected {
-        background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        box-shadow: var(--apple-shadow-small) !important;
-        
-        &:hover {
-          background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
-          transform: translateX(4px) scale(1.02) !important;
-        }
-      }
-      
-      &.ant-select-item-option-active {
-        background: var(--apple-blue-light-bg) !important;
-        color: var(--apple-blue) !important;
-      }
-      
-      /* 用户选项特殊样式 */
-      .user-option {
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        
-        .user-avatar {
-          width: 32px !important;
-          height: 32px !important;
-          border-radius: 50% !important;
-          background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          color: white !important;
-          font-weight: 600 !important;
-          font-size: 14px !important;
-          box-shadow: var(--apple-shadow-small) !important;
-          flex-shrink: 0 !important;
-        }
-        
-        .user-name {
-          font-size: 15px !important;
-          font-weight: 500 !important;
-          color: inherit !important;
-          flex: 1 !important;
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-          white-space: nowrap !important;
-        }
-      }
+// 创建新集群卡片样式 - 修复丢失的样式
+.create-card {
+  cursor: pointer;
+  background: white;
+  
+  .create-card-inner {
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     }
     
-    /* 空状态样式 */
-    .ant-empty {
-      margin: 20px 0 !important;
+  .create-card-content {
+    text-align: center;
+    max-width: 250px;
+  }
+  
+  .create-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background: #f0f7ff;
+    color: #007aff;
+    font-size: 24px;
+          display: flex;
+    align-items: center;
+          justify-content: center;
+    margin: 0 auto 16px;
+  }
+  
+  .create-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin: 0 0 8px;
+          }
+  
+  .create-desc {
+    font-size: 14px;
+    color: #86868b;
+    margin: 0 0 20px;
+    line-height: 1.4;
+  }
+  
+  .create-features {
+    text-align: left;
+    
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
       
-      .ant-empty-description {
-        color: var(--apple-text-tertiary) !important;
-        font-size: 14px !important;
+      .anticon {
+        color: #007aff;
+        font-size: 16px;
       }
-    }
-    
-    /* 滚动条样式 */
-    &::-webkit-scrollbar {
-      width: 6px !important;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: transparent !important;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.1) !important;
-      border-radius: 3px !important;
       
-      &:hover {
-        background: rgba(0, 0, 0, 0.2) !important;
+      span {
+        font-size: 14px;
+        color: #1d1d1f;
       }
     }
   }
   
-  /* 下拉动画 */
-  @keyframes apple-dropdown-fade-in {
-    0% {
-      opacity: 0;
-      transform: translateY(-8px) scale(0.95);
+  &:hover {
+    .create-icon {
+      background: #007aff;
+      color: white;
     }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
+    
+    .create-title {
+      color: #007aff;
+        }
+      }
+}
+
+/* 集群卡片样式 */
+.cluster-card {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.07);
+  border: 1px solid #E5E5E5;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 220px; /* 确保卡片高度足够 */
   
-  /* 下拉箭头旋转动画 */
-  .ant-select-open .ant-select-arrow {
-    transform: rotate(180deg) !important;
-  }
-  .ant-modal {
-    .ant-modal-content {
-      border-radius: 24px;
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(40px);
-      box-shadow: 
-        0 32px 80px rgba(0, 0, 0, 0.12),
-        0 16px 40px rgba(0, 0, 0, 0.08),
-        0 8px 20px rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .ant-modal-header {
-      background: transparent;
-      border-bottom: none;
-      padding: 0;
-      
-      .ant-modal-title {
-        display: none; /* 隐藏默认标题，使用组件内部的标题 */
+  &:hover {
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08), 0 3px 6px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
       }
     }
     
-    .ant-modal-body {
-      padding: 0;
-      
-      /* 重置所有可能影响的样式 */
-      .apple-auth-container {
-        padding: 32px;
+/* 样式一致性修复 */
+:deep(.ant-btn) {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* 全局样式，确保下拉菜单和按钮样式一致 */
+.mac-dropdown-overlay {
+  z-index: 1050 !important; /* 确保不被覆盖 */
+    }
+    
+/* 修复下拉菜单容器问题 */
+.ant-dropdown.mac-dropdown-overlay {
+  padding: 0 !important;
+      background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+      }
+
+.mac-dropdown-overlay .ant-dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  background-color: #ffffff;
+  border: 1px solid #f0f0f0;
+  width: auto;
+    }
+    
+.mac-dropdown-overlay .ant-dropdown-menu-item {
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 2px 0;
+  font-size: 14px;
+  min-width: 120px;
       }
       
-      /* 确保苹果风格样式不被覆盖 */
-      .apple-select {
-        border: 1px solid var(--apple-border) !important;
-        border-radius: var(--apple-radius-large) !important;
-        background: var(--apple-background) !important;
-        min-height: 52px !important;
-        
-        &:hover {
-          border-color: var(--apple-blue) !important;
-          box-shadow: 0 0 0 1px var(--apple-blue) !important;
+.mac-dropdown-overlay .ant-dropdown-menu-item:hover {
+  background-color: #f0f7ff;
+  color: #1890ff;
+}
+
+.mac-dropdown-overlay .ant-dropdown-menu-item.danger:hover {
+  background-color: #fff1f0;
+  color: #ff4d4f;
+}
+
+.mac-dropdown-overlay .ant-dropdown-menu-item .anticon {
+  margin-right: 8px;
         }
         
-        &.ant-select-focused {
-          border-color: var(--apple-blue) !important;
-          box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
+.mac-dropdown-overlay .ant-dropdown-menu-item[disabled] {
+  color: rgba(0, 0, 0, 0.25);
         }
         
-        .ant-select-selector {
-          border: none !important;
-          background: transparent !important;
-          box-shadow: none !important;
-          padding: 12px 20px !important;
-          min-height: 50px !important;
-          border-radius: var(--apple-radius-large) !important;
-          
-          .ant-select-selection-placeholder {
-            color: var(--apple-text-tertiary) !important;
-            font-size: 15px !important;
-            line-height: 26px !important;
-            font-weight: 400 !important;
+/* 改进的按钮样式，确保全局一致 */
+body.colony-manage-page .ant-btn.mac-btn {
+  height: 36px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
           }
           
-          .ant-select-selection-item {
-            background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: var(--apple-radius-medium) !important;
-            padding: 6px 14px !important;
-            margin: 3px 6px 3px 0 !important;
-            font-weight: 600 !important;
+/* 图标单独定位，让文字可以居中 */
+.apple-create-modal .ant-btn .anticon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
             font-size: 14px !important;
-            height: auto !important;
-            line-height: 1.4 !important;
-            box-shadow: var(--apple-shadow-small) !important;
-            
-            .ant-select-selection-item-remove {
-              color: rgba(255, 255, 255, 0.8) !important;
-              font-size: 13px !important;
-              margin-left: 8px !important;
-              border-radius: 50% !important;
-              width: 16px !important;
-              height: 16px !important;
+}
+
+/* 编辑集群弹窗样式 */
+.apple-create-modal .ant-btn {
+  height: 40px !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
               display: flex !important;
               align-items: center !important;
               justify-content: center !important;
-              transition: all 0.2s ease !important;
-              
-              &:hover {
-                color: white !important;
-                background: rgba(255, 255, 255, 0.2) !important;
-              }
-            }
+  padding: 0 16px !important;
+  min-width: 120px !important;
+  position: relative !important;
           }
           
-          .ant-select-selection-search {
+.apple-create-modal .ant-btn:has(.anticon) span {
             margin-left: 0 !important;
-            
-            .ant-select-selection-search-input {
-              height: 26px !important;
-              line-height: 26px !important;
-              font-size: 15px !important;
-            }
-          }
+  margin-right: 0 !important;
+  width: 100% !important;
+  text-align: center !important;
         }
         
-        .ant-select-arrow {
-          color: var(--apple-text-secondary) !important;
-          font-size: 16px !important;
-          right: 20px !important;
-          transition: all 0.2s ease !important;
-          
-          &:hover {
-            color: var(--apple-blue) !important;
-          }
-        }
-      }
-      
-      .apple-btn {
-        border-radius: var(--apple-radius-medium) !important;
-        font-weight: 600 !important;
-        height: 44px !important;
-        padding: 0 28px !important;
-        font-size: 15px !important;
+.apple-create-modal .ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
         border: none !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
-        letter-spacing: -0.01em !important;
-        cursor: pointer !important;
-        
-        &.apple-btn-primary {
-          background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
           color: white !important;
-          box-shadow: var(--apple-shadow-medium) !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
+          }
           
-          &:hover {
-            background: linear-gradient(135deg, var(--apple-blue-dark) 0%, var(--apple-blue) 100%) !important;
+.apple-create-modal .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
             transform: translateY(-2px) !important;
-            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4) !important;
-          }
-          
-          &:active {
-            transform: translateY(-1px) !important;
-            box-shadow: var(--apple-shadow-medium) !important;
-          }
-          
-          &.ant-btn-loading {
-            background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%) !important;
-            
-            .ant-btn-loading-icon {
-              color: white !important;
-            }
-          }
-        }
-        
-        &.apple-btn-secondary {
-          background: var(--apple-background-secondary) !important;
-          border: 1px solid var(--apple-border) !important;
-          color: var(--apple-text-primary) !important;
-          
-          &:hover {
-            background: var(--apple-gray-1) !important;
-            border-color: var(--apple-gray-3) !important;
-            color: var(--apple-text-primary) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--apple-shadow-small) !important;
-          }
-          
-          &:active {
-            transform: translateY(-1px) !important;
-            background: var(--apple-gray-2) !important;
-          }
-        }
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
+}
+
+.apple-create-modal .ant-modal-footer {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  padding: 20px 24px !important;
+  background-color: #fafafa !important;
+  border-top: 1px solid #f0f0f0 !important;
       }
       
-      .ant-form-item-label {
-        label {
-          color: var(--apple-text-primary) !important;
+.apple-create-modal .ant-modal-footer .ant-btn {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  min-width: 120px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
           font-weight: 600 !important;
-          font-size: 16px !important;
-          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif !important;
-          letter-spacing: -0.01em !important;
-        }
-      }
-    }
-    
-    .ant-modal-footer {
-      display: none; /* 隐藏默认footer，使用组件内部的按钮 */
-    }
-    
-    .ant-modal-close {
-      top: 24px;
-      right: 24px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.05);
-      backdrop-filter: blur(10px);
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background: rgba(0, 0, 0, 0.1);
-        transform: scale(1.1);
-      }
-      
-      .ant-modal-close-x {
-        width: 32px;
-        height: 32px;
-        line-height: 32px;
-        font-size: 16px;
-        color: var(--apple-text-secondary);
-        
-        &:hover {
-          color: var(--apple-text-primary);
-        }
-      }
-    }
-  }
 }
 
-/* 创建/编辑集群弹窗专用样式 */
-/deep/ .apple-create-modal {
-  .ant-modal {
-    .ant-modal-content {
-      border-radius: 24px;
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(40px);
-      box-shadow: 
-        0 32px 80px rgba(0, 0, 0, 0.12),
-        0 16px 40px rgba(0, 0, 0, 0.08),
-        0 8px 20px rgba(0, 0, 0, 0.04);
-    }
-    
-    .ant-modal-header {
-      background: linear-gradient(135deg, 
-        rgba(52, 199, 89, 0.08) 0%, 
-        rgba(255, 255, 255, 0.95) 100%);
-      border-bottom: 1px solid rgba(52, 199, 89, 0.12);
-      padding: 32px 36px 28px;
-      
-      .ant-modal-title {
-        color: #248a3d;
-        font-weight: 700;
-        font-size: 24px;
-        letter-spacing: -0.02em;
-      }
-    }
-    
-    .ant-modal-body {
-      padding: 32px 36px;
-      max-height: 70vh;
-      overflow-y: auto;
-      
-      /* 自定义滚动条 */
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-      
-      &::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.02);
-        border-radius: 3px;
-      }
-      
-      &::-webkit-scrollbar-thumb {
-        background: rgba(52, 199, 89, 0.3);
-        border-radius: 3px;
-        
-        &:hover {
-          background: rgba(52, 199, 89, 0.5);
-        }
-      }
-      
-      .ant-form-item {
-        margin-bottom: 24px;
-        
-        .ant-form-item-label {
-          label {
-            color: #248a3d;
-            font-weight: 600;
-            font-size: 16px;
-          }
-        }
-        
-        .ant-input, .ant-select {
-          border-radius: 12px;
-          border: 1.5px solid rgba(52, 199, 89, 0.2);
-          background: rgba(255, 255, 255, 0.9);
-          transition: all 0.3s ease;
-          height: 44px;
-          
-          &:hover {
-            border-color: rgba(52, 199, 89, 0.4);
-            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.1);
-          }
-          
-          &:focus, &.ant-select-focused {
-            border-color: #34c759;
-            box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.1);
-          }
-        }
-        
-        .ant-select {
-          .ant-select-selector {
+/* 授权模态框整体样式，干净简洁无多余区域 */
+.auth-cluster-modal {
+  max-width: 100% !important;
+}
+
+/* 极端方式隐藏所有问号图标，包括SVG */
+.no-icon-modal .anticon-question-circle,
+.no-icon-modal i.anticon,
+.no-icon-modal i.anticon-question-circle,
+.no-icon-modal svg[data-icon="question-circle"],
+.no-icon-modal .anticon-question-circle svg,
+.no-icon-modal .ant-modal-confirm-title + i,
+.no-icon-modal .ant-modal-confirm-body i,
+.no-icon-modal .ant-modal-header i,
+.no-icon-modal .ant-modal-body i.anticon,
+.no-icon-modal .ant-modal-confirm i,
+.no-icon-modal .ant-modal-confirm-body > .anticon,
+.no-icon-modal .ant-modal-confirm-body > .anticon-question-circle,
+.no-icon-modal .ant-modal-confirm .ant-modal-confirm-body > .anticon,
+.no-icon-modal .ant-modal-body .anticon-info-circle,
+.no-icon-modal .anticon,
+.no-icon-modal svg,
+.no-icon-modal [aria-label="icon: question-circle"],
+.no-icon-modal [data-icon="question-circle"] {
+  /* 极端隐藏 - 多重方法确保不可见 */
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
             border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            height: 42px !important;
-            padding: 8px 16px;
-            
-            .ant-select-selection-placeholder {
-              color: rgba(52, 199, 89, 0.6);
-              line-height: 26px;
-            }
-            
-            .ant-select-selection-item {
-              color: #248a3d;
-              font-weight: 500;
-              line-height: 26px;
-            }
-          }
-        }
-      }
-      
-      .ant-card {
-        border-radius: 16px;
-        border: 1px solid rgba(52, 199, 89, 0.15);
-        background: rgba(255, 255, 255, 0.8);
-        margin-bottom: 20px;
-        
-        .ant-card-head {
-          background: linear-gradient(135deg, 
-            rgba(52, 199, 89, 0.05) 0%, 
-            rgba(255, 255, 255, 0.9) 100%);
-          border-bottom: 1px solid rgba(52, 199, 89, 0.1);
-          border-radius: 16px 16px 0 0;
-          
-          .ant-card-head-title {
-            color: #248a3d;
-            font-weight: 600;
-            font-size: 18px;
-          }
-        }
-        
-        .ant-card-body {
-          padding: 24px;
-        }
-      }
-    }
-    
-    .ant-modal-footer {
-      background: linear-gradient(135deg, 
-        rgba(248, 250, 252, 0.95) 0%, 
-        rgba(255, 255, 255, 0.9) 100%);
-      border-top: 1px solid rgba(52, 199, 89, 0.08);
-      padding: 28px 36px 32px;
-      
-      .ant-btn {
-        border-radius: 12px;
-        font-weight: 600;
-        height: 44px;
-        padding: 0 28px;
-        font-size: 16px;
-        
-        &.ant-btn-primary {
-          background: linear-gradient(135deg, #34c759 0%, #248a3d 100%);
-          border: none;
-          box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
-          
-          &:hover {
-            background: linear-gradient(135deg, #248a3d 0%, #1e7e34 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(52, 199, 89, 0.4);
-          }
-        }
-        
-        &.ant-btn-default {
-          background: rgba(255, 255, 255, 0.8);
-          border: 1.5px solid rgba(52, 199, 89, 0.2);
-          color: #34c759;
-          
-          &:hover {
-            background: rgba(52, 199, 89, 0.05);
-            border-color: rgba(52, 199, 89, 0.4);
-            color: #248a3d;
-          }
-        }
-      }
-    }
-  }
-}
-</style>
-
-<style scoped>
-/* 确保这个样式在scoped style中添加 */
-</style>
-
-<style>
-/* 全局样式覆盖 */
-.apple-create-modal .ant-modal-content {
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.apple-create-modal .ant-modal-header {
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 20px 24px;
-}
-
-.apple-create-modal .ant-modal-title {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  color: #000;
-}
-
-.apple-create-modal .ant-modal-body {
-  padding: 0;
-}
-
-.apple-create-modal .ant-modal-close {
-  top: 16px;
-  right: 20px;
-}
-
-.apple-create-modal .ant-modal-close-x {
-  width: 48px;
-  height: 48px;
-  line-height: 48px;
-  font-size: 20px;
-}
-
-/* 选择框本身的圆角样式 */
-.ant-select .ant-select-selector {
-  border-radius: 12px !important;
-  overflow: hidden;
-}
-
-/* 确保下拉箭头区域与框体融合 */
-.ant-select .ant-select-arrow {
-  right: 11px;
-}
-
-/* 确保多选模式下的选择框也是圆角的 */
-.ant-select-multiple .ant-select-selector {
-  border-radius: 12px !important;
-  padding: 4px 8px !important;
-}
-
-/* 全局下拉菜单样式 */
-.ant-select-dropdown {
-  border-radius: 12px !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
-  padding: 6px !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
   overflow: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  pointer-events: none !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(100%) !important;
+            }
+            
+/* 移除可能存放图标的父元素边距 */
+.no-icon-modal .ant-modal-confirm-body,
+.no-icon-modal .ant-modal-confirm-title-wrap,
+.no-icon-modal .ant-modal-header,
+.no-icon-modal .ant-modal-body,
+.no-icon-modal .ant-modal-confirm-content {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
-/* 下拉菜单项容器 */
-.ant-select-dropdown-menu,
-.ant-select-dropdown ul {
-  max-height: 240px !important;
-  padding: 4px !important;
+/* 隐藏标题区域和页脚区域 */
+.no-icon-modal .ant-modal-header,
+.no-icon-modal .ant-modal-footer,
+.no-icon-modal .ant-modal-confirm-btns {
+  display: none !important;
+          }
+
+/* 修复可能的内容布局问题 */
+.no-icon-modal .ant-modal-body,
+.no-icon-modal .ant-modal-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background-color: white !important;
+  border-radius: 16px !important;
 }
 
-/* Ant Design Vue 1.7.2版本下拉菜单项样式 */
-.ant-select-dropdown-menu-item,
-.ant-select-dropdown-menu-item-selected,
-.ant-select-dropdown-menu-item-active {
-  border-radius: 8px !important;
-  padding: 8px 12px !important;
-  transition: background 0.2s !important;
-  margin: 4px 0 !important;
-}
-
-/* 下拉菜单项悬停和选中效果 */
-.ant-select-dropdown-menu-item:hover {
-  background-color: #f0f7ff !important;
-}
-
-.ant-select-dropdown-menu-item-selected {
-  background-color: rgba(10, 132, 255, 0.1) !important;
-  color: #0A84FF !important;
-  font-weight: 600 !important;
-}
-
-/* 修复下拉菜单在屏幕外的问题 */
-.ant-select-dropdown {
-  position: fixed !important;
-}
-
-/* 美化表单样式 */
-.ant-form-item-required::before {
+/* 特别处理 - 移除图标后的空间调整 */
+.no-icon-modal .ant-modal-confirm-body > span:first-child:empty,
+.no-icon-modal .ant-modal-confirm-body > span:first-child:blank {
   display: none !important;
 }
 
-.ant-form-item-label > label.ant-form-item-required::after {
-  display: inline-block !important;
-  margin-left: 4px;
-  content: '必填';
-  font-size: 12px;
-  line-height: 1;
-  padding: 1px 5px;
-  background-color: rgba(10, 132, 255, 0.1);
-  color: #0A84FF;
-  border-radius: 4px;
-  font-weight: normal;
+/* 解决可能的焦点问题 */
+.focus-trap-disabled [aria-hidden="true"],
+.focus-trap-disabled [tabindex="-1"] {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }
 
-/* 圆角输入框和选择框 */
-.ant-input,
-.ant-btn {
-  border-radius: 12px !important;
+/* 主要内容区域居中 */
+.auth-cluster-modal .ant-modal-content {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  background-color: white !important;
+  width: 100% !important;
+  max-width: 450px !important;
+  margin: 0 auto !important;
 }
 
-.ant-input:focus, 
-.ant-input-focused {
-  border-color: #0A84FF !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
+/* 适用于info模态框的标题和内容样式 */
+.auth-cluster-modal .ant-modal-header {
+  display: none !important;
 }
 
-.ant-input:hover, 
-.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
-  border-color: #0A84FF !important;
+.auth-cluster-modal .ant-modal-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
 }
 
-/* 强制应用样式到下拉框选项上 */
-.ant-select-dropdown-menu .ant-select-dropdown-menu-item {
-  border-radius: 8px !important;
+/* 隐藏info模态框的默认底部按钮 */
+.auth-cluster-modal .ant-modal-footer {
+  display: none !important;
+}
+
+/* 确保内容居中，并占用正确宽度 */
+.auth-cluster-modal .cluster-auth-content {
+  width: 100% !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* 确保没有多余的图标和内边距 */
+.auth-cluster-modal .ant-modal-confirm-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.auth-cluster-modal .ant-modal-confirm-title {
+  display: none !important;
+}
+
+/* 确保确认内容没有内边距 */
+.auth-cluster-modal .ant-modal-confirm-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* 设置授权弹窗所有按钮样式 */
+.auth-cluster-modal .auth-btns {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  padding: 20px 24px !important;
+  background-color: #fafafa !important;
+  border-top: 1px solid #f0f0f0 !important;
+  width: 100% !important;
+}
+
+/* 确保弹窗按钮样式 */
+.auth-cluster-modal .auth-btn,
+.auth-cluster-modal .auth-btns .ant-btn {
+  min-width: 120px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  letter-spacing: 0.3px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+}
+
+.auth-cluster-modal .auth-btn-primary,
+.auth-cluster-modal .auth-btns .ant-btn-primary,
+.auth-cluster-modal .auth-btns .ant-btn-type-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+.auth-cluster-modal .auth-btn-primary:hover,
+.auth-cluster-modal .auth-btns .ant-btn-primary:hover,
+.auth-cluster-modal .auth-btns .ant-btn-type-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
+}
+
+.auth-cluster-modal .auth-btn-default,
+.auth-cluster-modal .auth-btns .ant-btn-default {
+  background: #ffffff !important;
+  color: #464646 !important;
+  border: 1px solid #e6e6e6 !important;
+}
+
+.auth-cluster-modal .auth-btn-default:hover,
+.auth-cluster-modal .auth-btns .ant-btn-default:hover {
+  background: white !important;
+  color: #1890ff !important;
+  border-color: #1890ff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 </style>
+
+<style>
+/* 清除之前的CSS，使用新的样式 */
+.clean-modal .ant-modal-content,
+.clean-modal .ant-modal-body {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.clean-modal .ant-modal-close {
+  display: none !important;
+}
+
+/* 添加圆角和阴影样式 */
+.clean-modal .ant-modal-content {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.auth-modal {
+  border-radius: 16px !important;
+}
+
+/* 为模态框添加Mac风格的毛玻璃效果 */
+.auth-modal .ant-modal-content {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* 保留其他CSS以防其他地方仍使用$confirm */
+.auth-cluster-modal .ant-modal-confirm-body {
+  display: block !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 彻底消除紫色区域 */
+.auth-cluster-modal .ant-modal-confirm-body > .anticon {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* 去除所有问号图标相关的空间 */
+.auth-cluster-modal .ant-modal-confirm-btns {
+  display: none !important;
+}
+
+/* 确保内容区域占满宽度 */
+.auth-cluster-modal .ant-modal-confirm-body-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  display: block !important;
+}
+
+.auth-cluster-modal .ant-modal-body {
+  padding: 0 !important;
+}</style>
