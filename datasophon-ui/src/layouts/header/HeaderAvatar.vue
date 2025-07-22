@@ -1,17 +1,17 @@
 <template>
-  <a-dropdown>
-    <div class="header-avatar" style="cursor: pointer">
+  <a-dropdown :trigger="['hover']" placement="bottomRight" :getPopupContainer="() => $refs.headerAvatar">
+    <div class="header-avatar" style="cursor: pointer" ref="headerAvatar">
       <svg-icon icon-class="avatar" class="avatar-icon" />
       <span class="name">{{ user.username }}</span>
     </div>
-    <a-menu :class="['avatar-menu']" slot="overlay">
+    <a-menu slot="overlay" class="user-menu">
       <a-menu-item @click="viewUserInfo">
         <a-icon type="user" />
         <span>个人中心</span>
       </a-menu-item>
       <a-menu-divider />
       <a-menu-item @click="logout">
-        <a-icon style="margin-right: 8px" type="poweroff" />
+        <a-icon type="poweroff" />
         <span>退出登录</span>
       </a-menu-item>
     </a-menu>
@@ -27,10 +27,6 @@ export default {
   computed: {
     ...mapGetters("account", ["user"]),
     ...mapGetters("setting", ["isCluster"]),
-    // isCluster () {
-    //   const isCluster = localStorage.getItem('isCluster')
-    //   return isCluster
-    // }
   },
   methods: {
     ...mapMutations("setting", ["setIsCluster", "setMenuData"]),
@@ -54,8 +50,6 @@ export default {
         logout();
         localStorage.removeItem("isCluster");
         this.setIsCluster("");
-        // this.$router.push("/login");
-     
         location.href = location.origin + location.pathname
       });
     },
@@ -66,7 +60,6 @@ export default {
       localStorage.removeItem("isCluster");
       this.setIsCluster("");
       this.$router.push("/colony-manage/colony-list");
-      // localStorage.removeItem('menuData')
     },
   },
 };
@@ -95,64 +88,58 @@ export default {
 }
 
 /* 用户下拉菜单 - 苹果风格 */
-.avatar-menu {
-  width: 180px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(30px) saturate(180%) !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  border-radius: 16px !important;
+.user-menu {
+  min-width: 160px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 12px;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.15),
-    0 8px 25px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  padding: 8px !important;
+    0 12px 28px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
   
+  .ant-dropdown-menu-item,
   .ant-menu-item {
-    border-radius: 12px !important;
-    margin-bottom: 4px !important;
-    padding: 12px 16px !important;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-    display: flex !important;
-    align-items: center !important;
-    
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-    
-    &:hover {
-      background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.12) 100%) !important;
-      transform: translateX(4px) !important;
-    }
+    padding: 10px 16px;
+    transition: all 0.2s;
     
     .anticon {
-      font-size: 16px !important;
-      color: #007aff !important;
-      margin-right: 12px !important;
-      transition: all 0.3s ease !important;
+      font-size: 16px;
+      color: #007aff;
+      margin-right: 10px;
     }
     
     span {
-      font-size: 14px !important;
-      font-weight: 500 !important;
-      color: #1d1d1f !important;
-      letter-spacing: -0.1px !important;
-      transition: all 0.3s ease !important;
+      font-size: 14px;
+      color: #1d1d1f;
     }
     
-    &:hover .anticon {
-      color: #0056d3 !important;
-      transform: scale(1.1) !important;
-    }
-    
-    &:hover span {
-      color: #007aff !important;
+    &:hover {
+      background-color: rgba(0, 122, 255, 0.08);
+      
+      .anticon {
+        color: #0056d3;
+      }
+      
+      span {
+        color: #007aff;
+      }
     }
   }
   
-  .ant-menu-item-divider {
-    background: rgba(0, 0, 0, 0.06) !important;
-    margin: 8px 12px !important;
-    height: 1px !important;
+  .ant-menu-item-divider,
+  .ant-dropdown-menu-item-divider {
+    background-color: rgba(0, 0, 0, 0.06);
+    margin: 4px 0;
+  }
+}
+
+/* 修复Ant Design下拉菜单容器问题 */
+.ant-dropdown-placement-bottomRight {
+  .ant-dropdown-menu-root {
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
   }
 }
 </style>
