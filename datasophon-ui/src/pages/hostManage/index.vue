@@ -56,7 +56,15 @@
     </a-card>
     <a-card class="card-shadow">
       <div class="table-info steps-body">
-        <a-table @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" rowKey="id" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" :pagination="pagination"></a-table>
+        <a-table 
+          @change="tableChange" 
+          :columns="columns" 
+          :loading="loading" 
+          :dataSource="dataSource" 
+          rowKey="id" 
+          :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" 
+          :pagination="pagination || {}"
+        ></a-table>
       </div>
       <!-- 配置集群的modal -->
       <a-modal v-if="visible" title :visible="visible" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
@@ -369,6 +377,18 @@ export default {
     },
     getHostListByPage() {
       this.loading = true;
+      // 确保pagination已经初始化
+      if (!this.pagination) {
+        this.pagination = {
+          total: 0,
+          pageSize: 10,
+          current: 1,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50", "100"],
+          showTotal: (total) => `共 ${total} 条`,
+        };
+      }
+      
       const params = {
         pageSize: this.pagination.pageSize,
         page: this.pagination.current,

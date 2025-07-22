@@ -619,14 +619,27 @@ export default {
     ...mapMutations("setting", ["setLang", "setClusterId"]),
     goToHome() {
       // 跳转到主页
-      if (this.$route.path !== '/service-manage') {
-        this.$router.push("/service-manage").catch(err => {
-          // 忽略重复导航错误
-          if (err.name !== 'NavigationDuplicated') {
-            throw err;
-          }
-        });
+      this.$router.push('/');
+      // 设置主页菜单为激活状态
+      this.activeFirstMenuKey = '/service-manage';
+      // 更新当前集群状态到主页菜单
+      this.$emit('firstMenuSelect', '/service-manage');
+      
+      // 如果有集群ID，则获取集群状态
+      if (this.clusterId) {
+        this.updateClusterStatus(this.clusterId);
       }
+    },
+    
+    // 更新集群状态
+    updateClusterStatus(clusterId) {
+      // 如果有接口获取集群状态，可以在这里调用
+      // 例如：this.$axiosGet(`/cluster/status/${clusterId}`).then(...)
+      
+      // 临时解决方案：直接刷新页面以获取最新状态
+      setTimeout(() => {
+        this.$forceUpdate();
+      }, 100);
     },
   },
   created() {
@@ -814,23 +827,24 @@ export default {
     position: relative;
     
     &.active .nav-link {
-      background: linear-gradient(135deg, #007aff 0%, #0056d3 100%);
-      color: #ffffff;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.12) 0%, rgba(0, 122, 255, 0.18) 100%);
+      color: #007aff;
       box-shadow: 
-        0 4px 16px rgba(0, 122, 255, 0.3),
-        0 2px 8px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 2px 12px rgba(0, 122, 255, 0.15),
+        0 1px 4px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
       transform: translateY(-1px);
+      border: 1px solid rgba(0, 122, 255, 0.2);
       
       .nav-icon {
-        color: #ffffff;
-        transform: scale(1.1);
+        color: #007aff;
+        transform: scale(1.05);
       }
       
       .nav-arrow {
-        color: #ffffff;
-        background: rgba(255, 255, 255, 0.2);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        color: #007aff;
+        background: rgba(0, 122, 255, 0.15);
+        box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
       }
     }
     
@@ -855,22 +869,28 @@ export default {
       }
     }
     
-    &:hover:not(.active):not(.expanded) .nav-link {
-      background: linear-gradient(135deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.06) 100%);
-      transform: translateY(-2px);
+    &:hover .nav-link {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.12) 100%);
+      transform: translateY(-2px) scale(1.02);
       box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.08),
-        0 2px 6px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        0 4px 12px rgba(0, 122, 255, 0.15),
+        0 2px 6px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 122, 255, 0.2);
       
       .nav-icon {
-        transform: scale(1.05);
+        transform: scale(1.1);
         color: #007aff;
+      }
+      
+      .nav-text {
+        color: #007aff;
+        font-weight: 600;
       }
       
       .nav-arrow {
         background: rgba(0, 122, 255, 0.1);
         color: #007aff;
+        transform: scale(1.1);
       }
     }
     
@@ -894,100 +914,6 @@ export default {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
         overflow: hidden;
         margin-top: 4px;
-        
-        .submenu-container {
-          padding: 8px 0;
-          
-          .submenu-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 16px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-            margin-bottom: 4px;
-            
-            .submenu-title {
-              font-weight: 500;
-              font-size: 14px;
-              color: #1d1d1f;
-            }
-            
-            .submenu-close {
-              cursor: pointer;
-              width: 24px;
-              height: 24px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 50%;
-              transition: background-color 0.2s;
-              
-              &:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-              }
-              
-              .anticon {
-                font-size: 12px;
-                color: #666;
-              }
-            }
-          }
-          
-          .submenu-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            
-            .submenu-item {
-              margin: 2px 8px;
-              border-radius: 8px;
-              
-              &:hover, &.active {
-                background-color: rgba(0, 122, 255, 0.08);
-              }
-              
-              .submenu-link {
-                display: flex;
-                align-items: center;
-                padding: 10px 12px;
-                color: #1d1d1f;
-                text-decoration: none;
-                
-                .submenu-icon {
-                  margin-right: 12px;
-                  width: 20px;
-                  height: 20px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  
-                  svg {
-                    width: 16px;
-                    height: 16px;
-                  }
-                }
-                
-                .submenu-text {
-                  flex: 1;
-                  font-size: 14px;
-                }
-                
-                .submenu-badge {
-                  background-color: #ff3b30;
-                  color: white;
-                  font-size: 11px;
-                  padding: 0 6px;
-                  border-radius: 10px;
-                  height: 20px;
-                  min-width: 20px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                }
-              }
-            }
-          }
-        }
       }
     }
   }
@@ -995,36 +921,50 @@ export default {
   .nav-link {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
+    padding: 12px 16px;
     border-radius: 12px;
-    text-decoration: none;
     color: #2c2c2c;
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
-    gap: 8px;
-    min-height: 36px;
+    gap: 10px;
+    min-height: 40px;
     position: relative;
-    overflow: hidden;
+    text-decoration: none;
+    border: 1px solid transparent;
     
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-      transition: left 0.6s ease;
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4b5563;
+      transition: all 0.3s ease;
     }
     
-    &:hover::before {
-      left: 100%;
+    .nav-text {
+      font-weight: 500;
+      color: #2c2c2c;
+      transition: all 0.3s ease;
     }
     
-    &:hover {
-      text-decoration: none;
+    .nav-arrow {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.04);
+      margin-left: 4px;
+      transition: all 0.3s ease;
+      
+      .anticon {
+        font-size: 10px;
+        color: #4b5563;
+      }
     }
   }
   
@@ -1282,21 +1222,40 @@ export default {
     gap: 10px;
     min-height: 40px;
     position: relative;
-    overflow: hidden;
+    text-decoration: none;
+    border: 1px solid transparent;
     
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-      transition: left 0.6s ease;
+    .admin-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4b5563;
+      transition: all 0.3s ease;
     }
     
-    &:hover::before {
-      left: 100%;
+    .admin-text {
+      font-weight: 500;
+      color: #2c2c2c;
+      transition: all 0.3s ease;
+    }
+    
+    .admin-arrow {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.04);
+      margin-left: 4px;
+      transition: all 0.3s ease;
+      
+      .anticon {
+        font-size: 10px;
+        color: #4b5563;
+      }
     }
   }
   
@@ -1774,21 +1733,119 @@ export default {
 /* 子菜单面板样式 */
 .submenu-panel {
   position: absolute;
-  top: calc(100% + 8px);
+  top: 100%;
   left: 0;
-  min-width: 180px;
-  max-width: 200px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 16px;
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.12),
-    0 8px 24px rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04);
   z-index: 1000;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  transform-origin: top left;
+  margin-top: 4px;
+  
+  .submenu-container {
+    padding: 8px 0;
+    
+    .submenu-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      margin-bottom: 4px;
+      
+      .submenu-title {
+        font-weight: 500;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      
+      .submenu-close {
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .anticon {
+          font-size: 12px;
+          color: #666;
+        }
+      }
+    }
+    
+    .submenu-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      
+      .submenu-item {
+        margin: 2px 8px;
+        border-radius: 8px;
+        
+        &:hover, &.active {
+          background-color: rgba(0, 0, 0, 0.06) !important; // 与主菜单选中颜色保持一致
+          
+          .submenu-text {
+            color: rgba(0, 0, 0, 0.85) !important; // 保持与常规文本相似的颜色，稍微加深
+            font-weight: 500 !important; // 使用中等加粗
+          }
+        }
+        
+        &:hover:not(.active) {
+          background-color: rgba(0, 0, 0, 0.04) !important;
+        }
+        
+        .submenu-link {
+          display: flex;
+          align-items: center;
+          padding: 10px 12px;
+          color: #1d1d1f;
+          text-decoration: none;
+          
+          .submenu-icon {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            svg {
+              width: 16px;
+              height: 16px;
+            }
+          }
+          
+          .submenu-text {
+            flex: 1;
+            font-size: 14px;
+          }
+          
+          .submenu-badge {
+            background-color: #ff3b30;
+            color: white;
+            font-size: 11px;
+            padding: 0 6px;
+            border-radius: 10px;
+            height: 20px;
+            min-width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+      }
+    }
+  }
 }
 
 .admin-submenu-panel {
@@ -1871,37 +1928,69 @@ export default {
   }
   
   &.active {
-    background: linear-gradient(135deg, #007aff 0%, #0056d3 100%);
-    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.25);
-    transform: translateY(-1px);
+    background-color: rgba(0, 0, 0, 0.06) !important; // 与主菜单选中颜色保持一致
     
-    .submenu-link,
-    .admin-submenu-link {
-      color: #ffffff;
-      
-      .submenu-icon .svg-icon {
-        color: #ffffff;
-      }
-      
-      .submenu-badge {
-        background: rgba(255, 255, 255, 0.2);
-        color: #ffffff;
-      }
+    .submenu-text {
+      color: rgba(0, 0, 0, 0.85) !important; // 保持与常规文本相似的颜色，稍微加深
+      font-weight: 500 !important; // 使用中等加粗
     }
   }
   
   &:hover:not(.active) {
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.06) 0%, rgba(0, 122, 255, 0.10) 100%);
-    transform: translateY(-1px) translateX(4px);
-    box-shadow: 0 2px 12px rgba(0, 122, 255, 0.15);
+    background-color: rgba(0, 0, 0, 0.04) !important;
+  }
+  
+  .submenu-link,
+  .admin-submenu-link {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    color: #2c2c2c;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    gap: 12px;
+    position: relative;
     
-    .submenu-link,
-    .admin-submenu-link {
-      color: #007aff;
+    .submenu-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
       
-      .submenu-icon .svg-icon {
-        color: #007aff;
+      .svg-icon {
+        font-size: 14px;
+        color: #666666;
+        transition: color 0.3s ease;
       }
+    }
+    
+    .submenu-text {
+      flex: 1;
+      white-space: nowrap;
+      font-weight: 500;
+      letter-spacing: -0.1px;
+    }
+    
+    .submenu-badge {
+      padding: 2px 8px;
+      background: rgba(0, 122, 255, 0.1);
+      color: #007aff;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      
+      span {
+        white-space: nowrap;
+      }
+    }
+    
+    &:hover {
+      text-decoration: none;
     }
   }
 }
