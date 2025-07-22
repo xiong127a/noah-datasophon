@@ -206,16 +206,16 @@
                           <!-- 隐藏的表单字段 (不使用a-select) -->
                           <a-form-item style="display: none;">
                             <a-input
-                              v-decorator="[
-                                'namespaceSelect',
-                                { 
-                                  rules: [{ required: true, message: '请选择命名空间!' }] 
-                                }
-                              ]"
+                        v-decorator="[
+                          'namespaceSelect',
+                          { 
+                            rules: [{ required: true, message: '请选择命名空间!' }] 
+                          }
+                        ]"
                               :value="selectedNamespace"
                             />
                           </a-form-item>
-                        </div>
+                          </div>
                       </template>
                       
                       <!-- 创建命名空间模式 -->
@@ -236,8 +236,8 @@
                           />
                         </div>
                         <a-button type="link" class="back-to-select-btn-outside" @click="cancelCreateNamespace">
-                          <a-icon type="arrow-left" /> 返回选择
-                        </a-button>
+                            <a-icon type="arrow-left" /> 返回选择
+                          </a-button>
                       </div>
                       
                       <!-- 隐藏字段，用于最终提交的namespace值 -->
@@ -864,7 +864,7 @@ export default {
     onNamespaceSelect(value) {
       this.selectedNamespace = value;
       this.isCreatingNewNamespace = false;
-      this.customNamespaceInput = '';
+        this.customNamespaceInput = '';
       
       // 防止表单字段提前设置的错误
       if (this.form.getFieldDecorator) {
@@ -932,7 +932,7 @@ export default {
         } catch (e) {
           console.error('清空命名空间值失败:', e);
         }
-      });
+        });
     },
     
     onCreateNewNamespaceClick(e) {
@@ -942,10 +942,10 @@ export default {
       // 关闭下拉框并切换到创建模式
       this.namespaceDropdownOpen = false;
       this.isCreatingNewNamespace = true;
-      this.customNamespaceInput = '';
+        this.customNamespaceInput = '';
       
       // 在下一次DOM更新后设置表单值
-      this.$nextTick(() => {
+        this.$nextTick(() => {
         setTimeout(() => {
           this.form.setFieldsValue({
             namespaceSelect: undefined,
@@ -2295,8 +2295,8 @@ export default {
 
 .create-new-option {
   .create-new-content {
-    display: flex;
-    align-items: center;
+        display: flex;
+        align-items: center;
     padding: 10px 12px;
     border-radius: 8px;
     background: rgba(82, 196, 26, 0.08);
@@ -2310,13 +2310,13 @@ export default {
       display: inline-block;
     }
 
-    &:hover {
+        &:hover {
       transform: translateY(-1px);
       box-shadow: 0 2px 6px rgba(82, 196, 26, 0.15);
       background: rgba(82, 196, 26, 0.12);
+    }
   }
-  }
-}
+        }
 
 .namespace-divider {
   height: 1px;
@@ -2326,7 +2326,7 @@ export default {
 
 /* 全局命名空间下拉框样式 */
 :global(.apple-namespace-dropdown) {
-  position: absolute;
+    position: absolute;
   width: auto !important;
   border-radius: var(--apple-radius-large) !important;
   background: rgba(255, 255, 255, 0.98) !important;
