@@ -1,5 +1,5 @@
 <template>
-  <a-dropdown :trigger="['hover']" placement="bottomRight" :getPopupContainer="() => $refs.headerAvatar">
+  <a-dropdown :trigger="['hover']" placement="bottomRight" :getPopupContainer="() => $refs.headerAvatar" :mouseEnterDelay="0.1" :mouseLeaveDelay="0.3">
     <div class="header-avatar" style="cursor: pointer" ref="headerAvatar">
       <svg-icon icon-class="avatar" class="avatar-icon" />
       <span class="name">{{ user.username }}</span>
@@ -71,6 +71,13 @@ export default {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+  padding: 4px 8px; /* 增加内边距扩大可点击区域 */
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
   
   .avatar-icon {
     transition: all 0.3s ease;
@@ -141,5 +148,18 @@ export default {
     background: transparent !important;
     border: none !important;
   }
+}
+
+/* 扩大菜单项感应区域 */
+.ant-dropdown-menu-item, 
+.ant-menu-item {
+  margin: 2px 0;
+  border-radius: 8px;
+}
+
+/* 修复菜单消失问题 */
+.ant-dropdown {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 </style>

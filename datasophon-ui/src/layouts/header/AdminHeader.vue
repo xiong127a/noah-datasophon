@@ -266,8 +266,12 @@ export default {
         { key: "US", name: "English", alias: "English" },
       ],
       searchActive: false,
-      hoveredMenu: '', // 当前鼠标悬浮的菜单
-      expandedMenu: '', // 当前展开的菜单（点击展开）
+      hoveredMenu: null,
+      expandedMenu: null,
+      menuHoverTimer: null,
+      menuCloseTimer: null,
+      menuHoverDelay: 100,   // 悬浮触发延迟（毫秒）
+      menuCloseDelay: 300,   // 关闭延迟（毫秒）
       menuTimeouts: {}, // 存储菜单延迟关闭的定时器
       cachedServiceData: null, // 缓存服务数据
       cachedMenuData: null, // 缓存菜单数据
@@ -479,23 +483,25 @@ export default {
     },
     // 处理菜单悬浮
     handleMenuEnter(item) {
-      // 清除任何现有的关闭定时器
-      if (this.menuTimeouts[item.fullPath]) {
-        clearTimeout(this.menuTimeouts[item.fullPath]);
-        delete this.menuTimeouts[item.fullPath];
-      }
+      clearTimeout(this.menuCloseTimer);
       
-      // 设置当前悬浮菜单
-      this.hoveredMenu = item.fullPath;
+      if (this.hoveredMenu !== item.fullPath) {
+        this.menuHoverTimer = setTimeout(() => {
+          this.hoveredMenu = item.fullPath;
+        }, this.menuHoverDelay);
+      }
     },
     // 处理菜单离开
     handleMenuLeave(item) {
-      // 设置延迟关闭，以便用户有时间移动到子菜单
-      this.menuTimeouts[item.fullPath] = setTimeout(() => {
-        if (this.hoveredMenu === item.fullPath) {
-          this.hoveredMenu = '';
-        }
-      }, 300);
+      clearTimeout(this.menuHoverTimer);
+      
+      if (this.expandedMenu !== item.fullPath) {
+        this.menuCloseTimer = setTimeout(() => {
+          if (this.hoveredMenu === item.fullPath) {
+            this.hoveredMenu = null;
+          }
+        }, this.menuCloseDelay);
+      }
     },
     // 处理菜单点击
     onLeftMenuClick(item) {
@@ -525,29 +531,25 @@ export default {
     
     // 保持子菜单打开状态
     keepSubmenuOpen(item) {
-      // 清除关闭定时器
-      if (this.menuTimeouts[item.fullPath]) {
-        clearTimeout(this.menuTimeouts[item.fullPath]);
-        delete this.menuTimeouts[item.fullPath];
-      }
+      clearTimeout(this.menuCloseTimer);
+      this.hoveredMenu = item.fullPath;
     },
     
     // 处理子菜单离开
     handleSubmenuLeave(item) {
-      // 只有在非展开状态下才设置延迟关闭
       if (this.expandedMenu !== item.fullPath) {
-        this.menuTimeouts[item.fullPath] = setTimeout(() => {
+        this.menuCloseTimer = setTimeout(() => {
           if (this.hoveredMenu === item.fullPath) {
-            this.hoveredMenu = '';
+            this.hoveredMenu = null;
           }
-        }, 300);
+        }, this.menuCloseDelay);
       }
     },
     
     // 关闭子菜单
     closeSubmenu(item) {
-      this.expandedMenu = '';
-      this.hoveredMenu = '';
+      this.hoveredMenu = null;
+      this.expandedMenu = null;
     },
     
     // 获取服务状态文本
@@ -875,6 +877,118 @@ export default {
     &:active .nav-link {
       transform: translateY(0) scale(0.98);
       transition: all 0.15s ease;
+    }
+    
+    &.has-submenu {
+      position: relative;
+      
+      .submenu-panel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        min-width: 200px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        margin-top: 4px;
+        
+        .submenu-container {
+          padding: 8px 0;
+          
+          .submenu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            margin-bottom: 4px;
+            
+            .submenu-title {
+              font-weight: 500;
+              font-size: 14px;
+              color: #1d1d1f;
+            }
+            
+            .submenu-close {
+              cursor: pointer;
+              width: 24px;
+              height: 24px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              transition: background-color 0.2s;
+              
+              &:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+              }
+              
+              .anticon {
+                font-size: 12px;
+                color: #666;
+              }
+            }
+          }
+          
+          .submenu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            
+            .submenu-item {
+              margin: 2px 8px;
+              border-radius: 8px;
+              
+              &:hover, &.active {
+                background-color: rgba(0, 122, 255, 0.08);
+              }
+              
+              .submenu-link {
+                display: flex;
+                align-items: center;
+                padding: 10px 12px;
+                color: #1d1d1f;
+                text-decoration: none;
+                
+                .submenu-icon {
+                  margin-right: 12px;
+                  width: 20px;
+                  height: 20px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  
+                  svg {
+                    width: 16px;
+                    height: 16px;
+                  }
+                }
+                
+                .submenu-text {
+                  flex: 1;
+                  font-size: 14px;
+                }
+                
+                .submenu-badge {
+                  background-color: #ff3b30;
+                  color: white;
+                  font-size: 11px;
+                  padding: 0 6px;
+                  border-radius: 10px;
+                  height: 20px;
+                  min-width: 20px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
   
@@ -1849,12 +1963,12 @@ export default {
 /* 子菜单动画 */
 .submenu-slide-enter-active,
 .submenu-slide-leave-active {
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: opacity 0.2s, transform 0.2s;
 }
 
 .submenu-slide-enter {
   opacity: 0;
-  transform: translateY(-12px) scale(0.95);
+  transform: translateY(-10px);
 }
 
 .submenu-slide-enter-to {
