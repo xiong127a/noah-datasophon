@@ -30,11 +30,11 @@
       <div class="auth-header-content">
         <div class="auth-icon-wrapper">
           <div class="auth-icon">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
-              <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="white"/>
-            </svg>
-          </div>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
+          <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="white"/>
+        </svg>
+      </div>
         </div>
         <div class="auth-title">
           <h1>集群授权管理</h1>
@@ -45,17 +45,17 @@
     
     <!-- 内容区域 -->
     <div class="auth-content">
-      <div class="auth-form">
+    <div class="auth-form">
         <div class="form-group">
           <label class="form-label">选择管理员：</label>
           <div class="select-area">
             <a-form :form="form" v-if="userListLoaded">
-              <a-select 
-                class="admin-select"
-                mode="multiple" 
+            <a-select 
+              class="admin-select"
+              mode="multiple" 
                 :defaultValue="selectedUserIds"
-                placeholder="请选择一个或多个集群管理员"
-                :dropdownMatchSelectWidth="false"
+              placeholder="请选择一个或多个集群管理员"
+              :dropdownMatchSelectWidth="false"
                 :getPopupContainer="triggerNode => triggerNode.parentElement"
                 dropdownClassName="admin-dropdown apple-dropdown"
                 @change="handleUserSelectionChange"
@@ -65,16 +65,16 @@
                 :dropdownStyle="{ minWidth: '250px' }"
                 :maxTagCount="maxTagCount"
                 :maxTagPlaceholder="tagPlaceholder"
+            >
+              <a-select-option 
+                v-for="item in userList" 
+                :key="item.id"
+                :value="item.id"
               >
-                <a-select-option 
-                  v-for="item in userList" 
-                  :key="item.id"
-                  :value="item.id"
-                >
-                  {{ item.username }}
-                </a-select-option>
-              </a-select>
-            </a-form>
+                {{ item.username }}
+              </a-select-option>
+            </a-select>
+          </a-form>
             <div v-else class="loading-state">
               <div class="loading-spinner"></div>
               <span>加载用户数据中...</span>
@@ -83,7 +83,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 底部按钮 -->
     <div class="auth-footer">
       <div class="auth-actions">
@@ -94,13 +94,13 @@
           class="primary-btn"
         >
           <span class="btn-content">确认授权</span>
-        </a-button>
+      </a-button>
         <a-button 
           @click="formCancel" 
           class="cancel-btn"
         >
           <span class="btn-content">取消</span>
-        </a-button>
+      </a-button>
       </div>
     </div>
   </div>
@@ -194,7 +194,7 @@ export default {
           this.$axiosGet(url)
             .then((res) => {
               this.loading = false;
-              if (res.code === 200) { 
+              if (res.code === 200) {
                 if (userIds && userIds.length > 0) {
                   this.$message.success('授权成功', 2);
                 } else {
@@ -350,7 +350,7 @@ export default {
       border-radius: 50%;
       display: flex;
       align-items: center;
-      justify-content: center;
+    justify-content: center;
       position: relative;
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -365,8 +365,8 @@ export default {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
         z-index: 1;
       }
-      
-      svg {
+    
+    svg {
         width: 26px;
         height: 26px;
         position: relative;
@@ -419,9 +419,9 @@ export default {
     height: 1px;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
     z-index: 1;
-  }
-  
-  .auth-form {
+}
+
+.auth-form {
     max-width: 480px;
     margin: 0 auto;
     background-color: white;
@@ -441,7 +441,7 @@ export default {
         display: block;
         margin-bottom: 12px;
         font-size: 15px;
-        font-weight: 500;
+      font-weight: 500;
         color: @text-color;
         position: relative;
         padding-left: 12px;
@@ -457,16 +457,16 @@ export default {
           background: @primary-gradient;
           border-radius: 2px;
         }
-      }
-      
+    }
+    
       .select-area {
-        position: relative;
+      position: relative;
         
         .admin-select {
-          width: 100%;
-        }
-      }
+      width: 100%;
     }
+  }
+}
   }
 }
 
@@ -481,7 +481,7 @@ export default {
   .auth-actions {
     display: flex;
     gap: 18px;
-  }
+}
 }
 
 // 按钮样式 - 超现代设计
@@ -524,8 +524,8 @@ export default {
     opacity: 0;
     transition: opacity @animation-duration;
     z-index: 1;
-  }
-  
+}
+
   &:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 8px 20px rgba(24, 144, 255, 0.35) !important;
@@ -548,10 +548,10 @@ export default {
   
   &::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
     height: 100%;
     background: linear-gradient(135deg, rgba(24, 144, 255, 0.05) 0%, rgba(24, 144, 255, 0) 80%);
     opacity: 0;
@@ -567,7 +567,7 @@ export default {
     
     &::before {
       opacity: 1;
-    }
+}
   }
   
   &:active {
@@ -612,7 +612,7 @@ export default {
   100% {
     transform: scale(1);
     opacity: 0.7;
-  }
+}
 }
 
 @keyframes spin {

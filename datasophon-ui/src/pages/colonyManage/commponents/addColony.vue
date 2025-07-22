@@ -37,21 +37,21 @@
     @cancel="formCancel"
     class="apple-modal"
   >
-    <div class="apple-form-container">
-      <div class="form-header">
+  <div class="apple-form-container">
+    <div class="form-header">
         <div class="header-shine"></div>
-        <h1 class="form-title">{{ isEdit ? '编辑集群' : '创建新集群' }}</h1>
-        <p class="form-subtitle">{{ isEdit ? '修改集群配置信息' : '配置您的大数据平台集群信息' }}</p>
-      </div>
-      
+      <h1 class="form-title">{{ isEdit ? '编辑集群' : '创建新集群' }}</h1>
+      <p class="form-subtitle">{{ isEdit ? '修改集群配置信息' : '配置您的大数据平台集群信息' }}</p>
+    </div>
+    
       <div class="form-content">
-        <a-form :form="form" layout="vertical" class="apple-form">
+      <a-form :form="form" layout="vertical" class="apple-form">
           <!-- 基本信息部分 -->
           <div class="form-section">
             <div class="section-title">
               <div class="title-icon"></div>
               基本信息
-            </div>
+          </div>
             <div class="section-description">设置集群的基本标识信息</div>
             
             <div class="form-row">
@@ -61,22 +61,22 @@
                   <span class="required-icon" :class="{'success-icon': formValues.clusterName}"></span>
                 </div>
                 <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterName}">
-                  <a-input 
-                    v-decorator="[
-                      'clusterName',
+                <a-input 
+                  v-decorator="[
+                    'clusterName',
                       { 
                         rules: [
                           { required: true, message: '请输入集群名称' },
                           { max: 10, message: '不能超过10个字符' }
                         ] 
                       },
-                    ]" 
-                    placeholder="请输入集群名称" 
+                  ]" 
+                  placeholder="请输入集群名称" 
                     :maxLength="10"
                     class="compact-input"
                     @change="handleInputChange('clusterName', $event.target.value)"
-                  />
-                </a-form-item>
+                />
+              </a-form-item>
               </div>
               
               <div class="form-field code-field">
@@ -85,33 +85,33 @@
                   <span class="required-icon" :class="{'success-icon': formValues.clusterCode}"></span>
                 </div>
                 <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterCode}">
-                  <a-input 
-                    v-decorator="[
-                      'clusterCode',
+                <a-input 
+                  v-decorator="[
+                    'clusterCode',
                       { 
                         rules: [
                           { required: true, message: '请输入集群编码' },
                           { max: 10, message: '不能超过10个字符' }
                         ] 
                       },
-                    ]" 
-                    :disabled="isEdit"
-                    placeholder="请输入集群编码" 
+                  ]" 
+                  :disabled="isEdit"
+                  placeholder="请输入集群编码" 
                     :maxLength="10"
                     class="compact-input"
                     @change="handleInputChange('clusterCode', $event.target.value)"
-                  />
-                </a-form-item>
-              </div>
+                />
+              </a-form-item>
             </div>
           </div>
+        </div>
 
           <!-- 技术配置部分 -->
           <div class="form-section">
             <div class="section-title">
               <div class="title-icon"></div>
               技术配置
-            </div>
+          </div>
             <div class="section-description">选择集群的技术框架和部署方式</div>
             
             <div class="framework-row">
@@ -121,30 +121,30 @@
               </div>
               <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterFrame}">
                 <div class="select-wrapper" ref="selectContainer">
-                  <a-select 
-                    v-decorator="[
-                      'clusterFrame',
+                <a-select 
+                v-decorator="[
+                  'clusterFrame',
                       { 
                         rules: [
                           { required: true, message: '请选择集群框架' },
                         ] 
                       },
-                    ]"
-                    placeholder="请选择集群框架"
-                    :disabled="isEdit"
+                ]"
+                  placeholder="请选择集群框架"
+                  :disabled="isEdit"
                     :getPopupContainer="() => $refs.selectContainer"
                     dropdownClassName="apple-dropdown"
                     class="framework-select"
                     @change="handleSelectChange('clusterFrame', $event)"
-                  >
+                >
                     <a-select-option 
                       :value="item.frameCode" 
                       v-for="(item, index) in filteredFrameList" 
                       :key="index"
                     >
-                      {{ item.frameCode }}
-                    </a-select-option>
-                  </a-select>
+                    {{ item.frameCode }}
+                  </a-select-option>
+                </a-select>
                 </div>
               </a-form-item>
             </div>
@@ -158,10 +158,10 @@
               
               <a-form-item class="deployment-form-item" :class="{'has-success': formValues.depType}">
                 <!-- 隐藏字段 -->
-                <a-input
+              <a-input
                   v-decorator="['depType', { rules: [{ required: true, message: '请选择部署方式' }] }]"
-                  style="display: none;"
-                />
+                style="display: none;"
+              />
                 
                 <div class="deployment-cards">
                   <div
@@ -196,31 +196,31 @@
                       <div class="card-description">容器化部署，支持自动化和弹性伸缩</div>
                     </div>
                     <div class="check-icon"></div>
-                  </div>
                 </div>
-              </a-form-item>
-            </div>
+              </div>
+            </a-form-item>
           </div>
-        </a-form>
-      </div>
-      
-      <div class="form-actions">
-        <a-button
-          type="primary"
-          @click.stop="handleSubmit"
-          :loading="loading"
-          class="primary-btn"
-        >
-          <div class="btn-content">{{ isEdit ? '保存修改' : '创建集群' }}</div>
-        </a-button>
-        <a-button 
-          @click.stop="formCancel"
-          class="cancel-btn"
-        >
-          <div class="btn-content">取消</div>
-        </a-button>
-      </div>
+        </div>
+      </a-form>
     </div>
+    
+    <div class="form-actions">
+      <a-button
+        type="primary"
+        @click.stop="handleSubmit"
+        :loading="loading"
+          class="primary-btn"
+      >
+          <div class="btn-content">{{ isEdit ? '保存修改' : '创建集群' }}</div>
+      </a-button>
+      <a-button 
+        @click.stop="formCancel"
+          class="cancel-btn"
+      >
+          <div class="btn-content">取消</div>
+      </a-button>
+    </div>
+  </div>
   </a-modal>
 </template>
 <script>
@@ -528,22 +528,22 @@ export default {
             border-radius: 50%;
           }
         }
-      }
-      
+        }
+        
       .section-description {
         font-size: 13px;
         color: @form-text-color-tertiary;
         margin-bottom: 16px;
         margin-left: 28px;
         line-height: 1.5;
-      }
-      
-      .form-row {
+        }
+        
+        .form-row {
         display: flex;
         gap: 20px;
         margin-bottom: 16px;
-        
-        @media (max-width: 768px) {
+          
+          @media (max-width: 768px) {
           flex-direction: column;
         }
         
@@ -556,9 +556,9 @@ export default {
             
             @media (max-width: 768px) {
               max-width: 100%;
-            }
-          }
-          
+    }
+  }
+  
           .field-label {
             font-size: 14px;
             font-weight: 500;
@@ -576,7 +576,7 @@ export default {
         
         .field-label {
           font-size: 14px;
-          font-weight: 500;
+        font-weight: 500;
           color: @form-text-color;
           margin-bottom: 8px;
           display: flex;
@@ -605,11 +605,11 @@ export default {
               border-color: @form-blue;
               box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
               outline: none;
-            }
           }
         }
       }
-      
+    }
+    
       .deployment-section {
         .field-label {
           font-size: 14px;
@@ -628,16 +628,16 @@ export default {
             display: flex;
             flex-wrap: wrap;
             gap: 16px;
-            
-            .deployment-card {
+        
+        .deployment-card {
               flex: 1;
               min-width: 250px;
-              display: flex;
-              align-items: center;
+          display: flex;
+          align-items: center;
               padding: 20px;
               border: 1px solid @form-border-color;
               border-radius: 14px;
-              cursor: pointer;
+          cursor: pointer;
               transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
               background: white;
               position: relative;
@@ -653,8 +653,8 @@ export default {
                 opacity: 0;
                 transition: opacity 0.3s;
               }
-              
-              &:hover {
+          
+          &:hover {
                 border-color: @form-blue;
                 transform: translateY(-3px);
                 box-shadow: @card-shadow;
@@ -666,9 +666,9 @@ export default {
                 .card-icon {
                   transform: scale(1.05);
                 }
-              }
-              
-              &.selected {
+          }
+          
+          &.selected {
                 border-color: @form-blue;
                 background-color: rgba(24, 144, 255, 0.05);
                 box-shadow: 0 0 0 1px @form-blue, @card-shadow;
@@ -678,57 +678,57 @@ export default {
                   background-color: rgba(24, 144, 255, 0.1);
                   box-shadow: 0 0 0 1px rgba(24, 144, 255, 0.2), 0 4px 8px rgba(24, 144, 255, 0.2);
                 }
-                
+        
                 .card-title {
                   color: @form-blue;
                 }
                 
                 .check-icon {
-                  opacity: 1;
-                  transform: scale(1);
-                }
-              }
-              
-              .card-icon {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+          
+          .card-icon {
                 width: 48px;
                 height: 48px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
                 margin-right: 16px;
-                flex-shrink: 0;
+            flex-shrink: 0;
                 background-color: @form-gray-bg;
                 border-radius: 50%;
                 transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-                
-                img {
+            
+            img {
                   max-width: 24px;
                   max-height: 24px;
                   transition: transform 0.3s;
-                }
-              }
-              
-              .card-content {
-                flex: 1;
-                
-                .card-title {
+            }
+          }
+          
+          .card-content {
+            flex: 1;
+            
+            .card-title {
                   font-size: 15px;
-                  font-weight: 600;
+              font-weight: 600;
                   color: @form-text-color;
                   margin-bottom: 6px;
                   transition: color 0.3s;
-                }
-                
-                .card-description {
+            }
+        
+            .card-description {
                   font-size: 13px;
                   color: @form-text-color-tertiary;
-                  line-height: 1.4;
-                }
-              }
-              
+              line-height: 1.4;
+            }
+          }
+          
               .check-icon {
-                position: absolute;
+            position: absolute;
                 top: 16px;
                 right: 16px;
                 width: 22px;
@@ -738,7 +738,7 @@ export default {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                opacity: 0;
+            opacity: 0;
                 transform: scale(0.5);
                 transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
                 box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
@@ -755,10 +755,10 @@ export default {
             }
           }
         }
-      }
-    }
-  }
-  
+            }
+          }
+        }
+        
   .form-actions {
     display: flex;
     justify-content: center;
@@ -777,7 +777,7 @@ export default {
       font-size: 15px;
       font-weight: 500;
       transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
-      display: flex;
+            display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
@@ -787,8 +787,8 @@ export default {
         position: relative;
         z-index: 2;
       }
-    }
-    
+            }
+            
     .primary-btn {
       background: @gradient-blue;
       border: none;
@@ -838,10 +838,10 @@ export default {
         transform: translateY(0);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
       }
+      }
     }
   }
-}
-
+  
 // 必填项红点样式
 .required-icon {
   position: relative;
@@ -864,8 +864,8 @@ export default {
     background-color: rgba(255, 77, 79, 0.2);
     border-radius: 50%;
     animation: pulse 2s infinite;
-  }
-  
+    }
+    
   &.success-icon {
     background-color: #52c41a;
     
@@ -888,7 +888,7 @@ export default {
   100% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0;
-  }
+    }
 }
 
 @keyframes success-pulse {
@@ -927,8 +927,8 @@ export default {
   border: 1px solid #d9d9d9;
   padding: 4px 12px;
   font-size: 14px;
-  
-  &:hover {
+        
+        &:hover {
     border-color: @form-blue;
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06);
   }
@@ -937,8 +937,8 @@ export default {
     border-color: @form-blue;
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
     outline: none;
-  }
-}
+        }
+      }
 </style>
 
 <style>
@@ -992,7 +992,7 @@ export default {
   from {
     opacity: 0;
     transform: translateY(-8px);
-  }
+      }
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1005,8 +1005,8 @@ export default {
   margin: 2px 0 !important;
   transition: all 0.2s !important;
   font-size: 14px !important;
-}
-
+      }
+      
 .apple-dropdown .ant-select-dropdown-menu-item:hover {
   background-color: #f0f7ff !important;
 }
@@ -1030,8 +1030,8 @@ export default {
 .ant-input:hover {
   border-color: #1890ff !important;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06) !important;
-}
-
+        }
+        
 .ant-select-focused .ant-select-selection,
 .ant-select-selection:focus,
 .ant-input:focus {
@@ -1062,16 +1062,16 @@ export default {
   border-color: #1890ff !important;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
   outline: none !important;
-}
-
+        }
+        
 /* 成功状态下修复双重边框 */
 .ant-form-item-has-success .ant-input-affix-wrapper {
   border-color: #52c41a !important;
-}
-
+      }
+      
 .ant-form-item-has-success .ant-input-affix-wrapper:hover {
   border-color: #73d13d !important;
-}
+      }
 
 .ant-form-item-has-success .ant-input-affix-wrapper-focused,
 .ant-form-item-has-success .ant-input-affix-wrapper:focus {
@@ -1092,7 +1092,7 @@ export default {
 .ant-form-item-has-error .ant-input-affix-wrapper:focus {
   border-color: #ff4d4f !important;
   box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
-}
+        }
 
 /* 表单验证消息 */
 .ant-form-explain {
@@ -1116,8 +1116,8 @@ export default {
 .ant-form-item-has-success .ant-input,
 .ant-form-item-has-success .ant-select-selection {
   border-color: #52c41a !important;
-}
-
+    }
+    
 .ant-form-item-has-success .ant-input:hover,
 .ant-form-item-has-success .ant-select-selection:hover {
   border-color: #73d13d !important;
@@ -1127,7 +1127,7 @@ export default {
 .ant-form-item-has-success .ant-select-selection:focus {
   border-color: #52c41a !important;
   box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
-}
+      }
 
 @keyframes message-in {
   from {
@@ -1174,7 +1174,7 @@ export default {
   transition: opacity 0.2s ease-out !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-}
+  }
 
 @keyframes mask-in {
   from {
@@ -1190,8 +1190,8 @@ export default {
   background-color: #f5f5f5 !important;
   border-color: #d9d9d9 !important;
   color: rgba(0, 0, 0, 0.45) !important;
-}
-
+    }
+    
 /* 重写Select组件相关样式 */
 .framework-row .select-wrapper .ant-select .ant-select-selection {
   height: 38px !important;

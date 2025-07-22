@@ -53,6 +53,7 @@
               type="primary"
               class="mac-btn primary-btn"
               @click="getInto(item)"
+              :class="{'disabled-cluster-btn': item.clusterStateCode === 1}"
                 :disabled="item.clusterStateCode === 1"
               >
               <span>进入集群</span>
@@ -1616,12 +1617,12 @@ body.colony-manage-page .ant-btn.mac-btn {
   min-width: 120px !important;
   height: 40px !important;
   border-radius: 10px !important;
-        font-weight: 600 !important;
-  font-size: 14px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
   letter-spacing: 0.3px !important;
   display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+              align-items: center !important;
+              justify-content: center !important;
   padding: 0 16px !important;
   box-sizing: border-box !important;
 }
@@ -1631,7 +1632,7 @@ body.colony-manage-page .ant-btn.mac-btn {
 .auth-cluster-modal .auth-btns .ant-btn-type-primary {
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
   border: none !important;
-          color: white !important;
+                color: white !important;
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
 }
 
@@ -1751,6 +1752,72 @@ body.colony-manage-page .ant-btn.mac-btn {
 .mac-btn {
   min-width: 80px;
   padding: 0 16px;
+}
+
+/* 不可进入集群的按钮特殊样式 */
+.disabled-cluster-btn {
+  background: linear-gradient(to bottom, #a6a6a6, #8c8c8c) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid #999 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  cursor: not-allowed !important;
+  position: relative !important;
+  overflow: hidden !important;
+  
+  &::before {
+    content: '无法访问';
+    position: absolute;
+    right: -40px;
+    top: -10px;
+    background: #ff4d4f;
+    color: white;
+    transform: rotate(45deg);
+    padding: 18px 14px 3px;
+    font-size: 10px;
+    box-shadow: 0 1px 4px rgba(255, 77, 79, 0.3);
+    font-weight: bold;
+    z-index: 1;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: repeating-linear-gradient(45deg, 
+                      transparent, 
+                      transparent 5px, 
+                      rgba(0,0,0,0.04) 5px, 
+                      rgba(0,0,0,0.04) 10px);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 0;
+  }
+          
+          &:hover {
+    background: linear-gradient(to bottom, #a6a6a6, #8c8c8c) !important;
+    transform: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+}
+
+/* 禁用按钮更清晰的样式 */
+.mac-btn[disabled] {
+  background: #f5f5f5 !important;
+  color: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid #d9d9d9 !important;
+            box-shadow: none !important;
+  cursor: not-allowed !important;
+  
+  &:hover {
+    background: #f5f5f5 !important;
+    color: rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid #d9d9d9 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
 }
 </style>
 
