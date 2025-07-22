@@ -189,40 +189,56 @@
         <!-- 快捷操作区域 - 重新设计 -->
 
         <div class="quick-actions">
-          <!-- 集群选择器 - 简化设计 -->
-          <a-dropdown class="cluster-dropdown" placement="bottomRight" v-if="isCluster === 'isCluster'">
-            <div class="cluster-selector">
-              <div class="cluster-info">
+          <!-- 集群选择器 - 彻底重构 -->
+          <div class="cluster-selector-wrapper" ref="clusterDropdown">
+            <a-dropdown 
+              class="cluster-dropdown" 
+              placement="bottomCenter" 
+              v-if="isCluster === 'isCluster'"
+              :trigger="['click']"
+              overlayClassName="custom-cluster-dropdown"
+              :getPopupContainer="() => $refs.clusterDropdown"
+            >
+              <div class="cluster-selector">
                 <div class="cluster-icon">
-                  <svg-icon icon-class="cluster" />
+                  <img v-if="currentCluster.isK8s" src="@/assets/images/kubernetes-logo.svg" class="cluster-svg-icon" />
+                  <img v-else src="@/assets/img/os-logos/linux-tux.svg" class="cluster-svg-icon" />
                 </div>
                 <span class="cluster-name">{{ currentCluster.name || 'bdp' }}</span>
+                <a-icon type="down" class="dropdown-icon" />
               </div>
-              <div class="dropdown-arrow">
-                <a-icon type="down" />
-              </div>
-            </div>
-            <a-menu slot="overlay" class="cluster-menu">
-              <a-menu-item 
-                v-for="item in runningCluster" 
-                :key="item.value" 
-                @click="changeCluster({key: item.value})"
-                :class="{ 'selected': item.value === clusterId }"
-              >
-                <div class="cluster-item">
-                  <svg-icon icon-class="cluster" />
-                  <span>{{ item.label }}</span>
-                  <a-icon v-if="item.value === clusterId" type="check" class="check-icon" />
-                </div>
-              </a-menu-item>
-            </a-menu>
-          </a-dropdown>
+              
+              <a-menu slot="overlay" class="cluster-menu">
+                <a-menu-item 
+                  v-for="item in runningCluster" 
+                  :key="item.value" 
+                  @click="changeCluster({key: item.value})"
+                  :class="{ 'selected': item.value === clusterId }"
+                >
+                  <div class="cluster-item">
+                    <img 
+                      v-if="isK8sCluster(item)"
+                      src="@/assets/images/kubernetes-logo.svg" 
+                      class="menu-svg-icon" 
+                    />
+                    <img 
+                      v-else
+                      src="@/assets/img/os-logos/linux-tux.svg" 
+                      class="menu-svg-icon" 
+                    />
+                    <span>{{ item.label }}</span>
+                    <a-icon v-if="item.value === clusterId" type="check" class="check-icon" />
+                  </div>
+                </a-menu-item>
+              </a-menu>
+            </a-dropdown>
+          </div>
 
           <!-- 操作按钮组 -->
           <div class="action-buttons">
             <!-- 设置按钮 -->
-            <div class="action-btn settings-btn" v-if="isCluster === 'isCluster'" title="集群设置">
-              <cluster-setting />
+            <div class="action-btn settings-btn" v-if="isCluster === 'isCluster'" title="历史操作">
+              <cluster-setting class="settings-component" />
             </div>
 
             <!-- 告警按钮 -->
@@ -271,6 +287,7 @@ export default {
       menuTimeouts: {}, // 存储菜单延迟关闭的定时器
       cachedServiceData: null, // 缓存服务数据
       cachedMenuData: null, // 缓存菜单数据
+      currentClusterDetails: null, // 当前集群详细信息
     };
   },
   computed: {
@@ -305,10 +322,30 @@ export default {
       return `calc(${headWidth} - ${extraWidth})`;
     },
     currentCluster () {
+      console.log("所有集群数据:", JSON.stringify(this.runningCluster));
       let arr = this.runningCluster.filter(item => item.value === Number(this.clusterId)) || []
+      console.log("当前选中集群:", arr.length > 0 ? JSON.stringify(arr[0]) : "无数据");
+      console.log("集群详细信息:", this.currentClusterDetails ? JSON.stringify(this.currentClusterDetails) : "无详细数据");
+      
+      const currentItem = arr.length > 0 ? arr[0] : null;
+      
+      // 判断是否是k8s类型
+      let isK8s = false;
+      
+      // 优先使用详细信息中的depType
+      if (this.currentClusterDetails && this.currentClusterDetails.depType) {
+        isK8s = this.isK8sCluster({depType: this.currentClusterDetails.depType});
+        console.log("使用详细信息判断集群类型:", this.currentClusterDetails.depType, "是K8s:", isK8s);
+      } else if (currentItem) {
+        // 如果没有详细信息，使用列表中的信息
+        isK8s = this.isK8sCluster(currentItem);
+        console.log("使用列表信息判断集群类型:", currentItem, "是K8s:", isK8s);
+      }
+      
       return {
-        name: arr.length > 0 ? arr[0].label : '',
-        clusterId: this.clusterId
+        name: currentItem ? currentItem.label : '',
+        clusterId: this.clusterId,
+        isK8s: isK8s
       }
     },
     regularMenus() {
@@ -710,13 +747,29 @@ export default {
       this.$emit('routeChanged', subItem.fullPath);
     },
     // 切换运行中的集群
-    changeCluster (val) {
-      if (this.clusterId === val.key) return false
-      this.setClusterId(val.key)
-      // 刷新服务列表
-      this.$store.dispatch('setting/getRunningClusterList')
-      // 使用goToHome确保行为一致
-      this.goToHome();
+    changeCluster ({key}) {
+      // 如果点击的是当前已选集群，不做任何操作
+      if (Number(this.clusterId) === Number(key)) {
+        this.clusterVisible = false;
+        return;
+      }
+      
+      console.log("切换到集群ID:", key);
+      
+      // 更新集群ID
+      this.$store.commit('setting/setClusterId', key);
+      
+      // 设置isCluster为true
+      this.$store.commit('setting/setIsCluster', 'isCluster');
+      
+      // 关闭下拉菜单
+      this.clusterVisible = false;
+      
+      // 刷新集群列表和详情
+      this.$store.dispatch('setting/getRunningClusterList');
+      
+      // 跳转到概览页面
+      this.$router.push('/overview');
     },
     ...mapMutations("setting", ["setLang", "setClusterId"]),
     goToHome() {
@@ -743,38 +796,82 @@ export default {
         this.$forceUpdate();
       }, 100);
     },
-  },
-  created() {
-    if (this.firstMenu && this.firstMenu.length > 0) {
-      this.activeFirstMenuKey = this.firstMenu[0].fullPath
-    }
     
-    // 如果当前路径是服务详情页面，预加载服务数据
-    if (this.$route.path.includes('/service-manage/service-list/') && this.$route.params.serviceId) {
-      const serviceId = this.$route.params.serviceId;
+    // 判断集群类型
+    isK8sCluster(item) {
+      if (!item) return false;
       
-      // 确保serviceId已设置
-      if (this.serviceId !== serviceId) {
-        this.$store.commit('setting/setServiceId', serviceId);
+      // 检查不同的属性和命名
+      if (item.depType === 'Kubernetes' || 
+          item.depType === 'kubernetes' || 
+          item.depType === 'k8s' ||
+          item.deployType === 'Kubernetes' ||
+          item.deployType === 'kubernetes' ||
+          item.deployType === 'k8s') {
+        return true;
       }
       
-      // 预加载服务数据
-      this.getCachedServiceData(serviceId);
+      // 检查描述字段
+      if (item.desc && typeof item.desc === 'string' && 
+         (item.desc.toLowerCase().includes('kubernetes') || 
+          item.desc.toLowerCase().includes('k8s'))) {
+        return true;
+      }
+      
+      // 检查名称字段
+      if (item.label && typeof item.label === 'string' && 
+         (item.label.toLowerCase().includes('kubernetes') || 
+          item.label.toLowerCase().includes('k8s'))) {
+        return true;
+      }
+      
+      return false;
+    },
+    updateClusterList() {
+      // 获取集群列表
+      this.$store.dispatch('setting/getRunningClusterList');
+      
+      // 获取当前集群的详细信息
+      this.fetchCurrentClusterDetails();
+    },
+    
+    // 获取当前集群的详细信息
+    fetchCurrentClusterDetails() {
+      if (!this.clusterId) return;
+      
+      // 使用cluster/info API获取详细信息
+      this.$axiosGet(`/ddh/api/cluster/info/${this.clusterId}`).then(res => {
+        if (res.code === 200 && res.data) {
+          console.log("当前集群详细信息:", res.data);
+          
+          // 存储当前集群的详细信息，包括depType
+          this.currentClusterDetails = res.data;
+          
+          // 强制更新视图
+          this.$forceUpdate();
+        }
+      }).catch(error => {
+        console.error("获取集群详细信息失败:", error);
+      });
+    },
+  },
+  created() {
+    let _this = this;
+    document.addEventListener("click", _this.handleClickOutside);
+    this.updateClusterList();
+    
+    // 监听集群ID变化，更新详细信息
+    this.$watch('clusterId', (newVal, oldVal) => {
+      if (newVal && newVal !== oldVal) {
+        this.fetchCurrentClusterDetails();
+      }
+    });
+  },
+  mounted() {
+    // 初始加载时获取当前集群详细信息
+    if (this.clusterId) {
+      this.fetchCurrentClusterDetails();
     }
-    
-    // 添加调试信息
-    // 菜单数据: this.firstMenu
-    // 当前路径: this.$route.path
-    // 当前serviceId: this.serviceId
-    // 路由参数: this.$route.params
-    
-    setTimeout(() => {
-      // 菜单数据(延迟检查): this.firstMenu
-      // regularMenus: this.regularMenus
-      // 当前服务名称: this.currentServiceName
-      // 当前服务图标: this.currentServiceIcon
-      // 当前服务状态: this.currentServiceStatus
-    }, 1000);
   },
   watch: {
     '$route': {
@@ -1424,35 +1521,36 @@ export default {
   }
   
   /* 集群选择器 - 重新设计 */
-  .cluster-dropdown,
-  .ant-dropdown.cluster-dropdown {
+  .cluster-selector-wrapper,
+  .ant-dropdown.cluster-selector-wrapper {
+    margin-right: 10px !important;
+    
     .cluster-selector {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 20px !important;
-        padding: 4px 6px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 2px !important;
-        cursor: pointer !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-        backdrop-filter: blur(24px) saturate(180%) !important;
-        box-shadow: 
-          0 4px 20px rgba(0, 0, 0, 0.06),
-          0 2px 8px rgba(0, 0, 0, 0.04),
-          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-        min-width: 85px !important;
-        max-width: 120px !important;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+      border: 1px solid rgba(0, 0, 0, 0.08) !important;
+      border-radius: 20px !important;
+      padding: 6px 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.05),
+        0 1px 3px rgba(0, 0, 0, 0.03),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+      min-width: 120px !important;
+      max-width: 180px !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
       
       &:hover {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 254, 0.98) 100%) !important;
-        transform: translateY(-2px) scale(1.02) !important;
+        transform: translateY(-2px) !important;
         box-shadow: 
-          0 8px 32px rgba(0, 0, 0, 0.1),
-          0 4px 16px rgba(0, 0, 0, 0.06),
+          0 6px 16px rgba(0, 0, 0, 0.08),
+          0 3px 6px rgba(0, 0, 0, 0.05),
           inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
         border-color: rgba(0, 122, 255, 0.2) !important;
         
@@ -1467,21 +1565,19 @@ export default {
       }
       
       &:active {
-        transform: translateY(-1px) scale(1.01) !important;
+        transform: translateY(-1px) !important;
         transition: all 0.15s ease !important;
       }
       
       .cluster-info {
-          display: flex !important;
-          align-items: center !important;
-          gap: 4px !important;
-          flex: 1 !important;
-          min-width: 0 !important;
-          overflow: hidden !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
         
         .cluster-icon {
-            width: 20px !important;
-            height: 20px !important;
+          width: 24px !important;
+          height: 24px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -1496,8 +1592,8 @@ export default {
         }
         
         .cluster-name {
-          font-size: 12px !important;
-          font-weight: 600 !important;
+          font-size: 14px !important;
+          font-weight: 500 !important;
           color: #1d1d1f !important;
           letter-spacing: -0.2px !important;
           line-height: 1.2 !important;
@@ -1505,37 +1601,26 @@ export default {
           overflow: hidden !important;
           text-overflow: ellipsis !important;
           flex: 1 !important;
-          max-width: 40px !important;
         }
-      }
-      
-      .dropdown-arrow {
-        font-size: 10px !important;
-        color: #999999 !important;
-        transition: all 0.3s ease !important;
-        margin-left: 4px !important;
-        width: 12px !important;
-        height: 12px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 3px !important;
-        background: rgba(0, 0, 0, 0.04) !important;
-        flex-shrink: 0 !important;
         
-        .anticon {
-          transition: transform 0.3s ease !important;
-          font-size: 8px !important;
+        .dropdown-arrow {
+          font-size: 12px !important;
           color: #999999 !important;
-        }
-      }
-      
-      &:hover .dropdown-arrow {
-        background: rgba(0, 122, 255, 0.1) !important;
-        color: #007aff !important;
-        
-        .anticon {
-          color: #007aff !important;
+          transition: all 0.3s ease !important;
+          width: 20px !important;
+          height: 20px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border-radius: 4px !important;
+          background: rgba(0, 0, 0, 0.04) !important;
+          flex-shrink: 0 !important;
+          
+          .anticon {
+            transition: transform 0.3s ease !important;
+            font-size: 12px !important;
+            color: #666666 !important;
+          }
         }
       }
     }
@@ -1569,58 +1654,9 @@ export default {
           inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
         position: relative !important;
         overflow: hidden !important;
+        margin-right: 8px !important;
         
-        &::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%);
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-        
-        &:hover {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
-          transform: translateY(-2px) scale(1.05);
-          box-shadow: 
-            0 8px 24px rgba(0, 0, 0, 0.12),
-            0 4px 12px rgba(0, 0, 0, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-          
-          &::before {
-            opacity: 1;
-          }
-        }
-        
-        &:active {
-          transform: translateY(-1px) scale(1.02);
-          transition: all 0.15s ease;
-        }
-        
-        .anticon,
-        .svg-icon {
-          font-size: 16px !important;
-          color: #007aff !important;
-          transition: all 0.3s ease !important;
-          z-index: 1 !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-        }
-        
-        /* 确保子组件内的图标居中 */
-        > * {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-        
-        /* 强制子组件内的所有元素居中 */
+        /* 强制子组件中的所有元素居中 */
         * {
           display: flex !important;
           align-items: center !important;
@@ -1634,62 +1670,28 @@ export default {
           justify-content: center !important;
         }
         
-        /* 强制覆盖子组件样式 */
-        :deep(.cluster-setting) {
+        /* 确保图标居中 */
+        .settings-component {
+          width: 100% !important;
+          height: 100% !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          width: 100% !important;
-          height: 100% !important;
           
-          .icon-wrapper,
-          .icon-gj,
-          .cluster-setting-icon {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          /* 强制所有嵌套元素居中 */
-          * {
+          .cluster-setting, .icon-wrapper, .cluster-setting-icon {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
           }
         }
         
-        /* 额外的强制居中规则 */
-        :deep(*) {
-          &.cluster-setting,
-          &.icon-wrapper,
-          &.icon-gj,
-          &.cluster-setting-icon {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-        }
-        
-        /* 确保所有子元素都居中 */
-        > div,
-        > span,
-        > i,
-        > svg {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-        
-        &:hover .anticon,
-        &:hover .svg-icon {
-          color: #0056d3;
-          transform: scale(1.1);
+        &:hover {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 
+            0 8px 24px rgba(0, 0, 0, 0.12),
+            0 4px 12px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
         }
       }
     }
@@ -1800,33 +1802,34 @@ export default {
   .cluster-item {
     display: flex;
     align-items: center;
+    padding: 8px 12px;
     gap: 12px;
-    padding: 12px 16px;
     transition: all 0.3s ease;
     
-    .svg-icon {
-      font-size: 16px;
-      color: #007aff;
+    .menu-svg-icon {
       width: 20px;
       height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
+      margin-right: 10px;
+      object-fit: contain;
     }
     
     span {
-      flex: 1;
       font-size: 14px;
-      font-weight: 500;
-      color: #1d1d1f;
+      color: rgba(0, 0, 0, 0.85);
       letter-spacing: -0.2px;
       transition: all 0.3s ease;
     }
     
+    .cluster-type {
+      margin-left: 8px;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.45);
+    }
+    
     .check-icon {
+      margin-left: auto;
       font-size: 14px;
-      color: #007aff;
+      color: #1890ff;
       transition: all 0.3s ease;
     }
   }
@@ -2762,6 +2765,237 @@ export default {
         color: #1890ff;
       }
     }
+  }
+}
+
+/* 修复下拉菜单样式 */
+.cluster-menu-overlay {
+  margin-top: 10px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  
+  .ant-dropdown-menu {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 清除多余容器 */
+  .cluster-menu {
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(30px) saturate(180%) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border-radius: 16px !important;
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.15),
+      0 8px 25px rgba(0, 0, 0, 0.1),
+      0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    padding: 8px !important;
+    min-width: 200px !important;
+    animation: dropdownFadeIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  }
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cluster-selector-wrapper {
+  position: relative;
+}
+
+.cluster-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  min-width: 120px;
+  max-width: 180px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 10px;
+  
+  .cluster-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 8px;
+    flex-shrink: 0;
+    overflow: hidden;
+    
+    .cluster-svg-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+    }
+  }
+  
+  .cluster-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1d1d1f;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+  
+  .dropdown-icon {
+    font-size: 14px;
+    color: #666;
+    margin-left: 5px;
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 254, 0.98) 100%);
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 16px rgba(0, 0, 0, 0.08),
+      0 3px 6px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 122, 255, 0.2);
+    
+    .dropdown-icon {
+      color: #007aff;
+    }
+  }
+}
+
+/* 操作按钮组 - 恢复原始大小 */
+.action-buttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-shrink: 0 !important;
+  
+  .action-btn,
+  div.action-btn {
+    &.settings-btn,
+    &.alarm-btn {
+      width: 40px !important; /* 恢复原始尺寸 */
+      height: 40px !important; /* 恢复原始尺寸 */
+      border-radius: 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%) !important;
+      border: 1px solid rgba(0, 0, 0, 0.06) !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+      cursor: pointer !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.04),
+        0 1px 3px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+      position: relative !important;
+      overflow: hidden !important;
+      margin-right: 8px !important;
+      
+      /* 恢复原始图标尺寸 */
+      .settings-component {
+        .svg-icon, .icon-gj, .cluster-setting-icon, .icon-wrapper {
+          font-size: 16px !important; /* 恢复原始尺寸 */
+          width: auto !important;
+          height: auto !important;
+          color: #007aff !important;
+        }
+      }
+      
+      &:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 
+          0 8px 24px rgba(0, 0, 0, 0.12),
+          0 4px 12px rgba(0, 0, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      }
+    }
+  }
+}
+
+.custom-cluster-dropdown {
+  margin-top: 10px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  
+  .ant-dropdown-menu {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 清除多余容器 */
+  .cluster-menu {
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(30px) saturate(180%) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border-radius: 16px !important;
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.15),
+      0 8px 25px rgba(0, 0, 0, 0.1),
+      0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    padding: 8px !important;
+    min-width: 200px !important;
+    animation: dropdownFadeIn 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  }
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 覆盖Ant Design下拉菜单样式，修复双重容器问题 */
+:deep(.ant-dropdown) {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  
+  &.ant-dropdown-placement-bottomCenter {
+    margin-top: 10px !important;
+  }
+}
+
+:deep(.ant-dropdown-menu-root) {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* 确保集群下拉菜单正确定位 */
+.custom-cluster-dropdown {
+  z-index: 1050 !important;
+  
+  &.ant-dropdown-placement-bottomCenter {
+    margin-top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
   }
 }
 </style>

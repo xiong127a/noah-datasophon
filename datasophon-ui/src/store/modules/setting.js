@@ -106,17 +106,38 @@ export default {
       })
     },
     getRunningClusterList ({dispatch, commit}) {
-      this._vm.$axiosPost(global.API.runningClusterList, {}).then(res => {
-        let arr = []
-        res.data.map(item => {
-          arr.push({
+      this._vm.$axiosPost(global.API.runningClusterList, {}).then(async res => {
+        let arr = [];
+        
+        // 获取每个集群的基本信息
+        for (const item of res.data) {
+          const clusterInfo = {
             label: item.clusterName,
             value: item.id
-          })
-        })
-        commit('setRunningCluster', arr)
-        dispatch('getDashboardUrl')
-      })
+          };
+          
+          // 获取每个集群的详细信息
+          try {
+            const detailRes = await this._vm.$axiosGet(`/ddh/api/cluster/info/${item.id}`);
+            if (detailRes.code === 200 && detailRes.data) {
+              // 将详细信息合并到基本信息中
+              clusterInfo.depType = detailRes.data.depType;
+              clusterInfo.deployType = detailRes.data.deployType;
+              clusterInfo.desc = detailRes.data.desc;
+              clusterInfo.clusterFrame = detailRes.data.clusterFrame;
+              clusterInfo.clusterState = detailRes.data.clusterState;
+            }
+          } catch (error) {
+            console.error(`获取集群 ${item.id} 详细信息失败:`, error);
+          }
+          
+          arr.push(clusterInfo);
+        }
+        
+        console.log("获取的集群完整信息:", arr);
+        commit('setRunningCluster', arr);
+        dispatch('getDashboardUrl');
+      });
     },
     getServiceList ({dispatch, commit}) {
       let menuData = JSON.parse(localStorage.getItem('menuData')) || []

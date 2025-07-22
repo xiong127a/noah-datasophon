@@ -71,8 +71,13 @@ export default {
 <style lang="less" scoped>
 .cluster-setting {
   &-icon {
-    color: #222b45;
+    color: #007aff;
     font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
 
   .icon-wrapper {
@@ -80,12 +85,14 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
+    padding: 8px;
     border-radius: 4px;
-    transition: background-color 0.3s;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    width: 100%;
+    height: 100%;
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: rgba(0, 122, 255, 0.1);
     }
   }
 }
