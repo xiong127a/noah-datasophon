@@ -24,6 +24,11 @@ import App from './App'
 import {initRouter} from './router'
 import './icons/index'
 import './assets/less/index.less'
+import '@/assets/less/globalStyle.less'  // 添加全局样式文件导入
+
+// 导入表单验证mixin
+import { formValidationMixin } from './utils/formValidation'
+
 import Antd from 'ant-design-vue'
 import Viser from 'viser-vue'
 import '@/mock'
@@ -46,6 +51,9 @@ Vue.use(Antd)
 Vue.config.productionTip = false
 Vue.use(Viser)
 Vue.use(Plugins)
+
+// 注册全局mixin
+Vue.mixin(formValidationMixin)
 
 bootstrap({router, store, i18n, message: Vue.prototype.$message})
 

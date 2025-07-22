@@ -146,6 +146,32 @@
       />
     </a-modal>
     
+    <!-- 新增：编辑集群模态框 -->
+    <a-modal
+      v-model="editModalVisible"
+      :title="currentEditObj && JSON.stringify(currentEditObj) !== '{}' ? '编辑集群配置' : '创建新集群'"
+      :footer="null"
+      :closable="true"
+      :maskClosable="false"
+      centered
+      destroyOnClose
+      :width="800"
+      :style="{ top: '30px', height: 'auto', maxHeight: 'calc(100vh - 60px)' }"
+      :bodyStyle="{ padding: 0, maxHeight: 'calc(100vh - 170px)', overflowY: 'auto' }"
+      class="edit-colony-modal"
+      @cancel="handleEditModalClose"
+      ref="editModal"
+    >
+      <AddColony 
+        v-if="editModalVisible" 
+        :detail="currentEditObj || {}" 
+        :callBack="handleEditComplete" 
+        @cancel="handleEditModalClose"
+        @success="handleEditComplete"
+        ref="addColonyForm"
+      />
+    </a-modal>
+    
     <!-- 全局下拉菜单，固定在body上 -->
     <div v-if="activeDropdown !== null" class="custom-dropdown-container" ref="globalDropdown">
       <div class="custom-dropdown">
@@ -187,7 +213,8 @@ export default {
 
   components: {
     Steps,
-    AuthCluster
+    AuthCluster,
+    AddColony
   },
 
   data() {
@@ -203,7 +230,9 @@ export default {
       authModalVisible: false,
       currentClusterForAuth: null,
       // 增加辅助属性，避免直接操作DOM
-      styleConsistencyApplied: false
+      styleConsistencyApplied: false,
+      editModalVisible: false, // 新增：控制编辑模态框的显示
+      currentEditObj: null // 新增：存储当前编辑的集群数据
     };
   },
 
@@ -227,64 +256,32 @@ export default {
   },
 
   mounted() {
-    // 初始化
     this.getColonyList();
     
-    // 确保样式一致性
-    document.body.classList.add('colony-manage-page');
-    this.styleConsistencyApplied = true;
-    
-    // 添加点击外部关闭下拉菜单事件
+    // 监听全局点击，用于关闭下拉菜单
     document.addEventListener('click', this.closeDropdownOnOutsideClick);
     
-    // 在页面加载时修复可访问性问题
-    this.fixAccessibilityIssues();
-    
-    // 使用MutationObserver替代DOMNodeInserted
-    const observer = new MutationObserver((mutations) => {
-      for(const mutation of mutations) {
-        if (mutation.addedNodes.length) {
-          for(const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE &&
-                (node.classList && 
-                 (node.classList.contains('ant-modal-root') || 
-                  node.classList.contains('ant-modal-wrap')))) {
-              this.fixAccessibilityIssues();
-              break;
-            }
-          }
-        }
-      }
+    // 添加MutationObserver监听DOM变化
+    this.observer = new MutationObserver(this.handleDOMChanges);
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true
     });
     
-    observer.observe(document.body, { childList: true, subtree: true });
-    this.mutationObserver = observer;
-    
-    // 添加窗口大小变化监听，但不使用debounce
-    window.addEventListener('resize', () => {
-      this.styleConsistencyApplied = true;
-    });
-    
-    // 添加路由变化监听，确保导航后样式一致
-    this.$router.afterEach(() => {
-      if (this.$route.path.includes('/colony-manage')) {
-        this.$nextTick(() => {
-          this.ensureStyleConsistency();
-        });
-      }
+    // 应用初始样式一致性
+    this.$nextTick(() => {
+      this.ensureStyleConsistency();
+      this.fixAccessibilityIssues();
     });
   },
   
   beforeDestroy() {
-    // 移除样式标记
-    document.body.classList.remove('colony-manage-page');
-    
-    // 断开点击事件监听
+    // 移除全局事件监听器
     document.removeEventListener('click', this.closeDropdownOnOutsideClick);
     
-    // 断开MutationObserver连接
-    if (this.mutationObserver) {
-      this.mutationObserver.disconnect();
+    // 停止观察DOM变化
+    if (this.observer) {
+      this.observer.disconnect();
     }
   },
 
@@ -386,34 +383,64 @@ export default {
       });
     },
     addColony(obj) {
-      const self = this;
-      let width = 800;
-      let title = JSON.stringify(obj) !== "{}" ? "编辑集群配置" : "创建新集群";
-      let content = (
-        <AddColony detail={obj} callBack={() => self.getColonyList()} />
-      );
-      this.$confirm({
-        width: width,
-        title: title,
-        content: content,
-        closable: true,
-        wrapClassName: 'apple-create-modal',
-        okButtonProps: { style: { display: 'none' } },
-        cancelButtonProps: { style: { display: 'none' } },
-        maskClosable: false,
-        centered: true,
-        destroyOnClose: true,
-        bodyStyle: { 
-          padding: 0, 
-          maxHeight: 'calc(100vh - 200px)', 
-          overflow: 'auto' 
-        },
-        icon: () => {
-          return <div />;
-        },
+      this.editModalVisible = true;
+      this.currentEditObj = obj;
+      
+      // 确保模态框内容正确渲染
+      this.$nextTick(() => {
+        // 使用多个setTimeout以确保在Vue渲染完成后执行
+        setTimeout(() => {
+          this.forceRefreshModal();
+        }, 50);
+        
+        setTimeout(() => {
+          this.forceRefreshModal();
+        }, 200);
+        
+        setTimeout(() => {
+          this.forceRefreshModal();
+        }, 500);
       });
     },
+    
+    handleEditModalClose() {
+      this.editModalVisible = false;
+      this.currentEditObj = null;
+    },
+    
+    handleEditComplete() {
+      this.getColonyList();
+      this.handleEditModalClose();
+    },
+    
+    // 强制刷新模态框内容
+    forceRefreshModal() {
+      if (!this.$refs.editModal) return;
+      
+      const modalEl = this.$refs.editModal.$el;
+      if (!modalEl) return;
+      
+      // 强制刷新模态框DOM
+      const modalBody = modalEl.querySelector('.ant-modal-body');
+      if (modalBody) {
+        modalBody.style.display = 'block';
+        modalBody.style.visibility = 'visible';
+        modalBody.style.opacity = '1';
+      }
+      
+      // 确保表单组件正确渲染
+      if (this.$refs.addColonyForm && this.$refs.addColonyForm.$el) {
+        const formContainer = this.$refs.addColonyForm.$el;
+        formContainer.style.display = 'block';
+        formContainer.style.visibility = 'visible';
+        formContainer.style.opacity = '1';
+        formContainer.style.height = 'auto';
+        formContainer.style.minHeight = '300px';
+      }
+    },
     delectColony(obj) {
+      // 直接导入DelectColony组件，避免在components中注册
+      const DelectColony = require('./commponents/delectColony.vue').default;
       const self = this;
       let width = 300;
       let content = (
@@ -664,6 +691,79 @@ export default {
       // 阻止事件冒泡
       event.stopPropagation();
     },
+    
+    // 监听DOM变化，修复样式问题
+    handleDOMChanges(mutations) {
+      let needsFix = false;
+      
+      mutations.forEach(mutation => {
+        if (mutation.addedNodes && mutation.addedNodes.length) {
+          for (let i = 0; i < mutation.addedNodes.length; i++) {
+            const node = mutation.addedNodes[i];
+            // 检查是否添加了模态框
+            if (node.nodeType === 1 && 
+                (node.classList && 
+                 (node.classList.contains('ant-modal-root') || 
+                  node.classList.contains('edit-colony-modal')))) {
+              needsFix = true;
+              break;
+            }
+            
+            // 检查子节点
+            if (node.querySelector && 
+                (node.querySelector('.ant-modal-root') || 
+                 node.querySelector('.edit-colony-modal'))) {
+              needsFix = true;
+              break;
+            }
+          }
+        }
+      });
+      
+      if (needsFix) {
+        // 使用nextTick和setTimeout确保在Vue更新DOM后应用样式
+        this.$nextTick(() => {
+          setTimeout(() => {
+            this.fixEditModalStyles();
+          }, 50);
+        });
+      }
+    },
+    
+    // 修复编辑集群模态框样式
+    fixEditModalStyles() {
+      // 查找编辑集群模态框
+      const editModals = document.querySelectorAll('.edit-colony-modal');
+      
+      editModals.forEach(modal => {
+        // 确保模态框内容区域可见
+        const modalBody = modal.querySelector('.ant-modal-body');
+        if (modalBody) {
+          modalBody.style.maxHeight = 'calc(100vh - 170px)';
+          modalBody.style.overflowY = 'auto';
+        }
+        
+        // 确保表单容器可见
+        const formContainer = modal.querySelector('.apple-form-container');
+        if (formContainer) {
+          formContainer.style.display = 'block';
+          formContainer.style.visibility = 'visible';
+          formContainer.style.minHeight = '300px';
+        }
+        
+        // 确保表单头部可见
+        const formHeader = modal.querySelector('.form-header');
+        if (formHeader) {
+          formHeader.style.display = 'block';
+        }
+        
+        // 确保卡片区域可见
+        const formCards = modal.querySelector('.form-cards');
+        if (formCards) {
+          formCards.style.display = 'block';
+        }
+      });
+    },
   },
   // 修复1: 先定义debounce函数，不要放在methods里
   debounce(fn, delay) {
@@ -747,8 +847,8 @@ export default {
     transform: translateY(-6px) scale(1.01);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
   }
-  
-  &.linux-type {
+        
+        &.linux-type {
   &::before {
     content: '';
     position: absolute;
@@ -758,9 +858,9 @@ export default {
       width: 4px;
       background: linear-gradient(to bottom, #ff9500, #ff2d55);
     }
-  }
-  
-  &.k8s-type {
+        }
+        
+        &.k8s-type {
     &::before {
       content: '';
       position: absolute;
@@ -770,9 +870,9 @@ export default {
       width: 4px;
       background: linear-gradient(to bottom, #007aff, #5ac8fa);
     }
-  }
-  
-  &.default-type {
+        }
+        
+        &.default-type {
     &::before {
       content: '';
       position: absolute;

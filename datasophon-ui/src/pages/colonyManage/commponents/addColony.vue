@@ -24,77 +24,145 @@
  * @FilePath: \ddh-ui\src\pages\colonyManage\commponents\addColony.vue
 -->
 <template>
-  <div class="apple-form-container">
-    <div class="form-header">
-      <h1 class="form-title">{{ isEdit ? '编辑集群' : '创建新集群' }}</h1>
-      <p class="form-subtitle">{{ isEdit ? '修改集群配置信息' : '配置您的大数据平台集群信息' }}</p>
-    </div>
-    
-    <div class="form-cards">
-      <a-form :form="form" layout="vertical" class="apple-form">
-        <!-- 基本信息卡片 -->
-        <div class="form-card">
-          <div class="card-header">
-            <h3 class="card-title">基本信息</h3>
-            <p class="card-description">设置集群的基本标识信息</p>
-          </div>
-          <div class="card-content">
+  <a-modal
+    :visible="true"
+    :title="isEdit ? '编辑集群' : '创建新集群'"
+    :maskClosable="false"
+    :keyboard="false"
+    :closable="true"
+    :destroyOnClose="true"
+    width="800px"
+    :footer="null"
+    :bodyStyle="{ padding: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }"
+    @cancel="formCancel"
+    class="apple-modal"
+  >
+    <div class="apple-form-container">
+      <div class="form-header">
+        <div class="header-shine"></div>
+        <h1 class="form-title">{{ isEdit ? '编辑集群' : '创建新集群' }}</h1>
+        <p class="form-subtitle">{{ isEdit ? '修改集群配置信息' : '配置您的大数据平台集群信息' }}</p>
+      </div>
+      
+      <div class="form-content">
+        <a-form :form="form" layout="vertical" class="apple-form">
+          <!-- 基本信息部分 -->
+          <div class="form-section">
+            <div class="section-title">
+              <div class="title-icon"></div>
+              基本信息
+            </div>
+            <div class="section-description">设置集群的基本标识信息</div>
+            
             <div class="form-row">
-              <a-form-item label="集群名称" class="apple-form-item">
-                <a-input 
-                  v-decorator="[
-                    'clusterName',
-                    { rules: [{ required: true, message: '集群名称不能为空!' }] },
-                  ]" 
-                  placeholder="请输入集群名称" 
-                  class="apple-input"
-                />
-              </a-form-item>
-              <a-form-item label="集群编码" class="apple-form-item">
-                <a-input 
-                  v-decorator="[
-                    'clusterCode',
-                    { rules: [{ required: true, message: '集群编码不能为空!' }] },
-                  ]" 
-                  :disabled="isEdit"
-                  placeholder="请输入集群编码" 
-                  class="apple-input"
-                />
-              </a-form-item>
+              <div class="form-field name-field">
+                <div class="field-label">
+                  集群名称
+                  <span class="required-icon" :class="{'success-icon': formValues.clusterName}"></span>
+                </div>
+                <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterName}">
+                  <a-input 
+                    v-decorator="[
+                      'clusterName',
+                      { 
+                        rules: [
+                          { required: true, message: '请输入集群名称' },
+                          { max: 10, message: '不能超过10个字符' }
+                        ] 
+                      },
+                    ]" 
+                    placeholder="请输入集群名称" 
+                    :maxLength="10"
+                    class="compact-input"
+                    @change="handleInputChange('clusterName', $event.target.value)"
+                  />
+                </a-form-item>
+              </div>
+              
+              <div class="form-field code-field">
+                <div class="field-label">
+                  集群编码
+                  <span class="required-icon" :class="{'success-icon': formValues.clusterCode}"></span>
+                </div>
+                <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterCode}">
+                  <a-input 
+                    v-decorator="[
+                      'clusterCode',
+                      { 
+                        rules: [
+                          { required: true, message: '请输入集群编码' },
+                          { max: 10, message: '不能超过10个字符' }
+                        ] 
+                      },
+                    ]" 
+                    :disabled="isEdit"
+                    placeholder="请输入集群编码" 
+                    :maxLength="10"
+                    class="compact-input"
+                    @change="handleInputChange('clusterCode', $event.target.value)"
+                  />
+                </a-form-item>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 技术配置卡片 -->
-        <div class="form-card">
-          <div class="card-header">
-            <h3 class="card-title">技术配置</h3>
-            <p class="card-description">选择集群的技术框架和部署方式</p>
-          </div>
-          <div class="card-content">
-            <a-form-item label="集群框架" class="apple-form-item" style="margin-bottom: 24px;">
-                <a-select 
-                v-decorator="[
-                  'clusterFrame',
-                  { rules: [{ required: true, message: '集群框架不能为空!' }] },
-                ]"
-                  placeholder="请选择集群框架"
-                  class="apple-select"
-                  :disabled="isEdit"
-                >
-                  <a-select-option :value="item.frameCode" v-for="(item, index) in frameList" :key="index">
-                    {{ item.frameCode }}
-                  </a-select-option>
-                </a-select>
+          <!-- 技术配置部分 -->
+          <div class="form-section">
+            <div class="section-title">
+              <div class="title-icon"></div>
+              技术配置
+            </div>
+            <div class="section-description">选择集群的技术框架和部署方式</div>
+            
+            <div class="framework-row">
+              <div class="field-label">
+                集群框架
+                <span class="required-icon" :class="{'success-icon': formValues.clusterFrame}"></span>
+              </div>
+              <a-form-item class="custom-form-item" :class="{'has-success': formValues.clusterFrame}">
+                <div class="select-wrapper" ref="selectContainer">
+                  <a-select 
+                    v-decorator="[
+                      'clusterFrame',
+                      { 
+                        rules: [
+                          { required: true, message: '请选择集群框架' },
+                        ] 
+                      },
+                    ]"
+                    placeholder="请选择集群框架"
+                    :disabled="isEdit"
+                    :getPopupContainer="() => $refs.selectContainer"
+                    dropdownClassName="apple-dropdown"
+                    class="framework-select"
+                    @change="handleSelectChange('clusterFrame', $event)"
+                  >
+                    <a-select-option 
+                      :value="item.frameCode" 
+                      v-for="(item, index) in filteredFrameList" 
+                      :key="index"
+                    >
+                      {{ item.frameCode }}
+                    </a-select-option>
+                  </a-select>
+                </div>
               </a-form-item>
+            </div>
+            
+            <!-- 部署方式选择 -->
+            <div class="deployment-section">
+              <div class="field-label">
+                集群部署方式
+                <span class="required-icon" :class="{'success-icon': formValues.depType}"></span>
+              </div>
               
-              <a-form-item label="集群部署方式" class="apple-form-item deployment-type">
-              <!-- 隐藏的表单字段用于验证 -->
-              <a-input
-                v-decorator="['depType', { rules: [{ required: true, message: '请选择集群部署方式!' }] }]"
-                style="display: none;"
-              />
-              <div class="deployment-cards-container">
+              <a-form-item class="deployment-form-item" :class="{'has-success': formValues.depType}">
+                <!-- 隐藏字段 -->
+                <a-input
+                  v-decorator="['depType', { rules: [{ required: true, message: '请选择部署方式' }] }]"
+                  style="display: none;"
+                />
+                
                 <div class="deployment-cards">
                   <div
                     class="deployment-card"
@@ -102,16 +170,15 @@
                     @click="selectDepType('PVM')"
                     :disabled="isEdit"
                   >
+                    <div class="card-glow"></div>
                     <div class="card-icon">
-                      <img src="~@/assets/img/os-logos/linux-tux.svg" alt="Bare Metal/VM" />
+                      <img src="~@/assets/img/os-logos/linux-tux.svg" alt="Linux" />
                     </div>
                     <div class="card-content">
-                      <h4 class="card-title">裸金属/虚拟机</h4>
-                      <p class="card-description">部署到Linux裸金属或虚拟机上</p>
+                      <div class="card-title">裸金属/虚拟机</div>
+                      <div class="card-description">部署到Linux裸金属或虚拟机上</div>
                     </div>
-                    <div class="card-check">
-                      <a-icon type="check-circle" class="check-icon" />
-                    </div>
+                    <div class="check-icon"></div>
                   </div>
 
                   <div
@@ -120,62 +187,45 @@
                     @click="selectDepType('Kubernetes')"
                     :disabled="isEdit"
                   >
+                    <div class="card-glow"></div>
                     <div class="card-icon k8s-icon">
                       <img src="~@/assets/images/kubernetes-logo.svg" alt="Kubernetes" />
                     </div>
                     <div class="card-content">
-                      <h4 class="card-title">Kubernetes</h4>
-                      <p class="card-description">容器化部署，支持自动化和弹性伸缩</p>
+                      <div class="card-title">Kubernetes</div>
+                      <div class="card-description">容器化部署，支持自动化和弹性伸缩</div>
                     </div>
-                    <div class="card-check">
-                      <a-icon type="check-circle" class="check-icon" />
-                    </div>
+                    <div class="check-icon"></div>
                   </div>
                 </div>
-
-                <div class="deployment-info-panel" v-if="selectedDepType">
-                  <div class="info-content">
-                    <div class="info-icon">
-                      <a-icon type="info-circle" />
-                    </div>
-                    <div class="info-text">
-                      <div v-if="selectedDepType === 'PVM'">
-                        <strong>裸金属/虚拟机部署：</strong>适用于需要并行处理大规模计算任务的场景。
-                      </div>
-                      <div v-else-if="selectedDepType === 'Kubernetes'">
-                        <strong>Kubernetes部署：</strong>适用于需要管理和部署容器化应用程序的场景。
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </a-form-item>
+              </a-form-item>
+            </div>
           </div>
-        </div>
-      </a-form>
+        </a-form>
+      </div>
+      
+      <div class="form-actions">
+        <a-button
+          type="primary"
+          @click.stop="handleSubmit"
+          :loading="loading"
+          class="primary-btn"
+        >
+          <div class="btn-content">{{ isEdit ? '保存修改' : '创建集群' }}</div>
+        </a-button>
+        <a-button 
+          @click.stop="formCancel"
+          class="cancel-btn"
+        >
+          <div class="btn-content">取消</div>
+        </a-button>
+      </div>
     </div>
-    
-    <div class="form-actions">
-      <a-button
-        type="primary"
-        @click.stop="handleSubmit"
-        :loading="loading"
-        class="apple-button primary"
-      >
-        <a-icon type="check" />
-        {{ isEdit ? '保存修改' : '创建集群' }}
-      </a-button>
-      <a-button 
-        @click.stop="formCancel"
-        class="apple-button secondary"
-      >
-        <a-icon type="close" />
-        取消
-      </a-button>
-    </div>
-  </div>
+  </a-modal>
 </template>
 <script>
+import { validateField } from '@/utils/formValidation';
+
 export default {
   props: {
     detail: {
@@ -203,12 +253,22 @@ export default {
       depTypeList: ['Kubernetes', 'PVM'], // 部署方式列表
       depType: '',
       selectedDepType: '', // 当前选中的部署方式
+      formValues: {
+        clusterName: '',
+        clusterCode: '',
+        clusterFrame: '',
+        depType: ''
+      }
     };
   },
   computed: {
     // 判断是否为编辑模式
     isEdit() {
       return JSON.stringify(this.detail) !== '{}';
+    },
+    // 过滤后的框架列表，确保每个框架码不超过10个字符
+    filteredFrameList() {
+      return this.frameList.filter(item => item.frameCode.length <= 10);
     }
   },
   watch: {
@@ -219,11 +279,35 @@ export default {
           // 编辑模式，设置部署方式
           this.selectedDepType = val.depType;
           this.depType = val.depType;
+          
+          // 填充表单值状态
+          this.formValues = {
+            clusterName: val.clusterName || '',
+            clusterCode: val.clusterCode || '',
+            clusterFrame: val.clusterFrame || '',
+            depType: val.depType || ''
+          };
         }
       }
     }
   },
   methods: {
+    handleInputChange(field, value) {
+      // 直接设置对应字段的值状态
+      if (value && value.trim() !== '') {
+        this.$set(this.formValues, field, value.trim());
+      } else {
+        this.$set(this.formValues, field, '');
+      }
+    },
+    handleSelectChange(field, value) {
+      // 直接设置对应字段的值状态
+      if (value) {
+        this.$set(this.formValues, field, value);
+      } else {
+        this.$set(this.formValues, field, '');
+      }
+    },
     tochange(val) {
       this.depType = val;
     },
@@ -233,11 +317,16 @@ export default {
       
       this.selectedDepType = type;
       this.depType = type;
+      
       // 手动设置表单字段值
       this.form.setFieldsValue({ depType: type });
+      
+      // 设置验证状态
+      this.$set(this.formValues, 'depType', type);
     },
     formCancel() {
-      this.$destroyAll();
+      // 替换$destroyAll()为触发自定义事件
+      this.$emit('cancel');
     },
     handleSubmit(e) {
       const _this = this;
@@ -280,7 +369,8 @@ export default {
             this.loading = false;
             if (res.code === 200) {
               this.$message.success('保存成功', 2);
-              this.$destroyAll();
+              // 使用自定义事件代替this.$destroyAll()
+              this.$emit('success');
               _this.callBack();
             }
           }).catch(() => {
@@ -294,12 +384,21 @@ export default {
         if (res.code === 200) {
           this.frameList = res.data;
           if (this.isEdit) {
+            // 设置表单值
             this.form.setFieldsValue({
               clusterName: this.detail.clusterName,
               clusterFrame: this.detail.clusterFrame,
               clusterCode: this.detail.clusterCode,
               depType: this.detail.depType,
             });
+            
+            // 设置验证状态
+            this.formValues = {
+              clusterName: this.detail.clusterName || '',
+              clusterCode: this.detail.clusterCode || '',
+              clusterFrame: this.detail.clusterFrame || '',
+              depType: this.detail.depType || ''
+            };
           }
         }
       });
@@ -307,285 +406,351 @@ export default {
   },
   mounted() {
     this.getFrameList();
-  },
+  }
 };
 </script>
 <style lang="less" scoped>
-// Apple设计系统颜色变量 - 优化版
-@apple-blue: #0A84FF;
-@apple-blue-hover: #0062CC;
-@apple-blue-light: rgba(10, 132, 255, 0.1);
-@apple-gray: #F2F2F7;
-@apple-gray-light: #fafbfc;
-@apple-white: #ffffff;
-@apple-black: #1a1a1a;
-@apple-text-primary: #1a1a1a;
-@apple-text-secondary: #6b7280;
-@apple-border: #D1D1D6;
-@apple-border-light: rgba(0, 0, 0, 0.08);
-@apple-radius: 12px; // 增加圆角值
-@apple-radius-large: 16px;
-@apple-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-@apple-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12);
+// 高级设计颜色变量
+@form-border-radius: 16px;
+@form-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+@form-text-color: #333333;
+@form-text-color-secondary: #666666;
+@form-text-color-tertiary: #999999;
+@form-blue: #1890ff;
+@form-blue-hover: #40a9ff;
+@form-gray-bg: #f9fafc;
+@form-border-color: #e8e8e8;
+@gradient-blue: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+@required-color: #ff4d4f;
+@card-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 
-// Apple字体
-.apple-font() {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+// 标题字体
+.title-font() {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 .apple-form-container {
-  .apple-font();
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 24px; // 减小内边距
-  border-radius: @apple-radius;
+  width: 100%;
+  background-color: white;
+  overflow: hidden;
+  border-radius: @form-border-radius;
+  position: relative;
   
   .form-header {
     text-align: center;
-    margin-bottom: 32px; // 减小下边距
+    padding: 24px 0;
+    margin-bottom: 0;
+    background: @gradient-blue;
+    position: relative;
+    overflow: hidden;
+    border-top-left-radius: @form-border-radius;
+    border-top-right-radius: @form-border-radius;
+    
+    // 闪光效果
+    .header-shine {
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+      transform: rotate(-30deg);
+      pointer-events: none;
+    }
     
     .form-title {
-      .apple-font();
-      font-size: 1.8rem; // 减小字体大小
-      font-weight: 600;
-      line-height: 1.1;
-      color: @apple-text-primary;
-      margin-bottom: 8px;
+      .title-font();
+      font-size: 22px;
+      color: white;
+      margin-bottom: 10px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      position: relative;
     }
     
     .form-subtitle {
-      .apple-font();
-      font-size: 1rem; // 减小字体大小
-      line-height: 1.5;
-      color: @apple-text-secondary;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.95);
       margin: 0;
-      font-weight: 500;
+      font-weight: 400;
+      position: relative;
     }
   }
   
-  .form-cards {
-    .form-card {
-      background: @apple-white;
-      border: 1px solid @apple-border;
-      border-radius: @apple-radius;
-      margin-bottom: 16px; // 减小卡片间距
-      overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  .form-content {
+    padding: 24px;
+    background-color: @form-gray-bg;
+    
+    .form-section {
+      margin-bottom: 24px;
+      background-color: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       
       &:hover {
-        box-shadow: @apple-shadow;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       }
       
-      .card-header {
-        padding: 16px 20px 12px; // 减小内边距
-        border-bottom: 1px solid @apple-border-light;
-        
-        .card-title {
-          .apple-font();
-          font-size: 1.1rem; // 减小字体大小
-          font-weight: 600;
-          color: @apple-text-primary;
-          margin: 0 0 6px 0;
-          line-height: 1.2;
-        }
-        
-        .card-description {
-          .apple-font();
-          font-size: 0.9rem; // 减小字体大小
-          color: @apple-text-secondary;
-          margin: 0;
-          line-height: 1.4;
-        }
+      &:last-child {
+        margin-bottom: 0;
       }
       
-      .card-content {
-        padding: 16px 20px; // 减小内边距
+      .section-title {
+        .title-font();
+        font-size: 16px;
+        color: @form-text-color;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
         
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px; // 减小表单项间距
-          
-          @media (max-width: 768px) {
-            grid-template-columns: 1fr;
-          }
-        }
-      }
-    }
-  }
-  
-  // 表单项样式
-  .apple-form-item {
-    margin-bottom: 0;
-    
-    /deep/ .ant-form-item-label {
-      padding-bottom: 6px;
-      
-      label {
-        .apple-font();
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: @apple-text-primary;
-        
-        // 替换必填星号为更优雅的样式
-        &::before {
-          content: '';
-          display: none;
-        }
-        
-        &::after {
-          content: '';
-          display: none;
-        }
-        
-        // 必填项标签使用蓝色文字而非星号
-        &.ant-form-item-required {
-          &::before {
-            display: none;
-          }
-          
-          // 可以添加"必填"小标签
-          &::after {
-            content: '必填';
-            display: inline-block;
-            margin-left: 4px;
-            font-size: 0.7rem;
-            padding: 1px 5px;
-            background-color: rgba(10, 132, 255, 0.1);
-            color: @apple-blue;
-            border-radius: 4px;
-            line-height: 1.4;
-            font-weight: normal;
-            vertical-align: middle;
-          }
-        }
-      }
-    }
-    
-    // 部署方式特殊样式
-    &.deployment-type {
-      grid-column: 1 / -1;
-      
-      .deployment-cards-container {
-        .deployment-cards {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          margin-bottom: 12px;
-          
-          @media (max-width: 768px) {
-            grid-template-columns: 1fr;
-          }
-        }
-        
-        .deployment-card {
-          display: flex;
-          align-items: center;
+        .title-icon {
+          width: 18px;
+          height: 18px;
+          background: @gradient-blue;
+          border-radius: 50%;
+          margin-right: 10px;
           position: relative;
-          background: @apple-white;
-          border: 1px solid @apple-border;
-          border-radius: @apple-radius;
-          padding: 12px 16px;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-          height: 80px; // 限制卡片高度
+          box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
           
-          &:hover {
-            border-color: @apple-blue;
-            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.15);
+          &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
           }
-          
-          &.selected {
-            border-color: @apple-blue;
-            background: @apple-blue-light;
-            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
+        }
+      }
+      
+      .section-description {
+        font-size: 13px;
+        color: @form-text-color-tertiary;
+        margin-bottom: 16px;
+        margin-left: 28px;
+        line-height: 1.5;
+      }
+      
+      .form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 16px;
         
-            .card-check {
-              opacity: 1;
-              transform: scale(1);
+        @media (max-width: 768px) {
+          flex-direction: column;
+        }
+        
+        .form-field {
+          flex: 1;
+          
+          &.name-field,
+          &.code-field {
+            max-width: 50%;
+            
+            @media (max-width: 768px) {
+              max-width: 100%;
             }
           }
           
-          .card-icon {
+          .field-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: @form-text-color;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            margin-right: 12px;
-            flex-shrink: 0;
-            
-            img {
-              width: 32px;
-              height: 32px;
-            }
+            gap: 4px;
           }
-          
-          .card-content {
-            flex: 1;
-            
-            .card-title {
-              .apple-font();
-              font-size: 1rem;
-              font-weight: 600;
-              color: @apple-text-primary;
-              margin: 0 0 4px 0;
-              line-height: 1.2;
-            }
+        }
+      }
+      
+      .framework-row {
+        margin-bottom: 24px;
         
-            .card-description {
-              .apple-font();
-              font-size: 0.8rem;
-              color: @apple-text-secondary;
-              margin: 0;
-              line-height: 1.4;
-            }
-          }
+        .field-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: @form-text-color;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .select-wrapper {
+          position: relative;
+          width: 100%;
+          max-width: 300px;
           
-          .card-check {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          .framework-select {
+            width: 100%;
+            height: 38px;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+            border: 1px solid #d9d9d9;
             
-            .check-icon {
-              color: @apple-blue;
-              font-size: 18px;
+            &:hover {
+              border-color: @form-blue;
+              box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06);
+            }
+            
+            &:focus {
+              border-color: @form-blue;
+              box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+              outline: none;
             }
           }
         }
+      }
+      
+      .deployment-section {
+        .field-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: @form-text-color;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
         
-        .deployment-info-panel {
-          background: rgba(10, 132, 255, 0.05);
-          border: 1px solid rgba(10, 132, 255, 0.1);
-          border-radius: @apple-radius;
-          padding: 12px;
-          margin-top: 8px;
+        .deployment-form-item {
+          margin-bottom: 0;
           
-          .info-content {
+          .deployment-cards {
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            flex-wrap: wrap;
+            gap: 16px;
             
-            .info-icon {
-              color: @apple-blue;
-              font-size: 14px;
-              margin-top: 2px;
-            }
-            
-            .info-text {
+            .deployment-card {
               flex: 1;
-              .apple-font();
-              font-size: 0.85rem;
-              line-height: 1.4;
-              color: @apple-text-primary;
+              min-width: 250px;
+              display: flex;
+              align-items: center;
+              padding: 20px;
+              border: 1px solid @form-border-color;
+              border-radius: 14px;
+              cursor: pointer;
+              transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+              background: white;
+              position: relative;
+              overflow: hidden;
               
-              strong {
-                color: @apple-blue;
+              .card-glow {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 80%);
+                opacity: 0;
+                transition: opacity 0.3s;
+              }
+              
+              &:hover {
+                border-color: @form-blue;
+                transform: translateY(-3px);
+                box-shadow: @card-shadow;
+                
+                .card-glow {
+                  opacity: 0.5;
+                }
+                
+                .card-icon {
+                  transform: scale(1.05);
+                }
+              }
+              
+              &.selected {
+                border-color: @form-blue;
+                background-color: rgba(24, 144, 255, 0.05);
+                box-shadow: 0 0 0 1px @form-blue, @card-shadow;
+                
+                .card-icon {
+                  transform: scale(1.05);
+                  background-color: rgba(24, 144, 255, 0.1);
+                  box-shadow: 0 0 0 1px rgba(24, 144, 255, 0.2), 0 4px 8px rgba(24, 144, 255, 0.2);
+                }
+                
+                .card-title {
+                  color: @form-blue;
+                }
+                
+                .check-icon {
+                  opacity: 1;
+                  transform: scale(1);
+                }
+              }
+              
+              .card-icon {
+                width: 48px;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 16px;
+                flex-shrink: 0;
+                background-color: @form-gray-bg;
+                border-radius: 50%;
+                transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+                
+                img {
+                  max-width: 24px;
+                  max-height: 24px;
+                  transition: transform 0.3s;
+                }
+              }
+              
+              .card-content {
+                flex: 1;
+                
+                .card-title {
+                  font-size: 15px;
+                  font-weight: 600;
+                  color: @form-text-color;
+                  margin-bottom: 6px;
+                  transition: color 0.3s;
+                }
+                
+                .card-description {
+                  font-size: 13px;
+                  color: @form-text-color-tertiary;
+                  line-height: 1.4;
+                }
+              }
+              
+              .check-icon {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                width: 22px;
+                height: 22px;
+                background: @form-blue;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transform: scale(0.5);
+                transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+                box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+                
+                &:after {
+                  content: '';
+                  width: 8px;
+                  height: 4px;
+                  border-left: 2px solid white;
+                  border-bottom: 2px solid white;
+                  transform: rotate(-45deg) translate(0, -1px);
+                }
               }
             }
           }
@@ -594,220 +759,239 @@ export default {
     }
   }
   
-  // 输入框样式
-  .apple-input {
-    /deep/ .ant-input {
-      .apple-font();
-      border: 1px solid @apple-border;
-      border-radius: @apple-radius;
-      padding: 8px 12px;
-      height: 40px;
-      font-size: 0.9rem;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      background: @apple-white;
-      
-      &:hover {
-        border-color: @apple-blue;
-      }
-      
-      &:focus {
-        border-color: @apple-blue;
-        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
-        outline: none;
-      }
-      
-      &::placeholder {
-        color: @apple-text-secondary;
-        font-weight: 400;
-      }
-    }
-  }
-  
-  // 选择框样式
-  .apple-select {
-    max-width: 260px; // 限制集群框架选择框宽度
-    
-    /deep/ .ant-select-selector {
-      .apple-font();
-      border: 1px solid @apple-border !important;
-      border-radius: @apple-radius !important;
-      padding: 4px 8px !important;
-      height: 40px !important;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      
-      .ant-select-selection-search-input {
-        height: 32px !important;
-        font-size: 0.9rem;
-      }
-      
-      .ant-select-selection-placeholder {
-        color: @apple-text-secondary;
-        font-weight: 400;
-        line-height: 32px;
-      }
-      
-      .ant-select-selection-item {
-        line-height: 32px;
-        font-size: 0.9rem;
-      }
-    }
-    
-    &:hover /deep/ .ant-select-selector {
-      border-color: @apple-blue !important;
-    }
-    
-    &.ant-select-focused /deep/ .ant-select-selector {
-      border-color: @apple-blue !important;
-      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1) !important;
-    }
-    
-    // 下拉菜单样式
-    /deep/ .ant-select-dropdown {
-      border-radius: @apple-radius !important;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
-      padding: 6px !important;
-      border: 1px solid rgba(0, 0, 0, 0.05) !important;
-      
-      .ant-select-item {
-        padding: 8px 12px !important;
-        border-radius: 6px !important;
-        transition: background 0.2s !important;
-        margin: 2px 0 !important;
-        font-size: 0.9rem !important;
-        
-        &:hover {
-          background-color: #f0f7ff !important;
-        }
-        
-        &-option-selected {
-          background-color: rgba(10, 132, 255, 0.1) !important;
-          color: @apple-blue !important;
-          font-weight: 600 !important;
-        }
-      }
-    }
-  }
-  
-  // 按钮样式
   .form-actions {
     display: flex;
     justify-content: center;
+    padding: 20px;
+    background-color: white;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
     gap: 16px;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid @apple-border-light;
+    border-bottom-left-radius: @form-border-radius;
+    border-bottom-right-radius: @form-border-radius;
     
-    .apple-button {
-      .apple-font();
-      border-radius: @apple-radius;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 0 24px;
-      height: 40px;
+    .primary-btn,
+    .cancel-btn {
       min-width: 120px;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      height: 40px;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 500;
+      transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      
+      .btn-content {
+        position: relative;
+        z-index: 2;
+      }
+    }
+    
+    .primary-btn {
+      background: @gradient-blue;
       border: none;
+      color: white;
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+      
+      &:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 80%);
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
       
       &:hover {
         transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(24, 144, 255, 0.4);
+        
+        &:before {
+          opacity: 1;
+        }
       }
       
       &:active {
-        transform: translateY(-1px);
+        transform: translateY(0);
+        box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+      }
+    }
+    
+    .cancel-btn {
+      border: 1px solid #e0e0e0;
+      color: @form-text-color;
+      background: white;
+      
+      &:hover {
+        border-color: @form-blue;
+        color: @form-blue;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
       
-      &.primary {
-        background: linear-gradient(135deg, #0A84FF 0%, #0062CC 100%);
-        color: @apple-white;
-        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
-        
-        &:hover {
-          box-shadow: 0 6px 16px rgba(10, 132, 255, 0.35);
-        }
-        
-        &:focus {
-          box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
-        }
-      }
-      
-      &.secondary {
-        background: @apple-white;
-        color: @apple-text-primary;
-        border: 1px solid @apple-border;
-        
-        &:hover {
-          background: @apple-gray-light;
-          color: @apple-blue;
-          border-color: @apple-blue;
-        }
-        
-        &:focus {
-          background: @apple-gray-light;
-          border-color: @apple-blue;
-        }
-      }
-      
-      .anticon {
-        margin-right: 8px;
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
       }
     }
   }
 }
 
-// 全局tooltip样式
-/deep/ .apple-tooltip {
-  .ant-tooltip-inner {
-    .apple-font();
-    background: rgba(0, 0, 0, 0.85);
-    border-radius: 8px;
-    padding: 12px 16px;
-    
-    .tooltip-content {
-      .tooltip-item {
-        margin-bottom: 8px;
-        line-height: 1.5;
-        
-        &:last-child {
-          margin-bottom: 0;
-        }
-        
-        strong {
-          color: @apple-blue;
-        }
-      }
-    }
+// 必填项红点样式
+.required-icon {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+  margin-left: 4px;
+  transition: background-color 0.3s;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(2);
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 77, 79, 0.2);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
   }
   
-  .ant-tooltip-arrow::before {
-    background: rgba(0, 0, 0, 0.85);
-  }
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .apple-form-container {
-    padding: 16px;
+  &.success-icon {
+    background-color: #52c41a;
     
-    .form-header .form-title {
-      font-size: 1.5rem;
-    }
-    
-    .form-actions {
-      flex-direction: column;
-      align-items: center;
-      
-      .apple-button {
-        width: 100%;
-      }
+    &::after {
+      background-color: rgba(82, 196, 26, 0.2);
+      animation: success-pulse 2s infinite;
     }
   }
 }
 
-// 动画效果
-@keyframes fadeInUp {
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes success-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+// 表单项样式
+.custom-form-item {
+  margin-bottom: 0;
+  
+  :deep(.ant-form-item-label) {
+    display: none;
+  }
+  
+  :deep(.ant-form-item-control) {
+    line-height: 32px;
+  }
+}
+
+.compact-input {
+  width: 100%;
+  height: 38px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1);
+  border: 1px solid #d9d9d9;
+  padding: 4px 12px;
+  font-size: 14px;
+  
+  &:hover {
+    border-color: @form-blue;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06);
+  }
+  
+  &:focus {
+    border-color: @form-blue;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    outline: none;
+  }
+}
+</style>
+
+<style>
+/* 全局样式 */
+.apple-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.08);
+  animation: modal-in 0.4s cubic-bezier(0.2, 0, 0.38, 1);
+}
+
+@keyframes modal-in {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.apple-modal .ant-modal-header {
+  display: none;
+}
+
+.apple-modal .ant-modal-close {
+  color: white;
+  z-index: 10;
+}
+
+.apple-modal .ant-modal-body {
+  padding: 0 !important;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* 下拉菜单样式 */
+.apple-dropdown {
+  min-width: 100% !important;
+  width: 100% !important;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06) !important;
+  padding: 8px !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  animation: dropdown-in 0.2s cubic-bezier(0.2, 0, 0.38, 1) !important;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
@@ -815,90 +999,269 @@ export default {
   }
 }
 
-.apple-form-container {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-// 禁用状态样式
-.apple-input {
-  /deep/ .ant-input[disabled] {
-    background-color: #F9F9F9;
-    color: #999;
-    border-color: #E5E5EA;
-    cursor: not-allowed;
-  }
-}
-
-.apple-select {
-  /deep/ .ant-select-disabled {
-    .ant-select-selector {
-      background-color: #F9F9F9 !important;
-      color: #999;
-      border-color: #E5E5EA !important;
-      cursor: not-allowed;
-    }
-    
-    .ant-select-arrow {
-      color: #C7C7CC;
-    }
-  }
-}
-
-.deployment-card[disabled] {
-  opacity: 0.7;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-</style>
-
-<style>
-/* 确保下拉菜单项有圆角 */
-.ant-select-dropdown-menu-item {
+.apple-dropdown .ant-select-dropdown-menu-item {
   border-radius: 8px !important;
-  padding: 8px 12px !important;
-  transition: background 0.2s !important;
-  margin: 4px 0 !important;
+  padding: 10px 14px !important;
+  margin: 2px 0 !important;
+  transition: all 0.2s !important;
+  font-size: 14px !important;
 }
 
-.ant-select-dropdown-menu-item:hover {
+.apple-dropdown .ant-select-dropdown-menu-item:hover {
   background-color: #f0f7ff !important;
 }
 
-.ant-select-dropdown-menu-item-selected {
-  background-color: rgba(10, 132, 255, 0.1) !important;
-  color: #0A84FF !important;
+.apple-dropdown .ant-select-dropdown-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  color: #1890ff !important;
   font-weight: 600 !important;
 }
 
-/* 强制应用圆角到下拉框本身 */
-.ant-select-dropdown {
-  border-radius: 12px !important;
-  overflow: hidden !important;
-  padding: 6px !important;
+/* 输入框和下拉框样式 */
+.ant-select-selection,
+.ant-input {
+  border-radius: 10px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  height: 38px !important;
 }
 
-/* 选择框样式强化 */
-.ant-select .ant-select-selector {
-  border-radius: 12px !important;
-  overflow: hidden !important;
+.ant-select-selection:hover,
+.ant-input:hover {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06) !important;
 }
 
-/* 修复集群框架下拉选择器 */
-.apple-select .ant-select-selector {
-  border-radius: 12px !important;
-  border-top-left-radius: 12px !important;
-  border-top-right-radius: 12px !important;
-  border-bottom-left-radius: 12px !important;
-  border-bottom-right-radius: 12px !important;
+.ant-select-focused .ant-select-selection,
+.ant-select-selection:focus,
+.ant-input:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  outline: none !important;
 }
 
-/* 强制覆盖所有选择器样式 */
-.ant-select > .ant-select-selection {
-  border-radius: 12px !important;
+/* 修复双重边框问题 */
+.ant-form-item-control .ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* 修复下拉箭头区域 */
-.ant-select-arrow {
-  right: 11px;
+.ant-input-affix-wrapper {
+  border-radius: 10px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+}
+
+.ant-input-affix-wrapper:hover {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.06) !important;
+}
+
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  outline: none !important;
+}
+
+/* 成功状态下修复双重边框 */
+.ant-form-item-has-success .ant-input-affix-wrapper {
+  border-color: #52c41a !important;
+}
+
+.ant-form-item-has-success .ant-input-affix-wrapper:hover {
+  border-color: #73d13d !important;
+}
+
+.ant-form-item-has-success .ant-input-affix-wrapper-focused,
+.ant-form-item-has-success .ant-input-affix-wrapper:focus {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
+}
+
+/* 错误状态下修复双重边框 */
+.ant-form-item-has-error .ant-input-affix-wrapper {
+  border-color: #ff4d4f !important;
+}
+
+.ant-form-item-has-error .ant-input-affix-wrapper:hover {
+  border-color: #ff7875 !important;
+}
+
+.ant-form-item-has-error .ant-input-affix-wrapper-focused,
+.ant-form-item-has-error .ant-input-affix-wrapper:focus {
+  border-color: #ff4d4f !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+}
+
+/* 表单验证消息 */
+.ant-form-explain {
+  font-size: 12px !important;
+  margin-top: 4px !important;
+  padding-left: 2px !important;
+  animation: message-in 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+}
+
+/* 表单验证错误消息 */
+.ant-form-item-has-error .ant-form-explain {
+  color: #ff4d4f !important;
+}
+
+/* 表单验证成功消息 */
+.ant-form-item-has-success .ant-form-explain {
+  color: #52c41a !important;
+}
+
+/* 成功状态的表单项 */
+.ant-form-item-has-success .ant-input,
+.ant-form-item-has-success .ant-select-selection {
+  border-color: #52c41a !important;
+}
+
+.ant-form-item-has-success .ant-input:hover,
+.ant-form-item-has-success .ant-select-selection:hover {
+  border-color: #73d13d !important;
+}
+
+.ant-form-item-has-success .ant-input:focus,
+.ant-form-item-has-success .ant-select-selection:focus {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 全局按钮样式 */
+.ant-btn {
+  border-radius: 20px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-btns {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 24px !important;
+}
+
+.ant-modal-confirm .ant-btn {
+  flex: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 36px !important;
+}
+
+/* 模态框遮罩层 */
+.apple-modal .ant-modal-mask {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  animation: mask-in 0.2s ease-out !important;
+  transition: opacity 0.2s ease-out !important;
+}
+
+.ant-modal-mask-hidden {
+  opacity: 0 !important;
+  transition: opacity 0.2s ease-out !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@keyframes mask-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 禁用表单元素样式 */
+.ant-input[disabled], .ant-select-disabled .ant-select-selection {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 重写Select组件相关样式 */
+.framework-row .select-wrapper .ant-select .ant-select-selection {
+  height: 38px !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 10px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.framework-row .select-wrapper .ant-select .ant-select-selection:hover {
+  border-color: #1890ff !important;
+}
+
+.framework-row .select-wrapper .ant-select-focused .ant-select-selection {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  outline: none !important;
+}
+
+/* 修复Select内部元素 */
+.ant-select-selection__rendered {
+  line-height: 38px !important;
+  margin-left: 12px !important;
+}
+
+/* 验证成功的表单项样式 */
+.custom-form-item.has-success .ant-input,
+.custom-form-item.has-success .ant-select-selection {
+  border-color: #52c41a !important;
+}
+
+.custom-form-item.has-success .ant-input:hover,
+.custom-form-item.has-success .ant-select-selection:hover {
+  border-color: #73d13d !important;
+}
+
+.custom-form-item.has-success .ant-input:focus,
+.custom-form-item.has-success .ant-select-selection:focus {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
+}
+
+/* 输入框样式强制覆盖 */
+.compact-input {
+  border-radius: 10px !important;
+  height: 38px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.custom-form-item.has-success .compact-input {
+  border-color: #52c41a !important;
+}
+
+/* 下拉框样式强制覆盖 */
+.framework-select .ant-select-selection {
+  border-radius: 10px !important;
+  height: 38px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  border: 1px solid #d9d9d9 !important;
+}
+
+.custom-form-item.has-success .framework-select .ant-select-selection {
+  border-color: #52c41a !important;
+}
+
+/* 卡片选择样式强制覆盖 */
+.deployment-form-item.has-success .deployment-card.selected {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 1px #52c41a, 0 4px 12px rgba(82, 196, 26, 0.2) !important;
 }
 </style>

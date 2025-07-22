@@ -511,11 +511,1109 @@
         position: static !important;
         margin-right: 10px !important;
       }
+      
+      /* 解决重复按钮问题 - 隐藏自动生成的底部按钮 */
+      .service-action-confirm .ant-modal-confirm-btns {
+        display: none !important;
+      }
+      
+      /* 恢复服务管理确认框的原始内容布局 */
+      .service-action-confirm .ant-modal-body {
+        padding: 24px !important;
+      }
+      
+      .service-action-confirm .ant-modal-confirm-body {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      
+      .service-action-confirm .ant-modal-confirm-content {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* 恢复服务操作弹窗的原始样式 */
+      .service-action-confirm .ant-modal-confirm-title {
+        padding: 0 !important;
+        margin: 0 0 20px 0 !important;
+        border-bottom: none !important;
+        font-weight: normal !important;
+        font-size: 22px !important;
+      }
+      
+      /* 服务管理确认框内的自定义内容区域样式 */
+      .service-action-confirm .ant-modal-confirm-content > div {
+        margin-top: 20px !important;
+      }
+      
+      /* 服务管理确认框内的标题样式 */
+      .service-action-confirm .ant-modal-confirm-title > div {
+        font-size: 22px !important;
+      }
+      
+      /* 完全隐藏框架自带的底部按钮区域，不保留任何空间 */
+      .service-action-confirm .ant-modal-confirm-btns {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        top: -9999px !important;
+        left: -9999px !important;
+      }
+      
+      /* 恢复原始的模态框内容区域样式 */
+      .service-action-confirm .ant-modal-body {
+        padding: 24px !important;
+      }
+      
+      /* 恢复问号图标样式 */
+      .service-action-confirm .anticon-question-circle,
+      .service-action-confirm i.anticon-question-circle,
+      .service-action-confirm svg[data-icon="question-circle"] {
+        display: inline-block !important;
+        width: 1em !important;
+        height: 1em !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: static !important;
+        vertical-align: -0.125em !important;
+        color: #2F7FD1 !important;
+        margin-right: 10px !important;
+      }
+      
+      /* 加强覆盖所有svg路径元素的显示 */
+      .service-action-confirm svg path {
+        display: inline !important;
+        visibility: visible !important;
+      }
+      
+      /* 修复文本样式 */
+      .service-action-confirm .ant-modal-confirm-content {
+        color: #555555 !important;
+        font-size: 16px !important;
+      }
+      
+      /* 修复服务确认框右上角的样式问题 */
+      .service-action-confirm .ant-modal-close {
+        color: rgba(0, 0, 0, 0.45) !important;
+      }
+      
+      .service-action-confirm .ant-modal-header {
+        display: none !important; /* 隐藏可能的重复标题区域 */
+      }
+      
+      /* 移除模态框内的多余分割线 */
+      .service-action-confirm .ant-modal-header,
+      .service-action-confirm .ant-modal-content {
+        border-bottom: none !important;
+        box-shadow: none !important;
+      }
+      
+      /* 优化关闭按钮位置 */
+      .service-action-confirm .ant-modal-close {
+        right: 17px !important;
+        top: 15px !important;
+      }
+      
+      /* 统一整个确认框的样式 */
+      .service-action-confirm .ant-modal-content {
+        border-radius: 8px !important;
+        overflow: hidden !important;
+      }
+      
+      /* 优化模态框内的间距 */
+      .service-action-confirm .ant-modal-confirm-body-wrapper {
+        padding-top: 8px !important;
+      }
+      
+      /* 确保标题与内容的正确对齐 */
+      .ant-modal-confirm-title {
+        margin: 0 !important;
+        padding: 16px 24px 0 24px !important;
+        border-bottom: none !important;
+      }
+
+      /* 专门修复编辑集群的UI样式 */
+      .apple-create-modal .ant-modal-body {
+        padding: 0 !important; 
+      }
+
+      .apple-create-modal .ant-modal-content {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+      }
+
+      /* 修复编辑集群表单元素样式 */
+      .apple-create-modal .ant-form-item,
+      .apple-create-modal .ant-form-item-label,
+      .apple-create-modal .ant-form-item-control,
+      .apple-create-modal .ant-form-item-children {
+        line-height: normal !important;
+        margin-bottom: 16px !important;
+      }
+
+      /* 编辑集群的表单项恢复正常样式 */
+      .apple-create-modal .ant-form-item-control {
+        position: relative !important;
+        line-height: 32px !important;
+      }
+
+      /* 确保编辑集群表单输入框正常工作 */
+      .apple-create-modal .ant-input,
+      .apple-create-modal .ant-select {
+        width: 100% !important;
+        height: auto !important;
+      }
+
+      /* 编辑集群页面基础布局恢复 */
+      .apple-create-modal .apple-form-container {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+      }
+
+      /* 重置编辑集群卡片布局 */
+      .apple-create-modal .form-card {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 24px !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        border-radius: 8px !important;
+        background-color: #fff !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+      }
+
+      /* 集群部署方式选择卡片恢复 */
+      .apple-create-modal .deployment-card {
+        display: flex !important;
+        align-items: center !important;
+        padding: 16px !important;
+        border: 1px solid #e8e8e8 !important;
+        border-radius: 8px !important;
+        margin-bottom: 16px !important;
+        cursor: pointer !important;
+        transition: all 0.3s !important;
+      }
+
+      /* 修复选项卡选择效果 */
+      .apple-create-modal .deployment-card.selected {
+        border-color: #1890ff !important;
+        background-color: #e6f7ff !important;
+      }
+
+      /* 重置特殊布局类 */
+      .apple-create-modal .form-row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        margin: 0 -8px !important;
+      }
+
+      .apple-create-modal .form-row .ant-form-item {
+        padding: 0 8px !important;
+        flex: 1 0 50% !important;
+        max-width: 50% !important;
+      }
+      
+      /* 编辑集群专用样式，优先级最高 */
+      .edit-cluster-modal {
+        z-index: 1100 !important; /* 确保在最顶层 */
+      }
+      
+      /* 确保表单正确布局 */
+      .edit-cluster-modal .apple-form-container {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      
+      /* 恢复原始表单项布局 */
+      .edit-cluster-modal .ant-form-item-control-wrapper,
+      .edit-cluster-modal .ant-form-item-control {
+        width: 100% !important;
+        display: block !important;
+      }
+      
+      /* 修复标题样式 */
+      .edit-cluster-modal .ant-modal-title {
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        color: #333 !important;
+        text-align: left !important;
+      }
+      
+      /* 修复表单项标签和内容的垂直对齐 */
+      .edit-cluster-modal .ant-form-item-label,
+      .edit-cluster-modal .ant-form-item-control {
+        line-height: 32px !important;
+      }
+      
+      /* 修复选择器样式 */
+      .edit-cluster-modal .ant-select-selection {
+        min-height: 32px !important;
+      }
+      
+      /* 修复部署卡片布局 */
+      .edit-cluster-modal .deployment-cards {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+      }
+      
+      /* 确保部署卡片在一行显示 */
+      .edit-cluster-modal .deployment-card {
+        flex: 1 0 45% !important;
+        max-width: 48% !important;
+      }
+      
+      /* 强制覆盖所有表单样式 */
+      .edit-cluster-modal .ant-form .ant-form-item,
+      .edit-cluster-modal .ant-form .ant-form-item-with-help {
+        margin-bottom: 16px !important;
+      }
+      
+      /* 强制表单项布局正确 */
+      .edit-cluster-modal .ant-form .ant-form-item-control-wrapper {
+        width: 100% !important;
+      }
+      
+      /* 强制表单内容正确布局 */
+      .edit-cluster-modal .ant-form-item-children {
+        width: 100% !important;
+        display: block !important;
+      }
+      
+      /* 编辑集群模态框专用样式 - 使用新的a-modal实现 */
+      .edit-colony-modal {
+        z-index: 1100 !important;
+      }
+      
+      /* 重置模态框内容区域样式 */
+      .edit-colony-modal .ant-modal-body {
+        padding: 0 !important;
+        background: #ffffff !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      
+      /* 修复模态框整体高度问题 */
+      .edit-colony-modal .ant-modal {
+        top: 30px !important;
+        height: auto !important;
+        max-height: calc(100vh - 60px) !important;
+        padding-bottom: 0 !important;
+      }
+      
+      .edit-colony-modal .ant-modal-content {
+        height: auto !important;
+        min-height: 300px !important;
+        max-height: calc(100vh - 60px) !important;
+      }
+      
+      /* 确保内容区可滚动 */
+      .edit-colony-modal .ant-modal-body {
+        max-height: calc(100vh - 170px) !important;
+        overflow-y: auto !important;
+      }
+      
+      /* 完全重置模态框标题区域样式 */
+      .edit-colony-modal .ant-modal-header,
+      .ant-modal-header {
+        padding: 16px 24px !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        background: #ffffff !important;
+        border-radius: 2px 2px 0 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+      }
+      
+      /* 修复弹窗关闭按钮位置 */
+      .edit-colony-modal .ant-modal-close {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        z-index: 10 !important;
+        padding: 0 !important;
+        width: 56px !important;
+        height: 56px !important;
+        line-height: 56px !important;
+      }
+      
+      /* 强制显示编辑集群表单 */
+      .edit-colony-modal .apple-form-container {
+        display: block !important;
+        width: 100% !important;
+        min-height: 300px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        padding: 24px !important;
+        overflow: visible !important;
+      }
+      
+      /* 确保表单头部正确显示 */
+      .edit-colony-modal .form-header {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 24px !important;
+        text-align: center !important;
+      }
+      
+      /* 确保表单内容正确显示 */
+      .edit-colony-modal .form-cards {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 24px !important;
+      }
+      
+      /* 确保按钮区域正确显示 */
+      .edit-colony-modal .form-actions {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 24px 0 !important;
+        margin-top: 24px !important;
+        border-top: 1px solid #f0f0f0 !important;
+      }
+      
+      /* 恢复所有表单元素样式 */
+      .edit-colony-modal .ant-form {
+        display: block !important;
+      }
+      
+      /* 确保表单项正确布局 */
+      .edit-colony-modal .ant-form-item {
+        display: flex !important;
+        flex-direction: column !important;
+        margin-bottom: 24px !important;
+      }
+      
+      /* 确保表单标签正确显示 */
+      .edit-colony-modal .ant-form-item-label {
+        text-align: left !important;
+        padding: 0 0 8px !important;
+      }
+      
+      .edit-colony-modal .ant-form-item-label label {
+        color: rgba(0, 0, 0, 0.85) !important;
+        font-size: 14px !important;
+      }
+      
+      /* 确保表单控件正确显示 */
+      .edit-colony-modal .ant-form-item-control-wrapper {
+        display: block !important;
+        width: 100% !important;
+      }
+      
+      /* 修复表单行样式 */
+      .edit-colony-modal .form-row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        margin: 0 -8px !important;
+      }
+      
+      .edit-colony-modal .form-row .ant-form-item {
+        flex: 1 1 calc(50% - 16px) !important;
+        margin: 0 8px 24px !important;
+      }
+      
+      /* 确保输入框和选择框正确显示 */
+      .edit-colony-modal .ant-input,
+      .edit-colony-modal .ant-select-selection {
+        width: 100% !important;
+        height: 32px !important;
+        border: 1px solid #d9d9d9 !important;
+        border-radius: 4px !important;
+        transition: all 0.3s !important;
+      }
+      
+      /* 部署方式卡片样式 */
+      .edit-colony-modal .deployment-cards-container {
+        width: 100% !important;
+        display: block !important;
+      }
+      
+      .edit-colony-modal .deployment-cards {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 16px !important;
+        width: 100% !important;
+      }
+      
+      .edit-colony-modal .deployment-card {
+        flex: 1 1 calc(50% - 8px) !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 12px !important;
+        border: 1px solid #d9d9d9 !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        transition: all 0.3s !important;
+      }
+      
+      .edit-colony-modal .deployment-card.selected {
+        border-color: #1890ff !important;
+        background: rgba(24, 144, 255, 0.1) !important;
+      }
+      
+      /* 确保按钮正确显示 */
+      .edit-colony-modal .apple-button {
+        min-width: 80px !important;
+        height: 32px !important;
+        padding: 0 15px !important;
+        margin: 0 8px !important;
+        font-size: 14px !important;
+        border-radius: 4px !important;
+      }
+      
+      /* 确保卡片内容区域正确显示 */
+      .edit-colony-modal .card-content {
+        padding: 16px !important;
+        display: block !important;
+      }
+      
+      .edit-colony-modal .card-header {
+        padding: 16px 16px 0 16px !important;
+        display: block !important;
+      }
+      
+      /* 修复部署卡片内容对齐 */
+      .edit-colony-modal .card-icon {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        margin-right: 12px !important;
+      }
+      
+      .edit-colony-modal .card-content {
+        flex: 1 !important;
+      }
+      
+      /* 强制避免任何滚动或高度溢出问题 */
+      body.has-edit-modal {
+        overflow: hidden !important;
+      }
+      
+      .edit-colony-modal {
+        overflow: hidden !important;
+      }
+      
+      /* 确保模态框内容不被裁剪 */
+      .edit-colony-modal .ant-modal-wrap {
+        overflow-y: auto !important;
+      }
+      
+      .edit-colony-modal .ant-modal {
+        padding-bottom: 24px !important;
+      }
+      
+      /* 修复表单卡片的间距和样式 */
+      .edit-colony-modal .form-card {
+        border: 1px solid #e8e8e8 !important;
+        border-radius: 8px !important;
+        margin-bottom: 16px !important;
+        background: #fff !important;
+      }
+      
+      /* 恢复服务确认框样式 */
+      /* 防止文本在确认框中换行 */
+      .ant-modal-confirm-content {
+        white-space: normal !important;
+      }
+      
+      /* 服务确认框特别样式 - 防止文本换行 */
+      .service-action-confirm .ant-modal-confirm-content {
+        white-space: nowrap !important;
+      }
+      
+      /* 完全重置和覆盖确认框的文本样式，强制不换行 */
+      .ant-modal-confirm-content > div {
+        white-space: normal !important;
+        padding: 0 !important;
+      }
+      
+      .ant-modal-confirm-content > div > div {
+        white-space: nowrap !important;
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+      }
+      
+      /* 更精确的服务确认框文本样式覆盖 */
+      .ant-modal-confirm[class*='service-action'] .ant-modal-confirm-content > div > div {
+        white-space: nowrap !important;
+        display: block !important;
+        width: 100% !important;
+        min-width: 250px !important;
+        text-align: center !important;
+      }
+      
+      /* 优化确认框布局 - 居中内容并增加间距 */
+      .ant-modal-confirm-content {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        padding: 20px 24px !important;
+      }
+      
+      /* 确保内容容器水平居中 */
+      .ant-modal-confirm-content > div {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+      }
+      
+      /* 确保文本居中 */
+      .ant-modal-confirm-content > div > div:first-child {
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin: 0 auto 30px auto !important; /* 增加底部间距 */
+        padding: 0 !important;
+      }
+      
+      /* 优化按钮容器 */
+      .ant-modal-confirm-content > div > div:last-child {
+        margin-top: 36px !important; /* 增加顶部间距 */
+        padding-top: 16px !important; /* 增加顶部内边距 */
+      }
+      
+      /* 优化按钮样式 */
+      .ant-modal-confirm-content .ant-btn {
+        min-width: 80px !important;
+        margin: 0 6px !important;
+      }
+      
+      /* 强力校正内容居中 */
+      .ant-modal-confirm .ant-modal-body {
+        display: flex !important;
+        justify-content: center !important;
+        padding: 24px !important;
+      }
+      
+      .ant-modal-confirm-body-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        width: 100% !important;
+      }
+      
+      .ant-modal-confirm-body {
+        text-align: center !important;
+        width: 100% !important;
+      }
+      
+      /* 确保标题居中 */
+      .ant-modal-confirm-title {
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+        margin-bottom: 20px !important;
+      }
+      
+      /* 强制删除底部按钮 */
+      .ant-modal-confirm-btns {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+        z-index: -9999 !important;
+        transform: scale(0) !important;
+      }
     </style>
+    <!-- Mac风格全局输入框和下拉框样式 -->
+    <style>
+      /* 全局强制应用Mac风格输入框样式 */
+      .ant-input,
+      .ant-input-affix-wrapper {
+        border-radius: 8px !important;
+        border: 1px solid #D1D1D6 !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        font-size: 14px !important;
+        height: 38px !important;
+        line-height: 38px !important;
+        padding: 0 16px !important;
+      }
+
+      .ant-input:hover,
+      .ant-input-affix-wrapper:hover {
+        border-color: #5AC8FA !important;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1) !important;
+      }
+
+      .ant-input:focus,
+      .ant-input-focused,
+      .ant-input-affix-wrapper-focused {
+        border-color: #007AFF !important;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+        outline: 0 !important;
+      }
+
+      /* 全局强制应用Mac风格下拉框样式 */
+      .ant-select-selection {
+        border-radius: 8px !important;
+        border: 1px solid #D1D1D6 !important;
+        height: 38px !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+      }
+
+      .ant-select-selection__rendered {
+        line-height: 38px !important;
+        margin-left: 16px !important;
+        margin-right: 16px !important;
+      }
+
+      .ant-select-selection:hover {
+        border-color: #5AC8FA !important;
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1) !important;
+      }
+
+      .ant-select-focused .ant-select-selection,
+      .ant-select-selection:focus,
+      .ant-select-selection:active {
+        border-color: #007AFF !important;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+        outline: 0 !important;
+      }
+
+      /* 下拉菜单样式 */
+      .ant-select-dropdown {
+        border-radius: 16px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12),
+                    0 6px 16px rgba(0, 0, 0, 0.08),
+                    0 2px 6px rgba(0, 0, 0, 0.06) !important;
+        background: rgba(255, 255, 255, 0.98) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        padding: 6px !important;
+      }
+
+      /* 下拉选项 */
+      .ant-select-dropdown-menu-item {
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        margin: 2px 0 !important;
+        transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+        color: #1D1D1F !important;
+        min-height: 38px !important;
+        line-height: 22px !important;
+      }
+
+      /* 选中状态 */
+      .ant-select-dropdown-menu-item-selected {
+        background-color: rgba(0, 122, 255, 0.1) !important;
+        color: #007AFF !important;
+        font-weight: 500 !important;
+      }
+
+      /* 悬停状态 */
+      .ant-select-dropdown-menu-item-active {
+        background-color: rgba(0, 122, 255, 0.05) !important;
+        color: #1D1D1F !important;
+      }
+      
+      /* 编辑集群模态框内的输入框和下拉框样式 */
+      .edit-colony-modal .ant-input,
+      .edit-colony-modal .ant-input-affix-wrapper,
+      .edit-colony-modal .ant-select-selection {
+        border-radius: 8px !important;
+        border: 1px solid #D1D1D6 !important;
+        height: 38px !important;
+      }
+      
+      /* 编辑集群模态框内的表单项样式 */
+      .edit-colony-modal .ant-form-item-label > label {
+        font-size: 14px !important;
+        color: #1D1D1F !important;
+      }
+      
+      /* 部署卡片选择样式 */
+      .edit-colony-modal .deployment-card {
+        border-radius: 8px !important;
+        border: 1px solid #D1D1D6 !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+      }
+      
+      .edit-colony-modal .deployment-card.selected {
+        border-color: #007AFF !important;
+        background-color: rgba(0, 122, 255, 0.1) !important;
+      }
+    </style>
+
+    <!-- 授权集群风格全局样式 - 参照authCluster.vue实现 -->
+    <style>
+      /* ===== 改进的输入框样式 ===== */
+      .ant-input,
+      .ant-input-affix-wrapper {
+        border-radius: 10px !important;
+        border: 1px solid #D1D1D6 !important;
+        min-height: 44px !important;
+        line-height: 44px !important;
+        padding: 0 16px !important;
+        font-size: 14px !important;
+        transition: all 0.3s !important;
+        background: white !important;
+        box-shadow: none !important;
+      }
+
+      .ant-input:hover,
+      .ant-input-affix-wrapper:hover {
+        border-color: #1890ff !important;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15) !important;
+      }
+
+      .ant-input:focus,
+      .ant-input-focused,
+      .ant-input-affix-wrapper-focused {
+        border-color: #1890ff !important;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+        outline: 0 !important;
+      }
+
+      /* ===== 改进的下拉框样式 ===== */
+      .ant-select-selection {
+        border-radius: 10px !important;
+        border: 1px solid #D1D1D6 !important;
+        min-height: 44px !important;
+        transition: all 0.3s !important;
+        background: white !important;
+        box-shadow: none !important;
+      }
+
+      .ant-select-selection__rendered {
+        line-height: 44px !important;
+        margin-left: 16px !important;
+        margin-right: 32px !important; /* 给箭头留出空间 */
+      }
+
+      .ant-select-selection:hover {
+        border-color: #1890ff !important;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15) !important;
+      }
+
+      .ant-select-focused .ant-select-selection,
+      .ant-select-selection:focus,
+      .ant-select-selection:active {
+        border-color: #1890ff !important;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+        outline: 0 !important;
+      }
+
+      /* 多选模式的选择框样式 */
+      .ant-select-selection--multiple {
+        padding: 6px 8px 2px !important;
+      }
+
+      .ant-select-selection--multiple .ant-select-selection__rendered {
+        margin-left: 4px !important;
+        margin-bottom: 5px !important;
+        line-height: normal !important;
+      }
+
+      .ant-select-selection__placeholder {
+        margin-left: 12px !important;
+        color: #999 !important;
+      }
+
+      /* 标签样式 - 类似授权集群页面 */
+      .ant-select-selection__choice {
+        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        color: white !important;
+        height: 32px !important;
+        line-height: 32px !important;
+        margin-top: 3px !important;
+        margin-bottom: 3px !important;
+        margin-right: 8px !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        padding-right: 28px !important;
+        padding-left: 12px !important;
+        box-shadow: 0 2px 6px rgba(24, 144, 255, 0.25) !important;
+      }
+
+      .ant-select-selection__choice__content {
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        line-height: 32px !important;
+        text-align: center !important;
+        display: block !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      .ant-select-selection__choice__remove {
+        position: absolute !important;
+        right: 9px !important;
+        top: 0 !important;
+        height: 32px !important;
+        line-height: 32px !important;
+        color: white !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        opacity: 0.85 !important;
+      }
+
+      .ant-select-selection__choice__remove:hover {
+        color: white !important;
+        opacity: 1 !important;
+      }
+
+      /* 搜索输入框样式 */
+      .ant-select-search--inline .ant-select-search__field {
+        margin-top: 7px !important;
+        margin-bottom: 4px !important;
+        height: 22px !important;
+      }
+
+      /* ===== 改进的下拉菜单样式 ===== */
+      .ant-select-dropdown {
+        border-radius: 12px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+        padding: 6px !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        overflow: hidden !important;
+      }
+
+      .ant-select-dropdown-menu {
+        max-height: 240px !important;
+      }
+
+      .ant-select-dropdown-menu-item {
+        padding: 10px 12px !important;
+        transition: all 0.2s !important;
+        border-radius: 8px !important;
+        margin: 2px 4px !important;
+      }
+
+      .ant-select-dropdown-menu-item:hover {
+        background-color: #f0f7ff !important;
+      }
+
+      .ant-select-dropdown-menu-item-selected {
+        background-color: rgba(24, 144, 255, 0.1) !important;
+        color: #1890ff !important;
+        font-weight: 600 !important;
+      }
+
+      /* ===== 改进的按钮样式 - 更符合苹果设计风格 ===== */
+      .ant-btn {
+        min-width: 90px !important;
+        height: 40px !important;
+        border-radius: 10px !important;
+        font-weight: 500 !important; /* 调整字重为更轻的500 */
+        font-size: 14px !important;
+        letter-spacing: 0.2px !important; /* 调整字母间距更自然 */
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 16px !important;
+        box-sizing: border-box !important;
+        transition: all 0.25s cubic-bezier(0.645, 0.045, 0.355, 1) !important; /* 更苹果风格的过渡 */
+      }
+
+      .ant-btn-primary {
+        background: #1890ff !important; /* 纯色背景更符合苹果设计 */
+        border: none !important;
+        color: white !important;
+        box-shadow: 0 1px 5px rgba(24, 144, 255, 0.25) !important; /* 更微妙的阴影 */
+      }
+
+      .ant-btn-primary:hover {
+        background: #40a9ff !important; /* 纯色悬停状态 */
+        transform: translateY(-1px) !important; /* 更微妙的上浮效果 */
+        box-shadow: 0 3px 8px rgba(24, 144, 255, 0.3) !important;
+      }
+
+      .ant-btn-primary:active {
+        background: #096dd9 !important; /* 纯色激活状态 */
+        transform: translateY(0) !important;
+        box-shadow: 0 1px 3px rgba(24, 144, 255, 0.3) !important;
+      }
+
+      .ant-btn-default {
+        background: #ffffff !important;
+        color: #464646 !important;
+        border: 1px solid #e2e2e2 !important; /* 更浅的边框颜色 */
+        font-weight: 400 !important; /* 默认按钮字重更轻 */
+      }
+
+      .ant-btn-default:hover {
+        background: white !important;
+        color: #1890ff !important;
+        border-color: #1890ff !important;
+        transform: translateY(-1px) !important; /* 更微妙的上浮效果 */
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important; /* 更微妙的阴影 */
+      }
+
+      .ant-btn-default:active {
+        background: #f7f7f7 !important; /* 更浅的激活背景 */
+        color: #096dd9 !important;
+        transform: translateY(0) !important;
+      }
+
+      /* ===== 编辑集群页面专用样式 ===== */
+      .edit-colony-modal .ant-input,
+      .edit-colony-modal .ant-input-affix-wrapper,
+      .edit-colony-modal .ant-select-selection {
+        border-radius: 10px !important;
+        border: 1px solid #D1D1D6 !important;
+        min-height: 44px !important;
+        line-height: 44px !important;
+      }
+
+      .edit-colony-modal .ant-form-item-label > label {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #333333 !important;
+      }
+
+      .edit-colony-modal .deployment-card {
+        border-radius: 10px !important;
+        border: 1px solid #D1D1D6 !important;
+        transition: all 0.3s !important;
+        overflow: hidden !important;
+      }
+
+      .edit-colony-modal .deployment-card.selected {
+        border-color: #1890ff !important;
+        background-color: rgba(24, 144, 255, 0.1) !important;
+      }
+      
+      /* 修复集群部署方式选择卡片 */
+      .deployment-card {
+        cursor: pointer !important;
+        transition: all 0.3s !important;
+      }
+      
+      .deployment-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+      }
+    </style>
+    <script>
+      // 在页面加载完成后添加loaded类和初始化DOM修复
+      window.addEventListener('load', function() {
+        document.body.classList.add('loaded');
+        
+        // 强力修复：手动替换服务确认框DOM结构
+        function forceFixServiceConfirmDialogs() {
+          // 找到所有确认框
+          const allModals = document.querySelectorAll('.ant-modal-root');
+          
+          allModals.forEach(function(modal) {
+            // 检查是否存在多余按钮区域
+            const btnContainers = modal.querySelectorAll('.ant-modal-confirm-btns');
+            
+            // 找到所有可能有问题的模态框
+            btnContainers.forEach(function(btnContainer) {
+              // 彻底移除它们
+              if (btnContainer && btnContainer.parentNode) {
+                try {
+                  btnContainer.parentNode.removeChild(btnContainer);
+                } catch(e) {
+                  console.warn('移除按钮容器失败:', e);
+                }
+              }
+            });
+            
+            // 修复文本换行问题
+            const confirmContents = modal.querySelectorAll('.ant-modal-confirm-content');
+            confirmContents.forEach(function(content) {
+              // 确保内容是居中且不换行的
+              if (content) {
+                content.style.setProperty('white-space', 'nowrap', 'important');
+                content.style.setProperty('text-align', 'center', 'important');
+                content.style.setProperty('width', '100%', 'important');
+                content.style.setProperty('min-width', '250px', 'important');
+                
+                // 修复内部文本容器
+                const textDivs = content.querySelectorAll('div > div');
+                if (textDivs.length > 0) {
+                  textDivs.forEach(function(div) {
+                    div.style.setProperty('white-space', 'nowrap', 'important');
+                    div.style.setProperty('text-align', 'center', 'important');
+                    div.style.setProperty('display', 'block', 'important');
+                    div.style.setProperty('width', '100%', 'important');
+                    div.style.setProperty('padding', '0', 'important');
+                  });
+                }
+              }
+            });
+          });
+        }
+        
+        // 定期执行修复
+        const fixInterval = setInterval(forceFixServiceConfirmDialogs, 100);
+        
+        // 增强型DOM监听
+        const observer = new MutationObserver(function() {
+          // 每当DOM变化时立即尝试修复
+          setTimeout(forceFixServiceConfirmDialogs, 0);
+          setTimeout(forceFixServiceConfirmDialogs, 50);
+          setTimeout(forceFixServiceConfirmDialogs, 100);
+        });
+        
+        // 监听整个文档的DOM变化
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'style']
+        });
+        
+        // 针对按钮点击事件特别处理
+        document.body.addEventListener('click', function() {
+          // 点击事件可能会触发模态框，确保我们能够修复它
+          setTimeout(forceFixServiceConfirmDialogs, 10);
+          setTimeout(forceFixServiceConfirmDialogs, 100);
+          setTimeout(forceFixServiceConfirmDialogs, 300);
+        }, true);
+      });
+    </script>
     <script>
       // 在页面加载完成后添加loaded类
       window.addEventListener('load', function() {
         document.body.classList.add('loaded');
+        
+        // 已移除不需要的编辑集群模态框修复代码
+        // 现在使用Vue的响应式方式处理表单验证，无需DOM操作
       });
     </script>
   </head>

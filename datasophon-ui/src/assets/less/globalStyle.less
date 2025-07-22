@@ -447,3 +447,163 @@ html.beauty-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
 }
+
+/* Global Input Styles - Fix for double borders */
+
+/* Ant Design Select Components */
+.ant-select-selection {
+  border-radius: 10px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+}
+
+.ant-select-selection__rendered {
+  line-height: 38px !important;
+  margin-left: 12px !important;
+}
+
+/* Fix for framework selection in forms */
+.framework-select .ant-select-selection {
+  height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  box-shadow: none !important;
+}
+
+.framework-select.ant-select-focused .ant-select-selection {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Fix for nested input wrappers */
+.ant-input-affix-wrapper {
+  border-radius: 10px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  height: auto !important;
+}
+
+.ant-input-affix-wrapper:hover {
+  border-color: #1890ff !important;
+}
+
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper:focus {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Most important - remove inner borders when wrapped */
+.ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  box-shadow: none !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+/* Fix form item control styles */
+.ant-form-item-control {
+  position: relative;
+}
+
+/* Fix select dropdown style */
+.ant-select-dropdown {
+  border-radius: 10px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+  padding: 8px !important;
+}
+
+/* Success states */
+.ant-form-item-has-success .ant-select-selection {
+  border-color: #52c41a !important;
+}
+
+.ant-form-item-has-success .ant-input-affix-wrapper {
+  border-color: #52c41a !important;
+}
+
+.ant-form-item-has-success .ant-input-affix-wrapper .ant-input {
+  background-color: transparent !important;
+}
+
+/* 表单验证状态样式 - 全局应用 */
+
+/* 必填项红点指示器动画 */
+.ant-form-item-required::before {
+  content: '*';
+  display: inline-block;
+  margin-right: 4px;
+  color: #ff4d4f;
+  font-size: 14px;
+  font-family: SimSun, sans-serif;
+  line-height: 1;
+  transition: color 0.3s ease;
+}
+
+/* 输入有效时必填项标记变绿色 */
+.ant-form-item-has-success .ant-form-item-required::before {
+  color: #52c41a !important;
+  animation: pulse-success 1.5s ease-in-out;
+}
+
+@keyframes pulse-success {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 成功状态的表单项标签 */
+.ant-form-item-has-success .ant-form-item-label > label {
+  color: #52c41a !important;
+}
+
+/* 输入框、文本域和选择框的成功状态 */
+.ant-form-item-has-success .ant-input,
+.ant-form-item-has-success .ant-input-affix-wrapper,
+.ant-form-item-has-success .ant-input-number,
+.ant-form-item-has-success .ant-select-selection,
+.ant-form-item-has-success .ant-cascader-picker,
+.ant-form-item-has-success .ant-input-number-input,
+.ant-form-item-has-success .ant-time-picker-input,
+.ant-form-item-has-success .ant-calendar-picker-input,
+.ant-form-item-has-success .ant-mention-wrapper .ant-mention-editor,
+.ant-form-item-has-success .ant-mentions-wrapper .ant-mentions {
+  border-color: #52c41a !important;
+}
+
+.ant-form-item-has-success .ant-input:hover,
+.ant-form-item-has-success .ant-input-affix-wrapper:hover,
+.ant-form-item-has-success .ant-input-number:hover,
+.ant-form-item-has-success .ant-select-selection:hover,
+.ant-form-item-has-success .ant-cascader-picker:hover,
+.ant-form-item-has-success .ant-time-picker-input:hover,
+.ant-form-item-has-success .ant-calendar-picker-input:hover,
+.ant-form-item-has-success .ant-mention-wrapper .ant-mention-editor:hover,
+.ant-form-item-has-success .ant-mentions-wrapper .ant-mentions:hover {
+  border-color: #73d13d !important;
+}
+
+.ant-form-item-has-success .ant-input:focus,
+.ant-form-item-has-success .ant-input-focused,
+.ant-form-item-has-success .ant-input-affix-wrapper-focused,
+.ant-form-item-has-success .ant-input-number-focused,
+.ant-form-item-has-success .ant-select-selection:focus,
+.ant-form-item-has-success .ant-cascader-picker:focus,
+.ant-form-item-has-success .ant-time-picker-input:focus,
+.ant-form-item-has-success .ant-calendar-picker-input:focus,
+.ant-form-item-has-success .ant-mention-wrapper.ant-mention-active .ant-mention-editor,
+.ant-form-item-has-success .ant-mentions-wrapper.ant-mention-active .ant-mentions {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
+}
+
+/* 成功状态下的验证提示信息 */
+.ant-form-item-has-success .ant-form-explain,
+.ant-form-item-has-success .ant-form-split {
+  color: #52c41a !important;
+}

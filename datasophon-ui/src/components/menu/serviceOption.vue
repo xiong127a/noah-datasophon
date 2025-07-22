@@ -362,7 +362,9 @@ export default {
           return <div />;
         },
         closable: true,
-        wrapClassName: 'service-action-confirm', // 添加特殊类名以便应用特定样式
+        wrapClassName: 'service-action-confirm',
+        okButtonProps: { style: { display: 'none' } },
+        cancelButtonProps: { style: { display: 'none' } }
       });
     },
     
