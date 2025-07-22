@@ -49,12 +49,12 @@
                   v-for="service in currentFrameServices" 
                   :key="service.id" 
                   class="service-card"
-                >
+              >
                   <div class="service-card-content">
                     <div class="service-header">
                                               <svg-icon 
                         :icon-class="getServiceIconClass(service.serviceName)" 
-                        class="service-icon-img"
+                      class="service-icon-img"
                       />
                       <div class="service-title">
                         <div class="service-name">{{ service.serviceName }}</div>
@@ -64,7 +64,7 @@
                     
                     <div class="service-description">
                       {{ service.serviceDesc || '暂无描述' }}
-                    </div>
+                  </div>
                     
                     <div class="service-footer">
                       <a-button 
@@ -80,7 +80,7 @@
                   </div>
                 </div>
               </div>
-              
+                
               <!-- 空状态 -->
               <div v-if="currentFrameServices.length === 0" class="empty-services">
                 <a-empty description="该框架下暂无服务组件" />
@@ -469,10 +469,10 @@ export default {
                   background: #f3f4f6;
                   border-radius: 20px;
                   display: inline-block;
-                }
-              }
-            }
-            
+          }
+        }
+      }
+      
             .service-description {
               font-size: 14px;
               color: #4b5563;
@@ -487,9 +487,9 @@ export default {
             }
             
                           .service-footer {
-                display: flex;
+        display: flex;
                 justify-content: flex-end;
-                align-items: center;
+        align-items: center;
                 margin-top: auto;
                 padding-top: 16px;
                 
@@ -499,7 +499,7 @@ export default {
                   border-color: #ff4d4f;
                   border-radius: 6px;
                   padding: 0 16px;
-                  height: 32px;
+          height: 32px;
                   
                   /deep/ span {
                     display: inline-block !important; /* 强制显示按钮文本 */
@@ -524,13 +524,13 @@ export default {
             }
           }
         }
-      }
-      
+        }
+        
       .empty-services {
         padding: 40px 0;
         text-align: center;
-      }
-    }
+       }
+     }
   }
   
   .empty-frames {
