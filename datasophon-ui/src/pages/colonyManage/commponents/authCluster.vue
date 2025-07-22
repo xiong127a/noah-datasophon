@@ -24,58 +24,84 @@
  * @FilePath: \ddh-ui\src\pages\colonyManage\commponents\authCluster.vue
 -->
 <template>
-  <div class="cluster-auth-content no-question-icons">
-    <div class="auth-top">
-      <div class="blue-icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
-          <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="white"/>
-        </svg>
-      </div>
-      <div class="auth-info">
-        <div class="title">集群授权管理</div>
-        <div class="desc">为集群 <span>{{ detail.clusterName || '未知集群' }}</span> 分配管理员权限</div>
+  <div class="cluster-auth-modal no-question-icons">
+    <!-- 顶部区域 -->
+    <div class="auth-header">
+      <div class="auth-header-content">
+        <div class="auth-icon-wrapper">
+          <div class="auth-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
+              <path d="M12 14C7.58172 14 4 17.5817 4 22H20C20 17.5817 16.4183 14 12 14Z" fill="white"/>
+            </svg>
+          </div>
+        </div>
+        <div class="auth-title">
+          <h1>集群授权管理</h1>
+          <p>为集群 <span class="cluster-name">{{ detail.clusterName || '未知集群' }}</span> 分配管理员权限</p>
+        </div>
       </div>
     </div>
     
-    <div class="auth-form">
-      <div class="form-item">
-        <div class="label">选择管理员：</div>
-        <div class="select-container">
-          <a-form :form="form" v-if="userListLoaded">
-            <a-select 
-              class="admin-select"
-              mode="multiple" 
-              :defaultValue="selectedUserIds"
-              placeholder="请选择一个或多个集群管理员"
-              :dropdownMatchSelectWidth="false"
-              :getPopupContainer="triggerNode => triggerNode.parentElement"
-              dropdownClassName="admin-dropdown"
-              @change="handleUserSelectionChange"
-            >
-              <a-select-option 
-                v-for="item in userList" 
-                :key="item.id"
-                :value="item.id"
+    <!-- 内容区域 -->
+    <div class="auth-content">
+      <div class="auth-form">
+        <div class="form-group">
+          <label class="form-label">选择管理员：</label>
+          <div class="select-area">
+            <a-form :form="form" v-if="userListLoaded">
+              <a-select 
+                class="admin-select"
+                mode="multiple" 
+                :defaultValue="selectedUserIds"
+                placeholder="请选择一个或多个集群管理员"
+                :dropdownMatchSelectWidth="false"
+                :getPopupContainer="triggerNode => triggerNode.parentElement"
+                dropdownClassName="admin-dropdown apple-dropdown"
+                @change="handleUserSelectionChange"
+                optionFilterProp="children"
+                optionLabelProp="children"
+                :placement="'bottomLeft'"
+                :dropdownStyle="{ minWidth: '250px' }"
+                :maxTagCount="maxTagCount"
+                :maxTagPlaceholder="tagPlaceholder"
               >
-                {{ item.username }}
-              </a-select-option>
-            </a-select>
-          </a-form>
-          <div v-else class="loading-placeholder">
-            加载用户列表中...
+                <a-select-option 
+                  v-for="item in userList" 
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.username }}
+                </a-select-option>
+              </a-select>
+            </a-form>
+            <div v-else class="loading-state">
+              <div class="loading-spinner"></div>
+              <span>加载用户数据中...</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="auth-btns">
-      <a-button type="primary" @click="handleSubmit" :loading="loading" class="auth-btn auth-btn-primary">
-        确认授权
-      </a-button>
-      <a-button @click="formCancel" class="auth-btn auth-btn-default">
-        取消
-      </a-button>
+    
+    <!-- 底部按钮 -->
+    <div class="auth-footer">
+      <div class="auth-actions">
+        <a-button 
+          type="primary" 
+          @click="handleSubmit" 
+          :loading="loading" 
+          class="primary-btn"
+        >
+          <span class="btn-content">确认授权</span>
+        </a-button>
+        <a-button 
+          @click="formCancel" 
+          class="cancel-btn"
+        >
+          <span class="btn-content">取消</span>
+        </a-button>
+      </div>
     </div>
   </div>
 </template>
@@ -105,10 +131,15 @@ export default {
       loading: false,
       userList: [],
       selectedUserIds: selectedUserIds, // 直接初始化为提取的值
-      userListLoaded: false // 标记用户列表是否已加载
+      userListLoaded: false, // 标记用户列表是否已加载
+      maxTagCount: 3,
     };
   },
   methods: {
+    // 处理标签显示
+    tagPlaceholder(tags) {
+      return `还有 ${tags.length} 个管理员`;
+    },
     formCancel() {
       // 不再使用$destroyAll()
       this.$emit('cancel');
@@ -186,38 +217,6 @@ export default {
             });
         }
       });
-    },
-    // 在组件内部也添加图标清除逻辑
-    removeQuestionIcons() {
-      const selectors = [
-        '.anticon-question-circle',
-        'i.anticon',
-        'svg[data-icon="question-circle"]',
-        '[aria-label="icon: question-circle"]',
-        '.ant-modal-confirm-title + i',
-        '.ant-modal-confirm-body i',
-        '.ant-modal-header i',
-        '.ant-modal-body i.anticon'
-      ];
-      
-      selectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(el => {
-          if (el && el.parentNode) {
-            try {
-              el.style.display = 'none';
-              el.style.visibility = 'hidden';
-              el.style.width = '0';
-              el.style.height = '0';
-              el.style.position = 'absolute';
-              el.style.top = '-9999px';
-              el.parentNode.removeChild(el);
-            } catch (e) {
-              console.log('移除图标失败，但已隐藏');
-            }
-          }
-        });
-        });
     }
   },
   created() {
@@ -231,392 +230,725 @@ export default {
   mounted() {
     // 原始代码
     this.queryAllUser();
-    
-    // 组件挂载后移除图标
-    this.$nextTick(() => {
-      this.removeQuestionIcons();
-      // 设置多次检查，确保任何动态渲染的图标也被移除
-      setTimeout(() => this.removeQuestionIcons(), 50);
-      setTimeout(() => this.removeQuestionIcons(), 200);
-    });
   }
 };
 </script>
 
 <style lang="less" scoped>
-@apple-blue: #0A84FF;
-@apple-blue-light: #5AC8FA;
-@apple-blue-dark: #0062CC;
-@apple-gray-1: #F2F2F7;
-@apple-gray-2: #E5E5EA;
-@apple-gray-3: #D1D1D6;
-@apple-gray-4: #C7C7CC;
-@apple-radius: 10px;
-@apple-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+// 主题颜色变量 - 增强版
+@primary-color: #1890ff;
+@primary-gradient: linear-gradient(135deg, #40a9ff 0%, #1890ff 50%, #096dd9 100%);
+@primary-gradient-hover: linear-gradient(135deg, #69c0ff 0%, #40a9ff 50%, #1890ff 100%);
+@primary-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+@text-color: #262626;
+@text-color-secondary: #595959;
+@text-color-light: #8c8c8c;
+@border-color: #e8e8e8;
+@border-radius-base: 10px;
+@border-radius-lg: 20px;
+@shadow-color: rgba(0, 0, 0, 0.08);
+@shadow-color-darker: rgba(0, 0, 0, 0.12);
+@box-shadow: 0 6px 16px @shadow-color;
+@modal-padding: 24px;
+@animation-duration: 0.3s;
+@animation-easing: cubic-bezier(0.2, 0, 0.38, 1);
+@component-background: #fff;
 
-.cluster-auth-content {
-  padding: 0;
-  position: relative;
-  max-width: 100%;
-  overflow: hidden;
+// 模态框主容器
+.cluster-auth-modal {
   width: 100%;
-  margin: 0 auto; /* 确保居中 */
-  background-color: white;
-  min-width: 316px; /* 确保最小宽度符合设计 */
+  background-color: @component-background;
+  border-radius: @border-radius-base;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: @box-shadow;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: @primary-gradient;
+    z-index: 3;
+  }
 }
 
-.auth-top {
-  display: flex;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f0f0f0;
-  align-items: center;
-  width: 100%;
-  justify-content: center;
+// 顶部区域 - 强化色彩和层次
+.auth-header {
+  padding: 0;
+  position: relative;
+  overflow: hidden;
   
-  .blue-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%);
-    margin-right: 16px;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: @primary-gradient;
+    z-index: 0;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
+    opacity: 0.7;
+    z-index: 1;
+    transform: rotate(-35deg);
+  }
+  
+  .auth-header-content {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
-    flex-shrink: 0;
+    padding: 28px 32px;
+  }
+  
+  .auth-icon-wrapper {
+    margin-right: 20px;
+    position: relative;
     
-    svg {
-      width: 24px;
-      height: 24px;
+    &::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      animation: pulse 2.5s infinite;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: pulse 2.5s infinite 0.5s;
+    }
+    
+    .auth-icon {
+      width: 52px;
+      height: 52px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
+        z-index: 1;
+      }
+      
+      svg {
+        width: 26px;
+        height: 26px;
+        position: relative;
+        z-index: 2;
+      }
     }
   }
   
-  .auth-info {
-    flex: 1;
-    .title {
-      font-size: 18px;
+  .auth-title {
+    color: white;
+    
+    h1 {
+      font-size: 22px;
       font-weight: 600;
-      color: #000000;
-      margin-bottom: 6px;
+      margin: 0 0 10px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     }
     
-    .desc {
+    p {
       font-size: 14px;
-      color: #666666;
+      margin: 0;
+      opacity: 0.95;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
       
-      span {
-        color: @apple-blue;
-        font-weight: 500;
+      .cluster-name {
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        padding: 3px 8px;
+        margin: 0 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
     }
   }
 }
 
-.auth-form {
-  padding: 24px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+// 内容区域 - 强化质感
+.auth-content {
+  padding: @modal-padding;
+  background: linear-gradient(180deg, #f8faff 0%, #f0f5ff 100%);
+  flex: 1;
+  position: relative;
   
-  .form-item {
-    margin-bottom: 16px;
-    width: 100%;
-    max-width: 350px; /* 限制表单宽度，更好看 */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
+    z-index: 1;
+  }
+  
+  .auth-form {
+    max-width: 480px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: @border-radius-base;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+    padding: 28px;
+    border: 1px solid rgba(24, 144, 255, 0.1);
     
-    .label {
-      margin-bottom: 10px;
-      font-weight: 500;
-      font-size: 15px;
-      text-align: left;
-    }
-    
-    .select-container {
-      position: relative;
-      width: 100%;
+    .form-group {
+      margin-bottom: 20px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .form-label {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 15px;
+        font-weight: 500;
+        color: @text-color;
+        position: relative;
+        padding-left: 12px;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 4px;
+          height: 18px;
+          background: @primary-gradient;
+          border-radius: 2px;
+        }
+      }
+      
+      .select-area {
+        position: relative;
+        
+        .admin-select {
+          width: 100%;
+        }
+      }
     }
   }
 }
 
-.auth-btns {
-  padding: 20px 24px;
-  border-top: 1px solid #f0f0f0;
+// 底部按钮区域 - 精致化
+.auth-footer {
+  padding: 24px 28px;
+  background-color: white;
+  border-top: 1px solid @border-color;
   display: flex;
   justify-content: center;
-  gap: 16px;
-  background-color: #fafafa;
-  width: 100%;
+  
+  .auth-actions {
+    display: flex;
+    gap: 18px;
+  }
 }
 
-.auth-btn {
-  min-width: 120px !important;
-  height: 40px !important;
-  border-radius: 10px !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-  letter-spacing: 0.3px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 16px !important;
-  box-sizing: border-box !important;
-}
-
-.auth-btn-primary {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
-  border: none !important;
-  color: white !important;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3) !important;
-}
-
-.auth-btn-primary:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
-}
-
-.auth-btn-primary:active {
-  background: linear-gradient(135deg, #096dd9 0%, #1890ff 100%) !important;
-  transform: translateY(0) !important;
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.35) !important;
-}
-
-.auth-btn-default {
-  background: #ffffff !important;
-  color: #464646 !important;
-  border: 1px solid #e6e6e6 !important;
-}
-
-.auth-btn-default:hover {
-  background: white !important;
-  color: #1890ff !important;
-  border-color: #1890ff !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-}
-
-.auth-btn-default:active {
-  background: #f2f2f7 !important;
-  color: #096dd9 !important;
-  transform: translateY(0) !important;
-}
-
-.popup-container {
-  position: absolute;
-  z-index: 1060;
-}
-
-/* 添加加载占位符样式 */
-.loading-placeholder {
-  height: 44px;
-  border: 1px solid #d9d9d9;
-  border-radius: 10px;
-  padding: 0 10px;
+// 按钮样式 - 超现代设计
+.primary-btn, .cancel-btn {
+  min-width: 130px;
+  height: 42px;
+  border-radius: @border-radius-lg !important;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all @animation-duration @animation-easing;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  background-color: #f9f9f9;
+  overflow: hidden;
+  position: relative;
+  
+  .btn-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.primary-btn {
+  background: @primary-gradient !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: @primary-shadow !important;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 80%);
+    opacity: 0;
+    transition: opacity @animation-duration;
+    z-index: 1;
+  }
+  
+  &:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 20px rgba(24, 144, 255, 0.35) !important;
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 5px 10px rgba(24, 144, 255, 0.3) !important;
+  }
+}
+
+.cancel-btn {
+  border: 1px solid #e0e0e0 !important;
+  color: @text-color-secondary !important;
+  background: white !important;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(24, 144, 255, 0.05) 0%, rgba(24, 144, 255, 0) 80%);
+    opacity: 0;
+    transition: opacity @animation-duration;
+    z-index: 1;
+  }
+  
+  &:hover {
+    border-color: @primary-color !important;
+    color: @primary-color !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08) !important;
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05) !important;
+  }
+}
+
+// 加载状态 - 精美化
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 15px;
+  background-color: #f9faff;
+  border: 1px solid rgba(24, 144, 255, 0.15);
+  border-radius: @border-radius-base;
+  color: @text-color-light;
+  
+  .loading-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(24, 144, 255, 0.1);
+    border-top-color: @primary-color;
+    border-radius: 50%;
+    margin-right: 10px;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+// 动画
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
 
 <style>
-/* 全局样式 - 彻底修复紫色容器问题 */
-.auth-cluster-modal .ant-modal-content {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-}
-
-.auth-cluster-modal .ant-modal-body {
-  padding: 0 !important;
-}
-
-/* 极端处理：直接隐藏所有问号图标，包括蓝色问号 */
-.anticon-question-circle,
-i.anticon-question-circle,
-svg[data-icon="question-circle"],
-[aria-label="icon: question-circle"],
-svg[viewBox="64 64 896 896"][data-icon="question-circle"],
-.ant-modal-confirm-title-wrap i.anticon,
-.ant-modal-header i.anticon,
-.ant-modal-body i.anticon {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
-}
-
-/* 特定处理SVG路径 */
-path[d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"] {
-  display: none !important;
-}
-
-path[d="M623.6 316.7C593.6 290.4 554 276 512 276s-81.6 14.5-111.6 40.7C369.2 344 352 380.7 352 420v7.6c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V420c0-44.1 43.1-80 96-80s96 35.9 96 80c0 31.1-22 59.6-56.1 72.7-21.2 8.1-39.2 22.3-52.1 40.9-13.1 19-19.9 41.8-19.9 64.9V620c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-22.7a48.3 48.3 0 0 1 30.9-44.8c59-22.7 97.1-74.7 97.1-132.5.1-39.3-17.1-76-48.3-103.3zM472 732a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"] {
-  display: none !important;
-}
-
-/* 修复下拉菜单样式 */
+/* 全局样式 - 重构下拉菜单和选择器 */
 .admin-dropdown {
   border-radius: 12px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-  padding: 6px !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(24, 144, 255, 0.1) !important;
+  padding: 8px !important;
+  border: 1px solid rgba(24, 144, 255, 0.1) !important;
   overflow: hidden !important;
+  animation: dropdown-slide-down 0.25s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  min-width: 250px !important;
+  margin-top: 8px !important;
 }
 
+/* 修复下拉菜单动画和位置，确保始终向下 */
+.ant-select-dropdown {
+  animation-name: dropdown-slide-down !important;
+  transform-origin: top !important;
+}
+
+@keyframes dropdown-slide-down {
+  from {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* 下拉菜单项样式 */
 .admin-dropdown .ant-select-dropdown-menu {
-  max-height: 240px !important;
+  max-height: 250px !important;
+  padding: 4px !important;
 }
 
 .admin-dropdown .ant-select-dropdown-menu-item {
-  padding: 10px 12px !important;
+  padding: 10px 14px !important;
   transition: all 0.2s !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   margin: 2px 4px !important;
+  font-size: 14px !important;
+  color: #333 !important;
 }
 
 .admin-dropdown .ant-select-dropdown-menu-item:hover {
   background-color: #f0f7ff !important;
+  color: #1890ff !important;
 }
 
 .admin-dropdown .ant-select-dropdown-menu-item-selected {
-  background-color: rgba(10, 132, 255, 0.1) !important;
-  color: #0A84FF !important;
-  font-weight: 600 !important;
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  color: #1890ff !important;
+  font-weight: 500 !important;
 }
 
-/* 修复选择框样式 */
+.admin-dropdown .ant-select-dropdown-menu-item-active {
+  background-color: rgba(24, 144, 255, 0.05) !important;
+}
+
+/* 关键修复：选择框容器样式 */
 .admin-select {
   width: 100% !important;
 }
 
 .admin-select .ant-select-selection {
   border-radius: 10px !important;
-  border: 1px solid #D1D1D6 !important;
+  border: 1px solid #e8e8e8 !important;
+  height: 44px !important; /* 固定高度 */
   min-height: 44px !important;
-  padding: 6px 8px 2px !important;
-  transition: all 0.3s !important;
+  max-height: 44px !important;
+  padding: 0 !important; /* 移除内边距，完全由内部元素控制 */
+  transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  position: relative !important; /* 为绝对定位子元素准备 */
 }
 
-.admin-select .ant-select-selection:hover {
-  border-color: #0A84FF !important;
-  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15) !important;
-}
-
+/* 完全重构渲染区域，使用绝对定位 */
 .admin-select .ant-select-selection--multiple .ant-select-selection__rendered {
-  margin-left: 4px !important;
-  margin-bottom: 5px !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: center !important; /* 垂直居中 */
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
 }
 
-.admin-select .ant-select-selection__placeholder {
-  margin-left: 4px !important;
-  color: #999 !important;
-}
-
-/* 标签样式 - 完全重写 */
+/* 标签样式调整 */
 .admin-select .ant-select-selection__choice {
-  background: linear-gradient(135deg, #0A84FF 0%, #30B0FF 100%) !important;
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 14px !important;
   color: white !important;
-  height: 32px !important;
-  line-height: 32px !important;
-  margin-top: 3px !important;
-  margin-bottom: 3px !important;
-  margin-right: 8px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  margin: 0 6px 0 0 !important; /* 只保留水平间距 */
   position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0 28px 0 12px !important;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3) !important;
+  animation: tag-in 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  max-width: 150px !important;
+  transition: all 0.2s !important;
+  flex-shrink: 0 !important; /* 防止标签被压缩 */
+}
+
+/* 更多标签样式调整 */
+.admin-select .ant-select-selection__choice.ant-select-selection__choice__disabled {
+  background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%) !important;
+  color: #595959 !important;
+  border: none !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 10px !important;
+  margin: 0 6px 0 0 !important; /* 只保留水平间距 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  flex-shrink: 0 !important; /* 防止标签被压缩 */
+}
+
+/* 搜索框样式调整 */
+.admin-select .ant-select-search--inline {
+  height: 28px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-shrink: 1 !important; /* 允许搜索框被压缩 */
+}
+
+.admin-select .ant-select-search--inline .ant-select-search__field {
+  margin: 0 !important;
+  padding: 0 8px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  min-width: 20px !important;
+}
+
+/* 标签包装器样式，确保垂直居中 */
+.admin-select .ant-select-selection__rendered > ul {
   display: flex !important;
   align-items: center !important;
-  padding-right: 28px !important;
-  padding-left: 12px !important;
-  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.25) !important;
+  flex-wrap: nowrap !important;
+  height: 44px !important;
+}
+
+/* 确保箭头垂直居中 */
+.admin-select .ant-select-arrow {
+  top: 50% !important;
+  margin-top: -6px !important;
+}
+
+/* 防止标签文本溢出 */
+.admin-select .ant-select-selection__choice__content {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 28px !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* 确保选择框的高度不会轻易变化，保持最多显示一行标签 */
+.admin-select .ant-select-selection--multiple {
+  min-height: 44px !important;
+  max-height: 44px !important;
+  overflow: hidden !important;
+}
+
+/* 优化多标签显示 - 修复垂直居中问题 */
+.admin-select .ant-select-selection--multiple .ant-select-selection__rendered {
+  margin: 0 !important;
+  height: 44px !important;
+  overflow: hidden !important;
+  line-height: 44px !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 0 8px !important;
+}
+
+/* 超级优化标签样式 - 调整边距确保居中 */
+.admin-select .ant-select-selection__choice {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  border: none !important;
+  border-radius: 14px !important;
+  color: white !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  margin: 0 6px 0 0 !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0 28px 0 12px !important;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3) !important;
+  animation: tag-in 0.3s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  max-width: 150px !important;
+  transition: all 0.2s !important;
+}
+
+.admin-select .ant-select-selection__choice:hover {
+  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+@keyframes tag-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .admin-select .ant-select-selection__choice__content {
   margin: 0 !important;
   padding: 0 !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  line-height: 32px !important;
-  text-align: center !important;
-  display: block !important;
-  overflow: hidden !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 28px !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
 }
 
 .admin-select .ant-select-selection__choice__remove {
   position: absolute !important;
-  right: 9px !important;
+  right: 8px !important;
   top: 0 !important;
-  height: 32px !important;
-  line-height: 32px !important;
+  height: 28px !important;
+  width: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   color: white !important;
   font-size: 12px !important;
-  font-weight: bold !important;
-  opacity: 0.85 !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s !important;
+  transform: scale(1) !important;
 }
 
 .admin-select .ant-select-selection__choice__remove:hover {
   color: white !important;
   opacity: 1 !important;
+  transform: scale(1.2) !important;
 }
 
-/* 确保选择框中的搜索输入框正确对齐 */
+/* 更多标签的样式 - 调整边距确保居中 */
+.admin-select .ant-select-selection__choice.ant-select-selection__choice__disabled {
+  background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%) !important;
+  color: #595959 !important;
+  border: none !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 10px !important;
+  margin: 0 6px 0 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 确保搜索框样式 - 调整边距确保居中 */
+.admin-select .ant-select-search--inline {
+  margin: 0 !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 .admin-select .ant-select-search--inline .ant-select-search__field {
-  margin-top: 7px !important;
-  margin-bottom: 4px !important;
-  height: 22px !important;
-}
-</style>
-
-<style scoped>
-/* 在组件内部也添加清除图标的样式 */
-.no-question-icons :deep(.anticon-question-circle),
-.no-question-icons :deep(i.anticon),
-.no-question-icons :deep(svg[data-icon="question-circle"]),
-.no-question-icons :deep([aria-label="icon: question-circle"]) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  height: 0 !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  min-width: 100px !important;
 }
 
-/* 确保布局正确 */
-.cluster-auth-content {
-  width: 100%;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
+/* 确保下拉菜单始终在下方 */
+.ant-select-dropdown--multiple.ant-select-dropdown-placement-bottomLeft,
+.ant-select-dropdown.ant-select-dropdown--multiple.ant-select-dropdown-placement-bottomLeft,
+.ant-select-dropdown.ant-select-dropdown-placement-bottomLeft {
+  top: 100% !important;
+  left: 0 !important;
+  transform-origin: 0 0 !important;
 }
 
-/* 隐藏所有可能显示问号图标的区域 */
-:deep(.ant-modal-confirm-title),
-:deep(.ant-modal-title),
-:deep(.ant-modal-confirm-title-wrap) {
-  position: relative;
+/* 覆盖可能的上方弹出样式 */
+.ant-select-dropdown.slide-up-enter.slide-up-enter-active.ant-select-dropdown-placement-topLeft,
+.ant-select-dropdown.slide-up-appear.slide-up-appear-active.ant-select-dropdown-placement-topLeft {
+  animation-name: dropdown-slide-down !important;
+  transform-origin: bottom !important;
+  top: 100% !important;
+  bottom: auto !important;
 }
 
-:deep(.ant-modal-confirm-title)::before,
-:deep(.ant-modal-title)::before,
-:deep(.ant-modal-confirm-title-wrap)::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: white;
-  z-index: 10;
+/* 模态框动画 */
+.auth-cluster-modal .ant-modal-content {
+  animation: modal-in 0.35s cubic-bezier(0.2, 0, 0.38, 1) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 修复模态框边距问题 */
+.ant-modal-body {
+  padding: 0 !important;
 }
 </style>
