@@ -70,9 +70,7 @@
                         @click.stop="onSubMenuSelect(subItem, $event)"
                       >
                         <a :href="'#' + subItem.fullPath" class="submenu-link">
-                          <div class="submenu-icon">
-                            <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" />
-                          </div>
+                          <div class="submenu-icon" v-html="subItem.inlineSvg"></div>
                           <span class="submenu-text">{{subItem.name || subItem.label}}</span>
                           <div class="submenu-badge" v-if="subItem.badge">
                             <span>{{ subItem.badge }}</span>
@@ -173,9 +171,7 @@
                         @click.stop="onSubMenuSelect(subItem, $event)"
                       >
                         <a :href="'#' + subItem.fullPath" class="admin-submenu-link">
-                          <div class="submenu-icon">
-                            <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" />
-                          </div>
+                          <div class="submenu-icon" v-html="subItem.inlineSvg"></div>
                           <span class="submenu-text">{{subItem.name || subItem.label}}</span>
                           <div class="submenu-badge" v-if="subItem.badge">
                             <span>{{ subItem.badge }}</span>
@@ -580,7 +576,113 @@ export default {
     getMenuChildren(item) {
       // 从完整的firstMenu中查找对应项的children
       const menuItem = this.firstMenu.find(m => m.fullPath === item.fullPath);
-      return menuItem && menuItem.children ? menuItem.children : [];
+      let children = menuItem && menuItem.children ? menuItem.children : [];
+      
+      // 为子菜单项创建临时内联SVG图标
+      const createInlineSvg = (iconType) => {
+        switch(iconType) {
+          case 'cluster':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>`;
+            
+          case 'user':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+            
+          case 'settings':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+            
+          case 'file':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`;
+            
+          case 'alert':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+            
+          case 'notification':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
+            
+          case 'tag':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`;
+            
+          case 'log':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path><line x1="9" y1="9" x2="10" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg>`;
+            
+          case 'help':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+            
+          case 'metric':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`;
+            
+          case 'tenant':
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+            
+          default:
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+        }
+      };
+      
+      // 为每个子菜单添加合适的图标
+      children = children.map(child => {
+        // 创建meta对象（如果不存在）
+        if (!child.meta) {
+          child.meta = {};
+        }
+        
+        // 设置内联SVG
+        const pathSegment = child.path.split('/').pop();
+        const name = (child.name || '').toLowerCase();
+        
+        // 根据菜单路径和名称分配图标类型
+        let iconType = 'default';
+        
+        if (pathSegment === 'colony-list' || name.includes('集群管理')) {
+          iconType = 'cluster';
+        } 
+        else if (pathSegment === 'colony-parcel' || name.includes('存储库')) {
+          iconType = 'file';
+        }
+        else if (pathSegment === 'colony-frame' || name.includes('集群框架')) {
+          iconType = 'cluster';
+        }
+        else if (pathSegment === 'notice' || name.includes('通知')) {
+          iconType = 'notification';
+        }
+        else if (pathSegment === 'group' || name.includes('告警组')) {
+          iconType = 'alert';
+        }
+        else if (pathSegment === 'metric' || name.includes('指标')) {
+          iconType = 'metric';
+        }
+        else if (pathSegment === 'help' || name.includes('帮助')) {
+          iconType = 'help';
+        }
+        else if (pathSegment === 'tenant' || name.includes('租户')) {
+          iconType = 'tenant';
+        }
+        else if (pathSegment === 'user' || name.includes('用户')) {
+          iconType = 'user';
+        }
+        else if (pathSegment === 'frame' || name.includes('机架')) {
+          iconType = 'cluster';
+        }
+        else if (pathSegment === 'tag' || name.includes('标签')) {
+          iconType = 'tag';
+        }
+        else if (pathSegment === 'log' || name.includes('日志')) {
+          iconType = 'log';
+        }
+        else if (name.includes('设置') || pathSegment.includes('setting')) {
+          iconType = 'settings';
+        }
+        
+        // 设置内联SVG作为自定义属性
+        child.inlineSvg = createInlineSvg(iconType);
+        
+        // 输出调试信息
+        console.log(`菜单 ${child.name}(${pathSegment}) 设置图标类型: ${iconType}`);
+        
+        return child;
+      });
+      
+      return children;
     },
     
     // 处理子菜单点击
@@ -1818,10 +1920,14 @@ export default {
             display: flex;
             align-items: center;
             justify-content: center;
+            background: rgba(0, 122, 255, 0.08);
+            border-radius: 8px;
+            padding: 6px;
             
             svg {
               width: 16px;
               height: 16px;
+              color: #007aff;
             }
           }
           
@@ -1954,17 +2060,21 @@ export default {
     position: relative;
     
     .submenu-icon {
-      width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
+      margin-right: 12px;
+      width: 24px;
+      height: 24px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: rgba(0, 122, 255, 0.08);
+      border-radius: 8px;
+      padding: 6px;
+      flex-shrink: 0;
       
-      .svg-icon {
-        font-size: 14px;
-        color: #666666;
-        transition: color 0.3s ease;
+      svg {
+        width: 16px;
+        height: 16px;
+        color: #007aff;
       }
     }
     
@@ -1995,6 +2105,26 @@ export default {
   }
 }
 
+.admin-submenu-link .submenu-icon, 
+.submenu-link .submenu-icon {
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.admin-submenu-link .submenu-icon svg,
+.submenu-link .submenu-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #007aff;
+}
+
 .submenu-link,
 .admin-submenu-link {
   display: flex;
@@ -2009,17 +2139,21 @@ export default {
   position: relative;
   
   .submenu-icon {
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
+    margin-right: 12px;
+    width: 24px;
+    height: 24px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(0, 122, 255, 0.08);
+    border-radius: 8px;
+    padding: 6px;
+    flex-shrink: 0;
     
-    .svg-icon {
-      font-size: 14px;
-      color: #666666;
-      transition: color 0.3s ease;
+    svg {
+      width: 16px;
+      height: 16px;
+      color: #007aff;
     }
   }
   
@@ -2580,6 +2714,52 @@ export default {
         span {
           color: #0a84ff;
         }
+      }
+    }
+  }
+}
+
+.submenu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  background-color: rgba(24, 144, 255, 0.1);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 4px;
+  
+  /deep/ svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: #1890ff;
+    stroke-width: 2px;
+  }
+}
+
+// 二级菜单链接
+.submenu-link, .admin-submenu-link {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: rgba(0, 0, 0, 0.65);
+  text-decoration: none;
+  border-radius: 4px;
+  margin: 2px 0;
+  transition: all 0.3s;
+  
+  &:hover {
+    background-color: rgba(24, 144, 255, 0.05);
+    color: #1890ff;
+    
+    .submenu-icon {
+      background-color: rgba(24, 144, 255, 0.2);
+      
+      /deep/ svg {
+        color: #1890ff;
       }
     }
   }
