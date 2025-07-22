@@ -42,44 +42,49 @@
             :key="frame.frameCode"
             :tab="frame.frameCode"
           >
-            <!-- 服务表格 -->
-            <div class="services-table-container">
-              <a-table 
-                :columns="serviceColumns"
-                :data-source="currentFrameServices"
-                :pagination="false"
-                :scroll="{ x: 800 }"
-                row-key="id"
-              >
-                <template slot="serviceIcon" slot-scope="text, record">
-                  <div class="service-icon-cell">
-                    <img 
-                      :src="getServiceIconPath(record.serviceName)"
-                      :alt="record.serviceName"
-                      class="service-icon-img"
-                      @error="handleIconError"
-                    />
+            <!-- 服务卡片列表 -->
+            <div class="services-grid-container">
+              <div class="services-grid">
+                <div 
+                  v-for="service in currentFrameServices" 
+                  :key="service.id" 
+                  class="service-card"
+                >
+                  <div class="service-card-content">
+                    <div class="service-header">
+                                              <svg-icon 
+                        :icon-class="getServiceIconClass(service.serviceName)" 
+                        class="service-icon-img"
+                      />
+                      <div class="service-title">
+                        <div class="service-name">{{ service.serviceName }}</div>
+                        <div class="service-version">{{ service.serviceVersion }}</div>
+                      </div>
+                    </div>
+                    
+                    <div class="service-description">
+                      {{ service.serviceDesc || '暂无描述' }}
+                    </div>
+                    
+                    <div class="service-footer">
+                      <a-button 
+                        type="danger" 
+                        ghost
+                        class="delete-btn"
+                        @click.stop="onDelete(service)"
+                      >
+                        <a-icon type="delete" />
+                        <span>删除服务</span>
+                      </a-button>
+                    </div>
                   </div>
-                </template>
-                
-                <template slot="serviceName" slot-scope="text, record">
-                  <div class="service-name-cell">
-                    <div class="service-name">{{ record.serviceName }}</div>
-                    <div class="service-description">{{ record.serviceDesc || '暂无描述' }}</div>
-                  </div>
-                </template>
-                
-                <template slot="action" slot-scope="text, record">
-                  <a-button 
-                    type="link" 
-                    size="small" 
-                    danger
-                    @click="onDelete(record)"
-                  >
-                    删除
-                  </a-button>
-                </template>
-              </a-table>
+                </div>
+              </div>
+              
+              <!-- 空状态 -->
+              <div v-if="currentFrameServices.length === 0" class="empty-services">
+                <a-empty description="该框架下暂无服务组件" />
+              </div>
             </div>
           </a-tab-pane>
         </a-tabs>
@@ -94,8 +99,13 @@
 </template>
 
 <script>
+import SvgIcon from '@/icons/SvgIcon.vue';
+
 export default {
   name: "FrameList",
+  components: {
+    SvgIcon
+  },
   data() {
     return {
       loading: false,
@@ -145,15 +155,26 @@ export default {
       this.activeFrameCode = frameCode;
     },
 
-    getServiceIconPath(serviceName) {
-      // 将服务名称转为小写作为SVG图标名称
+    // 获取服务对应的图标类名
+    getServiceIconClass(serviceName) {
+      // 将服务名称转为小写
       const iconName = serviceName.toLowerCase();
-      return require(`@/icons/common/${iconName}.svg`);
-    },
-
-    handleIconError(event) {
-      // 图标加载失败时使用默认图标
-      event.target.src = require('@/icons/common/service-default.svg');
+      
+      // 检查是否为已知服务
+      const knownServices = [
+        'hdfs', 'yarn', 'hbase', 'hive', 'spark', 'flink', 'kafka', 'zookeeper',
+        'hadoop', 'hue', 'kylin', 'livy', 'phoenix', 'presto', 'ranger', 
+        'solr', 'sqoop', 'tez', 'trino', 'elasticsearch', 'kibana', 'alluxio',
+        'atlas', 'airflow', 'flume', 'oozie', 'sentry'
+      ];
+      
+      // 如果是已知服务，返回对应的图标名
+      if (knownServices.includes(iconName)) {
+        return iconName;
+      }
+      
+      // 对于未知服务，返回默认图标
+      return 'service-default';
     },
     loadTable() {
       let that = this;
@@ -251,10 +272,10 @@ export default {
 
 <style lang="less" scoped>
 .frame-management {
-  padding: 20px;
-  background: #fafafa;
+  padding: 24px;
+  background: #f5f7fa;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
 
   .page-header {
     background: #ffffff;
@@ -321,94 +342,195 @@ export default {
 
   .frames-content {
     background: #ffffff;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     overflow: hidden;
     
-    :global(.ant-tabs-bar) {
+    /deep/ .ant-tabs-bar {
       margin: 0;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
       background: #f8fafc;
+      padding: 0 8px;
       
       .ant-tabs-nav {
         .ant-tabs-tab {
-          padding: 16px 24px;
+          position: relative;
+          margin: 0 8px;
+          padding: 16px 16px;
           font-weight: 600;
+          font-size: 15px;
           color: #6b7280;
           border: none;
           background: transparent;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          
+          &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: transparent;
+            border-radius: 3px 3px 0 0;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          }
           
           &:hover {
-            color: #3b82f6;
+            color: #007AFF;
+            
+            &::after {
+              background: rgba(0, 122, 255, 0.3);
+            }
           }
           
           &.ant-tabs-tab-active {
-            color: #3b82f6;
-            background: #ffffff;
-            border-bottom: 2px solid #3b82f6;
+            color: #007AFF;
+            background: transparent;
+            border-bottom: none;
+            
+            &::after {
+              background: #007AFF;
+            }
           }
         }
       }
     }
     
-    :global(.ant-tabs-content) {
+    /deep/ .ant-tabs-content {
       padding: 0;
+      background: #fff;
       
       .ant-tabs-tabpane {
         padding: 0;
       }
     }
     
-    .services-table-container {
-      :global(.ant-table) {
-        .ant-table-thead > tr > th {
-          background: #f8fafc;
-          border-bottom: 1px solid #e5e7eb;
-          color: #374151;
-          font-weight: 600;
-          padding: 16px;
-        }
+    .services-grid-container {
+      padding: 24px;
+      
+      .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
         
-        .ant-table-tbody > tr {
+        .service-card {
+          background: white;
+          border-radius: 16px;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          height: 100%;
+          
           &:hover {
-            background: #f8fafc;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
           }
           
-          > td {
-            padding: 16px;
-            border-bottom: 1px solid #f3f4f6;
+          .service-card-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-between;
+            
+            .service-header {
+              display: flex;
+              align-items: center;
+              margin-bottom: 16px;
+              
+              .service-icon-img {
+                color: #007AFF;
+                font-size: 28px;
+                margin-right: 16px;
+                flex-shrink: 0;
+              }
+              
+              .service-title {
+                flex: 1;
+                overflow: hidden;
+                
+                .service-name {
+                  font-size: 18px;
+                  font-weight: 600;
+                  color: #1f2937;
+                  margin-bottom: 4px;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
+                
+                .service-version {
+                  font-size: 13px;
+                  color: #6b7280;
+                  padding: 2px 10px;
+                  background: #f3f4f6;
+                  border-radius: 20px;
+                  display: inline-block;
+                }
+              }
+            }
+            
+            .service-description {
+              font-size: 14px;
+              color: #4b5563;
+              line-height: 1.6;
+              margin: 8px 0;
+              min-height: 60px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+            }
+            
+                          .service-footer {
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                margin-top: auto;
+                padding-top: 16px;
+                
+                .delete-btn {
+                  font-size: 13px;
+                  color: #ff4d4f;
+                  border-color: #ff4d4f;
+                  border-radius: 6px;
+                  padding: 0 16px;
+                  height: 32px;
+                  
+                  /deep/ span {
+                    display: inline-block !important; /* 强制显示按钮文本 */
+                  }
+                  
+                  &:hover {
+                    color: #ffffff !important;
+                    background-color: #ff4d4f !important;
+                    border-color: #ff4d4f !important;
+                    opacity: 1;
+                  }
+                  
+                  &:active {
+                    background-color: #cf1322 !important;
+                    border-color: #cf1322 !important;
+                  }
+                  
+                  .anticon {
+                    margin-right: 4px;
+                  }
+                }
+            }
           }
         }
       }
       
-      .service-icon-cell {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        
-        .service-icon-img {
-          width: 32px;
-          height: 32px;
-          object-fit: contain;
-        }
+      .empty-services {
+        padding: 40px 0;
+        text-align: center;
       }
-      
-      .service-name-cell {
-        .service-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 4px;
-        }
-        
-        .service-description {
-          font-size: 12px;
-          color: #6b7280;
-          line-height: 1.4;
-        }
-       }
-     }
+    }
   }
   
   .empty-frames {
