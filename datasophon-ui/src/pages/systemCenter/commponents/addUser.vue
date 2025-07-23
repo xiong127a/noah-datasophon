@@ -25,21 +25,24 @@
 -->
 <template>
   <div style="padding-top: 10px">
-    <a-form :label-col="labelCol" :wrapper-col="wrapperCol" :form="form" class="p0-32-10-32 form-content">
-      <a-form-item label="用户名称">
-        <a-input v-decorator="[
+    <a-form :form="form" class="p0-32-10-32 form-content">
+      <a-form-item class="form-row">
+        <span class="form-label">用户名称</span>
+        <a-input class="form-field" v-decorator="[
             'username',
             { rules: [{ required: true, message: '用户名称不能为空!' }, { validator: checkName }] },
           ]" placeholder="请输入用户名称" />
       </a-form-item>
-      <a-form-item label="主用户组">
-        <a-select showSearch allowClear 
+      <a-form-item class="form-row">
+        <span class="form-label">主用户组</span>
+        <a-select class="form-field" showSearch allowClear 
           v-decorator="['mainGroupId', {rules: [{ required: true, message: '用户组不能为空' }]}]" placeholder="请选择用户组"  >
           <a-select-option v-for="list in groupList" :key="list.id" :value="list.id">  {{list.groupName}} </a-select-option>
         </a-select>
       </a-form-item>
-      <a-form-item label="附属用户组">
-        <a-select showSearch allowClear mode="multiple"
+      <a-form-item class="form-row">
+        <span class="form-label">附属用户组</span>
+        <a-select class="form-field" showSearch allowClear mode="multiple"
           v-decorator="['usergroup', {rules: [{ required: false }]}]" placeholder="请选择用户组"  >
           <a-select-option v-for="list in groupList" :key="list.id" :value="list.id">  {{list.groupName}} </a-select-option>
         </a-select>
@@ -163,4 +166,34 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+.form-content {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  width: 90px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 12px;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+}
+
+.form-field {
+  flex: 1;
+}
+
+/deep/ .ant-form-item {
+  margin-bottom: 16px;
+}
+
+/deep/ .ant-form-item-control {
+  line-height: 32px;
+}
 </style>

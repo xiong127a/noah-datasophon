@@ -24,16 +24,15 @@
  * @FilePath: \ddh-ui\src\pages\securityCenter\commponents\addUser.vue
 -->
 <template>
-  <div class="modal-content">
-    <!-- 表单内容 -->
-    <div class="form-content">
+  <div class="modal-container">
+    <table class="form-table">
       <!-- 用户名 -->
-      <div class="form-row">
-        <div class="form-label">
+      <tr class="form-table-row">
+        <td class="form-table-label">
           <span class="indicator" :class="hasUsername ? 'indicator-green' : 'indicator-red'"></span>
           <span class="label-text">用户名称</span>
-        </div>
-        <div class="form-field">
+        </td>
+        <td class="form-table-field">
           <a-input
             v-decorator="[
               'username',
@@ -41,36 +40,36 @@
             ]"
             placeholder="请输入用户名称"
             @change="checkUsername"
-            maxLength="20"
+            :maxLength="20"
           />
-        </div>
-      </div>
+        </td>
+      </tr>
 
       <!-- 密码 -->
-      <div class="form-row">
-        <div class="form-label">
+      <tr class="form-table-row">
+        <td class="form-table-label">
           <span class="indicator" :class="hasPassword ? 'indicator-green' : 'indicator-red'"></span>
           <span class="label-text">用户密码</span>
-        </div>
-        <div class="form-field">
+        </td>
+        <td class="form-table-field">
           <a-input
             type="password"
             :disabled="editFlag"
             v-decorator="['password',{ rules: [{ required: true, message: '用户密码不能为空!' }] }]"
             placeholder="请输入用户密码"
             @change="checkPassword"
-            maxLength="20"
+            :maxLength="20"
           />
-        </div>
-      </div>
+        </td>
+      </tr>
 
       <!-- 邮箱 -->
-      <div class="form-row">
-        <div class="form-label">
+      <tr class="form-table-row">
+        <td class="form-table-label">
           <span class="indicator" :class="hasEmail ? 'indicator-green' : 'indicator-red'"></span>
           <span class="label-text">邮箱地址</span>
-        </div>
-        <div class="form-field">
+        </td>
+        <td class="form-table-field">
           <a-input
             v-decorator="[
               'email',
@@ -81,30 +80,30 @@
             ]"
             placeholder="请输入邮箱"
             @change="checkEmail"
-            maxLength="30"
+            :maxLength="30"
           />
-        </div>
-      </div>
+        </td>
+      </tr>
 
       <!-- 手机 -->
-      <div class="form-row">
-        <div class="form-label">
+      <tr class="form-table-row">
+        <td class="form-table-label">
           <span class="indicator" :class="hasPhone ? 'indicator-green' : 'indicator-red'"></span>
           <span class="label-text">手机号码</span>
-        </div>
-        <div class="form-field">
+        </td>
+        <td class="form-table-field">
           <a-input
             v-decorator="['phone',{ rules: [{ required: true, message: '手机号码不能为空!' }] }]"
             placeholder="请输入手机号码"
             @change="checkPhone"
-            maxLength="11"
+            :maxLength="11"
           />
-        </div>
-      </div>
-    </div>
+        </td>
+      </tr>
+    </table>
 
     <!-- 按钮区域 -->
-    <div class="button-area">
+    <div class="button-container">
       <a-button @click="formCancel" class="btn-cancel">取 消</a-button>
       <a-button type="primary" @click="handleSubmit" :loading="loading" class="btn-submit">确 认</a-button>
     </div>
@@ -132,7 +131,7 @@ export default {
       hasUsername: false,
       hasPassword: false,
       hasEmail: false,
-      hasPhone: false
+      hasPhone: false,
     };
   },
   watch: {
@@ -240,52 +239,93 @@ export default {
       this.$nextTick(() => {
         this.echoUSer();
       });
+    } else {
+      // 初始状态为空，设置所有指示器为红色
+      this.hasUsername = false;
+      this.hasPassword = false;
+      this.hasEmail = false;
+      this.hasPhone = false;
     }
+    
+    // 确保指示器正确显示
+    setTimeout(() => {
+      const usernameInput = document.querySelector('input[placeholder="请输入用户名称"]');
+      const passwordInput = document.querySelector('input[placeholder="请输入用户密码"]');
+      const emailInput = document.querySelector('input[placeholder="请输入邮箱"]');
+      const phoneInput = document.querySelector('input[placeholder="请输入手机号码"]');
+      
+      if (usernameInput) {
+        usernameInput.addEventListener('input', (e) => {
+          this.hasUsername = !!e.target.value;
+        });
+      }
+      
+      if (passwordInput) {
+        passwordInput.addEventListener('input', (e) => {
+          this.hasPassword = !!e.target.value;
+        });
+      }
+      
+      if (emailInput) {
+        emailInput.addEventListener('input', (e) => {
+          this.hasEmail = !!e.target.value;
+        });
+      }
+      
+      if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+          this.hasPhone = !!e.target.value;
+        });
+      }
+    }, 500);
   },
 };
 </script>
 
 <style lang="less" scoped>
-.modal-content {
-  padding: 0;
+.modal-container {
+  padding: 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
 }
 
-.form-content {
-  margin-bottom: 30px;
+/* 使用表格布局强制左右排列 */
+.form-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 16px;
+  margin-bottom: 20px;
 }
 
-.form-row {
-  display: flex;
-  margin-bottom: 24px;
-  align-items: center;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+.form-table-row {
+  margin-bottom: 16px;
 }
 
-.form-label {
-  width: 100px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-
+.form-table-label {
+  width: 110px;
+  text-align: right;
+  padding-right: 12px;
+  vertical-align: middle;
+  
   .indicator {
-    width: 10px;
-    height: 10px;
+    display: inline-block;
+    width: 10px !important;
+    height: 10px !important;
     border-radius: 50%;
     margin-right: 8px;
-    display: inline-block;
+    box-sizing: content-box;
+    border: 1px solid transparent;
+    z-index: 1000;
+    position: relative;
     
     &.indicator-red {
-      background-color: #ff453a;
-      box-shadow: 0 0 5px rgba(255, 69, 58, 0.7);
+      background-color: #ff453a !important;
+      box-shadow: 0 0 6px rgba(255, 69, 58, 0.8) !important;
+      animation: pulse-red 1.5s infinite;
     }
     
     &.indicator-green {
-      background-color: #32d74b;
-      box-shadow: 0 0 5px rgba(50, 215, 75, 0.7);
+      background-color: #32d74b !important;
+      box-shadow: 0 0 6px rgba(50, 215, 75, 0.8) !important;
     }
   }
 
@@ -296,11 +336,14 @@ export default {
   }
 }
 
-.form-field {
-  flex: 1;
-  max-width: 280px;
-
+.form-table-field {
+  width: auto;
+  text-align: left;
+  vertical-align: middle;
+  
   /deep/ .ant-input {
+    width: 100%;
+    max-width: 320px;
     border-radius: 6px;
     height: 36px;
     border: 1px solid #d9d9d9;
@@ -317,12 +360,11 @@ export default {
   }
 }
 
-.button-area {
+.button-container {
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid #f0f0f0;
   padding-top: 16px;
-  margin-top: 8px;
   
   .btn-cancel {
     margin-right: 8px;
@@ -336,6 +378,22 @@ export default {
       background-color: #40a9ff;
       border-color: #40a9ff;
     }
+  }
+}
+
+/* 脈動動畫 */
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.9);
+    transform: scale(0.95);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 69, 58, 0);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 69, 58, 0);
+    transform: scale(0.95);
   }
 }
 </style>

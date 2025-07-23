@@ -70,16 +70,36 @@
         ></a-table>
       </div>
     </div>
+    
+    <!-- 添加/编辑用户弹窗 -->
+    <a-modal
+      :title="userModalTitle"
+      :visible="userModalVisible"
+      :footer="null"
+      :maskClosable="false"
+      @cancel="handleUserModalCancel"
+      class="apple-style-modal"
+      :destroyOnClose="true"
+      width="550px"
+    >
+      <AddUser 
+        :detail="currentUser" 
+        @ok="handleUserModalOk" 
+        @cancel="handleUserModalCancel"
+      />
+    </a-modal>
   </div>
 </template>
 
 <script>
 import AddUser from "./commponents/addUser.vue";
-import DelectUser from "./commponents/delectUser.vue";
 import { mapGetters, mapState, mapMutations } from "vuex";
 
 export default {
   name: "USER",
+  components: {
+    AddUser
+  },
   data() {
     return {
       params: {},
@@ -95,6 +115,9 @@ export default {
       username:'',
       dataSource: [],
       loading: false,
+      userModalVisible: false,
+      userModalTitle: '添加用户',
+      currentUser: {},
       columns: [
         {
           title: "序号",
@@ -241,54 +264,51 @@ export default {
       this.getUserList();
     },
     createUser(obj) {
-      const self = this;
-      let title = JSON.stringify(obj) === "{}" ? "添加用户" : "编辑用户";
-      let content = (
-        <AddUser detail={obj} callBack={() => self.getUserList()} />
-      );
-      this.$confirm({
-        width: 520,
-        title: title,
-        content: content,
-        closable: true,
-        okButtonProps: {style: {display: 'none'}},
-        cancelButtonProps: {style: {display: 'none'}},
-        icon: () => {
-          return <div />;
-        },
-      });
+      this.currentUser = obj;
+      this.userModalTitle = JSON.stringify(obj) === "{}" ? "添加用户" : "编辑用户";
+      this.userModalVisible = true;
     },
     delectUser(obj) {
       const self = this;
-      let content = (
-        <DelectUser
-          sysTypeTxt="用户"
-          detail={obj}
-          callBack={() => self.getUserList()}
-        />
-      );
-      this.$confirm({
-        width: 400,
-        title: () => {
-          return (
-            <div class="delete-title">
-              <a-icon
-                type="exclamation-circle"
-                theme="filled"
-                class="warning-icon"
-              />
-              <span>确认删除</span>
-            </div>
-          );
-        },
-        content,
-        closable: true,
-        okButtonProps: {style: {display: 'none'}},
-        cancelButtonProps: {style: {display: 'none'}},
-        icon: () => {
-          return <div />;
-        },
+      // 动态导入DelectUser组件，避免ESLint警告
+      import('./commponents/delectUser.vue').then(DelectUser => {
+        let content = (
+          <DelectUser.default
+            sysTypeTxt="用户"
+            detail={obj}
+            callBack={() => self.getUserList()}
+          />
+        );
+        this.$confirm({
+          width: 400,
+          title: () => {
+            return (
+              <div class="delete-title">
+                <a-icon
+                  type="exclamation-circle"
+                  theme="filled"
+                  class="warning-icon"
+                />
+                <span>确认删除</span>
+              </div>
+            );
+          },
+          content,
+          closable: true,
+          okButtonProps: {style: {display: 'none'}},
+          cancelButtonProps: {style: {display: 'none'}},
+          icon: () => {
+            return <div />;
+          },
+        });
       });
+    },
+    handleUserModalOk() {
+      this.userModalVisible = false;
+      this.getUserList();
+    },
+    handleUserModalCancel() {
+      this.userModalVisible = false;
     },
     getUserList() {
       this.loading = true;
@@ -585,6 +605,15 @@ export default {
     
     .ant-modal-body {
       padding: 24px;
+    }
+  }
+}
+
+/* 添加用户弹窗样式 */
+/deep/ .apple-style-modal {
+  .ant-modal-content {
+    .ant-modal-body {
+      padding: 0;
     }
   }
 }
