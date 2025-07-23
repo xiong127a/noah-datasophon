@@ -200,7 +200,7 @@
               overlayClassName="custom-cluster-dropdown"
               :getPopupContainer="() => $refs.clusterDropdown"
             >
-              <div class="cluster-selector">
+            <div class="cluster-selector">
                 <div class="cluster-icon">
                   <img v-if="currentCluster.isK8s" src="@/assets/images/kubernetes-logo.svg" class="cluster-svg-icon" />
                   <img v-else src="@/assets/img/os-logos/linux-tux.svg" class="cluster-svg-icon" />
@@ -209,14 +209,14 @@
                 <a-icon type="down" class="dropdown-icon" />
               </div>
               
-              <a-menu slot="overlay" class="cluster-menu">
-                <a-menu-item 
-                  v-for="item in runningCluster" 
-                  :key="item.value" 
-                  @click="changeCluster({key: item.value})"
-                  :class="{ 'selected': item.value === clusterId }"
-                >
-                  <div class="cluster-item">
+            <a-menu slot="overlay" class="cluster-menu">
+              <a-menu-item 
+                v-for="item in runningCluster" 
+                :key="item.value" 
+                @click="changeCluster({key: item.value})"
+                :class="{ 'selected': item.value === clusterId }"
+              >
+                <div class="cluster-item">
                     <img 
                       v-if="isK8sCluster(item)"
                       src="@/assets/images/kubernetes-logo.svg" 
@@ -227,12 +227,12 @@
                       src="@/assets/img/os-logos/linux-tux.svg" 
                       class="menu-svg-icon" 
                     />
-                    <span>{{ item.label }}</span>
-                    <a-icon v-if="item.value === clusterId" type="check" class="check-icon" />
-                  </div>
-                </a-menu-item>
-              </a-menu>
-            </a-dropdown>
+                  <span>{{ item.label }}</span>
+                  <a-icon v-if="item.value === clusterId" type="check" class="check-icon" />
+                </div>
+              </a-menu-item>
+            </a-menu>
+          </a-dropdown>
           </div>
 
           <!-- 操作按钮组 -->
@@ -521,7 +521,7 @@ export default {
       
       if (this.hoveredMenu !== item.fullPath) {
         this.menuHoverTimer = setTimeout(() => {
-          this.hoveredMenu = item.fullPath;
+      this.hoveredMenu = item.fullPath;
         }, this.menuHoverDelay);
       }
     },
@@ -531,9 +531,9 @@ export default {
       
       if (this.expandedMenu !== item.fullPath) {
         this.menuCloseTimer = setTimeout(() => {
-          if (this.hoveredMenu === item.fullPath) {
+        if (this.hoveredMenu === item.fullPath) {
             this.hoveredMenu = null;
-          }
+        }
         }, this.menuCloseDelay);
       }
     },
@@ -810,8 +810,8 @@ export default {
           item.deployType === 'kubernetes' ||
           item.deployType === 'k8s') {
         return true;
-      }
-      
+    }
+    
       // 检查描述字段
       if (item.desc && typeof item.desc === 'string' && 
          (item.desc.toLowerCase().includes('kubernetes') || 
@@ -1527,24 +1527,24 @@ export default {
     margin-right: 10px !important;
     
     .cluster-selector {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
-      border: 1px solid rgba(0, 0, 0, 0.08) !important;
-      border-radius: 20px !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        border-radius: 20px !important;
       padding: 6px 12px !important;
-      display: flex !important;
-      align-items: center !important;
+        display: flex !important;
+        align-items: center !important;
       justify-content: center !important;
-      cursor: pointer !important;
+        cursor: pointer !important;
       transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-      backdrop-filter: blur(24px) saturate(180%) !important;
-      box-shadow: 
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        box-shadow: 
         0 2px 8px rgba(0, 0, 0, 0.05),
         0 1px 3px rgba(0, 0, 0, 0.03),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+          inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
       min-width: 120px !important;
       max-width: 180px !important;
-      white-space: nowrap !important;
-      flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
       
       &:hover {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 254, 0.98) 100%) !important;
@@ -1571,8 +1571,8 @@ export default {
       }
       
       .cluster-info {
-        display: flex !important;
-        align-items: center !important;
+          display: flex !important;
+          align-items: center !important;
         justify-content: center !important;
         gap: 8px !important;
         
@@ -1602,26 +1602,26 @@ export default {
           overflow: hidden !important;
           text-overflow: ellipsis !important;
           flex: 1 !important;
-        }
-        
-        .dropdown-arrow {
+      }
+      
+      .dropdown-arrow {
           font-size: 12px !important;
-          color: #999999 !important;
-          transition: all 0.3s ease !important;
+        color: #999999 !important;
+        transition: all 0.3s ease !important;
           width: 20px !important;
           height: 20px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
           border-radius: 4px !important;
-          background: rgba(0, 0, 0, 0.04) !important;
-          flex-shrink: 0 !important;
-          
-          .anticon {
-            transition: transform 0.3s ease !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+        flex-shrink: 0 !important;
+        
+        .anticon {
+          transition: transform 0.3s ease !important;
             font-size: 12px !important;
             color: #666666 !important;
-          }
+        }
         }
       }
     }
@@ -2043,7 +2043,7 @@ export default {
   
   &.active {
     background-color: rgba(0, 0, 0, 0.06) !important; // 与主菜单选中颜色保持一致
-    
+      
     .submenu-text {
       color: rgba(0, 0, 0, 0.85) !important; // 保持与常规文本相似的颜色，稍微加深
       font-weight: 500 !important; // 使用中等加粗
@@ -2053,9 +2053,9 @@ export default {
   &:hover:not(.active) {
     background-color: rgba(0, 0, 0, 0.04) !important;
   }
-  
-  .submenu-link,
-  .admin-submenu-link {
+    
+    .submenu-link,
+    .admin-submenu-link {
     display: flex;
     align-items: center;
     padding: 14px 16px;
@@ -2082,7 +2082,7 @@ export default {
       svg {
         width: 16px;
         height: 16px;
-        color: #007aff;
+      color: #007aff;
       }
     }
     
@@ -2096,7 +2096,7 @@ export default {
     .submenu-badge {
       padding: 2px 8px;
       background: rgba(0, 122, 255, 0.1);
-      color: #007aff;
+        color: #007aff;
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
@@ -2159,8 +2159,8 @@ export default {
     flex-shrink: 0;
     
     svg {
-      width: 16px;
-      height: 16px;
+    width: 16px;
+    height: 16px;
       color: #007aff;
     }
   }

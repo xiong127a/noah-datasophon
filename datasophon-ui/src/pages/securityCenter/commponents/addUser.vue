@@ -35,8 +35,8 @@
         <td class="form-table-field">
           <a-input
             v-decorator="[
-              'username',
-              { rules: [{ required: true, message: '用户名称不能为空!' }, { validator: checkName }] },
+            'username',
+            { rules: [{ required: true, message: '用户名称不能为空!' }, { validator: checkName }] },
             ]"
             placeholder="请输入用户名称"
             @change="checkUsername"
@@ -172,10 +172,10 @@ export default {
             callback('用户名已存在!');
           } else {
             callback();
-          }
+      }
         });
       } else {
-        callback();
+      callback();
       }
     },
     formCancel() {
@@ -237,7 +237,7 @@ export default {
     if (JSON.stringify(this.detail) !== "{}") {
       this.editFlag = true;
       this.$nextTick(() => {
-        this.echoUSer();
+    this.echoUSer();
       });
     } else {
       // 初始状态为空，设置所有指示器为红色

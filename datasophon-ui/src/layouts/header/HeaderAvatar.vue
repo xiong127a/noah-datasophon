@@ -126,8 +126,8 @@ export default {
       
       .anticon {
         color: #0056d3;
-      }
-      
+    }
+    
       span {
         color: #007aff;
       }

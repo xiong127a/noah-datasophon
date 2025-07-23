@@ -70,9 +70,9 @@ export default {
 .history-action-btn {
   width: 40px;
   height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%);
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -85,15 +85,15 @@ export default {
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  
-  &:hover {
+
+    &:hover {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
     transform: translateY(-2px) scale(1.05);
     box-shadow: 
       0 8px 24px rgba(0, 0, 0, 0.12),
       0 4px 12px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  }
+    }
   
   &:active {
     transform: translateY(-1px) scale(1.02);

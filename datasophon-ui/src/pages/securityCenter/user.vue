@@ -182,7 +182,7 @@ export default {
                       onClick={() => this.delectUser(row)}
                     >
                       <a-icon type="delete" />
-                      删除
+                    删除
                     </a-button> 
                     : 
                     <a-button
@@ -191,7 +191,7 @@ export default {
                       disabled
                     >
                       <a-icon type="delete" />
-                      删除
+                    删除
                     </a-button>
                   }
                 </div>
@@ -212,7 +212,7 @@ export default {
                       onClick={() => this.delectUser(row)}
                     >
                       <a-icon type="delete" />
-                      删除
+                    删除
                     </a-button>
                   </div>
                 ) : (
@@ -223,7 +223,7 @@ export default {
                       disabled
                     >
                       <a-icon type="edit" />
-                      编辑
+                    编辑
                     </a-button>
                     <a-button
                       type="link" 
@@ -231,7 +231,7 @@ export default {
                       disabled
                     >
                       <a-icon type="delete" />
-                      删除
+                    删除
                     </a-button>
                   </div>
                 )
@@ -272,35 +272,35 @@ export default {
       const self = this;
       // 动态导入DelectUser组件，避免ESLint警告
       import('./commponents/delectUser.vue').then(DelectUser => {
-        let content = (
+      let content = (
           <DelectUser.default
-            sysTypeTxt="用户"
-            detail={obj}
-            callBack={() => self.getUserList()}
-          />
-        );
-        this.$confirm({
+          sysTypeTxt="用户"
+          detail={obj}
+          callBack={() => self.getUserList()}
+        />
+      );
+      this.$confirm({
           width: 400,
-          title: () => {
-            return (
+        title: () => {
+          return (
               <div class="delete-title">
-                <a-icon
+              <a-icon
                   type="exclamation-circle"
                   theme="filled"
                   class="warning-icon"
-                />
+              />
                 <span>确认删除</span>
-              </div>
-            );
-          },
-          content,
-          closable: true,
+            </div>
+          );
+        },
+        content,
+        closable: true,
           okButtonProps: {style: {display: 'none'}},
           cancelButtonProps: {style: {display: 'none'}},
-          icon: () => {
-            return <div />;
-          },
-        });
+        icon: () => {
+          return <div />;
+        },
+      });
       });
     },
     handleUserModalOk() {
@@ -534,7 +534,7 @@ export default {
       
       .anticon {
         margin-right: 4px;
-        font-size: 12px;
+    font-size: 12px;
       }
     }
     
