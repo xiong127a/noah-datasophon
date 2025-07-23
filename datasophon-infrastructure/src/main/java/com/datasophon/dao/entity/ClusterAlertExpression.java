@@ -22,11 +22,11 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_alert_expression")
+@Table("t_ddh_cluster_alert_expression")
 public class ClusterAlertExpression implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -34,7 +34,7 @@ public class ClusterAlertExpression implements Serializable {
     /**
      * 自增 ID
      */
-    @TableId
+    @Id
     private Long id;
     /**
      * 指标名称
@@ -49,7 +49,7 @@ public class ClusterAlertExpression implements Serializable {
      */
     private String serviceCategory;
     /**
-     * 阈值类型  BOOL  INT  FLOAT  
+     * 阈值类型 BOOL INT FLOAT
      */
     private String valueType;
     /**

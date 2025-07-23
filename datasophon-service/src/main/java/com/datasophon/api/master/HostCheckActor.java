@@ -151,7 +151,7 @@ public class HostCheckActor extends AbstractActor {
             }
           }
           if (!list.isEmpty()) {
-            clusterHostService.updateBatchById(list);
+            clusterHostService.updateBatch( list);
           }
         } else {
           // 没有 Prometheus？直接获取节点，通过 rpc 检测是否启动
@@ -210,7 +210,7 @@ public class HostCheckActor extends AbstractActor {
             checkedHosts.add(checkedHost);
           }
           if (!checkedHosts.isEmpty()) {
-            clusterHostService.updateBatchById(checkedHosts);
+              clusterHostService.updateBatch(checkedHosts);
           }
         }
       }

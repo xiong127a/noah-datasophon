@@ -20,7 +20,6 @@ package com.datasophon.api.master;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -41,55 +40,111 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RackActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(RackActor.class);
 
+    // 定义常量，避免魔法值
+    private static final String NAME_NODE_ROLE = "NameNode";
+    private static final String HDFS_SERVICE = "HDFS";
+    private static final String RACK_PROPERTIES = "rack.properties";
+    private static final String HADOOP_CONFIG_DIR = "etc/hadoop";
+    private static final String PROPERTIES2_FORMAT = "properties2";
+    private static final String SLASH = "/";
+
     @Override
     public Receive createReceive() {
         return ReceiveBuilder.create()
-                .match(GenerateRackPropCommand.class, command -> {
-                    ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
-                            .getBean(ClusterServiceRoleInstanceService.class);
-                    ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
-                    ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
-                    // update rack table
-                    List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
-                            .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), "NameNode");
-                    ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
-                    // build config file map
-                    HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                    Generators generators = new Generators();
-                    generators.setFilename("rack.properties");
-                    generators.setOutputDirectory("etc/hadoop");
-                    generators.setConfigFormat("properties2");
-
-                    ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
-                    List<ClusterHostDO> hostList = hostService.list();
-                    for (ClusterHostDO clusterHostDO : hostList) {
-                        ServiceConfig serviceConfig = ProcessUtils.createServiceConfig(clusterHostDO.getIp(),
-                                Constants.SLASH + clusterHostDO.getRack(), "input");
-                        serviceConfigs.add(serviceConfig);
-                    }
-                    configFileMap.put(generators, serviceConfigs);
-                    for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleList) {
-                        // generate rack.properties
-                        ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
-                        serviceRoleInfo.setName("NameNode");
-                        serviceRoleInfo.setParentName("HDFS");
-                        serviceRoleInfo.setConfigFileMap(configFileMap);
-                        serviceRoleInfo.setDecompressPackageName(
-                                PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "HDFS"));
-                        serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
-                        ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-                        ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
-                        if (!execResult.getExecResult()) {
-                            logger.error("generate rack.properties failed");
-                        }
-                    }
-                })
+                .match(GenerateRackPropCommand.class, this::generateRackProperties)
                 .matchAny(this::unhandled)
                 .build();
+    }
+
+    /**
+     * 生成机架配置文件
+     * 
+     * @param command 生成机架属性命令
+     */
+    private void generateRackProperties(GenerateRackPropCommand command) throws Exception {
+        // 获取所需服务
+        ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+
+        // 查询集群NameNode角色实例
+        List<ClusterServiceRoleInstanceEntity> nameNodes = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), NAME_NODE_ROLE);
+
+        // 获取集群信息
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
+
+        // 构建配置文件映射
+        Map<Generators, List<ServiceConfig>> configFileMap = buildRackConfigFileMap(hostService.list());
+
+        // 为每个NameNode生成rack.properties文件
+        for (ClusterServiceRoleInstanceEntity nameNode : nameNodes) {
+            generateRackPropertiesForNode(nameNode, configFileMap, clusterInfo);
+        }
+    }
+
+    /**
+     * 构建机架配置文件映射
+     * 
+     * @param hostList 主机列表
+     * @return 配置文件映射
+     */
+    private Map<Generators, List<ServiceConfig>> buildRackConfigFileMap(List<ClusterHostDO> hostList) {
+        Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
+
+        // 创建配置生成器
+        Generators generators = new Generators();
+        generators.setFilename(RACK_PROPERTIES);
+        generators.setOutputDirectory(HADOOP_CONFIG_DIR);
+        generators.setConfigFormat(PROPERTIES2_FORMAT);
+
+        // 为每个主机创建机架配置
+        List<ServiceConfig> serviceConfigs = new ArrayList<>();
+        for (ClusterHostDO host : hostList) {
+            ServiceConfig config = ProcessUtils.createServiceConfig(
+                    host.getIp(),
+                    SLASH + host.getRack(),
+                    "input");
+            serviceConfigs.add(config);
+        }
+
+        configFileMap.put(generators, serviceConfigs);
+        return configFileMap;
+    }
+
+    /**
+     * 为指定节点生成rack.properties文件
+     * 
+     * @param nameNode      NameNode实例
+     * @param configFileMap 配置文件映射
+     * @param clusterInfo   集群信息
+     */
+    private void generateRackPropertiesForNode(ClusterServiceRoleInstanceEntity nameNode,
+            Map<Generators, List<ServiceConfig>> configFileMap,
+            ClusterInfoEntity clusterInfo) throws Exception {
+        // 构建服务角色信息
+        ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+        serviceRoleInfo.setName(NAME_NODE_ROLE);
+        serviceRoleInfo.setParentName(HDFS_SERVICE);
+        serviceRoleInfo.setConfigFileMap(configFileMap);
+        serviceRoleInfo.setDecompressPackageName(
+                PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), HDFS_SERVICE));
+        serviceRoleInfo.setHostname(nameNode.getHostname());
+
+        // 生成配置
+        ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
+        ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
+
+        // 记录结果
+        if (!execResult.getExecResult()) {
+            logger.error("生成 {} 文件失败", RACK_PROPERTIES);
+        }
     }
 }

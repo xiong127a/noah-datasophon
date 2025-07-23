@@ -17,15 +17,11 @@
 
 package com.datasophon.api.master;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
@@ -44,9 +40,14 @@ import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Option;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,6 +59,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DAGBuildActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(DAGBuildActor.class);
+
+    @Override
+    public void preRestart(Throwable reason, Option<Object> message) throws Exception {
+        logger.info("restart actor {}", reason.getMessage());
+        super.preRestart(reason, message);
+    }
 
     @Override
     public Receive createReceive() {
@@ -72,8 +79,6 @@ public class DAGBuildActor extends AbstractActor {
             DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();
             CommandType commandType = executeCommandCommand.getCommandType();
             logger.info("start execute command");
-
-            ClusterServiceCommandService commandService = SpringUtil.getBean(ClusterServiceCommandService.class);
             ClusterServiceCommandHostCommandService hostCommandService = SpringUtil
                     .getBean(ClusterServiceCommandHostCommandService.class);
             FrameServiceRoleService frameServiceRoleService = SpringUtil.getBean(FrameServiceRoleService.class);
@@ -83,8 +88,9 @@ public class DAGBuildActor extends AbstractActor {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(executeCommandCommand.getClusterId());
             // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装
             // HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]
-            List<ClusterServiceCommandEntity> commandList = commandService.lambdaQuery()
-                    .in(ClusterServiceCommandEntity::getCommandId, executeCommandCommand.getCommandIds()).list();
+            List<ClusterServiceCommandEntity> commandList = QueryChain.of(ClusterServiceCommandEntity.class)
+                    .where(ClusterServiceCommandEntity::getCommandId).in(executeCommandCommand.getCommandIds())
+                    .list();
 
             ArrayList<FrameServiceEntity> frameServiceList = new ArrayList<>();
             if (ArrayUtil.isNotEmpty(commandList)) {
@@ -149,8 +155,7 @@ public class DAGBuildActor extends AbstractActor {
 
             if (commandType == CommandType.STOP_SERVICE) {
                 logger.info("reverse dag");
-                DAGGraph<String, ServiceNode, String> reverseDagGraph = dag.getReverseDagGraph(dag);
-                dag = reverseDagGraph;
+                dag = dag.getReverseDagGraph(dag);
             }
 
             Map<String, String> errorTaskList = new ConcurrentHashMap<>();

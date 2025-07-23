@@ -20,22 +20,22 @@
 package com.datasophon.dao.entity;
 
 import com.datasophon.dao.enums.NeedRestart;
-
-import java.io.Serializable;
-
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import java.io.Serial;
+import java.io.Serializable;
 
 @Data
-@TableName("t_ddh_cluster_service_instance_role_group")
+@Table("t_ddh_cluster_service_instance_role_group")
 public class ClusterServiceInstanceRoleGroup implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /** */
-    @TableId
+    @Id
     private Integer id;
     /** */
     private String roleGroupName;

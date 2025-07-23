@@ -22,14 +22,13 @@ package com.datasophon.api.master;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
 import com.datasophon.api.load.ServiceRoleJmxMap;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -71,6 +70,22 @@ public class PrometheusActor extends AbstractActor {
     private static final String PROMETHEUS_NODE_PORT = "30909";
     private static final String RELOAD_PATH = "/-/reload";
     private static final int HTTP_TIMEOUT_MS = 5000;
+    private static final String PROMETHEUS_SERVICE_NAME = "Prometheus";
+    private static final String PROMETHEUS_SYMBOL_NAME = "prometheus";
+    private static final String UPDATE_SYMBOL_NAME = "update";
+    private static final String CONFIG_OUTPUT_DIRECTORY = "configs";
+    private static final String CONFIG_FORMAT_CUSTOM = "custom";
+    private static final String SCRAPE_TEMPLATE_NAME = "scrape.ftl";
+    private static final String PROMETHEUS_PACKAGE_NAME = "prometheus-2.17.2";
+    private static final String WORKER_PORT = "8585";
+    private static final String NODE_PORT = "9100";
+    private static final String MASTER_PORT = "8586";
+    private static final int HOST_MANAGED = 1;
+    private static final String WORKER_CONFIG_FILENAME = "worker.json";
+    private static final String NODE_CONFIG_FILENAME = "linux.json";
+    private static final String MASTER_CONFIG_FILENAME = "master.json";
+    private static final String STARROCKS_TEMPLATE_NAME = "starrocks-prom.ftl";
+    private static final String CONFIG_UPDATE_REASON = "prometheus-update";
 
     @Override
     public Receive createReceive() {
@@ -89,7 +104,7 @@ public class PrometheusActor extends AbstractActor {
                                     serviceInstance.getId());
 
                     ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, clusterId);
+                            PROMETHEUS_SERVICE_NAME, null, clusterId);
 
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
@@ -103,15 +118,15 @@ public class PrometheusActor extends AbstractActor {
                     Map<String, Integer> roleIndexMap = new HashMap<>();
 
                     // 添加特殊处理ZKFC的映射，将其关联到对应的NameNode
-                    String symbolName = "Prometheus";
+                    String symbolName = PROMETHEUS_SERVICE_NAME;
                     for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
                         String serviceRoleFullName = CommonUtil.generateServiceRoleFullName(
                                 roleInstanceEntity.getServiceName(),
                                 roleInstanceEntity.getServiceRoleName());
                         if (StrUtil.equals("prometheus-prometheus", serviceRoleFullName)) {
-                            symbolName = "prometheus";
+                            symbolName = PROMETHEUS_SYMBOL_NAME;
                         } else {
-                            symbolName = "update";
+                            symbolName = UPDATE_SYMBOL_NAME;
                         }
                         String hostname = roleInstanceEntity.getHostname();
 
@@ -159,9 +174,9 @@ public class PrometheusActor extends AbstractActor {
                     for (Map.Entry<String, List<String>> roleEntry : roleMap.entrySet()) {
                         Generators generators = new Generators();
                         generators.setFilename(roleEntry.getKey().toLowerCase() + ".json");
-                        generators.setOutputDirectory("configs");
-                        generators.setConfigFormat("custom");
-                        generators.setTemplateName("scrape.ftl");
+                        generators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+                        generators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+                        generators.setTemplateName(SCRAPE_TEMPLATE_NAME);
                         List<String> value = roleEntry.getValue();
                         ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
                         String serviceName = serviceInstance.getServiceName();
@@ -188,7 +203,7 @@ public class PrometheusActor extends AbstractActor {
                     serviceRoleInfo.setName(symbolName);
                     serviceRoleInfo.setParentName("PROMETHEUS");
                     serviceRoleInfo.setConfigFileMap(configFileMap);
-                    serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
+                    serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
                     if (Objects.nonNull(prometheusInstance)) {
                         serviceRoleInfo.setClusterId(prometheusInstance.getClusterId());
                         serviceRoleInfo.setHostname(prometheusInstance.getHostname());
@@ -198,38 +213,39 @@ public class PrometheusActor extends AbstractActor {
                 .match(GenerateHostPrometheusConfig.class, command -> {
                     Integer clusterId = command.getClusterId();
                     HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                    ClusterHostService hostService = SpringUtil.getBean(ClusterHostService.class);
                     ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                             .getBean(ClusterServiceRoleInstanceService.class);
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
                     String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
-                    List<ClusterHostDO> hostList = hostService.list(
-                            new QueryWrapper<ClusterHostDO>()
-                                    .eq(Constants.MANAGED, 1)
-                                    .eq(Constants.CLUSTER_ID, clusterId));
+
+                    List<ClusterHostDO> hostList = QueryChain.of(ClusterHostDO.class)
+                            .where(ClusterHostDO::getManaged).eq(HOST_MANAGED)
+                            .and(ClusterHostDO::getClusterId).eq(clusterId)
+                            .list();
+
                     ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
+                            PROMETHEUS_SERVICE_NAME, null, command.getClusterId());
                     boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
                     if (Objects.nonNull(prometheusInstance)) {
 
                         Generators workerGenerators = new Generators();
-                        workerGenerators.setFilename("worker.json");
-                        workerGenerators.setOutputDirectory("configs");
-                        workerGenerators.setConfigFormat("custom");
-                        workerGenerators.setTemplateName("scrape.ftl");
+                        workerGenerators.setFilename(WORKER_CONFIG_FILENAME);
+                        workerGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+                        workerGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+                        workerGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
 
                         Generators nodeGenerators = new Generators();
-                        nodeGenerators.setFilename("linux.json");
-                        nodeGenerators.setOutputDirectory("configs");
-                        nodeGenerators.setConfigFormat("custom");
-                        nodeGenerators.setTemplateName("scrape.ftl");
+                        nodeGenerators.setFilename(NODE_CONFIG_FILENAME);
+                        nodeGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+                        nodeGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+                        nodeGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
 
                         Generators masterGenerators = new Generators();
-                        masterGenerators.setFilename("master.json");
-                        masterGenerators.setOutputDirectory("configs");
-                        masterGenerators.setConfigFormat("custom");
-                        masterGenerators.setTemplateName("scrape.ftl");
+                        masterGenerators.setFilename(MASTER_CONFIG_FILENAME);
+                        masterGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+                        masterGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+                        masterGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
 
                         ArrayList<ServiceConfig> workerServiceConfigs = new ArrayList<>();
                         ArrayList<ServiceConfig> nodeServiceConfigs = new ArrayList<>();
@@ -237,7 +253,7 @@ public class PrometheusActor extends AbstractActor {
 
                         ServiceConfig masterConfig = new ServiceConfig();
                         masterConfig.setName("master_" + CacheUtils.get(Constants.HOSTNAME));
-                        masterConfig.setValue(CacheUtils.get(Constants.HOSTNAME) + ":8586");
+                        masterConfig.setValue(CacheUtils.get(Constants.HOSTNAME) + ":" + MASTER_PORT);
                         masterConfig.setRequired(true);
                         masterServiceConfigs.add(masterConfig);
 
@@ -246,14 +262,14 @@ public class PrometheusActor extends AbstractActor {
                             if (!isKubernetes) {
                                 ServiceConfig serviceConfig = new ServiceConfig();
                                 serviceConfig.setName("worker_" + clusterHostDO.getHostname());
-                                serviceConfig.setValue(clusterHostDO.getHostname() + ":8585");
+                                serviceConfig.setValue(clusterHostDO.getHostname() + ":" + WORKER_PORT);
                                 serviceConfig.setRequired(true);
                                 workerServiceConfigs.add(serviceConfig);
                             }
 
                             ServiceConfig nodeConfig = new ServiceConfig();
                             nodeConfig.setName("node_" + clusterHostDO.getHostname());
-                            nodeConfig.setValue(clusterHostDO.getHostname() + ":9100");
+                            nodeConfig.setValue(clusterHostDO.getHostname() + ":" + NODE_PORT);
                             nodeConfig.setRequired(true);
                             nodeServiceConfigs.add(nodeConfig);
                         }
@@ -266,10 +282,10 @@ public class PrometheusActor extends AbstractActor {
 
                         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                         serviceRoleInfo.setClusterId(clusterId);
-                        serviceRoleInfo.setName("Prometheus");
+                        serviceRoleInfo.setName(PROMETHEUS_SERVICE_NAME);
                         serviceRoleInfo.setParentName("PROMETHEUS");
                         serviceRoleInfo.setConfigFileMap(configFileMap);
-                        serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
+                        serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
                         serviceRoleInfo.setHostname(prometheusInstance.getHostname());
                         reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
                     }
@@ -281,10 +297,9 @@ public class PrometheusActor extends AbstractActor {
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
                     String depType = clusterInfoService.getById(clusterId).getDepType();
-                    boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
 
                     ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, clusterId);
+                            PROMETHEUS_SERVICE_NAME, null, clusterId);
                     if (Objects.nonNull(prometheusInstance)) {
                         ExecResult configResult;
                         if (Constants.KUBERNETES_MODE.equals(depType)) {
@@ -302,7 +317,8 @@ public class PrometheusActor extends AbstractActor {
                             logger.info("Generate prometheus alert config success , now start to reload prometheus");
                             // reload prometheus config
                             HttpUtil.post(
-                                    "http://" + prometheusInstance.getHostname() + ":9090/-/reload", "");
+                                    "http://" + prometheusInstance.getHostname() + ":" + PROMETHEUS_PORT + RELOAD_PATH,
+                                    "");
                         }
                     }
                 })
@@ -318,7 +334,7 @@ public class PrometheusActor extends AbstractActor {
                                     serviceInstance.getId());
 
                     ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole(
-                            "Prometheus", null, command.getClusterId());
+                            PROMETHEUS_SERVICE_NAME, null, command.getClusterId());
 
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
@@ -352,9 +368,9 @@ public class PrometheusActor extends AbstractActor {
                     ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
                     Generators generators = new Generators();
                     generators.setFilename(command.getFilename());
-                    generators.setOutputDirectory("configs");
-                    generators.setConfigFormat("custom");
-                    generators.setTemplateName("starrocks-prom.ftl");
+                    generators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+                    generators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+                    generators.setTemplateName(STARROCKS_TEMPLATE_NAME);
 
                     ServiceConfig feServiceConfig = new ServiceConfig();
                     feServiceConfig.setName("feList");
@@ -373,10 +389,10 @@ public class PrometheusActor extends AbstractActor {
 
                     ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                     serviceRoleInfo.setClusterId(command.getClusterId());
-                    serviceRoleInfo.setName("Prometheus");
+                    serviceRoleInfo.setName(PROMETHEUS_SERVICE_NAME);
                     serviceRoleInfo.setParentName("PROMETHEUS");
                     serviceRoleInfo.setConfigFileMap(configFileMap);
-                    serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
+                    serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
                     serviceRoleInfo.setHostname(prometheusInstance.getHostname());
                     boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
                     reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
@@ -404,7 +420,7 @@ public class PrometheusActor extends AbstractActor {
 
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
-        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig, "prometheus-update", clusterId);
+        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig, CONFIG_UPDATE_REASON, clusterId);
         if (execResult != null && execResult.getExecResult()) {
             String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isKubernetes);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);

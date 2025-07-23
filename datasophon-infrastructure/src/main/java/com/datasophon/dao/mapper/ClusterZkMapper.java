@@ -21,12 +21,9 @@ import com.datasophon.dao.entity.ClusterZk;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
-import java.util.Map;
-
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 
@@ -36,7 +33,7 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-09-07 10:04:16
  */
 @Mapper
-public interface ClusterZkMapper extends MPJBaseMapper<ClusterZk> {
+public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
 
     /**
      * 获取指定集群的最大myid值
@@ -44,21 +41,6 @@ public interface ClusterZkMapper extends MPJBaseMapper<ClusterZk> {
      * @param clusterId 集群ID
      * @return 最大myid值
      */
-    default Integer getMaxMyId(@Param("clusterId") Integer clusterId) {
-        // 使用MAX聚合函数
-        LambdaQueryWrapper<ClusterZk> wrapper = Wrappers.<ClusterZk>lambdaQuery()
-                .select(ClusterZk::getMyid, a -> "MAX(myid) as max_id")
-                .eq(ClusterZk::getClusterId, clusterId);
-
-        // 使用selectMaps查询聚合结果
-        Map<String, Object> result = selectMaps(wrapper).stream().findFirst().orElse(null);
-
-        // 提取结果或返回null
-        if (result != null && result.containsKey("max_id")) {
-            Object maxId = result.get("max_id");
-            return maxId == null ? null : Integer.parseInt(maxId.toString());
-        }
-
-        return null;
-    }
+    @Select("SELECT MAX(myid) FROM t_ddh_cluster_zk WHERE cluster_id = #{clusterId}")
+    Integer getMaxMyId(@Param("clusterId") Integer clusterId);
 }

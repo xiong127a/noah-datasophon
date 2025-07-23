@@ -17,15 +17,15 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.StrUtil;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.SessionService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.dao.entity.SessionEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.SessionMapper;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +38,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service("sessionService")
 public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity> implements SessionService {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
+
+    // 定义最大会话数量常量
+    private static final int MAX_SESSIONS_PER_USER = 1;
 
     @Autowired
     private SessionMapper sessionMapper;
@@ -55,24 +59,26 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
      */
     @Override
     public SessionEntity getSession(HttpServletRequest request) {
+        // 首先从header获取sessionId
         String sessionId = request.getHeader(Constants.SESSION_ID);
 
-        if (StringUtils.isBlank(sessionId)) {
+        // 如果header中没有，从cookie获取
+        if (StrUtil.isBlank(sessionId)) {
             Cookie cookie = WebUtils.getCookie(request, Constants.SESSION_ID);
-
-            if (cookie != null) {
-                sessionId = cookie.getValue();
-            }
+            sessionId = Optional.ofNullable(cookie)
+                    .map(Cookie::getValue)
+                    .orElse(null);
         }
 
-        if (StringUtils.isBlank(sessionId)) {
+        // 如果sessionId为空，返回null
+        if (StrUtil.isBlank(sessionId)) {
             return null;
         }
 
         String ip = HttpUtils.getClientIpAddress(request);
         logger.debug("get session: {}, ip: {}", sessionId, ip);
 
-        return sessionMapper.selectById(sessionId);
+        return sessionMapper.selectOneById(sessionId);
     }
 
     /**
@@ -85,51 +91,41 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createSession(UserInfoEntity user, String ip) {
-        SessionEntity session;
-
-        // logined
+        // 查询用户现有会话
         List<SessionEntity> sessionList = sessionMapper.queryByUserId(user.getId());
-
         Date now = new Date();
 
-        /*
-          if you have logged in and are still valid, return directly
-         */
-        if (CollectionUtils.isNotEmpty(sessionList)) {
-            // is session list greater 1 ， delete other ，get one
-            if (sessionList.size() > 1) {
-                for (int i = 1; i < sessionList.size(); i++) {
+        // 会话不为空，表示用户已登录
+        if (CollectionUtil.isNotEmpty(sessionList)) {
+            // 保持一个用户只有一个会话
+            if (sessionList.size() > MAX_SESSIONS_PER_USER) {
+                for (int i = MAX_SESSIONS_PER_USER; i < sessionList.size(); i++) {
                     sessionMapper.deleteById(sessionList.get(i).getId());
                 }
             }
-            session = sessionList.getFirst();
-            if (now.getTime() - session.getLastLoginTime().getTime() <= Constants.SESSION_TIME_OUT * 1000) {
-                /*
-                  updateProcessInstance the latest login time
-                 */
+
+            SessionEntity session = sessionList.getFirst();
+
+            // 会话未过期，更新最后登录时间并返回
+            long sessionAge = now.getTime() - session.getLastLoginTime().getTime();
+            if (sessionAge <= Constants.SESSION_TIME_OUT * 1000) {
                 session.setLastLoginTime(now);
-                sessionMapper.updateById(session);
-
+                this.updateById(session);
                 return session.getId();
-
             } else {
-                /*
-                  session expired, then delete this session first
-                 */
+                // 会话过期，删除后创建新会话
                 sessionMapper.deleteById(session.getId());
             }
         }
 
-        // assign new session
-        session = new SessionEntity();
-
+        // 创建新会话
+        SessionEntity session = new SessionEntity();
         session.setId(UUID.randomUUID().toString());
         session.setIp(ip);
         session.setUserId(user.getId());
         session.setLastLoginTime(now);
 
         sessionMapper.insertSession(session);
-
         return session.getId();
     }
 
@@ -143,16 +139,16 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
     @Override
     public void signOut(String ip, UserInfoEntity loginUser) {
         try {
-            /*
-              query session by user id and ip
-             */
+            // 查询会话并删除
             SessionEntity session = sessionMapper.queryByUserIdAndIp(loginUser.getId(), ip);
-
-            // delete session
-            sessionMapper.deleteById(session.getId());
+            if (session != null) {
+                sessionMapper.deleteById(session.getId());
+                logger.debug("User signed out: userId={}, ip={}, sessionId={}",
+                        loginUser.getId(), ip, session.getId());
+            }
         } catch (Exception e) {
-            logger.warn("userId : {} , ip : {} , find more one session", loginUser.getId(), ip);
+            logger.warn("Multiple sessions found or session not found: userId={}, ip={}, error={}",
+                    loginUser.getId(), ip, e.getMessage());
         }
     }
-
 }

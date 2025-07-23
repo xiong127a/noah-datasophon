@@ -17,15 +17,14 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,8 +35,6 @@ import java.util.stream.Collectors;
 @Service("frameInfoService")
 public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfoEntity> implements FrameInfoService {
 
-    @Autowired
-    private FrameServiceService frameServiceService;
 
     @Override
     public Result getAllClusterFrame() {
@@ -47,9 +44,11 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
         }
 
         Set<Integer> frameInfoIds = frameInfoEntities.stream().map(FrameInfoEntity::getId).collect(Collectors.toSet());
-        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceService.lambdaQuery()
-                .select(FrameServiceEntity::getId, FrameServiceEntity::getFrameId, FrameServiceEntity::getFrameCode, FrameServiceEntity::getServiceName, FrameServiceEntity::getServiceVersion, FrameServiceEntity::getServiceDesc)
-                .in(FrameServiceEntity::getFrameId, frameInfoIds)
+        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = QueryChain.of(FrameServiceEntity.class)
+                .select(FrameServiceEntity::getId, FrameServiceEntity::getFrameId, FrameServiceEntity::getFrameCode,
+                        FrameServiceEntity::getServiceName, FrameServiceEntity::getServiceVersion,
+                        FrameServiceEntity::getServiceDesc)
+                .where(FrameServiceEntity::getFrameId).in(frameInfoIds)
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(FrameServiceEntity::getFrameId));

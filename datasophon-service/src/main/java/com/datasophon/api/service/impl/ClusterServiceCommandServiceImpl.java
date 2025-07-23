@@ -17,13 +17,10 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.date.BetweenFormatter;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.EnumUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DAGBuildActor;
@@ -53,6 +50,9 @@ import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,7 +112,7 @@ public class ClusterServiceCommandServiceImpl
 
         Map<String, List<String>> serviceRoleHostMap = CacheOperateUtils
                 .getWithType(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING,
-                        new TypeReference<Map<String, List<String>>>() {
+                        new TypeReference<>() {
                         });
 
         for (String serviceName : serviceNames) {
@@ -178,12 +178,21 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public Result getServiceCommandlist(Integer clusterId, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
-        List<ClusterServiceCommandEntity> list = this.list(new QueryWrapper<ClusterServiceCommandEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .orderByDesc(Constants.CREATE_TIME).last("limit " + offset + "," + pageSize));
-        long total = this.count(new QueryWrapper<ClusterServiceCommandEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId));
+        // 使用分页对象
+        Page<ClusterServiceCommandEntity> flexPage = new Page<>(
+                page, pageSize);
+
+        // 构建查询条件
+        com.mybatisflex.core.query.QueryChain<ClusterServiceCommandEntity> query = com.mybatisflex.core.query.QueryChain
+                .of(ClusterServiceCommandEntity.class)
+                .where(ClusterServiceCommandEntity::getClusterId).eq(clusterId)
+                .orderBy(ClusterServiceCommandEntity::getCreateTime).desc();
+
+        // 执行分页查询
+        Page<ClusterServiceCommandEntity> resultPage = query.page(flexPage);
+        List<ClusterServiceCommandEntity> list = resultPage.getRecords();
+        long total = resultPage.getTotalRow();
+
         for (ClusterServiceCommandEntity commandEntity : list) {
             // 实时聚合命令进度和状态，并更新数据库
             calculateCommandActualProgress(commandEntity);
@@ -237,8 +246,9 @@ public class ClusterServiceCommandServiceImpl
             }
             // 获取该命令下所有主机命令
             List<ClusterServiceCommandHostEntity> hostCommands = commandHostService.list(
-                    new QueryWrapper<ClusterServiceCommandHostEntity>()
-                            .eq("command_id", commandEntity.getCommandId()));
+                    com.mybatisflex.core.query.QueryChain.of(ClusterServiceCommandHostEntity.class)
+                            .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandEntity.getCommandId()));
+
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandEntity.setCommandProgress(0L);
                 if ((oldProgress == null || oldProgress != 0L)) {
@@ -284,8 +294,9 @@ public class ClusterServiceCommandServiceImpl
     private void calculateRealTimeCommandState(ClusterServiceCommandEntity commandEntity) {
         try {
             List<ClusterServiceCommandHostEntity> hostCommands = commandHostService.list(
-                    new QueryWrapper<ClusterServiceCommandHostEntity>()
-                            .eq("command_id", commandEntity.getCommandId()));
+                    com.mybatisflex.core.query.QueryChain.of(ClusterServiceCommandHostEntity.class)
+                            .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandEntity.getCommandId()));
+
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandEntity.setCommandState(CommandState.RUNNING);
                 commandEntity.setCommandStateCode(CommandState.RUNNING.getValue());
@@ -481,16 +492,37 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public ClusterServiceCommandEntity getLastRestartCommand(Integer serviceInstanceId) {
-        return this.getOne(
-                new QueryWrapper<ClusterServiceCommandEntity>().eq(Constants.SERVICE_INSTANCE_ID, serviceInstanceId)
-                        .eq(Constants.COMMAND_TYPE, CommandType.RESTART_SERVICE.getValue()).or()
-                        .eq(Constants.COMMAND_TYPE, CommandType.INSTALL_SERVICE.getValue())
-                        .orderByDesc(Constants.CREATE_TIME).last("limit 1"));
+        // 创建基础查询条件
+        int restartValue = CommandType.RESTART_SERVICE.getValue();
+        int installValue = CommandType.INSTALL_SERVICE.getValue();
+
+        // 先获取RESTART_SERVICE类型的命令
+        ClusterServiceCommandEntity result = com.mybatisflex.core.query.QueryChain
+                .of(ClusterServiceCommandEntity.class)
+                .where(ClusterServiceCommandEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterServiceCommandEntity::getCommandType).eq(restartValue)
+                .orderBy(ClusterServiceCommandEntity::getCreateTime).desc()
+                .limit(1)
+                .one();
+
+        // 如果没有找到RESTART_SERVICE类型的命令，尝试获取INSTALL_SERVICE类型的命令
+        if (result == null) {
+            result = com.mybatisflex.core.query.QueryChain
+                    .of(ClusterServiceCommandEntity.class)
+                    .where(ClusterServiceCommandEntity::getServiceInstanceId).eq(serviceInstanceId)
+                    .and(ClusterServiceCommandEntity::getCommandType).eq(installValue)
+                    .orderBy(ClusterServiceCommandEntity::getCreateTime).desc()
+                    .limit(1)
+                    .one();
+        }
+
+        return result;
     }
 
     @Override
     public ClusterServiceCommandEntity getCommandById(String commandId) {
-        return this.getOne(
-                new QueryWrapper<ClusterServiceCommandEntity>().eq("command_id", commandId));
+        return com.mybatisflex.core.query.QueryChain.of(ClusterServiceCommandEntity.class)
+                .where(ClusterServiceCommandEntity::getCommandId).eq(commandId)
+                .one();
     }
 }

@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 @Mapper
 public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntity> {

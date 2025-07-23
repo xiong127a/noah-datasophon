@@ -20,14 +20,13 @@ package com.datasophon.api.service.impl;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.TimedCache;
 import com.alibaba.fastjson2.JSONArray;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
@@ -82,16 +81,8 @@ public class ClusterServiceInstanceServiceImpl
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
-
-    @Autowired
-    private ClusterServiceDashboardService dashboardService;
-
     @Autowired
     private ClusterInfoService clusterInfoService;
-
-    @Autowired
-    private ClusterAlertHistoryService alertHistoryService;
-
     @Autowired
     private FrameServiceRoleService frameServiceRoleService;
 
@@ -116,9 +107,10 @@ public class ClusterServiceInstanceServiceImpl
     @Override
     public ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId,
             String serviceName) {
-        return this.getOne(new QueryWrapper<ClusterServiceInstanceEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.SERVICE_NAME, serviceName));
+        return QueryChain.of(ClusterServiceInstanceEntity.class)
+                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceInstanceEntity::getServiceName).eq(serviceName)
+                .one();
     }
 
     @Override
@@ -129,36 +121,53 @@ public class ClusterServiceInstanceServiceImpl
     @Override
     public List<ClusterServiceInstanceEntity> listAll(Integer clusterId) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        List<ClusterServiceInstanceEntity> list = this.list(new QueryWrapper<ClusterServiceInstanceEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId).orderByAsc(Constants.SORT_NUM));
-        for (ClusterServiceInstanceEntity serviceInstance : list) {
+
+        // 查询集群下所有服务实例并按排序号升序排列
+        List<ClusterServiceInstanceEntity> serviceInstances = QueryChain.of(ClusterServiceInstanceEntity.class)
+                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                .orderBy(ClusterServiceInstanceEntity::getSortNum).asc()
+                .list();
+
+        // 处理每个服务实例
+        for (ClusterServiceInstanceEntity serviceInstance : serviceInstances) {
             serviceInstance.setServiceStateCode(serviceInstance.getServiceState().getValue());
             boolean needUpdate = false;
-            // 查询dashboard
-            ClusterServiceDashboard dashboard = dashboardService.getOne(new QueryWrapper<ClusterServiceDashboard>()
-                    .eq(Constants.SERVICE_NAME, serviceInstance.getServiceName()));
+
+            // 查询仪表盘
+            ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
+                    .where(ClusterServiceDashboard::getServiceName).eq(serviceInstance.getServiceName())
+                    .one();
+
             if (Objects.nonNull(dashboard)) {
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                         Constants.REGEX_VARIABLE);
                 serviceInstance.setDashboardUrl(dashboardUrl);
             }
-            // 查询告警数量
-            long alertNum = alertHistoryService.count(new QueryWrapper<ClusterAlertHistory>()
-                    .eq(Constants.SERVICE_INSTANCE_ID, serviceInstance.getId()).eq(Constants.IS_ENABLED, 1));
+
+            // 查询启用的告警数量
+            long alertNum = QueryChain.of(ClusterAlertHistory.class)
+                    .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstance.getId())
+                    .and(ClusterAlertHistory::getIsEnabled).eq(1)
+                    .count();
+
             serviceInstance.setAlertNum(alertNum);
-            List<ClusterServiceRoleInstanceEntity> totalRoleList = roleInstanceService.lambdaQuery()
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstance.getId())
+
+            // 查询该服务的所有角色实例
+            List<ClusterServiceRoleInstanceEntity> totalRoleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
                     .list();
+
             if (Objects.nonNull(totalRoleList) && totalRoleList.isEmpty()) {
                 serviceInstance.setServiceState(ServiceState.WAIT_INSTALL);
                 needUpdate = true;
             }
 
             // 查询停止状态角色
-            List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService.lambdaQuery()
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstance.getId())
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, ServiceRoleState.STOP)
+            List<ClusterServiceRoleInstanceEntity> roleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
+                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.STOP)
                     .list();
+
             if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
                 if (!ServiceState.EXISTS_EXCEPTION.equals(serviceInstance.getServiceState())) {
                     serviceInstance.setServiceState(ServiceState.EXISTS_EXCEPTION);
@@ -172,11 +181,13 @@ public class ClusterServiceInstanceServiceImpl
                     needUpdate = true;
                 }
             }
+
             // 查询告警状态角色
-            List<ClusterServiceRoleInstanceEntity> alarmRoleList = roleInstanceService.lambdaQuery()
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstance.getId())
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, ServiceRoleState.EXISTS_ALARM)
+            List<ClusterServiceRoleInstanceEntity> alarmRoleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
+                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.EXISTS_ALARM)
                     .list();
+
             if (Objects.nonNull(alarmRoleList) && !alarmRoleList.isEmpty()) {
                 if (!ServiceState.EXISTS_ALARM.equals(serviceInstance.getServiceState())
                         && !ServiceState.EXISTS_EXCEPTION.equals(serviceInstance.getServiceState())) {
@@ -193,16 +204,18 @@ public class ClusterServiceInstanceServiceImpl
             // 查询是否进行了配置更新
             List<ClusterServiceRoleInstanceEntity> obsoleteRoleList = roleInstanceService
                     .getObsoleteService(serviceInstance.getId());
+
             if (Objects.nonNull(obsoleteRoleList) && obsoleteRoleList.isEmpty()
                     && serviceInstance.getNeedRestart() == NeedRestart.YES) {
                 serviceInstance.setNeedRestart(NeedRestart.NO);
                 needUpdate = true;
             }
+
             if (needUpdate) {
                 this.updateById(serviceInstance);
             }
         }
-        return list;
+        return serviceInstances;
     }
 
     @Override
@@ -275,10 +288,11 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences) {
-        List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
-                .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
-                        .eq(Constants.ROLE_GROUP_ID, roleGroupId)
-                        .orderByDesc(Constants.CONFIG_VERSION).last("limit 2"));
+        List<ClusterServiceRoleGroupConfig> list = QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                .limit(2)
+                .list();
 
         // 如果没有足够的版本进行比较，返回空结果
         if (list == null || list.size() < 2) {
@@ -481,23 +495,32 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public List<ClusterServiceInstanceEntity> listRunningServiceInstance(Integer clusterId) {
-        return this.list(new QueryWrapper<ClusterServiceInstanceEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.SERVICE_STATE, ServiceState.RUNNING));
+        return QueryChain.of(ClusterServiceInstanceEntity.class)
+                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceInstanceEntity::getServiceState).eq(ServiceState.RUNNING)
+                .list();
     }
 
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
-        List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
-                .getRunningServiceRoleInstanceListByServiceId(serviceInstanceId);
-        return !list.isEmpty();
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId)
+                .count() > 0;
     }
 
     @Override
     public Boolean hasRoleInstance(Integer clusterId, String serviceName) {
-        long count = roleInstanceService
-                .count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                        .eq(Constants.CLUSTER_ID, clusterId)
-                        .eq(Constants.SERVICE_NAME, serviceName));
+        // 先获取服务实例ID
+        ClusterServiceInstanceEntity serviceInstance = getServiceInstanceByClusterIdAndServiceName(clusterId,
+                serviceName);
+        if (serviceInstance == null) {
+            return false;
+        }
+
+        // 查询该服务实例下是否有角色实例
+        long count = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
+                .count();
+
         return count > 0;
     }
 

@@ -22,11 +22,11 @@ import java.io.Serializable;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
-@TableName("t_ddh_frame_service")
+@Table("t_ddh_frame_service")
 @Data
 @Accessors(chain = true)
 public class FrameServiceEntity implements Serializable {
@@ -36,7 +36,7 @@ public class FrameServiceEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 框架id
@@ -93,12 +93,12 @@ public class FrameServiceEntity implements Serializable {
      */
     private String decompressPackageName;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Boolean installed;
 
     private Integer sortNum;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Boolean isRequired;
 
 }

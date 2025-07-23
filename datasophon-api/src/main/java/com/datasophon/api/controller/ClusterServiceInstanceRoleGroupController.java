@@ -17,9 +17,8 @@
 
 package com.datasophon.api.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,9 +41,9 @@ public class ClusterServiceInstanceRoleGroupController {
      */
     @RequestMapping("/list")
     public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
-        List<ClusterServiceInstanceRoleGroup> list =
-                clusterServiceInstanceRoleGroupService.list(new QueryWrapper<ClusterServiceInstanceRoleGroup>()
-                        .eq(Constants.SERVICE_INSTANCE_ID, serviceInstanceId));
+        List<ClusterServiceInstanceRoleGroup> list = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
+                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
+                .list();
         return Result.success(list);
     }
 
@@ -53,8 +52,8 @@ public class ClusterServiceInstanceRoleGroupController {
      */
     @RequestMapping("/info/{id}")
     public Result info(@PathVariable("id") Integer id) {
-        ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup =
-                clusterServiceInstanceRoleGroupService.getById(id);
+        ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = clusterServiceInstanceRoleGroupService
+                .getById(id);
 
         return Result.success().put("clusterServiceInstanceRoleGroup", clusterServiceInstanceRoleGroup);
     }
@@ -63,7 +62,8 @@ public class ClusterServiceInstanceRoleGroupController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestParam("serviceInstanceId") Integer serviceInstanceId, @RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
+    public Result save(@RequestParam("serviceInstanceId") Integer serviceInstanceId,
+            @RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
         clusterServiceInstanceRoleGroupService.saveRoleGroup(serviceInstanceId, roleGroupId, roleGroupName);
         return Result.success();
     }
@@ -72,7 +72,8 @@ public class ClusterServiceInstanceRoleGroupController {
      * 分配角色组
      */
     @RequestMapping("/bind")
-    public Result bind(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds, @RequestParam("roleGroupId") Integer roleGroupId) {
+    public Result bind(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
+            @RequestParam("roleGroupId") Integer roleGroupId) {
         return clusterServiceInstanceRoleGroupService.bind(serviceRoleInstancesIds, roleGroupId);
     }
 
@@ -80,7 +81,8 @@ public class ClusterServiceInstanceRoleGroupController {
      * 修改
      */
     @RequestMapping("/rename")
-    public Result update(@RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
+    public Result update(@RequestParam("roleGroupId") Integer roleGroupId,
+            @RequestParam("roleGroupName") String roleGroupName) {
 
         return clusterServiceInstanceRoleGroupService.rename(roleGroupId, roleGroupName);
 

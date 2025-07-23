@@ -22,11 +22,11 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_role_info")
+@Table("t_ddh_role_info")
 public class RoleInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -34,7 +34,7 @@ public class RoleInfoEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 角色名称

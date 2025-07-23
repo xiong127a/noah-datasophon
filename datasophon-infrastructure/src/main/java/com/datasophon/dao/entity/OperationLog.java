@@ -17,33 +17,34 @@
 
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Map;
 
-@TableName("t_ddh_operation_log")
+@Table("t_ddh_operation_log")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class OperationLog implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
 
     /**
@@ -73,7 +74,7 @@ public class OperationLog implements Serializable {
     private String param;
 
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Map<String,Object> paramMap;
 
     //集群id
@@ -91,7 +92,7 @@ public class OperationLog implements Serializable {
     //返回状态码
     private Integer returnCode;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     //返回状态中文
     private String returnCodeMsg;
 

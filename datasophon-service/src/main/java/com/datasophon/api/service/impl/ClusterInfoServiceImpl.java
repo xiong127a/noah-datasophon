@@ -17,9 +17,9 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.load.GlobalVariables;
@@ -60,6 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceEntityTableDef.CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY;
 
 @Slf4j
 @Service("clusterInfoService")
@@ -115,8 +117,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     @Override
     public Result saveCluster(ClusterInfoEntity clusterInfo) {
 
-        List<ClusterInfoEntity> list = this
-                .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_CODE, clusterInfo.getClusterCode()));
+        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
+                .where(ClusterInfoEntity::getClusterCode).eq(clusterInfo.getClusterCode())
+                .list();
+
         if (Objects.nonNull(list) && !list.isEmpty()) {
             return Result.error(Status.CLUSTER_CODE_EXISTS.getMsg());
         }
@@ -178,8 +182,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public Result runningClusterList() {
-        List<ClusterInfoEntity> list = this
-                .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_STATE, ClusterState.RUNNING));
+        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
+                .where(ClusterInfoEntity::getClusterState).eq(ClusterState.RUNNING)
+                .list();
+
         return Result.success(list);
     }
 
@@ -198,14 +204,18 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public List<ClusterInfoEntity> getClusterByFrameCode(String frameCode) {
-        return this.list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_FRAME, frameCode));
+        return QueryChain.of(ClusterInfoEntity.class)
+                .where(ClusterInfoEntity::getClusterFrame).eq(frameCode)
+                .list();
     }
 
     @Override
     public Result updateCluster(ClusterInfoEntity clusterInfo) {
         // 集群编码判重
-        List<ClusterInfoEntity> list = this
-                .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_CODE, clusterInfo.getClusterCode()));
+        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
+                .where(ClusterInfoEntity::getClusterCode).eq(clusterInfo.getClusterCode())
+                .list();
+
         if (Objects.nonNull(list) && !list.isEmpty()) {
             ClusterInfoEntity clusterInfoEntity = list.getFirst();
             if (!clusterInfoEntity.getId().equals(clusterInfo.getId())) {
@@ -251,12 +261,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public String getServiceRoleMetrics() {
-        LambdaQueryWrapper<ClusterServiceRoleInstanceEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, 1);
-
         // 获取所有运行中的服务角色实例
-        List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceMapper
-                .selectList(lambdaQueryWrapper);
+        List<ClusterServiceRoleInstanceEntity> roleInstances = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(1)
+                .list();
 
         // 按服务角色名称分组并计数
         Map<String, Long> roleCountMap = roleInstances.stream()

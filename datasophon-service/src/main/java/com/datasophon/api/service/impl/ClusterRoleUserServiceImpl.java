@@ -17,22 +17,23 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterRoleUserService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.UserType;
 import com.datasophon.dao.mapper.ClusterRoleUserMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service("clusterRoleUserService")
 public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMapper, ClusterRoleUserEntity>
@@ -44,30 +45,36 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
 
     @Override
     public boolean isClusterManager(Integer userId, String clusterId) {
-        List<ClusterRoleUserEntity> list = this.list(new QueryWrapper<ClusterRoleUserEntity>()
-                .eq(Constants.DETAILS_USER_ID, userId)
-                .eq(Constants.CLUSTER_ID, clusterId));
+        List<ClusterRoleUserEntity> list = QueryChain.of(ClusterRoleUserEntity.class)
+                .where(ClusterRoleUserEntity::getUserId).eq(userId)
+                .and(ClusterRoleUserEntity::getClusterId).eq(clusterId)
+                .list();
         return Objects.nonNull(list) && list.size() == 1;
     }
 
     @Override
     public Result saveClusterManager(Integer clusterId, String userIds) {
         // 首先删除原有管理员
-        this.remove(new QueryWrapper<ClusterRoleUserEntity>().eq(Constants.CLUSTER_ID, clusterId));
+        this.remove(QueryWrapper.create()
+                .where(ClusterRoleUserEntity::getClusterId).eq(clusterId));
+
         if (StringUtils.isEmpty(userIds)) {
             // userIds 为空,表示取消授权
             return Result.success();
         }
-        ArrayList<ClusterRoleUserEntity> list = new ArrayList<>();
-        for (String userId : userIds.split(",")) {
-            Integer id = Integer.parseInt(userId);
-            ClusterRoleUserEntity clusterRoleUserEntity = new ClusterRoleUserEntity();
-            clusterRoleUserEntity.setClusterId(clusterId);
-            clusterRoleUserEntity.setUserId(id);
-            clusterRoleUserEntity.setUserType(UserType.CLUSTER_MANAGER);
-            list.add(clusterRoleUserEntity);
-        }
-        this.saveBatch(list);
+
+        // 使用流式处理构建实体列表
+        List<ClusterRoleUserEntity> entityList = Arrays.stream(userIds.split(","))
+                .map(id -> {
+                    ClusterRoleUserEntity entity = new ClusterRoleUserEntity();
+                    entity.setClusterId(clusterId);
+                    entity.setUserId(Integer.parseInt(id));
+                    entity.setUserType(UserType.CLUSTER_MANAGER);
+                    return entity;
+                })
+                .collect(Collectors.toList());
+
+        this.saveBatch(entityList);
         return Result.success();
     }
 

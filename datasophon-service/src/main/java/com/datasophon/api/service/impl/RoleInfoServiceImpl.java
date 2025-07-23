@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.RoleInfoService;
 import com.datasophon.dao.entity.RoleInfoEntity;
 import com.datasophon.dao.mapper.RoleInfoMapper;

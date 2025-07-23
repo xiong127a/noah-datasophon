@@ -1,25 +1,31 @@
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.datasophon.dao.entity.tenantResource.*;
+import com.datasophon.dao.entity.tenantResource.TenantHbaseResource;
+import com.datasophon.dao.entity.tenantResource.TenantHdfsResource;
+import com.datasophon.dao.entity.tenantResource.TenantHiveResource;
+import com.datasophon.dao.entity.tenantResource.TenantKafkaResource;
+import com.datasophon.dao.entity.tenantResource.TenantYarnResource;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
+import com.mybatisflex.core.handler.JacksonTypeHandler;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
 @Data
-@TableName(value = "t_ddh_cluster_tenant", autoResultMap = true)
+@Table(value = "t_ddh_cluster_tenant")
 public class ClusterTenant implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
 
     /**
@@ -35,31 +41,31 @@ public class ClusterTenant implements Serializable {
     /**
      * hdfs资源列表
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @Column(typeHandler = JacksonTypeHandler.class)
     private List<TenantHdfsResource> hdfsResourceList;
 
     /**
      * yarn资源列表
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @Column(typeHandler = JacksonTypeHandler.class)
     private List<TenantYarnResource> yarnResourceList;
 
     /**
      * hive资源列表
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @Column(typeHandler = JacksonTypeHandler.class)
     private List<TenantHiveResource> hiveResourceList;
 
     /**
      * hbase资源列表
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @Column(typeHandler = JacksonTypeHandler.class)
     private List<TenantHbaseResource> hbaseResourceList;
 
     /**
      * kafka资源列表
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @Column(typeHandler = JacksonTypeHandler.class)
     private List<TenantKafkaResource> kafkaResourceList;
 }
 

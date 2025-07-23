@@ -17,11 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
@@ -43,7 +39,12 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,7 +104,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             createUnixGroupCommand.setGroupName(groupName);
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             Future<Object> execFuture = Patterns.ask(unixGroupActor, createUnixGroupCommand, timeout);
-            ExecResult execResult = null;
+            ExecResult execResult;
             try {
                 execResult = (ExecResult) Await.result(execFuture, timeout.duration());
                 if (execResult.getExecResult()) {
@@ -121,6 +122,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         return Result.success();
     }
+
     @Override
     public Result saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
         // 用户组名校验
@@ -149,10 +151,9 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
                 .max(Integer::compareTo)
                 .orElse(null);
 
-        Integer globalMaxGid = 0;
+        int globalMaxGid = 0;
 
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
-
 
         for (ClusterHostDO clusterHost : hostList) {
             // 执行命令获取当前主机的最大 GID
@@ -160,7 +161,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/group");
 
             // 将返回结果转换为 Integer 类型
-            Integer currentMaxGid = null;
+            int currentMaxGid;
             try {
                 currentMaxGid = Integer.parseInt(result.trim()); // 解析结果
             } catch (NumberFormatException e) {
@@ -169,21 +170,22 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
 
             // 更新全局最大 UID
-            if (globalMaxGid == null || (globalMaxGid != null && currentMaxGid > globalMaxGid)) {
+            if (currentMaxGid > globalMaxGid) {
                 globalMaxGid = currentMaxGid;
             }
         }
 
-        Integer createUnixUserGid=Math.max(systemInitMaxGid,globalMaxGid)+1;
+        Integer createUnixUserGid = Math.max(systemInitMaxGid, globalMaxGid) + 1;
 
         if (createUnixUserGid > 65535) {
             throw new ServiceException(500,
-                    "create unix user " + groupName + " failed at Gid{"+createUnixUserGid+"} > 65535");
+                    "create unix user " + groupName + " failed at Gid{" + createUnixUserGid + "} > 65535");
         }
         for (ClusterHostDO clusterHost : hostList) {
             ExecResult execResult = null;
             try {
-                if (!createUnixGroup(groupName, clusterHost.getHostname(),createUnixUserGid).equals(Constants.FAILED)) {
+                if (!createUnixGroup(groupName, clusterHost.getHostname(), createUnixUserGid)
+                        .equals(Constants.FAILED)) {
                     logger.info("create unix group {} success at {}", groupName, clusterHost.getHostname());
                 } else {
                     logger.info(execResult.getExecOut());
@@ -198,14 +200,13 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         return Result.success();
     }
+
     private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
-        List<ClusterGroup> list = this.list(new QueryWrapper<ClusterGroup>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.GROUP_NAME, groupName));
-        if (list.size() > 0) {
-            return true;
-        }
-        return false;
+        List<ClusterGroup> list = QueryChain.of(ClusterGroup.class)
+                .where(ClusterGroup::getClusterId).eq(clusterId)
+                .and(ClusterGroup::getGroupName).eq(groupName)
+                .list();
+        return CollUtil.isNotEmpty(list);
     }
 
     @Override
@@ -232,7 +233,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             delUnixGroupCommand.setGroupName(clusterGroup.getGroupName());
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             Future<Object> execFuture = Patterns.ask(unixGroupActor, delUnixGroupCommand, timeout);
-            ExecResult execResult = null;
+            ExecResult execResult;
             try {
                 execResult = (ExecResult) Await.result(execFuture, timeout.duration());
                 if (execResult.getExecResult()) {
@@ -246,6 +247,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
         return Result.success();
     }
+
     @Override
     public Result deleteUserGroupOnKubernetes(Integer id) {
         ClusterGroup clusterGroup = this.getById(id);
@@ -268,30 +270,38 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
         return Result.success();
     }
+
     @Override
     public Result listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
-        List<ClusterGroup> list = this.list(new QueryWrapper<ClusterGroup>()
-                .like(StringUtils.isNotBlank(groupName), Constants.GROUP_NAME, groupName)
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .last("limit " + offset + "," + pageSize));
+
+        QueryChain<ClusterGroup> query = QueryChain.of(ClusterGroup.class)
+                .where(ClusterGroup::getClusterId).eq(clusterId);
+
+        if (StringUtils.isNotBlank(groupName)) {
+            query.and(ClusterGroup::getGroupName).like("%" + groupName + "%");
+        }
+
+        List<ClusterGroup> list = query.limit(offset, pageSize).list();
+
         for (ClusterGroup clusterGroup : list) {
             List<ClusterUser> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
             if (Objects.nonNull(clusterUserList) && !clusterUserList.isEmpty()) {
-                String clusterUsers =
-                        clusterUserList.stream().map(e -> e.getUsername()).collect(Collectors.joining(","));
+                String clusterUsers = clusterUserList.stream().map(ClusterUser::getUsername)
+                        .collect(Collectors.joining(","));
                 clusterGroup.setClusterUsers(clusterUsers);
             }
         }
-        long total = this.count(new QueryWrapper<ClusterGroup>().
-                like(StringUtils.isNotBlank(groupName), Constants.GROUP_NAME, groupName)
-                .eq(Constants.CLUSTER_ID, clusterId));
+
+        long total = query.count();
         return Result.success(list).put(Constants.TOTAL, total);
     }
 
     @Override
     public List<ClusterGroup> listAllUserGroup(Integer clusterId) {
-        return this.lambdaQuery().eq(ClusterGroup::getClusterId, clusterId).list();
+        return QueryChain.of(ClusterGroup.class)
+                .where(ClusterGroup::getClusterId).eq(clusterId)
+                .list();
     }
 
     @Override
@@ -305,7 +315,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         createUnixGroupCommand.setGroupName(groupName);
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> execFuture = Patterns.ask(unixGroupActor, createUnixGroupCommand, timeout);
-        ExecResult execResult = null;
+        ExecResult execResult;
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
@@ -318,8 +328,9 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new ServiceException(500, "create unix group " + groupName + " failed at " + hostname);
         }
     }
-    public static String createUnixGroup(String groupName,String hostname,Integer createUnixGroupGid) {
-        if (isGroupExists(groupName,hostname)) {
+
+    public static String createUnixGroup(String groupName, String hostname, Integer createUnixGroupGid) {
+        if (isGroupExists(groupName, hostname)) {
             return Constants.FAILED;
         }
         ArrayList<String> commands = new ArrayList<>();
@@ -332,15 +343,16 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
-    public static String delUnixGroup(String groupName,String hostname) {
+    public static String delUnixGroup(String groupName, String hostname) {
         ArrayList<String> commands = new ArrayList<>();
         commands.add("groupdel");
         commands.add(groupName);
         return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
-    public static boolean isGroupExists(String groupName,String hostname) {
-        String result = KubernetesMinaUtils.execCmdWithResult(hostname, "egrep \"" + groupName + "\" /etc/group >& /dev/null");
+    public static boolean isGroupExists(String groupName, String hostname) {
+        String result = KubernetesMinaUtils.execCmdWithResult(hostname,
+                "egrep \"" + groupName + "\" /etc/group >& /dev/null");
         return !result.equals(Constants.FAILED);
     }
 }

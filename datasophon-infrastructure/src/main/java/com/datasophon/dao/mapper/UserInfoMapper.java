@@ -18,31 +18,38 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.datasophon.dao.entity.AccessTokenEntity;
-
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
+import java.util.Date;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.github.yulichang.base.MPJBaseMapper;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import static com.datasophon.dao.entity.table.UserInfoEntityTableDef.USER_INFO_ENTITY;
+import static com.datasophon.dao.entity.table.AccessTokenEntityTableDef.ACCESS_TOKEN_ENTITY;
 
 /**
  * 用户信息表
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ *
  */
 @Mapper
-public interface UserInfoMapper extends MPJBaseMapper<UserInfoEntity> {
+public interface UserInfoMapper extends BaseMapper<UserInfoEntity> {
 
+    /**
+     * 根据token查询用户信息
+     * 
+     * @param token 令牌
+     * @return 用户信息
+     */
     default UserInfoEntity queryUserByToken(@Param("token") String token) {
-        return this.selectJoinOne(UserInfoEntity.class,
-                new MPJLambdaWrapper<UserInfoEntity>()
-                        .selectAll(UserInfoEntity.class)
-                        .leftJoin(AccessTokenEntity.class, AccessTokenEntity::getUserId, UserInfoEntity::getId)
-                        .eq(AccessTokenEntity::getToken, token)
-                        .gt(AccessTokenEntity::getExpireTime, new java.util.Date()));
+        Date now = new Date();
+
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .select(USER_INFO_ENTITY.ALL_COLUMNS)
+                .from(USER_INFO_ENTITY)
+                .leftJoin(ACCESS_TOKEN_ENTITY).on(ACCESS_TOKEN_ENTITY.USER_ID.eq(USER_INFO_ENTITY.ID))
+                .where(ACCESS_TOKEN_ENTITY.TOKEN.eq(token))
+                .and(ACCESS_TOKEN_ENTITY.EXPIRE_TIME.gt(now));
+
+        return this.selectOneByQuery(queryWrapper);
     }
 }

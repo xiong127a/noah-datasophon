@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.mybatisflex.core.service.IService;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 
 import java.util.List;

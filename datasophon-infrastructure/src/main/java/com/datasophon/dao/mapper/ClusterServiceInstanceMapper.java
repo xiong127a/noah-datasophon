@@ -22,11 +22,12 @@ import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.Map;
 
-import com.github.yulichang.base.MPJBaseMapper;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 
 /**
  * 集群服务表
@@ -36,29 +37,19 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
  * @date 2022-04-24 16:25:17
  */
 @Mapper
-public interface ClusterServiceInstanceMapper extends MPJBaseMapper<ClusterServiceInstanceEntity> {
+public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceInstanceEntity> {
 
-    /**
-     * 根据集群ID和服务名称获取服务配置
-     *
-     * @param clusterId   集群ID
-     * @param serviceName 服务名称
-     * @return 服务配置文件JSON字符串
-     */
-    default String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
-            @Param("serviceName") String serviceName) {
-        MPJLambdaWrapper<ClusterServiceInstanceEntity> wrapper = new MPJLambdaWrapper<ClusterServiceInstanceEntity>()
-                .selectAs(ClusterServiceInstanceConfigEntity::getConfigFileJson, "config_file_json")
-                .leftJoin(ClusterServiceInstanceConfigEntity.class,
-                        ClusterServiceInstanceConfigEntity::getServiceId,
-                        ClusterServiceInstanceEntity::getId)
-                .eq(ClusterServiceInstanceEntity::getClusterId, clusterId)
-                .eq(ClusterServiceInstanceEntity::getServiceName, serviceName)
-                .orderByDesc(ClusterServiceInstanceConfigEntity::getConfigVersion)
-                .last("limit 1");
-
-        Map<String, Object> result = selectJoinMap(wrapper);
-
-        return result != null ? (String) result.get("config_file_json") : null;
-    }
+        /**
+         * 根据集群ID和服务名称获取服务配置
+         *
+         * @param clusterId   集群ID
+         * @param serviceName 服务名称
+         * @return 服务配置文件JSON字符串
+         */
+        @Select("SELECT c.config_file_json FROM t_ddh_cluster_service_instance s " +
+                        "LEFT JOIN t_ddh_cluster_service_instance_config c ON c.service_id = s.id " +
+                        "WHERE s.cluster_id = #{clusterId} AND s.service_name = #{serviceName} " +
+                        "ORDER BY c.config_version DESC LIMIT 1")
+        String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
+                        @Param("serviceName") String serviceName);
 }

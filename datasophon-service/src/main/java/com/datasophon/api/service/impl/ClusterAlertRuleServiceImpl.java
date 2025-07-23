@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterAlertRuleService;
 import com.datasophon.dao.entity.ClusterAlertRule;
 import com.datasophon.dao.mapper.ClusterAlertRuleMapper;

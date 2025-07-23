@@ -17,7 +17,7 @@
 
 package com.datasophon.api.security;
 
-import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.mybatisflex.annotation.EnumValue;
 
 /**
  * authentication type

@@ -19,14 +19,12 @@ package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
-
-import com.github.yulichang.base.MPJBaseMapper;
-import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 /**
  * 集群角色用户中间表
@@ -36,7 +34,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface ClusterRoleUserMapper extends MPJBaseMapper<ClusterRoleUserEntity> {
+public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity> {
 
     /**
      * 获取指定集群的所有管理员
@@ -45,10 +43,11 @@ public interface ClusterRoleUserMapper extends MPJBaseMapper<ClusterRoleUserEnti
      * @return 管理员用户列表
      */
     default List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Integer clusterId) {
-        return selectJoinList(UserInfoEntity.class,
-                new MPJLambdaWrapper<ClusterRoleUserEntity>()
-                        .selectAll(UserInfoEntity.class)
-                        .leftJoin(UserInfoEntity.class, UserInfoEntity::getId, ClusterRoleUserEntity::getUserId)
-                        .eq(ClusterRoleUserEntity::getClusterId, clusterId));
+        return QueryChain.of(ClusterRoleUserEntity.class)
+                .select("u.*")
+                .from("t_ddh_cluster_role_user c") // 给表起别名
+                .leftJoin("t_ddh_user_info u").on("u.id = c.user_id")
+                .where("c.cluster_id = #{clusterId}", clusterId)
+                .listAs(UserInfoEntity.class);
     }
 }

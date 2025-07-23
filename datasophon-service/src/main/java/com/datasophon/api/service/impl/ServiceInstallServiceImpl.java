@@ -26,7 +26,6 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.TypeReference;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
@@ -58,6 +57,8 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategy;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategyContext;
+import com.mybatisflex.core.query.QueryChain;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +66,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -74,7 +74,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
-import static com.datasophon.common.Constants.*;
+import static com.datasophon.common.Constants.CONFIG;
+import static com.datasophon.common.Constants.GENERAL;
+import static com.datasophon.common.Constants.HOST_SERVICE_ROLE_MAPPING;
+import static com.datasophon.common.Constants.INPUT;
+import static com.datasophon.common.Constants.MASTER;
+import static com.datasophon.common.Constants.MASTER_MANAGE_PACKAGE_PATH;
+import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
+import static com.datasophon.common.Constants.SLASH;
+import static com.datasophon.common.Constants.UNDERLINE;
 
 @Service("serviceInstallService")
 @Transactional
@@ -363,7 +371,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         HashMap<String, List<String>> map = new HashMap<>();
         if (CacheOperateUtils.containsKey(hostMapKey)) {
             map = CacheOperateUtils.getWithType(hostMapKey,
-                    new com.fasterxml.jackson.core.type.TypeReference<HashMap<String, List<String>>>() {
+                    new com.fasterxml.jackson.core.type.TypeReference<>() {
                     });
         }
 
@@ -566,10 +574,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     private ClusterServiceInstanceRoleGroup saveNewRoleGroup(
             ClusterServiceInstanceEntity serviceInstanceEntity) {
-        long count = roleGroupService.count(
-                new QueryWrapper<ClusterServiceInstanceRoleGroup>()
-                        .eq(ROLE_GROUP_TYPE, "auto")
-                        .eq(SERVICE_INSTANCE_ID, serviceInstanceEntity.getId()));
+        long count = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
+                .where(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq("auto")
+                .and(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceEntity.getId())
+                .count();
         ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
         long num = count + 1;
         roleGroup.setRoleGroupName("RoleGroup" + num);
@@ -676,10 +684,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     private void addHostNodeToPrometheus(
             Integer clusterId, HashMap<Generators, List<ServiceConfig>> configFileMap) {
-        List<ClusterHostDO> hostList = hostService.list(
-                new QueryWrapper<ClusterHostDO>()
-                        .eq(MANAGED, 1)
-                        .eq(CLUSTER_ID, clusterId));
+        List<ClusterHostDO> hostList = QueryChain.of(ClusterHostDO.class)
+                .where(ClusterHostDO::getManaged).eq(1)
+                .and(ClusterHostDO::getClusterId).eq(clusterId)
+                .list();
+
         Generators workerGenerators = new Generators();
         workerGenerators.setFilename("worker.json");
         workerGenerators.setOutputDirectory("configs");

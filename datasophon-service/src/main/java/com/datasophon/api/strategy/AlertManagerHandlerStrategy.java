@@ -20,7 +20,7 @@ package com.datasophon.api.strategy;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.mybatisflex.core.paginate.Page;
 import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ServiceConfig;
@@ -37,47 +37,45 @@ import java.util.stream.Collectors;
 
 public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
-
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
 
         NoticeGroupService noticeGroupService = SpringUtil.getBean(NoticeGroupService.class);
 
         MPage<NoticeGroupEntity> page = new MPage<>();
-        page.setSize(1000);
-        IPage<NoticeGroupEntity> noticeGroupEntityIPage = noticeGroupService.pageNoticeGroup(page);
+        page.setPageSize(1000); // 使用MPage的setPageSize方法
+        Page<NoticeGroupEntity> noticeGroupEntityPage = noticeGroupService.pageNoticeGroup(page);
 
-        //去掉之前的
-        list.removeIf(serviceConfig -> StringUtils.isEmpty(serviceConfig.getConfigType()) || "".equals(serviceConfig.getConfigType()));
+        // 去掉之前的
+        list.removeIf(serviceConfig -> StringUtils.isEmpty(serviceConfig.getConfigType())
+                || serviceConfig.getConfigType().isEmpty());
 
-        //准备alertNoticeConfig,邮件通知组和路由
-        List<ServiceConfig> alertNoticeConfig = noticeGroupEntityIPage.getRecords().stream()
+        // 准备alertNoticeConfig,邮件通知组和路由
+        List<ServiceConfig> alertNoticeConfig = noticeGroupEntityPage.getRecords().stream()
                 .filter(v -> CollectionUtil.isNotEmpty(v.getUserIds()))
-                .map(v ->
-                        ServiceConfig.builder()
-                                .hidden(true)
-                                .required(true)
-                                .configType("")
-                                .name(v.getId().toString())
-                                .value(v.getUserIds().stream()
-                                        .map(UserInfoEntity::getEmail)
-                                        .filter(StringUtils::isNotEmpty)
-                                        .collect(Collectors.joining(",")))
-                                .build())
-                .collect(Collectors.toList());
+                .map(v -> ServiceConfig.builder()
+                        .hidden(true)
+                        .required(true)
+                        .configType("")
+                        .name(v.getId().toString())
+                        .value(v.getUserIds().stream()
+                                .map(UserInfoEntity::getEmail)
+                                .filter(StringUtils::isNotEmpty)
+                                .collect(Collectors.joining(",")))
+                        .build())
+                .toList();
 
         list.addAll(alertNoticeConfig);
     }
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
+        ServiceRoleStrategy.super.getConfig(clusterId, list);
     }
-
 
     @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         String url = "http://" + roleInstanceEntity.getHostname() + ":9093";
         try {
             HttpUtil.get(url);

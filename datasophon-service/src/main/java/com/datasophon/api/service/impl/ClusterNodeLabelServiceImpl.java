@@ -22,8 +22,8 @@ import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
@@ -115,8 +115,8 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     private boolean refreshToYarn(Integer clusterId, String type, String nodeLabel) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        List<ClusterServiceRoleInstanceEntity> roleList =
-                roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
         String depMode = getDepMode(clusterId);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
@@ -146,20 +146,21 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
                 }
                 logger.info("add yarn node label failed");
                 return false;
-            }else{
+            } else {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
                 String enableYARNKerberos = globalVariables.get("${enableYARNKerberos}");
-                String cmd =String.join(" ", commands);
+                String cmd = String.join(" ", commands);
                 if (StrUtil.isNotEmpty(enableYARNKerberos) && "true".equals(enableYARNKerberos)) {
-                    cmd="kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM && "+cmd;
+                    cmd = "kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM && "
+                            + cmd;
                 }
                 try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-                runCmd(namespace,
-                        client,
-                        "yarn-resourcemanager",
-                        hostname,
-                        cmd);
+                    runCmd(namespace,
+                            client,
+                            "yarn-resourcemanager",
+                            hostname,
+                            cmd);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -203,7 +204,9 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     @Override
     public List<ClusterNodeLabelEntity> queryClusterNodeLabel(Integer clusterId) {
-        return this.list(new QueryWrapper<ClusterNodeLabelEntity>().eq(Constants.CLUSTER_ID, clusterId));
+        return QueryChain.of(ClusterNodeLabelEntity.class)
+                .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId)
+                .list();
     }
 
     @Override
@@ -215,15 +218,17 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
     }
 
     private boolean nodeLabelInUse(String nodeLabel) {
-        List<ClusterHostDO> list = hostService.list(new QueryWrapper<ClusterHostDO>()
-                .eq(Constants.NODE_LABEL, nodeLabel));
+        List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
+                .where(ClusterHostDO::getNodeLabel).eq(nodeLabel)
+                .list();
         return CollUtil.isNotEmpty(list);
     }
 
     private boolean repeatNodeLable(Integer clusterId, String nodeLabel) {
-        List<ClusterNodeLabelEntity> list = this.list(new QueryWrapper<ClusterNodeLabelEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.NODE_LABEL, nodeLabel));
+        List<ClusterNodeLabelEntity> list = QueryChain.of(ClusterNodeLabelEntity.class)
+                .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId)
+                .and(ClusterNodeLabelEntity::getNodeLabel).eq(nodeLabel)
+                .list();
         return CollUtil.isNotEmpty(list);
     }
 }

@@ -21,11 +21,11 @@ import java.io.Serializable;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_zk")
+@Table("t_ddh_cluster_zk")
 public class ClusterZk implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -33,7 +33,7 @@ public class ClusterZk implements Serializable {
     /**
      * 
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 

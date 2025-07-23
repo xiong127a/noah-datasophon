@@ -17,13 +17,14 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
 import cn.hutool.core.util.NumberUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
@@ -77,12 +78,6 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     @Autowired
     private ClusterUserGroupService userGroupService;
 
-    @Autowired
-    private ClusterKerberosService clusterKerberosService;
-
-    @Autowired
-    private ClusterInfoService clusterInfoService;
-
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
 
@@ -111,13 +106,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
-            List<Integer> otherGroupIds =
-                    Arrays.stream(groupIds.split(",")).map(e -> Integer.parseInt(e)).collect(Collectors.toList());
+            List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
+                    .collect(Collectors.toList());
             for (Integer id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
             }
             Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(e -> e.getGroupName()).collect(Collectors.joining(","));
+            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
         }
 
         ClusterGroup mainGroup = groupService.getById(mainGroupId);
@@ -134,7 +129,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-            ExecResult execResult = null;
+            ExecResult execResult;
             try {
                 execResult = (ExecResult) Await.result(execFuture, timeout.duration());
                 if (execResult.getExecResult()) {
@@ -178,7 +173,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
-        ExecResult execResult = null;
+        ExecResult execResult;
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
@@ -224,13 +219,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
-            List<Integer> otherGroupIds =
-                    Arrays.stream(groupIds.split(",")).map(e -> Integer.parseInt(e)).collect(Collectors.toList());
+            List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
+                    .collect(Collectors.toList());
             for (Integer id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
             }
             Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(e -> e.getGroupName()).collect(Collectors.joining(","));
+            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
         }
         ClusterGroup mainGroup = groupService.getById(mainGroupId);
         Map<String, UserEnum> userNameMap = UserEnum.getUserNameMap();
@@ -246,7 +241,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/passwd");
 
             // 将返回结果转换为 Integer 类型
-            Integer currentMaxUid = null;
+            int currentMaxUid;
             try {
                 currentMaxUid = Integer.parseInt(result.trim()); // 解析结果
             } catch (NumberFormatException e) {
@@ -255,21 +250,22 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             }
 
             // 更新全局最大 UID
-            if (globalMaxUid == null || (currentMaxUid != null && currentMaxUid > globalMaxUid)) {
+            if (globalMaxUid == null || currentMaxUid > globalMaxUid) {
                 globalMaxUid = currentMaxUid;
             }
         }
-        Integer createUnixUserUid=Math.max(systemInitMaxUid,globalMaxUid)+1;
+        Integer createUnixUserUid = Math.max(systemInitMaxUid, globalMaxUid) + 1;
 
         if (createUnixUserUid > 65535) {
             throw new ServiceException(500,
-                    "create unix user " + username + " failed at Uid{"+createUnixUserUid+"} > 65535");
+                    "create unix user " + username + " failed at Uid{" + createUnixUserUid + "} > 65535");
         }
 
         for (ClusterHostDO clusterHost : hostList) {
             ExecResult execResult = null;
             try {
-                if (!createUnixUser(username, mainGroup.getGroupName(), otherGroup, clusterHost.getHostname(),createUnixUserUid).equals(Constants.FAILED)) {
+                if (!createUnixUser(username, mainGroup.getGroupName(), otherGroup, clusterHost.getHostname(),
+                        createUnixUserUid).equals(Constants.FAILED)) {
                     logger.info("create unix user {} success at {}", username, clusterHost.getHostname());
                 } else {
                     logger.info(execResult.getExecOut());
@@ -323,35 +319,38 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     private boolean hasRepeatUserName(Integer clusterId, String username) {
-        List<ClusterUser> list = this.list(new QueryWrapper<ClusterUser>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.USERNAME, username));
-        if (list.size() > 0) {
-            return true;
-        }
-        return false;
+        List<ClusterUser> list = QueryChain.of(ClusterUser.class)
+                .where(ClusterUser::getClusterId).eq(clusterId)
+                .and(ClusterUser::getUsername).eq(username)
+                .list();
+        return CollUtil.isNotEmpty(list);
     }
 
     @Override
     public Result listPage(Integer clusterId, String username, Integer page, Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
-        List<ClusterUser> list = this.list(new QueryWrapper<ClusterUser>()
-                .like(StringUtils.isNotBlank(username), Constants.USERNAME, username)
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .last("limit " + offset + "," + pageSize));
+
+        QueryChain<ClusterUser> query = QueryChain.of(ClusterUser.class)
+                .where(ClusterUser::getClusterId).eq(clusterId);
+
+        if (StringUtils.isNotBlank(username)) {
+            query.and(ClusterUser::getUsername).like("%" + username + "%");
+        }
+
+        List<ClusterUser> list = query.limit(offset, pageSize).list();
+
         for (ClusterUser clusterUser : list) {
             ClusterGroup mainGroup = userGroupService.queryMainGroup(clusterUser.getId());
             List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
             if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
-                String otherGroups =
-                        otherGroupList.stream().map(e -> e.getGroupName()).collect(Collectors.joining(","));
+                String otherGroups = otherGroupList.stream().map(ClusterGroup::getGroupName)
+                        .collect(Collectors.joining(","));
                 clusterUser.setOtherGroups(otherGroups);
             }
             clusterUser.setMainGroup(mainGroup.getGroupName());
         }
-        long total = this.count(new QueryWrapper<ClusterUser>()
-                .like(StringUtils.isNotBlank(username), Constants.USERNAME, username)
-                .eq(Constants.CLUSTER_ID, clusterId));
+
+        long total = query.count();
         return Result.success(list).put(Constants.TOTAL, total);
     }
 
@@ -369,7 +368,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             createUnixUserCommand.setUsername(clusterUser.getUsername());
             Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-            ExecResult execResult = null;
+            ExecResult execResult;
             try {
                 execResult = (ExecResult) Await.result(execFuture, timeout.duration());
                 if (execResult.getExecResult()) {
@@ -397,7 +396,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
-        ExecResult execResult = null;
+        ExecResult execResult;
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
@@ -415,6 +414,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         this.removeById(id);
         return Result.success();
     }
+
     @Override
     public Result deleteClusterUserOnkubernetes(Integer id) {
         ClusterUser clusterUser = this.getById(id);
@@ -459,9 +459,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         this.removeById(id);
         return Result.success();
     }
+
     @Override
     public List<ClusterUser> listAllUser(Integer clusterId) {
-        return this.lambdaQuery().eq(ClusterUser::getClusterId, clusterId).list();
+        return QueryChain.of(ClusterUser.class)
+                .where(ClusterUser::getClusterId).eq(clusterId)
+                .list();
     }
 
     @Override
@@ -471,7 +474,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
         String otherGroup = "";
         if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
-            otherGroup = otherGroupList.stream().map(e -> e.getGroupName()).collect(Collectors.joining(","));
+            otherGroup = otherGroupList.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
         }
         ActorSelection unixUserActor = ActorUtils.actorSystem
                 .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/unixUserActor");
@@ -483,7 +486,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-        ExecResult execResult = null;
+        ExecResult execResult;
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
@@ -497,9 +500,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
     }
-    public static String createUnixUser(String username, String mainGroup, String otherGroups,String hostname,Integer createUnixUserUid) {
+
+    public static String createUnixUser(String username, String mainGroup, String otherGroups, String hostname,
+            Integer createUnixUserUid) {
         ArrayList<String> commands = new ArrayList<>();
-        if (!isUserExists(username,hostname).equals(Constants.FAILED)) {
+        if (!isUserExists(username, hostname).equals(Constants.FAILED)) {
             commands.add("usermod");
         } else {
             commands.add("useradd");
@@ -520,20 +525,20 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
-    public static String isUserExists(String username,String hostname) {
+
+    public static String isUserExists(String username, String hostname) {
         ArrayList<String> commands = new ArrayList<>();
         commands.add("id");
         commands.add(username);
-        String result = KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
-        return result;
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
-    public static String delUnixUser(String username,String hostname) {
+    public static String delUnixUser(String username, String hostname) {
         ArrayList<String> commands = new ArrayList<>();
         commands.add("userdel");
         commands.add("-r");
         commands.add(username);
-        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
 }

@@ -25,9 +25,8 @@ import org.apache.ibatis.annotations.Param;
 import java.util.Map;
 import java.util.Objects;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 集群服务操作指令主机指令表
@@ -37,7 +36,7 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-04-12 11:28:06
  */
 @Mapper
-public interface ClusterServiceCommandHostCommandMapper extends MPJBaseMapper<ClusterServiceCommandHostCommandEntity> {
+public interface ClusterServiceCommandHostCommandMapper extends BaseMapper<ClusterServiceCommandHostCommandEntity> {
 
     /**
      * 获取指定主机和命令的总进度
@@ -48,14 +47,12 @@ public interface ClusterServiceCommandHostCommandMapper extends MPJBaseMapper<Cl
      */
     default Integer getHostCommandTotalProgressByHostnameAndCommandHostId(@Param("hostname") String hostname,
             @Param("commandHostId") String commandHostId) {
-        // 使用原生SQL查询避免Lambda表达式导致的MyBatis解析问题
-        Object result = selectObjs(Wrappers.<ClusterServiceCommandHostCommandEntity>query()
+        // 使用MyBatis-Flex的QueryChain进行查询
+        Object result = QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
                 .select("SUM(command_progress) as total")
-                .eq("hostname", hostname)
-                .eq("command_host_id", commandHostId))
-                .stream()
-                .findFirst()
-                .orElse(null);
+                .where(ClusterServiceCommandHostCommandEntity::getHostname).eq(hostname)
+                .and(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
+                .oneAs(Object.class);
 
         return result == null ? 0 : ((Number) result).intValue();
     }

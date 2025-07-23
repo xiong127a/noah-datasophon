@@ -17,13 +17,10 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.*;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
+import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.utils.ExecResult;
@@ -35,6 +32,12 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostCommandMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,15 +59,13 @@ public class ClusterServiceCommandHostCommandServiceImpl
         ClusterServiceCommandHostCommandService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostCommandServiceImpl.class);
+    private static final int DEFAULT_LOG_TIMEOUT_SECONDS = 30;
+    private static final String AKKA_TCP_PREFIX = "akka.tcp://datasophon@";
+    private static final String AKKA_USER_WORKER_PATH = "/user/worker/commandLogActor";
+    private static final int MAXIMUM_LOG_LENGTH = 100000;
 
     @Autowired
     ClusterServiceCommandHostCommandMapper hostCommandMapper;
-
-    @Autowired
-    FrameServiceRoleService frameServiceRoleService;
-
-    @Autowired
-    FrameServiceService frameService;
 
     @Autowired
     ClusterInfoService clusterInfoService;
@@ -74,14 +75,21 @@ public class ClusterServiceCommandHostCommandServiceImpl
 
     @Override
     public Result getHostCommandList(String hostname, String commandHostId, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
-        List<ClusterServiceCommandHostCommandEntity> list = this
-                .list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                        .eq(Constants.COMMAND_HOST_ID, commandHostId)
-                        .orderByDesc(Constants.CREATE_TIME)
-                        .last("limit " + offset + "," + pageSize));
-        long total = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                .eq(Constants.COMMAND_HOST_ID, commandHostId));
+        // 创建分页对象
+        Page<ClusterServiceCommandHostCommandEntity> pagingRequest = new Page<>(page, pageSize);
+
+        // 构建查询
+        QueryChain<ClusterServiceCommandHostCommandEntity> query = QueryChain
+                .of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
+                .orderBy(ClusterServiceCommandHostCommandEntity::getCreateTime).desc();
+
+        // 执行分页查询
+        Page<ClusterServiceCommandHostCommandEntity> pageResult = query.page(pagingRequest);
+        List<ClusterServiceCommandHostCommandEntity> list = pageResult.getRecords();
+        long total = pageResult.getTotalRow();
+
+        // 处理结果
         for (ClusterServiceCommandHostCommandEntity hostCommandEntity : list) {
             hostCommandEntity.setCommandStateCode(hostCommandEntity.getCommandState().getValue());
 
@@ -98,68 +106,48 @@ public class ClusterServiceCommandHostCommandServiceImpl
      */
     private void updateCommandProgress(ClusterServiceCommandHostCommandEntity hostCommandEntity) {
         try {
-            // 对所有最终状态的命令（成功、失败、取消），进度都应设为100%
-            // 前端通过状态判断颜色（成功-绿色，失败-红色，取消-黄色）
-            if ((CommandState.SUCCESS.equals(hostCommandEntity.getCommandState()) ||
+            // 确保状态和进度一致，完成或失败的命令应该显示100%
+            if (CommandState.SUCCESS.equals(hostCommandEntity.getCommandState()) ||
                     CommandState.FAILED.equals(hostCommandEntity.getCommandState()) ||
-                    CommandState.CANCEL.equals(hostCommandEntity.getCommandState())) &&
-                    (hostCommandEntity.getCommandProgress() == null || hostCommandEntity.getCommandProgress() < 100)) {
+                    CommandState.CANCEL.equals(hostCommandEntity.getCommandState())) {
 
-                hostCommandEntity.setCommandProgress(100);
-
-                // 更新数据库进度值
-                this.updateById(hostCommandEntity);
-                logger.info("命令 {} 状态为 {}，进度设为100%以保持一致性",
-                        hostCommandEntity.getHostCommandId(),
-                        hostCommandEntity.getCommandState().getDesc());
-            }
-
-            // 确保运行中的命令至少显示一些进度
-            else if (CommandState.RUNNING.equals(hostCommandEntity.getCommandState())
-                    && (hostCommandEntity.getCommandProgress() == null
-                            || hostCommandEntity.getCommandProgress() == 0)) {
-                hostCommandEntity.setCommandProgress(10);
-                // 更新数据库进度值
-                this.updateById(hostCommandEntity);
-            }
-
-            // 确保命令进度不为空
-            if (hostCommandEntity.getCommandProgress() == null) {
-                hostCommandEntity.setCommandProgress(0);
-                // 更新数据库进度值
-                this.updateById(hostCommandEntity);
+                if (hostCommandEntity.getCommandProgress() == null || hostCommandEntity.getCommandProgress() != 100) {
+                    hostCommandEntity.setCommandProgress(100);
+                    updateById(hostCommandEntity);
+                }
             }
         } catch (Exception e) {
-            logger.error("更新命令进度时出错: " + e.getMessage(), e);
-            // 出错时确保至少有默认进度
-            if (hostCommandEntity.getCommandProgress() == null) {
-                hostCommandEntity.setCommandProgress(0);
-            }
+            logger.error("更新命令进度时出错", e);
         }
     }
 
     @Override
     public List<ClusterServiceCommandHostCommandEntity> getHostCommandListByCommandId(String commandId) {
-        return this.lambdaQuery().eq(ClusterServiceCommandHostCommandEntity::getCommandId, commandId).list();
+        return QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getCommandId).eq(commandId)
+                .list();
     }
 
     @Override
     public ClusterServiceCommandHostCommandEntity getByHostCommandId(String hostCommandId) {
-        return this.getOne(new QueryWrapper<ClusterServiceCommandHostCommandEntity>().eq(Constants.HOST_COMMAND_ID,
-                hostCommandId));
+        return QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getHostCommandId).eq(hostCommandId)
+                .one();
     }
 
     @Override
     public void updateByHostCommandId(ClusterServiceCommandHostCommandEntity hostCommand) {
-        this.update(hostCommand, new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                .eq(Constants.HOST_COMMAND_ID, hostCommand.getHostCommandId()));
+        QueryChain<ClusterServiceCommandHostCommandEntity> updateCondition = QueryChain
+                .of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getHostCommandId).eq(hostCommand.getHostCommandId());
+        this.update(hostCommand, updateCondition);
     }
 
     @Override
     public Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId) {
-        long size = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                .eq(Constants.HOSTNAME, hostname).eq(Constants.COMMAND_HOST_ID, commandHostId));
-        return size;
+        return QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
+                .count();
     }
 
     @Override
@@ -170,9 +158,10 @@ public class ClusterServiceCommandHostCommandServiceImpl
     @Override
     public Result getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        ClusterServiceCommandHostCommandEntity hostCommand = this
-                .getOne(new QueryWrapper<ClusterServiceCommandHostCommandEntity>().eq(Constants.HOST_COMMAND_ID,
-                        hostCommandId));
+        ClusterServiceCommandHostCommandEntity hostCommand = QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getHostCommandId).eq(hostCommandId)
+                .one();
+
         ClusterServiceCommandEntity commandEntity = commandService.getCommandById(hostCommand.getCommandId());
 
         ExecResult logResult = new ExecResult();
@@ -180,7 +169,7 @@ public class ClusterServiceCommandHostCommandServiceImpl
         String serviceRoleName = hostCommand.getServiceRoleName();
         String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
 
-        Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
+        Timeout timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
         if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             String baseDir = System.getProperty("user.dir");
             String logStr = KubernetesMinaUtils
@@ -196,7 +185,7 @@ public class ClusterServiceCommandHostCommandServiceImpl
             logger.info("Start to get {} install log from host {}", serviceRoleName, hostCommand.getHostname());
             ActorSelection configActor = ActorUtils.actorSystem
                     .actorSelection(
-                            "akka.tcp://datasophon@" + hostCommand.getHostname() + ":2552/user/worker/logActor");
+                            AKKA_TCP_PREFIX + hostCommand.getHostname() + ":2552/user/worker/logActor");
             Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
             logResult = (ExecResult) Await.result(logFuture, timeout.duration());
         }
@@ -208,17 +197,17 @@ public class ClusterServiceCommandHostCommandServiceImpl
 
     @Override
     public List<ClusterServiceCommandHostCommandEntity> findFailedHostCommand(String hostname, String commandHostId) {
-        return this.list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                .eq(Constants.HOSTNAME, hostname)
-                .eq(Constants.COMMAND_HOST_ID, commandHostId)
-                .eq(Constants.COMMAND_STATE, CommandState.FAILED));
+        return QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
+                .and(ClusterServiceCommandHostCommandEntity::getCommandState).eq(CommandState.FAILED)
+                .list();
     }
 
     @Override
     public List<ClusterServiceCommandHostCommandEntity> findCanceledHostCommand(String hostname, String commandHostId) {
-        return this.list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                .eq(Constants.HOSTNAME, hostname)
-                .eq(Constants.COMMAND_HOST_ID, commandHostId)
-                .eq(Constants.COMMAND_STATE, CommandState.CANCEL));
+        return QueryChain.of(ClusterServiceCommandHostCommandEntity.class)
+                .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
+                .and(ClusterServiceCommandHostCommandEntity::getCommandState).eq(CommandState.CANCEL)
+                .list();
     }
 }

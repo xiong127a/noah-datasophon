@@ -17,13 +17,17 @@
 
 package com.datasophon.common.command;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serial;
 import java.io.Serializable;
 
-import lombok.Data;
-
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class InstallServiceRoleCommandResult extends BaseCommandResult implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -2524637560247096696L;
     private InstallServiceRoleCommand installServiceRoleCommand;
 

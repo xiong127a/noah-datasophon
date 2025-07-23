@@ -17,13 +17,12 @@
 
 package com.datasophon.api.master;
 
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
-import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.command.HdfsEcCommand;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.mybatisflex.core.query.QueryChain;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,17 +47,17 @@ public class HdfsECActor extends AbstractActor {
 
     private void handleHdfsEcCommand(HdfsEcCommand hdfsEcCommand) {
         try {
-            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
-                    .getBean(ClusterServiceRoleInstanceService.class);
             // list datanode
-            List<ClusterServiceRoleInstanceEntity> datanodes = roleInstanceService.lambdaQuery()
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceId, hdfsEcCommand.getServiceInstanceId())
-                    .eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, "DataNode")
+            List<ClusterServiceRoleInstanceEntity> datanodes = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(hdfsEcCommand.getServiceInstanceId())
+                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq("DataNode")
                     .list();
-            TreeSet<String> list = datanodes.stream().map(e -> e.getHostname())
+
+            TreeSet<String> list = datanodes.stream()
+                    .map(ClusterServiceRoleInstanceEntity::getHostname)
                     .collect(Collectors.toCollection(TreeSet::new));
-            ProcessUtils.hdfsEcMethond(hdfsEcCommand.getServiceInstanceId(), roleInstanceService, list, "whitelist",
-                    "NameNode");
+
+            ProcessUtils.hdfsEcMethond(hdfsEcCommand.getServiceInstanceId(), list, "whitelist", "NameNode");
         } catch (Exception e) {
             logger.error("Error handling HdfsEcCommand", e);
         }

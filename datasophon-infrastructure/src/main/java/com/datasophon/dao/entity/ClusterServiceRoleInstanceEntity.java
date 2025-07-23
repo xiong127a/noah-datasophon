@@ -26,11 +26,11 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
-@TableName("t_ddh_cluster_service_role_instance")
+@Table("t_ddh_cluster_service_role_instance")
 @Data
 public class ClusterServiceRoleInstanceEntity implements Serializable {
 
@@ -39,7 +39,7 @@ public class ClusterServiceRoleInstanceEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 服务角色名称
@@ -54,7 +54,7 @@ public class ClusterServiceRoleInstanceEntity implements Serializable {
      */
     private ServiceRoleState serviceRoleState;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer serviceRoleStateCode;
     /**
      * 更新时间
@@ -85,7 +85,7 @@ public class ClusterServiceRoleInstanceEntity implements Serializable {
 
     private NeedRestart needRestart;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String roleGroupName;
 
 }

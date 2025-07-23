@@ -23,8 +23,8 @@ import org.apache.pekko.util.Timeout;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
@@ -55,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 @Service("clusterYarnQueueService")
 public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMapper, ClusterYarnQueue>
         implements
-            ClusterYarnQueueService {
+        ClusterYarnQueueService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueServiceImpl.class);
 
@@ -65,12 +65,14 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     @Override
     public Result listByPage(Integer clusterId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
-        List<ClusterYarnQueue> list = this.list(new QueryWrapper<ClusterYarnQueue>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .orderByDesc(Constants.CREATE_TIME)
-                .last("limit " + offset + "," + pageSize));
-        long count = this.count(new QueryWrapper<ClusterYarnQueue>()
-                .eq(Constants.CLUSTER_ID, clusterId));
+
+        QueryChain<ClusterYarnQueue> query = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .orderBy(ClusterYarnQueue::getCreateTime).desc();
+
+        List<ClusterYarnQueue> list = query.limit(offset, pageSize).list();
+        long count = query.count();
+
         for (ClusterYarnQueue clusterYarnQueue : list) {
             String minResources = clusterYarnQueue.getMinCore() + "Core," + clusterYarnQueue.getMinMem() + "GB";
             String maxResources = clusterYarnQueue.getMaxCore() + "Core," + clusterYarnQueue.getMaxMem() + "GB";
@@ -82,8 +84,10 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public Result saveQueue(ClusterYarnQueue clusterYarnQueue) {
-        List<ClusterYarnQueue> list = this
-                .list(new QueryWrapper<ClusterYarnQueue>().eq(Constants.QUEUE_NAME, clusterYarnQueue.getQueueName()));
+        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getQueueName).eq(clusterYarnQueue.getQueueName())
+                .list();
+
         if (Objects.nonNull(list) && list.size() == 1) {
             return Result.error(Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
         }
@@ -95,11 +99,12 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public Result refreshQueues(Integer clusterId) throws Exception {
-        List<ClusterYarnQueue> list = this.list(new QueryWrapper<ClusterYarnQueue>()
-                .eq(Constants.CLUSTER_ID, clusterId));
+        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .list();
         // 查询resourcemanager节点
-        List<ClusterServiceRoleInstanceEntity> roleList =
-                roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
 
         // 构建configfilemap
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -168,14 +173,13 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public ClusterYarnQueue getQueueByName(Integer clusterId, String queueName) {
-        List<ClusterYarnQueue> list = this
-                .list(new QueryWrapper<ClusterYarnQueue>()
-                        .eq(Constants.QUEUE_NAME, queueName)
-                        .eq(Constants.CLUSTER_ID, clusterId));
+        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getQueueName).eq(queueName)
+                .and(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .list();
         if (CollUtil.isNotEmpty(list)) {
             return list.getFirst();
         }
-
         return null;
     }
 }

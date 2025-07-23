@@ -19,8 +19,6 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceDashboardService;
@@ -30,7 +28,8 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
 import com.datasophon.dao.mapper.ClusterServiceDashboardMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -42,8 +41,6 @@ public class ClusterServiceDashboardServiceImpl
                 implements
                 ClusterServiceDashboardService {
 
-        @Autowired
-        ClusterServiceDashboardService dashboardService;
 
         @Override
         public Result getDashboardUrl(Integer clusterId) {
@@ -55,9 +52,9 @@ public class ClusterServiceDashboardServiceImpl
                         serviceName = "KUBERNETES";
                 }
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = dashboardService
-                                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME,
-                                                serviceName));
+                ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
+                                .where(ClusterServiceDashboard::getServiceName).eq(serviceName)
+                                .one();
 
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
@@ -67,9 +64,10 @@ public class ClusterServiceDashboardServiceImpl
         @Override
         public Result getDatasophonDashboard(Integer clusterId) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = dashboardService
-                                .getOne(new QueryWrapper<ClusterServiceDashboard>().eq(Constants.SERVICE_NAME,
-                                                "DATASOPHON"));
+                ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
+                                .where(ClusterServiceDashboard::getServiceName).eq("DATASOPHON")
+                                .one();
+
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
                 return Result.success(dashboardUrl);

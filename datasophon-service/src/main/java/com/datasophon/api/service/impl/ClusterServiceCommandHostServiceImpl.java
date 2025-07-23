@@ -17,9 +17,9 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.Constants;
@@ -28,10 +28,13 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service("clusterServiceCommandHostService")
 public class ClusterServiceCommandHostServiceImpl
@@ -39,6 +42,12 @@ public class ClusterServiceCommandHostServiceImpl
         ServiceImpl<ClusterServiceCommandHostMapper, ClusterServiceCommandHostEntity>
         implements
         ClusterServiceCommandHostService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostServiceImpl.class);
+
+    // 定义命令进度常量
+    private static final Long PROGRESS_COMPLETE = 100L;
+    private static final Long PROGRESS_INITIAL = 0L;
 
     @Autowired
     private ClusterServiceCommandHostCommandService hostCommandService;
@@ -48,21 +57,27 @@ public class ClusterServiceCommandHostServiceImpl
 
     @Override
     public Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
-        LambdaQueryChainWrapper<ClusterServiceCommandHostEntity> wrapper = this.lambdaQuery()
-                .eq(ClusterServiceCommandHostEntity::getCommandId, commandId);
-        long total = wrapper.count();
-        List<ClusterServiceCommandHostEntity> list = wrapper
-                .orderByDesc(ClusterServiceCommandHostEntity::getCreateTime)
-                .last("limit " + offset + "," + pageSize)
-                .list();
+        // 使用分页对象代替手动计算偏移量
+        com.mybatisflex.core.paginate.Page<ClusterServiceCommandHostEntity> flexPage = new com.mybatisflex.core.paginate.Page<>(
+                page, pageSize);
+
+        // 构建查询条件并执行分页查询
+        com.mybatisflex.core.paginate.Page<ClusterServiceCommandHostEntity> resultPage = QueryChain
+                .of(ClusterServiceCommandHostEntity.class)
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
+                .orderBy(ClusterServiceCommandHostEntity::getCreateTime).desc()
+                .page(flexPage);
+
+        // 处理查询结果
+        List<ClusterServiceCommandHostEntity> list = resultPage.getRecords();
         for (ClusterServiceCommandHostEntity commandHostEntity : list) {
             // 实时聚合主机命令进度和状态（只做内存聚合，不做数据库update）
             calculateHostCommandActualProgress(commandHostEntity, false);
             calculateRealTimeHostCommandState(commandHostEntity, false);
             commandHostEntity.setCommandStateCode(commandHostEntity.getCommandState().getValue());
         }
-        return Result.success(list).put(Constants.TOTAL, total);
+
+        return Result.success(list).put(Constants.TOTAL, resultPage.getTotalRow());
     }
 
     /**
@@ -72,47 +87,37 @@ public class ClusterServiceCommandHostServiceImpl
             boolean updateDb) {
         try {
             Long oldProgress = commandHostEntity.getCommandProgress();
+            CommandState currentState = commandHostEntity.getCommandState();
 
-            if (CommandState.SUCCESS.equals(commandHostEntity.getCommandState())) {
-                commandHostEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
+            // 对于已完成状态（成功、失败、取消），直接设置进度为100%
+            if (isTerminalState(currentState)) {
+                commandHostEntity.setCommandProgress(PROGRESS_COMPLETE);
+                if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_COMPLETE)) {
                     this.updateById(commandHostEntity);
-                    System.out.println("主机命令 " + commandHostEntity.getCommandHostId() +
-                            " 状态为成功，进度设为100%并更新数据库");
-                }
-                return;
-            } else if (CommandState.FAILED.equals(commandHostEntity.getCommandState())) {
-                commandHostEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
-                    this.updateById(commandHostEntity);
-                    System.out.println("主机命令 " + commandHostEntity.getCommandHostId() +
-                            " 状态为失败，进度设为100%并更新数据库");
-                }
-                return;
-            } else if (CommandState.CANCEL.equals(commandHostEntity.getCommandState())) {
-                commandHostEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
-                    this.updateById(commandHostEntity);
-                    System.out.println("主机命令 " + commandHostEntity.getCommandHostId() +
-                            " 状态为取消，进度设为100%并更新数据库");
+                    logProgressUpdate(commandHostEntity, currentState.toString());
                 }
                 return;
             }
-            List<ClusterServiceCommandHostCommandEntity> hostCommands = hostCommandService.list(
-                    new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                            .eq("command_host_id", commandHostEntity.getCommandHostId()));
+
+            // 获取该主机命令下的所有子命令
+            List<ClusterServiceCommandHostCommandEntity> hostCommands = getHostCommands(
+                    commandHostEntity.getCommandHostId());
+
+            // 如果没有子命令，设置进度为0%
             if (hostCommands == null || hostCommands.isEmpty()) {
-                commandHostEntity.setCommandProgress(0L);
-                if (updateDb && (oldProgress == null || oldProgress != 0L)) {
+                commandHostEntity.setCommandProgress(PROGRESS_INITIAL);
+                if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_INITIAL)) {
                     this.updateById(commandHostEntity);
-                    System.out.println("主机命令 " + commandHostEntity.getCommandHostId() +
-                            " 无子命令，进度设为0%并更新数据库");
+                    logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getCommandHostId());
                 }
                 return;
             }
+
+            // 计算所有子命令的平均进度
             long totalProgress = 0;
             int completedCount = 0;
             int totalCount = hostCommands.size();
+
             for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommands) {
                 if (hostCommand.getCommandProgress() != null) {
                     totalProgress += hostCommand.getCommandProgress();
@@ -121,20 +126,22 @@ public class ClusterServiceCommandHostServiceImpl
                     }
                 }
             }
-            long avgProgress = totalCount > 0 ? totalProgress / totalCount : 0;
-            long completedProgress = totalCount > 0 ? (completedCount * 100L) / totalCount : 0;
+
+            // 计算平均进度和完成百分比
+            long avgProgress = calculateAverage(totalProgress, totalCount);
+            long completedProgress = calculatePercentage(completedCount, totalCount);
             long finalProgress = Math.max(avgProgress, completedProgress);
+
             commandHostEntity.setCommandProgress(finalProgress);
 
             // 如果需要更新数据库且进度有变化
-            if (updateDb && (oldProgress == null || oldProgress != finalProgress)) {
+            if (shouldUpdateProgress(updateDb, oldProgress, finalProgress)) {
                 this.updateById(commandHostEntity);
-                System.out.println("主机命令 " + commandHostEntity.getCommandHostId() +
-                        " 进度更新为 " + finalProgress + "%并更新数据库");
+                logger.info("主机命令 {} 进度更新为 {}% 并更新数据库",
+                        commandHostEntity.getCommandHostId(), finalProgress);
             }
         } catch (Exception e) {
-            System.err.println("计算主机命令进度时出错: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("计算主机命令进度时出错: {}", e.getMessage(), e);
         }
     }
 
@@ -145,22 +152,28 @@ public class ClusterServiceCommandHostServiceImpl
         try {
             CommandState oldState = hostCommandEntity.getCommandState();
 
-            List<ClusterServiceCommandHostCommandEntity> subCommands = hostCommandService.list(
-                    new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
-                            .eq("command_host_id", hostCommandEntity.getCommandHostId()));
+            // 获取该主机命令下的所有子命令
+            List<ClusterServiceCommandHostCommandEntity> subCommands = getHostCommands(
+                    hostCommandEntity.getCommandHostId());
+
             if (subCommands == null || subCommands.isEmpty()) {
-                hostCommandEntity.setCommandState(CommandState.RUNNING);
-                hostCommandEntity.setCommandStateCode(CommandState.RUNNING.getValue());
+                updateEntityState(hostCommandEntity, CommandState.RUNNING);
                 return;
             }
+
+            // 统计子命令状态
             boolean allCompleted = true;
             int failedCount = 0;
             int canceledCount = 0;
             int successCount = 0;
+
             for (ClusterServiceCommandHostCommandEntity subCommand : subCommands) {
-                if (subCommand.getCommandProgress() == null || subCommand.getCommandProgress() < 100) {
+                // 检查是否所有子命令都已完成
+                if (isCommandIncomplete(subCommand)) {
                     allCompleted = false;
                 }
+
+                // 统计不同状态的子命令数量
                 if (CommandState.FAILED.equals(subCommand.getCommandState())) {
                     failedCount++;
                 } else if (CommandState.CANCEL.equals(subCommand.getCommandState())) {
@@ -172,44 +185,39 @@ public class ClusterServiceCommandHostServiceImpl
                 }
             }
 
-            boolean stateChanged = false;
-
+            // 根据统计结果确定主机命令的状态
+            CommandState newState;
             if (allCompleted) {
                 if (failedCount > 0) {
-                    hostCommandEntity.setCommandState(CommandState.FAILED);
-                    hostCommandEntity.setCommandStateCode(CommandState.FAILED.getValue());
-                    stateChanged = !CommandState.FAILED.equals(oldState);
+                    newState = CommandState.FAILED;
                 } else if (canceledCount > 0) {
-                    hostCommandEntity.setCommandState(CommandState.CANCEL);
-                    hostCommandEntity.setCommandStateCode(CommandState.CANCEL.getValue());
-                    stateChanged = !CommandState.CANCEL.equals(oldState);
+                    newState = CommandState.CANCEL;
                 } else {
-                    hostCommandEntity.setCommandState(CommandState.SUCCESS);
-                    hostCommandEntity.setCommandStateCode(CommandState.SUCCESS.getValue());
-                    stateChanged = !CommandState.SUCCESS.equals(oldState);
+                    newState = CommandState.SUCCESS;
                 }
             } else {
-                hostCommandEntity.setCommandState(CommandState.RUNNING);
-                hostCommandEntity.setCommandStateCode(CommandState.RUNNING.getValue());
-                stateChanged = !CommandState.RUNNING.equals(oldState);
+                newState = CommandState.RUNNING;
             }
+
+            boolean stateChanged = !Objects.equals(oldState, newState);
+            updateEntityState(hostCommandEntity, newState);
 
             // 如果需要更新数据库且状态发生了变化
             if (updateDb && stateChanged) {
                 this.updateById(hostCommandEntity);
-                System.out.println("主机命令 " + hostCommandEntity.getCommandHostId() +
-                        " 状态从 " + oldState + " 变为 " + hostCommandEntity.getCommandState() +
-                        "，已更新数据库");
+                logger.info("主机命令 {} 状态从 {} 变为 {}，已更新数据库",
+                        hostCommandEntity.getCommandHostId(), oldState, newState);
             }
         } catch (Exception e) {
-            System.err.println("实时计算主机命令状态出错: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("实时计算主机命令状态出错: {}", e.getMessage(), e);
         }
     }
 
     @Override
     public Long getCommandHostSizeByCommandId(String commandId) {
-        return this.lambdaQuery().eq(ClusterServiceCommandHostEntity::getCommandId, commandId).count();
+        return QueryChain.of(ClusterServiceCommandHostEntity.class)
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
+                .count();
     }
 
     @Override
@@ -219,18 +227,81 @@ public class ClusterServiceCommandHostServiceImpl
 
     @Override
     public List<ClusterServiceCommandHostEntity> findFailedCommandHost(String commandId) {
-        return this.lambdaQuery()
-                .eq(ClusterServiceCommandHostEntity::getCommandId, commandId)
-                .eq(ClusterServiceCommandHostEntity::getCommandState, CommandState.FAILED)
+        return QueryChain.of(ClusterServiceCommandHostEntity.class)
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
+                .and(ClusterServiceCommandHostEntity::getCommandState).eq(CommandState.FAILED)
                 .list();
     }
 
     @Override
     public List<ClusterServiceCommandHostEntity> findCanceledCommandHost(String commandId) {
-        return this.lambdaQuery()
-                .eq(ClusterServiceCommandHostEntity::getCommandId, commandId)
-                .eq(ClusterServiceCommandHostEntity::getCommandState, CommandState.CANCEL)
+        return QueryChain.of(ClusterServiceCommandHostEntity.class)
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
+                .and(ClusterServiceCommandHostEntity::getCommandState).eq(CommandState.CANCEL)
                 .list();
     }
 
+    // ========== 辅助方法 ==========
+
+    /**
+     * 判断命令是否处于终止状态（成功、失败或取消）
+     */
+    private boolean isTerminalState(CommandState state) {
+        return CommandState.SUCCESS.equals(state)
+                || CommandState.FAILED.equals(state)
+                || CommandState.CANCEL.equals(state);
+    }
+
+    /**
+     * 判断是否需要更新进度
+     */
+    private boolean shouldUpdateProgress(boolean updateDb, Long oldProgress, Long newProgress) {
+        return updateDb && (oldProgress == null || !oldProgress.equals(newProgress));
+    }
+
+    /**
+     * 记录进度更新日志
+     */
+    private void logProgressUpdate(ClusterServiceCommandHostEntity entity, String state) {
+        logger.info("主机命令 {} 状态为{}，进度设为100%并更新数据库",
+                entity.getCommandHostId(), state);
+    }
+
+    /**
+     * 获取主机命令的所有子命令
+     */
+    private List<ClusterServiceCommandHostCommandEntity> getHostCommands(String commandHostId) {
+        return hostCommandService.list(
+                QueryWrapper.create()
+                        .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId));
+    }
+
+    /**
+     * 计算平均值，避免除零错误
+     */
+    private long calculateAverage(long total, int count) {
+        return count > 0 ? total / count : 0;
+    }
+
+    /**
+     * 计算百分比，避免除零错误
+     */
+    private long calculatePercentage(int part, int total) {
+        return total > 0 ? (part * PROGRESS_COMPLETE) / total : 0;
+    }
+
+    /**
+     * 判断命令是否未完成
+     */
+    private boolean isCommandIncomplete(ClusterServiceCommandHostCommandEntity command) {
+        return command.getCommandProgress() == null || command.getCommandProgress() < PROGRESS_COMPLETE;
+    }
+
+    /**
+     * 更新实体状态
+     */
+    private void updateEntityState(ClusterServiceCommandHostEntity entity, CommandState state) {
+        entity.setCommandState(state);
+        entity.setCommandStateCode(state.getValue());
+    }
 }

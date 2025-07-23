@@ -19,16 +19,13 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
-import com.datasophon.api.master.HostConnectActor;
 import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
@@ -42,7 +39,6 @@ import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
-import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
@@ -59,9 +55,10 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
-import com.datasophon.dao.mapper.InstallStepMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorRef;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,9 +83,6 @@ public class InstallServiceImpl implements InstallService {
     // 添加一个原子计数器，用于控制日志打印频率
     private static final AtomicInteger logCounter = new AtomicInteger(0);
     private static final int LOG_PRINT_INTERVAL = 10;
-
-    @Autowired
-    InstallStepMapper stepMapper;
 
     @Autowired
     ClusterInfoService clusterInfoService;
@@ -118,8 +112,9 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result getInstallStep(Integer type) {
-        List<InstallStepEntity> list = stepMapper
-                .selectList(new QueryWrapper<InstallStepEntity>().eq(Constants.INSTALL_TYPE, type));
+        List<InstallStepEntity> list = QueryChain.of(InstallStepEntity.class)
+                .where(InstallStepEntity::getInstallType).eq(type)
+                .list();
         return Result.success(list);
     }
 
@@ -518,7 +513,7 @@ public class InstallServiceImpl implements InstallService {
                                 }
                             }
                         })
-                        .collect(Collectors.toList());
+                        .toList();
 
                 if (pendingHosts.isEmpty()) {
                     // 每10次请求只打印一次日志
@@ -1079,76 +1074,6 @@ public class InstallServiceImpl implements InstallService {
         return Result.success(list);
     }
 
-    public Result rehostCheck(
-            Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
-
-        // 获取集群信息和部署模式
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
-        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream().sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue).filter(e -> e.getCheckResult().getCode() == 10001)
-                .collect(Collectors.toList());
-        String clusterCode = clusterInfo.getClusterCode();
-        String depType = clusterInfo.getDepType();
-
-        if (Constants.KUBERNETES_MODE.equals(depType)) {
-            // Kubernetes模式：直接更新校验结果，不进行SSH连接测试
-            logger.info("Kubernetes mode detected, updating host check results directly");
-
-            for (String hostname : hostnames.split(",")) {
-                if (map.containsKey(hostname)) {
-                    HostInfo hostInfo = map.get(hostname);
-
-                    // 检查主机是否已受管
-                    ClusterHostDO existingHost = hostService.getClusterHostByHostname(hostname);
-
-                    if (existingHost != null && existingHost.getClusterId().equals(clusterId)) {
-                        // 主机已在当前集群中受管 - 重复添加
-                        hostInfo.setCheckResult(
-                                new CheckResult(
-                                        Status.CONNECTION_FAILED.getCode(),
-                                        "主机已在当前集群中受管，请勿重复添加"));
-                        logger.info("Host {} is already managed in current Kubernetes cluster {}",
-                                hostname, clusterId);
-                    } else if (existingHost != null) {
-                        // 主机已在其他集群中受管
-                        hostInfo.setCheckResult(
-                                new CheckResult(
-                                        Status.CONNECTION_FAILED.getCode(),
-                                        "主机已在其他集群中受管"));
-                        logger.info("Host {} is already managed in another cluster {}",
-                                hostname, existingHost.getClusterId());
-                    } else {
-                        // 主机未受管，可以添加
-                        hostInfo.setCheckResult(
-                                new CheckResult(
-                                        Status.CHECK_HOST_SUCCESS.getCode(),
-                                        Status.CHECK_HOST_SUCCESS.getMsg()));
-                        logger.info("Host {} is not managed in Kubernetes mode, can be added", hostname);
-                    }
-                }
-            }
-        } else {
-            // PVM模式：开启主机校验，使用Actor进行SSH连接测试
-            logger.info("PVM mode detected, starting SSH-based host check");
-
-            for (String hostname : hostnames.split(",")) {
-                if (map.containsKey(hostname)) {
-                    ActorRef hostActor = ActorUtils.getLocalActor(HostConnectActor.class, "hostActor-" + hostname);
-                    HostInfo hostInfo = map.get(hostname);
-                    hostInfo.setCheckResult(
-                            new CheckResult(
-                                    Status.START_CHECK_HOST.getCode(),
-                                    Status.START_CHECK_HOST.getMsg()));
-                    hostActor.tell(new HostCheckCommand(hostInfo, clusterCode), ActorRef.noSender());
-                }
-            }
-        }
-
-        return Result.success();
-    }
-
     @Override
     public Result dispatcherHostAgentList(
             Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
@@ -1277,7 +1202,6 @@ public class InstallServiceImpl implements InstallService {
                 totalFailedItems++;
 
                 logger.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getIp());
-                continue;
             }
         }
         return Result.success().put("hostCheckCompleted", true);

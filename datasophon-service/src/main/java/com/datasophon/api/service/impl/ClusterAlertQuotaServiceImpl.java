@@ -20,10 +20,9 @@ package com.datasophon.api.service.impl;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.service.AlertGroupService;
@@ -67,6 +66,10 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
             ClusterAlertQuotaService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertQuotaServiceImpl.class);
+    
+    private static final String ALERT_RULE_FILE_SUFFIX = ".yml";
+    private static final String ALERT_CONFIG_FORMAT = "prometheus";
+    private static final String ALERT_OUTPUT_DIRECTORY = "alert_rules";
 
     @Autowired
     private AlertGroupService alertGroupService;
@@ -77,166 +80,249 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
     @Override
     public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page,
                                     Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
-
-        LambdaQueryChainWrapper<ClusterAlertQuota> wrapper = this.lambdaQuery()
-                .eq(alertGroupId != null, ClusterAlertQuota::getAlertGroupId, alertGroupId)
-                .eq(noticeGroupId != null, ClusterAlertQuota::getNoticeGroupId, noticeGroupId)
-                .like(StringUtils.isNotBlank(quotaName), ClusterAlertQuota::getAlertQuotaName, quotaName);
-
-        long count = wrapper.count() == null ? 0 : wrapper.count();
-        List<ClusterAlertQuota> alertQuotaList = wrapper.last("limit " + offset + "," + pageSize).list();
+        // 使用分页对象代替手动计算偏移量
+        Page<ClusterAlertQuota> flexPage = new Page<>(page, pageSize);
+        
+        // 构建查询条件
+        QueryChain<ClusterAlertQuota> query = QueryChain.of(ClusterAlertQuota.class);
+        
+        // 按条件筛选
+        if (alertGroupId != null) {
+            query.where(ClusterAlertQuota::getAlertGroupId).eq(alertGroupId);
+        }
+        
+        if (noticeGroupId != null) {
+            query.and(ClusterAlertQuota::getNoticeGroupId).eq(noticeGroupId);
+        }
+        
+        if (StringUtils.isNotBlank(quotaName)) {
+            query.and(ClusterAlertQuota::getAlertQuotaName).like(quotaName);
+        }
+        
+        // 执行分页查询
+        Page<ClusterAlertQuota> resultPage = query.page(flexPage);
+        List<ClusterAlertQuota> alertQuotaList = resultPage.getRecords();
+        
         if (CollectionUtils.isEmpty(alertQuotaList)) {
             return Result.successEmptyCount();
         }
+        
         // 查询告警组
-        Set<Integer> alertGroupIdList =
-                alertQuotaList.stream().map(ClusterAlertQuota::getAlertGroupId).collect(Collectors.toSet());
+        Set<Integer> alertGroupIdList = alertQuotaList.stream()
+                .map(ClusterAlertQuota::getAlertGroupId)
+                .collect(Collectors.toSet());
+                
         // 查询通知组
-        List<Integer> noticeGroupIdList =
-                alertQuotaList.stream().map(ClusterAlertQuota::getNoticeGroupId).collect(Collectors.toList());
+        List<Integer> noticeGroupIdList = alertQuotaList.stream()
+                .map(ClusterAlertQuota::getNoticeGroupId)
+                .collect(Collectors.toList());
+                
         Collection<AlertGroupEntity> alertGroupEntityList = alertGroupService.listByIds(alertGroupIdList);
         Collection<NoticeGroupEntity> noticeGroupEntityList = noticeGroupService.listByIds(noticeGroupIdList);
+        
         if (CollectionUtils.isNotEmpty(alertGroupEntityList)) {
-            Map<Integer, AlertGroupEntity> alertIdMap = alertGroupEntityList.stream()
-                    .collect(Collectors.toMap(AlertGroupEntity::getId, a -> a, (a1, a2) -> a1));
-            Map<Integer, NoticeGroupEntity> noticeIdMap = noticeGroupEntityList.stream()
-                    .collect(Collectors.toMap(NoticeGroupEntity::getId, a -> a, (a1, a2) -> a1));
-            alertQuotaList.forEach(a -> {
-                AlertGroupEntity alertGroupEntity = alertIdMap.get(a.getAlertGroupId());
-                NoticeGroupEntity noticeGroupEntity = noticeIdMap.get(a.getNoticeGroupId());
-                if (Objects.nonNull(alertGroupEntity)) {
-                    a.setAlertGroupName(alertGroupEntity.getAlertGroupName());
+            // 使用更具描述性的映射变量名
+            Map<Integer, AlertGroupEntity> alertGroupById = alertGroupEntityList.stream()
+                    .collect(Collectors.toMap(AlertGroupEntity::getId, entity -> entity, (a1, a2) -> a1));
+                    
+            Map<Integer, NoticeGroupEntity> noticeGroupById = noticeGroupEntityList.stream()
+                    .collect(Collectors.toMap(NoticeGroupEntity::getId, entity -> entity, (a1, a2) -> a1));
+            
+            // 填充告警指标的相关属性
+            alertQuotaList.forEach(quota -> {
+                AlertGroupEntity alertGroup = alertGroupById.get(quota.getAlertGroupId());
+                NoticeGroupEntity noticeGroup = noticeGroupById.get(quota.getNoticeGroupId());
+                
+                if (Objects.nonNull(alertGroup)) {
+                    quota.setAlertGroupName(alertGroup.getAlertGroupName());
                 }
-                if (Objects.nonNull(noticeGroupEntity)) {
-                    a.setNoticeGroupName(noticeGroupEntity.getNoticeGroupName());
+                
+                if (Objects.nonNull(noticeGroup)) {
+                    quota.setNoticeGroupName(noticeGroup.getNoticeGroupName());
                 }
-                a.setQuotaStateCode(a.getQuotaState().getValue());
+                
+                quota.setQuotaStateCode(quota.getQuotaState().getValue());
             });
         }
-        return Result.success(alertQuotaList).put(Constants.TOTAL, count);
+        
+        return Result.success(alertQuotaList).put(Constants.TOTAL, resultPage.getTotalRow());
     }
 
+    /**
+     * 根据告警指标生成告警规则文件
+     */
     private void alertRuleFile(Integer clusterId, Collection<ClusterAlertQuota> alertQuotaList) {
-        HashMap<String, List<ClusterAlertQuota>> map = new HashMap<>();
+        Map<String, List<ClusterAlertQuota>> alertsByCategoryMap = new HashMap<>();
+        
         for (ClusterAlertQuota alertQuota : alertQuotaList) {
-            if (!map.containsKey(alertQuota.getServiceCategory())) {
-                // list all started alert quota
-                List<ClusterAlertQuota> quotaList = this.lambdaQuery()
-                        .eq(ClusterAlertQuota::getServiceCategory, alertQuota.getServiceCategory())
-                        .eq(ClusterAlertQuota::getQuotaState, QuotaState.RUNNING)
+            String category = alertQuota.getServiceCategory();
+            
+            if (!alertsByCategoryMap.containsKey(category)) {
+                // 查询该类别下所有已启动的告警指标
+                List<ClusterAlertQuota> activeQuotas = QueryChain.of(ClusterAlertQuota.class)
+                        .where(ClusterAlertQuota::getServiceCategory).eq(category)
+                        .and(ClusterAlertQuota::getQuotaState).eq(QuotaState.RUNNING)
                         .list();
-                quotaList.add(alertQuota);
-                map.put(alertQuota.getServiceCategory(), quotaList);
+                        
+                activeQuotas.add(alertQuota);
+                alertsByCategoryMap.put(category, activeQuotas);
             } else {
-                List<ClusterAlertQuota> quotaList = map.get(alertQuota.getServiceCategory());
-
-                quotaList.add(alertQuota);
+                alertsByCategoryMap.get(category).add(alertQuota);
             }
+            
             alertQuota.setQuotaState(QuotaState.RUNNING);
         }
 
-        if (alertQuotaList.size() > 0) {
-            logger.info("start alert size is {}", alertQuotaList.size());
-            this.updateBatchById(alertQuotaList);
+        if (!alertQuotaList.isEmpty()) {
+            logger.info("启动告警指标数量: {}", alertQuotaList.size());
+            this.updateBatch(alertQuotaList);
         }
-        HashMap<Generators, List<AlertItem>> configFileMap = new HashMap<>();
-        for (Map.Entry<String, List<ClusterAlertQuota>> entry : map.entrySet()) {
+        
+        // 构建告警配置文件映射
+        Map<Generators, List<AlertItem>> configFileMap = new HashMap<>();
+        
+        for (Map.Entry<String, List<ClusterAlertQuota>> entry : alertsByCategoryMap.entrySet()) {
             String category = entry.getKey();
             List<ClusterAlertQuota> alerts = entry.getValue();
-            // alerts duplicate removal
-            List<ClusterAlertQuota> alertList = alerts.stream()
-                    .collect(Collectors.collectingAndThen(Collectors.toCollection(
-                            () -> new TreeSet<>(Comparator.comparing(ClusterAlertQuota::getAlertQuotaName))),
-                            ArrayList::new));
+            
+            // 去重处理
+            List<ClusterAlertQuota> uniqueAlerts = alerts.stream()
+                    .collect(Collectors.collectingAndThen(
+                        Collectors.toCollection(() -> 
+                            new TreeSet<>(Comparator.comparing(ClusterAlertQuota::getAlertQuotaName))),
+                        ArrayList::new
+                    ));
 
+            // 配置生成器
             Generators generators = new Generators();
-            generators.setFilename(category.toLowerCase() + ".yml");
-            generators.setConfigFormat("prometheus");
-            generators.setOutputDirectory("alert_rules");
-            ArrayList<AlertItem> alertItems = new ArrayList<>();
-            for (ClusterAlertQuota clusterAlertQuota : alertList) {
-                AlertItem alertItem = new AlertItem();
-                alertItem.setAlertName(clusterAlertQuota.getAlertQuotaName());
-                alertItem.setAlertExpr(clusterAlertQuota.getAlertExpr() + " " + clusterAlertQuota.getCompareMethod()
-                        + " " + clusterAlertQuota.getAlertThreshold());
-                alertItem.setClusterId(clusterId);
-                alertItem.setServiceRoleName(clusterAlertQuota.getServiceRoleName());
-                alertItem.setAlertLevel(clusterAlertQuota.getAlertLevel().getDesc());
-                alertItem.setAlertAdvice(clusterAlertQuota.getAlertAdvice());
-                alertItem.setTriggerDuration(clusterAlertQuota.getTriggerDuration());
-                alertItem.setNoticeGroupId(clusterAlertQuota.getNoticeGroupId());
-                alertItems.add(alertItem);
-            }
+            generators.setFilename(category.toLowerCase() + ALERT_RULE_FILE_SUFFIX);
+            generators.setConfigFormat(ALERT_CONFIG_FORMAT);
+            generators.setOutputDirectory(ALERT_OUTPUT_DIRECTORY);
+            
+            // 转换告警指标为AlertItem
+            List<AlertItem> alertItems = uniqueAlerts.stream().map(this::convertToAlertItem)
+                    .peek(item -> item.setClusterId(clusterId))
+                    .collect(Collectors.toList());
+                    
             configFileMap.put(generators, alertItems);
         }
-        ActorRef prometheusActor =
-                ActorUtils.getLocalActor(PrometheusActor.class, ActorUtils.getActorRefName(PrometheusActor.class));
+        
+        // 发送命令生成告警配置文件
+        ActorRef prometheusActor = ActorUtils.getLocalActor(
+                PrometheusActor.class, 
+                ActorUtils.getActorRefName(PrometheusActor.class));
+                
         GenerateAlertConfigCommand alertConfigCommand = new GenerateAlertConfigCommand();
         alertConfigCommand.setClusterId(clusterId);
         alertConfigCommand.setConfigFileMap(configFileMap);
         prometheusActor.tell(alertConfigCommand, ActorRef.noSender());
     }
+    
+    /**
+     * 将告警指标转换为AlertItem
+     */
+    private AlertItem convertToAlertItem(ClusterAlertQuota quota) {
+        AlertItem alertItem = new AlertItem();
+        alertItem.setAlertName(quota.getAlertQuotaName());
+        
+        // 构建告警表达式
+        String exprBuilder = quota.getAlertExpr() +
+                " " +
+                quota.getCompareMethod() +
+                " " +
+                quota.getAlertThreshold();
+        alertItem.setAlertExpr(exprBuilder);
+        
+        alertItem.setServiceRoleName(quota.getServiceRoleName());
+        alertItem.setAlertLevel(quota.getAlertLevel().getDesc());
+        alertItem.setAlertAdvice(quota.getAlertAdvice());
+        alertItem.setTriggerDuration(quota.getTriggerDuration());
+        alertItem.setNoticeGroupId(quota.getNoticeGroupId());
+        
+        return alertItem;
+    }
 
     @Override
     public void start(Integer clusterId, String alertQuotaIds) {
-        List<String> ids = Arrays.asList(alertQuotaIds.split(","));
-        if(CollUtil.isEmpty(ids)) {
+        if (StringUtils.isBlank(alertQuotaIds)) {
+            return;
+        }
+        
+        List<String> ids = Arrays.asList(alertQuotaIds.split(StrUtil.COMMA));
+        if (CollUtil.isEmpty(ids)) {
             return;
         }
 
         Collection<ClusterAlertQuota> alertQuotaList = this.listByIds(ids);
-
         alertRuleFile(clusterId, alertQuotaList);
     }
 
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void stop(Integer clusterId, String alertQuotaIds) {
+        if (StringUtils.isBlank(alertQuotaIds)) {
+            return;
+        }
+        
         List<String> ids = Arrays.asList(alertQuotaIds.split(StrUtil.COMMA));
-        if(CollUtil.isEmpty(ids)) {
+        if (CollUtil.isEmpty(ids)) {
             return;
         }
 
         Set<String> categories = new HashSet<>(ids.size());
-        //1、修改禁用状态 & 更新
+        
+        //1、修改禁用状态并更新
         Collection<ClusterAlertQuota> alertQuotas = this.listByIds(ids);
-        alertQuotas.forEach(q -> {
-            q.setQuotaState(QuotaState.STOPPED);
-            categories.add(q.getServiceCategory());
+        alertQuotas.forEach(quota -> {
+            quota.setQuotaState(QuotaState.STOPPED);
+            categories.add(quota.getServiceCategory());
         });
-        this.updateBatchById(alertQuotas);
+        this.updateBatch(alertQuotas);
 
-        //2、查询需要重新生成 alert rule file 的告警指标
-        Collection<ClusterAlertQuota> clusterAlertQuotas = this.lambdaQuery()
-                .eq(ClusterAlertQuota::getQuotaState, QuotaState.RUNNING)
-                .in(ClusterAlertQuota::getServiceCategory, categories)
+        //2、查询需要重新生成告警规则文件的告警指标
+        if (CollUtil.isEmpty(categories)) {
+            return;
+        }
+        
+        Collection<ClusterAlertQuota> activeQuotas = QueryChain.of(ClusterAlertQuota.class)
+                .where(ClusterAlertQuota::getQuotaState).eq(QuotaState.RUNNING)
+                .and(ClusterAlertQuota::getServiceCategory).in(categories)
                 .list();
-        if(CollUtil.isEmpty(clusterAlertQuotas)) {
+                
+        if (CollUtil.isEmpty(activeQuotas)) {
             return;
         }
 
-        alertRuleFile(clusterId, clusterAlertQuotas);
+        alertRuleFile(clusterId, activeQuotas);
     }
 
     @Override
     public void saveAlertQuota(ClusterAlertQuota clusterAlertQuota) {
         clusterAlertQuota.setQuotaState(QuotaState.STOPPED);
         clusterAlertQuota.setCreateTime(new Date());
+        
+        // 获取告警组信息并设置服务类别
         AlertGroupEntity alertGroupEntity = alertGroupService.getById(clusterAlertQuota.getAlertGroupId());
         clusterAlertQuota.setServiceCategory(alertGroupEntity.getAlertGroupCategory());
+        
         this.save(clusterAlertQuota);
     }
 
     @Override
     public List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName) {
-        return this.list(new QueryWrapper<ClusterAlertQuota>().eq(Constants.SERVICE_CATEGORY, serviceName));
+        return QueryChain.of(ClusterAlertQuota.class)
+                .where(ClusterAlertQuota::getServiceCategory).eq(serviceName)
+                .list();
     }
 
     @Override
-    public List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> list) {
-        LambdaQueryWrapper<ClusterAlertQuota> query = new LambdaQueryWrapper<>();
-        query.in(ClusterAlertQuota::getNoticeGroupId, list);
-        return this.list(query);
+    public List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> groupIds) {
+        if (CollUtil.isEmpty(groupIds)) {
+            return new ArrayList<>();
+        }
+        
+        return QueryChain.of(ClusterAlertQuota.class)
+                .where(ClusterAlertQuota::getNoticeGroupId).in(groupIds)
+                .list();
     }
 }

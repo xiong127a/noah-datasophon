@@ -1,18 +1,15 @@
 package com.datasophon.api.master;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
-import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantHiveResource;
 import com.datasophon.common.model.TenantResource.TenantKafkaResource;
 import com.datasophon.common.model.TenantResource.TenantYarnResource;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.mybatisflex.core.query.QueryChain;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,11 +62,11 @@ public class TenantResourceDispatcherActor extends AbstractActor {
     }
 
     private Map<String, String> getRoleHostMap(Integer clusterId) {
-        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
-                .getBean(ClusterServiceRoleInstanceService.class);
-        List<ClusterServiceRoleInstanceEntity> nameNodeInstance = clusterServiceRoleInstanceService.list(
-                new QueryWrapper<ClusterServiceRoleInstanceEntity>().eq(Constants.CLUSTER_ID, clusterId));
-        return nameNodeInstance.stream().collect(Collectors.toMap(
+        List<ClusterServiceRoleInstanceEntity> roleInstances = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .list();
+
+        return roleInstances.stream().collect(Collectors.toMap(
                 ClusterServiceRoleInstanceEntity::getServiceRoleName,
                 ClusterServiceRoleInstanceEntity::getHostname,
                 (a, b) -> a,
@@ -77,17 +74,12 @@ public class TenantResourceDispatcherActor extends AbstractActor {
     }
 
     private String getServiceMasterRoleName(String serviceName) {
-        switch (serviceName) {
-            case "HDFS":
-                return "NameNode";
-            case "HIVE":
-                return "HiveServer2";
-            case "KAFKA":
-                return "KafkaBroker";
-            case "HBASE":
-                return "HbaseMaster";
-            default:
-                return "";
-        }
+        return switch (serviceName) {
+            case "HDFS" -> "NameNode";
+            case "HIVE" -> "HiveServer2";
+            case "KAFKA" -> "KafkaBroker";
+            case "HBASE" -> "HbaseMaster";
+            default -> "";
+        };
     }
 }

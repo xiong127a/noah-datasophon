@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 集群服务角色对应web ui表
@@ -31,6 +31,6 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-04-24 16:25:17
  */
 @Mapper
-public interface ClusterServiceRoleInstanceWebuisMapper extends MPJBaseMapper<ClusterServiceRoleInstanceWebuis> {
+public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<ClusterServiceRoleInstanceWebuis> {
 
 }

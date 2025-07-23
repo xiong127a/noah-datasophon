@@ -18,8 +18,6 @@
 package com.datasophon.api.controller;
 
 import cn.hutool.core.io.FileUtil;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
@@ -27,6 +25,7 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.mybatisflex.core.query.QueryChain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,13 +45,8 @@ public class FrameServiceController {
     @Autowired
     private FrameServiceService frameVersionServiceService;
 
-
     @Autowired
     private FrameServiceRoleService frameServiceRoleService;
-
-
-    @Autowired
-    private ClusterServiceInstanceService clusterServiceInstanceService;
 
     /**
      * 列表
@@ -66,7 +60,7 @@ public class FrameServiceController {
      * 自定义模式列表和数据湖模式列表，包含必选组件
      */
     @RequestMapping("/listWithRequired")
-    public Result listWithRequired(@RequestParam("clusterId") Integer clusterId,@RequestParam("type") String type) {
+    public Result listWithRequired(@RequestParam("clusterId") Integer clusterId, @RequestParam("type") String type) {
         return frameVersionServiceService.getAllFrameServiceWithRequired(clusterId, type);
     }
 
@@ -118,9 +112,9 @@ public class FrameServiceController {
             return Result.error("Service 组件不存在。");
         }
         // 已经安装为服务，无法删除
-        final List<ClusterServiceInstanceEntity> roleEntities = clusterServiceInstanceService.list(
-                Wrappers.<ClusterServiceInstanceEntity>lambdaQuery()
-                        .eq(ClusterServiceInstanceEntity::getFrameServiceId, serviceEntity.getId()));
+        final List<ClusterServiceInstanceEntity> roleEntities = QueryChain.of(ClusterServiceInstanceEntity.class)
+                .where(ClusterServiceInstanceEntity::getFrameServiceId).eq(serviceEntity.getId())
+                .list();
         if (roleEntities != null && !roleEntities.isEmpty()) {
             return Result.error("Service 组件正在使用中。");
         }
@@ -129,13 +123,14 @@ public class FrameServiceController {
         File targetPackageFile = new File(Constants.MASTER_MANAGE_PACKAGE_PATH, serviceEntity.getPackageName());
         FileUtil.del(targetPackageFile);
         log.info("delete package file to: {}", targetPackageFile.getAbsolutePath());
-        File targetPackageFileMd5 = new File(Constants.MASTER_MANAGE_PACKAGE_PATH, serviceEntity.getPackageName() + ".md5");
+        File targetPackageFileMd5 = new File(Constants.MASTER_MANAGE_PACKAGE_PATH,
+                serviceEntity.getPackageName() + ".md5");
         FileUtil.del(targetPackageFileMd5);
         log.info("delete package md5 file to: {}", targetPackageFileMd5.getAbsolutePath());
 
         // 删除配置
-        frameServiceRoleService.remove(Wrappers.<FrameServiceRoleEntity>lambdaQuery()
-                .eq(FrameServiceRoleEntity::getServiceId, id));
+        frameServiceRoleService.remove(QueryChain.of(FrameServiceRoleEntity.class)
+                .where(FrameServiceRoleEntity::getServiceId).eq(id));
         // 删除主服务
         frameVersionServiceService.removeById(id);
         return Result.success();

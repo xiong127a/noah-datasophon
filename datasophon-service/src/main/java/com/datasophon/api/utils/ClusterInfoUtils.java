@@ -8,7 +8,7 @@ public class ClusterInfoUtils {
 
     public static String getKubernetesNamespace(Integer clusterId) {
         ClusterInfoMapper clusterInfoMapper = SpringUtil.getBean(ClusterInfoMapper.class);
-        ClusterInfoEntity clusterInfoEntity = clusterInfoMapper.selectById(clusterId);
+        ClusterInfoEntity clusterInfoEntity = clusterInfoMapper.selectOneById(clusterId);
         return clusterInfoEntity.getNamespace();
     }
 

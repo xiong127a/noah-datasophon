@@ -17,8 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.mapper.ClusterServiceRoleGroupConfigMapper;
@@ -35,31 +35,30 @@ public class ClusterServiceRoleGroupConfigServiceImpl
 
     @Override
     public ClusterServiceRoleGroupConfig getConfigByRoleGroupId(Integer roleGroupId) {
-        LambdaQueryWrapper<ClusterServiceRoleGroupConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterServiceRoleGroupConfig::getRoleGroupId, roleGroupId)
-                .orderByDesc(ClusterServiceRoleGroupConfig::getConfigVersion);
-        return this.getOne(queryWrapper, false);
+        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                .one();
     }
 
     @Override
     public ClusterServiceRoleGroupConfig getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version) {
-        LambdaQueryWrapper<ClusterServiceRoleGroupConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterServiceRoleGroupConfig::getRoleGroupId, roleGroupId)
-                .eq(ClusterServiceRoleGroupConfig::getConfigVersion, version);
-        return this.getOne(queryWrapper);
+        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                .and(ClusterServiceRoleGroupConfig::getConfigVersion).eq(version)
+                .one();
     }
 
     @Override
     public void removeAllByRoleGroupId(Integer roleGroupId) {
-        LambdaQueryWrapper<ClusterServiceRoleGroupConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterServiceRoleGroupConfig::getRoleGroupId, roleGroupId);
-        this.remove(queryWrapper);
+        this.remove(QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId));
     }
 
     @Override
     public List<ClusterServiceRoleGroupConfig> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds) {
-        LambdaQueryWrapper<ClusterServiceRoleGroupConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(ClusterServiceRoleGroupConfig::getRoleGroupId, roleGroupIds);
-        return this.list(queryWrapper);
+        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds)
+                .list();
     }
 }

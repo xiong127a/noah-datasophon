@@ -17,11 +17,7 @@
 
 package com.datasophon.api.master;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.api.service.ClusterInfoService;
@@ -29,7 +25,6 @@ import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
 import com.datasophon.common.command.HdfsEcCommand;
@@ -42,7 +37,10 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.enums.CommandState;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
@@ -99,9 +97,10 @@ public class ServiceCommandActor extends AbstractActor {
             ClusterServiceCommandService commandService = SpringUtil
                     .getBean(ClusterServiceCommandService.class);
 
-            ClusterServiceCommandHostEntity commandHost = commandHostService
-                    .getOne(new QueryWrapper<ClusterServiceCommandHostEntity>()
-                            .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
+            ClusterServiceCommandHostEntity commandHost = QueryChain.of(ClusterServiceCommandHostEntity.class)
+                    .where(ClusterServiceCommandHostEntity::getCommandHostId).eq(message.getCommandHostId())
+                    .one();
+
             long size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
             Integer totalProgress = service.getHostCommandTotalProgressByHostnameAndCommandHostId(message.getHostname(),
@@ -127,14 +126,15 @@ public class ServiceCommandActor extends AbstractActor {
                 }
             }
 
-            commandHostService.update(commandHost, new QueryWrapper<ClusterServiceCommandHostEntity>()
-                    .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
+            commandHostService.updateById(commandHost);
 
             Long size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
             Integer totalProgress1 = commandHostService.getCommandHostTotalProgressByCommandId(message.getCommandId());
-            Long progress1 = totalProgress1 / size1;
-            ClusterServiceCommandEntity command = commandService.lambdaQuery()
-                    .eq(ClusterServiceCommandEntity::getCommandId, message.getCommandId()).one();
+            long progress1 = totalProgress1 / size1;
+            ClusterServiceCommandEntity command = QueryChain.of(ClusterServiceCommandEntity.class)
+                    .where(ClusterServiceCommandEntity::getCommandId).eq(message.getCommandId())
+                    .one();
+
             command.setCommandProgress(progress1);
 
             if (progress1 == 100) {
@@ -202,8 +202,7 @@ public class ServiceCommandActor extends AbstractActor {
                     enableAlertConfig(serviceName, clusterInfo.getId());
                 }
             }
-            commandService.lambdaUpdate().eq(ClusterServiceCommandEntity::getCommandId, command.getCommandId())
-                    .update(command);
+            commandService.updateById(command);
         } catch (Exception e) {
             logger.error("处理UpdateCommandHostMessage消息时出错", e);
         }

@@ -17,8 +17,8 @@
 
 package com.datasophon.api.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.service.IService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.model.MPage;
@@ -31,5 +31,5 @@ public interface NoticeGroupService extends IService<NoticeGroupEntity> {
 
     void removeNoticeGroup(List<Integer> list);
 
-    IPage<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage);
+    Page<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage);
 }

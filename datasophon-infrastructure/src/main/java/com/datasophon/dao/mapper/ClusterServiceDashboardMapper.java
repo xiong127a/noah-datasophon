@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterServiceDashboard;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 集群服务总览仪表盘

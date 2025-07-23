@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.InstallStepEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 
@@ -31,6 +31,6 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-04-11 10:18:18
  */
 @Mapper
-public interface InstallStepMapper extends MPJBaseMapper<InstallStepEntity> {
+public interface InstallStepMapper extends BaseMapper<InstallStepEntity> {
 
 }

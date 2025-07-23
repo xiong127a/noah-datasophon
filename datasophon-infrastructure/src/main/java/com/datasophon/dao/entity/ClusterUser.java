@@ -21,27 +21,27 @@ import java.io.Serializable;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_user")
+@Table("t_ddh_cluster_user")
 public class ClusterUser implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId
+    @Id
     private Integer id;
 
     private String username;
 
     private Integer clusterId;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String mainGroup;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String otherGroups;
 
 }

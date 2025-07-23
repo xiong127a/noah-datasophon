@@ -17,14 +17,13 @@
 
 package com.datasophon.dao.entity;
 
-import java.io.Serializable;
-
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import java.io.Serializable;
 
-@TableName("t_ddh_install_step")
+@Table("t_ddh_install_step")
 @Data
 public class InstallStepEntity implements Serializable {
 
@@ -33,7 +32,7 @@ public class InstallStepEntity implements Serializable {
     /**
      *
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      *
@@ -43,5 +42,7 @@ public class InstallStepEntity implements Serializable {
      *
      */
     private String stepDesc;
+
+    private String installType;
 
 }

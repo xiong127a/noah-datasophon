@@ -2,17 +2,16 @@ package com.datasophon.api.service.checker.common;
 
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.HostInfo;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.session.ClientSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,10 +63,6 @@ public class SshConnectionPoolManager {
     // 上次执行时间
     private volatile long lastConnectionCleanupTime = 0;
 
-    // 定时任务调度器
-    @Autowired
-    private TaskScheduler taskScheduler;
-
     // 定时任务的Future
     private ScheduledFuture<?> connectionCleanupTask;
 
@@ -75,13 +70,6 @@ public class SshConnectionPoolManager {
     @Autowired
     @Qualifier("checkExecutor")
     private ExecutorService checkExecutor;
-
-    // 连接池是否已初始化
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
-
-    // 默认超时时间（减少到15秒）
-    private static final long DEFAULT_TIMEOUT = 15000;
-
     // 添加连接超时监控
     private final Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
     private final Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
@@ -121,22 +109,6 @@ public class SshConnectionPoolManager {
 
         // 设置定时任务标志为已停用
         scheduledTasksEnabled.set(false);
-    }
-
-    /**
-     * 启动定时任务
-     */
-    public void startScheduledTasks() {
-        if (!scheduledTasksEnabled.get()) {
-            scheduledTasksEnabled.set(true);
-        }
-
-        // 启动连接清理定时任务
-        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, connectionCleanupIntervalMs);
-            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
-        }
     }
 
     /**
@@ -554,84 +526,6 @@ public class SshConnectionPoolManager {
     }
 
     /**
-     * 停止连接清理定时任务
-     */
-    public void stopConnectionCleanup() {
-        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask.cancel(false);
-            log.info("连接清理定时任务已停止");
-        }
-    }
-
-    /**
-     * 启动连接清理定时任务
-     */
-    public void startConnectionCleanup() {
-        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, connectionCleanupIntervalMs);
-            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
-        }
-    }
-
-    /**
-     * 更新连接清理定时任务执行间隔
-     * 
-     * @param intervalMs 执行间隔（毫秒）
-     */
-    public void updateConnectionCleanupInterval(long intervalMs) {
-        if (intervalMs < 1000) { // 最小1秒
-            log.warn("连接清理定时任务间隔不能小于1秒，忽略此次更新");
-            return;
-        }
-
-        this.connectionCleanupIntervalMs = intervalMs;
-
-        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask.cancel(false);
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, intervalMs);
-            log.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
-        }
-    }
-
-    /**
-     * 更新空闲连接超时时间
-     * 
-     * @param timeoutMs 超时时间（毫秒）
-     */
-    public void updateIdleTimeout(long timeoutMs) {
-        if (timeoutMs < 1000) { // 最小1秒
-            log.warn("空闲连接超时时间不能小于1秒，忽略此次更新");
-            return;
-        }
-
-        this.idleTimeoutMs = timeoutMs;
-        log.info("已更新空闲连接超时时间: {}毫秒", timeoutMs);
-    }
-
-    /**
-     * 更新连接池最大大小
-     * 
-     * @param size 最大大小
-     */
-    public void updateMaxPoolSize(int size) {
-        if (size <= 0) {
-            log.warn("连接池最大大小必须大于0，忽略此次更新");
-            return;
-        }
-
-        this.maxPoolSize = size;
-        log.info("已更新连接池最大大小: {}", size);
-
-        // 如果当前连接池大小超过新的最大大小，触发清理
-        if (hostConnectionPool.size() > size) {
-            log.info("当前连接池大小({})超过新设置的最大大小({}), 触发清理", hostConnectionPool.size(), size);
-            manualCleanupConnections();
-        }
-    }
-
-    /**
      * 获取SSH连接池的状态信息
      * 
      * @return 连接池状态对象
@@ -658,4 +552,5 @@ public class SshConnectionPoolManager {
 
         return status;
     }
+
 }

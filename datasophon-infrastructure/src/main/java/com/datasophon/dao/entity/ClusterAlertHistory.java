@@ -17,8 +17,8 @@
 
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import com.datasophon.dao.enums.AlertLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +30,7 @@ import java.util.Date;
 
 @Data
 @Builder
-@TableName("t_ddh_cluster_alert_history")
+@Table("t_ddh_cluster_alert_history")
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClusterAlertHistory implements Serializable {
@@ -40,7 +40,7 @@ public class ClusterAlertHistory implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 告警组

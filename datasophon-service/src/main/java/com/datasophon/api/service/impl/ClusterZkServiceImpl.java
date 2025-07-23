@@ -17,10 +17,9 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterZkService;
-import com.datasophon.common.Constants;
 import com.datasophon.dao.entity.ClusterZk;
 import com.datasophon.dao.mapper.ClusterZkMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +40,8 @@ public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZk
 
     @Override
     public List<ClusterZk> getAllZkServer(Integer clusterId) {
-        return this.list(new QueryWrapper<ClusterZk>().eq(Constants.CLUSTER_ID, clusterId));
+        return QueryChain.of(ClusterZk.class)
+                .where(ClusterZk::getClusterId).eq(clusterId)
+                .list();
     }
 }

@@ -18,20 +18,14 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterInfoEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-
 /**
  * 集群信息表
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ *
  */
 @Mapper
 public interface ClusterInfoMapper extends BaseMapper<ClusterInfoEntity> {
@@ -43,8 +37,8 @@ public interface ClusterInfoMapper extends BaseMapper<ClusterInfoEntity> {
      * @return 集群信息实体
      */
     default ClusterInfoEntity getClusterByClusterCode(@Param("clusterCode") String clusterCode) {
-        LambdaQueryWrapper<ClusterInfoEntity> queryWrapper = Wrappers.lambdaQuery();
-        queryWrapper.eq(ClusterInfoEntity::getClusterCode, clusterCode);
-        return selectOne(queryWrapper);
+        return QueryChain.of(ClusterInfoEntity.class)
+                .where(ClusterInfoEntity::getClusterCode).eq(clusterCode)
+                .one();
     }
 }

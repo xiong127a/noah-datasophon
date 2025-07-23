@@ -19,14 +19,14 @@ package com.datasophon.dao.entity;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_node_label")
+@Table("t_ddh_cluster_node_label")
 public class ClusterNodeLabelEntity {
 
-    @TableId
+    @Id
     private Integer id;
 
     private Integer clusterId;

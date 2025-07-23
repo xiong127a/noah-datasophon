@@ -17,7 +17,7 @@
 
 package com.datasophon.api.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
@@ -48,10 +48,11 @@ public class ClusterHostController {
      */
     @RequestMapping("/all")
     public Result all(@RequestParam("clusterId") Integer clusterId) {
-        List<ClusterHostDO> list = clusterHostService
-                .list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
-                        .eq(Constants.MANAGED, 1)
-                        .orderByAsc(Constants.HOSTNAME));
+        List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
+                .where(ClusterHostDO::getClusterId).eq(clusterId)
+                .and(ClusterHostDO::getManaged).eq(1)
+                .orderBy(ClusterHostDO::getHostname).asc()
+                .list();
         return Result.success(list);
     }
 

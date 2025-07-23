@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import org.apache.ibatis.annotations.Mapper;
 

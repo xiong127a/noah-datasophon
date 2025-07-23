@@ -19,8 +19,9 @@
 
 package com.datasophon.api.master;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.enums.Status;
-import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
@@ -29,20 +30,13 @@ import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-
-import org.apache.sshd.client.session.ClientSession;
-
-import scala.Option;
-
-import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
-import cn.hutool.core.util.ObjectUtil;
+import org.apache.sshd.client.session.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import scala.Option;
 
 public class HostConnectActor extends AbstractActor {
 
@@ -69,13 +63,12 @@ public class HostConnectActor extends AbstractActor {
 
             logger.info("start host check: {} for cluster: {}", hostInfo.getHostname(), clusterCode);
 
-            // 获取集群信息以判断部署模式
-            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
             ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
 
             // 通过clusterCode查找集群信息
-            ClusterInfoEntity clusterInfo = clusterInfoService.getOne(
-                    new QueryWrapper<ClusterInfoEntity>().eq("cluster_code", clusterCode));
+            ClusterInfoEntity clusterInfo = QueryChain.of(ClusterInfoEntity.class)
+                    .where(ClusterInfoEntity::getClusterCode).eq(clusterCode)
+                    .one();
 
             if (clusterInfo == null) {
                 logger.error("Cluster not found for clusterCode: {}", clusterCode);

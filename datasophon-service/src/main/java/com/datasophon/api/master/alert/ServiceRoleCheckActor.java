@@ -19,17 +19,14 @@
 
 package com.datasophon.api.master.alert;
 
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
-import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.mybatisflex.core.query.QueryChain;
+import org.apache.pekko.actor.AbstractActor;
 
 import java.util.List;
 import java.util.Map;
@@ -51,13 +48,10 @@ public class ServiceRoleCheckActor extends AbstractActor {
 
     private void handleServiceRoleCheckCommand(ServiceRoleCheckCommand msg) {
         try {
-            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
-                    .getBean(ClusterServiceRoleInstanceService.class);
-
             // 查询服务实例
-            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(
-                    new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                            .in(Constants.SERVICE_ROLE_NAME, Constants.STATUS_CHECK_SERVICES));
+            List<ClusterServiceRoleInstanceEntity> list = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                    .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).in(Constants.STATUS_CHECK_SERVICES)
+                    .list();
 
             // 集群类型map
             Map<Integer, String> allClusterIdAndType = ProcessUtils.getAllClusterIdAndType();
@@ -77,7 +71,7 @@ public class ServiceRoleCheckActor extends AbstractActor {
                                     .ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         case Constants.KUBERNETES_MODE:
-                            handlerKubernetesServiceRoleCheck(roleInstanceEntity, map);
+                            handlerKubernetesServiceRoleCheck(roleInstanceEntity);
                             Optional.ofNullable(serviceRoleHandler).ifPresent(
                                     handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
                             break;
@@ -91,8 +85,7 @@ public class ServiceRoleCheckActor extends AbstractActor {
         }
     }
 
-    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
         KubernetesServiceRoleStatusService kubernetesServiceRoleStatusService = new KubernetesServiceRoleStatusService();
         kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceEntity);
     }

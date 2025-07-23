@@ -18,8 +18,8 @@
 package com.datasophon.api.service.impl;
 
 import org.apache.pekko.actor.ActorRef;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.alert.AlertActor;
@@ -45,64 +45,72 @@ import java.util.concurrent.TimeUnit;
 
 @Service("clusterAlertHistoryService")
 @Transactional
-public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistory> implements ClusterAlertHistoryService {
+public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistory>
+                implements ClusterAlertHistoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
+        private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
 
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+        @Autowired
+        private ClusterServiceRoleInstanceService roleInstanceService;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+        @Autowired
+        private ClusterInfoService clusterInfoService;
 
-    @Override
-    public void saveAlertHistory(String alertMessage) {
-        logger.warn("Receive Alert Message : {}", alertMessage);
-        ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
-        ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                2L, TimeUnit.SECONDS),
-                alertActor, alertMessage,
-                ActorUtils.actorSystem.dispatcher(),
-                ActorRef.noSender());
-    }
+        @Override
+        public void saveAlertHistory(String alertMessage) {
+                logger.warn("Receive Alert Message : {}", alertMessage);
+                ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
+                ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
+                                2L, TimeUnit.SECONDS),
+                                alertActor, alertMessage,
+                                ActorUtils.actorSystem.dispatcher(),
+                                ActorRef.noSender());
+        }
 
+        @Override
+        public Result getAlertList(Integer serviceInstanceId) {
+                QueryWrapper query = QueryWrapper.create();
+                if (serviceInstanceId != null) {
+                        query.where(Constants.SERVICE_INSTANCE_ID + " = " + serviceInstanceId);
+                }
+                query.and(Constants.IS_ENABLED + " = 1");
+                List<ClusterAlertHistory> list = this.list(query);
+                return Result.success(list);
+        }
 
-    @Override
-    public Result getAlertList(Integer serviceInstanceId) {
-        List<ClusterAlertHistory> list = this.list(new QueryWrapper<ClusterAlertHistory>()
-                .eq(serviceInstanceId != null, Constants.SERVICE_INSTANCE_ID, serviceInstanceId)
-                .eq(Constants.IS_ENABLED, 1));
-        return Result.success(list);
-    }
+        @Override
+        public Result getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
+                int offset = (page - 1) * pageSize;
+                QueryWrapper query = QueryWrapper.create()
+                                .where(Constants.CLUSTER_ID + " = " + clusterId)
+                                .and(Constants.IS_ENABLED + " = 1")
+                                .orderBy(Constants.CREATE_TIME + " desc")
+                                .limit(offset, pageSize);
+                List<ClusterAlertHistory> list = this.list(query);
 
-    @Override
-    public Result getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
-        List<ClusterAlertHistory> list = this.list(new QueryWrapper<ClusterAlertHistory>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.IS_ENABLED, 1)
-                .orderByDesc(Constants.CREATE_TIME)
-                .last("limit " + offset + "," + pageSize));
-        long count = this.count(new QueryWrapper<ClusterAlertHistory>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.IS_ENABLED, 1));
-        return Result.success(list).put(Constants.TOTAL, count);
-    }
+                QueryWrapper countQuery = QueryWrapper.create()
+                                .where(Constants.CLUSTER_ID + " = " + clusterId)
+                                .and(Constants.IS_ENABLED + " = 1");
+                long count = this.count(countQuery);
+                return Result.success(list).put(Constants.TOTAL, count);
+        }
 
-    @Override
-    public void removeAlertByRoleInstanceIds(List<Integer> ids) {
-        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(ids.getFirst());
-        ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
-        this.remove(new QueryWrapper<ClusterAlertHistory>()
-                .eq(Constants.IS_ENABLED, 1)
-                .in(Constants.SERVICE_ROLE_INSTANCE_ID, ids));
-        // 重新配置prometheus
-        ActorRef prometheusActor =
-                ActorUtils.getLocalActor(PrometheusActor.class, ActorUtils.getActorRefName(PrometheusActor.class));
-        GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
-        prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
-        prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
-        prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
-        prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
-    }
+        @Override
+        public void removeAlertByRoleInstanceIds(List<Integer> ids) {
+                ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(ids.getFirst());
+                ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+                QueryWrapper query = QueryWrapper.create()
+                                .where(Constants.IS_ENABLED + " = 1")
+                                .and(Constants.SERVICE_ROLE_INSTANCE_ID + " in ("
+                                                + String.join(",", ids.stream().map(String::valueOf).toList()) + ")");
+                this.remove(query);
+                // 重新配置prometheus
+                ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                                ActorUtils.getActorRefName(PrometheusActor.class));
+                GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
+                prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
+                prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
+                prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
+                prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
+        }
 }

@@ -16,15 +16,14 @@
  */
 package com.datasophon.api.utils;
 
+import cn.hutool.core.lang.Validator;
 import com.datasophon.api.enums.Status;
 import com.datasophon.common.Constants;
-
 import org.apache.commons.lang.StringUtils;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 public class CheckUtils {
 
@@ -38,7 +37,7 @@ public class CheckUtils {
      * @return true if user name regex valid,otherwise return false
      */
     public static boolean checkUserName(String userName) {
-        return regexChecks(userName, Constants.REGEX_USER_NAME);
+        return Validator.isGeneral(userName);
     }
 
     /**
@@ -52,7 +51,7 @@ public class CheckUtils {
             return false;
         }
 
-        return email.length() > 5 && email.length() <= 40 && regexChecks(email, Constants.REGEX_MAIL_NAME);
+        return email.length() > 5 && email.length() <= 40 && Validator.isEmail(email);
     }
 
     /**
@@ -106,20 +105,5 @@ public class CheckUtils {
                 CheckUtils.checkEmail(email) &&
                 CheckUtils.checkPassword(password) &&
                 CheckUtils.checkPhone(phone);
-    }
-
-    /**
-     * regex check
-     *
-     * @param str input string
-     * @param pattern regex pattern
-     * @return true if regex pattern is right, otherwise return false
-     */
-    private static boolean regexChecks(String str, Pattern pattern) {
-        if (StringUtils.isEmpty(str)) {
-            return false;
-        }
-
-        return pattern.matcher(str).matches();
     }
 }

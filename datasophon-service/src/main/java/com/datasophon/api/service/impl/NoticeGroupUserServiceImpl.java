@@ -18,8 +18,8 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.NoticeGroupUserService;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.mapper.NoticeGroupUserMapper;
@@ -34,25 +34,24 @@ public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMappe
 
     @Override
     public boolean removeByGroupIds(List<Integer> list) {
-        if (CollectionUtil.isEmpty(list)){
+        if (CollectionUtil.isEmpty(list)) {
             return false;
         }
-        LambdaQueryWrapper<NoticeGroupUserEntity> query = new LambdaQueryWrapper<>();
-        query.in(NoticeGroupUserEntity::getNoticeGroupId,list);
-        return remove(query);
+        return this.remove(QueryChain.of(NoticeGroupUserEntity.class)
+                .where(NoticeGroupUserEntity::getNoticeGroupId).in(list));
     }
 
     @Override
     public List<NoticeGroupUserEntity> listByGroupId(Integer id) {
-        LambdaQueryWrapper<NoticeGroupUserEntity> query = new LambdaQueryWrapper<>();
-        query.eq(NoticeGroupUserEntity::getNoticeGroupId,id);
-        return list(query);
+        return QueryChain.of(NoticeGroupUserEntity.class)
+                .where(NoticeGroupUserEntity::getNoticeGroupId).eq(id)
+                .list();
     }
 
     @Override
     public List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids) {
-        LambdaQueryWrapper<NoticeGroupUserEntity> query = new LambdaQueryWrapper<>();
-        query.in(NoticeGroupUserEntity::getNoticeGroupId,ids);
-        return list(query);
+        return QueryChain.of(NoticeGroupUserEntity.class)
+                .where(NoticeGroupUserEntity::getNoticeGroupId).in(ids)
+                .list();
     }
 }

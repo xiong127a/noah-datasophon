@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.NoticeGroupUserEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 通知组-用户中间表
@@ -31,6 +31,6 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface NoticeGroupUserMapper extends MPJBaseMapper<NoticeGroupUserEntity> {
+public interface NoticeGroupUserMapper extends BaseMapper<NoticeGroupUserEntity> {
 
 }

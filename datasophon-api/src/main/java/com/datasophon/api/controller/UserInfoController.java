@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller;
 
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
@@ -45,7 +46,8 @@ public class UserInfoController {
      * 列表带分页
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("username") String username, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+    public Result list(@RequestParam("username") String username, @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
         return userInfoService.getUserListByPage(username, page, pageSize);
     }
 
@@ -54,7 +56,7 @@ public class UserInfoController {
      */
     @RequestMapping("/all")
     public Result all() {
-        List<UserInfoEntity> list = userInfoService.lambdaQuery().list();
+        List<UserInfoEntity> list = QueryChain.of(UserInfoEntity.class).list();
         return Result.success(list);
     }
 
@@ -95,7 +97,8 @@ public class UserInfoController {
     public Result delete(@RequestBody Integer[] ids) {
         // UserInfoEntity authUser = SecurityUtils.getAuthUser();
         // if (!SecurityUtils.isAdmin(authUser)) {
-        // return Result.error(Status.USER_NO_OPERATION_PERM.getCode(), Status.USER_NO_OPERATION_PERM.getMsg());
+        // return Result.error(Status.USER_NO_OPERATION_PERM.getCode(),
+        // Status.USER_NO_OPERATION_PERM.getMsg());
         // }
         if (SecurityUtils.getAuthUser().getId() != 1) {
             return Result.error(Status.USER_NO_OPERATION_PERM.getMsg());

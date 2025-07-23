@@ -17,7 +17,7 @@
 
 package com.datasophon.domain.host.enums;
 
-import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum HostState {

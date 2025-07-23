@@ -53,20 +53,16 @@
             <artifactId>datasophon-domain</artifactId>
             <version>${project.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>icu.mhb</groupId>-->
-<!--            <artifactId>mybatis-plus-join</artifactId>-->
-<!--            <version>${mybatis-plus-join}</version>-->
-<!--        </dependency>-->
         <dependency>
-            <groupId>com.github.yulichang</groupId>
-            <artifactId>mybatis-plus-join-boot-starter</artifactId>
+            <groupId>com.mybatis-flex</groupId>
+            <artifactId>mybatis-flex-spring-boot3-starter</artifactId>
+            <version>${mybatis-flex.version}</version>
         </dependency>
-        <!-- 明确添加MyBatis-Plus依赖，确保版本兼容 -->
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>${mybatis-plus.version}</version>
+            <groupId>com.mybatis-flex</groupId>
+            <artifactId>mybatis-flex-processor</artifactId>
+            <version>${mybatis-flex.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

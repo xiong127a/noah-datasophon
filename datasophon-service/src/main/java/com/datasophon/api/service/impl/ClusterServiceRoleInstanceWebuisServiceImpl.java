@@ -1,5 +1,4 @@
 /*
- *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -14,15 +13,13 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
  */
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceWebuisMapper;
@@ -34,9 +31,9 @@ import java.util.List;
 @Service("clusterServiceRoleInstanceWebuisService")
 public class ClusterServiceRoleInstanceWebuisServiceImpl
         extends
-            ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>
+        ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>
         implements
-            ClusterServiceRoleInstanceWebuisService {
+        ClusterServiceRoleInstanceWebuisService {
 
     private static final String ACTIVE = "(Active)";
 
@@ -44,18 +41,16 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
 
     @Override
     public Result getWebUis(Integer serviceInstanceId) {
-        List<ClusterServiceRoleInstanceWebuis> list =
-                this.list(
-                        new QueryWrapper<ClusterServiceRoleInstanceWebuis>()
-                                .eq(Constants.SERVICE_INSTANCE_ID, serviceInstanceId));
+        List<ClusterServiceRoleInstanceWebuis> list = QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceInstanceId).eq(serviceInstanceId)
+                .list();
         return Result.success(list);
     }
 
     @Override
     public void removeByServiceInsId(Integer serviceInstanceId) {
-        this.remove(
-                new QueryWrapper<ClusterServiceRoleInstanceWebuis>()
-                        .eq(Constants.SERVICE_INSTANCE_ID, serviceInstanceId));
+        this.remove(QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceInstanceId).eq(serviceInstanceId));
     }
 
     @Override
@@ -65,18 +60,15 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
 
     @Override
     public ClusterServiceRoleInstanceWebuis getRoleInstanceWebUi(Integer roleInstanceId) {
-        List<ClusterServiceRoleInstanceWebuis> webuisList = this.lambdaQuery()
-                .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
-                .list();
-        // 返回第一条数据，或者根据业务需求调整
-        return webuisList.isEmpty() ? null : webuisList.getFirst();
+        return QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId).eq(roleInstanceId)
+                .one();
     }
 
     @Override
     public void removeByRoleInsIds(ArrayList<Integer> needRemoveList) {
-        this.lambdaUpdate()
-                .in(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, needRemoveList)
-                .remove();
+        this.remove(QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId).in(needRemoveList));
     }
 
     @Override
@@ -86,20 +78,20 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceWebuis> listWebUisByServiceInstanceId(Integer serviceInstanceId) {
-        return this.list(
-                        new QueryWrapper<ClusterServiceRoleInstanceWebuis>()
-                                .eq(Constants.SERVICE_INSTANCE_ID, serviceInstanceId));
+        return QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceInstanceId).eq(serviceInstanceId)
+                .list();
     }
 
     private void updateWebUiName(Integer roleInstanceId, String state) {
-        List<ClusterServiceRoleInstanceWebuis> webuisList = this.lambdaQuery()
-                .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
+        List<ClusterServiceRoleInstanceWebuis> webuisList = QueryChain.of(ClusterServiceRoleInstanceWebuis.class)
+                .where(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId).eq(roleInstanceId)
                 .list();
-                
+
         if (webuisList.isEmpty()) {
             return;
         }
-        
+
         for (ClusterServiceRoleInstanceWebuis webuis : webuisList) {
             String webuiName = webuis.getName();
             boolean needUpdate = false;
@@ -117,9 +109,7 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
                 needUpdate = true;
             }
             if (needUpdate) {
-                this.lambdaUpdate()
-                        .eq(ClusterServiceRoleInstanceWebuis::getServiceRoleInstanceId, roleInstanceId)
-                        .update(webuis);
+                this.updateById(webuis);
             }
         }
     }

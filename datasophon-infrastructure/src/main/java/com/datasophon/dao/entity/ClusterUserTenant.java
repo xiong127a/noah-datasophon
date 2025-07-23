@@ -1,28 +1,30 @@
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Data
-@TableName("t_ddh_cluster_user_tenant")
+@Table("t_ddh_cluster_user_tenant")
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ClusterUserTenant implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
 
     /**
@@ -34,7 +36,7 @@ public class ClusterUserTenant implements Serializable {
 
     private Integer tenantId;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String tenantName;
 
 }

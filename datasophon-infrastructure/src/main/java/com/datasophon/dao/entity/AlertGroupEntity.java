@@ -22,11 +22,11 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
-@TableName("t_ddh_alert_group")
+@Table("t_ddh_alert_group")
 @Data
 public class AlertGroupEntity implements Serializable {
 
@@ -35,7 +35,7 @@ public class AlertGroupEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 告警组名称
@@ -48,10 +48,10 @@ public class AlertGroupEntity implements Serializable {
 
     private Date createTime;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer alertQuotaNum;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer clusterId;
 
 }

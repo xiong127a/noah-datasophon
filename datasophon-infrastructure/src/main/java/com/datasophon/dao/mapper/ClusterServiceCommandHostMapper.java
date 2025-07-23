@@ -18,25 +18,19 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.util.Map;
-
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 集群服务操作指令主机表
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-12 11:28:06
  */
 @Mapper
-public interface ClusterServiceCommandHostMapper extends MPJBaseMapper<ClusterServiceCommandHostEntity> {
+public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServiceCommandHostEntity> {
 
     /**
      * 获取指定命令的总进度
@@ -45,14 +39,16 @@ public interface ClusterServiceCommandHostMapper extends MPJBaseMapper<ClusterSe
      * @return 总进度
      */
     default Integer getCommandHostTotalProgressByCommandId(@Param("commandId") String commandId) {
-        // 使用原生SQL查询避免Lambda表达式导致的MyBatis解析问题
-        Object result = selectObjs(Wrappers.<ClusterServiceCommandHostEntity>query()
-                .select("SUM(command_progress) as total")
-                .eq("command_id", commandId))
-                .stream()
-                .findFirst()
-                .orElse(null);
+        // 使用QueryChain和流处理，获取所有命令实例然后计算总和
+        List<ClusterServiceCommandHostEntity> entities = QueryChain.of(ClusterServiceCommandHostEntity.class)
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
+                .list();
 
-        return result == null ? 0 : ((Number) result).intValue();
+        // 使用JDK 21的Stream API处理结果
+        return entities.stream()
+                .map(ClusterServiceCommandHostEntity::getCommandProgress)
+                .filter(Objects::nonNull)
+                .mapToInt(Long::intValue)
+                .sum();
     }
 }

@@ -20,10 +20,10 @@ package com.datasophon.api.controller;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.AlertGroupService;
-import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,14 +42,13 @@ public class AlertGroupController {
     @Autowired
     private AlertGroupService alertGroupService;
 
-    @Autowired
-    private ClusterAlertQuotaService alertQuotaService;
-
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("clusterId") Integer clusterId, @RequestParam("alertGroupName") String alertGroupName, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+    public Result list(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("alertGroupName") String alertGroupName, @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
         return alertGroupService.getAlertGroupList(clusterId, alertGroupName, page, pageSize);
     }
 
@@ -89,8 +88,9 @@ public class AlertGroupController {
     public Result delete(@RequestBody Integer[] ids) {
 
         // 校验是否绑定告警指标
-        List<ClusterAlertQuota> list =
-                alertQuotaService.lambdaQuery().in(ClusterAlertQuota::getAlertGroupId, ids).list();
+        List<ClusterAlertQuota> list = QueryChain.of(ClusterAlertQuota.class)
+                .where(ClusterAlertQuota::getAlertGroupId).in((Object[]) ids)
+                .list();
         if (CollUtil.isNotEmpty(list)) {
             return Result.error(Status.ALERT_GROUP_TIPS_ONE.getMsg());
         }

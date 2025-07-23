@@ -17,9 +17,9 @@
 
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import lombok.Data;
@@ -27,7 +27,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 
-@TableName("t_ddh_cluster_service_instance")
+@Table("t_ddh_cluster_service_instance")
 @Data
 public class ClusterServiceInstanceEntity implements Serializable {
 
@@ -36,7 +36,7 @@ public class ClusterServiceInstanceEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 集群id
@@ -53,7 +53,7 @@ public class ClusterServiceInstanceEntity implements Serializable {
      */
     private ServiceState serviceState;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer serviceStateCode;
     /**
      * 更新时间
@@ -68,10 +68,10 @@ public class ClusterServiceInstanceEntity implements Serializable {
 
     private Integer frameServiceId;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String dashboardUrl;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Long alertNum;
 
     private Integer sortNum;

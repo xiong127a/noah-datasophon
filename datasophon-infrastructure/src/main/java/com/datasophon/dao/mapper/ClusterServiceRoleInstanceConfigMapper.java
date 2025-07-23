@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 集群服务角色实例配置表
@@ -31,6 +31,6 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface ClusterServiceRoleInstanceConfigMapper extends MPJBaseMapper<ClusterServiceRoleInstanceConfigEntity> {
+public interface ClusterServiceRoleInstanceConfigMapper extends BaseMapper<ClusterServiceRoleInstanceConfigEntity> {
 
 }

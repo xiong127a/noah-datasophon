@@ -25,12 +25,12 @@ import java.util.List;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_info")
+@Table("t_ddh_cluster_info")
 public class ClusterInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -38,7 +38,7 @@ public class ClusterInfoEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 创建人
@@ -85,10 +85,10 @@ public class ClusterInfoEntity implements Serializable {
      */
     private String namespace;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private List<UserInfoEntity> clusterManagerList;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer clusterStateCode;
 
 }

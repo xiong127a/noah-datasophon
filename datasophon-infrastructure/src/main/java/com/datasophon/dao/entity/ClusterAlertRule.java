@@ -22,11 +22,11 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_alert_rule")
+@Table("t_ddh_cluster_alert_rule")
 public class ClusterAlertRule implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -34,7 +34,7 @@ public class ClusterAlertRule implements Serializable {
     /**
      * 自增 ID
      */
-    @TableId
+    @Id
     private Long id;
     /**
      * 表达式 ID

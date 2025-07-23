@@ -19,7 +19,7 @@
 
 package com.datasophon.api.load;
 
-import org.apache.pekko.actor.Props;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;
@@ -27,19 +27,36 @@ import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.serviceCacheSyncActor;
-import com.datasophon.api.service.*;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.api.service.ClusterServiceInstanceService;
+import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.api.service.FrameInfoService;
+import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.*;
-import com.datasophon.dao.entity.*;
+import com.datasophon.common.model.ConfigWriter;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceInfo;
+import com.datasophon.common.model.ServiceRoleInfo;
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.FrameInfoEntity;
+import com.datasophon.dao.entity.FrameServiceEntity;
+import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.pekko.actor.Props;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -52,7 +69,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
@@ -74,9 +95,6 @@ public class LoadServiceMeta implements ApplicationRunner {
 
     @Autowired
     private FrameServiceRoleService roleService;
-
-    @Autowired
-    private ClusterVariableService variableService;
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -129,12 +147,7 @@ public class LoadServiceMeta implements ApplicationRunner {
 
     /**
      * 解析 DDL 并存储到 frame 库
-     * 
-     * @param frameCode
-     * @param clusters
-     * @param frameInfo
-     * @param serviceName
-     * @param serviceDdl
+     *
      */
     public void parseServiceDdl(final String frameCode,
             List<ClusterInfoEntity> clusters,
@@ -340,8 +353,9 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private FrameInfoEntity saveClusterFrame(String frameCode) {
-        FrameInfoEntity frameInfo = frameInfoService.getOne(
-                new QueryWrapper<FrameInfoEntity>().eq("frame_code", frameCode));
+        FrameInfoEntity frameInfo = QueryChain.of(FrameInfoEntity.class)
+                .where(FrameInfoEntity::getFrameCode).eq(frameCode)
+                .one();
         if (Objects.isNull(frameInfo)) {
             frameInfo = new FrameInfoEntity();
             frameInfo.setFrameCode(frameCode);
@@ -351,12 +365,12 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     public void loadGlobalVariables(List<ClusterInfoEntity> clusters) throws UnknownHostException {
-        if (Objects.nonNull(clusters) && clusters.size() > 0) {
+        if (CollUtil.isNotEmpty(clusters)) {
             for (ClusterInfoEntity cluster : clusters) {
                 HashMap<String, String> globalVariables = new HashMap<>();
-                List<ClusterVariable> variables = variableService.list(
-                        new QueryWrapper<ClusterVariable>()
-                                .eq(Constants.CLUSTER_ID, cluster.getId()));
+                List<ClusterVariable> variables = QueryChain.of(ClusterVariable.class)
+                        .where(ClusterVariable::getClusterId).eq(cluster.getId())
+                        .list();
                 for (ClusterVariable variable : variables) {
                     globalVariables.put(variable.getVariableName(), variable.getVariableValue());
                 }

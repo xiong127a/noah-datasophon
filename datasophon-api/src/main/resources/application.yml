@@ -110,25 +110,12 @@ management:
       process: true
       system: true
 
-#mybatis
-mybatis-plus:
+#mybatis-flex
+mybatis-flex:
   mapper-locations: classpath*:/mapper/*.xml
   #实体扫描，多个package用逗号或者分号分隔
-  typeAliasesPackage: com.datasophon.dao.entity
-  typeEnumsPackage: com.datasophon.dao.enums,com.datasophon.domain.host.enums
-  global-config:
-    #数据库相关配置
-    db-config:
-      #主键类型  AUTO:"数据库ID自增", INPUT:"用户输入ID", ID_WORKER:"全局唯一ID (数字类型唯一ID)", UUID:"全局唯一ID UUID";
-      id-type: AUTO
-      #字段策略 IGNORED:"忽略判断",NOT_NULL:"非 NULL 判断"),NOT_EMPTY:"非空判断"
-      field-strategy: NOT_NULL
-      #驼峰下划线转换
-      column-underline: true
-      logic-delete-value: -1
-      logic-not-delete-value: 0
-    banner: false
-  #原生配置
+  type-aliases-package: com.datasophon.dao.entity
+  type-handlers-package: com.datasophon.dao.enums,com.datasophon.domain.host.enums
   configuration:
     map-underscore-to-camel-case: true
     # 开启二级缓存
@@ -136,10 +123,19 @@ mybatis-plus:
     call-setters-on-nulls: true
     jdbc-type-for-null: 'null'
     # 设置执行器类型为REUSE，复用PreparedStatement
-    default-executor-type: reuse
+    default-executor-type: REUSE
     # 设置合理的超时时间(秒)
     default-statement-timeout: 30
 #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    print-banner: false
+    # 主键策略
+    key-config:
+      key-type: AUTO
+    # 逻辑删除
+    logic-delete-config:
+      logic-delete-value: -1
+      logic-not-delete-value: 0
 logging:
   config: classpath:logback-api.xml
 

@@ -19,14 +19,14 @@ package com.datasophon.dao.entity;
 
 import java.io.Serializable;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@TableName("t_ddh_notice_group_user")
+@Table("t_ddh_notice_group_user")
 @Data
 @Builder
 @NoArgsConstructor
@@ -38,7 +38,7 @@ public class NoticeGroupUserEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 通知组id

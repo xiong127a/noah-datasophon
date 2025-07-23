@@ -25,11 +25,11 @@ import java.util.List;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
-@TableName("t_ddh_frame_service_role")
+@Table("t_ddh_frame_service_role")
 @Data
 @Accessors(chain = true)
 public class FrameServiceRoleEntity implements Serializable {
@@ -39,7 +39,7 @@ public class FrameServiceRoleEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 服务id
@@ -66,7 +66,7 @@ public class FrameServiceRoleEntity implements Serializable {
 
     private String jmxPort;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private List<String> hosts;
 
     private String logFile;

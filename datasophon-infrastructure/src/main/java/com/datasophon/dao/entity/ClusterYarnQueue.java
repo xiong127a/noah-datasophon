@@ -22,12 +22,12 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_yarn_queue")
+@Table("t_ddh_cluster_yarn_queue")
 public class ClusterYarnQueue implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -35,7 +35,7 @@ public class ClusterYarnQueue implements Serializable {
     /**
      * 
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 
@@ -80,10 +80,10 @@ public class ClusterYarnQueue implements Serializable {
 
     private String amShare;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String minResources;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private String maxResources;
 
 }

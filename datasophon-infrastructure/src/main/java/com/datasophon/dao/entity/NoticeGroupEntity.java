@@ -21,15 +21,15 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@TableName("t_ddh_notice_group")
+@Table("t_ddh_notice_group")
 @Data
 @Builder
 @NoArgsConstructor
@@ -41,23 +41,21 @@ public class NoticeGroupEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer clusterId;
     /**
      * 通知组名称
      */
     private String noticeGroupName;
 
-
     /**
      * 创建时间
      */
     private Date createTime;
 
-
-    @TableField(exist = false)
+    @Column(ignore = true)
     private List<UserInfoEntity> userIds;
 
 }

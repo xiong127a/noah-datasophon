@@ -22,12 +22,12 @@ import java.util.List;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_frame_info")
+@Table("t_ddh_frame_info")
 public class FrameInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -35,7 +35,7 @@ public class FrameInfoEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 框架名称
@@ -50,7 +50,7 @@ public class FrameInfoEntity implements Serializable {
      */
     private String frameVersion;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private List<FrameServiceEntity> frameServiceList;
 
 }

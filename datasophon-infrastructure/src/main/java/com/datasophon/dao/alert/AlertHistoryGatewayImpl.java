@@ -1,6 +1,6 @@
 package com.datasophon.dao.alert;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
@@ -17,59 +17,65 @@ import java.util.Objects;
 @Component
 public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
 
+    private static final int ENABLED = 1;
+    private static final int DISABLED = 2;
+
     @Autowired
     private ClusterAlertHistoryMapper alertHistoryMapper;
 
     @Override
     public boolean hasEnabledAlertHistory(String alertname, int clusterId, String hostname) {
-        LambdaQueryWrapper<ClusterAlertHistory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterAlertHistory::getAlertTargetName, alertname)
-                .eq(ClusterAlertHistory::getClusterId, clusterId)
-                .eq(ClusterAlertHistory::getHostname, hostname)
-                .eq(ClusterAlertHistory::getIsEnabled, 1);
-        ClusterAlertHistory clusterAlertHistory = alertHistoryMapper.selectOne(queryWrapper);
-        if (Objects.nonNull(clusterAlertHistory)) {
-            return true;
-        }
-        return false;
+        ClusterAlertHistory alertHistory = QueryChain.of(ClusterAlertHistory.class)
+                .where(ClusterAlertHistory::getAlertTargetName).eq(alertname)
+                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistory::getHostname).eq(hostname)
+                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
+                .one();
+
+        return Objects.nonNull(alertHistory);
     }
 
     @Override
     public AlertHistory getEnabledAlertHistory(String alertname, int clusterId, String hostname) {
-        LambdaQueryWrapper<ClusterAlertHistory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterAlertHistory::getAlertTargetName, alertname)
-                .eq(ClusterAlertHistory::getClusterId, clusterId)
-                .eq(ClusterAlertHistory::getHostname, hostname)
-                .eq(ClusterAlertHistory::getIsEnabled, 1);
-        ClusterAlertHistory clusterAlertHistory = alertHistoryMapper.selectOne(queryWrapper);
-        if(Objects.nonNull(clusterAlertHistory)){
+        ClusterAlertHistory clusterAlertHistory = QueryChain.of(ClusterAlertHistory.class)
+                .where(ClusterAlertHistory::getAlertTargetName).eq(alertname)
+                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistory::getHostname).eq(hostname)
+                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
+                .one();
+
+        if (Objects.nonNull(clusterAlertHistory)) {
             AlertHistory alertHistory = new AlertHistory();
-            BeanUtils.copyProperties(clusterAlertHistory,alertHistory);
+            BeanUtils.copyProperties(clusterAlertHistory, alertHistory);
             alertHistory.setAlertLevel(clusterAlertHistory.getAlertLevel().getValue());
             return alertHistory;
         }
+
         return null;
     }
 
     @Override
     public void updateAlertHistoryToDisabled(Integer id) {
-        ClusterAlertHistory clusterAlertHistory = alertHistoryMapper.selectById(id);
-        clusterAlertHistory.setIsEnabled(2);
-        alertHistoryMapper.updateById(clusterAlertHistory);
+        ClusterAlertHistory alertHistory = QueryChain.of(ClusterAlertHistory.class)
+                .where(ClusterAlertHistory::getId).eq(id)
+                .one();
+
+        if (Objects.nonNull(alertHistory)) {
+            alertHistory.setIsEnabled(DISABLED);
+            alertHistoryMapper.update(alertHistory);
+        }
     }
 
     @Override
     public boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Integer id) {
-        LambdaQueryWrapper<ClusterAlertHistory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ClusterAlertHistory::getHostname, hostname)
-                .eq(ClusterAlertHistory::getAlertGroupName, serviceRoleName.toLowerCase())
-                .eq(ClusterAlertHistory::getIsEnabled, 1)
-                .eq(ClusterAlertHistory::getAlertLevel, AlertLevel.WARN)
-                .ne(ClusterAlertHistory::getId, id);
-        List<ClusterAlertHistory> clusterAlertHistories = alertHistoryMapper.selectList(queryWrapper);
-        if(CollectionUtils.isEmpty(clusterAlertHistories)){
-            return false;
-        }
-        return true;
+        List<ClusterAlertHistory> alertHistories = QueryChain.of(ClusterAlertHistory.class)
+                .where(ClusterAlertHistory::getHostname).eq(hostname)
+                .and(ClusterAlertHistory::getAlertGroupName).eq(serviceRoleName.toLowerCase())
+                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
+                .and(ClusterAlertHistory::getAlertLevel).eq(AlertLevel.WARN)
+                .and(ClusterAlertHistory::getId).ne(id)
+                .list();
+
+        return !CollectionUtils.isEmpty(alertHistories);
     }
 }

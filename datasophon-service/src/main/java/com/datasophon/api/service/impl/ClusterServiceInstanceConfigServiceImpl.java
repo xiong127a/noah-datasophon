@@ -19,8 +19,8 @@ package com.datasophon.api.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.mybatisflex.core.query.QueryChain;
 
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
@@ -79,20 +80,20 @@ public class ClusterServiceInstanceConfigServiceImpl
 
         @Override
         public ClusterServiceInstanceConfigEntity getServiceConfigByServiceId(Integer id) {
-                return this.lambdaQuery()
-                                .eq(ClusterServiceInstanceConfigEntity::getServiceId, id)
-                                .orderByDesc(ClusterServiceInstanceConfigEntity::getConfigVersion)
-                                .last("limit 1")
+                return QueryChain.of(ClusterServiceInstanceConfigEntity.class)
+                                .where(ClusterServiceInstanceConfigEntity::getServiceId).eq(id)
+                                .orderBy(ClusterServiceInstanceConfigEntity::getConfigVersion).desc()
+                                .limit(1)
                                 .one();
         }
 
         @Override
         public Result getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
                 // 获取角色组的所有配置版本
-                List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
-                                .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
-                                                .eq(Constants.ROLE_GROUP_ID, roleGroupId)
-                                                .orderByDesc(Constants.CONFIG_VERSION));
+                List<ClusterServiceRoleGroupConfig> list = QueryChain.of(ClusterServiceRoleGroupConfig.class)
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                                .list();
 
                 // 如果没有配置版本，直接返回空列表
                 if (list == null || list.isEmpty()) {

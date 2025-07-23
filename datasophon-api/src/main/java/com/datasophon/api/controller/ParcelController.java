@@ -22,11 +22,9 @@ import cn.hutool.core.util.NumberUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.datasophon.api.load.LoadServiceMeta;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.FileUtils;
 import com.datasophon.common.utils.Result;
@@ -36,6 +34,7 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.model.ComponentVO;
 import com.datasophon.dao.model.ParcelInfoVO;
 import com.google.common.util.concurrent.AtomicDouble;
+import com.mybatisflex.core.query.QueryChain;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
@@ -79,9 +78,6 @@ public class ParcelController implements DisposableBean {
      * 异步操作的任务
      */
     final Map<String, CompletableFuture> ASYNC_TASK_CACHE = new ConcurrentHashMap<>();
-
-    @Autowired
-    private FrameServiceService frameServiceService;
 
     @Autowired
     private FrameInfoService frameInfoService;
@@ -178,7 +174,8 @@ public class ParcelController implements DisposableBean {
             }
 
             if (parcelInfo.getComponents() != null && !parcelInfo.getComponents().isEmpty()) {
-                final List<ComponentVO> componentVOS = parcelInfo.getComponents().stream().filter(it -> info.getParcelName().equals(it.getName())).toList();
+                final List<ComponentVO> componentVOS = parcelInfo.getComponents().stream()
+                        .filter(it -> info.getParcelName().equals(it.getName())).toList();
                 if (componentVOS.isEmpty()) {
                     throw new IllegalStateException("No component package: " + info.getParcelName());
                 }
@@ -287,15 +284,15 @@ public class ParcelController implements DisposableBean {
         final FrameInfoEntity frameInfo = frameInfoEntityList.getFirst();
 
         // 是否已经安装了组件？
-        List<FrameServiceEntity> installService = frameServiceService.list(
-                Wrappers.<FrameServiceEntity>lambdaQuery()
-                        .eq(FrameServiceEntity::getServiceName, vo.getName())
-                        .eq(FrameServiceEntity::getServiceVersion, vo.getVersion()));
+        List<FrameServiceEntity> installService = QueryChain.of(FrameServiceEntity.class)
+                .where(FrameServiceEntity::getServiceName).eq(vo.getName())
+                .and(FrameServiceEntity::getServiceVersion).eq(vo.getVersion())
+                .list();
         if (installService.isEmpty()) {
             // 防止包名称相同，覆盖了已经安装的，也防止包名称的污染
-            installService = frameServiceService.list(
-                    Wrappers.<FrameServiceEntity>lambdaQuery()
-                            .eq(FrameServiceEntity::getPackageName, vo.getPackageName()));
+            installService = QueryChain.of(FrameServiceEntity.class)
+                    .where(FrameServiceEntity::getPackageName).eq(vo.getPackageName())
+                    .list();
         }
         // 已经安装的服务
         if (installService != null && !installService.isEmpty()) {

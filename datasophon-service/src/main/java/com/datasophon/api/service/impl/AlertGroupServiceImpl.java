@@ -17,12 +17,10 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
-import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
 import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
 import com.datasophon.common.Constants;
@@ -44,43 +42,70 @@ import java.util.stream.Collectors;
 @Service("alertGroupService")
 public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGroupEntity>
         implements
-            AlertGroupService {
+        AlertGroupService {
 
     @Autowired
     private ClusterAlertGroupMapService alertGroupMapService;
 
-    @Autowired
-    private ClusterAlertQuotaService quotaService;
-
     @Override
     public Result getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
+        // 查询告警组映射关系
+        List<ClusterAlertGroupMap> alertGroupMapList = QueryChain.of(ClusterAlertGroupMap.class)
+                .where(ClusterAlertGroupMap::getClusterId).eq(clusterId)
+                .list();
 
-        List<ClusterAlertGroupMap> alertGroupMapList =
-                alertGroupMapService.list(new QueryWrapper<ClusterAlertGroupMap>().eq(Constants.CLUSTER_ID, clusterId));
         if (CollectionUtils.isEmpty(alertGroupMapList)) {
             return Result.successEmptyCount();
         }
 
-        List<Integer> groupIds =
-                alertGroupMapList.stream().map(ClusterAlertGroupMap::getAlertGroupId).collect(Collectors.toList());
-        LambdaQueryChainWrapper<AlertGroupEntity> wrapper = this.lambdaQuery()
-                .in(AlertGroupEntity::getId, groupIds)
-                .like(StringUtils.isNotBlank(alertGroupName), AlertGroupEntity::getAlertGroupName, alertGroupName);
-        long count = wrapper.count() == null ? 0 : wrapper.count();
-        List<AlertGroupEntity> alertGroupList = wrapper.last("limit " + offset + "," + pageSize).list();
+        // 提取告警组ID集合
+        List<Integer> groupIds = alertGroupMapList.stream()
+                .map(ClusterAlertGroupMap::getAlertGroupId)
+                .collect(Collectors.toList());
+
+        // 构建查询条件
+        QueryChain<AlertGroupEntity> query = QueryChain.of(AlertGroupEntity.class)
+                .where(AlertGroupEntity::getId).in(groupIds);
+
+        // 添加名称过滤条件
+        if (StringUtils.isNotBlank(alertGroupName)) {
+            query.and(AlertGroupEntity::getAlertGroupName).like(alertGroupName);
+        }
+
+        // 获取总记录数
+        long count = query.count();
+
+        if (count == 0) {
+            return Result.successEmptyCount();
+        }
+
+        // 使用MyBatis-Flex内置的分页API
+        com.mybatisflex.core.paginate.Page<AlertGroupEntity> flexPage = new com.mybatisflex.core.paginate.Page<>(page,
+                pageSize);
+        com.mybatisflex.core.paginate.Page<AlertGroupEntity> resultPage = query.page(flexPage);
+
+        List<AlertGroupEntity> alertGroupList = resultPage.getRecords();
+
         if (CollectionUtils.isEmpty(alertGroupList)) {
             return Result.successEmptyCount();
         }
 
-        Set<Integer> alertGroupIdList =
-                alertGroupList.stream().map(AlertGroupEntity::getId).collect(Collectors.toSet());
+        // 获取告警组ID集合用于后续查询
+        Set<Integer> alertGroupIdList = alertGroupList.stream()
+                .map(AlertGroupEntity::getId)
+                .collect(Collectors.toSet());
+
         // 查询告警组下告警指标个数
-        List<ClusterAlertQuota> clusQuotaList =
-                quotaService.lambdaQuery().in(ClusterAlertQuota::getAlertGroupId, alertGroupIdList).list();
+        List<ClusterAlertQuota> clusQuotaList = QueryChain.of(ClusterAlertQuota.class)
+                .where(ClusterAlertQuota::getAlertGroupId).in(alertGroupIdList)
+                .list();
+
         if (CollectionUtils.isNotEmpty(clusQuotaList)) {
-            Map<Integer, List<ClusterAlertQuota>> alertGroupByGroupId =
-                    clusQuotaList.stream().collect(Collectors.groupingBy(ClusterAlertQuota::getAlertGroupId));
+            // 按告警组ID分组统计指标数量
+            Map<Integer, List<ClusterAlertQuota>> alertGroupByGroupId = clusQuotaList.stream()
+                    .collect(Collectors.groupingBy(ClusterAlertQuota::getAlertGroupId));
+
+            // 设置告警指标数量
             alertGroupList.forEach(a -> {
                 List<ClusterAlertQuota> tmpQuotaList = alertGroupByGroupId.get(a.getId());
                 int quotaCnt = CollectionUtils.isEmpty(tmpQuotaList) ? 0 : tmpQuotaList.size();
@@ -105,17 +130,19 @@ public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGr
         }
 
         // 重复校验
-        List<Integer> existGroupId = alertGroupMapService.lambdaQuery()
-                .eq(ClusterAlertGroupMap::getClusterId, alertGroup.getClusterId())
+        List<Integer> existGroupId = QueryChain.of(ClusterAlertGroupMap.class)
+                .where(ClusterAlertGroupMap::getClusterId).eq(alertGroup.getClusterId())
                 .list()
                 .stream()
                 .map(ClusterAlertGroupMap::getAlertGroupId)
                 .collect(Collectors.toList());
+
         List<String> existGroupName = this
                 .listByIds(existGroupId)
                 .stream()
                 .map(AlertGroupEntity::getAlertGroupName)
-                .collect(Collectors.toList());
+                .toList();
+
         if (existGroupName.contains(alertGroup.getAlertGroupName())) {
             return Result.error("告警组名称重复");
         }

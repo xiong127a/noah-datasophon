@@ -19,14 +19,13 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.HadoopUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
@@ -50,7 +49,7 @@ import java.util.List;
 @Service("clusterQueueCapacityService")
 public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCapacityMapper, ClusterQueueCapacity>
         implements
-            ClusterQueueCapacityService {
+        ClusterQueueCapacityService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterQueueCapacityServiceImpl.class);
 
@@ -59,11 +58,12 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     @Override
     public Result refreshToYarn(Integer clusterId) throws Exception {
-        List<ClusterQueueCapacity> list = this.list(new QueryWrapper<ClusterQueueCapacity>()
-                .eq(Constants.CLUSTER_ID, clusterId));
+        List<ClusterQueueCapacity> list = QueryChain.of(ClusterQueueCapacity.class)
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .list();
         ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
-        List<ClusterServiceRoleInstanceEntity> roleList =
-                roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
 
         // build configfilemap
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -125,8 +125,9 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     @Override
     public Result listCapacityQueue(Integer clusterId) {
-        List<ClusterQueueCapacity> list = this.list(new QueryWrapper<ClusterQueueCapacity>()
-                .eq(Constants.CLUSTER_ID, clusterId));
+        List<ClusterQueueCapacity> list = QueryChain.of(ClusterQueueCapacity.class)
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .list();
 
         ClusterQueueCapacityList clusterQueueCapacityList = new ClusterQueueCapacityList();
         clusterQueueCapacityList.setRootId("root");

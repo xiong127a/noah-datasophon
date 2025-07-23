@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -25,8 +26,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 /**
  * 访问令牌实体
@@ -34,18 +35,19 @@ import com.baomidou.mybatisplus.annotation.TableName;
  * @author generated
  */
 @Data
-@TableName("t_ddh_access_token")
+@Table("t_ddh_access_token")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccessTokenEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
 
     /**

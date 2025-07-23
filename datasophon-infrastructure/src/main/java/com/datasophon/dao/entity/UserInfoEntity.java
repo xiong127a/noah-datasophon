@@ -17,19 +17,18 @@
 
 package com.datasophon.dao.entity;
 
-import java.io.Serializable;
-import java.util.Date;
-
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+import java.util.Date;
+
 @Data
-@TableName("t_ddh_user_info")
+@Table("t_ddh_user_info")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,7 +39,7 @@ public class UserInfoEntity implements Serializable {
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 用户名

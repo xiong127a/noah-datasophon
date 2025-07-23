@@ -20,9 +20,10 @@ package com.datasophon.api.service.impl;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.AlertManagersActor;
 import com.datasophon.api.service.ClusterAlertQuotaService;
@@ -90,14 +91,19 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
             return Result.error(e.getMessage());
         }
 
-        LambdaQueryWrapper<NoticeGroupEntity> query = new LambdaQueryWrapper<>();
-        query.eq(NoticeGroupEntity::getNoticeGroupName, noticeGroup.getNoticeGroupName());
+        // 查询是否存在相同名称的通知组
+        QueryChain<NoticeGroupEntity> query = QueryChain.of(NoticeGroupEntity.class)
+                .where(NoticeGroupEntity::getNoticeGroupName).eq(noticeGroup.getNoticeGroupName());
+
+        // 如果是更新操作，则排除自身
         if (Objects.nonNull(noticeGroup.getId())) {
-            query.ne(NoticeGroupEntity::getId, noticeGroup.getId());
+            query.and(NoticeGroupEntity::getId).ne(noticeGroup.getId());
         }
-        List<NoticeGroupEntity> list = list(query);
+
+        List<NoticeGroupEntity> list = query.list();
+
         if (CollectionUtil.isNotEmpty(list)) {
-            // return Result.error("通知组名称重复");
+            return Result.error("通知组名称重复");
         }
 
         if (Objects.nonNull(noticeGroup.getId())) {
@@ -134,7 +140,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                     .getConfigByRoleGroupId(roleInstanceEntity.getRoleGroupId());
             List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
             serviceInstallService.saveServiceConfig(roleInstanceEntity.getClusterId(), "ALERTMANAGER", serviceConfig,
-                    roleGroupConfig.getRoleGroupId(), "(AUTO) 生成alertManager 配置信息",-1,"system");
+                    roleGroupConfig.getRoleGroupId(), "(AUTO) 生成alertManager 配置信息", -1, "system");
         }
 
         // 调用配置生成
@@ -148,7 +154,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     public void removeNoticeGroup(List<Integer> list) {
         List<ClusterAlertQuota> byNoticeGroupIds = clusterAlertQuotaService.getByNoticeGroupIds(list);
         if (CollectionUtil.isNotEmpty(byNoticeGroupIds)) {
-            // throw new ServiceException(Status.NOTICE_GROUP_USE);
+            throw new ServiceException("该通知组被使用，无法删除");
         }
         removeByIds(list);
         noticeGroupUserService.removeByGroupIds(list);
@@ -157,35 +163,51 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     }
 
     @Override
-    public IPage<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage) {
+    public Page<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage) {
         // 获取查询参数
-        NoticeGroupEntity param = Optional.ofNullable(mPage.getParam()).orElse(NoticeGroupEntity.builder().build());
-        // 设置查询条件
-        LambdaQueryWrapper<NoticeGroupEntity> query = new LambdaQueryWrapper<>();
+        NoticeGroupEntity param = Optional.ofNullable(mPage.getParam())
+                .orElse(NoticeGroupEntity.builder().build());
 
+        // 构建查询链，基于参数动态构建条件
+        QueryChain<NoticeGroupEntity> query = QueryChain.of(NoticeGroupEntity.class);
+
+        // 根据名称模糊查询（如果参数中有名称）
         if (StrUtil.isNotBlank(param.getNoticeGroupName())) {
-            query.like(NoticeGroupEntity::getNoticeGroupName, param.getNoticeGroupName());
+            query.where(NoticeGroupEntity::getNoticeGroupName).like(param.getNoticeGroupName());
         }
 
-        // 查询
-        IPage<NoticeGroupEntity> page = page(mPage, query);
+        // 执行分页查询
+        Page<NoticeGroupEntity> resultPage = query.page(mPage);
 
-        // 查询用户
-        List<Integer> groupIds = page.getRecords().stream().map(NoticeGroupEntity::getId).collect(Collectors.toList());
-        Map<Integer, UserInfoEntity> userinfo = userInfoService.list().stream()
-                .collect(Collectors.toMap(UserInfoEntity::getId, v -> v));
+        // 如果查询结果为空，提前返回
+        if (CollectionUtil.isEmpty(resultPage.getRecords())) {
+            return resultPage;
+        }
 
-        // groupid 和用户的的对应map
-        Map<Integer, List<UserInfoEntity>> users = noticeGroupUserService.listByGroupIds(groupIds).stream()
-                .filter(v -> Objects.nonNull(userinfo.get(v.getUserId())))
-                .map(v -> {
-                    UserInfoEntity userInfoEntity = userinfo.get(v.getUserId());
-                    userInfoEntity.setUserType(v.getNoticeGroupId());
-                    return userInfoEntity;
-                }).collect(Collectors.groupingBy(UserInfoEntity::getUserType));
+        // 查询所有相关的用户信息
+        List<Integer> groupIds = resultPage.getRecords().stream()
+                .map(NoticeGroupEntity::getId)
+                .collect(Collectors.toList());
 
-        page.getRecords().forEach(record -> record.setUserIds(users.get(record.getId())));
-        return page;
+        // 获取所有用户信息，构建ID到用户实体的映射
+        Map<Integer, UserInfoEntity> userInfoMap = userInfoService.list().stream()
+                .collect(Collectors.toMap(UserInfoEntity::getId, user -> user));
+
+        // 查询通知组和用户的关系，构建组ID到用户列表的映射
+        Map<Integer, List<UserInfoEntity>> groupUserMap = noticeGroupUserService.listByGroupIds(groupIds).stream()
+                .filter(relation -> Objects.nonNull(userInfoMap.get(relation.getUserId())))
+                .map(relation -> {
+                    // 将用户类型设置为通知组ID
+                    UserInfoEntity userInfo = userInfoMap.get(relation.getUserId());
+                    userInfo.setUserType(relation.getNoticeGroupId());
+                    return userInfo;
+                })
+                .collect(Collectors.groupingBy(UserInfoEntity::getUserType));
+
+        // 将用户列表关联到各个通知组
+        resultPage.getRecords()
+                .forEach(group -> group.setUserIds(groupUserMap.getOrDefault(group.getId(), Collections.emptyList())));
+
+        return resultPage;
     }
-
 }

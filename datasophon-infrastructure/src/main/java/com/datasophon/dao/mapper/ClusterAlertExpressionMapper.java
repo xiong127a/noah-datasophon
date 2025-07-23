@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterAlertExpression;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 表达式常量表

@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import org.apache.ibatis.annotations.Mapper;

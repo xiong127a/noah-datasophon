@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.RoleInfoEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.github.yulichang.base.MPJBaseMapper;
+import com.mybatisflex.core.BaseMapper;
 
 /**
  * 角色信息表
@@ -31,6 +31,6 @@ import com.github.yulichang.base.MPJBaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface RoleInfoMapper extends MPJBaseMapper<RoleInfoEntity> {
+public interface RoleInfoMapper extends BaseMapper<RoleInfoEntity> {
 
 }

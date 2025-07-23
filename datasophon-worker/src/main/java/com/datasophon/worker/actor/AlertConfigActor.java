@@ -17,16 +17,16 @@
 
 package com.datasophon.worker.actor;
 
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.worker.utils.WorkerFreemarkerUtils;
+import org.apache.pekko.actor.AbstractActor;
+import org.apache.pekko.japi.pf.ReceiveBuilder;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AlertConfigActor extends AbstractActor {
 
@@ -35,7 +35,7 @@ public class AlertConfigActor extends AbstractActor {
         return ReceiveBuilder.create()
                 .match(GenerateAlertConfigCommand.class, command -> {
                     ExecResult execResult = new ExecResult();
-                    HashMap<Generators, List<AlertItem>> configFileMap = command.getConfigFileMap();
+                    Map<Generators, List<AlertItem>> configFileMap = command.getConfigFileMap();
                     for (Generators generators : configFileMap.keySet()) {
                         List<AlertItem> alertItems = configFileMap.get(generators);
                         WorkerFreemarkerUtils.generatePromAlertFile(generators, alertItems,

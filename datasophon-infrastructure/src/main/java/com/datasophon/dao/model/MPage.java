@@ -1,15 +1,13 @@
 package com.datasophon.dao.model;
 
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.mybatisflex.core.paginate.Page;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class MPage<T> extends Page<T> {
-
-    {
-//        super.optimizeCountSql = false;
-    }
 
     private T param;
 
@@ -17,13 +15,6 @@ public class MPage<T> extends Page<T> {
 
     private Integer page;
 
-    public void setKeyword(String keyword) {
-        if (null == keyword || "".equals(keyword)) {
-            this.keyword = null;
-        } else {
-            this.keyword = keyword;
-        }
-    }
 
     public MPage() {
 

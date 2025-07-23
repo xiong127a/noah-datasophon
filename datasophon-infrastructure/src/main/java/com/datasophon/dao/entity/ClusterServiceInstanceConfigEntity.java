@@ -22,10 +22,10 @@ import java.util.Date;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
-@TableName("t_ddh_cluster_service_instance_config")
+@Table("t_ddh_cluster_service_instance_config")
 @Data
 public class ClusterServiceInstanceConfigEntity implements Serializable {
 
@@ -34,7 +34,7 @@ public class ClusterServiceInstanceConfigEntity implements Serializable {
     /**
      * 主机
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 服务角色实例id

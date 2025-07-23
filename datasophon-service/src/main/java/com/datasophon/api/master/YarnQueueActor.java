@@ -4,10 +4,9 @@ import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantYarnResource;
@@ -69,11 +68,12 @@ public class YarnQueueActor extends AbstractActor {
     private void createCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
 
-        List<ClusterQueueCapacity> list = clusterQueueCapacityService
-                .list(new QueryWrapper<ClusterQueueCapacity>()
-                        .eq(Constants.CLUSTER_ID, clusterId)
-                        .eq("parent", yarnResource.getParentQueueName())
-                        .eq("queue_name", yarnResource.getQueueName()));
+        List<ClusterQueueCapacity> list = QueryChain.of(ClusterQueueCapacity.class)
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .and(ClusterQueueCapacity::getParent).eq(yarnResource.getParentQueueName())
+                .and(ClusterQueueCapacity::getQueueName).eq(yarnResource.getQueueName())
+                .list();
+
         if (CollUtil.isNotEmpty(list)) {
             logger.error("当前队列已经存在");
             return;
@@ -94,12 +94,12 @@ public class YarnQueueActor extends AbstractActor {
 
     private void updateCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
-        ClusterQueueCapacity queue = clusterQueueCapacityService
-                .list(new QueryWrapper<ClusterQueueCapacity>()
-                        .eq(Constants.CLUSTER_ID, clusterId)
-                        .eq("parent", yarnResource.getParentQueueName())
-                        .eq("queue_name", yarnResource.getQueueName()))
-                .getFirst();
+        ClusterQueueCapacity queue = QueryChain.of(ClusterQueueCapacity.class)
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .and(ClusterQueueCapacity::getParent).eq(yarnResource.getParentQueueName())
+                .and(ClusterQueueCapacity::getQueueName).eq(yarnResource.getQueueName())
+                .one();
+
         queue.setCapacity(yarnResource.getCapacityPercent());
         queue.setNodeLabel(yarnResource.getNodeLabel());
 
@@ -114,12 +114,12 @@ public class YarnQueueActor extends AbstractActor {
 
     private void deleteCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
-        ClusterQueueCapacity queue = clusterQueueCapacityService
-                .list(new QueryWrapper<ClusterQueueCapacity>()
-                        .eq(Constants.CLUSTER_ID, clusterId)
-                        .eq("parent", yarnResource.getParentQueueName())
-                        .eq("queue_name", yarnResource.getQueueName()))
-                .getFirst();
+        ClusterQueueCapacity queue = QueryChain.of(ClusterQueueCapacity.class)
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .and(ClusterQueueCapacity::getParent).eq(yarnResource.getParentQueueName())
+                .and(ClusterQueueCapacity::getQueueName).eq(yarnResource.getQueueName())
+                .one();
+
         clusterQueueCapacityService.removeById(queue.getId());
         clusterQueueCapacityService.refreshToYarn(clusterId);
         logger.info("delete yarn queue {} success , please restart yarn", yarnResource.getQueueName());

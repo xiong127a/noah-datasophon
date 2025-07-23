@@ -17,9 +17,9 @@
 
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -31,7 +31,7 @@ import java.util.Date;
  * @author datasophon
  */
 @Data
-@TableName("t_ddh_config_version_info")
+@Table("t_ddh_config_version_info")
 public class ConfigVersionInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -39,7 +39,7 @@ public class ConfigVersionInfoEntity implements Serializable {
     /**
      * 版本号
      */
-    @TableId(type = IdType.INPUT)
+    @Id(keyType = KeyType.None)
     private Integer version;
 
     /**

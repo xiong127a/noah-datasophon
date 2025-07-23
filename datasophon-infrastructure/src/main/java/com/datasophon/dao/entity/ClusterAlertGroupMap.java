@@ -21,11 +21,11 @@ import java.io.Serializable;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 
 @Data
-@TableName("t_ddh_cluster_alert_group_map")
+@Table("t_ddh_cluster_alert_group_map")
 public class ClusterAlertGroupMap implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -33,7 +33,7 @@ public class ClusterAlertGroupMap implements Serializable {
     /**
      * 
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 

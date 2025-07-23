@@ -17,9 +17,9 @@
 
 package com.datasophon.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.mybatisflex.annotation.Column;
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.Table;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import lombok.AllArgsConstructor;
@@ -27,22 +27,24 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
-@TableName("t_ddh_cluster_host")
+@Table("t_ddh_cluster_host")
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ClusterHostDO implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 主键
      */
-    @TableId
+    @Id
     private Integer id;
     /**
      * 创建时间
@@ -105,7 +107,7 @@ public class ClusterHostDO implements Serializable {
 
     private String nodeLabel;
 
-    @TableField(exist = false)
+    @Column(ignore = true)
     private Integer serviceRoleNum;
 
 }
