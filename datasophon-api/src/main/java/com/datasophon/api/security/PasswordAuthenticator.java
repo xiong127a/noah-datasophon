@@ -17,67 +17,64 @@
 
 package com.datasophon.api.security;
 
-import com.datasophon.api.enums.Status;
-import com.datasophon.api.service.SessionService;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.api.utils.SecurityUtils;
-import com.datasophon.common.Constants;
-import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.SessionEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
-
-import java.util.Collections;
-
-import jakarta.servlet.http.HttpServletRequest;
-
+import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
 
-public class PasswordAuthenticator implements Authenticator {
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Spring Security用户详情服务实现
+ * 负责加载用户信息以进行认证
+ */
+@Service
+public class PasswordAuthenticator implements UserDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(PasswordAuthenticator.class);
 
     @Autowired
     private UserInfoService userService;
-    @Autowired
-    private SessionService sessionService;
 
     @Override
-    public Result authenticate(String username, String password, String extra) {
-        Result result = new Result();
-        // verify username and password
-        UserInfoEntity user = userService.queryUser(username, password);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // 直接使用QueryChain查询用户
+        UserInfoEntity user = QueryChain.of(UserInfoEntity.class)
+                .where(UserInfoEntity::getUsername).eq(username)
+                .one();
+
         if (user == null) {
-            result.put(Constants.CODE, Status.USER_NAME_PASSWD_ERROR.getCode());
-            result.put(Constants.MSG, Status.USER_NAME_PASSWD_ERROR.getMsg());
-            return result;
+            logger.error("User not found with username: {}", username);
+            throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
-        // create session
-        String sessionId = sessionService.createSession(user, extra);
-        if (sessionId == null) {
-            result.put(Constants.CODE, Status.LOGIN_SESSION_FAILED.getCode());
-            result.put(Constants.MSG, Status.LOGIN_SESSION_FAILED.getMsg());
-            return result;
-        }
-        logger.info("sessionId : {}", sessionId);
-        result.put(Constants.DATA, Collections.singletonMap(Constants.SESSION_ID, sessionId));
-        result.put(Constants.CODE, Status.SUCCESS.getCode());
-        result.put(Constants.MSG, Status.LOGIN_SUCCESS.getMsg());
-        result.put(Constants.USER_INFO, user);
-        SecurityUtils.getSession().setAttribute(Constants.SESSION_USER, user);
-        return result;
-    }
+        // 创建权限列表
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-    @Override
-    public UserInfoEntity getAuthUser(HttpServletRequest request) {
-        SessionEntity session = sessionService.getSession(request);
-        if (session == null) {
-            logger.info("session info is null ");
-            return null;
+        // 如果是管理员，添加管理员角色
+        if (user.getUserType() != null && user.getUserType() == 1) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
-        // get user object from session
-        return userService.getById(session.getUserId());
+
+        // 返回Spring Security用户对象
+        return new User(
+                user.getUsername(),
+                user.getPassword(),
+                true, // 所有用户默认为启用状态
+                true, // accountNonExpired
+                true, // credentialsNonExpired
+                true, // accountNonLocked
+                authorities);
     }
 }

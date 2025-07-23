@@ -18,7 +18,6 @@
 package com.datasophon.api.configuration;
 
 import com.datasophon.api.interceptor.LocaleChangeInterceptor;
-import com.datasophon.api.interceptor.LoginHandlerInterceptor;
 import com.datasophon.api.interceptor.UserPermissionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,13 +56,15 @@ public class AppConfiguration implements WebMvcConfigurer {
         return new CorsFilter(configSource);
     }
 
-    @Bean
-    public LoginHandlerInterceptor loginInterceptor() {
-        return new LoginHandlerInterceptor();
-    }
+    // 不再需要登录拦截器
+    // @Bean
+    // public LoginHandlerInterceptor loginInterceptor() {
+    // return new LoginHandlerInterceptor();
+    // }
 
     /**
      * Cookie
+     * 
      * @return local resolver
      */
     @Bean(name = "localeResolver")
@@ -92,24 +93,24 @@ public class AppConfiguration implements WebMvcConfigurer {
         // i18n
         registry.addInterceptor(localeChangeInterceptor());
         registry.addInterceptor(userPermissionHandler());
-        // login
-        registry.addInterceptor(loginInterceptor())
-                .addPathPatterns("/**")
-                .excludePathPatterns(
-                        LOGIN_PATH_PATTERN,
-                        "/error",
-                        "/service/install/downloadPackage",
-                        "/cluster/alert/history/save",
-                        "/cluster/kerberos/downloadKeytab",
-                        "/index.html",
-                        "/",
-                        "/static/**",
-                        "/ssoEnable",
-                        "/saveSsoUser",
-                        "/sso/*",
-                        "/lic/**",
-                        "/actuator/**",
-                        "/api/cluster/grafana/kerberos/*");
+        // 不再需要登录拦截器，由Spring Security JWT认证处理
+        // registry.addInterceptor(loginInterceptor())
+        // .addPathPatterns("/**")
+        // .excludePathPatterns(
+        // LOGIN_PATH_PATTERN,
+        // "/error",
+        // "/service/install/downloadPackage",
+        // "/cluster/alert/history/save",
+        // "/cluster/kerberos/downloadKeytab",
+        // "/index.html",
+        // "/",
+        // "/static/**",
+        // "/ssoEnable",
+        // "/saveSsoUser",
+        // "/sso/*",
+        // "/lic/**",
+        // "/actuator/**",
+        // "/api/cluster/grafana/kerberos/*");
     }
 
     @Override

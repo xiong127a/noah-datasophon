@@ -17,157 +17,144 @@
 
 package com.datasophon.api.controller;
 
-import cn.hutool.core.convert.Convert;
 import com.datasophon.api.enums.Status;
-import com.datasophon.api.security.Authenticator;
-import com.datasophon.api.service.SessionService;
+import com.datasophon.api.security.JwtTokenProvider;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
-import jakarta.servlet.http.Cookie;
+
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.lang.StringUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.datasophon.api.enums.Status.IP_IS_EMPTY;
-
 @RestController
-@RequestMapping("")
+@RequestMapping("/api")
 public class LoginController {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
 
     @Autowired
-    private SessionService sessionService;
+    private AuthenticationManager authenticationManager;
 
     @Autowired
-    private Authenticator authenticator;
-
-    @Autowired
-    private ApplicationContext applicationContext;
-
-//    @Autowired
-//    private CommonInterface commonInterface;
+    private JwtTokenProvider tokenProvider;
 
     @Autowired
     private UserInfoService userInfoService;
 
     /**
-     * login
-     *
-     * @param userName     user name
-     * @param userPassword user password
-     * @param request      request
-     * @param response     response
-     * @return login result
+     * 用户登录API
      */
+    @PostMapping("/login")
+    public Result login(@RequestBody LoginRequest loginRequest) {
+        try {
+            // 验证用户名和密码
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()));
 
-    @RequestMapping("/login")
-    public Result login(@RequestParam(value = "username") String userName,
-                        @RequestParam(value = "password") String userPassword,
-                        HttpServletRequest request,
-                        HttpServletResponse response) {
-        logger.info("login user name: {} ", userName);
+            // 设置认证信息到上下文
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // user name check
-        if (StringUtils.isEmpty(userName)) {
-            return Result.error(Status.USER_NAME_NULL.getCode(),
-                    Status.USER_NAME_NULL.getMsg());
+            // 获取用户信息
+            UserInfoEntity user = userInfoService.getUserByUsername(loginRequest.getUsername());
+
+            if (user == null) {
+                return Result.error(Status.USER_NAME_PASSWD_ERROR.getCode(),
+                        Status.USER_NAME_PASSWD_ERROR.getMsg());
+            }
+
+            // 生成JWT令牌
+            String jwt = tokenProvider.createToken(authentication);
+
+            // 返回结果
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put(Constants.SESSION_ID, jwt);
+            responseData.put(Constants.USER_INFO, user);
+
+            return Result.success(responseData)
+                    .put(Constants.CODE, Status.SUCCESS.getCode())
+                    .put(Constants.MSG, Status.LOGIN_SUCCESS.getMsg());
+
+        } catch (BadCredentialsException e) {
+            logger.error("登录失败: 用户名或密码错误", e);
+            return Result.error(Status.USER_NAME_PASSWD_ERROR.getCode(),
+                    Status.USER_NAME_PASSWD_ERROR.getMsg());
+        } catch (Exception e) {
+            logger.error("登录失败: {}", e.getMessage(), e);
+            return Result.error(Status.USER_NAME_PASSWD_ERROR.getCode(), "登录失败: " + e.getMessage());
         }
-
-        // user ip check
-        String ip = HttpUtils.getClientIpAddress(request);
-        if (StringUtils.isEmpty(ip)) {
-            return Result.error(IP_IS_EMPTY.getCode(), IP_IS_EMPTY.getMsg());
-        }
-
-        // verify username and password
-        Result result = authenticator.authenticate(userName, userPassword, ip);
-        if (result.getCode() != Status.SUCCESS.getCode()) {
-            return result;
-        }
-
-        response.setStatus(HttpStatus.SC_OK);
-        Map<String, String> cookieMap = (Map<String, String>) result.getData();
-        for (Map.Entry<String, String> cookieEntry : cookieMap.entrySet()) {
-            Cookie cookie = new Cookie(cookieEntry.getKey(), cookieEntry.getValue());
-            cookie.setHttpOnly(true);
-            response.addCookie(cookie);
-        }
-
-        return result;
     }
 
     /**
-     * sign out
-     *
-     * @param loginUser login user
-     * @param request   request
-     * @return sign out result
+     * 登出
      */
-    @PostMapping(value = "/signOut")
-    public Result signOut(@RequestAttribute(value = Constants.SESSION_USER) UserInfoEntity loginUser,
-                          HttpServletRequest request) {
-        logger.info("login user:{} sign out", loginUser.getUsername());
-        String ip = HttpUtils.getClientIpAddress(request);
-        sessionService.signOut(ip, loginUser);
-        // clear session
-        request.removeAttribute(Constants.SESSION_USER);
-        return Result.success();
+    @PostMapping(value = { "/logout", "/signOut" })
+    public Result logout() {
+        // 清除Spring Security上下文
+        SecurityContextHolder.clearContext();
+        return Result.success().put(Constants.MSG, "登出成功");
     }
 
-    @GetMapping(value = "/ssoEnable")
-    public Result ssoEnable() {
-        String ssoEnable = applicationContext.getEnvironment().getProperty("sa-token.sso.active");
-        return Result.success(Convert.toBool(ssoEnable));
+    /**
+     * 获取当前用户信息
+     */
+    @GetMapping("/user-info")
+    public Result getUserInfo(HttpServletRequest request) {
+        String token = tokenProvider.resolveToken(request);
+        if (token == null) {
+            return Result.error(Status.LOGIN_SESSION_FAILED.getCode(), "未提供有效令牌");
+        }
+
+        try {
+            Authentication authentication = tokenProvider.getAuthentication(token);
+            User principal = (User) authentication.getPrincipal();
+
+            UserInfoEntity user = userInfoService.getUserByUsername(principal.getUsername());
+
+            if (user == null) {
+                return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
+            }
+
+            return Result.success(user);
+        } catch (Exception e) {
+            logger.error("获取用户信息失败: {}", e.getMessage(), e);
+            return Result.error(Status.LOGIN_SESSION_FAILED.getCode(), "令牌无效或已过期");
+        }
     }
 
-//    @GetMapping(value = "/saveSsoUser")
-//    public Result saveSsoUser() {
-//        // 获取单点登录用户
-//        UserDto user = commonInterface.getUser();
-//        if (Objects.isNull(user)) {
-//            return Result.error("无法获取到单点用户");
-//        }
-//
-//        // 同步用户信息到本地
-//        List<UserInfoEntity> list = userInfoService.list(new QueryWrapper<UserInfoEntity>().eq(Constants.USERNAME, user.getUserName()));
-//        UserInfoEntity userInfoEntity;
-//        if (CollUtil.isEmpty(list)) {
-//            userInfoEntity = new UserInfoEntity();
-//            userInfoEntity.setUsername(user.getUserName());
-//            userInfoEntity.setEmail(user.getEmail());
-//            userInfoEntity.setPhone(user.getPhonenumber());
-//            userInfoEntity.setPassword(user.getUserName());
-//            userInfoService.createUser(userInfoEntity);
-//        } else {
-//            userInfoEntity = list.get(0);
-//            userInfoEntity.setUsername(user.getUserName());
-//            userInfoEntity.setEmail(user.getEmail());
-//            userInfoEntity.setPhone(user.getPhonenumber());
-//            userInfoEntity.setPassword(user.getUserName());
-//            if ("admin".equals(user.getUserName())) {
-//                userInfoEntity.setUserType(1);
-//            }
-//            userInfoService.updateUser(userInfoEntity);
-//        }
-//
-//        userInfoEntity.setPassword(userInfoEntity.getUsername());
-//        return Result.success(userInfoEntity);
-//    }
+    public static class LoginRequest {
+        private String username;
+        private String password;
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+    }
 }

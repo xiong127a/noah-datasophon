@@ -21,12 +21,14 @@ import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
+import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.dao.entity.UserInfoEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -41,13 +43,23 @@ public class UserPermissionHandler implements HandlerInterceptor {
     @Autowired
     private ClusterRoleUserService clusterUserService;
 
+    @Autowired
+    private UserInfoService userInfoService;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (HandlerMethod) handler;
+        if (handler instanceof HandlerMethod handlerMethod) {
             UserPermission annotation = handlerMethod.getMethod().getAnnotation(UserPermission.class);
             if (annotation != null) {
-                UserInfoEntity authUser = (UserInfoEntity) request.getSession().getAttribute(Constants.SESSION_USER);
+                // 从Spring Security上下文中获取认证信息
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication == null || !authentication.isAuthenticated()) {
+                    throw new ServiceException(Status.USER_NO_OPERATION_PERM);
+                }
+
+                // 获取用户信息
+                String username = authentication.getName();
+                UserInfoEntity authUser = userInfoService.getUserByUsername(username);
 
                 if (authUser == null) {
                     throw new ServiceException(Status.USER_NO_OPERATION_PERM);

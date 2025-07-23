@@ -37,4 +37,12 @@ public interface UserInfoService extends IService<UserInfoEntity> {
     Result updateUser(UserInfoEntity userInfo);
 
     Result getUserListByPage(String username, Integer page, Integer pageSize);
+
+    /**
+     * 根据用户名查询用户
+     *
+     * @param username 用户名
+     * @return 用户信息
+     */
+    UserInfoEntity getUserByUsername(String username);
 }

@@ -95,4 +95,11 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
 
         return Result.success().put(Constants.DATA, list).put(Constants.TOTAL, total);
     }
+
+    @Override
+    public UserInfoEntity getUserByUsername(String username) {
+        return QueryChain.of(UserInfoEntity.class)
+                .where(UserInfoEntity::getUsername).eq(username)
+                .one();
+    }
 }
