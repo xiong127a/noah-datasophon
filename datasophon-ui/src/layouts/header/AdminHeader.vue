@@ -82,6 +82,7 @@
                 </div>
               </transition>
             </li>
+
           </ul>
         </nav>
       </div>
@@ -236,9 +237,9 @@
 
           <!-- 操作按钮组 -->
           <div class="action-buttons">
-            <!-- 设置按钮 -->
-            <div class="action-btn settings-btn" v-if="isCluster === 'isCluster'" title="历史操作">
-              <cluster-setting class="settings-component" />
+            <!-- 历史操作按钮 -->
+            <div class="action-btn alarm-btn" v-if="isCluster === 'isCluster'" title="历史操作">
+              <cluster-setting />
             </div>
 
             <!-- 告警按钮 -->
@@ -1670,15 +1671,19 @@ export default {
           justify-content: center !important;
         }
         
-        /* 确保图标居中 */
+        /* 恢复原始图标尺寸 */
         .settings-component {
-          width: 100% !important;
-          height: 100% !important;
+          width: 36px !important;
+          height: 36px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
           
-          .cluster-setting, .icon-wrapper, .cluster-setting-icon {
+          .svg-icon, .icon-gj, .cluster-setting-icon, .icon-wrapper {
+            font-size: 20px !important;
+            width: 20px !important;
+            height: 20px !important;
+            color: #007aff !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -2912,15 +2917,7 @@ export default {
       overflow: hidden !important;
       margin-right: 8px !important;
       
-      /* 恢复原始图标尺寸 */
-      .settings-component {
-        .svg-icon, .icon-gj, .cluster-setting-icon, .icon-wrapper {
-          font-size: 16px !important; /* 恢复原始尺寸 */
-          width: auto !important;
-          height: auto !important;
-          color: #007aff !important;
-        }
-      }
+      /* 移除旧的历史操作图标样式 */
       
       &:hover {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);

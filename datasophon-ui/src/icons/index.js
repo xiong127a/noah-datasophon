@@ -23,10 +23,20 @@ import SvgIcon from './SvgIcon'// svg component
 
 // register globally
 Vue.component('svg-icon', SvgIcon)
-const common = require.context('./common', false, /\.svg$/)
-const colony = require.context('./colony', false, /\.svg$/)
-// 删除对旧目录的引用，因为文件已移至common目录
+
+// 导入所有SVG图标
+const req = require.context('./common/', false, /\.svg$/)
 const requireAll = requireContext => requireContext.keys().map(requireContext)
-requireAll(common)
-requireAll(colony)
-// 删除对旧服务图标目录的引用
+requireAll(req)
+
+// 导入集群相关图标
+const colonyReq = require.context('./colony/', false, /\.svg$/)
+const colonyRequireAll = requireContext => requireContext.keys().map(requireContext)
+colonyRequireAll(colonyReq)
+
+// 添加历史操作图标
+// 如果没有history图标，需要先将icon-history.svg添加到common目录
+
+export default {
+  // 可以在这里添加任何需要的配置
+}

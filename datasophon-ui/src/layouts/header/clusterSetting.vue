@@ -25,10 +25,8 @@
  * @FilePath: \ddh-ui\src\layouts\header\clusterSetting.vue
 -->
 <template>
-  <div class="cluster-setting mgr10">
-    <div class="icon-wrapper" @click="showSetting">
-      <svg-icon class="cluster-setting-icon" icon-class="setting" />
-    </div>
+  <div class="history-action-btn" @click="showSetting">
+    <svg-icon icon-class="setting" />
     <!-- 配置集群的modal -->
     <a-modal v-if="clusterSettingVisible" title :visible="clusterSettingVisible" :maskClosable="false" :closable="false" :width="1344" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
       <Steps8 :clusterId="clusterId" stepsType="cluster-setting" />
@@ -62,38 +60,49 @@ export default {
       this.showClusterSetting(false)
     },
     showSetting () {
-      console.log('点击设置图标');
+      console.log('点击历史操作按钮');
       this.showClusterSetting(true)
     }
   }
 };
 </script>
 <style lang="less" scoped>
-.cluster-setting {
-  &-icon {
-    color: #007aff;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+.history-action-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 252, 0.95) 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 
+      0 8px 24px rgba(0, 0, 0, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  
+  &:active {
+    transform: translateY(-1px) scale(1.02);
+    transition: all 0.15s ease;
   }
 
-  .icon-wrapper {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-radius: 4px;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    width: 100%;
-    height: 100%;
-
-    &:hover {
-      background-color: rgba(0, 122, 255, 0.1);
-    }
+  .svg-icon {
+    font-size: 20px;
+    color: #007aff;
   }
 }
 </style>

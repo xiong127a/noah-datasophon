@@ -49,14 +49,21 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
 .svg-icon {
   width: 1em;
   height: 1em;
   vertical-align: -0.2em;
   fill: currentColor;
   overflow: hidden;
-  /* margin-right: 5px; */
-  font-size: 14px;
+  font-size: inherit;
+  display: inline-flex;
+}
+
+/* 针对历史操作图标的特殊样式 */
+.svg-icon-setting {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
 }
 </style>
