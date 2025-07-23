@@ -33,8 +33,8 @@ const router = useRouter();
 // 菜单状态管理
 const settingsStore = useSettingsStore();
 const menuData = ref([
-  { path: '/home', title: '主页', icon: 'home' },
-  { path: '/host-manage', title: '主机管理', icon: 'host-manager' },
+  { path: '/', title: '首页', icon: 'home' },
+  { path: '/host', title: '主机管理', icon: 'host' },
   { 
     path: '/alarm-manage', 
     title: '告警管理', 

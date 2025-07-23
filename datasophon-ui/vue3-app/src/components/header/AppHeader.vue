@@ -9,7 +9,7 @@
         <!-- Logo区域 -->
         <div class="logo-section" @click="goToHome">
           <div class="logo-wrapper">
-            <img src="../../assets/logo.svg" alt="Logo" />
+            <img src="@/assets/logo.svg" alt="Logo" />
           </div>
           <div class="brand-info">
             <h1 class="brand-title">Noah大数据基础平台</h1>
@@ -543,8 +543,19 @@ export default {
       // 通知父组件路由已经改变
       this.$emit('routeChanged', subItem.path);
       
+      // 处理特殊的路径映射，确保兼容旧路径格式
+      let targetPath = subItem.path;
+      
       // 导航到子菜单路径
-      this.$router.push(subItem.path);
+      this.$router.push(targetPath).catch(err => {
+        console.error('路由导航错误:', err);
+        
+        // 如果导航失败，尝试一些替代方案
+        if (targetPath === '/colony-manage/list') {
+          // 尝试导航到集群列表的替代路径
+          this.$router.push('/cluster/list').catch(e => console.error('替代导航也失败:', e));
+        }
+      });
     },
     
     // 点击左侧菜单

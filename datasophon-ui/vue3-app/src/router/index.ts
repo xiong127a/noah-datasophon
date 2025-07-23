@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { checkAuthorization } from '../utils/request'
 
 // 布局组件
 import MainLayout from '../layouts/MainLayout.vue'
@@ -103,7 +104,9 @@ const routes: RouteRecordRaw[] = [
             path: '/colony-manage/list',
             name: '集群列表管理',
             component: () => import('../views/cluster/ClusterList.vue'),
-            meta: { title: '集群管理', icon: 'cluster' }
+            meta: { title: '集群管理', icon: 'cluster' },
+            // 添加别名，使得/cluster/list和/colony-manage/list指向同一个组件
+            alias: '/cluster/list'
           },
           {
             path: '/colony-manage/storage',
@@ -127,10 +130,30 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
+  // 添加一个额外的cluster路径作为别名
+  {
+    path: '/cluster',
+    redirect: '/colony-manage/list',
+    children: [
+      {
+        path: '/cluster/list',
+        component: () => import('../views/cluster/ClusterList.vue'),
+      },
+      {
+        path: '/cluster/storage',
+        redirect: '/colony-manage/storage'
+      },
+      {
+        path: '/cluster/framework',
+        redirect: '/colony-manage/framework'
+      }
+    ]
+  },
+  // 修正登录路由路径
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue'),
+    component: () => import('../views/login/Login.vue'), // 修正路径指向正确的登录组件
     meta: { title: '登录' }
   },
   {
@@ -151,12 +174,20 @@ router.beforeEach((to, from, next) => {
   // 设置标题
   document.title = `${to.meta.title} | Noah大数据平台` || 'Noah大数据平台'
   
-  // 这里可以添加登录验证等逻辑
-  const isLoggedIn = localStorage.getItem('token')
-  if (to.path !== '/login' && !isLoggedIn) {
-    next({ path: '/login' })
+  // 判断是否需要登录权限
+  if (to.path !== '/login') {
+    if (checkAuthorization()) {
+      next() // 已登录，允许访问
+    } else {
+      next({ path: '/login', query: { redirect: to.fullPath } }) // 未登录，跳转到登录页面
+    }
   } else {
-    next()
+    // 如果是访问登录页面且已登录，重定向到首页
+    if (checkAuthorization()) {
+      next({ path: '/' })
+    } else {
+      next() // 未登录，允许访问登录页面
+    }
   }
 })
 

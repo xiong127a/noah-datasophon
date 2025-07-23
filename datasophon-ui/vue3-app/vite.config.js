@@ -33,5 +33,19 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  // 添加服务器代理配置
+  server: {
+    port: 5173,
+    open: true,
+    proxy: {
+      // 将/ddh前缀的请求代理到后端服务
+      '/ddh': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        // 是否重写路径
+        rewrite: (path) => path
+      }
+    }
   }
 }) 

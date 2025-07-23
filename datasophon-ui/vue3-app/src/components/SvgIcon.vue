@@ -1,5 +1,6 @@
 <template>
-  <svg :class="svgClass" aria-hidden="true" v-on="$attrs" style="cursor: pointer;">
+  <!-- 移除v-on="$attrs"属性，修复事件处理错误 -->
+  <svg :class="svgClass" aria-hidden="true" style="cursor: pointer;">
     <use :xlink:href="iconName" />
   </svg>
 </template>

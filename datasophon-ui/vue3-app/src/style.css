@@ -2,30 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  }
+  body {
+    @apply bg-gray-50;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 @layer components {
-  .card {
-    @apply bg-white rounded-xl shadow-apple backdrop-blur-md p-6 transition-all duration-300;
-}
-  
-  .card:hover {
-    @apply shadow-apple-hover;
-}
-
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium text-sm transition-all duration-200;
-}
-
+    @apply inline-flex items-center justify-center px-4 py-2 rounded font-medium transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply bg-primary text-white hover:bg-primary-600 focus:ring-primary-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-gray-800 border border-gray-200 hover:bg-gray-100 focus:ring-primary-500;
   }
   
   .btn-success {
-    @apply bg-success text-white hover:bg-success/90;
-}
+    @apply bg-success text-white hover:bg-success-600 focus:ring-success-500;
+  }
   
   .btn-danger {
-    @apply bg-danger text-white hover:bg-danger/90;
-}
+    @apply bg-error text-white hover:bg-error-600 focus:ring-error-500;
+  }
+  
+  .btn-warning {
+    @apply bg-warning text-white hover:bg-warning-600 focus:ring-warning-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-card p-6;
+  }
+  
+  .input {
+    @apply block w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
+  }
+  
+  .dropdown {
+    @apply absolute bg-white rounded-lg shadow-dropdown overflow-hidden border border-gray-100;
+  }
 }
 
 /* Apple-style scrollbar */

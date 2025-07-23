@@ -10,12 +10,29 @@ export interface Cluster {
   status: 'running' | 'stopped' | 'error'
 }
 
+// 菜单项类型
+export interface MenuItem {
+  name: string
+  path: string
+  meta: {
+    icon: string
+    title: string
+  }
+  component?: string
+  id?: string | number
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // 状态
   const currentCluster = ref<Cluster | null>(null)
   const clusters = ref<Cluster[]>([])
   const sidebarCollapsed = ref(false)
   const activeFirstMenu = ref<string>('')  // 使用ref正确声明
+  
+  // 服务菜单相关状态
+  const isCluster = ref(false)
+  const clusterId = ref<string | number | null>(null)
+  const menuData = ref<MenuItem[]>([])
   
   // 方法
   function setCurrentCluster(cluster: Cluster) {
@@ -32,6 +49,21 @@ export const useSettingsStore = defineStore('settings', () => {
   
   function setActiveFirstMenu(key: string) {
     activeFirstMenu.value = key  // 使用.value访问ref的值
+  }
+  
+  // 设置是否为集群状态
+  function setIsCluster(value: boolean) {
+    isCluster.value = value
+  }
+  
+  // 设置当前集群ID
+  function setClusterId(id: string | number | null) {
+    clusterId.value = id
+  }
+  
+  // 设置菜单数据
+  function setMenuData(data: MenuItem[]) {
+    menuData.value = data
   }
   
   // 初始化
@@ -53,13 +85,22 @@ export const useSettingsStore = defineStore('settings', () => {
   init()
   
   return {
+    // 状态
     currentCluster,
     clusters,
     sidebarCollapsed,
     activeFirstMenu,
+    isCluster,
+    clusterId,
+    menuData,
+    
+    // 方法
     setCurrentCluster,
     setClusters,
     toggleSidebar,
-    setActiveFirstMenu
+    setActiveFirstMenu,
+    setIsCluster,
+    setClusterId,
+    setMenuData
   }
 }) 
