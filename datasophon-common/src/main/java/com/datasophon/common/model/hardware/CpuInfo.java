@@ -1,16 +1,21 @@
 package com.datasophon.common.model.hardware;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * CPU信息类
+ * @author 63588
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 public class CpuInfo extends HardwareInfo implements Serializable  {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

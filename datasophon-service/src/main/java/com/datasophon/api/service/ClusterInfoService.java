@@ -76,7 +76,7 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
 
     /**
      * Retrieves metrics information for all service roles in the cluster.
-     *
+     * <p>
      * This method fetches the count of running instances for each service role
      * in the cluster. It returns a JSON string containing the service role names
      * as keys and their respective instance counts as values.

@@ -26,7 +26,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "networkInterfaces", "diskInfos" })
+@ToString(exclude = {"diskInfos"})
 public class OsInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 

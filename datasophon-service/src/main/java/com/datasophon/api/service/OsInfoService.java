@@ -5,7 +5,7 @@ import com.datasophon.common.model.HostInfo;
 /**
  * 操作系统信息收集服务接口
  * 负责收集主机操作系统和硬件信息
- * 
+ * <p>
  * 注意: 系统仅支持Linux操作系统
  */
 public interface OsInfoService {

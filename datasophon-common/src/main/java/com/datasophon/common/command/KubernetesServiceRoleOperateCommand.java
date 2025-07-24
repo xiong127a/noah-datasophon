@@ -5,11 +5,13 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class KubernetesServiceRoleOperateCommand extends BaseCommand implements Serializable {
 

@@ -60,7 +60,7 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * Master服务中的Worker启动Actor
- *
+ * <p>
  * 主要职责:
  * 1. 接收来自Worker的启动消息和心跳消息
  * 2. 更新主机状态信息
@@ -167,7 +167,7 @@ public class WorkerStartActor extends AbstractActor {
 
     /**
      * 自动启动/停止需要操作的服务
-     *
+     * <p>
      * 该方法会根据命令类型(启动或停止)和主机名查找需要操作的服务角色,
      * 然后生成相应的服务角色命令并执行
      *
