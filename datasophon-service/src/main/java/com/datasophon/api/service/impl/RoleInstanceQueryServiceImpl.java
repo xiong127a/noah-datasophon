@@ -49,4 +49,25 @@ public class RoleInstanceQueryServiceImpl implements RoleInstanceQueryService {
     public ClusterServiceRoleInstanceEntity getById(Integer id) {
         return roleInstanceMapper.selectOneById(id);
     }
+
+    @Override
+    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .list();
+    }
+
+    @Override
+    public ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname,
+            Integer clusterId) {
+        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+
+        if (hostname != null && !hostname.isEmpty()) {
+            query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+        }
+
+        return query.one();
+    }
 }

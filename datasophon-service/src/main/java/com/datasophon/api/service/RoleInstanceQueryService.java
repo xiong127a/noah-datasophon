@@ -43,4 +43,22 @@ public interface RoleInstanceQueryService {
      * @return 服务角色实例
      */
     ClusterServiceRoleInstanceEntity getById(Integer id);
+
+    /**
+     * 根据服务ID获取服务角色实例列表
+     * 
+     * @param serviceId 服务ID
+     * @return 服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId);
+
+    /**
+     * 根据服务角色名称、主机名和集群ID获取服务角色实例
+     * 
+     * @param serviceRoleName 服务角色名称
+     * @param hostname        主机名
+     * @param clusterId       集群ID
+     * @return 服务角色实例
+     */
+    ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname, Integer clusterId);
 }

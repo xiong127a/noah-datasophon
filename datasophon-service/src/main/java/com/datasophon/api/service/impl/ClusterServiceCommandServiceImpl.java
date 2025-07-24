@@ -29,7 +29,7 @@ import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CacheOperateUtils;
@@ -98,7 +98,7 @@ public class ClusterServiceCommandServiceImpl
     private ClusterServiceInstanceService serviceInstanceService;
 
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private RoleInstanceQueryService roleInstanceQueryService;
 
     @Override
     @Transactional
@@ -171,7 +171,8 @@ public class ClusterServiceCommandServiceImpl
     }
 
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
-        ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleName, hostname,
+        ClusterServiceRoleInstanceEntity serviceRole = roleInstanceQueryService.getOneServiceRole(serviceRoleName,
+                hostname,
                 clusterId);
         return Objects.nonNull(serviceRole);
     }
@@ -377,7 +378,7 @@ public class ClusterServiceCommandServiceImpl
         for (String serviceInstanceId : serviceInstanceIds) {
             int id = Integer.parseInt(serviceInstanceId);
             // 查询服务对应的服务角色实例
-            List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
+            List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceQueryService
                     .getServiceRoleInstanceListByServiceId(id);
             if (Objects.isNull(roleInstanceList) || roleInstanceList.isEmpty()) {
                 continue;
@@ -448,7 +449,7 @@ public class ClusterServiceCommandServiceImpl
         HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
         for (String serviceRoleInstanceId : serviceRoleInstanceIds) {
             int id = Integer.parseInt(serviceRoleInstanceId);
-            ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService.getById(id);
+            ClusterServiceRoleInstanceEntity roleInstance = roleInstanceQueryService.getById(id);
 
             ClusterServiceCommandHostEntity commandHost;
             if (map.containsKey(roleInstance.getHostname())) {
