@@ -47,6 +47,7 @@ import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -411,26 +412,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         for (ClusterHostDO kubernetesHost : kubernetesHosts) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(kubernetesHost.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
-                ClusterHostDO clusterHostDO = new ClusterHostDO();
-                clusterHostDO.setClusterId(clusterId);
-                clusterHostDO.setCreateTime(kubernetesHost.getCreateTime());
-                // 使用正确的主机名，而不是IP
-                clusterHostDO.setHostname(kubernetesHost.getHostname());
-                clusterHostDO.setIp(kubernetesHost.getIp());
-                clusterHostDO.setRack("/default-rack");
-                clusterHostDO.setHostState(HostState.RUNNING);
-                clusterHostDO.setManaged(MANAGED.YES);
-
-                // 从K8S API获取的完整硬件信息
-                clusterHostDO.setCpuArchitecture(kubernetesHost.getCpuArchitecture());
-                clusterHostDO.setCoreNum(kubernetesHost.getCoreNum());
-                clusterHostDO.setTotalMem(kubernetesHost.getTotalMem());
-                clusterHostDO.setTotalDisk(kubernetesHost.getTotalDisk());
-                clusterHostDO.setUsedMem(kubernetesHost.getUsedMem());
-                clusterHostDO.setUsedDisk(kubernetesHost.getUsedDisk());
-
-                // 设置节点标签
-                clusterHostDO.setNodeLabel("default");
+                ClusterHostDO clusterHostDO = getClusterHostDO(clusterId, kubernetesHost);
 
                 this.save(clusterHostDO);
                 logger.info(
@@ -441,6 +423,30 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             }
         }
         return Result.success();
+    }
+
+    private static @NotNull ClusterHostDO getClusterHostDO(Integer clusterId, ClusterHostDO kubernetesHost) {
+        ClusterHostDO clusterHostDO = new ClusterHostDO();
+        clusterHostDO.setClusterId(clusterId);
+        clusterHostDO.setCreateTime(kubernetesHost.getCreateTime());
+        // 使用正确的主机名，而不是IP
+        clusterHostDO.setHostname(kubernetesHost.getHostname());
+        clusterHostDO.setIp(kubernetesHost.getIp());
+        clusterHostDO.setRack("/default-rack");
+        clusterHostDO.setHostState(HostState.RUNNING);
+        clusterHostDO.setManaged(MANAGED.YES);
+
+        // 从K8S API获取的完整硬件信息
+        clusterHostDO.setCpuArchitecture(kubernetesHost.getCpuArchitecture());
+        clusterHostDO.setCoreNum(kubernetesHost.getCoreNum());
+        clusterHostDO.setTotalMem(kubernetesHost.getTotalMem());
+        clusterHostDO.setTotalDisk(kubernetesHost.getTotalDisk());
+        clusterHostDO.setUsedMem(kubernetesHost.getUsedMem());
+        clusterHostDO.setUsedDisk(kubernetesHost.getUsedDisk());
+
+        // 设置节点标签
+        clusterHostDO.setNodeLabel("default");
+        return clusterHostDO;
     }
 
     /**

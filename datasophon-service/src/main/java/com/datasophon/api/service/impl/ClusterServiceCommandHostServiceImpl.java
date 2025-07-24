@@ -117,23 +117,7 @@ public class ClusterServiceCommandHostServiceImpl
             }
 
             // 计算所有子命令的平均进度
-            long totalProgress = 0;
-            int completedCount = 0;
-            int totalCount = hostCommands.size();
-
-            for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommands) {
-                if (hostCommand.getCommandProgress() != null) {
-                    totalProgress += hostCommand.getCommandProgress();
-                    if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
-                        completedCount++;
-                    }
-                }
-            }
-
-            // 计算平均进度和完成百分比
-            long avgProgress = calculateAverage(totalProgress, totalCount);
-            long completedProgress = calculatePercentage(completedCount, totalCount);
-            long finalProgress = Math.max(avgProgress, completedProgress);
+            long finalProgress = getFinalProgress(hostCommands);
 
             commandHostEntity.setCommandProgress(finalProgress);
 
@@ -146,6 +130,27 @@ public class ClusterServiceCommandHostServiceImpl
         } catch (Exception e) {
             logger.error("计算主机命令进度时出错: {}", e.getMessage(), e);
         }
+    }
+
+    private long getFinalProgress(List<ClusterServiceCommandHostCommandEntity> hostCommands) {
+        long totalProgress = 0;
+        int completedCount = 0;
+        int totalCount = hostCommands.size();
+
+        for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommands) {
+            if (hostCommand.getCommandProgress() != null) {
+                totalProgress += hostCommand.getCommandProgress();
+                if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
+                    completedCount++;
+                }
+            }
+        }
+
+        // 计算平均进度和完成百分比
+        long avgProgress = calculateAverage(totalProgress, totalCount);
+        long completedProgress = calculatePercentage(completedCount, totalCount);
+        long finalProgress = Math.max(avgProgress, completedProgress);
+        return finalProgress;
     }
 
     /**

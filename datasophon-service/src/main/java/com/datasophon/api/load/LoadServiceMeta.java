@@ -57,6 +57,7 @@ import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.pekko.actor.Props;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -471,6 +472,14 @@ public class LoadServiceMeta implements ApplicationRunner {
             return null; // 无效的 IP 地址
         }
 
+        String subnetMask = getString(ipParts);
+
+        // 构造网络前缀
+        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
+        return networkPrefix + subnetMask;
+    }
+
+    private static @NotNull String getString(String[] ipParts) {
         int firstOctet = Integer.parseInt(ipParts[0]);
 
         // 根据 IP 地址的第一部分推断出适当的子网掩码
@@ -488,10 +497,7 @@ public class LoadServiceMeta implements ApplicationRunner {
             // 其他情况，暂不处理
             subnetMask = "/24"; // 默认返回 /24
         }
-
-        // 构造网络前缀
-        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
-        return networkPrefix + subnetMask;
+        return subnetMask;
     }
 
     // 设置 priority_networks 参数
