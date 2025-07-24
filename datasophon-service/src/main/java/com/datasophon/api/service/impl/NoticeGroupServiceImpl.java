@@ -65,6 +65,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
     private final UserInfoService userInfoService;
 
+    @org.springframework.context.annotation.Lazy
     private final ClusterAlertQuotaService clusterAlertQuotaService;
 
     private final ServiceInstallService serviceInstallService;
@@ -72,7 +73,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     private final ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
     private final ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
     @Autowired
-    public NoticeGroupServiceImpl(NoticeGroupUserService noticeGroupUserService, UserInfoService userInfoService, ClusterAlertQuotaService clusterAlertQuotaService, ServiceInstallService serviceInstallService, ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService, ClusterServiceRoleInstanceService clusterServiceRoleInstanceService) {
+    public NoticeGroupServiceImpl(NoticeGroupUserService noticeGroupUserService, UserInfoService userInfoService, @org.springframework.context.annotation.Lazy ClusterAlertQuotaService clusterAlertQuotaService, ServiceInstallService serviceInstallService, ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService, ClusterServiceRoleInstanceService clusterServiceRoleInstanceService) {
         this.noticeGroupUserService = noticeGroupUserService;
         this.userInfoService = userInfoService;
         this.clusterAlertQuotaService = clusterAlertQuotaService;
