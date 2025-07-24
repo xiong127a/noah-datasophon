@@ -40,7 +40,6 @@ public class RangerClient implements Client {
     private RoleApis roles;
 
     private final RangerClientConfig clientConfig;
-    private RestTemplate restTemplate;
 
     public RangerClient(RangerClientConfig clientConfig) {
         this.clientConfig = clientConfig;
@@ -88,7 +87,7 @@ public class RangerClient implements Client {
         factory.setReadTimeout(clientConfig.getReadTimeoutMillis());
 
         // 构建RestTemplate
-        this.restTemplate = new RestTemplateBuilder()
+        RestTemplate restTemplate = new RestTemplateBuilder()
                 .requestFactory(() -> factory)
                 .additionalMessageConverters(messageConverter)
                 .additionalInterceptors(authInterceptor)

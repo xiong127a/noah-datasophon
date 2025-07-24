@@ -21,9 +21,6 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
     private final CheckerProperties checkerProperties;
 
-    // 保存Java版本的原始输出
-    private String javaVersionRawOutput = "";
-
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
@@ -180,7 +177,8 @@ public class JavaEnvChecker extends AbstractItemChecker {
             }
 
             // 保存原始版本输出
-            javaVersionRawOutput = javaVersionResult.getOutput();
+            // 保存Java版本的原始输出
+            String javaVersionRawOutput = javaVersionResult.getOutput();
 
             // 解析版本信息
             String version = parseJavaVersion(javaVersionRawOutput);
