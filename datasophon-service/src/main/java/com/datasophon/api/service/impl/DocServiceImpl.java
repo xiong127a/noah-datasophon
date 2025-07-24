@@ -216,7 +216,7 @@ public class DocServiceImpl implements DocService {
             while (!decodedPath.equals(previousPath)) {
                 previousPath = decodedPath;
                 try {
-                    decodedPath = java.net.URLDecoder.decode(previousPath, StandardCharsets.UTF_8.name());
+                    decodedPath = java.net.URLDecoder.decode(previousPath, StandardCharsets.UTF_8);
                 } catch (Exception e) {
                     // 如果解码出错，说明已经不需要再解码了或格式不正确
                     log.debug("URL解码结束或出错: {}", e.getMessage());

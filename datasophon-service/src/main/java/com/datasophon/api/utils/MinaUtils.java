@@ -659,8 +659,8 @@ public class MinaUtils {
             }
 
             int exitStatus = channel.getExitStatus();
-            String output = outputStream.toString(StandardCharsets.UTF_8.name());
-            String error = errorStream.toString(StandardCharsets.UTF_8.name());
+            String output = outputStream.toString(StandardCharsets.UTF_8);
+            String error = errorStream.toString(StandardCharsets.UTF_8);
 
             if (exitStatus != 0) {
                 LOG.error("命令执行失败 [exit={}]: {}\n错误信息: {}", exitStatus, command, error);
