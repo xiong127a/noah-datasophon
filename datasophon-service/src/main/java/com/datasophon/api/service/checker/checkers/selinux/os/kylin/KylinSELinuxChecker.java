@@ -416,56 +416,56 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                     cacheLog.error("修改SELinux配置文件失败");
 
                     // 创建HTML详细信息构建器
-                    StringBuilder detailsBuilder = new StringBuilder();
 
                     // 添加警告信息
-                    detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                            "SELinux配置修改失败",
-                            "无法修改SELinux配置文件，请手动修改。"));
 
-                    // 添加手动修复指南
-                    detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                    detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                    detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                    detailsBuilder.append("<li style='margin-bottom:5px'>编辑SELinux配置文件:</li>");
-                    detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo vi /etc/selinux/config"));
-                    detailsBuilder.append("<li style='margin-bottom:5px'>将SELINUX=行修改为:</li>");
-                    detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("SELINUX=disabled"));
-                    detailsBuilder.append("<li style='margin-bottom:5px'>保存并重启系统:</li>");
-                    detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-                    detailsBuilder.append("</ol>");
-                    detailsBuilder.append(HtmlStyleHelper.endGroup());
+                    String detailsBuilder = HtmlStyleHelper.generateWarningAlert(
+                            "SELinux配置修改失败",
+                            "无法修改SELinux配置文件，请手动修改。") +
+
+                            // 添加手动修复指南
+                            HtmlStyleHelper.beginGroup() +
+                            "<p><strong>手动修复步骤:</strong></p>" +
+                            "<ol style='padding-left:20px;margin-bottom:15px'>" +
+                            "<li style='margin-bottom:5px'>编辑SELinux配置文件:</li>" +
+                            HtmlStyleHelper.generateCodeBlock("sudo vi /etc/selinux/config") +
+                            "<li style='margin-bottom:5px'>将SELINUX=行修改为:</li>" +
+                            HtmlStyleHelper.generateCodeBlock("SELINUX=disabled") +
+                            "<li style='margin-bottom:5px'>保存并重启系统:</li>" +
+                            HtmlStyleHelper.generateCodeBlock("sudo reboot") +
+                            "</ol>" +
+                            HtmlStyleHelper.endGroup();
 
                     // 设置消息
-                    checkItem.setMessage(detailsBuilder.toString());
+                    checkItem.setMessage(detailsBuilder);
                     return false;
                 }
 
                 // 修复成功
                 // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
 
                 // 添加成功信息
-                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
+
+                String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
                         "SELinux修复完成",
-                        "麒麟V4系统上的SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。"));
+                        "麒麟V4系统上的SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。") +
 
-                // 添加当前状态
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>当前SELinux状态:</strong></p>");
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS));
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "永久状态", "已设置为禁用", HtmlStyleHelper.Colors.SUCCESS));
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                        // 添加当前状态
+                        HtmlStyleHelper.beginGroup() +
+                        "<p><strong>当前SELinux状态:</strong></p>" +
+                        HtmlStyleHelper.generatePropertyRow(
+                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                        HtmlStyleHelper.generatePropertyRow(
+                                "永久状态", "已设置为禁用", HtmlStyleHelper.Colors.SUCCESS) +
+                        HtmlStyleHelper.endGroup() +
 
-                // 添加重启通知
-                detailsBuilder.append(HtmlStyleHelper.generateNoteAlert(
-                        "重要提示",
-                        "SELinux配置修改需要重启系统后才能完全生效。在重启前，系统将以宽容模式(Permissive)运行SELinux。"));
+                        // 添加重启通知
+                        HtmlStyleHelper.generateNoteAlert(
+                                "重要提示",
+                                "SELinux配置修改需要重启系统后才能完全生效。在重启前，系统将以宽容模式(Permissive)运行SELinux。");
 
                 // 设置消息
-                checkItem.setMessage(detailsBuilder.toString());
+                checkItem.setMessage(detailsBuilder);
 
                 return true;
 
@@ -482,14 +482,13 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                     cacheLog.info("麒麟V10系统上未安装SELinux工具，无需修复。");
 
                     // 创建HTML详细信息构建器
-                    StringBuilder detailsBuilder = new StringBuilder();
 
                     // 添加状态信息
-                    detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
-                            "无需修复", "麒麟V10系统上未安装SELinux工具，SELinux已处于禁用状态，不需要进行任何修复操作。"));
+                    String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
+                            "无需修复", "麒麟V10系统上未安装SELinux工具，SELinux已处于禁用状态，不需要进行任何修复操作。");
 
                     // 设置消息
-                    checkItem.setMessage(detailsBuilder.toString());
+                    checkItem.setMessage(detailsBuilder);
                     return true;
                 }
 
@@ -504,22 +503,21 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                     cacheLog.info("已安装SELinux工具但模块未加载，SELinux处于有效禁用状态，可选择卸载工具包。");
 
                     // 创建HTML详细信息构建器
-                    StringBuilder detailsBuilder = new StringBuilder();
 
-                    detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
+                    String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
                             "SELinux已有效禁用",
-                            "SELinux模块未加载，已处于有效禁用状态。工具包已安装但不会影响系统运行。"));
+                            "SELinux模块未加载，已处于有效禁用状态。工具包已安装但不会影响系统运行。") +
 
-                    // 添加可选操作
-                    detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                    detailsBuilder.append("<p><strong>可选操作:</strong></p>");
-                    detailsBuilder.append("<p>您可以选择完全移除SELinux工具包，或保持当前状态。</p>");
-                    detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                            "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics"));
-                    detailsBuilder.append(HtmlStyleHelper.endGroup());
+                            // 添加可选操作
+                            HtmlStyleHelper.beginGroup() +
+                            "<p><strong>可选操作:</strong></p>" +
+                            "<p>您可以选择完全移除SELinux工具包，或保持当前状态。</p>" +
+                            HtmlStyleHelper.generateCodeBlock(
+                                    "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics") +
+                            HtmlStyleHelper.endGroup();
 
                     // 设置消息
-                    checkItem.setMessage(detailsBuilder.toString());
+                    checkItem.setMessage(detailsBuilder);
                     return true;
                 }
 

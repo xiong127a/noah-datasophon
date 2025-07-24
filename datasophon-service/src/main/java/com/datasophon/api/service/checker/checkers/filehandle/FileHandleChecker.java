@@ -328,11 +328,10 @@ public class FileHandleChecker extends AbstractItemChecker {
             detailsBuilder.append(HtmlStyleHelper.endGroup());
 
             // 添加修复完成，验证配置是否正确添加
-            StringBuilder verificationCmd = new StringBuilder();
-            verificationCmd.append("grep '\\* soft nofile' /etc/security/limits.conf | tail -n 1 && ");
-            verificationCmd.append("grep '\\* hard nofile' /etc/security/limits.conf | tail -n 1");
+            String verificationCmd = "grep '\\* soft nofile' /etc/security/limits.conf | tail -n 1 && " +
+                    "grep '\\* hard nofile' /etc/security/limits.conf | tail -n 1";
 
-            CommandResult verifyResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), verificationCmd.toString());
+            CommandResult verifyResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), verificationCmd);
             if (verifyResult.isSuccess() && !verifyResult.getOutput().isEmpty()) {
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append("<p><strong>配置验证:</strong></p>");

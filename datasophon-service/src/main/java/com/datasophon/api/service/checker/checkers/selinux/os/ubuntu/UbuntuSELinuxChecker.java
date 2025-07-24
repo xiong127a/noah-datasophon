@@ -208,14 +208,13 @@ public class UbuntuSELinuxChecker extends GenericSELinuxChecker {
                                 cacheLog.info("Ubuntu系统上未安装SELinux工具，无需修复。");
 
                                 // 创建HTML详细信息构建器
-                                StringBuilder detailsBuilder = new StringBuilder();
 
-                                // 添加状态信息
-                                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
-                                                "无需修复", "Ubuntu系统上未安装SELinux工具，SELinux已处于禁用状态，不需要进行任何修复操作。"));
+                            // 添加状态信息
+                            String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
+                                    "无需修复", "Ubuntu系统上未安装SELinux工具，SELinux已处于禁用状态，不需要进行任何修复操作。");
 
                                 // 设置消息
-                                checkItem.setMessage(detailsBuilder.toString());
+                                checkItem.setMessage(detailsBuilder);
                                 return true;
                         }
 
@@ -231,22 +230,21 @@ public class UbuntuSELinuxChecker extends GenericSELinuxChecker {
                                 cacheLog.info("已安装SELinux工具但模块未加载，SELinux处于有效禁用状态，可选择卸载工具包。");
 
                                 // 创建HTML详细信息构建器
-                                StringBuilder detailsBuilder = new StringBuilder();
 
-                                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
-                                                "SELinux已有效禁用",
-                                                "SELinux模块未加载，已处于有效禁用状态。工具包已安装但不会影响系统运行。"));
+                            String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
+                                    "SELinux已有效禁用",
+                                    "SELinux模块未加载，已处于有效禁用状态。工具包已安装但不会影响系统运行。") +
 
-                                // 添加可选操作
-                                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                                detailsBuilder.append("<p><strong>可选操作:</strong></p>");
-                                detailsBuilder.append("<p>您可以选择完全移除SELinux工具包，或保持当前状态。</p>");
-                                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                                                "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics"));
-                                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                                    // 添加可选操作
+                                    HtmlStyleHelper.beginGroup() +
+                                    "<p><strong>可选操作:</strong></p>" +
+                                    "<p>您可以选择完全移除SELinux工具包，或保持当前状态。</p>" +
+                                    HtmlStyleHelper.generateCodeBlock(
+                                            "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics") +
+                                    HtmlStyleHelper.endGroup();
 
                                 // 设置消息
-                                checkItem.setMessage(detailsBuilder.toString());
+                                checkItem.setMessage(detailsBuilder);
                                 return true;
                         }
 

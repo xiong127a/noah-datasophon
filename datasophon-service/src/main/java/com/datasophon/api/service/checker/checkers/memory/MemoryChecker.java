@@ -328,16 +328,15 @@ public class MemoryChecker extends AbstractItemChecker {
                         htmlBuilder.append(HtmlStyleHelper.generateSuccessAlert("内存检查通过",
                                         "系统可用内存充足，可以满足正常运行需求"));
                 } else {
-                        StringBuilder warningMsg = new StringBuilder();
-                        warningMsg.append("系统可用内存为 ")
-                                        .append(String.format("%.2f GB", availableGB))
-                                        .append("，低于最低要求的 ")
-                                        .append(String.format("%.2f GB", minMemoryGB));
-                        warningMsg.append("，建议增加至少 ")
-                                        .append(String.format("%.2f GB", recommendedMemoryGB - availableGB))
-                                        .append(" 内存以确保系统正常运行。");
+                    String warningMsg = "系统可用内存为 " +
+                            String.format("%.2f GB", availableGB) +
+                            "，低于最低要求的 " +
+                            String.format("%.2f GB", minMemoryGB) +
+                            "，建议增加至少 " +
+                            String.format("%.2f GB", recommendedMemoryGB - availableGB) +
+                            " 内存以确保系统正常运行。";
 
-                        htmlBuilder.append(HtmlStyleHelper.generateWarningAlert("内存检查未通过", warningMsg.toString()));
+                        htmlBuilder.append(HtmlStyleHelper.generateWarningAlert("内存检查未通过", warningMsg));
                 }
 
                 return htmlBuilder;

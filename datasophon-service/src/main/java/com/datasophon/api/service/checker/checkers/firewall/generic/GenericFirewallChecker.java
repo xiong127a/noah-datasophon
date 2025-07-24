@@ -335,55 +335,41 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
      * 返回适用于CentOS风格的CSS样式
      */
     private String getCentosStyleCss() {
-        StringBuilder cssStyles = new StringBuilder();
 
-        cssStyles.append("<style>\n");
-        cssStyles.append(
-                "@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600&display=swap');\n");
-        cssStyles.append("* { box-sizing: border-box; }\n");
-        cssStyles.append(
-                ".firewall-container { font-family: 'Red Hat Display', -apple-system, BlinkMacSystemFont, sans-serif; color: #333; max-width: 800px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }\n");
-        cssStyles.append(
-                ".header { background: linear-gradient(135deg, #52a2da, #204f85); color: white; padding: 20px; }\n");
-        cssStyles.append(".header h2 { margin: 0; font-weight: 500; font-size: 22px; }\n");
-        cssStyles.append(".header p { margin: 6px 0 0; opacity: 0.9; font-size: 14px; }\n");
-        cssStyles.append(".content { padding: 16px 20px 20px; }\n");
-        cssStyles.append(
-                ".card { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 16px; transition: all 0.2s ease; border: 1px solid #e6e6e6; }\n");
-        cssStyles.append(".card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }\n");
-        cssStyles.append(".card-header { display: flex; align-items: center; margin-bottom: 12px; }\n");
-        cssStyles.append(
-                ".card-header i { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 16px; background: #ebf5ff; color: #204f85; border-radius: 50%; }\n");
-        cssStyles.append(".card-header h3 { margin: 0; font-size: 16px; font-weight: 500; color: #333; }\n");
-        cssStyles.append(
-                ".command { background: #2c3e50; color: white; padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; margin: 10px 0; }\n");
-        cssStyles.append(
-                ".output { background: white; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 200px; overflow-y: auto; margin: 10px 0; color: #333; border: 1px solid #eaeaea; }\n");
-        cssStyles.append(
-                ".result-summary { background: #ebf5ff; border-radius: 6px; padding: 16px; margin-bottom: 16px; }\n");
-        cssStyles.append(
-                ".result-summary h3 { margin: 0 0 15px 0; color: #204f85; font-size: 16px; font-weight: 500; }\n");
-        cssStyles.append(".status-item { display: flex; align-items: center; margin-bottom: 10px; }\n");
-        cssStyles.append(".status-item i { margin-right: 10px; }\n");
-        cssStyles.append(".status-item span { font-size: 14px; }\n");
-        cssStyles.append(".status-running { color: #c00; }\n");
-        cssStyles.append(".status-stopped { color: #080; }\n");
-        cssStyles.append(
-                ".action-needed { background: #fef4f4; border-radius: 6px; padding: 16px; margin-top: 20px; border: 1px solid #f8d7da; }\n");
-        cssStyles.append(
-                ".action-needed h3 { margin: 0 0 15px 0; color: #c00; font-size: 16px; font-weight: 500; display: flex; align-items: center; }\n");
-        cssStyles.append(".action-needed h3 i { margin-right: 8px; }\n");
-        cssStyles.append(".action-needed ol { margin: 0; padding-left: 20px; }\n");
-        cssStyles.append(".action-needed li { margin-bottom: 10px; line-height: 1.5; }\n");
-        cssStyles.append(
-                ".command-bubble { display: inline-block; background: #f4f4f4; padding: 3px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; border: 1px solid #ddd; }\n");
-        cssStyles.append(
-                ".success-message { display: flex; align-items: center; background: #f0fff0; border-radius: 6px; padding: 16px; margin-top: 20px; border: 1px solid #d4edda; }\n");
-        cssStyles.append(".success-message i { font-size: 22px; color: #080; margin-right: 15px; }\n");
-        cssStyles.append(".success-message p { margin: 0; color: #333; font-size: 14px; }\n");
-        cssStyles.append("</style>\n");
+        String cssStyles = "<style>\n" +
+                "@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600&display=swap');\n" +
+                "* { box-sizing: border-box; }\n" +
+                ".firewall-container { font-family: 'Red Hat Display', -apple-system, BlinkMacSystemFont, sans-serif; color: #333; max-width: 800px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }\n" +
+                ".header { background: linear-gradient(135deg, #52a2da, #204f85); color: white; padding: 20px; }\n" +
+                ".header h2 { margin: 0; font-weight: 500; font-size: 22px; }\n" +
+                ".header p { margin: 6px 0 0; opacity: 0.9; font-size: 14px; }\n" +
+                ".content { padding: 16px 20px 20px; }\n" +
+                ".card { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 16px; transition: all 0.2s ease; border: 1px solid #e6e6e6; }\n" +
+                ".card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }\n" +
+                ".card-header { display: flex; align-items: center; margin-bottom: 12px; }\n" +
+                ".card-header i { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 16px; background: #ebf5ff; color: #204f85; border-radius: 50%; }\n" +
+                ".card-header h3 { margin: 0; font-size: 16px; font-weight: 500; color: #333; }\n" +
+                ".command { background: #2c3e50; color: white; padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; margin: 10px 0; }\n" +
+                ".output { background: white; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; max-height: 200px; overflow-y: auto; margin: 10px 0; color: #333; border: 1px solid #eaeaea; }\n" +
+                ".result-summary { background: #ebf5ff; border-radius: 6px; padding: 16px; margin-bottom: 16px; }\n" +
+                ".result-summary h3 { margin: 0 0 15px 0; color: #204f85; font-size: 16px; font-weight: 500; }\n" +
+                ".status-item { display: flex; align-items: center; margin-bottom: 10px; }\n" +
+                ".status-item i { margin-right: 10px; }\n" +
+                ".status-item span { font-size: 14px; }\n" +
+                ".status-running { color: #c00; }\n" +
+                ".status-stopped { color: #080; }\n" +
+                ".action-needed { background: #fef4f4; border-radius: 6px; padding: 16px; margin-top: 20px; border: 1px solid #f8d7da; }\n" +
+                ".action-needed h3 { margin: 0 0 15px 0; color: #c00; font-size: 16px; font-weight: 500; display: flex; align-items: center; }\n" +
+                ".action-needed h3 i { margin-right: 8px; }\n" +
+                ".action-needed ol { margin: 0; padding-left: 20px; }\n" +
+                ".action-needed li { margin-bottom: 10px; line-height: 1.5; }\n" +
+                ".command-bubble { display: inline-block; background: #f4f4f4; padding: 3px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; border: 1px solid #ddd; }\n" +
+                ".success-message { display: flex; align-items: center; background: #f0fff0; border-radius: 6px; padding: 16px; margin-top: 20px; border: 1px solid #d4edda; }\n" +
+                ".success-message i { font-size: 22px; color: #080; margin-right: 15px; }\n" +
+                ".success-message p { margin: 0; color: #333; font-size: 14px; }\n" +
+                "</style>\n";
 
-        return cssStyles.toString();
+        return cssStyles;
     }
 
     /**
