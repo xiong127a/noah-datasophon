@@ -19,9 +19,12 @@ package com.datasophon.domain.host.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import lombok.Getter;
-import lombok.Setter;
 
-@Setter
+
+/**
+ * @author 63588
+ */
+
 @Getter
 public enum MANAGED {
 
