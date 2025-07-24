@@ -86,9 +86,8 @@ public class ClusterServiceCommandHostServiceImpl
     /**
      * 计算主机命令的实际进度（支持只做内存聚合或同时更新数据库）
      */
-    @Override
     public void calculateHostCommandActualProgress(ClusterServiceCommandHostEntity commandHostEntity,
-                                                   boolean updateDb) {
+            boolean updateDb) {
         try {
             Long oldProgress = commandHostEntity.getCommandProgress();
             CommandState currentState = commandHostEntity.getCommandState();
@@ -118,7 +117,23 @@ public class ClusterServiceCommandHostServiceImpl
             }
 
             // 计算所有子命令的平均进度
-            long finalProgress = getFinalProgress(hostCommands);
+            long totalProgress = 0;
+            int completedCount = 0;
+            int totalCount = hostCommands.size();
+
+            for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommands) {
+                if (hostCommand.getCommandProgress() != null) {
+                    totalProgress += hostCommand.getCommandProgress();
+                    if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
+                        completedCount++;
+                    }
+                }
+            }
+
+            // 计算平均进度和完成百分比
+            long avgProgress = calculateAverage(totalProgress, totalCount);
+            long completedProgress = calculatePercentage(completedCount, totalCount);
+            long finalProgress = Math.max(avgProgress, completedProgress);
 
             commandHostEntity.setCommandProgress(finalProgress);
 
@@ -133,30 +148,9 @@ public class ClusterServiceCommandHostServiceImpl
         }
     }
 
-    private long getFinalProgress(List<ClusterServiceCommandHostCommandEntity> hostCommands) {
-        long totalProgress = 0;
-        int completedCount = 0;
-        int totalCount = hostCommands.size();
-
-        for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommands) {
-            if (hostCommand.getCommandProgress() != null) {
-                totalProgress += hostCommand.getCommandProgress();
-                if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
-                    completedCount++;
-                }
-            }
-        }
-
-        // 计算平均进度和完成百分比
-        long avgProgress = calculateAverage(totalProgress, totalCount);
-        long completedProgress = calculatePercentage(completedCount, totalCount);
-        return Math.max(avgProgress, completedProgress);
-    }
-
     /**
      * 实时计算主机命令状态（支持只做内存聚合或同时更新数据库）
      */
-    @Override
     public void calculateRealTimeHostCommandState(ClusterServiceCommandHostEntity hostCommandEntity, boolean updateDb) {
         try {
             CommandState oldState = hostCommandEntity.getCommandState();

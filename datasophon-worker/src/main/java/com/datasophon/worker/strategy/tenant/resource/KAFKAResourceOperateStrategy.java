@@ -1,4 +1,4 @@
-package com.datasophon.worker.strategy.tenantResource;
+package com.datasophon.worker.strategy.tenant.resource;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -9,6 +9,9 @@ import com.datasophon.common.utils.ShellUtils;
 
 import java.util.StringJoiner;
 
+/**
+ * @author 63588
+ */
 public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
     private final TenantKafkaResource kafkaResource;

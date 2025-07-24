@@ -1,4 +1,4 @@
-package com.datasophon.worker.strategy.tenantResource;
+package com.datasophon.worker.strategy.tenant.resource;
 
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 

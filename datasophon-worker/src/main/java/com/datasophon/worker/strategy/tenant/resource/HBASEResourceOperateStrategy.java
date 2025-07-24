@@ -1,4 +1,4 @@
-package com.datasophon.worker.strategy.tenantResource;
+package com.datasophon.worker.strategy.tenant.resource;
 
 import cn.hutool.core.convert.Convert;
 import com.datasophon.common.Constants;

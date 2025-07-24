@@ -36,6 +36,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Map;
 
+/**
+ * @author 63588
+ */
 public class UserPermissionHandler implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(UserPermissionHandler.class);

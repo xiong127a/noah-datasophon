@@ -5,8 +5,8 @@ import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.worker.strategy.tenantResource.AbstractOperateStrategy;
-import com.datasophon.worker.strategy.tenantResource.OperateStrategyFactory;
+import com.datasophon.worker.strategy.tenant.resource.AbstractOperateStrategy;
+import com.datasophon.worker.strategy.tenant.resource.OperateStrategyFactory;
 
 public class TenantResourceActor extends AbstractActor {
 
