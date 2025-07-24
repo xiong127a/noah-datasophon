@@ -111,8 +111,8 @@ public class PlaceholderUtils {
     public static List<String> getNewEquipmentNoList(String pre, String last) {
         int length = pre.length();
         ArrayList<String> list = new ArrayList<>();
-        Integer start = Integer.parseInt(pre);
-        Integer end = Integer.parseInt(last);
+        int start = Integer.parseInt(pre);
+        int end = Integer.parseInt(last);
         int next = start;
         list.add(pre);
         while (next < end) {

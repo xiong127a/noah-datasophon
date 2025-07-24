@@ -67,7 +67,7 @@ public class AlertActor extends AbstractActor {
                 String hostname = instance.split(":")[0];
                 String serviceRoleName = labels.getServiceRoleName();
                 if (FIRING.equals(status)) {
-                    Boolean hasEnabledAlertHistory = alertHistoryGateway.hasEnabledAlertHistory(alertname, clusterId,
+                    boolean hasEnabledAlertHistory = alertHistoryGateway.hasEnabledAlertHistory(alertname, clusterId,
                             hostname);
                     // 查询服务实例，服务角色实例
                     if (NODE.equals(serviceRoleName)) {
