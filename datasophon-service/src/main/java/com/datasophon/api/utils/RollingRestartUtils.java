@@ -49,12 +49,12 @@ public class RollingRestartUtils {
     /**
      * hostName+服务id:实例id，
      */
-    public static Map<String, CountDownLatch> bachIdMap = new ConcurrentHashMap<>();
+    public static final Map<String, CountDownLatch> bachIdMap = new ConcurrentHashMap<>();
 
     /**
      * hostName+服务id  :启动状态
      */
-    public static Map<String, Boolean> serverInstanceExecuteResultMap = new ConcurrentHashMap<>();
+    public static final Map<String, Boolean> serverInstanceExecuteResultMap = new ConcurrentHashMap<>();
 
 
     private RollingRestartUtils() {

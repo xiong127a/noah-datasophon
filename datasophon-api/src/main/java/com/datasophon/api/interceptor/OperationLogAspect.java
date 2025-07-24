@@ -109,7 +109,7 @@ public class OperationLogAspect {
     }
 
 
-    public boolean apiLogAutoEnable = true;
+    public final boolean apiLogAutoEnable = true;
 
     @Pointcut("execution(* *..*Controller.*(..))")
     public void normalPointcutWeb() {

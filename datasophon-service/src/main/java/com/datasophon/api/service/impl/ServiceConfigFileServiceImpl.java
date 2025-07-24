@@ -68,7 +68,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     /**
      * 配置文件内容缓存，5分钟过期
      */
-    Cache<String, byte[]> CONFIG_FILE_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);
+    final Cache<String, byte[]> CONFIG_FILE_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);
     @Autowired
     public ServiceConfigFileServiceImpl(ClusterServiceInstanceService serviceInstanceService) {
         this.serviceInstanceService = serviceInstanceService;

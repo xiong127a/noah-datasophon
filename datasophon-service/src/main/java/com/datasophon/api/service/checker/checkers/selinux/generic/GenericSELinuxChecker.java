@@ -32,7 +32,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
     @Setter
     @Autowired
     protected SshConnectionPoolManager sshConnectionPoolManager;
-    protected SELinuxChecker selinuxChecker;
+    protected final SELinuxChecker selinuxChecker;
 
     @Getter
     @Setter

@@ -47,7 +47,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected final CheckLogger cacheLog;
 
     // 添加一个成员变量来存储当前正在处理的主机信息
-    public ThreadLocal<HostInfo> currentHostInfo = new ThreadLocal<>();
+    public final ThreadLocal<HostInfo> currentHostInfo = new ThreadLocal<>();
 
     /**
      * 构造函数
