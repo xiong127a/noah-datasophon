@@ -95,8 +95,7 @@ public class FirewallChecker extends AbstractItemChecker {
                     if (statusResult.isSuccess()) {
                         // 分析输出确定防火墙状态
                         boolean firewallRunning = switch (osInfo.getOsDistribution()) {
-                            case CENTOS, REDHAT, KYLIN -> output.contains("active");
-                            case UBUNTU, DEBIAN -> output.contains("active");
+                            case CENTOS, REDHAT, KYLIN, UBUNTU, DEBIAN -> output.contains("active");
                             default -> output.contains("REJECT") || output.contains("DROP");
                         };
 
