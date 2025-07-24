@@ -39,10 +39,10 @@ public class UserGroupChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(UserGroupChecker.class);
     private static final String SERVICE_DDL_JSON = "service_ddl.json";
+    @Autowired
+    private CheckerProperties checkerProperties;
 
-    private final CheckerProperties checkerProperties;
-
-    private final String metaBasePath;
+    private String metaBasePath;
 
     // 保存需要创建的用户和组
     private final List<String> usersToCreate = new ArrayList<>();
