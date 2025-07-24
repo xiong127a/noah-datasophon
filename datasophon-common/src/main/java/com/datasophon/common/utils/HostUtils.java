@@ -77,8 +77,7 @@ public class HostUtils {
 
     public static String findIp(String hostname) {
         validHostname(hostname);
-        String ip = getIpByHost(hostname);
-        return ip;
+        return getIpByHost(hostname);
     }
 
     public static String getHostName(String hostOrIp) {

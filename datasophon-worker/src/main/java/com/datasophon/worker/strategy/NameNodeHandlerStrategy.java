@@ -102,10 +102,9 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
                 }
             }
         }
-        ExecResult startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                command.getDecompressPackageName(), command.getRunAs());
 
-        return startResult;
+        return serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+                command.getDecompressPackageName(), command.getRunAs());
     }
 
 }

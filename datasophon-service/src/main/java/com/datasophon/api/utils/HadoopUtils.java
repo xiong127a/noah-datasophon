@@ -52,8 +52,7 @@ public class HadoopUtils {
                 .setDecompressPackageName(PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN"));
         serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
         ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-        ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
-        return execResult;
+        return configureHandler.handlerRequest(serviceRoleInfo);
     }
 
     public static ExecResult refreshQueuePropToYarn(ClusterInfoEntity clusterInfo, String hostname) throws Exception {
@@ -68,7 +67,6 @@ public class HadoopUtils {
         commands.add("-refreshQueues");
         command.setCommands(commands);
         Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
-        ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-        return execResult;
+        return (ExecResult) Await.result(execFuture, timeout.duration());
     }
 }

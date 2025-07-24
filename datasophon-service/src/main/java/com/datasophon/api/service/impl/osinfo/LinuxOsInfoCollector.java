@@ -689,9 +689,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (totalBytes > 0) {
                 // 使用默认值
                 long usedBytes = 0;
-                long freeBytes = totalBytes;
 
-                setSwapInfoValues(swapInfo, totalBytes, usedBytes, freeBytes);
+                setSwapInfoValues(swapInfo, totalBytes, usedBytes, totalBytes);
                 return true;
             }
         } catch (Exception e) {
@@ -725,9 +724,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (totalBytes > 0) {
                 // 使用默认值
                 long usedBytes = 0;
-                long freeBytes = totalBytes;
 
-                setSwapInfoValues(swapInfo, totalBytes, usedBytes, freeBytes);
+                setSwapInfoValues(swapInfo, totalBytes, usedBytes, totalBytes);
                 return true;
             }
         } catch (Exception e) {

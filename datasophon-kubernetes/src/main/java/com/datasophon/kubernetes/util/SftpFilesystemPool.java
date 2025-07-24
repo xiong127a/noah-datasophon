@@ -52,8 +52,7 @@ public class SftpFilesystemPool {
         @Override
         public SftpFileSystem create() throws Exception {
             ClientSession clientSession = sshConnectionPool.borrowObject();
-            SftpFileSystem SftpFileSystem = SftpClientFactory.instance().createSftpFileSystem(clientSession);
-            return SftpFileSystem;
+            return SftpClientFactory.instance().createSftpFileSystem(clientSession);
         }
 
         @Override

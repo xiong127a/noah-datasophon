@@ -127,13 +127,11 @@ public class ServiceHandler {
     }
 
     public ExecResult reStart(ServiceRoleRunner runner, String decompressPackageName) {
-        ExecResult result = execRunner(runner, decompressPackageName, null);
-        return result;
+        return execRunner(runner, decompressPackageName, null);
     }
 
     public ExecResult status(ServiceRoleRunner runner, String decompressPackageName) {
-        ExecResult result = execRunner(runner, decompressPackageName, null);
-        return result;
+        return execRunner(runner, decompressPackageName, null);
     }
 
     public ExecResult execRunner(ServiceRoleRunner runner, String decompressPackageName, RunAs runAs) {
@@ -173,9 +171,7 @@ public class ServiceHandler {
         command.add(shell);
         command.addAll(args);
         logger.info("execute shell command : {}", command);
-        ExecResult execResult =
-                ShellUtils.execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, command, timeout, logger);
-        return execResult;
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, command, timeout, logger);
     }
 
 

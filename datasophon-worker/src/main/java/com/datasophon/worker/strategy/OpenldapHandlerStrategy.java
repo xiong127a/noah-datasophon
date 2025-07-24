@@ -43,8 +43,7 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
             ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/base.ldif");
             ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/default-user.ldif");
         }
-        ExecResult startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+        return serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());
-        return startResult;
     }
 }

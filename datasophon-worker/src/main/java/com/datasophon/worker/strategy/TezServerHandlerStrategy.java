@@ -96,9 +96,8 @@ public class TezServerHandlerStrategy extends AbstractHandlerStrategy implements
             execResult = ShellUtils.execWithStatus(workPath, commands, 90, logger);
             logger.info("upload tez.tar.gz to {} output: {}", tezLibParentDir, execResult.getExecOut());
         }
-        ExecResult startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+        return serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());
-        return startResult;
     }
 
 
@@ -116,8 +115,7 @@ public class TezServerHandlerStrategy extends AbstractHandlerStrategy implements
             }
 
             // tez lib uri 启动清理
-            String tezLibPath = conf.get("tez.lib.uris");
-            return tezLibPath;
+            return conf.get("tez.lib.uris");
         } catch (Exception e) {
         }
         return null;

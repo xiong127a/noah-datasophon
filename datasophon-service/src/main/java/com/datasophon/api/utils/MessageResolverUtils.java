@@ -53,8 +53,6 @@ public class MessageResolverUtils {
      */
     public static String getMessages(Object code, Object... messageArgs) {
         Object[] objs = Arrays.stream(messageArgs).map(MessageResolverUtils::getMessage).toArray();
-        String message =
-                messageSource.getMessage(code.toString(), objs, code.toString(), LocaleContextHolder.getLocale());
-        return message;
+        return messageSource.getMessage(code.toString(), objs, code.toString(), LocaleContextHolder.getLocale());
     }
 }

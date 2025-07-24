@@ -68,10 +68,9 @@ public class SELinuxChecker extends AbstractItemChecker {
                         SELinuxCheckerStrategy strategy = selinuxCheckerFactory.getChecker(osInfo);
 
                         // 执行检查
-                        CheckItem result = strategy.check(hostInfo, checkItem, cacheLog);
 
-                        // 返回检查结果
-                        return result;
+                    // 返回检查结果
+                        return strategy.check(hostInfo, checkItem, cacheLog);
 
                 } catch (Exception e) {
                         String errorMsg = "检查SELinux时发生异常: " + e.getMessage();

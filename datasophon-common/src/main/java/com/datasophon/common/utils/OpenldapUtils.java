@@ -27,12 +27,11 @@ public class OpenldapUtils {
             );
             return OpenldapUtils.addUser(ldapUser, ldapCommand.getUserRootDn(), ldapContext);
         } else if("delete".equals(ldapCommand.getOperation())) {
-            boolean deleteResult = OpenldapUtils.delete(
+            return OpenldapUtils.delete(
                     ldapCommand.getUsername(),
                     ldapCommand.getUserRootDn(),
                     ldapContext
             );
-            return deleteResult;
         }
         return false;
     }

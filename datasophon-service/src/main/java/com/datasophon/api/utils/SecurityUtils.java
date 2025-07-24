@@ -31,14 +31,11 @@ import java.util.Objects;
 public class SecurityUtils {
 
     public static HttpServletRequest getRequest() {
-        HttpServletRequest request =
-                ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
-        return request;
+        return ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
     }
 
     public static HttpSession getSession() {
-        HttpSession session = getRequest().getSession();
-        return session;
+        return getRequest().getSession();
     }
     /**
      * 获取用户

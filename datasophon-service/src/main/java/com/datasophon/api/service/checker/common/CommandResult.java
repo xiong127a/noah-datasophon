@@ -27,9 +27,8 @@ public class CommandResult {
 
     // 从MinaUtils.CommandResult创建新实例的静态工厂方法
     public static CommandResult fromMinaCommandResult(CommandResult minaResult) {
-        CommandResult result = new CommandResult(minaResult.getCommand(), minaResult.getExitCode(),
+        return new CommandResult(minaResult.getCommand(), minaResult.getExitCode(),
                 minaResult.getOutput(), minaResult.getError());
-        return result;
     }
 
     public String getOutput() {

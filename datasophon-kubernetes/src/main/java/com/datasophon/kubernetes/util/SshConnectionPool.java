@@ -31,8 +31,7 @@ public class SshConnectionPool {
         pool.getNumActive();
         pool.getNumIdle();
         pool.getNumWaiters();
-        SshPoolMetrics sshPoolMetrics = new SshPoolMetrics(pool.getNumActive(), pool.getNumIdle(), pool.getNumWaiters());
-        return sshPoolMetrics;
+        return new SshPoolMetrics(pool.getNumActive(), pool.getNumIdle(), pool.getNumWaiters());
     }
 
     public ClientSession borrowObject() throws Exception {
