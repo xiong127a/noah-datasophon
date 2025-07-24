@@ -33,8 +33,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/alert/quota")
 public class ClusterAlertQuotaController {
 
-    @Autowired
-    private ClusterAlertQuotaService clusterAlertQuotaService;
+    private final ClusterAlertQuotaService clusterAlertQuotaService;
 
     /**
      * list alert quota

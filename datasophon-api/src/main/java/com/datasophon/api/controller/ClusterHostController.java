@@ -40,8 +40,7 @@ import java.util.List;
 @RequestMapping("api/cluster/host")
 public class ClusterHostController {
 
-    @Autowired
-    private ClusterHostService clusterHostService;
+    private final ClusterHostService clusterHostService;
 
     /**
      * 查询集群所有主机

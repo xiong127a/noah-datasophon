@@ -35,11 +35,9 @@ import java.util.Arrays;
 @RequestMapping("api/frame/service/role")
 public class FrameServiceRoleController {
 
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
+    private final FrameServiceRoleService frameServiceRoleService;
 
-    @Autowired
-    private AlertGroupService alertGroupService;
+    private final AlertGroupService alertGroupService;
 
     /**
      * 查询服务对应的角色列表

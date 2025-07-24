@@ -53,8 +53,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ServiceConfigController {
 
-    @Autowired
-    private ServiceConfigFileService serviceConfigFileService;
+    private final ServiceConfigFileService serviceConfigFileService;
 
     /**
      * 获取服务配置文件列表

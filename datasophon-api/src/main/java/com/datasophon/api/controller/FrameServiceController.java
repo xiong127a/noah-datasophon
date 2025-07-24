@@ -42,11 +42,9 @@ import java.util.List;
 @RequestMapping("api/frame/service")
 public class FrameServiceController {
 
-    @Autowired
-    private FrameServiceService frameVersionServiceService;
+    private final FrameServiceService frameVersionServiceService;
 
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
+    private final FrameServiceRoleService frameServiceRoleService;
 
     /**
      * 列表

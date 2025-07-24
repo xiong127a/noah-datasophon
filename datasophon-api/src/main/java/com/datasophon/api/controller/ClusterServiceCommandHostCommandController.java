@@ -33,8 +33,7 @@ import java.util.Arrays;
 @RequestMapping("api/cluster/service/command/host/command")
 public class ClusterServiceCommandHostCommandController {
 
-    @Autowired
-    private ClusterServiceCommandHostCommandService clusterServiceCommandHostCommandService;
+    private final ClusterServiceCommandHostCommandService clusterServiceCommandHostCommandService;
 
     /**
      * 列表

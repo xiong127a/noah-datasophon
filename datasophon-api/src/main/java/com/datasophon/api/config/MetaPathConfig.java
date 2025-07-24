@@ -21,11 +21,14 @@ public class MetaPathConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(MetaPathConfig.class);
 
-    @Autowired
-    private ResourceLoader resourceLoader;
+    private final ResourceLoader resourceLoader;
 
     @Value("${datasophon.checker.meta.base-dir}")
     private String configuredPath;
+    @Autowired
+    public MetaPathConfig(ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
 
     @Bean
     public String metaBasePath() {

@@ -32,8 +32,7 @@ import java.util.Arrays;
 @RequestMapping("api/frame")
 public class FrameInfoController {
 
-    @Autowired
-    private FrameInfoService frameInfoService;
+    private final FrameInfoService frameInfoService;
 
     /**
      * 列表

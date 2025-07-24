@@ -34,8 +34,7 @@ import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 @RequestMapping("cluster/user")
 public class ClusterUserController {
 
-    @Autowired
-    private ClusterUserService clusterUserService;
+    private final ClusterUserService clusterUserService;
 
     /**
      * 列表

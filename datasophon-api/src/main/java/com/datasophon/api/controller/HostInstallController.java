@@ -34,11 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("host/install")
 public class HostInstallController {
 
-    @Autowired
-    private InstallService installService;
+    private final InstallService installService;
 
-    @Autowired
-    private HostCheckService hostCheckService;
+    private final HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤

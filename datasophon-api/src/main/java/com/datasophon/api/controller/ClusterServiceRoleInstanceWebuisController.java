@@ -33,8 +33,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/webuis")
 public class ClusterServiceRoleInstanceWebuisController {
 
-    @Autowired
-    private ClusterServiceRoleInstanceWebuisService clusterServiceRoleInstanceWebuisService;
+    private final ClusterServiceRoleInstanceWebuisService clusterServiceRoleInstanceWebuisService;
 
     /**
      * 列表

@@ -40,8 +40,7 @@ import java.util.List;
 @RequestMapping("api/cluster/service/command")
 public class ClusterServiceCommandController {
 
-    @Autowired
-    private ClusterServiceCommandService clusterServiceCommandService;
+    private final ClusterServiceCommandService clusterServiceCommandService;
 
     /**
      * 查询集群服务指令列表

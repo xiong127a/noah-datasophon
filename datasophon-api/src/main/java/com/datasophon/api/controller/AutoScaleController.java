@@ -13,8 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/autoScale")
 public class AutoScaleController {
 
-    @Autowired
-    private AutoScaleService autoScaleService;
+    private final AutoScaleService autoScaleService;
 
     @PostMapping("/createAutoScaleTask")
     public Result createAutoScaleTask(@RequestBody AutoScaleTaskVO taskVO) {

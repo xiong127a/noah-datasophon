@@ -32,8 +32,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/alert/group/map")
 public class ClusterAlertGroupMapController {
 
-    @Autowired
-    private ClusterAlertGroupMapService clusterAlertGroupMapService;
+    private final ClusterAlertGroupMapService clusterAlertGroupMapService;
 
     /**
      * 列表

@@ -33,8 +33,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/yarn/queue")
 public class ClusterYarnQueueController {
 
-    @Autowired
-    private ClusterYarnQueueService clusterYarnQueueService;
+    private final ClusterYarnQueueService clusterYarnQueueService;
 
     /**
      * 列表

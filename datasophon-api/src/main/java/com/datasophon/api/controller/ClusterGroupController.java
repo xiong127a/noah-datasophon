@@ -32,8 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("cluster/group")
 public class ClusterGroupController {
 
-    @Autowired
-    private ClusterGroupService clusterGroupService;
+    private final ClusterGroupService clusterGroupService;
 
     /**
      * 列表

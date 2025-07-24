@@ -42,8 +42,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
 
-    @Autowired
-    private UserInfoService userService;
+    private final UserInfoService userService;
 
     /**
      * 根据用户名加载用户详情

@@ -35,8 +35,7 @@ import java.util.Map;
 @RequestMapping("api/cluster/user")
 public class ClusterRoleUserController {
 
-    @Autowired
-    private ClusterRoleUserService clusterRoleUserService;
+    private final ClusterRoleUserService clusterRoleUserService;
 
     /**
      * 列表

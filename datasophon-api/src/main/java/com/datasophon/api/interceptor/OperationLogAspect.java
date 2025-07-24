@@ -65,8 +65,7 @@ public class OperationLogAspect {
     @Autowired
     OperationLogService operationLogService;
 
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceInstanceService serviceInstanceService;
 
     @PostConstruct
     public void initialize() {

@@ -32,8 +32,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/service/role/group/config")
 public class ClusterServiceRoleGroupConfigController {
 
-    @Autowired
-    private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
+    private final ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
 
     /**
      * 列表

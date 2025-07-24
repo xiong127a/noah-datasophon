@@ -34,8 +34,7 @@ import java.util.Map;
 @RequestMapping("api/clusterserviceroleinstanceconfig")
 public class ClusterServiceRoleInstanceConfigController {
 
-    @Autowired
-    private ClusterServiceRoleInstanceConfigService clusterServiceRoleInstanceConfigService;
+    private final ClusterServiceRoleInstanceConfigService clusterServiceRoleInstanceConfigService;
 
     /**
      * 列表

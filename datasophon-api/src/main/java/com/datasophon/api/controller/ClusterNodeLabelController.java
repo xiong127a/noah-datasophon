@@ -31,8 +31,7 @@ import java.util.List;
 @RequestMapping("cluster/node/label")
 public class ClusterNodeLabelController {
 
-    @Autowired
-    private ClusterNodeLabelService nodeLabelService;
+    private final ClusterNodeLabelService nodeLabelService;
 
     /**
      * save node label

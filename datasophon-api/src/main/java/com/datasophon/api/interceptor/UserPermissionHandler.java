@@ -17,13 +17,15 @@
 
 package com.datasophon.api.interceptor;
 
-import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.enums.Status;
+import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.dao.entity.UserInfoEntity;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,19 +34,20 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 public class UserPermissionHandler implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(UserPermissionHandler.class);
 
-    @Autowired
-    private ClusterRoleUserService clusterUserService;
+    private final ClusterRoleUserService clusterUserService;
 
+    private final UserInfoService userInfoService;
     @Autowired
-    private UserInfoService userInfoService;
+    public UserPermissionHandler(ClusterRoleUserService clusterUserService, UserInfoService userInfoService) {
+        this.clusterUserService = clusterUserService;
+        this.userInfoService = userInfoService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

@@ -34,8 +34,7 @@ import java.io.IOException;
 @RequestMapping("cluster/kerberos")
 public class ClusterKerberosController {
 
-    @Autowired
-    private ClusterKerberosService kerberosService;
+    private final ClusterKerberosService kerberosService;
 
     /**
      * download user keytab

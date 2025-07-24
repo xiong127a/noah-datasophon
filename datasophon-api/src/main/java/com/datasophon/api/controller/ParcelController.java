@@ -79,11 +79,9 @@ public class ParcelController implements DisposableBean {
      */
     final Map<String, CompletableFuture> ASYNC_TASK_CACHE = new ConcurrentHashMap<>();
 
-    @Autowired
-    private FrameInfoService frameInfoService;
+    private final FrameInfoService frameInfoService;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+    private final ClusterInfoService clusterInfoService;
 
     @Autowired
     LoadServiceMeta loadServiceMeta;

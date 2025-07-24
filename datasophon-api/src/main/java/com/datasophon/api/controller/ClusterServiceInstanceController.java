@@ -31,8 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("cluster/service/instance")
 public class ClusterServiceInstanceController {
 
-    @Autowired
-    private ClusterServiceInstanceService clusterServiceInstanceService;
+    private final ClusterServiceInstanceService clusterServiceInstanceService;
 
     /**
      * 列表

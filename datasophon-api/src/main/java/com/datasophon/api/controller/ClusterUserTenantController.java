@@ -16,8 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class ClusterUserTenantController {
 
-    @Autowired
-    private ClusterUserTenantService clusterUserTenantService;
+    private final ClusterUserTenantService clusterUserTenantService;
 
     @RequestMapping(value = "/add", method = RequestMethod.GET)
     public Result add(@RequestParam("clusterId") @NotNull Integer clusterId, @RequestParam("userId") @NotNull Integer userId, @RequestParam("tenantIds") @NotBlank String tenantIds) {

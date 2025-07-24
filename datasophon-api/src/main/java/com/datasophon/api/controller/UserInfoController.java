@@ -39,8 +39,7 @@ import java.util.List;
 @RequestMapping("api/user")
 public class UserInfoController {
 
-    @Autowired
-    private UserInfoService userInfoService;
+    private final UserInfoService userInfoService;
 
     /**
      * 列表带分页

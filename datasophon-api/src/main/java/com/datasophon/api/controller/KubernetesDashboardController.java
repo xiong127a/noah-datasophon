@@ -36,8 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class KubernetesDashboardController {
 
-    @Autowired
-    private KubernetesDashboardService kubernetesDashboardService;
+    private final KubernetesDashboardService kubernetesDashboardService;
 
     /**
      * 获取Kubernetes命名空间列表

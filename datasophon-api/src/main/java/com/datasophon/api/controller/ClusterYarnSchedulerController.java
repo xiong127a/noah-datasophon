@@ -32,8 +32,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/yarn/scheduler")
 public class ClusterYarnSchedulerController {
 
-    @Autowired
-    private ClusterYarnSchedulerService clusterYarnSchedulerService;
+    private final ClusterYarnSchedulerService clusterYarnSchedulerService;
 
     /**
      * 列表

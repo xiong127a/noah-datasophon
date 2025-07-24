@@ -33,8 +33,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/alert/history")
 public class ClusterAlertHistoryController {
 
-    @Autowired
-    private ClusterAlertHistoryService clusterAlertHistoryService;
+    private final ClusterAlertHistoryService clusterAlertHistoryService;
 
     /**
      * 列表

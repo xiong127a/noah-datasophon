@@ -31,8 +31,7 @@ import java.util.Arrays;
 @RequestMapping("api/clusterusergroup")
 public class ClusterUserGroupController {
 
-    @Autowired
-    private ClusterUserGroupService clusterUserGroupService;
+    private final ClusterUserGroupService clusterUserGroupService;
 
     /**
      * 列表

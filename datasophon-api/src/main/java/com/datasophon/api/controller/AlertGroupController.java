@@ -39,8 +39,7 @@ import java.util.List;
 @RequestMapping("alert/group")
 public class AlertGroupController {
 
-    @Autowired
-    private AlertGroupService alertGroupService;
+    private final AlertGroupService alertGroupService;
 
     /**
      * 列表

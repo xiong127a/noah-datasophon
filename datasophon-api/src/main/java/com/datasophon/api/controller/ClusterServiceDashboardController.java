@@ -31,8 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/cluster/service/dashboard")
 public class ClusterServiceDashboardController {
 
-    @Autowired
-    private ClusterServiceDashboardService clusterServiceDashboardService;
+    private final ClusterServiceDashboardService clusterServiceDashboardService;
 
     /**
      * get dashboard url

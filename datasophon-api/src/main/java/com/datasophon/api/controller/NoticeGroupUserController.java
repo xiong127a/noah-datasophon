@@ -34,8 +34,7 @@ import java.util.Map;
 @RequestMapping("api/notice/group/user")
 public class NoticeGroupUserController {
 
-    @Autowired
-    private NoticeGroupUserService noticeGroupUserService;
+    private final NoticeGroupUserService noticeGroupUserService;
 
     /**
      * 列表

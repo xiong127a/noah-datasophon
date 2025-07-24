@@ -42,8 +42,7 @@ public class ServiceInstallController {
 
     @Autowired
     ServiceInstallService serviceInstallService;
-    @Autowired
-    private HttpServletResponse httpServletResponse;
+    private final HttpServletResponse httpServletResponse;
 
     /**
      * 根据服务角色名称查询服务配置选项

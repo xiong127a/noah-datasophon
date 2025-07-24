@@ -32,8 +32,7 @@ import java.util.List;
 @RequestMapping("cluster/rack")
 public class ClusterRackController {
 
-    @Autowired
-    private ClusterRackService clusterRackService;
+    private final ClusterRackService clusterRackService;
 
     /**
      * 列表

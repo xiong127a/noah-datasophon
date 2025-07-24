@@ -37,8 +37,7 @@ import java.util.List;
 @RequestMapping("/notice/group")
 public class NoticeGroupController {
 
-    @Autowired
-    private NoticeGroupServiceImpl noticeGroupService;
+    private final NoticeGroupServiceImpl noticeGroupService;
 
     /**
      * 列表带分页

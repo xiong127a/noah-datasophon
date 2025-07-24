@@ -32,8 +32,7 @@ import java.util.Arrays;
 @RequestMapping("cluster/service/instance/config")
 public class ClusterServiceInstanceConfigController {
 
-    @Autowired
-    private ClusterServiceInstanceConfigService clusterServiceInstanceConfigService;
+    private final ClusterServiceInstanceConfigService clusterServiceInstanceConfigService;
 
     /**
      * 列表

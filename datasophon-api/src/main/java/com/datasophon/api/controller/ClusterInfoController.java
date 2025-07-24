@@ -37,8 +37,7 @@ import java.util.Arrays;
 @RequestMapping("api/cluster")
 public class ClusterInfoController {
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+    private final ClusterInfoService clusterInfoService;
 
     /**
      * 列表

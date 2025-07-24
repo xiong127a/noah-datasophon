@@ -36,17 +36,13 @@ import java.util.List;
 @Slf4j
 public class HostCheckController {
 
-    @Autowired
-    private HostCheckService hostCheckService;
+    private final HostCheckService hostCheckService;
 
-    @Autowired
-    private QueueManagerServiceImpl queueManagerService;
+    private final QueueManagerServiceImpl queueManagerService;
 
-    @Autowired
-    private HostCheckQueueManager hostCheckQueueManager;
+    private final HostCheckQueueManager hostCheckQueueManager;
 
-    @Autowired
-    private AsyncCheckService asyncCheckService;
+    private final AsyncCheckService asyncCheckService;
 
     /**
      * 获取主机检查项列表

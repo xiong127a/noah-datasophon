@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("cluster/tenant")
 public class ClusterTenantController {
 
-    @Autowired
-    private ClusterTenantService clusterTenantService;
+    private final ClusterTenantService clusterTenantService;
 
     /**
      * 查询租户列表

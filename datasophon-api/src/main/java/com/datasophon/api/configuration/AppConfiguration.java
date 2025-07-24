@@ -40,8 +40,7 @@ import java.util.Locale;
 @Configuration
 public class AppConfiguration implements WebMvcConfigurer {
 
-    public static final String LOGIN_INTERCEPTOR_PATH_PATTERN = "/**/*";
-    public static final String LOGIN_PATH_PATTERN = "/login";
+
     public static final String PATH_PATTERN = "/**";
     public static final String LOCALE_LANGUAGE_COOKIE = "language";
 
@@ -71,9 +70,9 @@ public class AppConfiguration implements WebMvcConfigurer {
     public LocaleResolver localeResolver() {
         CookieLocaleResolver localeResolver = new CookieLocaleResolver();
         localeResolver.setCookieName(LOCALE_LANGUAGE_COOKIE);
-        /** set default locale **/
+        /* set default locale **/
         localeResolver.setDefaultLocale(Locale.SIMPLIFIED_CHINESE);
-        /** set language tag compliant **/
+        /* set language tag compliant **/
         localeResolver.setLanguageTagCompliant(false);
         return localeResolver;
     }

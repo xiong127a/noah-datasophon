@@ -34,8 +34,7 @@ import java.util.Map;
 @RequestMapping("/api/role/info")
 public class RoleInfoController {
 
-    @Autowired
-    private RoleInfoService roleInfoService;
+    private final RoleInfoService roleInfoService;
 
     /**
      * 列表

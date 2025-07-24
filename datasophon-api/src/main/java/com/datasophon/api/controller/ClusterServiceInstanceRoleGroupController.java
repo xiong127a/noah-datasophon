@@ -33,8 +33,7 @@ import java.util.List;
 @RequestMapping("cluster/service/instance/role/group")
 public class ClusterServiceInstanceRoleGroupController {
 
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService;
+    private final ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService;
 
     /**
      * 列表
