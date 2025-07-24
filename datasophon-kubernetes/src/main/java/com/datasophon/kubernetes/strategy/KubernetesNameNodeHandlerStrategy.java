@@ -28,7 +28,6 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         String hostname = command.getHostname();
-        ExecResult execResult = new ExecResult();
 
         if (command.getEnableKerberos()) {
             logger.info("Start to get namenode keytab file");
@@ -40,27 +39,6 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                 KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "HTTP/" + hostname, "spnego.service.keytab");
             }
         }
-
-        if (command.getEnableRangerPlugin()) {
-            // logger.info("Start to enable ranger hdfs plugin");
-            // ArrayList<String> commands = new ArrayList<>();
-            // commands.add("sh");
-            // commands.add(workPath + "/ranger-hdfs-plugin/enable-hdfs-plugin.sh");
-            // if (!FileUtil.exist(workPath + "/ranger-hdfs-plugin/success.id")) {
-            // ExecResult execResult = ShellUtils.execWithStatus(workPath +
-            // "/ranger-hdfs-plugin", commands, 30L, logger);
-            // if (execResult.getExecResult()) {
-            // logger.info("Enable ranger hdfs plugin success");
-            // // 写入ranger plugin集成成功标识
-            // FileUtil.writeUtf8String("success", workPath +
-            // "/ranger-hdfs-plugin/success.id");
-            // } else {
-            // logger.info("Enable ranger hdfs plugin failed");
-            // return execResult;
-            // }
-            // }
-        }
-
         return serviceHandler.start(command);
     }
 
@@ -108,10 +86,8 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
         final String DATANODE_SERVICE = "hdfs-datanode";
 
         // 当前服务角色名称
-        String serviceRoleName = "";
         for (ServiceConfig config : list) {
             if ("dfs.namenode.name.dir".equals(config.getName())) {
-                serviceRoleName = config.getConfigTargetRoles();
                 break;
             }
         }
