@@ -40,6 +40,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author 63588
+ */
 @Slf4j
 public class ShellUtils {
 
@@ -359,5 +362,6 @@ public class ShellUtils {
         } catch (Exception e) {
             logger.error("关闭命令通道异常", e);
         }
+        return command;
     }
 }

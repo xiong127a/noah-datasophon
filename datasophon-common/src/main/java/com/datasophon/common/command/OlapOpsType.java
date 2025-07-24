@@ -17,9 +17,12 @@
 package com.datasophon.common.command;
 
 import lombok.Getter;
-import lombok.Setter;
 
-@Setter
+
+/**
+ * @author 63588
+ */
+
 @Getter
 public enum OlapOpsType {
 
