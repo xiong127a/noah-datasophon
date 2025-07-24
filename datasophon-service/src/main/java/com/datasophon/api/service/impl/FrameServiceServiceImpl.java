@@ -99,12 +99,8 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
         for (FrameServiceEntity serviceEntity : list) {
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
                     .getServiceInstanceByClusterIdAndServiceName(clusterId, serviceEntity.getServiceName());
-            if (Objects.nonNull(serviceInstance)
-                    && !serviceInstance.getServiceState().equals(ServiceState.WAIT_INSTALL)) {
-                serviceEntity.setInstalled(true);
-            } else {
-                serviceEntity.setInstalled(false);
-            }
+            serviceEntity.setInstalled(Objects.nonNull(serviceInstance)
+                    && !serviceInstance.getServiceState().equals(ServiceState.WAIT_INSTALL));
         }
     }
 

@@ -68,11 +68,7 @@ public class KubernetesStatusHandler {
                     //logger.info("check pod status  service role instants: {}, pod: {} , status:{}", serviceRoleFullName, podName, phase);
 
                     //判断pod 状态是否正常
-                    if ("Running".equals(phase) || "Ready".equals(phase)) {
-                        execResult.setExecResult(true);
-                    } else {
-                        execResult.setExecResult(false);
-                    }
+                    execResult.setExecResult("Running".equals(phase) || "Ready".equals(phase));
                 }
             }
             return execResult;

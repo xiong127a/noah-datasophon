@@ -25,16 +25,12 @@ public class UnixNewlineWriter extends Writer {
                     writeSingleChar(c);
                 }
                 lastCharWasCR = false;
-            } else if (c == '\r') {
+            } else // 直接处理LF
+                // 普通字符直接写入
+                if (c == '\r') {
                 // 记录CR状态，等待下一个字符
                 lastCharWasCR = true;
-            } else if (c == '\n') {
-                // 直接处理LF
-                target.write('\n');
-            } else {
-                // 普通字符直接写入
-                target.write(c);
-            }
+            } else target.write(c);
         }
     }
 
