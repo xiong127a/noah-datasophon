@@ -86,7 +86,8 @@ public class SecurityConfig {
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                                 // 配置头部安全选项
-                                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+                                .headers(headers -> headers
+                                                .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
                                 // 配置请求授权规则
                                 .authorizeHttpRequests(authorize -> authorize
@@ -149,7 +150,8 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(Collections.singletonList("*"));
+                // 使用allowedOriginPatterns代替allowedOrigins解决CORS错误
+                configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList(
                                 "Authorization",
