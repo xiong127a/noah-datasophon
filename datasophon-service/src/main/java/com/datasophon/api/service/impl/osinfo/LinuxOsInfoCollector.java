@@ -676,7 +676,6 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
                         if (deviceInfo.length >= 4) {
                             try {
-                                usedKB = Long.parseLong(deviceInfo[3]);
                             } catch (NumberFormatException e) {
                                 logger.warn("解析已用交换空间失败: {}", e.getMessage());
                             }

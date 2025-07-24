@@ -70,7 +70,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                                 enableJmxAcl = isEnableConfig(config);
                         }
                         if ("cluster1.efak.sasl.enable".equals(config.getName())) {
-                                enableSasl = isEnableConfig(config);
+                            isEnableConfig(config);
                         }
                         /*
                          * if ("JMX_PORT".equals(config.getName())) {

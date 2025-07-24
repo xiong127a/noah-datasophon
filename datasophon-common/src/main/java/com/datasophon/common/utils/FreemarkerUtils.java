@@ -615,7 +615,6 @@ public class FreemarkerUtils {
                 if (logger != null) {
                     logger.info("Find dataDir : {}", config.getValue());
                 }
-                dataDir = (String) config.getValue();
             }
         }
 

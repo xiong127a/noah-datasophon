@@ -111,7 +111,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             String result;
 
             // 1. 检查并创建服务目录（如果需要）
-            result = MinaUtils.safeExecCommand(session, "sudo mkdir -p " + serviceDir);
+            MinaUtils.safeExecCommand(session, "sudo mkdir -p " + serviceDir);
 
             // 2. 复制服务脚本
             result = MinaUtils.safeExecCommand(session,
@@ -131,7 +131,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
 
                 if (createResult) {
                     // 如果创建成功，使用systemctl管理服务
-                    result = MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
+                    MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
                     result = MinaUtils.safeExecCommand(session, "systemctl enable datasophon-worker");
                     success &= (result != null && !result.startsWith("ERROR:"));
                 } else {
@@ -163,7 +163,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             // 8. 启动服务
             logger.info("启动Worker服务: {}", hostInfo.getIp());
             if (useSystemd) {
-                result = MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
+                MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
                 // 使用restart替代start命令启动
                 result = MinaUtils.safeExecCommand(session,
                         installPath + "/datasophon-worker/bin/datasophon-worker.sh restart worker");
