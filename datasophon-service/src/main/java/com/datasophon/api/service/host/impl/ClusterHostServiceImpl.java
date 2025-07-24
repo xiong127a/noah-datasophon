@@ -73,12 +73,15 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     private static final Logger logger = LoggerFactory.getLogger(ClusterHostServiceImpl.class);
 
     // 移除字段注入
+    @org.springframework.context.annotation.Lazy
     private final ClusterServiceRoleInstanceService roleInstanceService;
     private final ClusterRackService clusterRackService;
 
     // 添加构造函数注入
     @Autowired
-    public ClusterHostServiceImpl(ClusterServiceRoleInstanceService roleInstanceService, ClusterRackService clusterRackService) {
+    public ClusterHostServiceImpl(
+            @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService,
+            ClusterRackService clusterRackService) {
         this.roleInstanceService = roleInstanceService;
         this.clusterRackService = clusterRackService;
     }
@@ -98,7 +101,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result<List<QueryHostListPageDTO>> listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
+    public Result<List<QueryHostListPageDTO>> listByPage(Integer clusterId, String hostname, String ip,
+            String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
@@ -135,7 +139,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
 
-        Map<String, HostInfo> hostInfoMap = Convert.toMap(String.class, HostInfo.class, CacheUtils.get(clusterId + Constants.HOST_MAP));
+        Map<String, HostInfo> hostInfoMap = Convert.toMap(String.class, HostInfo.class,
+                CacheUtils.get(clusterId + Constants.HOST_MAP));
 
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
@@ -187,7 +192,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
         long count = countQuery.count();
 
-        return Result.success(hostListPageDTOS,count);
+        return Result.success(hostListPageDTOS, count);
     }
 
     @Override
@@ -271,7 +276,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorUtils.actorSystem.dispatcher(),
                     ActorRef.noSender());
 
-            Map<String, HostInfo> map = Convert.toMap(String.class, HostInfo.class, CacheUtils.get(clusterId + Constants.HOST_MAP));
+            Map<String, HostInfo> map = Convert.toMap(String.class, HostInfo.class,
+                    CacheUtils.get(clusterId + Constants.HOST_MAP));
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
             }
