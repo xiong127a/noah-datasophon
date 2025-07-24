@@ -98,7 +98,7 @@ public class AppConfiguration implements WebMvcConfigurer {
 
     @Bean
     public UserPermissionHandler userPermissionHandler() {
-        return new UserPermissionHandler(clusterRoleUserService, userInfoService);
+        return new UserPermissionHandler();
     }
 
     @Override

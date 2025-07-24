@@ -11,9 +11,7 @@ import org.slf4j.LoggerFactory;
  */
 public class KylinV4SELinuxChecker extends KylinSELinuxChecker {
     
-    public KylinV4SELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
-        super(selinuxCheckerFactory);
-    }
+
 
     private static final Logger log = LoggerFactory.getLogger(KylinV4SELinuxChecker.class);
 
