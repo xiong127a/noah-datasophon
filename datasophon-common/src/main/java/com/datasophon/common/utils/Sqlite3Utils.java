@@ -35,7 +35,7 @@ public class Sqlite3Utils {
                                    String sql) throws SQLException {
         Connection connection = getConnection(dbFilePath);
         Statement statement = connection.createStatement();
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
+        if (Objects.nonNull(statement)) {
             statement.executeUpdate(sql);
         }
         close(connection, statement);

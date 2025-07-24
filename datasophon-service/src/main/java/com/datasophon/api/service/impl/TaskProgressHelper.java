@@ -111,11 +111,6 @@ public class TaskProgressHelper {
             return;
         }
 
-        if (taskProgressMap == null) {
-            logger.warn("任务进度映射为null，无法更新主机{}的处理状态", ip);
-            return;
-        }
-
         TaskProgress progress = taskProgressMap.get(taskId);
         if (progress == null) {
             logger.warn("任务{}不存在，无法更新主机{}的处理状态", taskId, ip);

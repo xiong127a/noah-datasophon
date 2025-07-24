@@ -1787,7 +1787,7 @@ public class HostCheckQueueManager {
             HostCheckServiceImpl hostCheckServiceImpl = fixTask.getHostCheckService();
 
             // 检查是否是免密检查项
-            boolean isPasswordFreeItem = ItemCode.PASSWORD_FREE.equals(checkItem.getItemCode());
+            boolean isPasswordFreeItem = false;
             String taskKey = getFixTaskKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 任务已在运行中，跳过

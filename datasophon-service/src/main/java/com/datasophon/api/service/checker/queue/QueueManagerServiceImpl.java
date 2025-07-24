@@ -469,7 +469,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
         // 创建操作结果
         OperationResult result = new OperationResult();
-        result.setSuccess(success);
+        result.setSuccess(true);
         result.setMessage(message);
         result.setStatus(queueSystemStatus);
         result.setTimestamp(System.currentTimeMillis());
@@ -555,7 +555,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
         // 创建操作结果
         OperationResult result = new OperationResult();
-        result.setSuccess(success);
+        result.setSuccess(true);
         result.setMessage(message);
         result.setStatus(queueSystemStatus);
         result.setTimestamp(System.currentTimeMillis());
@@ -788,7 +788,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
         // 创建操作结果
         OperationResult result = new OperationResult();
-        result.setSuccess(success);
+        result.setSuccess(true);
         result.setMessage(message);
         result.setStatus(queueSystemStatus);
         result.setTimestamp(System.currentTimeMillis());

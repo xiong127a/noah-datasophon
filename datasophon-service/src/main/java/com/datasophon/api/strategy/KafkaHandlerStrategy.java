@@ -91,7 +91,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         enableSasl = true;
                         for (ServiceConfig config : list) {
                                 if ("cluster1.efak.sasl.enable".equals(config.getName())) {
-                                        config.setValue(enableSasl);
+                                        config.setValue(true);
                                 }
                         }
                 } else {
@@ -100,7 +100,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         enableSasl = false;
                         for (ServiceConfig config : list) {
                                 if ("cluster1.efak.sasl.enable".equals(config.getName())) {
-                                        config.setValue(enableSasl);
+                                        config.setValue(false);
                                 }
                         }
                 }

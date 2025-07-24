@@ -134,7 +134,7 @@ public class FirewallCheckerFactory {
 
 
                         // 匹配操作系统类型且没有版本前缀（通用检查器）
-                        return distribution.equals(supportedOs) && !hasVersionPrefix;
+                        return false;
                     } catch (Exception e) {
                         return false;
                     }

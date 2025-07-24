@@ -130,7 +130,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             if (configMap.containsKey("enableKerberos")) {
                 enableKerberos = Boolean.parseBoolean(String.valueOf(configMap.get("enableKerberos")));
                 if (enableKerberos) {
-                    enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, null, "HIVE");
+                    enableKerberos = isEnableKerberos(clusterId, globalVariables, true, null, "HIVE");
                 }
             }
 

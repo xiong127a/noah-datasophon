@@ -169,7 +169,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             if (!isDisabled) {
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
                         "SELinux模式", selinuxMode,
-                        isPermissive ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR));
+                        HtmlStyleHelper.Colors.SUCCESS));
             }
 
             detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(

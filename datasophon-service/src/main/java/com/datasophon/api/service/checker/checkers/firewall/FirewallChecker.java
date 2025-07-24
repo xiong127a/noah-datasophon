@@ -97,43 +97,35 @@ public class FirewallChecker extends AbstractItemChecker {
                     };
 
                     // 执行额外检查命令
-                    if (!checkCommand.isEmpty()) {
-                        CommandResult statusResult = execCommand(
-                                sshConnectionPoolManager.getOrCreateConnection(hostInfo), checkCommand);
-                        String output = statusResult.getOutput().trim();
+                    CommandResult statusResult = execCommand(
+                            sshConnectionPoolManager.getOrCreateConnection(hostInfo), checkCommand);
+                    String output = statusResult.getOutput().trim();
 
-                        if (statusResult.isSuccess()) {
-                            // 分析输出确定防火墙状态
-                            boolean firewallRunning = switch (osInfo.getOsDistribution()) {
-                                case CENTOS, REDHAT, KYLIN -> output.contains("active");
-                                case UBUNTU, DEBIAN -> output.contains("active");
-                                default -> output.contains("REJECT") || output.contains("DROP");
-                            };
+                    if (statusResult.isSuccess()) {
+                        // 分析输出确定防火墙状态
+                        boolean firewallRunning = switch (osInfo.getOsDistribution()) {
+                            case CENTOS, REDHAT, KYLIN -> output.contains("active");
+                            case UBUNTU, DEBIAN -> output.contains("active");
+                            default -> output.contains("REJECT") || output.contains("DROP");
+                        };
 
-                            if (firewallRunning) {
-                                log.warn("额外检查发现防火墙服务处于活动状态");
-                                cacheLog.warn("额外检查发现防火墙服务处于活动状态");
-                                result.setStatus(CheckItem.Status.FAILED);
-                                result.setMessage("防火墙正在运行，建议关闭");
-                            } else {
-                                log.info("额外检查发现防火墙服务未运行");
-                                cacheLog.info("额外检查发现防火墙服务未运行");
-                                result.setStatus(CheckItem.Status.SUCCESS);
-                                result.setMessage("防火墙未运行或无限制规则");
-                            }
-                        } else {
-                            // 命令执行失败
-                            log.warn("额外防火墙检查命令执行失败");
-                            cacheLog.warn("额外防火墙检查命令执行失败，无法确定防火墙状态");
+                        if (firewallRunning) {
+                            log.warn("额外检查发现防火墙服务处于活动状态");
+                            cacheLog.warn("额外检查发现防火墙服务处于活动状态");
                             result.setStatus(CheckItem.Status.FAILED);
-                            result.setMessage("无法确定防火墙状态，检查失败: " + statusResult.getError());
+                            result.setMessage("防火墙正在运行，建议关闭");
+                        } else {
+                            log.info("额外检查发现防火墙服务未运行");
+                            cacheLog.info("额外检查发现防火墙服务未运行");
+                            result.setStatus(CheckItem.Status.SUCCESS);
+                            result.setMessage("防火墙未运行或无限制规则");
                         }
                     } else {
-                        // 无法确定检查命令
-                        log.warn("无法为当前操作系统确定适合的防火墙检查命令");
-                        cacheLog.warn("无法确定适合的防火墙检查命令");
+                        // 命令执行失败
+                        log.warn("额外防火墙检查命令执行失败");
+                        cacheLog.warn("额外防火墙检查命令执行失败，无法确定防火墙状态");
                         result.setStatus(CheckItem.Status.FAILED);
-                        result.setMessage("无法为当前操作系统确定适合的防火墙检查命令");
+                        result.setMessage("无法确定防火墙状态，检查失败: " + statusResult.getError());
                     }
                 } catch (Exception e) {
                     log.error("执行额外防火墙检查时出错: ", e);

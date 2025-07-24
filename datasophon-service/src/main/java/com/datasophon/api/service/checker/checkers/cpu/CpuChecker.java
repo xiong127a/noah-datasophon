@@ -230,7 +230,7 @@ public class CpuChecker extends AbstractItemChecker {
                 // CPU使用率进度条
                 detailsBuilder.append("<p><strong>CPU使用率:</strong></p>");
                 String usageColor = cpuUsage < 70 ? HtmlStyleHelper.Colors.SUCCESS
-                        : (cpuUsage < 90 ? HtmlStyleHelper.Colors.WARNING : HtmlStyleHelper.Colors.ERROR);
+                        : HtmlStyleHelper.Colors.WARNING;
                 detailsBuilder.append(HtmlStyleHelper.generateProgressBar((int) cpuUsage, usageColor,
                         String.format("%.1f%%", cpuUsage)));
                 detailsBuilder.append(HtmlStyleHelper.endGroup());

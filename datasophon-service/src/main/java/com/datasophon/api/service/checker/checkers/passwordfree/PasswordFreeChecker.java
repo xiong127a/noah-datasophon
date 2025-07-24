@@ -507,7 +507,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         Exception lastException = null;
 
         // 自动重试逻辑，最多尝试MAX_RETRY_ATTEMPTS次
-        while (attempts < MAX_RETRY_ATTEMPTS) {
+        while (true) {
             attempts++;
             try {
                 // 调用父类的execCommand方法执行命令
@@ -550,11 +550,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 if (attempts >= MAX_RETRY_ATTEMPTS) {
                     cacheLog.error("命令 [%s] 在尝试 %d 次后仍然出现异常，放弃重试",
                             command, attempts);
-                    if (e instanceof RuntimeException) {
-                        throw (RuntimeException) e;
-                    } else {
-                        throw new RuntimeException("执行命令失败: " + e.getMessage(), e);
-                    }
+                    throw (RuntimeException) e;
                 }
 
                 // 否则等待一段时间后重试
