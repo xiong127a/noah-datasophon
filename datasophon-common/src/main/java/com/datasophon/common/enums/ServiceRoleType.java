@@ -30,8 +30,8 @@ public enum ServiceRoleType {
     SLAVE(4, "slave");
 
     @Getter
-    private Integer code;
-    private String name;
+    private final Integer code;
+    private final String name;
 
     ServiceRoleType(Integer code, String name) {
         this.code = code;

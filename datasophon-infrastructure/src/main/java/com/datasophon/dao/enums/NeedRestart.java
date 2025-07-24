@@ -30,9 +30,9 @@ public enum NeedRestart {
 
     @Getter
     @EnumValue
-    private int value;
+    private final int value;
 
-    private boolean desc;
+    private final boolean desc;
 
     NeedRestart(int value, boolean desc) {
         this.value = value;

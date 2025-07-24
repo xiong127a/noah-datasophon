@@ -31,9 +31,9 @@ public enum QuotaState {
 
     @Getter
     @EnumValue
-    private int value;
+    private final int value;
 
-    private String desc;
+    private final String desc;
 
     QuotaState(int value, String desc) {
         this.value = value;

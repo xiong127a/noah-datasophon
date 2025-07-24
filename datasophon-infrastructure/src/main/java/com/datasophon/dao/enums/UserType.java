@@ -29,9 +29,9 @@ public enum UserType {
 
     @Getter
     @EnumValue
-    private int value;
+    private final int value;
 
-    private String desc;
+    private final String desc;
 
     UserType() {
         this.value = 1;

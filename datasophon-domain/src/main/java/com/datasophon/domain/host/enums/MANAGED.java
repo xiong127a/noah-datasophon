@@ -32,9 +32,9 @@ public enum MANAGED {
     NO(2, false);
 
     @EnumValue
-    private int value;
+    private final int value;
 
-    private boolean desc;
+    private final boolean desc;
 
     MANAGED(int value, boolean desc) {
         this.value = value;

@@ -28,9 +28,9 @@ public enum OlapOpsType {
     ADD_FE_OBSERVER(3, "observer"),
     ADD_CN(4, "compute");
 
-    private int value;
+    private final int value;
 
-    private String desc;
+    private final String desc;
 
     OlapOpsType(int value, String desc) {
         this.value = value;

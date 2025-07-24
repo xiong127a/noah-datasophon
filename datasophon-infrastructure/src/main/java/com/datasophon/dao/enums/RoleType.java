@@ -32,9 +32,9 @@ public enum RoleType {
 
     @Getter
     @EnumValue
-    private int value;
+    private final int value;
 
-    private String desc;
+    private final String desc;
 
     RoleType(int value, String desc) {
         this.value = value;

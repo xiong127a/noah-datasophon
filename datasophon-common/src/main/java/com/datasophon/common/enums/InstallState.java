@@ -30,9 +30,9 @@ public enum InstallState {
     FAILED(3, "安装失败");
 
     @Getter
-    private int value;
+    private final int value;
 
-    private String desc;
+    private final String desc;
 
     InstallState(int value, String desc) {
         this.value = value;
