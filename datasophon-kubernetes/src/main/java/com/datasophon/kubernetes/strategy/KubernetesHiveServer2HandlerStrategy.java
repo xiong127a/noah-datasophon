@@ -1,5 +1,6 @@
 package com.datasophon.kubernetes.strategy;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.model.ServiceConfig;
@@ -67,7 +68,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
 
         for (ServiceConfig config : list) {
             if ("hive.metastore.uris".equals(config.getName())) {
-                String finalUris = metastoreUris.length() > 0 ? metastoreUris.toString() : "";
+                String finalUris = StrUtil.isNotBlank(metastoreUris) ? metastoreUris.toString() : "";
                 logger.info("检测到hive.metastore.uris，将值从 {} 更新为 Kubernetes 服务地址 {}", config.getValue(), finalUris);
                 config.setValue(finalUris);
             } else if ("hive.zookeeper.quorum".equals(config.getName())) {
@@ -82,7 +83,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
                             .append(namespace).append(".")
                             .append(CLUSTER_DOMAIN);
                 }
-                logger.info("检测到hive.zookeeper.quorum，将值从 {} 更新为 Kubernetes 服务地址 {}", config.getValue(), zkServers.toString());
+                logger.info("检测到hive.zookeeper.quorum，将值从 {} 更新为 Kubernetes 服务地址 {}", config.getValue(), zkServers);
                 config.setValue(zkServers.toString());
             }
         }
