@@ -206,8 +206,6 @@ public class MasterServiceActor extends AbstractActor {
                                     "stop {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-                            // ServiceHandler serviceStopHandler = new ServiceStopHandler();
-                            // execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
                             execResult = ProcessUtils.stopService(serviceRoleInfo);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) { // 执行成功
                                 successNum += 1;

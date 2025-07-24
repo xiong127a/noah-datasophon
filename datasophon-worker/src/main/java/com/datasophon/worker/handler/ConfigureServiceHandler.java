@@ -154,18 +154,6 @@ public class ConfigureServiceHandler {
                         config.setName("fs.defaultFS");
                     }
 
-//                    if ("fe_priority_networks".equals(config.getName())
-//                            || "be_priority_networks".equals(config.getName())) {
-//                        config.setName("priority_networks");
-//                    }
-//                    if (("SRFE".equals(serviceRoleName)
-//                            || "SRBE".equals(serviceRoleName)
-//                            || "SRFEObserver".equals(serviceRoleName)
-//                            || "SRCN".equals(serviceRoleName))
-//                            && "priority_networks".equals(config.getName())) {
-//                        config.setValue(InetAddress.getLocalHost().getHostAddress());
-//                    }
-
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
                         final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";

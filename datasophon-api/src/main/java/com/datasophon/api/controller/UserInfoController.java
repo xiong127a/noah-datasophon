@@ -94,11 +94,6 @@ public class UserInfoController {
     @RequestMapping("/delete")
     @UserPermission
     public Result delete(@RequestBody Integer[] ids) {
-        // UserInfoEntity authUser = SecurityUtils.getAuthUser();
-        // if (!SecurityUtils.isAdmin(authUser)) {
-        // return Result.error(Status.USER_NO_OPERATION_PERM.getCode(),
-        // Status.USER_NO_OPERATION_PERM.getMsg());
-        // }
         if (SecurityUtils.getAuthUser().getId() != 1) {
             return Result.error(Status.USER_NO_OPERATION_PERM.getMsg());
         }

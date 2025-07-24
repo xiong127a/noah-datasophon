@@ -535,24 +535,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // "service install depends on prometheus ,please make sure you have selected it
         // or that prometheus is normal and running");
         // }
-        //
-        // for (FrameServiceEntity frameServiceEntity : list) {
-        // for (String dependService : frameServiceEntity.getDependencies().split(","))
-        // {
-        // if (StringUtils.isNotBlank(dependService)
-        // && !instanceMap.containsKey(dependService)
-        // && !serviceMap.containsKey(dependService)) {
-        // return Result.error(
-        // ""
-        // + frameServiceEntity.getServiceName()
-        // + " install depends on "
-        // + dependService
-        // + ",please make sure that you have selected it or that "
-        // + dependService
-        // + " is normal and running");
-        // }
-        // }
-        // }
         return Result.success();
     }
 

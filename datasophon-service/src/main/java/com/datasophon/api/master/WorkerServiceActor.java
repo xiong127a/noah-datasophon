@@ -118,8 +118,6 @@ public class WorkerServiceActor extends AbstractActor {
                             try {
                                 logger.info("stop {} in host {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                // ServiceHandler serviceStopHandler = new ServiceStopHandler();
-                                // execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
                                 execResult = ProcessUtils.stopService(serviceRoleInfo);
                                 if (Objects.nonNull(execResult) && execResult.getExecResult()) {// 执行成功
                                     // 更新角色实例状态为停止

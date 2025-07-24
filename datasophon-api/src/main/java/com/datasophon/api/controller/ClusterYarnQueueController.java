@@ -67,15 +67,6 @@ public class ClusterYarnQueueController {
     @RequestMapping("/save")
     public Result save(@RequestBody ClusterYarnQueue clusterYarnQueue) {
         return clusterYarnQueueService.saveQueue(clusterYarnQueue);
-//        List<ClusterYarnQueue> list = clusterYarnQueueService
-//                .list(new QueryWrapper<ClusterYarnQueue>().eq(Constants.QUEUE_NAME, clusterYarnQueue.getQueueName()));
-//        if (Objects.nonNull(list) && list.size() == 1) {
-//            return Result.error(Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
-//        }
-//        clusterYarnQueue.setCreateTime(new Date());
-//        clusterYarnQueueService.save(clusterYarnQueue);
-//
-//        return Result.success();
     }
 
     /**

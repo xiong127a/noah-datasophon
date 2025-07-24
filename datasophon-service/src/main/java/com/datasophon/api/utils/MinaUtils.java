@@ -427,9 +427,6 @@ public class MinaUtils {
             if (distro.contains("ubuntu") || distro.contains("debian")) {
                 // 对于Debian/Ubuntu, 先尝试systemctl, 如果不存在再用service命令
                 adaptedCommand = command.replace("service", "systemctl");
-//                adaptedCommand = adaptedCommand.replace(" start ", " start ");
-//                adaptedCommand = adaptedCommand.replace(" stop ", " stop ");
-//                adaptedCommand = adaptedCommand.replace(" restart ", " restart ");
             }
         } else if (command.contains("chkconfig")) {
             if (distro.contains("ubuntu") || distro.contains("debian")) {

@@ -104,8 +104,6 @@ public class WorkerStartActor extends AbstractActor {
             ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
-            // ClusterHostDO hostEntity =
-            // clusterHostService.getClusterHostByHostname(hostname);
             ClusterHostDO hostEntity = clusterHostService.getClusterHostByIp(ip);
             ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
             logger.info("收到来自主机 {} ({}) 的Worker启动消息,设置主机安装状态为100%", hostname, ip);
@@ -144,8 +142,6 @@ public class WorkerStartActor extends AbstractActor {
             prometheusActor.tell(prometheusConfigCommand, getSelf());
 
             // 告知worker需要启动的服务
-            // autoAddServiceOperatorNeeded(msg.getHostname(), cluster.getId(),
-            // CommandType.START_SERVICE,false);
         } catch (Exception e) {
             logger.error("处理StartWorkerMessage消息时出错", e);
         }

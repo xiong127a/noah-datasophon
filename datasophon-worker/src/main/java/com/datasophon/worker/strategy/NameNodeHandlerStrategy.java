@@ -57,14 +57,6 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
             if (command.isSlave()) {
                 // 执行hdfs namenode -bootstrapStandby
                 logger.info("Start to execute hdfs namenode -bootstrapStandby");
-//                ArrayList<String> commands = new ArrayList<>();
-//                commands.add("echo");
-//                commands.add("Y");
-//                commands.add("|");
-//                commands.add(workPath + "/bin/hdfs");
-//                commands.add("namenode");
-//                commands.add("-bootstrapStandby");
-//                ExecResult execResult = ShellUtils.execWithStatus(workPath, commands, 180L, logger);
                 ExecResult execResult = ShellUtils.exceShell("echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby");
                 if (execResult.getExecResult()) {
                     logger.info("Namenode standby success");
@@ -83,8 +75,6 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
 //                commands.add("-format");
 //                commands.add("smhadoop");
                 // 清空namenode元数据
-//                FileUtil.del("/data/dfs/nn/current");
-//                ExecResult execResult = ShellUtils.execWithStatus(workPath, commands, 180L, logger);
                 ShellUtils.exceShell("dir=$(sed -n '/<name>dfs.namenode.name.dir<\\/name>/{n;s/.*<value>\\(.*\\)<\\/value>.*/\\1\\/current/p;}' /opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml) && rm -rf \"$dir\"");
                 ExecResult execResult = ShellUtils.exceShell("echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop");
                 if (execResult.getExecResult()) {

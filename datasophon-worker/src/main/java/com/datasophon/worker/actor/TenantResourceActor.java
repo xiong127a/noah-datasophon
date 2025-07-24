@@ -40,8 +40,6 @@ public class TenantResourceActor extends AbstractActor {
                 execResult = operateStrategy.updateSource();
                 break;
             case DELETE:
-                // 暂时不做资源删除操作
-                // execResult = operateStrategy.deleteSource();
             case NONE:
                 execResult = new ExecResult();
                 execResult.setExecResult(true);

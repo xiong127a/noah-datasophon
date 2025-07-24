@@ -21,14 +21,6 @@ public class kubernetesOpenldapHandlerStrategy extends KubernetesAbstractHandler
         String hostname = command.getHostname();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             KubernetesMinaUtils.createUserAndGroup(hostname, "ldap", "ldap");
-            /*if (!KubernetesMinaUtils.checkPathExists(hostname, "/var/lib/openldap")) {
-                KubernetesMinaUtils.createDir(hostname,"/var/lib/openldap");
-            }
-            if (!KubernetesMinaUtils.checkPathExists(hostname, "/etc/openldap/slapd.d/")) {
-                KubernetesMinaUtils.createDir(hostname,"/etc/openldap/slapd.d/");
-            }
-            KubernetesMinaUtils.execCmdWithResult(hostname, "chown -R ldap:ldap /var/lib/openldap /etc/openldap/slapd.d/");
-            KubernetesMinaUtils.execCmdWithResult(hostname, "chmod -R 700 /var/lib/openldap /etc/openldap/slapd.d/");*/
         }
         return serviceHandler.start(command);
     }

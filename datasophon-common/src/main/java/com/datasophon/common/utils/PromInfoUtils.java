@@ -95,8 +95,6 @@ public class PromInfoUtils {
     }
 
     public static void main(String[] args) {
-        // List<PromResultInfo> windowsOsInfo = getWindowsInfo("http://10.0.50.225:9090/api/v1/query",
-        // PromConstants.WINDOWS_OS_INFO);
 
         List<PromResultInfo> hadoop_nameNode_threads = getPrometheusMetrics("http://172.31.96.16:9090/api/v1/query",
                 "up{job=\"hdfs\",instance=\"172.31.96.16:27001\"}");

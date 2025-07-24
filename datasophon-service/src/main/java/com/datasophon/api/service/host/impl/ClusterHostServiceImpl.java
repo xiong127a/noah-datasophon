@@ -237,8 +237,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
 
-            // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-            // String clusterCode = clusterInfo.getClusterCode();
             String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
             if (CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
                 CacheUtils.removeKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname());

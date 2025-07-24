@@ -133,9 +133,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
 
                 String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING;
-                // HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>)
-                // CacheOperateUtils.get(hostMapKey);
-                HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
+            HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
                                 hostMapKey,
                         new TypeReference<>() {
                         });
