@@ -84,20 +84,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
     /**
      * 分页结果包装类，提供类型安全的分页结果
-     * 
+     *
      * @param <T> 资源类型
      */
-    @Data
-    private static class PaginatedResult<T> {
-        private final List<T> items;
-        private final long total;
-        private final int totalPages;
-
-        public PaginatedResult(List<T> items, long total, int totalPages) {
-            this.items = items;
-            this.total = total;
-            this.totalPages = totalPages;
-        }
+        @Data
+        private record PaginatedResult<T>(List<T> items, long total, int totalPages) {
 
     }
 
@@ -179,7 +170,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的Deployment列表
-            List<Deployment> deploymentItems = paginationResult.getItems();
+            List<Deployment> deploymentItems = paginationResult.items();
 
             // 转换为与原生Kubernetes Dashboard兼容的数据结构
             List<Map<String, Object>> deployments = deploymentItems.stream()
@@ -225,8 +216,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 创建结果对象
             Map<String, Object> result = new HashMap<>();
             result.put("deployments", deployments); // Deployments列表
-            result.put("total", paginationResult.getTotal()); // 总数
-            result.put("totalPages", paginationResult.getTotalPages()); // 总页数
+            result.put("total", paginationResult.total()); // 总数
+            result.put("totalPages", paginationResult.totalPages()); // 总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -256,7 +247,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的Service列表
-            List<io.fabric8.kubernetes.api.model.Service> serviceList = paginationResult.getItems();
+            List<io.fabric8.kubernetes.api.model.Service> serviceList = paginationResult.items();
 
             // 按照Kubernetes Dashboard的格式构建结果
             Map<String, Object> result = new HashMap<>();
@@ -355,8 +346,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -384,7 +375,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             pageSize);
 
                     // 获取到分页的ConfigMap列表
-                    List<io.fabric8.kubernetes.api.model.ConfigMap> configMapList = paginationResult.getItems();
+                    List<io.fabric8.kubernetes.api.model.ConfigMap> configMapList = paginationResult.items();
 
                     // 按照前端需要的格式构建结果
                     // 构建items列表
@@ -428,8 +419,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", new ArrayList<>());
 
                     // 添加分页信息
-                    result.put("total", paginationResult.getTotal()); // 添加总记录数
-                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+                    result.put("total", paginationResult.total()); // 添加总记录数
+                    result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
                     return Result.success().put(Constants.DATA, result);
                 } catch (Exception e) {
@@ -522,7 +513,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             pageSize);
 
                     // 获取到分页的Secret列表
-                    List<io.fabric8.kubernetes.api.model.Secret> secretList = paginationResult.getItems();
+                    List<io.fabric8.kubernetes.api.model.Secret> secretList = paginationResult.items();
 
                     // 转换为前端需要的数据结构
                     List<Map<String, Object>> secrets = secretList.stream()
@@ -561,8 +552,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", new ArrayList<>());
 
                     // 添加分页信息
-                    result.put("total", paginationResult.getTotal()); // 添加总记录数
-                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+                    result.put("total", paginationResult.total()); // 添加总记录数
+                    result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
                     return Result.success().put(Constants.DATA, result);
                 } catch (Exception e) {
@@ -652,7 +643,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的PersistentVolume列表
-            List<PersistentVolume> pvList = paginationResult.getItems();
+            List<PersistentVolume> pvList = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = pvList.stream()
@@ -725,11 +716,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            log.info("获取PersistentVolumes列表（分页）成功，共{}个PV，总页数：{}", paginationResult.getTotal(),
-                    paginationResult.getTotalPages());
+            log.info("获取PersistentVolumes列表（分页）成功，共{}个PV，总页数：{}", paginationResult.total(),
+                    paginationResult.totalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             log.error("获取PersistentVolumes列表（分页）出错", e);
@@ -758,7 +749,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的PersistentVolumeClaim列表
-            List<io.fabric8.kubernetes.api.model.PersistentVolumeClaim> pvcList = paginationResult.getItems();
+            List<io.fabric8.kubernetes.api.model.PersistentVolumeClaim> pvcList = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = pvcList.stream()
@@ -824,11 +815,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            log.info("获取PersistentVolumeClaims列表（分页）成功，共{}个PVC，总页数：{}", paginationResult.getTotal(),
-                    paginationResult.getTotalPages());
+            log.info("获取PersistentVolumeClaims列表（分页）成功，共{}个PVC，总页数：{}", paginationResult.total(),
+                    paginationResult.totalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             log.error("获取PersistentVolumeClaims列表（分页）出错", e);
@@ -857,7 +848,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的StorageClass列表
-            List<StorageClass> storageClassList = paginationResult.getItems();
+            List<StorageClass> storageClassList = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = storageClassList.stream()
@@ -905,11 +896,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            log.info("获取StorageClasses列表（分页）成功，共{}个StorageClass，总页数：{}", paginationResult.getTotal(),
-                    paginationResult.getTotalPages());
+            log.info("获取StorageClasses列表（分页）成功，共{}个StorageClass，总页数：{}", paginationResult.total(),
+                    paginationResult.totalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             log.error("获取StorageClasses列表（分页）出错", e);
@@ -935,7 +926,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 从分页结果获取Ingress列表
-            List<Ingress> ingressList = paginationResult.getItems();
+            List<Ingress> ingressList = paginationResult.items();
 
             // 获取集群节点IP列表，用于Endpoints（只获取一次，避免多次调用）
             final List<String> nodeIps = new ArrayList<>();
@@ -1024,8 +1015,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -1055,7 +1046,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
                     // 获取到分页的IngressClass列表
                     List<IngressClass> ingressClassList = paginationResult
-                            .getItems();
+                            .items();
 
                     // 转换为前端需要的数据结构
                     List<Map<String, Object>> items = ingressClassList.stream()
@@ -1096,8 +1087,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", new ArrayList<>());
 
                     // 添加分页信息
-                    result.put("total", paginationResult.getTotal()); // 添加总记录数
-                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+                    result.put("total", paginationResult.total()); // 添加总记录数
+                    result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
                     return Result.success().put(Constants.DATA, result);
                 } catch (Exception e) {
@@ -1178,7 +1169,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的DaemonSet列表
-            List<DaemonSet> daemonSets = paginationResult.getItems();
+            List<DaemonSet> daemonSets = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> daemonSetDetails = daemonSets.stream()
@@ -1284,8 +1275,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -1309,7 +1300,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的StatefulSet列表
-            List<StatefulSet> statefulSetItems = paginationResult.getItems();
+            List<StatefulSet> statefulSetItems = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> statefulSets = statefulSetItems.stream()
@@ -1416,8 +1407,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -1441,7 +1432,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的ReplicaSet列表
-            List<ReplicaSet> replicaSetItems = paginationResult.getItems();
+            List<ReplicaSet> replicaSetItems = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> replicaSets = replicaSetItems.stream()
@@ -1540,8 +1531,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -1565,7 +1556,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的ReplicationController列表
-            List<ReplicationController> rcList = paginationResult.getItems();
+            List<ReplicationController> rcList = paginationResult.items();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> replicationControllers = rcList.stream()
@@ -1770,8 +1761,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
@@ -1795,7 +1786,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的Job列表
-            List<Job> jobsList = paginationResult.getItems();
+            List<Job> jobsList = paginationResult.items();
 
             // 处理Jobs数据
             List<Map<String, Object>> jobs = new ArrayList<>();
@@ -2008,8 +1999,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            responseData.put("total", paginationResult.getTotal()); // 添加总记录数
-            responseData.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            responseData.put("total", paginationResult.total()); // 添加总记录数
+            responseData.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
@@ -2084,7 +2075,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 获取到分页的CronJob列表
-            List<CronJob> cronJobsList = paginationResult.getItems();
+            List<CronJob> cronJobsList = paginationResult.items();
 
             // 处理CronJobs数据
             List<Map<String, Object>> items = new ArrayList<>();
@@ -2178,8 +2169,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            responseData.put("total", paginationResult.getTotal()); // 添加总记录数
-            responseData.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            responseData.put("total", paginationResult.total()); // 添加总记录数
+            responseData.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
@@ -2432,7 +2423,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageSize);
 
             // 3. 获取Pod列表
-            List<Pod> podList = paginationResult.getItems();
+            List<Pod> podList = paginationResult.items();
 
             // 4. 获取Pod指标
             PodMetricsList podMetricsList;
@@ -2584,8 +2575,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             Map<String, Object> result = new HashMap<>();
             result.put("pods", podDetails);
             result.put("status", statusCount);
-            result.put("total", paginationResult.getTotal()); // 添加总记录数
-            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+            result.put("total", paginationResult.total()); // 添加总记录数
+            result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
             // 9. 关闭客户端
             client.close();
