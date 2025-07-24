@@ -26,7 +26,8 @@ public class AlluxioHandlerStrategy implements ServiceRoleStrategy {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
+        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
+        });
 
         if (Objects.nonNull(hostMap)) {
             List<String> masterHosts = hostMap.get("AlluxioMaster");

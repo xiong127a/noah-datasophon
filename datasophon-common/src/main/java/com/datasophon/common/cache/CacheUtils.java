@@ -90,7 +90,7 @@ public class CacheUtils {
      */
     public static Map<String, HostInfo> getHostMap(String key) {
         // 使用TypeReference获取泛型类型
-        Map<String, HostInfo> result = getGeneric(key, new TypeReference<Map<String, HostInfo>>() {
+        Map<String, HostInfo> result = getGeneric(key, new TypeReference<>() {
         });
         return result != null ? result : new ConcurrentHashMap<>();
     }

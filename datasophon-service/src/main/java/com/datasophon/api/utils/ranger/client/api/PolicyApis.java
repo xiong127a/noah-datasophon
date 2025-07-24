@@ -75,7 +75,7 @@ public class PolicyApis {
                     url,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<List<Policy>>() {
+                    new ParameterizedTypeReference<>() {
                     });
             return response.getBody();
         } catch (HttpClientErrorException e) {
@@ -96,7 +96,7 @@ public class PolicyApis {
                     url,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<List<Policy>>() {
+                    new ParameterizedTypeReference<>() {
                     });
             return response.getBody();
         } catch (HttpClientErrorException e) {

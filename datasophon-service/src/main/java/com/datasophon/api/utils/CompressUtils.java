@@ -215,7 +215,7 @@ public class CompressUtils {
             // 设置压缩级别
             zipOut.setLevel(Deflater.BEST_COMPRESSION);
 
-            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     // 获取相对路径
@@ -264,7 +264,7 @@ public class CompressUtils {
             }
 
             // 添加文件到zip
-            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     try {
@@ -317,7 +317,7 @@ public class CompressUtils {
                 sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
 
                 // 添加目录中的所有文件
-                Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+                Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                         try {
@@ -370,7 +370,7 @@ public class CompressUtils {
             // 设置长文件名支持模式
             taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     // 获取相对路径
@@ -403,7 +403,7 @@ public class CompressUtils {
                 new GzipCompressorOutputStream(baos))) {
             taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     // 获取相对路径
@@ -436,7 +436,7 @@ public class CompressUtils {
                 new XZCompressorOutputStream(baos))) {
             taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     // 获取相对路径
@@ -472,7 +472,7 @@ public class CompressUtils {
             try (TarArchiveOutputStream taos = new TarArchiveOutputStream(Files.newOutputStream(tarFile))) {
                 taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-                Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+                Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                         Path relativePath = directory.relativize(file);
@@ -511,7 +511,7 @@ public class CompressUtils {
             try (TarArchiveOutputStream taos = new TarArchiveOutputStream(Files.newOutputStream(tarFile))) {
                 taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
-                Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+                Files.walkFileTree(directory, new SimpleFileVisitor<>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                         Path relativePath = directory.relativize(file);
@@ -542,7 +542,7 @@ public class CompressUtils {
      */
     private static void cleanTempDir(Path tempDir) {
         try {
-            Files.walkFileTree(tempDir, new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(tempDir, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     Files.delete(file);

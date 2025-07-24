@@ -27,7 +27,8 @@ public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements S
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
+        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
+        });
 
         if (Objects.nonNull(hostMap)) {
             List<String> noahSyncServers = hostMap.get("NoahSyncServer");

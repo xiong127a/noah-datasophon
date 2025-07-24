@@ -66,7 +66,8 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
+        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
+        });
         if (ObjectUtils.isEmpty(map)){
             log.warn("hostMapKey is empty");
         }

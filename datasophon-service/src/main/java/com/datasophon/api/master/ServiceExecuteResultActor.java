@@ -70,7 +70,7 @@ public class ServiceExecuteResultActor extends AbstractActor {
                     // cancel all next node
                     logger.info("{} master roles failed , cancel all next node by commandId {}", node,
                             servicNode.getCommandId());
-                    List<String> commandIds = new ArrayList<String>();
+                    List<String> commandIds = new ArrayList<>();
                     commandIds.add(servicNode.getCommandId());
                     listCancelCommand(dag, node, commandIds);
                     ProcessUtils.updateCommandStateToFailed(commandIds);

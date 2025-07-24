@@ -3,7 +3,7 @@ package com.datasophon.api.master;
 import java.util.HashMap;
 
 public class CancelCommandMap {
-    private static HashMap<String, String> map = new HashMap<String, String>();
+    private static HashMap<String, String> map = new HashMap<>();
 
     public static void put(String key, String value) {
         map.put(key, value);

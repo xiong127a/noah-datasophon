@@ -63,8 +63,8 @@ public class ClusterServiceInstanceConfigServiceImpl
                                 .getConfigByRoleGroupIdAndVersion(roleGroupId, version);
                 if (Objects.nonNull(roleGroupConfig)) {
                         List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfig.getConfigJson(),
-                                        new TypeReference<List<ServiceConfig>>() {
-                                        });
+                                new TypeReference<>() {
+                                });
 
                         // 设置服务名称，用于排序
                         String serviceName = roleGroupConfig.getServiceName();

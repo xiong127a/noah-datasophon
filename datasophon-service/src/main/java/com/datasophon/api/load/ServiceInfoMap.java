@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 public class ServiceInfoMap {
 
-    private static HashMap<String, ServiceInfo> map = new HashMap<String, ServiceInfo>();
+    private static HashMap<String, ServiceInfo> map = new HashMap<>();
 
     public static void put(String key, ServiceInfo value) {
         map.put(key, value);

@@ -51,7 +51,7 @@ public class WorkerServiceActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return ReceiveBuilder.create()
-                .match(ExecuteServiceRoleCommand.class, new FI.UnitApply<ExecuteServiceRoleCommand>() {
+                .match(ExecuteServiceRoleCommand.class, new FI.UnitApply<>() {
                     @Override
                     public void apply(ExecuteServiceRoleCommand executeServiceRoleCommand) {
                         ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
@@ -160,7 +160,7 @@ public class WorkerServiceActor extends AbstractActor {
                                 execResult.getExecOut());
                     }
                 })
-                .matchAny(new FI.UnitApply<Object>() {
+                .matchAny(new FI.UnitApply<>() {
                     @Override
                     public void apply(Object msg) {
                         unhandled(msg);

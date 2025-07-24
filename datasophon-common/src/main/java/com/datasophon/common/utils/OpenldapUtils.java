@@ -118,7 +118,7 @@ public class OpenldapUtils {
     public static LdapContext ldapConnect(String url, String root, String pwd) {
         String factory = "com.sun.jndi.ldap.LdapCtxFactory";
         String simple = "simple";
-        Hashtable<String, String> env = new Hashtable<String, String>();
+        Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, factory);
         env.put(Context.PROVIDER_URL, url);
         env.put(Context.SECURITY_AUTHENTICATION, simple);

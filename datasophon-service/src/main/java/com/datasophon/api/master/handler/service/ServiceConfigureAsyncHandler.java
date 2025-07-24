@@ -62,18 +62,18 @@ public class ServiceConfigureAsyncHandler extends ServiceHandler {
 
     Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
     final Future<Object> configureFuture = Patterns.ask(configActor, generateServiceConfigCommand, timeout);
-    configureFuture.onComplete(new OnComplete<Object>() {
-      @Override
-      public void onComplete(Throwable failure, Object success) throws Throwable {
-        if (failure != null) {
-          function.onComplete(failure, success);
-        } else {
-          ExecResult configResult = (ExecResult) success;
-          if (Objects.nonNull(configResult) && configResult.getExecResult() && Objects.nonNull(getNext())) {
-            getNext().handlerRequest(serviceRoleInfo);
-          }
+    configureFuture.onComplete(new OnComplete<>() {
+        @Override
+        public void onComplete(Throwable failure, Object success) throws Throwable {
+            if (failure != null) {
+                function.onComplete(failure, success);
+            } else {
+                ExecResult configResult = (ExecResult) success;
+                if (Objects.nonNull(configResult) && configResult.getExecResult() && Objects.nonNull(getNext())) {
+                    getNext().handlerRequest(serviceRoleInfo);
+                }
+            }
         }
-      }
     }, ActorUtils.actorSystem.dispatcher());
     return execResult;
   }

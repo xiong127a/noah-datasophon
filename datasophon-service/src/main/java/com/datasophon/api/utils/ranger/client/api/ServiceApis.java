@@ -58,7 +58,7 @@ public class ServiceApis {
                     url,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<List<Service>>() {
+                    new ParameterizedTypeReference<>() {
                     });
             return response.getBody();
         } catch (HttpClientErrorException e) {
