@@ -1,5 +1,6 @@
 package com.datasophon.kubernetes.actor.handler;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -24,6 +25,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.IntRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +61,7 @@ import static com.datasophon.common.Constants.STATEFULSET;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
+@Slf4j
 public class KubernetesServiceHandler {
 
     private static final Long timeout = 300L;
@@ -78,13 +81,15 @@ public class KubernetesServiceHandler {
     // 保存ConfigMap的YAML配置到本地文件
     public static void saveConfigMapYaml(ConfigMap configMap) {
         try {
-            // 创建保存目录，使用Paths.get正确处理路径拼接
+            // 创建保存目录，使用java.nio.file.Paths处理路径拼接
             Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
                     "kubernetesYaml",
                     "configmaps");
-            File dir = dirPath.toFile();
-            if (!dir.exists()) {
-                dir.mkdirs();
+
+            // 确保目录存在
+            if (BooleanUtil.isFalse(ensureDirectoryExists(dirPath))) {
+                log.error("无法创建ConfigMap YAML保存目录: {}", dirPath);
+                return;
             }
 
             // 生成文件名，使用Paths.get拼接路径
@@ -97,9 +102,9 @@ public class KubernetesServiceHandler {
             // 写入文件
             Files.write(filePath, yamlContent.getBytes());
 
-            LoggerFactory.getLogger(KubernetesServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
+            log.info("保存ConfigMap YAML文件成功: {}", filePath);
         } catch (Exception e) {
-            LoggerFactory.getLogger(KubernetesServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(),
+            log.error("保存ConfigMap YAML文件失败: {}", e.getMessage(),
                     e);
         }
     }
@@ -117,8 +122,15 @@ public class KubernetesServiceHandler {
 
             // 检查当前地图是否包含该键
             if (currentMap.containsKey(key)) {
-                // 获取下一个层级的 Map
-                currentMap = (Map<String, Object>) currentMap.get(key);
+                // 获取下一个层级的 Map，并进行安全的类型检查
+                Object nextLevel = currentMap.get(key);
+                if (!(nextLevel instanceof Map)) {
+                    logger.warn("字段路径中的元素不是Map类型: {} 在 {}", key, fieldPath);
+                    return;
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nextMap = (Map<String, Object>) nextLevel;
+                currentMap = nextMap;
             } else {
                 // 如果路径不存在，直接返回
                 logger.info("Field path does not exist: {}", fieldPath);
@@ -145,9 +157,11 @@ public class KubernetesServiceHandler {
         execResult.setExecResult(true);
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.KubernetesYamlFilePath(serviceRoleFullName);
-        if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("operator")) {
-            String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().getFirst(), "kubectl apply -f " + yamlFile);
-            execResult.setExecResult(!s.equals(Constants.FAILED));
+        Path path = Paths.get(yamlFile);
+        if (Files.exists(path) && yamlFile.toLowerCase().contains("operator")) {
+            String s = KubernetesMinaUtils.execCmdWithResult(GetMasterHost().getFirst(),
+                    "kubectl apply -f " + yamlFile);
+            execResult.setExecResult(!StrUtil.equals(s, Constants.FAILED));
             logger.info("start operator: {}", s);
             return execResult;
         }
@@ -158,7 +172,7 @@ public class KubernetesServiceHandler {
             return execResult;
         }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+                InputStream yamlInputStream = Files.newInputStream(path)) {
 
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
@@ -281,8 +295,9 @@ public class KubernetesServiceHandler {
         int index = 0;
         String portType;
 
-        // 根据配置名称确定端口类型
-        if (isNodePort) {
+        // 根据配置名称和参数确定端口类型
+        // 注意: isNodePort是由方法参数决定的
+        if (configName.contains(KUBERNETES_NODEPORT_MAPPING)) {
             portType = "nodeport";
         } else if (configName.contains(KUBERNETES_LOADBALANCER_MAPPING)) {
             portType = "loadbalancer";
@@ -311,8 +326,11 @@ public class KubernetesServiceHandler {
                     continue;
                 }
 
+                // 确定是否是特殊端口类型
+                boolean isLoadBalancer = configName.contains(KUBERNETES_LOADBALANCER_MAPPING);
+
                 // 对于ClusterIP类型，检查重复端口
-                if (!isNodePort && !configName.contains(KUBERNETES_LOADBALANCER_MAPPING)) {
+                if (!isNodePort && !isLoadBalancer) {
                     if (processedClusterPorts.contains(port)) {
                         logger.info("跳过重复的ClusterIP端口配置: {}", port);
                         continue;
@@ -330,13 +348,13 @@ public class KubernetesServiceHandler {
                         }
                         // 为每个NodePort值创建独立的ServicePort
                         ServicePort servicePort = createServicePort(port, String.valueOf(nodePort), portType, index++,
-                                isNodePort,
+                                true,
                                 VALID_NODEPORT_RANGE);
                         servicePorts.add(servicePort);
                     }
                 } else {
                     // 创建ClusterIP或LoadBalancer的ServicePort
-                    ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, isNodePort,
+                    ServicePort servicePort = createServicePort(port, entry.getValue(), portType, index++, false,
                             VALID_NODEPORT_RANGE);
                     servicePorts.add(servicePort);
                 }
@@ -708,20 +726,17 @@ public class KubernetesServiceHandler {
     /**
      * 执行服务创建并返回创建的服务对象
      */
-    private Service executeServiceCreationWithReturnValue(String namespace, KubernetesClient client, Service service) {
+    private void executeServiceCreationWithReturnValue(String namespace, KubernetesClient client, Service service) {
         try {
-            // 创建Service
-            Service createdService = client.services().inNamespace(namespace).createOrReplace(service);
-            logger.info("成功创建服务: {}", service.getMetadata().getName());
+            // 创建或更新服务，并返回创建的服务对象
+            client.services().inNamespace(namespace).resource(service).serverSideApply();
 
             // 添加彩色日志输出
             ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), namespace);
 
-            return createdService;
         } catch (Exception e) {
             logger.error("创建服务失败: {}", e.getMessage(), e);
             ColorLogUtils.printError("创建服务 " + service.getMetadata().getName() + " 失败: " + e.getMessage());
-            return null;
         }
     }
 
@@ -783,12 +798,12 @@ public class KubernetesServiceHandler {
             if (existingConfigMap != null) {
                 logger.info("更新现有ConfigMap: {}", configMapName);
 
-                // 更新现有ConfigMap
+                // 更新现有的ConfigMap
                 existingConfigMap.setData(externalIpMap);
                 client.configMaps()
                         .inNamespace(namespace)
-                        .withName(configMapName)
-                        .replace(existingConfigMap);
+                        .resource(existingConfigMap)
+                        .serverSideApply();
 
                 // 保存ConfigMap的YAML文件
                 saveConfigMapYaml(existingConfigMap);
@@ -809,7 +824,8 @@ public class KubernetesServiceHandler {
 
                 client.configMaps()
                         .inNamespace(namespace)
-                        .createOrReplace(configMap);
+                        .resource(configMap)
+                        .serverSideApply();
 
                 // 保存ConfigMap的YAML文件
                 saveConfigMapYaml(configMap);
@@ -834,7 +850,7 @@ public class KubernetesServiceHandler {
 
     private void handleDeployment(String namespace, KubernetesClient client, Map<String, Object> yamlData,
             InputStream yamlInputStream,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+            Map<Generators, List<ServiceConfig>> configFileMap) {
         handleResource(namespace, client, yamlData, yamlInputStream, client.apps().deployments()
                 .inNamespace(namespace)
                 .withName(serviceRoleFullName), DEPLOYMENT, configFileMap);
@@ -843,7 +859,7 @@ public class KubernetesServiceHandler {
 
     private void handleStatefulSet(String namespace, KubernetesClient client, Map<String, Object> yamlData,
             InputStream yamlInputStream,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+            Map<Generators, List<ServiceConfig>> configFileMap) {
         handleResource(namespace, client, yamlData, yamlInputStream, client.apps().statefulSets()
                 .inNamespace(namespace)
                 .withName(serviceRoleFullName), STATEFULSET, configFileMap);
@@ -853,7 +869,7 @@ public class KubernetesServiceHandler {
             Map<String, Object> yamlData,
             InputStream yamlInputStream,
             RollableScalableResource<T> resource, String resourceKind,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+            Map<Generators, List<ServiceConfig>> configFileMap) {
         T existingResource = resource.get();
         boolean isExistingResource = existingResource != null;
 
@@ -900,7 +916,7 @@ public class KubernetesServiceHandler {
     }
 
     private void handleExistingDeployment(String namespace, Map<String, Object> yamlData, KubernetesClient client,
-            Deployment existingDeployment) throws IOException {
+            Deployment existingDeployment) {
         int replicas = existingDeployment.getSpec().getReplicas() != null
                 ? existingDeployment.getSpec().getReplicas()
                 : 0;
@@ -911,7 +927,7 @@ public class KubernetesServiceHandler {
 
         // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
         if (nodeCount != null && replicas == nodeCount) {
-            logger.info("当前副本数 {} 已等于期望节点数 {}，无需修改", replicas, nodeCount);
+            logger.info("Deployment {} 当前副本数 {} 已等于期望节点数 {}，无需修改", serviceRoleFullName, replicas, nodeCount);
             ColorLogUtils.printWarning("Deployment " + serviceRoleFullName + " 副本数已达到预期值 " + nodeCount + "，跳过更新");
             return;
         }
@@ -920,19 +936,12 @@ public class KubernetesServiceHandler {
         logger.info("修改 Deployment: {} 副本数 {} -> {}", serviceRoleFullName, replicas, replicas + 1);
         updateField(yamlData, "spec.replicas", replicas + 1);
 
-        try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
-            // 使用 client.load 加载资源并更新
-            client.load(updatedYamlInputStream)
-                    .inNamespace(namespace)
-                    .createOrReplace();
-
-            // 添加彩色日志
-            ColorLogUtils.printResourceUpdated("Deployment", serviceRoleFullName, namespace);
-        }
+        // 使用公共方法创建或更新资源
+        createOrUpdateResource(namespace, client, yamlData, "Deployment", serviceRoleFullName);
     }
 
     private void handleExistingStatefulSet(String namespace, Map<String, Object> yamlData, KubernetesClient client,
-            StatefulSet existingStatefulSet) throws IOException {
+            StatefulSet existingStatefulSet) {
         int replicas = existingStatefulSet.getSpec().getReplicas() != null
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
@@ -943,7 +952,7 @@ public class KubernetesServiceHandler {
 
         // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
         if (nodeCount != null && replicas == nodeCount) {
-            logger.info("当前副本数 {} 已等于期望节点数 {}，无需修改", replicas, nodeCount);
+            logger.info("StatefulSet {} 当前副本数 {} 已等于期望节点数 {}，无需修改", serviceRoleFullName, replicas, nodeCount);
             ColorLogUtils.printWarning("StatefulSet " + serviceRoleFullName + " 副本数已达到预期值 " + nodeCount + "，跳过更新");
             return;
         }
@@ -952,15 +961,8 @@ public class KubernetesServiceHandler {
         logger.info("修改 StatefulSet: {} 副本数 {} -> {}", serviceRoleFullName, replicas, replicas + 1);
         updateField(yamlData, "spec.replicas", replicas + 1);
 
-        try (InputStream updatedYamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
-            // 使用 client.load 加载资源并更新
-            client.load(updatedYamlInputStream)
-                    .inNamespace(namespace)
-                    .createOrReplace();
-
-            // 添加彩色日志
-            ColorLogUtils.printResourceUpdated("StatefulSet", serviceRoleFullName, namespace);
-        }
+        // 使用公共方法创建或更新资源
+        createOrUpdateResource(namespace, client, yamlData, "StatefulSet", serviceRoleFullName);
     }
 
     private <T extends HasMetadata> void handleNewResource(String namespace, KubernetesClient client,
@@ -969,7 +971,7 @@ public class KubernetesServiceHandler {
 
         logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
-        List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(namespace).create();
+        List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(namespace).serverSideApply();
         String resourceName = metadata.getFirst().getMetadata().getName();
         String resourceKind = metadata.getFirst().getKind();
         logger.info("在kubernetes上启动资源: {} ,使用本地资源文件: {}", resourceName,
@@ -1071,13 +1073,15 @@ public class KubernetesServiceHandler {
     // 保存Service的YAML配置到本地文件
     private void saveServiceYaml(Service service, String serviceType) {
         try {
-            // 创建保存目录，使用Paths.get正确处理路径拼接
+            // 创建保存目录，使用java.nio.file.Paths处理路径拼接
             Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
                     "kubernetesYaml",
                     "servers");
-            File dir = dirPath.toFile();
-            if (!dir.exists()) {
-                dir.mkdirs();
+
+            // 确保目录存在
+            if (BooleanUtil.isFalse(ensureDirectoryExists(dirPath))) {
+                logger.error("无法创建Service YAML保存目录: {}", dirPath);
+                return;
             }
 
             // 生成文件名，使用Paths.get拼接路径
@@ -1099,13 +1103,15 @@ public class KubernetesServiceHandler {
     // 保存PVC的YAML配置到本地文件
     private void savePvcYaml(PersistentVolumeClaim pvc) {
         try {
-            // 创建保存目录，使用Paths.get正确处理路径拼接
+            // 创建保存目录，使用java.nio.file.Paths处理路径拼接
             Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH),
                     "kubernetesYaml",
                     "volumes");
-            File dir = dirPath.toFile();
-            if (!dir.exists()) {
-                dir.mkdirs();
+
+            // 确保目录存在
+            if (BooleanUtil.isFalse(ensureDirectoryExists(dirPath))) {
+                logger.error("无法创建PVC YAML保存目录: {}", dirPath);
+                return;
             }
 
             // 生成文件名，使用Paths.get拼接路径
@@ -1237,7 +1243,8 @@ public class KubernetesServiceHandler {
             // 在Kubernetes集群上创建PVC
             PersistentVolumeClaim createdPvc = client.persistentVolumeClaims()
                     .inNamespace(namespace)
-                    .createOrReplace(pvc);
+                    .resource(pvc)
+                    .serverSideApply();
 
             // 在日志中添加有关共享PVC方法的说明
             logger.info("已创建共享PVC：{}。Pod将挂载子路径：{}/[pod名称]",
@@ -1268,7 +1275,7 @@ public class KubernetesServiceHandler {
     private void executeServiceCreation(String namespace, KubernetesClient client, Service service) {
         try {
             // 创建Service
-            client.services().inNamespace(namespace).createOrReplace(service);
+            client.services().inNamespace(namespace).resource(service).serverSideApply();
             logger.info("成功创建服务: {}", service.getMetadata().getName());
 
             // 添加彩色日志输出
@@ -1281,6 +1288,57 @@ public class KubernetesServiceHandler {
             logger.error("创建服务失败: {}", e.getMessage(), e);
             ColorLogUtils.printError("创建服务 " + service.getMetadata().getName() + " 失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 创建或更新Kubernetes资源
+     * 
+     * @param namespace    命名空间
+     * @param client       Kubernetes客户端
+     * @param yamlData     资源配置数据
+     * @param resourceKind 资源类型
+     * @param resourceName 资源名称
+     */
+    private void createOrUpdateResource(String namespace, KubernetesClient client, Map<String, Object> yamlData,
+            String resourceKind, String resourceName) {
+        try (InputStream yamlInputStream = new ByteArrayInputStream(new Yaml().dump(yamlData).getBytes())) {
+            // 使用 client.load 加载资源并更新，使用serverSideApply()替代已弃用的createOrReplace
+            client.load(yamlInputStream)
+                    .inNamespace(namespace)
+                    .serverSideApply();
+
+            // 添加彩色日志
+            ColorLogUtils.printResourceUpdated(resourceKind, resourceName, namespace);
+        } catch (IOException e) {
+            logger.error("更新 {} 资源失败: {}", resourceKind, e.getMessage(), e);
+            ColorLogUtils.printError("更新 " + resourceKind + " " + resourceName + " 失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 确保目录存在，如果不存在则创建
+     * 
+     * @param dirPath 目录路径
+     * @return 如果目录存在或创建成功则返回true，否则返回false
+     */
+    private static boolean ensureDirectoryExists(Path dirPath) {
+        File dir = dirPath.toFile();
+        if (dir.exists()) {
+            if (!dir.isDirectory()) {
+                log.warn("路径已存在但不是目录: {}", dirPath);
+                return false;
+            }
+            return true;
+        }
+
+        boolean created = dir.mkdirs();
+        if (!created) {
+            log.error("无法创建目录: {}", dirPath);
+            return false;
+        }
+
+        log.debug("成功创建目录: {}", dirPath);
+        return true;
     }
 
 }
