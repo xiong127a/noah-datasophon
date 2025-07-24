@@ -17,7 +17,6 @@
 
 package com.datasophon.api.controller;
 
-import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
@@ -25,7 +24,7 @@ import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,6 +39,10 @@ import java.util.List;
 public class UserInfoController {
 
     private final UserInfoService userInfoService;
+
+    public UserInfoController(UserInfoService userInfoService) {
+        this.userInfoService = userInfoService;
+    }
 
     /**
      * 列表带分页

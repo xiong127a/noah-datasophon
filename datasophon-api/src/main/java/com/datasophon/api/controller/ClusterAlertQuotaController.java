@@ -21,7 +21,6 @@ import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.enums.QuotaState;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -34,6 +33,10 @@ import java.util.Arrays;
 public class ClusterAlertQuotaController {
 
     private final ClusterAlertQuotaService clusterAlertQuotaService;
+
+    public ClusterAlertQuotaController(ClusterAlertQuotaService clusterAlertQuotaService) {
+        this.clusterAlertQuotaService = clusterAlertQuotaService;
+    }
 
     /**
      * list alert quota

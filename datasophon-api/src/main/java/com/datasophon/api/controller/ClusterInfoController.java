@@ -23,7 +23,6 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,6 +37,10 @@ import java.util.Arrays;
 public class ClusterInfoController {
 
     private final ClusterInfoService clusterInfoService;
+
+    public ClusterInfoController(ClusterInfoService clusterInfoService) {
+        this.clusterInfoService = clusterInfoService;
+    }
 
     /**
      * 列表

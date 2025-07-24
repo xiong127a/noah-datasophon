@@ -21,7 +21,6 @@ import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterUser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,6 +34,10 @@ import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 public class ClusterUserController {
 
     private final ClusterUserService clusterUserService;
+
+    public ClusterUserController(ClusterUserService clusterUserService) {
+        this.clusterUserService = clusterUserService;
+    }
 
     /**
      * 列表

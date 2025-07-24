@@ -39,7 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -86,7 +85,9 @@ public class ParcelController implements DisposableBean {
     final
     LoadServiceMeta loadServiceMeta;
 
-    public ParcelController(LoadServiceMeta loadServiceMeta) {
+    public ParcelController(FrameInfoService frameInfoService, ClusterInfoService clusterInfoService, LoadServiceMeta loadServiceMeta) {
+        this.frameInfoService = frameInfoService;
+        this.clusterInfoService = clusterInfoService;
         this.loadServiceMeta = loadServiceMeta;
     }
 

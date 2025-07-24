@@ -19,7 +19,6 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.utils.Result;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +31,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClusterServiceDashboardController {
 
     private final ClusterServiceDashboardService clusterServiceDashboardService;
+
+    public ClusterServiceDashboardController(ClusterServiceDashboardService clusterServiceDashboardService) {
+        this.clusterServiceDashboardService = clusterServiceDashboardService;
+    }
 
     /**
      * get dashboard url

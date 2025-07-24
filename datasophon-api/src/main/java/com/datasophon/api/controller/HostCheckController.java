@@ -44,6 +44,13 @@ public class HostCheckController {
 
     private final AsyncCheckService asyncCheckService;
 
+    public HostCheckController(HostCheckService hostCheckService, QueueManagerServiceImpl queueManagerService, HostCheckQueueManager hostCheckQueueManager, AsyncCheckService asyncCheckService) {
+        this.hostCheckService = hostCheckService;
+        this.queueManagerService = queueManagerService;
+        this.hostCheckQueueManager = hostCheckQueueManager;
+        this.asyncCheckService = asyncCheckService;
+    }
+
     /**
      * 获取主机检查项列表
      */

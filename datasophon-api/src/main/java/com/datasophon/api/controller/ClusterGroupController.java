@@ -22,7 +22,6 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterGroup;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClusterGroupController {
 
     private final ClusterGroupService clusterGroupService;
+
+    public ClusterGroupController(ClusterGroupService clusterGroupService) {
+        this.clusterGroupService = clusterGroupService;
+    }
 
     /**
      * 列表

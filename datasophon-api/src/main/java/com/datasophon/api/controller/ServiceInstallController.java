@@ -25,7 +25,6 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.utils.Result;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,9 +39,7 @@ import java.util.List;
 @RequestMapping("service/install")
 public class ServiceInstallController {
 
-    final
-    ServiceInstallService serviceInstallService;
-    private final HttpServletResponse httpServletResponse;
+    private final ServiceInstallService serviceInstallService;
 
     public ServiceInstallController(ServiceInstallService serviceInstallService) {
         this.serviceInstallService = serviceInstallService;

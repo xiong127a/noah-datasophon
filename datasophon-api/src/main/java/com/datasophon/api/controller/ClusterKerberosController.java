@@ -19,7 +19,6 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.service.ClusterKerberosService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +34,10 @@ import java.io.IOException;
 public class ClusterKerberosController {
 
     private final ClusterKerberosService kerberosService;
+
+    public ClusterKerberosController(ClusterKerberosService kerberosService) {
+        this.kerberosService = kerberosService;
+    }
 
     /**
      * download user keytab

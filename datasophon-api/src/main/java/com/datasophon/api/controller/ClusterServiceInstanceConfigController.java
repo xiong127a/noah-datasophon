@@ -20,7 +20,6 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +32,10 @@ import java.util.Arrays;
 public class ClusterServiceInstanceConfigController {
 
     private final ClusterServiceInstanceConfigService clusterServiceInstanceConfigService;
+
+    public ClusterServiceInstanceConfigController(ClusterServiceInstanceConfigService clusterServiceInstanceConfigService) {
+        this.clusterServiceInstanceConfigService = clusterServiceInstanceConfigService;
+    }
 
     /**
      * 列表

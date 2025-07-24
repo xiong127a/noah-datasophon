@@ -20,7 +20,6 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +31,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClusterQueueCapacityController {
 
     private final ClusterQueueCapacityService clusterQueueCapacityService;
+
+    public ClusterQueueCapacityController(ClusterQueueCapacityService clusterQueueCapacityService) {
+        this.clusterQueueCapacityService = clusterQueueCapacityService;
+    }
 
     /**
      * 列表

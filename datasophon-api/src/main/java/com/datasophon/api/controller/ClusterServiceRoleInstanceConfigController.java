@@ -20,7 +20,6 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceRoleInstanceConfigService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,6 +34,10 @@ import java.util.Map;
 public class ClusterServiceRoleInstanceConfigController {
 
     private final ClusterServiceRoleInstanceConfigService clusterServiceRoleInstanceConfigService;
+
+    public ClusterServiceRoleInstanceConfigController(ClusterServiceRoleInstanceConfigService clusterServiceRoleInstanceConfigService) {
+        this.clusterServiceRoleInstanceConfigService = clusterServiceRoleInstanceConfigService;
+    }
 
     /**
      * 列表

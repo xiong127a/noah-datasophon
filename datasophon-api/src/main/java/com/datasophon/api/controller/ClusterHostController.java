@@ -17,15 +17,14 @@
 
 package com.datasophon.api.controller;
 
-import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
+import com.mybatisflex.core.query.QueryChain;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,6 +40,10 @@ import java.util.List;
 public class ClusterHostController {
 
     private final ClusterHostService clusterHostService;
+
+    public ClusterHostController(ClusterHostService clusterHostService) {
+        this.clusterHostService = clusterHostService;
+    }
 
     /**
      * 查询集群所有主机
