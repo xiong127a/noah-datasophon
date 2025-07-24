@@ -24,7 +24,6 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.mybatisflex.core.query.QueryChain;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,11 +34,18 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * @author 63588
+ */
 @RestController
 @RequestMapping("alert/group")
 public class AlertGroupController {
 
     private final AlertGroupService alertGroupService;
+
+    public AlertGroupController(AlertGroupService alertGroupService) {
+        this.alertGroupService = alertGroupService;
+    }
 
     /**
      * 列表
