@@ -141,8 +141,8 @@ public class CollectionUtils {
          * @param b the second collection
          */
         public CardinalityHelper(final Iterable<? extends O> a, final Iterable<? extends O> b) {
-            cardinalityA = CollectionUtils.<O>getCardinalityMap(a);
-            cardinalityB = CollectionUtils.<O>getCardinalityMap(b);
+            cardinalityA = CollectionUtils.getCardinalityMap(a);
+            cardinalityB = CollectionUtils.getCardinalityMap(b);
         }
 
         /**
