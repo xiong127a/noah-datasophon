@@ -86,6 +86,8 @@ jasypt:
 
 # Prometheus监控配置
 management:
+  server:
+    port: 8082  # 添加明确的管理端口，与主应用端口分离
   endpoints:
     web:
       exposure:
