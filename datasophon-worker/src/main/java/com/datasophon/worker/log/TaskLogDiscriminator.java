@@ -48,8 +48,8 @@ public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
         String loggerName = event.getLoggerName();
         String prefix = TaskConstants.TASK_LOG_LOGGER_NAME + "-";
         if (loggerName.startsWith(prefix)) {
-            return loggerName.substring(prefix.length(),
-                    loggerName.length()).replace("-","/");
+            return loggerName.substring(prefix.length()
+            ).replace("-","/");
         } else {
             return "unknown_task";
         }
