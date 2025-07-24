@@ -17,19 +17,20 @@
 
 package com.datasophon.dao.entity;
 
-import java.io.Serializable;
-import java.util.List;
-
-import lombok.Data;
-
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.List;
 
 @Data
 @Table("t_ddh_frame_info")
 public class FrameInfoEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
