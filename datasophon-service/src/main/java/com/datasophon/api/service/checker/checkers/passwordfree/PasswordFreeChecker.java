@@ -355,7 +355,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 // 生成SSH密钥对
                 cacheLog.info("生成本地SSH密钥对...");
                 boolean keyGenResult = setupKeyBasedAuth(hostInfo.getIp(), hostInfo.getSshUser(),
-                        hostInfo.getSshPassword(), hostInfo.getSshPort(), "rsa");
+                        hostInfo.getSshPassword(), hostInfo.getSshPort());
                 if (!keyGenResult) {
                     cacheLog.error("生成SSH密钥对失败");
                     return false;
@@ -440,7 +440,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         }
     }
 
-    private boolean setupKeyBasedAuth(String hostname, String user, String password, int port, String keyType) {
+    private boolean setupKeyBasedAuth(String hostname, String user, String password, int port) {
         try {
             Path userHome = Paths.get(System.getProperty("user.home"));
             Path sshDir = userHome.resolve(SSH_DIR);
@@ -454,7 +454,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
             // 尝试使用Java调用系统命令生成密钥
             cacheLog.info("生成SSH密钥对...");
-            Process process = new ProcessBuilder("ssh-keygen", "-t", keyType, "-N", "", "-f", privateKeyPath.toString())
+            Process process = new ProcessBuilder("ssh-keygen", "-t", "rsa", "-N", "", "-f", privateKeyPath.toString())
                     .redirectErrorStream(true)
                     .start();
 

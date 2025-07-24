@@ -33,7 +33,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     public ExecResult createService() {
         try {
             createRangerAdminUserIfNotExists();
-            if (isKmsServiceExists("kmsdev")) {
+            if (isKmsServiceExists()) {
                 logger.info("kmsdev service already exists");
                 execResult.setExecResult(true);
                 RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
@@ -70,8 +70,8 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
         }
     }
 
-    private boolean isKmsServiceExists(String serviceName) throws RangerClientException {
-        Service kmsService = rangerKmsClient.getServices().getServiceByName(serviceName);
+    private boolean isKmsServiceExists() throws RangerClientException {
+        Service kmsService = rangerKmsClient.getServices().getServiceByName("kmsdev");
         return Objects.nonNull(kmsService);
     }
 

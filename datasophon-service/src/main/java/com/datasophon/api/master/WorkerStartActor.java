@@ -19,7 +19,6 @@ package com.datasophon.api.master;
 
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterGroupService;
@@ -155,7 +154,7 @@ public class WorkerStartActor extends AbstractActor {
     private void handleWorkerServiceMessage(WorkerServiceMessage msg) {
         try {
             // 告知worker需要启动/停止的服务
-            autoAddServiceOperatorNeeded(msg.getHostname(), msg.getClusterId(), msg.getCommandType(), true);
+            autoAddServiceOperatorNeeded(msg.getHostname(), msg.getClusterId(), msg.getCommandType());
         } catch (Exception e) {
             logger.error("处理WorkerServiceMessage消息时出错", e);
         }
@@ -170,10 +169,8 @@ public class WorkerStartActor extends AbstractActor {
      * @param hostname    主机名
      * @param clusterId   集群ID
      * @param commandType 命令类型(START_SERVICE或STOP_SERVICE)
-     * @param needRestart 是否需要重启服务
      */
-    private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId, CommandType commandType,
-            boolean needRestart) {
+    private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId, CommandType commandType) {
         ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
@@ -184,7 +181,7 @@ public class WorkerStartActor extends AbstractActor {
             serviceRoleList = roleInstanceService
                     .listStoppedServiceRoleListByHostnameAndClusterId(hostname, clusterId);
             // 重启时重刷服务配置以支持磁盘故障等问题
-            if (needRestart) {
+            if (true) {
                 roleInstanceService.updateToNeedRestartByHost(hostname);
             }
         }

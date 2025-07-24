@@ -22,16 +22,16 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum UserType {
 
-    CLUSTER_MANAGER(1, "集群管理员");
+    CLUSTER_MANAGER();
 
     @EnumValue
     private int value;
 
     private String desc;
 
-    UserType(int value, String desc) {
-        this.value = value;
-        this.desc = desc;
+    UserType() {
+        this.value = 1;
+        this.desc = "集群管理员";
     }
 
     public int getValue() {

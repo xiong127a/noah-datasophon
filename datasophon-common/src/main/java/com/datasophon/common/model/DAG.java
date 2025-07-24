@@ -82,18 +82,18 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
      * @param toNode   node of destination
      */
     public void addEdge(Node fromNode, Node toNode) {
-        addEdge(fromNode, toNode, false);
+        addEdge(fromNode, toNode);
     }
 
     /**
      * add edge
-     * @param fromNode        node of origin
-     * @param toNode          node of destination
-     * @param createNode      whether the node needs to be created if it does not exist
+     *
+     * @param fromNode node of origin
+     * @param toNode   node of destination
      * @return The result of adding an edge. returns false if the DAG result is a ring result
      */
-    private boolean addEdge(Node fromNode, Node toNode, boolean createNode) {
-        return addEdge(fromNode, toNode, null, createNode);
+    private boolean addEdge(Node fromNode, Node toNode) {
+        return addEdge(fromNode, toNode, null, false);
     }
 
     /**
@@ -116,8 +116,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
                 return false;
             }
 
-            addNodeIfAbsent(fromNode, null);
-            addNodeIfAbsent(toNode, null);
+            addNodeIfAbsent(fromNode);
+            addNodeIfAbsent(toNode);
 
             addEdge(fromNode, toNode, edge, edgesMap);
             addEdge(toNode, fromNode, edge, reverseEdgesMap);
@@ -334,14 +334,13 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     }
 
     /**
-     *  if tho node does not exist,add this node
+     * if tho node does not exist,add this node
      *
-     * @param node    node
-     * @param nodeInfo node information
+     * @param node node
      */
-    private void addNodeIfAbsent(Node node, NodeInfo nodeInfo) {
+    private void addNodeIfAbsent(Node node) {
         if (!containsNode(node)) {
-            addNode(node, nodeInfo);
+            addNode(node, null);
         }
     }
 

@@ -1509,7 +1509,7 @@ public class HostCheckQueueManager {
                 // 记录任务开始日志
                 String startMessage = String.format("开始执行主机 %s 的修复任务: %s (ID: %d)",
                         hostInfo.getIp(), checkItem.getItemName(), checkItem.getId());
-                LogEntry startLogEntry = createLogEntry(LogEntry.Level.INFO, startMessage, LogEntry.Type.FIX);
+                LogEntry startLogEntry = createLogEntry(LogEntry.Level.INFO, startMessage);
                 LogEntryManager.addLogEntry(logKey, startLogEntry);
 
                 logger.info("开始执行主机 {} 的修复任务: {}", hostInfo.getIp(), checkItem.getItemName());
@@ -1539,7 +1539,7 @@ public class HostCheckQueueManager {
                 if (isPasswordFreeItem) {
                     // 免密检查项特殊处理
                     LogEntry logEntry = createLogEntry(LogEntry.Level.INFO,
-                            "检测到免密登录修复项，将直接调用checker而非使用连接池", LogEntry.Type.FIX);
+                            "检测到免密登录修复项，将直接调用checker而非使用连接池");
                     LogEntryManager.addLogEntry(logKey, logEntry);
 
                     logger.info("检测到免密登录修复项，将直接调用checker而非使用连接池");
@@ -1549,8 +1549,8 @@ public class HostCheckQueueManager {
                         ItemChecker passwordFreeChecker = itemCheckerFactory.getChecker(ItemCode.PASSWORD_FREE);
                         if (passwordFreeChecker == null) {
                             String errorMsg = "未找到免密登录检查器";
-                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
-                                    LogEntry.Type.FIX);
+                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg
+                            );
                             LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                             logger.error(errorMsg);
@@ -1563,7 +1563,7 @@ public class HostCheckQueueManager {
                         }
 
                         LogEntry connLogEntry = createLogEntry(LogEntry.Level.INFO,
-                                "正在建立独立SSH连接进行免密登录配置", LogEntry.Type.FIX);
+                                "正在建立独立SSH连接进行免密登录配置");
                         LogEntryManager.addLogEntry(logKey, connLogEntry);
 
                         // 直接调用免密检查器的fix方法
@@ -1574,8 +1574,8 @@ public class HostCheckQueueManager {
                             fixTasksSucceeded.incrementAndGet();
 
                             String successMsg = String.format("主机 %s 的免密登录修复任务执行成功", hostInfo.getIp());
-                            LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
-                                    LogEntry.Type.FIX);
+                            LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg
+                            );
                             LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                             logger.info(successMsg);
@@ -1585,7 +1585,7 @@ public class HostCheckQueueManager {
                             fixTasksFailed.incrementAndGet();
 
                             String failMsg = String.format("主机 %s 的免密登录修复任务执行失败", hostInfo.getIp());
-                            LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
+                            LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg);
                             LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                             logger.warn(failMsg);
@@ -1595,8 +1595,8 @@ public class HostCheckQueueManager {
                     } catch (Exception e) {
                         String errorMsg = String.format("执行主机 %s 的免密登录修复任务时发生异常: %s",
                                 hostInfo.getIp(), e.getMessage());
-                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
-                                LogEntry.Type.FIX);
+                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg
+                        );
                         LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -1614,7 +1614,7 @@ public class HostCheckQueueManager {
 
                     // 记录将要使用连接池执行修复
                     LogEntry poolLogEntry = createLogEntry(LogEntry.Level.INFO,
-                            "将使用SSH连接池执行修复任务: " + checkItem.getItemName(), LogEntry.Type.FIX);
+                            "将使用SSH连接池执行修复任务: " + checkItem.getItemName());
                     LogEntryManager.addLogEntry(logKey, poolLogEntry);
 
                     // 使用doHostFix方法批量执行修复，实现SSH连接复用
@@ -1626,8 +1626,8 @@ public class HostCheckQueueManager {
 
                         String successMsg = String.format("主机 %s 的修复任务 %s 执行成功",
                                 hostInfo.getIp(), checkItem.getItemName());
-                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
-                                LogEntry.Type.FIX);
+                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg
+                        );
                         LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                         logger.info(successMsg);
@@ -1638,7 +1638,7 @@ public class HostCheckQueueManager {
 
                         String failMsg = String.format("主机 %s 的修复任务 %s 执行失败",
                                 hostInfo.getIp(), checkItem.getItemName());
-                        LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
+                        LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg);
                         LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                         logger.warn(failMsg);
@@ -1651,7 +1651,7 @@ public class HostCheckQueueManager {
                 // 处理异常情况
                 String errorMsg = String.format("执行主机 %s 的修复任务时发生异常: %s",
                         hostInfo.getIp(), e.getMessage());
-                LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg, LogEntry.Type.FIX);
+                LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg);
                 LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -1664,7 +1664,7 @@ public class HostCheckQueueManager {
                 // 记录任务完成
                 String endMessage = String.format("主机 %s 的修复任务 %s 已完成，耗时: %d 毫秒",
                         hostInfo.getIp(), checkItem.getItemName(), System.currentTimeMillis() - startTime);
-                LogEntry endLogEntry = createLogEntry(LogEntry.Level.INFO, endMessage, LogEntry.Type.FIX);
+                LogEntry endLogEntry = createLogEntry(LogEntry.Level.INFO, endMessage);
                 LogEntryManager.addLogEntry(logKey, endLogEntry);
 
                 // 统计执行时间
@@ -1693,18 +1693,17 @@ public class HostCheckQueueManager {
 
     /**
      * 创建日志条目对象
-     * 
+     *
      * @param level   日志级别
      * @param message 日志消息
-     * @param type    日志类型
      * @return 日志条目对象
      */
-    private LogEntry createLogEntry(LogEntry.Level level, String message, LogEntry.Type type) {
+    private LogEntry createLogEntry(LogEntry.Level level, String message) {
         Date timestamp = new Date();
         String threadName = Thread.currentThread().getName();
         String className = HostCheckQueueManager.class.getName();
 
-        LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message, type);
+        LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message, LogEntry.Type.FIX);
         // 获取调用者的行号作为元数据
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         if (stackTrace.length >= 3) {

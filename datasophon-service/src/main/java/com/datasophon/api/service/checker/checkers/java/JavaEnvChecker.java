@@ -10,7 +10,6 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
@@ -371,7 +370,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 // 上传JDK安装包
                 cacheLog.info("上传JDK安装包");
-                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "/usr/local",
+                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.X86JDK);
 
                 // 解压JDK安装包
@@ -403,7 +402,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 // 上传JDK安装包
                 cacheLog.info("上传JDK安装包");
-                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "/usr/local",
+                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.ARMJDK);
 
                 // 解压JDK安装包
@@ -752,12 +751,12 @@ public class JavaEnvChecker extends AbstractItemChecker {
         return ItemCode.JAVA_ENV;
     }
 
-    private void uploadFile(ClientSession session, String remoteDir, String localFile) {
+    private void uploadFile(ClientSession session, String localFile) {
         try {
             // 使用MinaUtils实现真正的文件上传
-            MinaUtils.uploadFile(session, remoteDir, localFile);
-            logger.info("上传文件: {} -> {}", localFile, remoteDir);
-            cacheLog.info("上传文件: " + localFile + " -> " + remoteDir);
+            MinaUtils.uploadFile(session, "/usr/local", localFile);
+            logger.info("上传文件: {} -> {}", localFile, "/usr/local");
+            cacheLog.info("上传文件: " + localFile + " -> " + "/usr/local");
         } catch (Exception e) {
             logger.error("上传文件失败: {}", e.getMessage());
             cacheLog.error("上传文件失败: " + e.getMessage());

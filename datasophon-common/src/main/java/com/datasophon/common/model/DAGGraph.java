@@ -76,8 +76,8 @@ public class DAGGraph<Node, NodeInfo, EdgeInfo> {
             logger.error("serious error: add edge({} -> {}) is invalid, cause cycle！", fromNode, toNode);
             return;
         }
-        addNodeIfAbsent(fromNode, null);
-        addNodeIfAbsent(toNode, null);
+        addNodeIfAbsent(fromNode);
+        addNodeIfAbsent(toNode);
 
         addEdge(fromNode, toNode, edgesMap);
         addEdge(toNode, fromNode, reverseEdgesMap);
@@ -90,9 +90,9 @@ public class DAGGraph<Node, NodeInfo, EdgeInfo> {
         toNodeEdges.put(toNode, null);
     }
 
-    private void addNodeIfAbsent(Node node, NodeInfo nodeInfo) {
+    private void addNodeIfAbsent(Node node) {
         if (!containsNode(node)) {
-            addNode(node, nodeInfo);
+            addNode(node, null);
         }
     }
 

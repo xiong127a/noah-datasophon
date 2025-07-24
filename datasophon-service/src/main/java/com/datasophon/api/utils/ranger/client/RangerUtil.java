@@ -129,15 +129,15 @@ public class RangerUtil {
     }
 
     public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
-        return getCachedOrNewClient(clusterTenant, "admin", "admin123", clientAdminCache);
+        return getCachedOrNewClient(clusterTenant, "admin", clientAdminCache);
     }
 
     public static RangerClient getRangerKmsClient(Integer clusterTenant) throws Exception {
-        return getCachedOrNewClient(clusterTenant, "keyadmin", "admin123", clientKmsCache);
+        return getCachedOrNewClient(clusterTenant, "keyadmin", clientKmsCache);
     }
 
-    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password,
-            Cache<Integer, RangerClient> clientCache) throws Exception {
+    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username,
+                                                     Cache<Integer, RangerClient> clientCache) throws Exception {
         if (clusterTenant == null) {
             throw new IllegalArgumentException("Cluster tenant cannot be null");
         }
@@ -163,7 +163,7 @@ public class RangerUtil {
                 .loggingLevel("INFO")
                 .authConfig(RangerAuthConfig.builder()
                         .username(username)
-                        .password(password)
+                        .password("admin123")
                         .build())
                 .url(rangerAdminUrl)
                 .build();
