@@ -66,8 +66,8 @@ public class ShellUtils {
      */
     public static ExecResult exceShell(String pathOrCommand) {
         ExecResult result = new ExecResult();
-        StringBuffer outputBuffer = new StringBuffer();
-        StringBuffer errorBuffer = new StringBuffer();
+        StringBuilder outputBuffer = new StringBuilder();
+        StringBuilder errorBuffer = new StringBuilder();
 
         try {
             // 执行脚本
@@ -115,7 +115,7 @@ public class ShellUtils {
     public static String getCpuArchitecture() {
         try {
             Process ps = Runtime.getRuntime().exec("arch");
-            StringBuffer stringBuffer = new StringBuffer();
+            StringBuilder stringBuffer = new StringBuilder();
             int exitValue = ps.waitFor();
             if (0 == exitValue) {
                 // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
@@ -196,7 +196,7 @@ public class ShellUtils {
             try {
                 inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
-                StringBuffer stringBuffer = new StringBuffer();
+                StringBuilder stringBuffer = new StringBuilder();
                 while ((line = inReader.readLine()) != null) {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
@@ -213,7 +213,7 @@ public class ShellUtils {
             try {
                 errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
                 String line;
-                StringBuffer stringBuffer = new StringBuffer();
+                StringBuilder stringBuffer = new StringBuilder();
                 while ((line = errorReader.readLine()) != null) {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
@@ -239,7 +239,7 @@ public class ShellUtils {
             try {
                 inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
-                StringBuffer stringBuffer = new StringBuffer();
+                StringBuilder stringBuffer = new StringBuilder();
                 while ((line = inReader.readLine()) != null) {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
@@ -261,7 +261,7 @@ public class ShellUtils {
         BufferedReader reader = null;
         try {
             if (process != null) {
-                StringBuffer stringBuffer = new StringBuffer();
+                StringBuilder stringBuffer = new StringBuilder();
                 reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
                 while (reader.read() != -1) {
                     stringBuffer.append("\n" + reader.readLine());
