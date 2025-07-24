@@ -16,7 +16,8 @@ public class KubernetesInstallServiceActor extends AbstractActor {
     public Receive createReceive() {
         return ReceiveBuilder.create()
                 .match(InstallServiceRoleCommand.class, command -> {
-                    ExecResult installResult = new ExecResult();
+                    new ExecResult();
+                    ExecResult installResult;
                     KubernetesInstallServiceHandler serviceHandler = new KubernetesInstallServiceHandler(
                             command.getServiceName(), command.getServiceRoleName());
 
