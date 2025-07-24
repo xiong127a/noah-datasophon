@@ -284,6 +284,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
         return result;
     }
 
+    @Override
     public byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName) {
         // 生成缓存键
         String cacheKey = serviceInstanceId + "_" + fileName;

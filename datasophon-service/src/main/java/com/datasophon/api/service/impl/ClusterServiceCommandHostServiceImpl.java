@@ -86,8 +86,9 @@ public class ClusterServiceCommandHostServiceImpl
     /**
      * 计算主机命令的实际进度（支持只做内存聚合或同时更新数据库）
      */
+    @Override
     public void calculateHostCommandActualProgress(ClusterServiceCommandHostEntity commandHostEntity,
-            boolean updateDb) {
+                                                   boolean updateDb) {
         try {
             Long oldProgress = commandHostEntity.getCommandProgress();
             CommandState currentState = commandHostEntity.getCommandState();
@@ -155,6 +156,7 @@ public class ClusterServiceCommandHostServiceImpl
     /**
      * 实时计算主机命令状态（支持只做内存聚合或同时更新数据库）
      */
+    @Override
     public void calculateRealTimeHostCommandState(ClusterServiceCommandHostEntity hostCommandEntity, boolean updateDb) {
         try {
             CommandState oldState = hostCommandEntity.getCommandState();

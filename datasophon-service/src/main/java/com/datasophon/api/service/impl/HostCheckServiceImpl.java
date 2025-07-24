@@ -2032,6 +2032,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      * @param syncHosts   是否同步更新hosts文件
      * @return 操作结果
      */
+    @Override
     public Result updateHostname(Integer clusterId, String ip, String newHostname, boolean syncHosts) {
         return asyncCheckService.updateHostname(clusterId, ip, newHostname, syncHosts);
     }

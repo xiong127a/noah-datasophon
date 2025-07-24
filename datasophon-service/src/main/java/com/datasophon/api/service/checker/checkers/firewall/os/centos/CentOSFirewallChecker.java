@@ -102,6 +102,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 检查CentOS系统的firewalld防火墙
      */
+    @Override
     protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("执行检查命令: systemctl status firewalld");
         CommandResult result = execCommand(session, "systemctl status firewalld", cacheLog);
@@ -295,6 +296,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 检查CentOS系统的iptables防火墙
      */
+    @Override
     protected CheckItem checkIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
             throws InterruptedException {
         // 获取系统实际类型，用于显示正确的系统名称
@@ -364,6 +366,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 修复CentOS系统的firewalld防火墙
      */
+    @Override
     protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 获取系统实际类型，用于显示正确的系统名称
         CommandResult osTypeResult = execCommand(session, "cat /etc/os-release | grep -i \"^NAME=\"", cacheLog);
@@ -454,6 +457,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 修复CentOS系统的iptables防火墙
      */
+    @Override
     protected boolean fixIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 更新状态为正在检查iptables当前状态
         checkItem.setMessage("正在检查CentOS系统iptables防火墙当前状态...");

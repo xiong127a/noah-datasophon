@@ -362,6 +362,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 .list();
     }
 
+    @Override
     public Result<String> saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
@@ -406,6 +407,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     /**
      * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
      */
+    @Override
     public Result<String> saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) {
         for (ClusterHostDO kubernetesHost : kubernetesHosts) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(kubernetesHost.getHostname());
@@ -450,6 +452,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     /**
      * 获取K8S模式下的完整硬件信息
      */
+    @Override
     public Result<List<ClusterHostDO>> getK8sHostsWithHardwareInfo(Integer clusterId) {
         try {
             // 从缓存中获取K8S完整硬件信息

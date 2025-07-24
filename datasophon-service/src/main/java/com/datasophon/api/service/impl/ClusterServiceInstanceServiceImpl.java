@@ -504,6 +504,7 @@ public class ClusterServiceInstanceServiceImpl
                 .list();
     }
 
+    @Override
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
         return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId)

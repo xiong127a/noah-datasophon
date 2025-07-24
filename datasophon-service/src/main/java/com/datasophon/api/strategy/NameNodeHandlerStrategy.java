@@ -118,6 +118,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                 performServiceRoleCheck(roleInstanceEntity, "");
         }
 
+        @Override
         public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
                 Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
                 String nn2 = globalVariable.get("${nn2}");

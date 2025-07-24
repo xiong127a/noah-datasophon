@@ -117,6 +117,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                 performServiceRoleCheck(roleInstanceEntity, "");
         }
 
+        @Override
         public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
                 Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
                 String rm2 = globalVariable.get("${rm2}");

@@ -22,6 +22,9 @@ import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @author 63588
+ */
 @Data
 public class AbstractHandlerStrategy {
     public String serviceName;

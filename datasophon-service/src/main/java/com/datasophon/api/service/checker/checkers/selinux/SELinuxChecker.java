@@ -187,6 +187,7 @@ public class SELinuxChecker extends AbstractItemChecker {
          * @return 命令执行结果
          * @throws InterruptedException 如果命令执行被中断
          */
+        @Override
         public CommandResult execCommand(org.apache.sshd.client.session.ClientSession session, String command)
                         throws InterruptedException {
                 // 确保正确设置了currentLogKey
