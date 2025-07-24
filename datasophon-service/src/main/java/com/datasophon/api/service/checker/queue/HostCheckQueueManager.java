@@ -42,10 +42,10 @@ public class HostCheckQueueManager {
     private static final Logger logger = LoggerFactory.getLogger(HostCheckQueueManager.class);
 
     // 修改为优先队列，支持任务优先级
-    @Autowired
+
     private BlockingQueue<CheckTask> checkQueue = new PriorityBlockingQueue<>(100);
     // 修复队列，独立于检查队列
-    @Autowired
+
     private BlockingQueue<FixTask> fixQueue = new PriorityBlockingQueue<>(50);
 
 
