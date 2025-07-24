@@ -308,7 +308,7 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 包装HostInfo并添加优先级信息
          */
         @Getter
-        private class PriorityHostInfo implements Comparable<PriorityHostInfo> {
+        private static class PriorityHostInfo implements Comparable<PriorityHostInfo> {
             private final HostInfo hostInfo;
             private final int priority; // 低数字 = 高优先级
             private final long addTime;
