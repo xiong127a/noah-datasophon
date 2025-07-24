@@ -11,7 +11,6 @@ import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -23,6 +22,7 @@ import java.util.concurrent.ExecutorService;
  * 统一队列管理服务
  * <p>
  * 提供SSH连接池管理和队列系统状态管理
+ * @author 63588
  */
 @Slf4j
 @Service
@@ -30,61 +30,46 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     private final HostCheckQueueManager hostCheckQueueManager;
 
+
     @Lazy
-    private AsyncCheckService asyncCheckService;
+    private final AsyncCheckService asyncCheckService;
 
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
     // 添加各种执行器
-    private ExecutorService checkExecutor;
+    @Qualifier("checkExecutor")
+    private final ExecutorService checkExecutor;
 
-    private ExecutorService fixExecutor;
+    @Qualifier("fixExecutor")
+    private final ExecutorService fixExecutor;
 
-    private ExecutorService osInfoExecutor;
+    @Qualifier("osInfoExecutor")
+    private final ExecutorService osInfoExecutor;
 
-    private ExecutorService hardwareInfoExecutor;
+    @Qualifier("hardwareInfoExecutor")
+    private final ExecutorService hardwareInfoExecutor;
+    @Qualifier("hostsFileExecutor")
+    private final ExecutorService hostsFileExecutor;
 
-    private ExecutorService hostsFileExecutor;
 
+    @Qualifier("hostnameExecutor")
     private final ExecutorService hostnameExecutor;
 
-    public QueueManagerServiceImpl(@Qualifier("hostnameExecutor") ExecutorService hostnameExecutor) {
-        this.hostnameExecutor = hostnameExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(@Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor) {
-        this.hostsFileExecutor = hostsFileExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(@Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor) {
-        this.hardwareInfoExecutor = hardwareInfoExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(@Qualifier("osInfoExecutor") ExecutorService osInfoExecutor) {
-        this.osInfoExecutor = osInfoExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(@Qualifier("fixExecutor") ExecutorService fixExecutor) {
-        this.fixExecutor = fixExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(@Qualifier("checkExecutor") ExecutorService checkExecutor) {
-        this.checkExecutor = checkExecutor;
-    }
-
-    @Autowired
-    public QueueManagerServiceImpl(AsyncCheckService asyncCheckService) {
+    public QueueManagerServiceImpl(HostCheckQueueManager hostCheckQueueManager, AsyncCheckService asyncCheckService, SshConnectionPoolManager sshConnectionPoolManager, ExecutorService checkExecutor, ExecutorService fixExecutor, ExecutorService osInfoExecutor, ExecutorService hardwareInfoExecutor, ExecutorService hostsFileExecutor, ExecutorService hostnameExecutor) {
+        this.hostCheckQueueManager = hostCheckQueueManager;
         this.asyncCheckService = asyncCheckService;
+        this.sshConnectionPoolManager = sshConnectionPoolManager;
+        this.checkExecutor = checkExecutor;
+        this.fixExecutor = fixExecutor;
+        this.osInfoExecutor = osInfoExecutor;
+        this.hardwareInfoExecutor = hardwareInfoExecutor;
+        this.hostsFileExecutor = hostsFileExecutor;
+        this.hostnameExecutor = hostnameExecutor;
     }
 
     /**
      * 获取队列系统状态
-     * 
+     *
      * @return 队列系统状态
      */
     @Override
@@ -101,7 +86,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接获取队列系统状态，不包装Result
-     * 
+     *
      * @return 队列系统状态对象
      */
     @Override
@@ -153,7 +138,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 暂停队列系统
-     * 
+     *
      * @param scope 范围代码
      * @return 操作结果
      */
@@ -171,7 +156,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接暂停队列系统
-     * 
+     *
      * @param scope 范围代码
      * @return 操作结果对象
      */
@@ -219,7 +204,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 恢复队列系统
-     * 
+     *
      * @param scope 范围代码
      * @return 操作结果
      */
@@ -237,7 +222,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接恢复队列系统
-     * 
+     *
      * @param scope 范围代码
      * @return 操作结果对象
      */
@@ -285,7 +270,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 关闭队列系统
-     * 
+     *
      * @return 操作结果
      */
     @Override
@@ -302,7 +287,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接关闭队列系统
-     * 
+     *
      * @return 操作结果对象
      */
     private OperationResult shutdownQueueSystemDirect() {
@@ -338,7 +323,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 管理队列系统
-     * 
+     *
      * @param action 动作
      * @param scope  范围代码
      * @return 操作结果
@@ -368,7 +353,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 清理不活跃的SSH连接
-     * 
+     *
      * @return 操作结果，包含清理的连接数
      */
     @Override
@@ -385,7 +370,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接清理不活跃的SSH连接
-     * 
+     *
      * @return 操作结果对象
      */
     private OperationResult cleanupConnectionsDirect() {
@@ -414,7 +399,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 暂停指定的定时任务
-     * 
+     *
      * @param taskId 任务ID
      * @return 操作结果
      */
@@ -436,7 +421,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接暂停指定的定时任务
-     * 
+     *
      * @param taskId 任务ID
      * @return 操作结果对象
      */
@@ -500,7 +485,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 恢复指定的定时任务
-     * 
+     *
      * @param taskId 任务ID
      * @return 操作结果
      */
@@ -522,7 +507,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接恢复指定的定时任务
-     * 
+     *
      * @param taskId 任务ID
      * @return 操作结果对象
      */
@@ -586,7 +571,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 获取检查任务队列详情
-     * 
+     *
      * @return 任务队列中的详细任务信息
      */
     @Override
@@ -603,7 +588,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接获取检查任务队列详情，不包装Result
-     * 
+     *
      * @return 任务队列中的详细任务信息
      */
     @Override
@@ -613,7 +598,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 获取修复任务队列详情
-     * 
+     *
      * @return 修复任务队列中的详细任务信息
      */
     @Override
@@ -630,7 +615,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接获取修复任务队列详情，不包装Result
-     * 
+     *
      * @return 修复任务队列中的详细任务信息
      */
     @Override
@@ -640,7 +625,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 统一处理队列管理器请求，并在状态请求时自动添加队列任务详情
-     * 
+     *
      * @param action    操作类型
      * @param scopeCode 作用范围
      * @param taskId    定时任务ID
@@ -707,7 +692,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 更新任务间隔
-     * 
+     *
      * @param taskId     任务ID
      * @param intervalMs 新的执行间隔（毫秒）
      * @return 操作结果
@@ -730,7 +715,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     /**
      * 内部方法：直接修改定时任务执行间隔
-     * 
+     *
      * @param taskId     任务ID
      * @param intervalMs 新的执行间隔（毫秒）
      * @return 操作结果对象
