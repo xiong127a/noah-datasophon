@@ -27,6 +27,7 @@ import com.datasophon.dao.mapper.ClusterUserGroupMapper;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -45,8 +46,9 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     private final ClusterGroupService clusterGroupService;
 
     private final ClusterUserService userService;
+
     @Autowired
-    public ClusterUserGroupServiceImpl(ClusterGroupService clusterGroupService, ClusterUserService userService) {
+    public ClusterUserGroupServiceImpl(@Lazy ClusterGroupService clusterGroupService, ClusterUserService userService) {
         this.clusterGroupService = clusterGroupService;
         this.userService = userService;
     }
