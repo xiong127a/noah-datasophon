@@ -40,11 +40,8 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
         implements
         ClusterRoleUserService {
 
-    private final ClusterRoleUserMapper clusterRoleUserMapper;
     @Autowired
-    public ClusterRoleUserServiceImpl(ClusterRoleUserMapper clusterRoleUserMapper) {
-        this.clusterRoleUserMapper = clusterRoleUserMapper;
-    }
+    private ClusterRoleUserMapper clusterRoleUserMapper;
 
     @Override
     public boolean isClusterManager(Integer userId, String clusterId) {

@@ -53,11 +53,8 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterQueueCapacityServiceImpl.class);
 
-    private final ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
-    public ClusterQueueCapacityServiceImpl(ClusterServiceRoleInstanceService roleInstanceService) {
-        this.roleInstanceService = roleInstanceService;
-    }
+    private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
     public Result refreshToYarn(Integer clusterId) throws Exception {

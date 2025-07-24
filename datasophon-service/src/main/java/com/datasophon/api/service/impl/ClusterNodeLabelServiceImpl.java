@@ -75,17 +75,15 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterNodeLabelServiceImpl.class);
 
-    private final ClusterHostService hostService;
-
-    private final ClusterServiceRoleInstanceService roleInstanceService;
-
-    private final ClusterInfoService clusterInfoService;
     @Autowired
-    public ClusterNodeLabelServiceImpl(ClusterHostService hostService, ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService) {
-        this.hostService = hostService;
-        this.roleInstanceService = roleInstanceService;
-        this.clusterInfoService = clusterInfoService;
-    }
+    private ClusterHostService hostService;
+
+    @Autowired
+    private ClusterServiceRoleInstanceService roleInstanceService;
+
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+
 
     @Override
     public Result saveNodeLabel(Integer clusterId, String nodeLabel) {

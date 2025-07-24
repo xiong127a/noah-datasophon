@@ -21,6 +21,7 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,11 +35,9 @@ import java.util.Map;
 @RequestMapping("api/cluster/user")
 public class ClusterRoleUserController {
 
-    private final ClusterRoleUserService clusterRoleUserService;
+    @Autowired
+    private ClusterRoleUserService clusterRoleUserService;
 
-    public ClusterRoleUserController(ClusterRoleUserService clusterRoleUserService) {
-        this.clusterRoleUserService = clusterRoleUserService;
-    }
 
     /**
      * 列表

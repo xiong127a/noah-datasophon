@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterRack;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,11 +32,9 @@ import java.util.List;
 @RequestMapping("cluster/rack")
 public class ClusterRackController {
 
-    private final ClusterRackService clusterRackService;
+    @Autowired
+    private ClusterRackService clusterRackService;
 
-    public ClusterRackController(ClusterRackService clusterRackService) {
-        this.clusterRackService = clusterRackService;
-    }
 
     /**
      * 列表

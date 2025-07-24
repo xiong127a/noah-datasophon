@@ -26,6 +26,7 @@ import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,11 +40,9 @@ import java.util.List;
 @RequestMapping("api/cluster/service/command")
 public class ClusterServiceCommandController {
 
-    private final ClusterServiceCommandService clusterServiceCommandService;
+    @Autowired
+    private ClusterServiceCommandService clusterServiceCommandService;
 
-    public ClusterServiceCommandController(ClusterServiceCommandService clusterServiceCommandService) {
-        this.clusterServiceCommandService = clusterServiceCommandService;
-    }
 
     /**
      * 查询集群服务指令列表
