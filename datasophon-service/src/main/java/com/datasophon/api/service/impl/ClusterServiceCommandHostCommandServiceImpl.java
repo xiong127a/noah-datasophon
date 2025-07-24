@@ -40,6 +40,7 @@ import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -73,11 +74,6 @@ public class ClusterServiceCommandHostCommandServiceImpl
     @Autowired
     private ClusterServiceCommandService commandService;
 
-    public ClusterServiceCommandHostCommandServiceImpl(ClusterServiceCommandHostCommandMapper hostCommandMapper, ClusterInfoService clusterInfoService, ClusterServiceCommandService commandService) {
-        this.hostCommandMapper = hostCommandMapper;
-        this.clusterInfoService = clusterInfoService;
-        this.commandService = commandService;
-    }
 
 
     @Override
