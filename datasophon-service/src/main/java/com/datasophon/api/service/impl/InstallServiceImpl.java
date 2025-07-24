@@ -168,7 +168,7 @@ public class InstallServiceImpl implements InstallService {
 
         } catch (Exception e) {
             logger.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
-            Result success = Result.success();
+            Result<Object> success = Result.success();
             success.put("data", Collections.emptyList());
             success.put(Constants.TOTAL, 0L);
             return success;
@@ -232,7 +232,7 @@ public class InstallServiceImpl implements InstallService {
             }
 
             // 直接返回主机列表和队列状态
-            Result success = Result.success();
+            Result<Object> success = Result.success();
             success.put("data", pagedHosts);
             success.put(Constants.TOTAL, (long) hostList.size());
             success.put("queueStatus", queueStatus);
@@ -240,7 +240,7 @@ public class InstallServiceImpl implements InstallService {
 
         } catch (Exception e) {
             logger.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
-            Result success = Result.success();
+            Result<Object> success = Result.success();
             success.put("data", Collections.emptyList());
             success.put(Constants.TOTAL, 0L);
             return success;
@@ -1580,7 +1580,7 @@ public class InstallServiceImpl implements InstallService {
             int end = Math.min(offset + pageSize, sortedHostList.size());
             List<HostInfo> pagedResult = sortedHostList.subList(offset, end);
 
-            Result success = Result.success();
+            Result<Object> success = Result.success();
             success.put("data", pagedResult);
             success.put(Constants.TOTAL, (long) sortedHostList.size());
             return success;

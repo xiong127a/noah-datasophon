@@ -206,24 +206,13 @@ public class LogEntry implements Serializable {
         // 根据日志级别设置样式
         String levelColor = level != null ? level.getColor() : "#000000";
         String bgColor = level != null ? level.getBackgroundColor() : "#ffffff";
-        String borderColor;
-
-        switch (level) {
-            case ERROR:
-                borderColor = "#ffccc7";
-                break;
-            case WARN:
-                borderColor = "#ffe58f";
-                break;
-            case INFO:
-                borderColor = "#b7eb8f";
-                break;
-            case DEBUG:
-                borderColor = "#d9d9d9";
-                break;
-            default:
-                borderColor = "#d9d9d9";
-        }
+        String borderColor = switch (level) {
+            case ERROR -> "#ffccc7";
+            case WARN -> "#ffe58f";
+            case INFO -> "#b7eb8f";
+            case DEBUG -> "#d9d9d9";
+            default -> "#d9d9d9";
+        };
 
         // 获取时间戳格式化字符串
         String timeFormatted = formatCreatedTime(getCreatedTime());

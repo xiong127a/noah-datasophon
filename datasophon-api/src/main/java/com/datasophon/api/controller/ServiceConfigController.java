@@ -136,26 +136,15 @@ public class ServiceConfigController {
 
             // 根据不同格式设置不同的媒体类型
             MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            switch (format) {
-                case "zip":
-                    mediaType = MediaType.parseMediaType("application/zip");
-                    break;
-                case "tar.gz":
-                    mediaType = MediaType.parseMediaType("application/gzip");
-                    break;
-                case "7z":
-                    mediaType = MediaType.parseMediaType("application/x-7z-compressed");
-                    break;
-                case "rar":
-                    mediaType = MediaType.parseMediaType("application/vnd.rar");
-                    break;
-                case "bz2":
-                    mediaType = MediaType.parseMediaType("application/x-bzip2");
-                    break;
-                case "gzip":
-                    mediaType = MediaType.parseMediaType("application/gzip");
-                    break;
-            }
+            mediaType = switch (format) {
+                case "zip" -> MediaType.parseMediaType("application/zip");
+                case "tar.gz" -> MediaType.parseMediaType("application/gzip");
+                case "7z" -> MediaType.parseMediaType("application/x-7z-compressed");
+                case "rar" -> MediaType.parseMediaType("application/vnd.rar");
+                case "bz2" -> MediaType.parseMediaType("application/x-bzip2");
+                case "gzip" -> MediaType.parseMediaType("application/gzip");
+                default -> mediaType;
+            };
 
             // 返回文件流
             InputStream inputStream = new ByteArrayInputStream(compressedContent);

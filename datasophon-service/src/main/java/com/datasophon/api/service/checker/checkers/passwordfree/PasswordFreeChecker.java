@@ -1,12 +1,12 @@
 package com.datasophon.api.service.checker.checkers.passwordfree;
 
+import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -117,7 +116,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
                         if (authKeysExists) {
                             // 读取本地公钥
-                            String localPubKey = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8)
+                            String localPubKey = Files.readString(publicKeyPath)
                                     .trim();
 
                             // 检查远程authorized_keys是否包含本地公钥
@@ -371,7 +370,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             }
 
             // 读取公钥内容
-            publicKeyContent = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8).trim();
+            publicKeyContent = Files.readString(publicKeyPath).trim();
             cacheLog.info("读取本地公钥内容成功");
 
             // 2. 建立到远程主机的密码连接并配置authorized_keys

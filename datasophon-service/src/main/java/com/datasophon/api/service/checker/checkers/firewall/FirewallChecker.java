@@ -84,25 +84,17 @@ public class FirewallChecker extends AbstractItemChecker {
                 // 尝试进行额外的防火墙检查
                 try {
                     // 根据不同操作系统执行不同的检查命令
-                    String checkCommand = "";
-
-                    switch (osInfo.getOsDistribution()) {
-                        case CENTOS:
-                        case REDHAT:
-                        case KYLIN:
+                    String checkCommand = switch (osInfo.getOsDistribution()) {
+                        case CENTOS, REDHAT, KYLIN ->
                             // 检查firewalld状态
-                            checkCommand = "systemctl is-active firewalld || echo 'inactive'";
-                            break;
-                        case UBUNTU:
-                        case DEBIAN:
+                                "systemctl is-active firewalld || echo 'inactive'";
+                        case UBUNTU, DEBIAN ->
                             // 检查ufw状态
-                            checkCommand = "ufw status | grep Status || echo 'inactive'";
-                            break;
-                        default:
+                                "ufw status | grep Status || echo 'inactive'";
+                        default ->
                             // 通用检查，尝试iptables
-                            checkCommand = "iptables -L | grep -E 'Chain|REJECT|DROP' || echo 'No rules'";
-                            break;
-                    }
+                                "iptables -L | grep -E 'Chain|REJECT|DROP' || echo 'No rules'";
+                    };
 
                     // 执行额外检查命令
                     if (!checkCommand.isEmpty()) {
@@ -112,22 +104,11 @@ public class FirewallChecker extends AbstractItemChecker {
 
                         if (statusResult.isSuccess()) {
                             // 分析输出确定防火墙状态
-                            boolean firewallRunning = false;
-
-                            switch (osInfo.getOsDistribution()) {
-                                case CENTOS:
-                                case REDHAT:
-                                case KYLIN:
-                                    firewallRunning = output.contains("active");
-                                    break;
-                                case UBUNTU:
-                                case DEBIAN:
-                                    firewallRunning = output.contains("active");
-                                    break;
-                                default:
-                                    firewallRunning = output.contains("REJECT") || output.contains("DROP");
-                                    break;
-                            }
+                            boolean firewallRunning = switch (osInfo.getOsDistribution()) {
+                                case CENTOS, REDHAT, KYLIN -> output.contains("active");
+                                case UBUNTU, DEBIAN -> output.contains("active");
+                                default -> output.contains("REJECT") || output.contains("DROP");
+                            };
 
                             if (firewallRunning) {
                                 log.warn("额外检查发现防火墙服务处于活动状态");

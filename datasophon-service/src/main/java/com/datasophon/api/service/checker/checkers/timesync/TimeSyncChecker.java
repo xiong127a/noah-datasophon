@@ -263,9 +263,15 @@ public class TimeSyncChecker extends AbstractItemChecker {
                 detailsBuilder.append("<li style='margin-bottom:5px'>安装并配置NTP服务:</li>");
 
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "# 安装NTP服务\nyum install -y ntp\n\n" +
-                                "# 设置NTP服务开机启动\nsystemctl enable ntpd\n\n" +
-                                "# 启动NTP服务\nsystemctl start ntpd"));
+                        """
+                                # 安装NTP服务
+                                yum install -y ntp
+                                
+                                # 设置NTP服务开机启动
+                                systemctl enable ntpd
+                                
+                                # 启动NTP服务
+                                systemctl start ntpd"""));
 
                 detailsBuilder.append("<li style='margin-bottom:5px'>或者手动设置系统时间:</li>");
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
@@ -392,11 +398,11 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     // 添加建议安装NTP服务
                     detailsBuilder.append(HtmlStyleHelper.generateNoteAlert(
                             "保持时间同步的建议",
-                            "为确保服务器时间长期保持同步，建议安装NTP服务并配置为自动启动。以CentOS/RHEL为例：" +
-                                    "<pre style='background:#f5f5f5;margin:5px 0;padding:5px;border-radius:3px'>yum install -y ntp\n"
-                                    +
-                                    "systemctl enable ntpd\n" +
-                                    "systemctl start ntpd</pre>"));
+                            """
+                                    为确保服务器时间长期保持同步，建议安装NTP服务并配置为自动启动。以CentOS/RHEL为例：\
+                                    <pre style='background:#f5f5f5;margin:5px 0;padding:5px;border-radius:3px'>yum install -y ntp
+                                    systemctl enable ntpd
+                                    systemctl start ntpd</pre>"""));
 
                     // 设置格式化的HTML消息
                     setStyledHtmlMessage(hostInfo, checkItem, true, "服务器时间同步已修复", detailsBuilder);
@@ -458,8 +464,16 @@ public class TimeSyncChecker extends AbstractItemChecker {
 
             detailsBuilder.append("<li style='margin-bottom:5px'>或者安装NTP服务:</li>");
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                    "# CentOS/RHEL系统\nyum install -y ntp\nsystemctl enable ntpd\nsystemctl start ntpd\n\n" +
-                            "# Debian/Ubuntu系统\napt-get install -y ntp\nsystemctl enable ntp\nsystemctl start ntp"));
+                    """
+                            # CentOS/RHEL系统
+                            yum install -y ntp
+                            systemctl enable ntpd
+                            systemctl start ntpd
+                            
+                            # Debian/Ubuntu系统
+                            apt-get install -y ntp
+                            systemctl enable ntp
+                            systemctl start ntp"""));
 
             detailsBuilder.append("</ol>");
             detailsBuilder.append(HtmlStyleHelper.endGroup());
@@ -483,33 +497,21 @@ public class TimeSyncChecker extends AbstractItemChecker {
         }
 
         // 常见时区ID到文件路径的映射
-        switch (tzId) {
-            case "Asia/Shanghai":
-            case "Asia/Chongqing":
-            case "Asia/Harbin":
-            case "Asia/Urumqi":
-                return "/usr/share/zoneinfo/Asia/Shanghai";
-
-            case "America/New_York":
-                return "/usr/share/zoneinfo/America/New_York";
-
-            case "America/Los_Angeles":
-                return "/usr/share/zoneinfo/America/Los_Angeles";
-
-            case "Europe/London":
-                return "/usr/share/zoneinfo/Europe/London";
-
-            case "Europe/Paris":
-                return "/usr/share/zoneinfo/Europe/Paris";
-
-            default:
+        return switch (tzId) {
+            case "Asia/Shanghai", "Asia/Chongqing", "Asia/Harbin", "Asia/Urumqi" -> "/usr/share/zoneinfo/Asia/Shanghai";
+            case "America/New_York" -> "/usr/share/zoneinfo/America/New_York";
+            case "America/Los_Angeles" -> "/usr/share/zoneinfo/America/Los_Angeles";
+            case "Europe/London" -> "/usr/share/zoneinfo/Europe/London";
+            case "Europe/Paris" -> "/usr/share/zoneinfo/Europe/Paris";
+            default -> {
                 // 如果是直接的路径形式，尝试直接使用
                 if (tzId.startsWith("Asia/") || tzId.startsWith("America/") || tzId.startsWith("Europe/") ||
                         tzId.startsWith("Australia/") || tzId.startsWith("Pacific/") || tzId.startsWith("Atlantic/")) {
-                    return "/usr/share/zoneinfo/" + tzId;
+                    yield "/usr/share/zoneinfo/" + tzId;
                 }
-                return null;
-        }
+                yield null;
+            }
+        };
     }
 
     @Override

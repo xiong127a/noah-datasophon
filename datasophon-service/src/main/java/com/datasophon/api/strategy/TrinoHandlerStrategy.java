@@ -32,7 +32,7 @@ public class TrinoHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${coordinatorHost}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${coordinatorHost}", hosts.getFirst());
         }
     }
 

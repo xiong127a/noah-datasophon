@@ -88,7 +88,7 @@ public abstract class ServiceHandlerAbstract {
                         "Welcome to CentOS Linux 7 (Core)");
 
         // 将SSH命令添加到列表最前面
-        commandLines.add(0, sshCommand);
+        commandLines.addFirst(sshCommand);
 
         // 添加cd到服务目录的命令
         CommandLineItem cdCommand = new CommandLineItem();
@@ -272,19 +272,12 @@ public abstract class ServiceHandlerAbstract {
             // 根据模板类型确定文件名
             String fileName;
             String serviceNameLowerCase = serviceName.toLowerCase();
-            switch (templateType) {
-                case "java":
-                    fileName = String.format("%s_Example.ftl", serviceNameLowerCase);
-                    break;
-                case "python":
-                    fileName = String.format("%s_example.ftl", serviceNameLowerCase);
-                    break;
-                case "shell":
-                    fileName = String.format("%s_commands.ftl", serviceNameLowerCase);
-                    break;
-                default:
-                    throw new IllegalArgumentException("不支持的模板类型: " + templateType);
-            }
+            fileName = switch (templateType) {
+                case "java" -> String.format("%s_Example.ftl", serviceNameLowerCase);
+                case "python" -> String.format("%s_example.ftl", serviceNameLowerCase);
+                case "shell" -> String.format("%s_commands.ftl", serviceNameLowerCase);
+                default -> throw new IllegalArgumentException("不支持的模板类型: " + templateType);
+            };
 
             // 读取模板文件
             File templateFile = TemplatePathUtils.getTemplateFile(templatePath, fileName);
@@ -307,8 +300,7 @@ public abstract class ServiceHandlerAbstract {
                 dataModel.put("data", data);
 
                 // 如果数据对象是ConnectionInfo类型，并且有模板变量，将其展开到顶级
-                if (data instanceof ConnectionInfo) {
-                    ConnectionInfo connectionInfo = (ConnectionInfo) data;
+                if (data instanceof ConnectionInfo connectionInfo) {
                     Map<String, Object> templateVars = connectionInfo.getTemplateVariables();
                     if (templateVars != null && !templateVars.isEmpty()) {
                         // 将模板变量展开到顶级，这样在模板中可以直接使用这些变量

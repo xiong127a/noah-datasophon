@@ -436,7 +436,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                 }
                 // 如果优先级队列为空但等待列表不为空，则从等待列表获取
                 else if (!waitingList.isEmpty()) {
-                    priorityHostInfo = waitingList.remove(0);
+                    priorityHostInfo = waitingList.removeFirst();
                     logger.info("从等待列表取出主机 [{}] 重新处理",
                             priorityHostInfo.getHostInfo().getIp());
                 } else {
@@ -759,7 +759,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         break;
                     }
 
-                    HostInfo hostInfo = waitForDetailInfoList.remove(0);
+                    HostInfo hostInfo = waitForDetailInfoList.removeFirst();
                     phase2ProcessingCount.incrementAndGet();
 
                     // 使用ExecutorService线程池

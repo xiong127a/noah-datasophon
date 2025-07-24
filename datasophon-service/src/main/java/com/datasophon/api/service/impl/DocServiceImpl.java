@@ -68,16 +68,12 @@ public class DocServiceImpl implements DocService {
             }
 
             String type = typeStr.toLowerCase();
-            switch (type) {
-                case "component":
-                    return COMPONENT;
-                case "guide":
-                    return GUIDE;
-                case "help":
-                    return HELP;
-                default:
-                    return null;
-            }
+            return switch (type) {
+                case "component" -> COMPONENT;
+                case "guide" -> GUIDE;
+                case "help" -> HELP;
+                default -> null;
+            };
         }
     }
 

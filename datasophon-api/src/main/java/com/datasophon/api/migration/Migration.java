@@ -89,11 +89,10 @@ public class Migration implements Comparable<Migration> {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof Migration)) {
+    if (!(o instanceof Migration migration)) {
       return false;
     }
-    Migration migration = (Migration) o;
-    return version.equals(migration.version);
+      return version.equals(migration.version);
   }
 
   @Override

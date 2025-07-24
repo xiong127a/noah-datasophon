@@ -44,7 +44,7 @@ public class LogEntryManager {
             synchronized (logEntries) {
                 // 如果超过最大数量，移除最旧的条目
                 if (logEntries.size() >= MAX_LOG_ENTRIES) {
-                    logEntries.remove(0);
+                    logEntries.removeFirst();
                 }
                 logEntries.add(logEntry);
             }
@@ -182,7 +182,7 @@ public class LogEntryManager {
             
             synchronized (logs) {
                 // 检查最新日志条目是否超时
-                LogEntry lastEntry = logs.get(logs.size() - 1);
+                LogEntry lastEntry = logs.getLast();
                 if (lastEntry.getTimestamp().getTime() + expirationTimeMs < now) {
                     shouldRemoveKey = true;
                     removedEntries += logs.size();

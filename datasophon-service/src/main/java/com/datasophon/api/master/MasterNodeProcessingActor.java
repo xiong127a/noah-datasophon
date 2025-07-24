@@ -28,20 +28,12 @@ public class MasterNodeProcessingActor extends AbstractActor {
             logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
             ExecResult execResult = new ExecResult();
             String tip = command.getOpsType().getDesc();
-            switch (command.getOpsType()) {
-                case ADD_BE:
-                    execResult = OlapUtils.addBackend(command.getFeMaster(), command.getHostName());
-                    break;
-                case ADD_FE_FOLLOWER:
-                    execResult = OlapUtils.addFollower(command.getFeMaster(), command.getHostName());
-                    break;
-                case ADD_FE_OBSERVER:
-                    execResult = OlapUtils.addObserver(command.getFeMaster(), command.getHostName());
-                    break;
-                case ADD_CN:
-                    execResult = OlapUtils.addCn(command.getFeMaster(), command.getHostName());
-                    break;
-            }
+            execResult = switch (command.getOpsType()) {
+                case ADD_BE -> OlapUtils.addBackend(command.getFeMaster(), command.getHostName());
+                case ADD_FE_FOLLOWER -> OlapUtils.addFollower(command.getFeMaster(), command.getHostName());
+                case ADD_FE_OBSERVER -> OlapUtils.addObserver(command.getFeMaster(), command.getHostName());
+                case ADD_CN -> OlapUtils.addCn(command.getFeMaster(), command.getHostName());
+            };
             if (execResult.getExecResult()) {
                 logger.info(command.getHostName() + " " + tip + " added success");
             } else {
@@ -51,20 +43,14 @@ public class MasterNodeProcessingActor extends AbstractActor {
             while (!execResult.getExecResult() && tryTimes < 3) {
                 try {
                     TimeUnit.SECONDS.sleep(10L);
-                    switch (command.getOpsType()) {
-                        case ADD_BE:
-                            execResult = OlapUtils.addBackendBySqlClient(command.getFeMaster(), command.getHostName());
-                            break;
-                        case ADD_FE_FOLLOWER:
-                            execResult = OlapUtils.addFollowerBySqlClient(command.getFeMaster(), command.getHostName());
-                            break;
-                        case ADD_FE_OBSERVER:
-                            execResult = OlapUtils.addObserverBySqlClient(command.getFeMaster(), command.getHostName());
-                            break;
-                        case ADD_CN:
-                            execResult = OlapUtils.addCnBySqlClient(command.getFeMaster(), command.getHostName());
-                            break;
-                    }
+                    execResult = switch (command.getOpsType()) {
+                        case ADD_BE -> OlapUtils.addBackendBySqlClient(command.getFeMaster(), command.getHostName());
+                        case ADD_FE_FOLLOWER ->
+                                OlapUtils.addFollowerBySqlClient(command.getFeMaster(), command.getHostName());
+                        case ADD_FE_OBSERVER ->
+                                OlapUtils.addObserverBySqlClient(command.getFeMaster(), command.getHostName());
+                        case ADD_CN -> OlapUtils.addCnBySqlClient(command.getFeMaster(), command.getHostName());
+                    };
                     if (execResult.getExecResult()) {
                         logger.info(command.getHostName() + " " + tip + " added success");
                         break;

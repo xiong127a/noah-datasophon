@@ -348,28 +348,24 @@ public class FreemarkerUtils {
         String configFormat = generators.getConfigFormat();
 
         // 确定需要加载的模板名称
-        if (Constants.XML.equals(configFormat)) {
-            templateName = "xml.ftl";
-        } else if (Constants.PROPERTIES.equals(configFormat)) {
-            templateName = "properties.ftl";
-        } else if (Constants.PROPERTIES2.equals(configFormat)) {
-            templateName = "properties2.ftl";
-        } else if (Constants.PROPERTIES3.equals(configFormat)) {
-            templateName = "properties3.ftl";
-        } else if (Constants.PROMETHEUS.equals(configFormat)) {
-            templateName = "alert.yml";
-        } else if (Constants.CUSTOM.equals(configFormat)) {
-            if (StringUtils.isBlank(generators.getTemplateName())) {
-                throw new IllegalArgumentException("CUSTOM类型配置必须指定templateName");
-            }
+        switch (configFormat) {
+            case Constants.XML -> templateName = "xml.ftl";
+            case Constants.PROPERTIES -> templateName = "properties.ftl";
+            case Constants.PROPERTIES2 -> templateName = "properties2.ftl";
+            case Constants.PROPERTIES3 -> templateName = "properties3.ftl";
+            case Constants.PROMETHEUS -> templateName = "alert.yml";
+            case Constants.CUSTOM -> {
+                if (StringUtils.isBlank(generators.getTemplateName())) {
+                    throw new IllegalArgumentException("CUSTOM类型配置必须指定templateName");
+                }
 
-            templateName = generators.getTemplateName();
-            // 对模板名称进行简单校验
-            if (!templateName.contains(".")) {
-                logger.warn("自定义模板名称缺少文件扩展名: {}", templateName);
+                templateName = generators.getTemplateName();
+                // 对模板名称进行简单校验
+                if (!templateName.contains(".")) {
+                    logger.warn("自定义模板名称缺少文件扩展名: {}", templateName);
+                }
             }
-        } else {
-            logger.warn("不支持的配置格式: {}", configFormat);
+            case null, default -> logger.warn("不支持的配置格式: {}", configFormat);
         }
 
         return templateName;
@@ -417,8 +413,7 @@ public class FreemarkerUtils {
      */
     private static void processMultipleValue(ServiceConfig config) {
         try {
-            if (config.getValue() instanceof JSONArray) {
-                JSONArray value = (JSONArray) config.getValue();
+            if (config.getValue() instanceof JSONArray value) {
                 List<String> strs = value.toJavaList(String.class);
                 String separator = config.getSeparator() != null ? config.getSeparator() : ",";
                 String joinValue = String.join(separator, strs);
@@ -428,8 +423,7 @@ public class FreemarkerUtils {
                     joinValue = config.getOpen() + joinValue + config.getClose();
                 }
                 config.setValue(joinValue);
-            } else if (config.getValue() instanceof List) {
-                List<?> list = (List<?>) config.getValue();
+            } else if (config.getValue() instanceof List<?> list) {
                 String separator = config.getSeparator() != null ? config.getSeparator() : ",";
                 String joinValue = list.stream()
                         .map(item -> item == null ? "" : String.valueOf(item))
@@ -639,8 +633,7 @@ public class FreemarkerUtils {
      */
     public static String conventToStr(ServiceConfig config, Logger logger) {
         try {
-            if (config.getValue() instanceof JSONArray) {
-                JSONArray value = (JSONArray) config.getValue();
+            if (config.getValue() instanceof JSONArray value) {
                 List<String> strs = value.toJavaList(String.class);
 
                 if (logger != null) {
@@ -662,8 +655,7 @@ public class FreemarkerUtils {
                 }
 
                 return finalValue;
-            } else if (config.getValue() instanceof List) {
-                List<?> list = (List<?>) config.getValue();
+            } else if (config.getValue() instanceof List<?> list) {
 
                 if (logger != null) {
                     logger.info("List size is: {}", list.size());

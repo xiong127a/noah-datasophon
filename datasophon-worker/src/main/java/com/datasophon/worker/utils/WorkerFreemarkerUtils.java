@@ -43,7 +43,7 @@ public class WorkerFreemarkerUtils {
     private static final Logger logger = LoggerFactory.getLogger(WorkerFreemarkerUtils.class);
 
     // Master主机地址
-    private static final String MASTER_HOST = PropertyUtils.getString(GetMasterHost().get(0), "localhost");
+    private static final String MASTER_HOST = PropertyUtils.getString(GetMasterHost().getFirst(), "localhost");
 
 
     /**

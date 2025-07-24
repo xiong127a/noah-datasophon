@@ -287,8 +287,10 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
 
                 detailsBuilder.append("<li style='margin-bottom:5px'>永久禁用SELinux (需要重启):</li>");
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config\n" +
-                                "# 完成后重启系统\nsudo reboot"));
+                        """
+                                sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+                                # 完成后重启系统
+                                sudo reboot"""));
                 detailsBuilder.append("</ol>");
                 detailsBuilder.append(HtmlStyleHelper.endGroup());
 
@@ -366,12 +368,19 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                         "<ol style='padding-left:20px;margin-bottom:15px'>" +
                         "<li style='margin-bottom:5px'>以root权限临时禁用SELinux (选择适合的方法):</li>" +
                         HtmlStyleHelper.generateCodeBlock(
-                                "# CentOS/RHEL/Kylin V4方法:\nsudo setenforce 0\n\n" +
-                                        "# Ubuntu/Kylin V10方法:\n[ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce") +
+                                """
+                                        # CentOS/RHEL/Kylin V4方法:
+                                        sudo setenforce 0
+                                        
+                                        # Ubuntu/Kylin V10方法:
+                                        [ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce""") +
                         "<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>" +
                         HtmlStyleHelper.generateCodeBlock(
-                                "sudo vi /etc/selinux/config\n\n" +
-                                        "# 修改以下行\nSELINUX=disabled") +
+                                """
+                                        sudo vi /etc/selinux/config
+                                        
+                                        # 修改以下行
+                                        SELINUX=disabled""") +
                         "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
                         HtmlStyleHelper.generateCodeBlock("sudo reboot") +
                         "</ol>" +
@@ -446,9 +455,13 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                         "<ol style='padding-left:20px;margin-bottom:15px'>" +
                         "<li style='margin-bottom:5px'>以root权限修改配置文件:</li>" +
                         HtmlStyleHelper.generateCodeBlock(
-                                "sudo mkdir -p /etc/selinux\n" +
-                                        "sudo vi /etc/selinux/config\n\n" +
-                                        "# 添加以下行\nSELINUX=disabled\nSELINUXTYPE=targeted") +
+                                """
+                                        sudo mkdir -p /etc/selinux
+                                        sudo vi /etc/selinux/config
+                                        
+                                        # 添加以下行
+                                        SELINUX=disabled
+                                        SELINUXTYPE=targeted""") +
                         "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
                         HtmlStyleHelper.generateCodeBlock("sudo reboot") +
                         "</ol>" +

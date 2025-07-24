@@ -69,8 +69,7 @@ public class SpringEnvironmentConfigProvider implements PropertyUtils.ConfigProv
         Map<String, String> matchedProperties = new HashMap<>();
 
         try {
-            if (environment instanceof ConfigurableEnvironment) {
-                ConfigurableEnvironment configurableEnvironment = (ConfigurableEnvironment) environment;
+            if (environment instanceof ConfigurableEnvironment configurableEnvironment) {
 
                 configurableEnvironment.getPropertySources().forEach(propertySource -> {
                     if (propertySource.getSource() instanceof Map) {

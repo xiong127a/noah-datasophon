@@ -91,8 +91,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
         // 获取主机信息和硬件信息相关线程池状态
         if (osInfoExecutor != null) {
-            if (osInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
-                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) osInfoExecutor;
+            if (osInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor executor) {
                 queueManagerStatus.setOsInfoExecutorActiveCount(executor.getActiveCount());
                 queueManagerStatus.setOsInfoExecutorQueueSize(executor.getQueue().size());
                 queueManagerStatus.setOsInfoExecutorCompletedTasks(executor.getCompletedTaskCount());
@@ -100,8 +99,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         }
 
         if (hardwareInfoExecutor != null) {
-            if (hardwareInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
-                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hardwareInfoExecutor;
+            if (hardwareInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor executor) {
                 queueManagerStatus.setHardwareInfoExecutorActiveCount(executor.getActiveCount());
                 queueManagerStatus.setHardwareInfoExecutorQueueSize(executor.getQueue().size());
                 queueManagerStatus.setHardwareInfoExecutorCompletedTasks(executor.getCompletedTaskCount());
@@ -109,8 +107,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         }
 
         if (hostsFileExecutor != null) {
-            if (hostsFileExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
-                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hostsFileExecutor;
+            if (hostsFileExecutor instanceof java.util.concurrent.ThreadPoolExecutor executor) {
                 queueManagerStatus.setHostsFileExecutorActiveCount(executor.getActiveCount());
                 queueManagerStatus.setHostsFileExecutorQueueSize(executor.getQueue().size());
                 queueManagerStatus.setHostsFileExecutorCompletedTasks(executor.getCompletedTaskCount());
@@ -118,8 +115,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         }
 
         if (hostnameExecutor != null) {
-            if (hostnameExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
-                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hostnameExecutor;
+            if (hostnameExecutor instanceof java.util.concurrent.ThreadPoolExecutor executor) {
                 queueManagerStatus.setHostnameExecutorActiveCount(executor.getActiveCount());
                 queueManagerStatus.setHostnameExecutorQueueSize(executor.getQueue().size());
                 queueManagerStatus.setHostnameExecutorCompletedTasks(executor.getCompletedTaskCount());

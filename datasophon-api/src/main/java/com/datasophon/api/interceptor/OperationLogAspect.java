@@ -281,11 +281,9 @@ public class OperationLogAspect {
      */
     private static void clusterParam(OperationLog op, Object arg) {
         Object parse = JSON.parse(JSONObject.toJSONString(arg));
-        if (!(parse instanceof JSONObject)) {
+        if (!(parse instanceof JSONObject param)) {
             return;
         }
-
-        JSONObject param = (JSONObject) parse;
 
         if (Objects.isNull(op.getClusterId())) {
             Object cId = param.get("clusterId");

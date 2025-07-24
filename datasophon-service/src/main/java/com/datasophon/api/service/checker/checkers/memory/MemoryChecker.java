@@ -416,9 +416,15 @@ public class MemoryChecker extends AbstractItemChecker {
                         detailsBuilder.append(HtmlStyleHelper.beginGroup());
                         detailsBuilder.append("<p><strong>内存分析命令：</strong></p>");
                         detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                                        "# 显示进程内存使用情况\nps aux --sort=-%mem | head -10\n\n" +
-                                                        "# 显示详细内存使用情况\nfree -h\n\n" +
-                                                        "# 显示缓存使用情况\ncat /proc/meminfo | grep -E 'Cache|Buffers'"));
+                                """
+                                        # 显示进程内存使用情况
+                                        ps aux --sort=-%mem | head -10
+                                        
+                                        # 显示详细内存使用情况
+                                        free -h
+                                        
+                                        # 显示缓存使用情况
+                                        cat /proc/meminfo | grep -E 'Cache|Buffers'"""));
                         detailsBuilder.append(HtmlStyleHelper.endGroup());
 
                         // 添加注意事项

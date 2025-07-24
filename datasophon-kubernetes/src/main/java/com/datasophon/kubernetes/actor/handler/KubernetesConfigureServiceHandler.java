@@ -240,9 +240,8 @@ public class KubernetesConfigureServiceHandler {
                 // 转换失败时返回空列表
                 list = new ArrayList<>();
             }
-        } else if (value instanceof JSONArray) {
+        } else if (value instanceof JSONArray jsonArray) {
             // 如果是JSONArray类型，直接转换
-            JSONArray jsonArray = (JSONArray) value;
             list = jsonArray.toJavaList(JSONObject.class);
         } else {
             logger.warn("Unexpected value type in addToCustomList: {}",

@@ -171,30 +171,15 @@ public class CompressUtils {
             }
 
             // 根据不同类型执行压缩
-            byte[] result;
-            switch (type) {
-                case SEVEN_ZIP:
-                    result = compressToSevenZip(tempDir, password);
-                    break;
-                case TAR:
-                    result = compressToTar(tempDir);
-                    break;
-                case TAR_GZ:
-                    result = compressToTarGz(tempDir);
-                    break;
-                case TAR_XZ:
-                    result = compressToTarXz(tempDir);
-                    break;
-                case GZIP:
-                    result = compressToGzip(tempDir);
-                    break;
-                case BZIP2:
-                    result = compressToBzip2(tempDir);
-                    break;
-                case ZIP:
-                default:
-                    result = compressToZip(tempDir, password);
-            }
+            byte[] result = switch (type) {
+                case SEVEN_ZIP -> compressToSevenZip(tempDir, password);
+                case TAR -> compressToTar(tempDir);
+                case TAR_GZ -> compressToTarGz(tempDir);
+                case TAR_XZ -> compressToTarXz(tempDir);
+                case GZIP -> compressToGzip(tempDir);
+                case BZIP2 -> compressToBzip2(tempDir);
+                default -> compressToZip(tempDir, password);
+            };
 
             // 更新进度为100%
             updateCompressProgress(serviceInstanceId, 100);
