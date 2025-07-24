@@ -102,8 +102,8 @@ public class CollectionUtils {
         String[] strings = str.split(separator);
         int initialCapacity = (int) (strings.length / DEFAULT_LOAD_FACTOR) + 1;
         Map<String, String> map = new HashMap<>(initialCapacity);
-        for (int i = 0; i < strings.length; i++) {
-            String[] strArray = strings[i].split("=");
+        for (String string : strings) {
+            String[] strArray = string.split("=");
             if (strArray.length != 2) {
                 return emptyMap;
             }
