@@ -138,11 +138,10 @@ public class ServiceConfigController {
             MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
             mediaType = switch (format) {
                 case "zip" -> MediaType.parseMediaType("application/zip");
-                case "tar.gz" -> MediaType.parseMediaType("application/gzip");
+                case "tar.gz", "gzip" -> MediaType.parseMediaType("application/gzip");
                 case "7z" -> MediaType.parseMediaType("application/x-7z-compressed");
                 case "rar" -> MediaType.parseMediaType("application/vnd.rar");
                 case "bz2" -> MediaType.parseMediaType("application/x-bzip2");
-                case "gzip" -> MediaType.parseMediaType("application/gzip");
                 default -> mediaType;
             };
 
