@@ -22,7 +22,8 @@ public class TaskManager implements ApplicationContextAware {
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
 
     // 正在运行的任务列表
-    private final Map<String, TaskInfo> tasks = new ConcurrentHashMap<>();
+
+    private Map<String, TaskInfo> tasks = new ConcurrentHashMap<>();
 
     /**
      * -- GETTER --

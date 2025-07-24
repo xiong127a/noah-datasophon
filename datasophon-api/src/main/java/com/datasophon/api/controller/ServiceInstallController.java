@@ -25,6 +25,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.utils.Result;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,11 +40,10 @@ import java.util.List;
 @RequestMapping("service/install")
 public class ServiceInstallController {
 
-    private final ServiceInstallService serviceInstallService;
+    @Autowired
+    private ServiceInstallService serviceInstallService;
 
-    public ServiceInstallController(ServiceInstallService serviceInstallService) {
-        this.serviceInstallService = serviceInstallService;
-    }
+
 
     /**
      * 根据服务角色名称查询服务配置选项

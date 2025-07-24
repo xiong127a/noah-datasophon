@@ -13,8 +13,10 @@ import org.springframework.web.client.RestTemplate;
 @AllArgsConstructor
 public class RoleApis {
 
-    private final RestTemplate restTemplate;
-    private final String baseUrl;
+
+    private RestTemplate restTemplate;
+
+    private String baseUrl;
 
     public void createRole(final Role role) throws RangerClientException {
         try {

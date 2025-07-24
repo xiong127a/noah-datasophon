@@ -43,14 +43,12 @@ public class UserPermissionHandler implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(UserPermissionHandler.class);
 
-    private final ClusterRoleUserService clusterUserService;
-
-    private final UserInfoService userInfoService;
     @Autowired
-    public UserPermissionHandler(ClusterRoleUserService clusterUserService, UserInfoService userInfoService) {
-        this.clusterUserService = clusterUserService;
-        this.userInfoService = userInfoService;
-    }
+    private ClusterRoleUserService clusterUserService;
+
+    @Autowired
+    private UserInfoService userInfoService;
+
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

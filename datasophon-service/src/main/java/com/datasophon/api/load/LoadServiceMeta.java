@@ -87,32 +87,30 @@ public class LoadServiceMeta implements ApplicationRunner {
     private static final String PATH = "meta";
     private static final String HDFS = "HDFS";
     private static final String HADOOP = "HADOOP";
-    private final FrameServiceService frameServiceService;
-
-    private final FrameInfoService frameInfoService;
-
-    private final FrameServiceRoleService roleService;
-
-    private final ClusterInfoService clusterInfoService;
-
-    private final ConfigBean configBean;
-
-    private final ClusterServiceInstanceService serviceInstanceService;
-
-    private final ClusterServiceInstanceRoleGroupService roleGroupService;
-
-    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
     @Autowired
-    public LoadServiceMeta(FrameServiceService frameServiceService, FrameInfoService frameInfoService, FrameServiceRoleService roleService, ClusterInfoService clusterInfoService, ConfigBean configBean, ClusterServiceInstanceService serviceInstanceService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleGroupConfigService roleGroupConfigService) {
-        this.frameServiceService = frameServiceService;
-        this.frameInfoService = frameInfoService;
-        this.roleService = roleService;
-        this.clusterInfoService = clusterInfoService;
-        this.configBean = configBean;
-        this.serviceInstanceService = serviceInstanceService;
-        this.roleGroupService = roleGroupService;
-        this.roleGroupConfigService = roleGroupConfigService;
-    }
+    private FrameServiceService frameServiceService;
+
+    @Autowired
+    private FrameInfoService frameInfoService;
+
+    @Autowired
+    private FrameServiceRoleService roleService;
+
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+
+    @Autowired
+    private ConfigBean configBean;
+
+    @Autowired
+    private ClusterServiceInstanceService serviceInstanceService;
+
+    @Autowired
+    private ClusterServiceInstanceRoleGroupService roleGroupService;
+
+    @Autowired
+    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+
 
     /**
      * 1、设置全局环境变量

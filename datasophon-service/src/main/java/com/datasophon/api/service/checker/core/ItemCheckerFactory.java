@@ -4,6 +4,7 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -18,17 +19,17 @@ import java.util.Map;
 public class ItemCheckerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ItemCheckerFactory.class);
     
-    private final ApplicationContext applicationContext;
+    @Autowired
+    private ApplicationContext applicationContext;
     
     // 按枚举类型存储检查器
-    private final Map<ItemCode, ItemChecker> checkerMap = new HashMap<>();
+    private Map<ItemCode, ItemChecker> checkerMap = new HashMap<>();
     
     // 按字符串类型存储检查器
-    private final Map<String, ItemChecker> checkerStringMap = new HashMap<>();
+    @Autowired
+    private Map<String, ItemChecker> checkerStringMap = new HashMap<>();
 
-    public ItemCheckerFactory(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
+
 
     @PostConstruct
     public void init() {

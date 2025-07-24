@@ -23,8 +23,10 @@ import java.util.Map;
 @Slf4j
 public class RangerUtil {
 
-    private final static String SUPER_USER = "admin";
-    private final static String SUPER_ROLE_NAME = "admin";
+
+    private static String SUPER_USER = "admin";
+
+    private static String SUPER_ROLE_NAME = "admin";
 
     // 创建一个缓存对象
     private static final Cache<Integer, RangerClient> clientAdminCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟

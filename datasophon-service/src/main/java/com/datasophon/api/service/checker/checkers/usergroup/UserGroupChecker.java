@@ -45,8 +45,10 @@ public class UserGroupChecker extends AbstractItemChecker {
     private String metaBasePath;
 
     // 保存需要创建的用户和组
-    private final List<String> usersToCreate = new ArrayList<>();
-    private final List<String> groupsToCreate = new ArrayList<>();
+    @Autowired
+    private List<String> usersToCreate = new ArrayList<>();
+    @Autowired
+    private List<String> groupsToCreate = new ArrayList<>();
 
     // 创建定时缓存，默认过期时间5分钟
     private static final TimedCache<String, Object> META_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);

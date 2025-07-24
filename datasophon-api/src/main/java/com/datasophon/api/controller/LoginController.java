@@ -27,6 +27,7 @@ import jakarta.validation.Valid;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -56,17 +57,16 @@ public class LoginController {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
 
-    private final AuthenticationManager authenticationManager;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-    private final JwtTokenProvider tokenProvider;
+    @Autowired
+    private JwtTokenProvider tokenProvider;
 
-    private final UserInfoService userInfoService;
+    @Autowired
+    private UserInfoService userInfoService;
 
-    public LoginController(AuthenticationManager authenticationManager, JwtTokenProvider tokenProvider, UserInfoService userInfoService) {
-        this.authenticationManager = authenticationManager;
-        this.tokenProvider = tokenProvider;
-        this.userInfoService = userInfoService;
-    }
+
 
     /**
      * 用户登录API - JSON格式

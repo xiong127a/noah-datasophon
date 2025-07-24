@@ -21,6 +21,7 @@ import com.datasophon.api.service.impl.NoticeGroupServiceImpl;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.model.MPage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,11 +37,9 @@ import java.util.List;
 @RequestMapping("/notice/group")
 public class NoticeGroupController {
 
-    private final NoticeGroupServiceImpl noticeGroupService;
+    @Autowired
+    private NoticeGroupServiceImpl noticeGroupService;
 
-    public NoticeGroupController(NoticeGroupServiceImpl noticeGroupService) {
-        this.noticeGroupService = noticeGroupService;
-    }
 
     /**
      * 列表带分页

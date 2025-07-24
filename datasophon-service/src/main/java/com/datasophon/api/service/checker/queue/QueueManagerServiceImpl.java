@@ -11,6 +11,7 @@ import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -28,44 +29,43 @@ import java.util.concurrent.ExecutorService;
 @Service
 public class QueueManagerServiceImpl implements QueueManagerService {
 
-    private final HostCheckQueueManager hostCheckQueueManager;
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
 
 
     @Lazy
-    private final AsyncCheckService asyncCheckService;
+    @Autowired
+    private AsyncCheckService asyncCheckService;
 
-    private final SshConnectionPoolManager sshConnectionPoolManager;
+    @Autowired
+    private SshConnectionPoolManager sshConnectionPoolManager;
 
     // 添加各种执行器
     @Qualifier("checkExecutor")
-    private final ExecutorService checkExecutor;
+    @Autowired
+    private ExecutorService checkExecutor;
 
     @Qualifier("fixExecutor")
-    private final ExecutorService fixExecutor;
+    @Autowired
+    private ExecutorService fixExecutor;
 
     @Qualifier("osInfoExecutor")
-    private final ExecutorService osInfoExecutor;
+    @Autowired
+    private ExecutorService osInfoExecutor;
 
     @Qualifier("hardwareInfoExecutor")
-    private final ExecutorService hardwareInfoExecutor;
+    @Autowired
+    private ExecutorService hardwareInfoExecutor;
     @Qualifier("hostsFileExecutor")
-    private final ExecutorService hostsFileExecutor;
+    @Autowired
+    private ExecutorService hostsFileExecutor;
 
 
     @Qualifier("hostnameExecutor")
-    private final ExecutorService hostnameExecutor;
+    @Autowired
+    private ExecutorService hostnameExecutor;
 
-    public QueueManagerServiceImpl(HostCheckQueueManager hostCheckQueueManager, AsyncCheckService asyncCheckService, SshConnectionPoolManager sshConnectionPoolManager, ExecutorService checkExecutor, ExecutorService fixExecutor, ExecutorService osInfoExecutor, ExecutorService hardwareInfoExecutor, ExecutorService hostsFileExecutor, ExecutorService hostnameExecutor) {
-        this.hostCheckQueueManager = hostCheckQueueManager;
-        this.asyncCheckService = asyncCheckService;
-        this.sshConnectionPoolManager = sshConnectionPoolManager;
-        this.checkExecutor = checkExecutor;
-        this.fixExecutor = fixExecutor;
-        this.osInfoExecutor = osInfoExecutor;
-        this.hardwareInfoExecutor = hardwareInfoExecutor;
-        this.hostsFileExecutor = hostsFileExecutor;
-        this.hostnameExecutor = hostnameExecutor;
-    }
+
 
     /**
      * 获取队列系统状态

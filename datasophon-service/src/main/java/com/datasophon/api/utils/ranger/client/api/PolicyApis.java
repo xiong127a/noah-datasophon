@@ -19,8 +19,10 @@ import java.util.List;
 @AllArgsConstructor
 public class PolicyApis {
 
-    private final RestTemplate restTemplate;
-    private final String baseUrl;
+
+    private RestTemplate restTemplate;
+
+    private String baseUrl;
 
     public void createPolicy(final Policy policy) throws RangerClientException {
         try {

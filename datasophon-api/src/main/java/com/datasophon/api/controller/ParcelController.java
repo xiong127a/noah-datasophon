@@ -39,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -78,18 +79,16 @@ public class ParcelController implements DisposableBean {
      */
     final Map<String, CompletableFuture> ASYNC_TASK_CACHE = new ConcurrentHashMap<>();
 
-    private final FrameInfoService frameInfoService;
+    @Autowired
+    private FrameInfoService frameInfoService;
 
-    private final ClusterInfoService clusterInfoService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
 
-    final
-    LoadServiceMeta loadServiceMeta;
+    @Autowired
+    private LoadServiceMeta loadServiceMeta;
 
-    public ParcelController(FrameInfoService frameInfoService, ClusterInfoService clusterInfoService, LoadServiceMeta loadServiceMeta) {
-        this.frameInfoService = frameInfoService;
-        this.clusterInfoService = clusterInfoService;
-        this.loadServiceMeta = loadServiceMeta;
-    }
+
 
     /**
      * 列表

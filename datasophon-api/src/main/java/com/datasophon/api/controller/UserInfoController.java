@@ -25,6 +25,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.mybatisflex.core.query.QueryChain;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,11 +39,10 @@ import java.util.List;
 @RequestMapping("api/user")
 public class UserInfoController {
 
-    private final UserInfoService userInfoService;
+    @Autowired
+    private UserInfoService userInfoService;
 
-    public UserInfoController(UserInfoService userInfoService) {
-        this.userInfoService = userInfoService;
-    }
+
 
     /**
      * 列表带分页

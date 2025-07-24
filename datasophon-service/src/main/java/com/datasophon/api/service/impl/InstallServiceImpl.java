@@ -85,37 +85,35 @@ public class InstallServiceImpl implements InstallService {
     private static final int LOG_PRINT_INTERVAL = 10;
 
 
-    private final ClusterInfoService clusterInfoService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
 
 
-    private final ClusterHostService hostService;
+    @Autowired
+    private ClusterHostService hostService;
 
-    private final HostCheckService hostCheckService;
+    @Autowired
+    private HostCheckService hostCheckService;
 
-    private final HostCheckQueueManager hostCheckQueueManager;
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
 
-    private final ApplicationContext applicationContext;
+    @Autowired
+    private ApplicationContext applicationContext;
 
-    private final OsInfoService osInfoService;
+    @Autowired
+    private OsInfoService osInfoService;
 
 
     @Qualifier("osInfoExecutor")
-    private final ExecutorService osInfoExecutor;
+    @Autowired
+    private ExecutorService osInfoExecutor;
 
 
     @Qualifier("hardwareInfoExecutor")
-    private final ExecutorService hardwareInfoExecutor;
     @Autowired
-    public InstallServiceImpl(ClusterInfoService clusterInfoService, ClusterHostService hostService, HostCheckService hostCheckService, HostCheckQueueManager hostCheckQueueManager, ApplicationContext applicationContext, OsInfoService osInfoService, ExecutorService osInfoExecutor, ExecutorService hardwareInfoExecutor) {
-        this.clusterInfoService = clusterInfoService;
-        this.hostService = hostService;
-        this.hostCheckService = hostCheckService;
-        this.hostCheckQueueManager = hostCheckQueueManager;
-        this.applicationContext = applicationContext;
-        this.osInfoService = osInfoService;
-        this.osInfoExecutor = osInfoExecutor;
-        this.hardwareInfoExecutor = hardwareInfoExecutor;
-    }
+    private ExecutorService hardwareInfoExecutor;
+
 
     @Override
     public Result getInstallStep(Integer type) {

@@ -10,7 +10,6 @@ import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
 import com.datasophon.api.exceptions.ServiceException;
-import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.model.OperationLogProp;
@@ -25,6 +24,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
@@ -61,12 +61,11 @@ public class OperationLogAspect {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
-    private final OperationLogService operationLogService;
+    @Autowired
+    private OperationLogService operationLogService;
 
 
-    public OperationLogAspect(OperationLogService operationLogService) {
-        this.operationLogService = operationLogService;
-    }
+
 
     @PostConstruct
     public void initialize() {

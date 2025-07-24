@@ -48,25 +48,23 @@ public class HostCheckServiceImpl implements HostCheckService {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
 
-    private final ItemCheckerFactory itemCheckerFactory;
+    @Autowired
+    private ItemCheckerFactory itemCheckerFactory;
 
-    private final HostCheckQueueManager hostCheckQueueManager;
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
 
-    private final AsyncCheckService asyncCheckService;
+    @Autowired
+    private AsyncCheckService asyncCheckService;
 
 
     @Qualifier("checkExecutor")
-    private final ExecutorService checkExecutor;
-
-    private final TaskManager taskManager;
     @Autowired
-    public HostCheckServiceImpl(ItemCheckerFactory itemCheckerFactory, HostCheckQueueManager hostCheckQueueManager, AsyncCheckService asyncCheckService, ExecutorService checkExecutor, TaskManager taskManager) {
-        this.itemCheckerFactory = itemCheckerFactory;
-        this.hostCheckQueueManager = hostCheckQueueManager;
-        this.asyncCheckService = asyncCheckService;
-        this.checkExecutor = checkExecutor;
-        this.taskManager = taskManager;
-    }
+    private ExecutorService checkExecutor;
+
+    @Autowired
+    private TaskManager taskManager;
+
 
     /**
      * 任务执行状态枚举

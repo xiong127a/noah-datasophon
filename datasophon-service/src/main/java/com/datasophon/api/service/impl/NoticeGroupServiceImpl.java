@@ -61,26 +61,23 @@ import java.util.stream.Collectors;
 public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, NoticeGroupEntity>
         implements NoticeGroupService {
 
-    private final NoticeGroupUserService noticeGroupUserService;
-
-    private final UserInfoService userInfoService;
-
-    @org.springframework.context.annotation.Lazy
-    private final ClusterAlertQuotaService clusterAlertQuotaService;
-
-    private final ServiceInstallService serviceInstallService;
-
-    private final ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
-    private final ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
     @Autowired
-    public NoticeGroupServiceImpl(NoticeGroupUserService noticeGroupUserService, UserInfoService userInfoService, @org.springframework.context.annotation.Lazy ClusterAlertQuotaService clusterAlertQuotaService, ServiceInstallService serviceInstallService, ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService, ClusterServiceRoleInstanceService clusterServiceRoleInstanceService) {
-        this.noticeGroupUserService = noticeGroupUserService;
-        this.userInfoService = userInfoService;
-        this.clusterAlertQuotaService = clusterAlertQuotaService;
-        this.serviceInstallService = serviceInstallService;
-        this.clusterServiceRoleGroupConfigService = clusterServiceRoleGroupConfigService;
-        this.clusterServiceRoleInstanceService = clusterServiceRoleInstanceService;
-    }
+    private NoticeGroupUserService noticeGroupUserService;
+
+    @Autowired
+    private UserInfoService userInfoService;
+
+    @Autowired
+    private ClusterAlertQuotaService clusterAlertQuotaService;
+
+    @Autowired
+    private ServiceInstallService serviceInstallService;
+
+    @Autowired
+    private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
+    @Autowired
+    private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
+
 
     @Override
     public Result saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup) {

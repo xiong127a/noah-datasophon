@@ -48,12 +48,8 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity
     // 定义最大会话数量常量
     private static final int MAX_SESSIONS_PER_USER = 1;
 
-    private final SessionMapper sessionMapper;
-
     @Autowired
-    public SessionServiceImpl(SessionMapper sessionMapper) {
-        this.sessionMapper = sessionMapper;
-    }
+    private SessionMapper sessionMapper;
 
     /**
      * get user session from request

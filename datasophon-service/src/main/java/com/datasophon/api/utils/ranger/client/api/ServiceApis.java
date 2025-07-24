@@ -19,8 +19,10 @@ import java.util.List;
 @AllArgsConstructor
 public class ServiceApis {
 
-    private final RestTemplate restTemplate;
-    private final String baseUrl;
+
+    private RestTemplate restTemplate;
+
+    private String baseUrl;
 
     public void createService(final Service service) throws RangerClientException {
         try {

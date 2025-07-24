@@ -38,9 +38,11 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(StartWorkerHandler.class);
 
-    private final Integer clusterId;
 
-    private final String clusterFrame;
+    private Integer clusterId;
+
+
+    private String clusterFrame;
 
     public StartWorkerHandler(Integer clusterId, String clusterFrame) {
         this.clusterId = clusterId;

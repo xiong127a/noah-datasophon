@@ -11,13 +11,12 @@ import java.util.Base64;
 
 public class RangerAuthHeadersInterceptor implements ClientHttpRequestInterceptor {
 
-    private final String username;
-    private final String password;
 
-    public RangerAuthHeadersInterceptor(String username, String password) {
-        this.username = username;
-        this.password = password;
-    }
+    private String username;
+
+    private String password;
+
+
 
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)

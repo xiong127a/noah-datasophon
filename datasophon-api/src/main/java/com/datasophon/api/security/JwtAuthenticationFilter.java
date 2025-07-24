@@ -48,11 +48,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/swagger-ui",
             "/v3/api-docs");
 
-    private final JwtTokenProvider tokenProvider;
+
+    private JwtTokenProvider tokenProvider;
 
     public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
         this.tokenProvider = tokenProvider;
     }
+
 
     /**
      * 过滤请求，验证JWT令牌

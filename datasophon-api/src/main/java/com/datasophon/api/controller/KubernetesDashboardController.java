@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -35,11 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class KubernetesDashboardController {
 
-    private final KubernetesDashboardService kubernetesDashboardService;
+    @Autowired
+    private KubernetesDashboardService kubernetesDashboardService;
 
-    public KubernetesDashboardController(KubernetesDashboardService kubernetesDashboardService) {
-        this.kubernetesDashboardService = kubernetesDashboardService;
-    }
 
     /**
      * 获取Kubernetes命名空间列表

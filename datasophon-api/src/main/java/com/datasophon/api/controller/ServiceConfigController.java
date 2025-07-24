@@ -24,6 +24,7 @@ import com.datasophon.api.utils.CompressUtils;
 import com.datasophon.common.model.ConfigFile;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,11 +53,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ServiceConfigController {
 
-    private final ServiceConfigFileService serviceConfigFileService;
+    @Autowired
+    private ServiceConfigFileService serviceConfigFileService;
 
-    public ServiceConfigController(ServiceConfigFileService serviceConfigFileService) {
-        this.serviceConfigFileService = serviceConfigFileService;
-    }
+
 
     /**
      * 获取服务配置文件列表

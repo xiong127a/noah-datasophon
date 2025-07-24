@@ -11,7 +11,8 @@ import org.apache.sshd.client.session.ClientSession;
 import java.time.Duration;
 
 public class SshConnectionPool {
-    private final GenericObjectPool<ClientSession> pool;
+
+    private GenericObjectPool<ClientSession> pool;
 
     public SshConnectionPool(String host) {
         GenericObjectPoolConfig<ClientSession> config = new GenericObjectPoolConfig<>();
@@ -47,7 +48,8 @@ public class SshConnectionPool {
     }
 
     private static class SshConnectionFactory extends BasePooledObjectFactory<ClientSession> {
-        private final String host;
+
+    private String host;
 
         public SshConnectionFactory(String host) {
             this.host = host;

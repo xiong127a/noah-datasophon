@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -45,29 +45,30 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoServiceImpl.class);
 
-    private  OsInfoCollectorFactory osInfoCollectorFactory;
+    private OsInfoCollectorFactory osInfoCollectorFactory;
 
-    private  SshConnectionPoolManager sshConnectionPoolManager;
+    private SshConnectionPoolManager sshConnectionPoolManager;
 
     // 线程池配置
-    private final ExecutorService hostInfoExecutor;
+    private ExecutorService hostInfoExecutor;
 
-    private final ExecutorService hardwareInfoExecutor;
+    @Autowired
+    private ExecutorService hardwareInfoExecutor;
 
     // 队列管理器
-    private final HostInfoCollectionQueueManager queueManager;
+    private HostInfoCollectionQueueManager queueManager;
 
     // 会话缓存
-    private final Map<String, ClientSession> sessionCache = new ConcurrentHashMap<>();
+    private Map<String, ClientSession> sessionCache = new ConcurrentHashMap<>();
 
     // 会话最后使用时间
-    private final Map<String, Long> sessionLastUsedTime = new ConcurrentHashMap<>();
+    private Map<String, Long> sessionLastUsedTime = new ConcurrentHashMap<>();
 
     // 硬件信息缓存
-    private final Map<String, OsInfo> hardwareInfoCache = new ConcurrentHashMap<>();
+    private Map<String, OsInfo> hardwareInfoCache = new ConcurrentHashMap<>();
 
     // 硬件信息上次收集时间
-    private final Map<String, Long> hardwareInfoLastCollectTime = new ConcurrentHashMap<>();
+    private Map<String, Long> hardwareInfoLastCollectTime = new ConcurrentHashMap<>();
 
     // 硬件信息缓存有效期(毫秒) - 5分钟
     private static final long HARDWARE_INFO_CACHE_TTL = 300_000;
@@ -76,23 +77,20 @@ public class OsInfoServiceImpl implements OsInfoService {
     private static final long SESSION_MAX_IDLE_TIME = 120_000;
 
     // 清理线程
-    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
     // 连接锁，用于避免多线程对同一主机的并发连接
-    private final ConcurrentMap<String, Object> connectionLocks = new ConcurrentHashMap<>();
+    @Autowired
+    private ConcurrentMap<String, Object> connectionLocks = new ConcurrentHashMap<>();
 
     // 每个主机的最大连接数
-    private final ConcurrentMap<String, AtomicInteger> hostConnectionCounter = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, AtomicInteger> hostConnectionCounter = new ConcurrentHashMap<>();
 
     // 每个主机的最大连接数
     private static final int MAX_CONNECTIONS_PER_HOST = 2;
 
     // 初始化
-    public OsInfoServiceImpl(@Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor, @Qualifier("osInfoExecutor") ExecutorService hostInfoExecutor) {
-        this.queueManager = new HostInfoCollectionQueueManager(this);
-        this.hardwareInfoExecutor = hardwareInfoExecutor;
-        this.hostInfoExecutor = hostInfoExecutor;
-    }
+
 
     @PostConstruct
     public void init() {
@@ -273,42 +271,56 @@ public class OsInfoServiceImpl implements OsInfoService {
      * 用于管理多个主机的信息收集流程
      */
     private class HostInfoCollectionQueueManager {
-        private final OsInfoServiceImpl service;
+
+        private OsInfoServiceImpl service;
 
         // 替换为优先级队列和等待列表
-        private final PriorityQueue<PriorityHostInfo> priorityHostQueue = new PriorityQueue<>();
-        private final List<PriorityHostInfo> waitingList = new ArrayList<>();
+
+        private PriorityQueue<PriorityHostInfo> priorityHostQueue = new PriorityQueue<>();
+
+        private List<PriorityHostInfo> waitingList = new ArrayList<>();
 
         // 保留原始列表用于按序查找
-        private final List<HostInfo> sortedHostList = new ArrayList<>();
 
-        private final AtomicInteger processingHostCount = new AtomicInteger(0);
+        private List<HostInfo> sortedHostList = new ArrayList<>();
+
+
+        private AtomicInteger processingHostCount = new AtomicInteger(0);
 
         // 增加并行度
         private static final int MAX_CONCURRENT_HOSTS = 10;
 
-        private final AtomicInteger totalHostCount = new AtomicInteger(0);
-        private final AtomicInteger completedHostCount = new AtomicInteger(0);
-        private final AtomicInteger basicInfoCompletedCount = new AtomicInteger(0);
 
-        private final List<HostInfo> waitForDetailInfoList = new ArrayList<>();
-        private final AtomicInteger phase2ProcessingCount = new AtomicInteger(0);
+        private AtomicInteger totalHostCount = new AtomicInteger(0);
+
+        private AtomicInteger completedHostCount = new AtomicInteger(0);
+
+        private AtomicInteger basicInfoCompletedCount = new AtomicInteger(0);
+
+
+        private List<HostInfo> waitForDetailInfoList = new ArrayList<>();
+
+        private AtomicInteger phase2ProcessingCount = new AtomicInteger(0);
         private static final int MAX_CONCURRENT_DETAIL_HOSTS = 10;
 
         // 主机超时设置 - 缩短到15秒
         private static final long HOST_TIMEOUT = 15000L; // 15秒超时
 
         // 慢速主机记录
-        private final Map<String, Integer> slowHostMap = new ConcurrentHashMap<>();
+
+        private Map<String, Integer> slowHostMap = new ConcurrentHashMap<>();
 
         /**
          * 包装HostInfo并添加优先级信息
          */
         @Getter
         private static class PriorityHostInfo implements Comparable<PriorityHostInfo> {
-            private final HostInfo hostInfo;
-            private final int priority; // 低数字 = 高优先级
-            private final long addTime;
+
+            private HostInfo hostInfo;
+
+            private int priority; // 低数字 = 高优先级
+
+            private long addTime;
             @Setter
             private long processStartTime = 0;
 
@@ -778,8 +790,8 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 处理主机详细信息（硬件信息）
-         * 
-         * @param hostInfo      主机信息
+         *
+         * @param hostInfo 主机信息
          */
         private void processHostDetailInfo(HostInfo hostInfo) {
             if (hostInfo == null) {

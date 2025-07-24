@@ -35,11 +35,9 @@ import java.util.concurrent.TimeUnit;
 
 public class ServiceConfigureAsyncHandler extends ServiceHandler {
 
-  private final OnComplete<Object> function;
 
-  public ServiceConfigureAsyncHandler(OnComplete<Object> function) {
-    this.function = function;
-  }
+    private OnComplete<Object> function;
+
 
   @Override
   public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo)  {

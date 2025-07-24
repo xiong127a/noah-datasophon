@@ -91,29 +91,27 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public static final String PROMETHEUS = "prometheus";
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallServiceImpl.class);
 
-    private final     FrameServiceService frameService;
-    private final ClusterServiceCommandService commandService;
-    private final ClusterInfoService clusterInfoService;
-    private final ClusterServiceInstanceService serviceInstanceService;
-    private final ClusterServiceCommandHostCommandService hostCommandService;
-    private final ClusterVariableService variableService;
-    private final ClusterServiceInstanceRoleGroupService roleGroupService;
-    private final ClusterServiceRoleGroupConfigService groupConfigService;
-    private final ClusterServiceRoleInstanceService roleInstanceService;
-    private final ConfigVersionInfoService configVersionInfoService;
     @Autowired
-    public ServiceInstallServiceImpl(FrameServiceService frameService, ClusterServiceCommandService commandService, ClusterInfoService clusterInfoService, ClusterServiceInstanceService serviceInstanceService, ClusterServiceCommandHostCommandService hostCommandService, ClusterVariableService variableService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleGroupConfigService groupConfigService, ClusterServiceRoleInstanceService roleInstanceService, ConfigVersionInfoService configVersionInfoService) {
-        this.frameService = frameService;
-        this.commandService = commandService;
-        this.clusterInfoService = clusterInfoService;
-        this.serviceInstanceService = serviceInstanceService;
-        this.hostCommandService = hostCommandService;
-        this.variableService = variableService;
-        this.roleGroupService = roleGroupService;
-        this.groupConfigService = groupConfigService;
-        this.roleInstanceService = roleInstanceService;
-        this.configVersionInfoService = configVersionInfoService;
-    }
+    private     FrameServiceService frameService;
+    @Autowired
+    private ClusterServiceCommandService commandService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+    @Autowired
+    private ClusterServiceInstanceService serviceInstanceService;
+    @Autowired
+    private ClusterServiceCommandHostCommandService hostCommandService;
+    @Autowired
+    private ClusterVariableService variableService;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupService roleGroupService;
+    @Autowired
+    private ClusterServiceRoleGroupConfigService groupConfigService;
+    @Autowired
+    private ClusterServiceRoleInstanceService roleInstanceService;
+    @Autowired
+    private ConfigVersionInfoService configVersionInfoService;
+
 
     /**
      * 处理配置列表，根据集群模式修改配置项的hidden和required属性

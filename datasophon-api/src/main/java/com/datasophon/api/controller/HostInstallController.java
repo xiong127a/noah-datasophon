@@ -21,6 +21,7 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,14 +34,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("host/install")
 public class HostInstallController {
 
-    private final InstallService installService;
+    @Autowired
+    private InstallService installService;
 
-    private final HostCheckService hostCheckService;
+    @Autowired
+    private HostCheckService hostCheckService;
 
-    public HostInstallController(InstallService installService, HostCheckService hostCheckService) {
-        this.installService = installService;
-        this.hostCheckService = hostCheckService;
-    }
 
     /**
      * 获取安装步骤

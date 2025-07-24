@@ -17,8 +17,10 @@ import java.util.Map;
 @AllArgsConstructor
 public class UserApis {
 
-    private final RestTemplate restTemplate;
-    private final String baseUrl;
+
+    private RestTemplate restTemplate;
+
+    private String baseUrl;
 
     public void createUser(final User user) throws RangerClientException {
         try {

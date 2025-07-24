@@ -9,9 +9,6 @@ import com.datasophon.common.utils.ShellUtils;
 
 import java.util.StringJoiner;
 
-/**
- * @author 63588
- */
 public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
     private final TenantKafkaResource kafkaResource;
@@ -114,9 +111,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
 
     private String kinitKafkaStr(TenantKafkaResource kafkaResource) {
         String kbString = "";
-        if (kafkaResource.getEnableKerberos()) {
-            kbString = kinitKbStr("kafka");
-        }
+        if (kafkaResource.getEnableKerberos()){ kbString = kinitKbStr("kafka");}
         return kbString;
     }
 

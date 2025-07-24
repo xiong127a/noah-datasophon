@@ -32,20 +32,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SshConnectionPoolManager {
 
     // SSH连接池 - 按主机名缓存SSH连接
-    private final Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
 
     // 连接锁，防止并发问题
-    private final Map<String, Object> connectionLocks = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Object> connectionLocks = new ConcurrentHashMap<>();
 
     // 添加连接池清理改进
-    private final Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
 
     // 添加缓存命中和总请求计数，用于计算缓存命中率
-    private final Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
-    private final Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
 
     // 定时任务启用标志
-    private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
+    @Autowired
+    private AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 从配置文件读取配置，如果未配置则使用默认值
     @Value("${datasophon.checker.ssh-connection-pool.idle-timeout-ms:30000}")
@@ -67,10 +73,13 @@ public class SshConnectionPoolManager {
     private ScheduledFuture<?> connectionCleanupTask;
 
     // 检查执行器 - 用于异步执行清理任务
-    private final ExecutorService checkExecutor;
+    @Autowired
+    private ExecutorService checkExecutor;
     // 添加连接超时监控
-    private final Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
-    private final Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
+    @Autowired
+    private Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
 
     // 重试等待时间上限（10分钟）
     private static final long MAX_RETRY_WAIT_TIME = TimeUnit.MINUTES.toMillis(10);

@@ -39,18 +39,21 @@ public class RangerClient implements Client {
     @Getter
     private RoleApis roles;
 
-    private final RangerClientConfig clientConfig;
+
+    private RangerClientConfig clientConfig;
 
     public RangerClient(RangerClientConfig clientConfig) {
         this.clientConfig = clientConfig;
     }
 
-    private final static ObjectMapper mapper = new ObjectMapper()
+
+    private static ObjectMapper mapper = new ObjectMapper()
             .setSerializationInclusion(JsonInclude.Include.NON_NULL)
             .configure(SerializationFeature.INDENT_OUTPUT, true)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    private final AtomicBoolean started = new AtomicBoolean(false);
+
+    private AtomicBoolean started = new AtomicBoolean(false);
 
     @Override
     public void start() {

@@ -9,12 +9,14 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.sftp.client.SftpClientFactory;
 import org.apache.sshd.sftp.client.fs.SftpFileSystem;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
 
 @Slf4j
 public class SftpFilesystemPool {
-    private final GenericObjectPool<SftpFileSystem> pool;
+
+    private GenericObjectPool<SftpFileSystem> pool;
 
     public SftpFilesystemPool(SshConnectionPool sshConnectionPool) {
         GenericObjectPoolConfig<SftpFileSystem> config = new GenericObjectPoolConfig<>();
@@ -43,7 +45,8 @@ public class SftpFilesystemPool {
     }
 
     private static class SftpConnectionPool extends BasePooledObjectFactory<SftpFileSystem> {
-        private final SshConnectionPool sshConnectionPool;
+        @Autowired
+    private SshConnectionPool sshConnectionPool;
 
         public SftpConnectionPool(SshConnectionPool sshConnectionPool) {
             this.sshConnectionPool = sshConnectionPool;
