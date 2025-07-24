@@ -16,6 +16,7 @@ import java.util.Optional;
 /**
  * SELinux检查器工厂类
  * 根据操作系统类型创建对应的SELinux检查器实例
+ * @author 63588
  */
 public class SELinuxCheckerFactory {
 

@@ -11,14 +11,19 @@ import lombok.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RangerClientConfig {
 
+    @Builder.Default
     private int connectTimeoutMillis = 5 * 1000;
+    @Builder.Default
     private int readTimeoutMillis = 30 * 1000;
 
     // 日志级别，可以使用Spring Boot自带的日志配置
+    @Builder.Default
     private String loggingLevel = "INFO";
 
+    @Builder.Default
     private String url = "http://localhost:6080";
 
+    @Builder.Default
     private RangerAuthConfig authConfig = new RangerAuthConfig();
 
     @Override

@@ -16,6 +16,11 @@ import org.slf4j.LoggerFactory;
  */
 public class KylinSELinuxChecker extends GenericSELinuxChecker {
 
+    public KylinSELinuxChecker(
+            com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
+
     private static final Logger log = LoggerFactory.getLogger(KylinSELinuxChecker.class);
 
     @Override
@@ -419,7 +424,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                             "SELinux配置修改失败",
                             "无法修改SELinux配置文件，请手动修改。") +
 
-                            // 添加手动修复指南
+                    // 添加手动修复指南
                             HtmlStyleHelper.beginGroup() +
                             "<p><strong>手动修复步骤:</strong></p>" +
                             "<ol style='padding-left:20px;margin-bottom:15px'>" +
@@ -446,13 +451,15 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                         "SELinux修复完成",
                         "麒麟V4系统上的SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。") +
 
-                        // 添加当前状态
+                // 添加当前状态
                         HtmlStyleHelper.beginGroup() +
                         "<p><strong>当前SELinux状态:</strong></p>" +
                         HtmlStyleHelper.generatePropertyRow(
-                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS)
+                        +
                         HtmlStyleHelper.generatePropertyRow(
-                                "永久状态", "已设置为禁用", HtmlStyleHelper.Colors.SUCCESS) +
+                                "永久状态", "已设置为禁用", HtmlStyleHelper.Colors.SUCCESS)
+                        +
                         HtmlStyleHelper.endGroup() +
 
                         // 添加重启通知
@@ -504,12 +511,13 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
                             "SELinux已有效禁用",
                             "SELinux模块未加载，已处于有效禁用状态。工具包已安装但不会影响系统运行。") +
 
-                            // 添加可选操作
+                    // 添加可选操作
                             HtmlStyleHelper.beginGroup() +
                             "<p><strong>可选操作:</strong></p>" +
                             "<p>您可以选择完全移除SELinux工具包，或保持当前状态。</p>" +
                             HtmlStyleHelper.generateCodeBlock(
-                                    "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics") +
+                                    "# 移除SELinux工具包\nsudo apt purge selinux-utils selinux-basics")
+                            +
                             HtmlStyleHelper.endGroup();
 
                     // 设置消息

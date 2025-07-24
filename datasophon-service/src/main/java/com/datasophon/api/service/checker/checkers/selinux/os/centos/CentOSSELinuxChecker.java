@@ -13,8 +13,14 @@ import org.slf4j.LoggerFactory;
 /**
  * CentOS系统专用的SELinux检查器实现
  * 适用于CentOS 7/8等版本
+ * @author 63588
  */
 public class CentOSSELinuxChecker extends GenericSELinuxChecker {
+
+    public CentOSSELinuxChecker(
+            com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(CentOSSELinuxChecker.class);
 
@@ -238,7 +244,7 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
                         "SELinux配置修改失败",
                         "无法修改SELinux配置文件，请手动修改。") +
 
-                        // 添加手动修复指南
+                // 添加手动修复指南
                         HtmlStyleHelper.beginGroup() +
                         "<p><strong>手动修复步骤:</strong></p>" +
                         "<ol style='padding-left:20px;margin-bottom:15px'>" +
@@ -276,14 +282,16 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
                     "SELinux修复完成",
                     "SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。") +
 
-                    // 添加当前状态
+            // 添加当前状态
                     HtmlStyleHelper.beginGroup() +
                     "<p><strong>当前SELinux状态:</strong></p>" +
                     HtmlStyleHelper.generatePropertyRow(
-                            "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                            "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS)
+                    +
                     HtmlStyleHelper.generatePropertyRow(
                             "永久状态", configModified ? "已设置为禁用" : "配置修改未验证",
-                            configModified ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.WARNING) +
+                            configModified ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.WARNING)
+                    +
                     HtmlStyleHelper.endGroup() +
 
                     // 添加重启通知

@@ -17,13 +17,15 @@ import org.springframework.stereotype.Component;
 /**
  * 防火墙检查器
  * 负责检查和修复主机防火墙配置
+ * @author 63588
  */
 @Component
 public class FirewallChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(FirewallChecker.class);
 
-    private final FirewallCheckerFactory firewallCheckerFactory;
+    @Autowired
+    private FirewallCheckerFactory firewallCheckerFactory;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

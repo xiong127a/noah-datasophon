@@ -15,6 +15,7 @@ import java.util.List;
 /**
  * SELinux检查器配置类
  * 用于注册所有SELinux检查器实现类作为Spring Bean
+ * 
  * @author 63588
  */
 @Configuration
@@ -24,8 +25,8 @@ public class SELinuxCheckerConfig {
      * 通用SELinux检查器
      */
     @Bean
-    public GenericSELinuxChecker genericSELinuxChecker() {
-        GenericSELinuxChecker checker = new GenericSELinuxChecker();
+    public GenericSELinuxChecker genericSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+        GenericSELinuxChecker checker = new GenericSELinuxChecker(selinuxCheckerFactory);
         checker.setSupportedOs(OsDistribution.OTHER);
         return checker;
     }
@@ -34,8 +35,8 @@ public class SELinuxCheckerConfig {
      * CentOS SELinux检查器
      */
     @Bean
-    public CentOSSELinuxChecker centOSSELinuxChecker() {
-        CentOSSELinuxChecker checker = new CentOSSELinuxChecker();
+    public CentOSSELinuxChecker centOSSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+        CentOSSELinuxChecker checker = new CentOSSELinuxChecker(selinuxCheckerFactory);
         checker.setSupportedOs(OsDistribution.CENTOS);
         return checker;
     }
@@ -44,8 +45,8 @@ public class SELinuxCheckerConfig {
      * Kylin SELinux检查器
      */
     @Bean
-    public KylinSELinuxChecker kylinSELinuxChecker() {
-        KylinSELinuxChecker checker = new KylinSELinuxChecker();
+    public KylinSELinuxChecker kylinSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+        KylinSELinuxChecker checker = new KylinSELinuxChecker(selinuxCheckerFactory);
         checker.setSupportedOs(OsDistribution.KYLIN);
         return checker;
     }
@@ -54,8 +55,8 @@ public class SELinuxCheckerConfig {
      * Ubuntu SELinux检查器
      */
     @Bean
-    public UbuntuSELinuxChecker ubuntuSELinuxChecker() {
-        UbuntuSELinuxChecker checker = new UbuntuSELinuxChecker();
+    public UbuntuSELinuxChecker ubuntuSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+        UbuntuSELinuxChecker checker = new UbuntuSELinuxChecker(selinuxCheckerFactory);
         checker.setSupportedOs(OsDistribution.UBUNTU);
         return checker;
     }
