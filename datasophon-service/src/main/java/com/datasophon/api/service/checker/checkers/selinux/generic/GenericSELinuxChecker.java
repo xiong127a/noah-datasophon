@@ -2,7 +2,6 @@ package com.datasophon.api.service.checker.checkers.selinux.generic;
 
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxCheckerStrategy;
-import com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
@@ -10,11 +9,11 @@ import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -33,7 +32,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
     @Setter
     @Autowired
     protected SshConnectionPoolManager sshConnectionPoolManager;
-    protected final SELinuxChecker selinuxChecker;
+    protected SELinuxChecker selinuxChecker;
 
     @Getter
     @Setter
@@ -42,12 +41,6 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
     @Getter
     @Setter
     private String versionPrefix;
-
-    @Autowired
-    public GenericSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
-        // 创建SELinuxChecker实例，传入工厂对象
-        this.selinuxChecker = new SELinuxChecker(selinuxCheckerFactory);
-    }
 
     @Override
     public CheckItem check(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {

@@ -16,11 +16,6 @@ import org.slf4j.LoggerFactory;
  */
 public class KylinSELinuxChecker extends GenericSELinuxChecker {
 
-    public KylinSELinuxChecker(
-            com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
-        super(selinuxCheckerFactory);
-    }
-
     private static final Logger log = LoggerFactory.getLogger(KylinSELinuxChecker.class);
 
     @Override

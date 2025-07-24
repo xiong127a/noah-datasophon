@@ -17,11 +17,6 @@ import org.slf4j.LoggerFactory;
  */
 public class CentOSSELinuxChecker extends GenericSELinuxChecker {
 
-    public CentOSSELinuxChecker(
-            com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
-        super(selinuxCheckerFactory);
-    }
-
     private static final Logger log = LoggerFactory.getLogger(CentOSSELinuxChecker.class);
 
     @Override

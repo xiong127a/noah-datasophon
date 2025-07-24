@@ -15,10 +15,7 @@ import org.slf4j.LoggerFactory;
  * 适用于Ubuntu 22/24等版本
  */
 public class UbuntuSELinuxChecker extends GenericSELinuxChecker {
-    
-    public UbuntuSELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
-        super(selinuxCheckerFactory);
-    }
+
 
         private static final Logger log = LoggerFactory.getLogger(UbuntuSELinuxChecker.class);
 

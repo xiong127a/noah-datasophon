@@ -15,8 +15,6 @@ import java.util.List;
 /**
  * SELinux检查器配置类
  * 用于注册所有SELinux检查器实现类作为Spring Bean
- * 
- * @author 63588
  */
 @Configuration
 public class SELinuxCheckerConfig {
@@ -25,8 +23,8 @@ public class SELinuxCheckerConfig {
      * 通用SELinux检查器
      */
     @Bean
-    public GenericSELinuxChecker genericSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
-        GenericSELinuxChecker checker = new GenericSELinuxChecker(selinuxCheckerFactory);
+    public GenericSELinuxChecker genericSELinuxChecker() {
+        GenericSELinuxChecker checker = new GenericSELinuxChecker();
         checker.setSupportedOs(OsDistribution.OTHER);
         return checker;
     }
@@ -35,8 +33,8 @@ public class SELinuxCheckerConfig {
      * CentOS SELinux检查器
      */
     @Bean
-    public CentOSSELinuxChecker centOSSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
-        CentOSSELinuxChecker checker = new CentOSSELinuxChecker(selinuxCheckerFactory);
+    public CentOSSELinuxChecker centOSSELinuxChecker() {
+        CentOSSELinuxChecker checker = new CentOSSELinuxChecker();
         checker.setSupportedOs(OsDistribution.CENTOS);
         return checker;
     }
@@ -45,8 +43,8 @@ public class SELinuxCheckerConfig {
      * Kylin SELinux检查器
      */
     @Bean
-    public KylinSELinuxChecker kylinSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
-        KylinSELinuxChecker checker = new KylinSELinuxChecker(selinuxCheckerFactory);
+    public KylinSELinuxChecker kylinSELinuxChecker() {
+        KylinSELinuxChecker checker = new KylinSELinuxChecker();
         checker.setSupportedOs(OsDistribution.KYLIN);
         return checker;
     }
@@ -55,8 +53,8 @@ public class SELinuxCheckerConfig {
      * Ubuntu SELinux检查器
      */
     @Bean
-    public UbuntuSELinuxChecker ubuntuSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
-        UbuntuSELinuxChecker checker = new UbuntuSELinuxChecker(selinuxCheckerFactory);
+    public UbuntuSELinuxChecker ubuntuSELinuxChecker() {
+        UbuntuSELinuxChecker checker = new UbuntuSELinuxChecker();
         checker.setSupportedOs(OsDistribution.UBUNTU);
         return checker;
     }
