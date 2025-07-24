@@ -263,7 +263,7 @@ public class ShellUtils {
                 StringBuilder stringBuffer = new StringBuilder();
                 reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
                 while (reader.read() != -1) {
-                    stringBuffer.append("\n" + reader.readLine());
+                    stringBuffer.append("\n").append(reader.readLine());
                 }
                 errput = stringBuffer.toString();
             }

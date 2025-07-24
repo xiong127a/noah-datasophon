@@ -307,8 +307,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             // 添加修复步骤说明
             detailsBuilder.append("<p><strong>已完成的修复操作:</strong></p>");
             detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-            detailsBuilder.append("<li style='margin-bottom:5px'>已修改系统配置文件 " +
-                    HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf") + " 添加以下配置:</li>");
+            detailsBuilder.append("<li style='margin-bottom:5px'>已修改系统配置文件 ").append(HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf")).append(" 添加以下配置:</li>");
 
             // 获取配置值用于显示
             int limitValue = checkerProperties.getFileHandle().getMinLimit();
@@ -322,8 +321,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                 detailsBuilder.append("<li style='margin-bottom:5px'>检测到系统使用systemd，已添加systemd配置:</li>");
                 String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", limitValue);
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(systemdConfigContent));
-                detailsBuilder.append("<li style='margin-bottom:5px'>已执行 " +
-                        HtmlStyleHelper.generateInlineCode("systemctl daemon-reload") + " 重新加载配置</li>");
+                detailsBuilder.append("<li style='margin-bottom:5px'>已执行 ").append(HtmlStyleHelper.generateInlineCode("systemctl daemon-reload")).append(" 重新加载配置</li>");
             }
 
             detailsBuilder.append("</ol>");
@@ -375,8 +373,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             detailsBuilder.append(HtmlStyleHelper.beginGroup());
             detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
             detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-            detailsBuilder.append("<li style='margin-bottom:5px'>编辑系统配置文件 " +
-                    HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf") + " 添加以下配置:</li>");
+            detailsBuilder.append("<li style='margin-bottom:5px'>编辑系统配置文件 ").append(HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf")).append(" 添加以下配置:</li>");
 
             // 获取配置值用于显示
             int limitValue = checkerProperties.getFileHandle().getMinLimit();
@@ -388,8 +385,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             detailsBuilder.append("<li style='margin-bottom:5px'>如果系统使用systemd，创建目录:</li>");
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("mkdir -p /etc/systemd/system.conf.d"));
 
-            detailsBuilder.append("<li style='margin-bottom:5px'>创建文件 " +
-                    HtmlStyleHelper.generateInlineCode("/etc/systemd/system.conf.d/limits.conf") + " 内容如下:</li>");
+            detailsBuilder.append("<li style='margin-bottom:5px'>创建文件 ").append(HtmlStyleHelper.generateInlineCode("/etc/systemd/system.conf.d/limits.conf")).append(" 内容如下:</li>");
             String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", limitValue);
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(systemdConfigContent));
 

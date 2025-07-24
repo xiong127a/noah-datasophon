@@ -339,20 +339,17 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     if (tzFile != null && !tzFile.isEmpty()) {
                         String tzStatus = tzSetSuccess ? "成功" : "失败";
                         String tzColor = tzSetSuccess ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
-                        detailsBuilder.append("<li style='margin-bottom:5px'>设置系统时区 (" +
-                                HtmlStyleHelper.generateColoredValue(tzStatus, tzColor) + ")</li>");
+                        detailsBuilder.append("<li style='margin-bottom:5px'>设置系统时区 (").append(HtmlStyleHelper.generateColoredValue(tzStatus, tzColor)).append(")</li>");
                     }
 
                     // 设置系统时间操作
-                    detailsBuilder.append("<li style='margin-bottom:5px'>设置系统时间 (" +
-                            HtmlStyleHelper.generateColoredValue("成功", HtmlStyleHelper.Colors.SUCCESS) + ")</li>");
+                    detailsBuilder.append("<li style='margin-bottom:5px'>设置系统时间 (").append(HtmlStyleHelper.generateColoredValue("成功", HtmlStyleHelper.Colors.SUCCESS)).append(")</li>");
 
                     // 同步硬件时钟操作
                     String hwStatus = hwClockSetSuccess ? "成功" : "失败（不影响使用）";
                     String hwColor = hwClockSetSuccess ? HtmlStyleHelper.Colors.SUCCESS
                             : HtmlStyleHelper.Colors.WARNING;
-                    detailsBuilder.append("<li style='margin-bottom:5px'>同步硬件时钟 (" +
-                            HtmlStyleHelper.generateColoredValue(hwStatus, hwColor) + ")</li>");
+                    detailsBuilder.append("<li style='margin-bottom:5px'>同步硬件时钟 (").append(HtmlStyleHelper.generateColoredValue(hwStatus, hwColor)).append(")</li>");
 
                     detailsBuilder.append("</ol>");
                     detailsBuilder.append(HtmlStyleHelper.endGroup());

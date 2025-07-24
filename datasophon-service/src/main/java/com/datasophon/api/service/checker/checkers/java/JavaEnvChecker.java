@@ -79,7 +79,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 detailsBuilder.append("<p><strong>修复建议:</strong></p>");
                 detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
                 detailsBuilder.append("<li>点击本检查项的修复按钮，系统将自动安装专用JDK</li>");
-                detailsBuilder.append("<li>或手动安装JDK到指定路径: " + defaultJdkPath + "</li>");
+                detailsBuilder.append("<li>或手动安装JDK到指定路径: ").append(defaultJdkPath).append("</li>");
                 detailsBuilder.append("</ol>");
                 detailsBuilder.append(HtmlStyleHelper.endGroup());
 
@@ -548,7 +548,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append("<p><strong>手动修复建议:</strong></p>");
                 detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                detailsBuilder.append("<li>确保目标路径可写入: " + checkerProperties.getJava().getDefaultPath() + "</li>");
+                detailsBuilder.append("<li>确保目标路径可写入: ").append(checkerProperties.getJava().getDefaultPath()).append("</li>");
                 detailsBuilder.append("<li>确保系统有足够的磁盘空间</li>");
                 detailsBuilder.append("<li>手动下载并安装JDK到指定路径</li>");
                 detailsBuilder.append("</ol>");
@@ -609,7 +609,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
             detailsBuilder.append("<li>检查系统日志获取更多错误信息</li>");
             detailsBuilder.append("<li>确保网络连接正常</li>");
-            detailsBuilder.append("<li>尝试手动安装JDK到: " + checkerProperties.getJava().getDefaultPath() + "</li>");
+            detailsBuilder.append("<li>尝试手动安装JDK到: ").append(checkerProperties.getJava().getDefaultPath()).append("</li>");
             detailsBuilder.append("</ol>");
             detailsBuilder.append(HtmlStyleHelper.endGroup());
 

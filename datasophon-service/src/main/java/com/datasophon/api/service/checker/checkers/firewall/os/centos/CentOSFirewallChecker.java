@@ -141,7 +141,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             case 0:
                 // 服务正在运行
                 cacheLog.info(osName + " firewalld状态: 正在运行");
-                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>" + osName + " 防火墙状态: 正在运行</h3>");
+                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>").append(osName).append(" 防火墙状态: 正在运行</h3>");
 
                 // 获取防火墙详细配置
                 message.append("<div style='margin-bottom:15px'>");
@@ -213,7 +213,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             case 3:
                 // 服务已停止
                 cacheLog.info(osName + " firewalld状态: 已停止");
-                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>" + osName + " 防火墙状态: 已停止</h3>");
+                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>").append(osName).append(" 防火墙状态: 已停止</h3>");
 
                 // 检查自启动状态
                 message.append("<div style='margin-bottom:15px'>");
@@ -258,7 +258,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             case 4:
                 // 服务不存在
                 cacheLog.info(osName + " firewalld状态: 服务不存在");
-                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>" + osName + " 防火墙状态: 未安装</h3>");
+                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>").append(osName).append(" 防火墙状态: 未安装</h3>");
                 message.append(
                         "<div style='background:#f6ffed;border-left:4px solid #52c41a;padding:10px;border-radius:0 4px 4px 0;'>");
                 message.append("<p style='margin:0;color:#52c41a;font-weight:bold'>防火墙检查通过</p>");
@@ -270,7 +270,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             default:
                 // 其他状态，可能是命令执行出错
                 cacheLog.warn("获取" + osName + " firewalld防火墙状态失败，退出状态码: %d", result.getExitCode());
-                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>" + osName + " 防火墙检查失败</h3>");
+                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>").append(osName).append(" 防火墙检查失败</h3>");
                 message.append(
                         "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
                 message.append("<p style='margin:0;color:#f5222d;font-weight:bold'>错误: 无法获取防火墙状态</p>");

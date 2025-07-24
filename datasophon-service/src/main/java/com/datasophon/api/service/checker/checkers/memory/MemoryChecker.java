@@ -317,8 +317,7 @@ public class MemoryChecker extends AbstractItemChecker {
                 // 使用率可视化
                 double memoryUsagePercent = (usedGB / totalGB) * 100;
                 htmlBuilder.append(HtmlStyleHelper.beginGroup());
-                htmlBuilder.append("<p><strong>内存使用率: </strong>"
-                                + String.format("%.1f%%", memoryUsagePercent) + "</p>");
+                htmlBuilder.append("<p><strong>内存使用率: </strong>").append(String.format("%.1f%%", memoryUsagePercent)).append("</p>");
                 htmlBuilder.append(HtmlStyleHelper.generateProgressBar((int) memoryUsagePercent,
                                 memoryUsagePercent > 80 ? "danger"
                                                 : memoryUsagePercent > 60 ? "warning" : "success",
@@ -386,21 +385,13 @@ public class MemoryChecker extends AbstractItemChecker {
                         detailsBuilder.append(
                                         "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>关闭不必要的服务以释放内存</span>");
                         detailsBuilder.append("<ul style='padding-left:20px;margin-top:5px'>");
-                        detailsBuilder.append("<li style='color:#333'>使用 " + HtmlStyleHelper.generateInlineCode("top") +
-                                        " 或 " + HtmlStyleHelper.generateInlineCode("htop") + " 命令查看内存占用较高的进程</li>");
-                        detailsBuilder
-                                        .append("<li style='color:#333'>使用 "
-                                                        + HtmlStyleHelper.generateInlineCode("systemctl stop <服务名>") +
-                                                        " 停止非必要服务</li>");
+                        detailsBuilder.append("<li style='color:#333'>使用 ").append(HtmlStyleHelper.generateInlineCode("top")).append(" 或 ").append(HtmlStyleHelper.generateInlineCode("htop")).append(" 命令查看内存占用较高的进程</li>");
+                        detailsBuilder.append("<li style='color:#333'>使用 ").append(HtmlStyleHelper.generateInlineCode("systemctl stop <服务名>")).append(" 停止非必要服务</li>");
                         detailsBuilder.append("</ul></li>");
                         detailsBuilder.append(
                                         "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>调整应用程序内存使用配置</span></li>");
-                        detailsBuilder.append(
-                                        "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>清理系统缓存</span>: "
-                                                        +
-                                                        HtmlStyleHelper.generateInlineCode(
-                                                                        "echo 3 > /proc/sys/vm/drop_caches")
-                                                        + "</li>");
+                        detailsBuilder.append("<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>清理系统缓存</span>: ").append(HtmlStyleHelper.generateInlineCode(
+                                "echo 3 > /proc/sys/vm/drop_caches")).append("</li>");
                         detailsBuilder.append("</ol>");
                         detailsBuilder.append(HtmlStyleHelper.endGroup());
 

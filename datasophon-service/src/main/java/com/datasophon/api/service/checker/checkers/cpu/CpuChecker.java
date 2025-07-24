@@ -313,8 +313,7 @@ public class CpuChecker extends AbstractItemChecker {
         detailsBuilder.append(
                 "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>关闭不必要的服务以减轻CPU负载</span>");
         detailsBuilder.append("<ul style='padding-left:20px;margin-top:5px'>");
-        detailsBuilder.append("<li style='color:#333'>使用 " + HtmlStyleHelper.generateInlineCode("top") +
-                " 命令查看占用CPU较高的进程</li>");
+        detailsBuilder.append("<li style='color:#333'>使用 ").append(HtmlStyleHelper.generateInlineCode("top")).append(" 命令查看占用CPU较高的进程</li>");
         detailsBuilder.append("<li style='color:#333'>停止或限制非关键服务</li>");
         detailsBuilder.append("</ul></li>");
         detailsBuilder.append(
