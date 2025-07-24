@@ -37,28 +37,13 @@ public class KubernetesStorageHandlerStrategy extends KubernetesAbstractHandlerS
 
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         String hostname = command.getHostname();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            ArrayList<String> commands = new ArrayList<>();
-            commands.add(workPath + "/bin/nebula-console");
-            commands.add("--addr");
-            commands.add(command.getGraphHost());
-
-            commands.add("--port");
-            commands.add("9669");
-
-            commands.add("-u");
-            commands.add("root");
-
-            commands.add("-p");
-            commands.add("nebula");
-
-            commands.add("-e");
-            commands.add("\"ADD HOSTS");
-            commands.add("'" + hostname + "':9779\"");
+            ArrayList<String> commands = getCommands(command, workPath, hostname);
 
             startResult = serviceHandler.start(command);
             if (startResult.getExecResult()) {
@@ -83,5 +68,26 @@ public class KubernetesStorageHandlerStrategy extends KubernetesAbstractHandlerS
             startResult = serviceHandler.start(command);
         }
         return startResult;
+    }
+
+    private static ArrayList<String> getCommands(KubernetesServiceRoleOperateCommand command, String workPath, String hostname) {
+        ArrayList<String> commands = new ArrayList<>();
+        commands.add(workPath + "/bin/nebula-console");
+        commands.add("--addr");
+        commands.add(command.getGraphHost());
+
+        commands.add("--port");
+        commands.add("9669");
+
+        commands.add("-u");
+        commands.add("root");
+
+        commands.add("-p");
+        commands.add("nebula");
+
+        commands.add("-e");
+        commands.add("\"ADD HOSTS");
+        commands.add("'" + hostname + "':9779\"");
+        return commands;
     }
 }
