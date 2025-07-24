@@ -15,6 +15,7 @@ import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -585,27 +586,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集交换分区信息失败: {}", e.getMessage(), e);
             // 异常情况下也需要设置状态，避免永久loading
-            SwapInfo swapInfo = new SwapInfo();
-            swapInfo.setEnabled(false);
-            swapInfo.setTotalSwap(0L);
-            swapInfo.setUsedSwap(0L);
-            swapInfo.setAvailableSwap(0L);
-            swapInfo.setUsagePercent(0.0);
-
-            // 设置UI显示字段
-            swapInfo.setTotalSwapFormatted("0.00");
-            swapInfo.setUsedSwapFormatted("0.00");
-            swapInfo.setAvailableSwapFormatted("0.00");
-            swapInfo.setTotalSwapUnit("GB");
-            swapInfo.setUsedSwapUnit("GB");
-            swapInfo.setAvailableSwapUnit("GB");
-
-            // 设置格式化显示
-            swapInfo.setTotalSwapGB("0.00 GB");
-            swapInfo.setUsedSwapGB("0.00 GB");
-            swapInfo.setFreeSwapGB("0.00 GB");
-
-            swapInfo.setStatus(OsInfoStatusEnum.SUCCESS); // 即使失败也设为SUCCESS，避免loading
+            SwapInfo swapInfo = getSwapInfo();
             osInfo.setSwapInfo(swapInfo);
             osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
         } finally {
@@ -613,6 +594,31 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             }
         }
+    }
+
+    private static @NotNull SwapInfo getSwapInfo() {
+        SwapInfo swapInfo = new SwapInfo();
+        swapInfo.setEnabled(false);
+        swapInfo.setTotalSwap(0L);
+        swapInfo.setUsedSwap(0L);
+        swapInfo.setAvailableSwap(0L);
+        swapInfo.setUsagePercent(0.0);
+
+        // 设置UI显示字段
+        swapInfo.setTotalSwapFormatted("0.00");
+        swapInfo.setUsedSwapFormatted("0.00");
+        swapInfo.setAvailableSwapFormatted("0.00");
+        swapInfo.setTotalSwapUnit("GB");
+        swapInfo.setUsedSwapUnit("GB");
+        swapInfo.setAvailableSwapUnit("GB");
+
+        // 设置格式化显示
+        swapInfo.setTotalSwapGB("0.00 GB");
+        swapInfo.setUsedSwapGB("0.00 GB");
+        swapInfo.setFreeSwapGB("0.00 GB");
+
+        swapInfo.setStatus(OsInfoStatusEnum.SUCCESS); // 即使失败也设为SUCCESS，避免loading
+        return swapInfo;
     }
 
     /**
