@@ -50,7 +50,7 @@ public class ServiceApis {
 
     public List<Service> searchServices(final String stringSearch) throws RangerClientException {
         try {
-            String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/service/public/v2/api/service")
+            String url = UriComponentsBuilder.fromUriString(baseUrl + "/service/public/v2/api/service")
                     .queryParam("serviceNamePartial", stringSearch)
                     .build()
                     .toUriString();

@@ -36,7 +36,7 @@ public class UserApis {
 
     public Users searchUsers(final String stringSearch) {
         try {
-            String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/service/xusers/users")
+            String url = UriComponentsBuilder.fromUriString(baseUrl + "/service/xusers/users")
                     .queryParam("name", stringSearch)
                     .build()
                     .toUriString();

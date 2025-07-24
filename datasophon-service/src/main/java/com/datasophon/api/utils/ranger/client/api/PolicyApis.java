@@ -66,7 +66,7 @@ public class PolicyApis {
     public List<Policy> searchPolicies(final String serviceName, final String stringSearch)
             throws RangerClientException {
         try {
-            String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/service/public/v2/api/policy")
+            String url = UriComponentsBuilder.fromUriString(baseUrl + "/service/public/v2/api/policy")
                     .queryParam("serviceName", serviceName)
                     .queryParam("policyNamePartial", stringSearch)
                     .build()
