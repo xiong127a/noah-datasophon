@@ -1,13 +1,12 @@
 package com.datasophon.api.service.checker.core;
 
 import com.datasophon.api.service.checker.common.ItemCode;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,7 +25,11 @@ public class ItemCheckerFactory {
     
     // 按字符串类型存储检查器
     private final Map<String, ItemChecker> checkerStringMap = new HashMap<>();
-    
+
+    public ItemCheckerFactory(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
     @PostConstruct
     public void init() {
         logger.info("初始化检查器工厂...");

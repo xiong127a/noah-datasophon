@@ -1,13 +1,12 @@
 package com.datasophon.dao.alert;
 
-import com.mybatisflex.core.query.QueryChain;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import com.datasophon.domain.alert.gateway.AlertHistoryGateway;
 import com.datasophon.domain.alert.model.AlertHistory;
+import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -21,6 +20,10 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
     private static final int DISABLED = 2;
 
     private final ClusterAlertHistoryMapper alertHistoryMapper;
+
+    public AlertHistoryGatewayImpl(ClusterAlertHistoryMapper alertHistoryMapper) {
+        this.alertHistoryMapper = alertHistoryMapper;
+    }
 
     @Override
     public boolean hasEnabledAlertHistory(String alertname, int clusterId, String hostname) {

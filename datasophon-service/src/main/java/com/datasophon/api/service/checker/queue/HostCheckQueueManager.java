@@ -132,7 +132,9 @@ public class HostCheckQueueManager {
 
     private final HostCheckServiceImpl hostCheckService;
 
-    public HostCheckQueueManager() {
+    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService) {
+        this.itemCheckerFactory = itemCheckerFactory;
+        this.hostCheckService = hostCheckService;
         // 创建检查项线程池 - 负责检查项级别的任务
         this.itemCheckExecutorService = new ThreadPoolExecutor(
                 4, // 核心线程数 - 减少并行度
