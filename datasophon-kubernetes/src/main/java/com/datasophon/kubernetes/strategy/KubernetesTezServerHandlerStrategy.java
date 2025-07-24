@@ -37,86 +37,100 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * TEZ Server 启动支持类
+ * TEZ Server handler strategy implementation
+ * Responsible for handling TEZ service role operations in Kubernetes
+ * environment
  *
  * @author zhenqin
  */
-public class KubernetesTezServerHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesTezServerHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesTezServerHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
     }
 
+    /**
+     * Handles the Kubernetes service role operation command
+     * 
+     * @param command The command containing operation details
+     * @return Execution result of the operation
+     */
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
-        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult = serviceHandler.start(command);
-        Integer clusterId = command.getClusterId();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             if (BooleanUtil.isFalse(startResult.getExecResult())) {
-                logger.error("start tez server failed");
+                logger.error("Failed to start TEZ server");
                 startResult.setExecResult(false);
                 return startResult;
             }
-            logger.info("start tez server success");
+            logger.info("Successfully started TEZ server");
             final String hadoopHome = PropertyUtils.getString("HADOOP_HOME");
-            final String tezLibPath = Optional.ofNullable(StringUtils.trimToNull(createEnvPath(workPath))).orElse("hdfs:///user/tez/tez.tar.gz");
+            final String tezLibPath = Optional.ofNullable(StringUtils.trimToNull(createEnvPath(workPath)))
+                    .orElse("hdfs:///user/tez/tez.tar.gz");
             final String tezLibParentDir = new Path(URI.create(tezLibPath).getPath()).getParent().toString();
-            logger.info("Start to execute hdfs dfs -mkdir {}", tezLibParentDir);
+            logger.info("Preparing to create HDFS directory: {}", tezLibParentDir);
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                // 提取用户信息并进行一次判断
-                boolean needSwitchUser = Objects.nonNull(command.getRunAs()) && StringUtils.isNotBlank(command.getRunAs().getUser());
+                // Check user information and determine if user switch is needed
+                boolean needSwitchUser = Objects.nonNull(command.getRunAs())
+                        && StringUtils.isNotBlank(command.getRunAs().getUser());
                 String runAsUser = Objects.nonNull(command.getRunAs()) ? command.getRunAs().getUser() : null;
 
-                // 拼接命令，依次执行 mkdir, chown 和 put 操作
+                // Build command sequence to execute mkdir, chown, and put operations
                 StringBuilder fullCmd = new StringBuilder();
 
-                // 第一个命令：创建目录
+                // First command: Create directory
                 String mkdirCmd = hadoopHome + "/bin/hdfs dfs -mkdir -p " + tezLibParentDir;
                 if (needSwitchUser) {
                     mkdirCmd = "su - " + runAsUser + " -c '" + mkdirCmd + "'";
                 }
                 fullCmd.append(mkdirCmd);
 
-                // 第二个命令：改变文件的所有者
+                // Second command: Change directory ownership
                 if (needSwitchUser) {
-                    String chownCmd = hadoopHome + "/bin/hdfs dfs -chown " + runAsUser + ":" + command.getRunAs().getGroup() + " " + tezLibParentDir;
+                    String chownCmd = hadoopHome + "/bin/hdfs dfs -chown " + runAsUser + ":"
+                            + command.getRunAs().getGroup() + " " + tezLibParentDir;
                     chownCmd = "su - " + runAsUser + " -c '" + chownCmd + "'";
-                    fullCmd.append(" && ").append(chownCmd); // 使用 "&&" 确保命令按顺序执行
+                    fullCmd.append(" && ").append(chownCmd); // Use "&&" to ensure sequential execution
                 }
 
-                // 第三步：检查文件是否已存在
+                // Third step: Check if file already exists
                 String checkFileExistCmd = hadoopHome + "/bin/hdfs dfs -test -e " + tezLibParentDir + "/tez.tar.gz";
                 if (needSwitchUser) {
                     checkFileExistCmd = "su - " + runAsUser + " -c '" + checkFileExistCmd + "'";
                 }
 
-                // 如果文件已存在，则跳过上传，否则执行上传
+                // If the file exists, skip upload, otherwise perform upload
                 String putCmd = hadoopHome + "/bin/hdfs dfs -put " + workPath + "/share/tez.tar.gz " + tezLibParentDir;
                 if (needSwitchUser) {
-                    putCmd = "su - " + runAsUser + " -c '" + putCmd + "'"; // 如果指定了用户，使用 su 切换用户
+                    putCmd = "su - " + runAsUser + " -c '" + putCmd + "'"; // Use su to switch user if specified
                 }
 
                 fullCmd.append(" && ").append(checkFileExistCmd);
-                fullCmd.append(" && if [ $? -ne 0 ]; then "); // 如果文件不存在，则执行上传
+                fullCmd.append(" && if [ $? -ne 0 ]; then "); // If file doesn't exist, perform upload
                 fullCmd.append(putCmd);
-                fullCmd.append("; fi"); // 否则跳过上传操作
+                fullCmd.append("; fi"); // Otherwise skip upload operation
 
-                // 执行拼接后的命令
-                KubernetesUtil.runCmd(
+                // Execute the combined command
+                ExecResult execResult = KubernetesUtil.runCmd(
                         command.getNamespace(),
                         kubeClient,
                         (command.getServiceName() + "-" + command.getServiceRoleName()).toLowerCase(),
                         command.getHostname(),
-                        fullCmd.toString()
-                );
+                        fullCmd.toString());
 
-                logger.info("Init hive dir success");
-                logger.info("Uploaded tez.tar.gz to {} output: {}", tezLibParentDir, startResult.getExecOut());
+                logger.info("TEZ directory initialization successful");
+                logger.info("Uploaded tez.tar.gz to {}. Command output: {}", tezLibParentDir,
+                        execResult.getExecOut() != null
+                                ? execResult.getExecOut().substring(0, Math.min(execResult.getExecOut().length(), 100))
+                                : "no output");
                 startResult.setExecResult(true);
             } catch (Exception e) {
-                logger.error("init hive dir failed");
+                logger.error("Failed to initialize TEZ directory", e);
                 startResult.setExecResult(false);
                 return startResult;
             }
@@ -124,26 +138,37 @@ public class KubernetesTezServerHandlerStrategy extends KubernetesAbstractHandle
         return startResult;
     }
 
-
     /**
-     * tez 的元数据
+     * Creates the environment path for TEZ metadata
+     * Reads tez.lib.uris from tez-site.xml configuration
      *
-     * @param workPath
+     * @param workPath The base work directory path
+     * @return The TEZ library URIs from configuration, or null if not found
      */
     String createEnvPath(final String workPath) {
         Configuration conf = new Configuration();
         try {
             final File tezSiteFile = new File(workPath, "conf/tez-site.xml");
             if (tezSiteFile.exists()) {
-                conf.addResource(tezSiteFile.toURL());
-                logger.info("add tez-site file: {}", tezSiteFile.getAbsolutePath());
+                // Fixed: Using toURI().toURL() instead of deprecated toURL()
+                conf.addResource(tezSiteFile.toURI().toURL());
+                logger.info("Added tez-site configuration file: {}", tezSiteFile.getAbsolutePath());
+            } else {
+                logger.warn("tez-site.xml not found at: {}", tezSiteFile.getAbsolutePath());
+                return null;
             }
 
-            // tez lib uri 启动清理
-            String tezLibPath = conf.get("tez.lib.uris");
-            return tezLibPath;
+            // Get TEZ library URI for startup
+            String tezLibUri = conf.get("tez.lib.uris");
+            if (tezLibUri == null) {
+                logger.warn("tez.lib.uris not found in tez-site.xml configuration");
+            } else {
+                logger.debug("Found tez.lib.uris: {}", tezLibUri);
+            }
+            return tezLibUri;
         } catch (Exception e) {
+            logger.error("Error reading tez-site.xml configuration", e);
+            return null;
         }
-        return null;
     }
 }
