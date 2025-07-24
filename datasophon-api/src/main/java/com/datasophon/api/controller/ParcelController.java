@@ -83,8 +83,12 @@ public class ParcelController implements DisposableBean {
 
     private final ClusterInfoService clusterInfoService;
 
-    @Autowired
+    final
     LoadServiceMeta loadServiceMeta;
+
+    public ParcelController(LoadServiceMeta loadServiceMeta) {
+        this.loadServiceMeta = loadServiceMeta;
+    }
 
     /**
      * 列表

@@ -102,8 +102,7 @@ public class HostCheckQueueManager {
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 定时任务调度器
-    @Autowired(required = false)
-    private TaskScheduler taskScheduler;
+    private final TaskScheduler taskScheduler;
 
     // 定时任务的Future
     private ScheduledFuture<?> queueHealthMonitorTask;
@@ -112,13 +111,9 @@ public class HostCheckQueueManager {
     private long queueHealthMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
     private long taskTimeoutMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
 
-    @Autowired
-    @Qualifier("checkExecutor")
-    private ExecutorService checkExecutorService;
+    private final ExecutorService checkExecutorService;
 
-    @Autowired
-    @Qualifier("fixExecutor")
-    private ExecutorService fixExecutorService;
+    private final ExecutorService fixExecutorService;
 
     private final ItemCheckerFactory itemCheckerFactory;
 
@@ -134,7 +129,7 @@ public class HostCheckQueueManager {
 
     private final HostCheckServiceImpl hostCheckService;
 
-    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService) {
+    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService, @Qualifier("fixExecutor") ExecutorService fixExecutorService, @Qualifier("checkExecutor") ExecutorService checkExecutorService, TaskScheduler taskScheduler) {
         this.itemCheckerFactory = itemCheckerFactory;
         this.hostCheckService = hostCheckService;
         // 创建检查项线程池 - 负责检查项级别的任务
@@ -158,6 +153,9 @@ public class HostCheckQueueManager {
                 },
                 new ThreadPoolExecutor.CallerRunsPolicy() // 改为调用者运行策略，防止任务丢失
         );
+        this.fixExecutorService = fixExecutorService;
+        this.checkExecutorService = checkExecutorService;
+        this.taskScheduler = taskScheduler;
     }
 
     @PostConstruct

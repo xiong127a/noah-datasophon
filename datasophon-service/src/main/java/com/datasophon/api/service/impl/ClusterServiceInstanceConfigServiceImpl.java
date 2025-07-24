@@ -50,11 +50,18 @@ public class ClusterServiceInstanceConfigServiceImpl
                 implements
                 ClusterServiceInstanceConfigService {
 
-        @Autowired
         private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
+        private final ConfigVersionInfoService configVersionInfoService;
+
+        public ClusterServiceInstanceConfigServiceImpl(ConfigVersionInfoService configVersionInfoService) {
+                this.configVersionInfoService = configVersionInfoService;
+        }
+
         @Autowired
-        private ConfigVersionInfoService configVersionInfoService;
+        public ClusterServiceInstanceConfigServiceImpl(ClusterServiceRoleGroupConfigService roleGroupConfigService) {
+                this.roleGroupConfigService = roleGroupConfigService;
+        }
 
         @Override
         public Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,

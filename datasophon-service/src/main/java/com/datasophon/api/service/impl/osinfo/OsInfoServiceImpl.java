@@ -51,13 +51,9 @@ public class OsInfoServiceImpl implements OsInfoService {
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
     // 线程池配置
-    @Autowired
-    @Qualifier("osInfoExecutor")
-    private ExecutorService hostInfoExecutor;
+    private final ExecutorService hostInfoExecutor;
 
-    @Autowired
-    @Qualifier("hardwareInfoExecutor")
-    private ExecutorService hardwareInfoExecutor;
+    private final ExecutorService hardwareInfoExecutor;
 
     // 队列管理器
     private final HostInfoCollectionQueueManager queueManager;
@@ -93,8 +89,10 @@ public class OsInfoServiceImpl implements OsInfoService {
     private static final int MAX_CONNECTIONS_PER_HOST = 2;
 
     // 初始化
-    public OsInfoServiceImpl() {
+    public OsInfoServiceImpl(@Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor, @Qualifier("osInfoExecutor") ExecutorService hostInfoExecutor) {
         this.queueManager = new HostInfoCollectionQueueManager(this);
+        this.hardwareInfoExecutor = hardwareInfoExecutor;
+        this.hostInfoExecutor = hostInfoExecutor;
     }
 
     @PostConstruct

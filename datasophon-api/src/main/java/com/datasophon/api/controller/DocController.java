@@ -42,8 +42,11 @@ import java.util.Map;
 @Slf4j
 public class DocController {
 
-        @Autowired
-        private DocService docService;
+        private final DocService docService;
+
+        public DocController(DocService docService) {
+                this.docService = docService;
+        }
 
         /**
          * 获取服务文档

@@ -17,8 +17,11 @@ public class MemoryChecker extends AbstractItemChecker {
 
         private static final Logger logger = LoggerFactory.getLogger(MemoryChecker.class);
 
-        @Autowired
-        private CheckerProperties checkerProperties;
+        private final CheckerProperties checkerProperties;
+
+        public MemoryChecker(CheckerProperties checkerProperties) {
+                this.checkerProperties = checkerProperties;
+        }
 
         @Override
         protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

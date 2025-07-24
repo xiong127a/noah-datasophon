@@ -67,9 +67,7 @@ public class SshConnectionPoolManager {
     private ScheduledFuture<?> connectionCleanupTask;
 
     // 检查执行器 - 用于异步执行清理任务
-    @Autowired
-    @Qualifier("checkExecutor")
-    private ExecutorService checkExecutor;
+    private final ExecutorService checkExecutor;
     // 添加连接超时监控
     private final Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
     private final Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
@@ -82,8 +80,9 @@ public class SshConnectionPoolManager {
     /**
      * 默认构造方法
      */
-    public SshConnectionPoolManager() {
+    public SshConnectionPoolManager(@Qualifier("checkExecutor") ExecutorService checkExecutor) {
         // 无参构造函数，依赖通过@Autowired注入
+        this.checkExecutor = checkExecutor;
     }
 
     @PostConstruct

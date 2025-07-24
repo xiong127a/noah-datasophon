@@ -43,13 +43,11 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
         implements
         FrameServiceService {
 
-    @Autowired
     ClusterInfoService clusterInfoService;
 
-    @Autowired
     FrameInfoMapper frameInfoMapper;
 
-    @Autowired
+    final
     ClusterServiceInstanceService serviceInstanceService;
 
     private final static List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
@@ -58,6 +56,20 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     private final static List<String> DATALAKE_REQUIRED_SERVICE = Arrays.asList(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
             "SPARK3", "FLINK");
+
+    public FrameServiceServiceImpl(ClusterServiceInstanceService serviceInstanceService) {
+        this.serviceInstanceService = serviceInstanceService;
+    }
+
+    @Autowired
+    public FrameServiceServiceImpl(FrameInfoMapper frameInfoMapper) {
+        this.frameInfoMapper = frameInfoMapper;
+    }
+
+    @Autowired
+    public FrameServiceServiceImpl(ClusterInfoService clusterInfoService) {
+        this.clusterInfoService = clusterInfoService;
+    }
 
     @Override
     public Result getAllFrameService(Integer clusterId) {

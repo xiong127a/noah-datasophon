@@ -40,9 +40,13 @@ import java.util.List;
 @RequestMapping("service/install")
 public class ServiceInstallController {
 
-    @Autowired
+    final
     ServiceInstallService serviceInstallService;
     private final HttpServletResponse httpServletResponse;
+
+    public ServiceInstallController(ServiceInstallService serviceInstallService) {
+        this.serviceInstallService = serviceInstallService;
+    }
 
     /**
      * 根据服务角色名称查询服务配置选项

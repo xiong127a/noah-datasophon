@@ -62,10 +62,14 @@ public class OperationLogAspect {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
-    @Autowired
+    final
     OperationLogService operationLogService;
 
     private final ClusterServiceInstanceService serviceInstanceService;
+
+    public OperationLogAspect(OperationLogService operationLogService) {
+        this.operationLogService = operationLogService;
+    }
 
     @PostConstruct
     public void initialize() {

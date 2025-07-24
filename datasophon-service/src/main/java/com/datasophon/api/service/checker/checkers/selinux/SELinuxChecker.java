@@ -26,8 +26,11 @@ public class SELinuxChecker extends AbstractItemChecker {
 
         private static final Logger logger = LoggerFactory.getLogger(SELinuxChecker.class);
 
-        @Autowired
-        private SELinuxCheckerFactory selinuxCheckerFactory;
+        private final SELinuxCheckerFactory selinuxCheckerFactory;
+
+        public SELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+                this.selinuxCheckerFactory = selinuxCheckerFactory;
+        }
 
         @Override
         protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

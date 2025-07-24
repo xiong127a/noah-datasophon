@@ -64,14 +64,26 @@ public class ClusterServiceCommandHostCommandServiceImpl
     private static final String AKKA_USER_WORKER_PATH = "/user/worker/commandLogActor";
     private static final int MAXIMUM_LOG_LENGTH = 100000;
 
-    @Autowired
     ClusterServiceCommandHostCommandMapper hostCommandMapper;
 
-    @Autowired
     ClusterInfoService clusterInfoService;
 
-    @Autowired
+    final
     ClusterServiceCommandService commandService;
+
+    public ClusterServiceCommandHostCommandServiceImpl(ClusterServiceCommandService commandService) {
+        this.commandService = commandService;
+    }
+
+    @Autowired
+    public ClusterServiceCommandHostCommandServiceImpl(ClusterInfoService clusterInfoService) {
+        this.clusterInfoService = clusterInfoService;
+    }
+
+    @Autowired
+    public ClusterServiceCommandHostCommandServiceImpl(ClusterServiceCommandHostCommandMapper hostCommandMapper) {
+        this.hostCommandMapper = hostCommandMapper;
+    }
 
     @Override
     public Result getHostCommandList(String hostname, String commandHostId, Integer page, Integer pageSize) {

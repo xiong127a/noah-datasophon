@@ -54,34 +54,22 @@ public class AsyncCheckService {
     private final TaskManager taskManager;
 
     // 检查任务执行器
-    @Autowired
-    @Qualifier("checkExecutor")
-    private ExecutorService checkExecutor;
+    private final ExecutorService checkExecutor;
 
     // 修复任务执行器
-    @Autowired
-    @Qualifier("fixExecutor")
-    private ExecutorService fixExecutor;
+    private final ExecutorService fixExecutor;
 
     // 操作系统信息获取专用执行器
-    @Autowired
-    @Qualifier("osInfoExecutor")
-    private ExecutorService osInfoExecutor;
+    private final ExecutorService osInfoExecutor;
 
     // 硬件信息获取专用执行器
-    @Autowired
-    @Qualifier("hardwareInfoExecutor")
-    private ExecutorService hardwareInfoExecutor;
+    private final ExecutorService hardwareInfoExecutor;
 
     // Hosts文件操作专用执行器
-    @Autowired
-    @Qualifier("hostsFileExecutor")
-    private ExecutorService hostsFileExecutor;
+    private final ExecutorService hostsFileExecutor;
 
     // 主机名设置专用执行器
-    @Autowired
-    @Qualifier("hostnameExecutor")
-    private ExecutorService hostnameExecutor;
+    private final ExecutorService hostnameExecutor;
 
     // 定时任务启用标志
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
@@ -94,8 +82,7 @@ public class AsyncCheckService {
     private volatile long lastTaskCleanupTime = 0;
 
     // 定时任务调度器
-    @Autowired(required = false)
-    private TaskScheduler taskScheduler;
+    private final TaskScheduler taskScheduler;
 
     // 定时任务的Future
     private ScheduledFuture<?> taskCleanupTask;
@@ -107,10 +94,17 @@ public class AsyncCheckService {
 
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
-    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager, SshConnectionPoolManager sshConnectionPoolManager) {
+    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager, SshConnectionPoolManager sshConnectionPoolManager, TaskScheduler taskScheduler, @Qualifier("hostnameExecutor") ExecutorService hostnameExecutor, @Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor, @Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor, @Qualifier("osInfoExecutor") ExecutorService osInfoExecutor, @Qualifier("fixExecutor") ExecutorService fixExecutor, @Qualifier("checkExecutor") ExecutorService checkExecutor) {
         this.itemCheckerFactory = itemCheckerFactory;
         this.taskManager = taskManager;
         this.sshConnectionPoolManager = sshConnectionPoolManager;
+        this.taskScheduler = taskScheduler;
+        this.hostnameExecutor = hostnameExecutor;
+        this.hostsFileExecutor = hostsFileExecutor;
+        this.hardwareInfoExecutor = hardwareInfoExecutor;
+        this.osInfoExecutor = osInfoExecutor;
+        this.fixExecutor = fixExecutor;
+        this.checkExecutor = checkExecutor;
     }
 
     @PostConstruct

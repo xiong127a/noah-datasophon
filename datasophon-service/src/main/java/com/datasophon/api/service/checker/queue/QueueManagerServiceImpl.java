@@ -30,36 +30,57 @@ public class QueueManagerServiceImpl implements QueueManagerService {
 
     private final HostCheckQueueManager hostCheckQueueManager;
 
-    @Autowired
     @Lazy
     private AsyncCheckService asyncCheckService;
 
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
     // 添加各种执行器
-    @Autowired
-    @Qualifier("checkExecutor")
     private ExecutorService checkExecutor;
 
-    @Autowired
-    @Qualifier("fixExecutor")
     private ExecutorService fixExecutor;
 
-    @Autowired
-    @Qualifier("osInfoExecutor")
     private ExecutorService osInfoExecutor;
 
-    @Autowired
-    @Qualifier("hardwareInfoExecutor")
     private ExecutorService hardwareInfoExecutor;
 
-    @Autowired
-    @Qualifier("hostsFileExecutor")
     private ExecutorService hostsFileExecutor;
 
+    private final ExecutorService hostnameExecutor;
+
+    public QueueManagerServiceImpl(@Qualifier("hostnameExecutor") ExecutorService hostnameExecutor) {
+        this.hostnameExecutor = hostnameExecutor;
+    }
+
     @Autowired
-    @Qualifier("hostnameExecutor")
-    private ExecutorService hostnameExecutor;
+    public QueueManagerServiceImpl(@Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor) {
+        this.hostsFileExecutor = hostsFileExecutor;
+    }
+
+    @Autowired
+    public QueueManagerServiceImpl(@Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor) {
+        this.hardwareInfoExecutor = hardwareInfoExecutor;
+    }
+
+    @Autowired
+    public QueueManagerServiceImpl(@Qualifier("osInfoExecutor") ExecutorService osInfoExecutor) {
+        this.osInfoExecutor = osInfoExecutor;
+    }
+
+    @Autowired
+    public QueueManagerServiceImpl(@Qualifier("fixExecutor") ExecutorService fixExecutor) {
+        this.fixExecutor = fixExecutor;
+    }
+
+    @Autowired
+    public QueueManagerServiceImpl(@Qualifier("checkExecutor") ExecutorService checkExecutor) {
+        this.checkExecutor = checkExecutor;
+    }
+
+    @Autowired
+    public QueueManagerServiceImpl(AsyncCheckService asyncCheckService) {
+        this.asyncCheckService = asyncCheckService;
+    }
 
     /**
      * 获取队列系统状态
