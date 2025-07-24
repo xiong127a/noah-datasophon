@@ -133,7 +133,6 @@ public class DiskChecker extends AbstractItemChecker {
      * 公开此方法供DiskCheckerStrategy实现类调用
      */
     @Override
-    @Override
     public CommandResult execCommand(ClientSession session, String command) {
         // 检查参数
         if (session == null) {
