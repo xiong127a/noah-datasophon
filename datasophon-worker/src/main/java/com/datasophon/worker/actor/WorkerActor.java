@@ -110,9 +110,7 @@ public class WorkerActor extends AbstractActor {
                                 .match(String.class, message -> {
                                         // 处理String类型的消息
                                 })
-                                .match(Terminated.class, t -> {
-                                        logger.info("find actor {} terminated", t.getActor());
-                                })
+                                .match(Terminated.class, t -> logger.info("find actor {} terminated", t.getActor()))
                                 .matchAny(this::unhandled)
                                 .build();
         }

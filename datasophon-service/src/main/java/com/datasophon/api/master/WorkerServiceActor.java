@@ -157,7 +157,7 @@ public class WorkerServiceActor extends AbstractActor {
                     ProcessUtils.handleCommandResult(serviceRoleInfo.getHostCommandId(), execResult.getExecResult(),
                             execResult.getExecOut());
                 })
-                .matchAny(msg -> unhandled(msg))
+                .matchAny(this::unhandled)
                 .build();
     }
 }

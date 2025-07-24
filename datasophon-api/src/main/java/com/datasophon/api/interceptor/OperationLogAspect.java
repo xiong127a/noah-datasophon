@@ -237,9 +237,7 @@ public class OperationLogAspect {
 
         //从request中查找
         JSONObject requestParam = new JSONObject();
-        request.getParameterMap().forEach((key, value) -> {
-            requestParam.put(key, String.join(" ", value));
-        });
+        request.getParameterMap().forEach((key, value) -> requestParam.put(key, String.join(" ", value)));
         clusterParam(op, requestParam);
 
         Object[] args = point.getArgs();
