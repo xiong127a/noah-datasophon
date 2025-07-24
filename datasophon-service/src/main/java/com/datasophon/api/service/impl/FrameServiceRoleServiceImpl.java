@@ -57,7 +57,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
 
     private final FrameServiceService frameService;
     @Autowired
-    public FrameServiceRoleServiceImpl(ClusterInfoService clusterInfoService, FrameServiceService frameService) {
+    public FrameServiceRoleServiceImpl(@org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService, FrameServiceService frameService) {
         this.clusterInfoService = clusterInfoService;
         this.frameService = frameService;
     }

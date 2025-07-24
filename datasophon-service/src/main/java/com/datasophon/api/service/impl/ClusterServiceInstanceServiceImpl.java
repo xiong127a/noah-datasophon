@@ -96,7 +96,7 @@ public class ClusterServiceInstanceServiceImpl
         CONNECTION_INFO_CACHE.schedulePrune(2000);
     }
     @Autowired
-    public ClusterServiceInstanceServiceImpl(ClusterServiceInstanceMapper serviceInstanceMapper, ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, ClusterServiceRoleGroupConfigService roleGroupConfigService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceWebuisService webuisService) {
+    public ClusterServiceInstanceServiceImpl(ClusterServiceInstanceMapper serviceInstanceMapper, @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, ClusterServiceRoleGroupConfigService roleGroupConfigService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceWebuisService webuisService) {
         this.serviceInstanceMapper = serviceInstanceMapper;
         this.roleInstanceService = roleInstanceService;
         this.clusterInfoService = clusterInfoService;
