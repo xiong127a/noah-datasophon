@@ -20,8 +20,7 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
     private static final int ENABLED = 1;
     private static final int DISABLED = 2;
 
-    @Autowired
-    private ClusterAlertHistoryMapper alertHistoryMapper;
+    private final ClusterAlertHistoryMapper alertHistoryMapper;
 
     @Override
     public boolean hasEnabledAlertHistory(String alertname, int clusterId, String hostname) {
