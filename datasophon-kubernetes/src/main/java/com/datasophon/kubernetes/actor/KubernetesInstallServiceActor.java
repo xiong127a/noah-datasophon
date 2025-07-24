@@ -22,7 +22,7 @@ public class KubernetesInstallServiceActor extends AbstractActor {
                             command.getServiceName(), command.getServiceRoleName());
 
                     logger.info("Start install package {}", command.getPackageName());
-                    installResult = serviceHandler.install(command);
+                    installResult = serviceHandler.install();
                     getSender().tell(installResult, getSelf());
                     logger.info("Install {} {}", command.getPackageName(),
                             installResult.getExecResult() ? "success" : "failed");
