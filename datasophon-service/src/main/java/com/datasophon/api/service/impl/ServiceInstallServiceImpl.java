@@ -461,7 +461,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             dag.addNode(command.getServiceName(), serviceNode);
             if (CollUtil.isNotEmpty(serviceInfo.getDependencies())) {
                 for (String dependency : serviceInfo.getDependencies()) {
-                    dag.addEdge(dependency, command.getServiceName());
+                    dag.addEdge(dependency, command.getServiceName(), null, false);
                 }
             }
         }

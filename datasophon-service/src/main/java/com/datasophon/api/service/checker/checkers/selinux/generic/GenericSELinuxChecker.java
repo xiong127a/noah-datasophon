@@ -2,6 +2,7 @@ package com.datasophon.api.service.checker.checkers.selinux.generic;
 
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxCheckerStrategy;
+import com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
@@ -42,9 +43,10 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
     @Setter
     private String versionPrefix;
 
-    public GenericSELinuxChecker() {
-        // 创建SELinuxChecker实例
-        this.selinuxChecker = new SELinuxChecker();
+    @Autowired
+    public GenericSELinuxChecker(SELinuxCheckerFactory selinuxCheckerFactory) {
+        // 创建SELinuxChecker实例，传入工厂对象
+        this.selinuxChecker = new SELinuxChecker(selinuxCheckerFactory);
     }
 
     @Override
@@ -361,7 +363,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                         "临时设置SELinux失败",
                         "无法临时设置SELinux为宽容模式: " + setenforceResult.getErrorOrOutput()) +
 
-                        // 添加手动修复指南
+                // 添加手动修复指南
                         HtmlStyleHelper.beginGroup() +
                         "<p><strong>手动修复步骤:</strong></p>" +
                         "<ol style='padding-left:20px;margin-bottom:15px'>" +
@@ -370,16 +372,18 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                                 """
                                         # CentOS/RHEL/Kylin V4方法:
                                         sudo setenforce 0
-                                        
+
                                         # Ubuntu/Kylin V10方法:
-                                        [ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce""") +
+                                        [ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce""")
+                        +
                         "<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>" +
                         HtmlStyleHelper.generateCodeBlock(
                                 """
                                         sudo vi /etc/selinux/config
-                                        
+
                                         # 修改以下行
-                                        SELINUX=disabled""") +
+                                        SELINUX=disabled""")
+                        +
                         "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
                         HtmlStyleHelper.generateCodeBlock("sudo reboot") +
                         "</ol>" +
@@ -438,13 +442,15 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                         "SELinux配置文件修改失败",
                         "SELinux已临时设置为宽容模式，但无法修改配置文件进行永久设置: " + sedResult.getErrorOrOutput()) +
 
-                        // 添加当前状态说明
+                // 添加当前状态说明
                         HtmlStyleHelper.beginGroup() +
                         "<p><strong>当前SELinux状态:</strong></p>" +
                         HtmlStyleHelper.generatePropertyRow(
-                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS)
+                        +
                         HtmlStyleHelper.generatePropertyRow(
-                                "永久状态", "未修改", HtmlStyleHelper.Colors.WARNING) +
+                                "永久状态", "未修改", HtmlStyleHelper.Colors.WARNING)
+                        +
                         HtmlStyleHelper.endGroup() +
 
                         // 添加手动修复指南
@@ -456,10 +462,11 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                                 """
                                         sudo mkdir -p /etc/selinux
                                         sudo vi /etc/selinux/config
-                                        
+
                                         # 添加以下行
                                         SELINUX=disabled
-                                        SELINUXTYPE=targeted""") +
+                                        SELINUXTYPE=targeted""")
+                        +
                         "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
                         HtmlStyleHelper.generateCodeBlock("sudo reboot") +
                         "</ol>" +

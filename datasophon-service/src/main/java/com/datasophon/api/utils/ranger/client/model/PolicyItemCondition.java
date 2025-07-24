@@ -14,6 +14,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PolicyItemCondition {
     private String type;
+    @Builder.Default
     private List<String> values = Lists.newArrayList();
 
     @Override

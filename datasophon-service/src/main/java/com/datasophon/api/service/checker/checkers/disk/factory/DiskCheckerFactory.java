@@ -23,7 +23,7 @@ public class DiskCheckerFactory {
     private final GenericDiskChecker genericDiskChecker;
 
     public DiskCheckerFactory(List<DiskCheckerStrategy> diskCheckers, List<DiskCheckerStrategy> checkers) {
-        this.diskCheckers = diskCheckers;
+        this.diskCheckers = diskCheckers; // 确保初始化diskCheckers成员变量
         this.genericDiskChecker = checkers.stream()
                 .filter(checker -> checker instanceof GenericDiskChecker)
                 .map(checker -> (GenericDiskChecker) checker)
