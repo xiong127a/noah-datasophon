@@ -17,6 +17,7 @@
 
 package com.datasophon.kubernetes.actor.handler;
 
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONArray;
@@ -51,7 +52,6 @@ public class KubernetesConfigureServiceHandler {
 
     private static final String RANGER_ADMIN = "RangerAdmin";
 
-
     private static final String SH = "sh";
 
     private String serviceName;
@@ -69,12 +69,12 @@ public class KubernetesConfigureServiceHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public ExecResult configure(String namespace,Map<Generators, List<ServiceConfig>> configFileMap,
-                                String decompressPackageName,
-                                Integer myid,
-                                String serviceRoleName,
-                                RunAs runAs,
-                                String hostName) throws Exception {
+    public ExecResult configure(String namespace, Map<Generators, List<ServiceConfig>> configFileMap,
+            String decompressPackageName,
+            Integer myid,
+            String serviceRoleName,
+            RunAs runAs,
+            String hostName) throws Exception {
         ExecResult execResult = new ExecResult();
 
         try {
@@ -109,9 +109,6 @@ public class KubernetesConfigureServiceHandler {
                                 break;
                         }
                     }
-                    if (Constants.PATH.equals(config.getConfigType())) {
-//                        createPath(config, runAs, hostName);
-                    }
                     if (Constants.MV_PATH.equals(config.getConfigType())) {
                         movePath(config, runAs, hostName);
                     }
@@ -121,7 +118,7 @@ public class KubernetesConfigureServiceHandler {
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
                         if (StrUtil.equals("map2", config.getConfigType())) {
                             config.setConfigType("map");
-                        }else {
+                        } else {
                             iterator.remove();
                         }
                     }
@@ -150,40 +147,33 @@ public class KubernetesConfigureServiceHandler {
                         customConfList.add(serviceConfig);
                         customConfList.add(serviceConfig1);
                     }
-//                    if ("fe_priority_networks".equals(config.getName())
-//                            || "be_priority_networks".equals(config.getName())) {
-//                        config.setName("priority_networks");
-//                    }
-//                    if (("SRFE".equals(serviceRoleName)
-//                            || "SRBE".equals(serviceRoleName)
-//                            || "SRFEObserver".equals(serviceRoleName)
-//                            || "SRCN".equals(serviceRoleName))
-//                            && "priority_networks".equals(config.getName())) {
-//                        config.setValue(InetAddress.getLocalHost().getHostAddress());
-//                    }
 
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
-                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
+                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName
+                                + "/conf/hive-site.xml";
                         if (!KubernetesMinaUtils.checkPathExists(hostName, targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            KubernetesMinaUtils.execCmdWithResult(hostName, "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            KubernetesMinaUtils.execCmdWithResult(hostName,
+                                    "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
                         }
                     }
                 }
 
-                if ("AlluxioMaster".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
+                if ("AlluxioMaster".equals(serviceRoleName)
+                        && "alluxio-site.properties".equals(generators.getFilename())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setName("alluxio.master.hostname");
                     serviceConfig.setValue(hostName);
                     customConfList.add(serviceConfig);
                 }
-                if ("AlluxioWorker".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
-                    if (KubernetesMinaUtils.checkPathExists(hostName, Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/alluxio-site.properties")) {
+                if ("AlluxioWorker".equals(serviceRoleName)
+                        && "alluxio-site.properties".equals(generators.getFilename())) {
+                    if (KubernetesMinaUtils.checkPathExists(hostName, Constants.INSTALL_PATH + File.separator
+                            + decompressPackageName + "/conf/alluxio-site.properties")) {
                         continue;
                     }
                 }
-
 
                 if ("node.properties".equals(generators.getFilename())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
@@ -193,38 +183,21 @@ public class KubernetesConfigureServiceHandler {
                 }
                 configs.addAll(customConfList);
                 if (!configs.isEmpty()) {
-                    // extra app, package: META, templates
-                    String path = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/templates";
-//                    if (KubernetesMinaUtils.checkPathExists(hostName, path) && KubernetesMinaUtils.isDirectory(hostName, path)) {
-//                        // 3rd app, load ext templates
-//                        logger.info("Add ext app template path: {} to loader path.", path);
-//                        KubernetesFreeMakerUtils.generateConfigFile(
-//                                generators,
-//                                configs,
-//                                path
-//                                );
-//                    } else {
-                        KubernetesFreeMakerUtils.generateConfigFile(
-                                namespace,
-                                generators,
-                                configs,
-                                serviceRoleName,serviceRoleFullName);
-//                    }
+                    KubernetesFreeMakerUtils.generateConfigFile(
+                            namespace,
+                            generators,
+                            configs,
+                            serviceRoleName, serviceRoleFullName);
                 } else if (!generators.getFilename().endsWith(SH)) {
-                    String configMapName = generateConfigMapName(serviceRoleFullName,generators);
-                    KubernetesFreeMakerUtils.cacheConfigMap(namespace,configMapName, "", generators.getFilename(),serviceRoleFullName);
+                    String configMapName = generateConfigMapName(serviceRoleFullName, generators);
+                    KubernetesFreeMakerUtils.cacheConfigMap(namespace, configMapName, "", generators.getFilename(),
+                            serviceRoleFullName);
                 }
 
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
 
             }
-
-//                return execResult;
-//            }
-//            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(hostName, decompressPackageName)) {
-//                return execResult;
-//            }
             execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
@@ -233,37 +206,11 @@ public class KubernetesConfigureServiceHandler {
         return execResult;
     }
 
-    private boolean setupRangerAdmin(String hostname, String decompressPackageName) {
-        logger.info("start to execute ranger admin setup.sh");
-        String commands = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh";
-        String result = KubernetesMinaUtils.execCmdWithResult(hostname, commands);
-
-        String globalCommand = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "set_globals.sh";
-        KubernetesMinaUtils.execCmdWithResult(hostname, globalCommand);
-
-        if ("true".equals(result)) {
-            logger.info("ranger admin setup success");
-            return true;
-        }
-        logger.info("ranger admin setup failed");
-        return false;
-    }
-
-    private void createPath(ServiceConfig config, RunAs runAs, String hostname) {
-        String path = (String) config.getValue();
-        if (StringUtils.isNotBlank(config.getSeparator()) && path.contains(config.getSeparator())) {
-            for (String dir : path.split(config.getSeparator())) {
-                mkdir(dir, runAs, hostname);
-            }
-        } else {
-            mkdir(path, runAs, hostname);
-        }
-    }
-
     private void movePath(ServiceConfig config, RunAs runAs, String hostname) {
         String oldPath = (String) config.getDefaultValue();
         String newPath = (String) config.getValue();
-        if (KubernetesMinaUtils.checkPathExists(hostname, oldPath) && !KubernetesMinaUtils.checkPathExists(hostname, newPath)) {
+        if (KubernetesMinaUtils.checkPathExists(hostname, oldPath)
+                && !KubernetesMinaUtils.checkPathExists(hostname, newPath)) {
             if (StringUtils.isNotBlank(config.getSeparator()) && newPath.contains(config.getSeparator())) {
                 for (String dir : newPath.split(config.getSeparator())) {
                     mkdir(dir, runAs, hostname);
@@ -278,8 +225,8 @@ public class KubernetesConfigureServiceHandler {
     }
 
     private void addToCustomList(Iterator<ServiceConfig> iterator, ArrayList<ServiceConfig> customConfList,
-                                 ServiceConfig config) {
-        List<JSONObject> list = (List<JSONObject>) config.getValue();
+            ServiceConfig config) {
+        List<JSONObject> list = Convert.toList(JSONObject.class, config.getValue());
         iterator.remove();
         for (JSONObject json : list) {
             if (Objects.nonNull(json)) {
@@ -297,23 +244,21 @@ public class KubernetesConfigureServiceHandler {
         }
     }
 
-    private String conventToStr(ServiceConfig config) {
+    private void conventToStr(ServiceConfig config) {
         JSONArray value = (JSONArray) config.getValue();
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
         String joinValue = String.join(config.getSeparator(), strs);
         config.setValue(joinValue);
         logger.info("config set value to {}", config.getValue());
-        return joinValue;
     }
 
     private void mkdir(String path, RunAs runAs, String hostname) {
         logger.info("create file path {}", path);
         if (!KubernetesMinaUtils.checkPathExists(hostname, path)) {
-            String command =
-                    "mkdir -p " + path
-                            + " && "
-                            + "chmod 775 " + path;
+            String command = "mkdir -p " + path
+                    + " && "
+                    + "chmod 775 " + path;
             if (Objects.nonNull(runAs)) {
                 command = command + " && chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + path;
             }
