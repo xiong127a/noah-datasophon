@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.host.impl;
 
+import cn.hutool.core.convert.Convert;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSONObject;
@@ -70,11 +71,16 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterHostServiceImpl.class);
 
-    @Autowired
-    ClusterServiceRoleInstanceService roleInstanceService;
+    // 移除字段注入
+    private final ClusterServiceRoleInstanceService roleInstanceService;
+    private final ClusterRackService clusterRackService;
 
+    // 添加构造函数注入
     @Autowired
-    ClusterRackService clusterRackService;
+    public ClusterHostServiceImpl(ClusterServiceRoleInstanceService roleInstanceService, ClusterRackService clusterRackService) {
+        this.roleInstanceService = roleInstanceService;
+        this.clusterRackService = clusterRackService;
+    }
 
     @Override
     public ClusterHostDO getClusterHostByHostname(String hostname) {
@@ -91,7 +97,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
+    public Result<List<QueryHostListPageDTO>> listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
@@ -128,10 +134,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
 
-        // 获取集群代码，用于查询主机信息缓存
-        // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        // String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        Map<String, HostInfo> hostInfoMap = Convert.toMap(String.class, HostInfo.class, CacheUtils.get(clusterId + Constants.HOST_MAP));
 
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
@@ -183,7 +186,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
         long count = countQuery.count();
 
-        return Result.success(hostListPageDTOS).put(Constants.TOTAL, count);
+        return Result.success(hostListPageDTOS,count);
     }
 
     @Override
@@ -195,7 +198,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result getRoleListByHostname(Integer clusterId, String hostname) {
+    public Result<List<ClusterServiceRoleInstanceEntity>> getRoleListByHostname(Integer clusterId, String hostname) {
         List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
                 .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
@@ -213,7 +216,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
      */
     @Override
     @Transactional
-    public Result deleteHosts(String hostIds) {
+    public Result<String> deleteHosts(String hostIds) {
         // 批量移除
         String[] ids = hostIds.split(Constants.COMMA);
         for (String hostId : ids) {
@@ -269,7 +272,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorUtils.actorSystem.dispatcher(),
                     ActorRef.noSender());
 
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            Map<String, HostInfo> map = Convert.toMap(String.class, HostInfo.class, CacheUtils.get(clusterId + Constants.HOST_MAP));
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
             }
@@ -278,7 +281,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result getRack(Integer clusterId) {
+    public Result<ArrayList<JSONObject>> getRack(Integer clusterId) {
         ArrayList<JSONObject> list = new ArrayList<>();
         JSONObject rack = new JSONObject();
         rack.put("rack", "/default-rack");
@@ -335,7 +338,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result assignRack(Integer clusterId, String rack, String hostIds) {
+    public Result<String> assignRack(Integer clusterId, String rack, String hostIds) {
         List<String> ids = Arrays.asList(hostIds.split(","));
         List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
                 .where(ClusterHostDO::getId).in(ids)
@@ -360,7 +363,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 .list();
     }
 
-    public Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
+    public Result<String> saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
@@ -404,7 +407,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     /**
      * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
      */
-    public Result saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) {
+    public Result<String> saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) {
         for (ClusterHostDO kubernetesHost : kubernetesHosts) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(kubernetesHost.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
@@ -443,7 +446,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     /**
      * 获取K8S模式下的完整硬件信息
      */
-    public Result getK8sHostsWithHardwareInfo(Integer clusterId) {
+    public Result<List<ClusterHostDO>> getK8sHostsWithHardwareInfo(Integer clusterId) {
         try {
             // 从缓存中获取K8S完整硬件信息
             Object cachedData = CacheUtils.get(clusterId + "_K8S_HOSTS_FOR_SAVE");
