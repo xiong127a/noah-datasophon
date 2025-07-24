@@ -83,10 +83,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
      * @param toNode     node of destination
      * @param edge       edge description
      * @param createNode whether the node needs to be created if it does not exist
-     * @return The result of adding an edge. returns false if the DAG result is a
-     *         ring result
      */
-    public boolean addEdge(Node fromNode, Node toNode, EdgeInfo edge, boolean createNode) {
+    public void addEdge(Node fromNode, Node toNode, EdgeInfo edge, boolean createNode) {
         lock.writeLock().lock();
 
         try {
@@ -94,7 +92,7 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
             // Whether an edge can be successfully added(fromNode -> toNode)
             if (!isLegalAddEdge(fromNode, toNode, createNode)) {
                 logger.error("serious error: add edge({} -> {}) is invalid, cause cycle！", fromNode, toNode);
-                return false;
+                return;
             }
 
             addNodeIfAbsent(fromNode);
@@ -103,7 +101,6 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
             addEdge(fromNode, toNode, edge, edgesMap);
             addEdge(toNode, fromNode, edge, reverseEdgesMap);
 
-            return true;
         } finally {
             lock.writeLock().unlock();
         }
