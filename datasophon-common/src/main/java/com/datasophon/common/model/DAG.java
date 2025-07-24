@@ -17,13 +17,12 @@
 package com.datasophon.common.model;
 
 import com.datasophon.common.utils.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * analysis of DAG
@@ -43,12 +42,14 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     private final Map<Node, NodeInfo> nodesMap;
 
     /**
-     * edge map. key is node of origin;value is Map with key for destination node and value for edge
+     * edge map. key is node of origin;value is Map with key for destination node
+     * and value for edge
      */
     private final Map<Node, Map<Node, EdgeInfo>> edgesMap;
 
     /**
-     * reversed edge set，key is node of destination, value is Map with key for origin node and value for edge
+     * reversed edge set，key is node of destination, value is Map with key for
+     * origin node and value for edge
      */
     private final Map<Node, Map<Node, EdgeInfo>> reverseEdgesMap;
 
@@ -61,8 +62,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     /**
      * add node information
      *
-     * @param node          node
-     * @param nodeInfo      node information
+     * @param node     node
+     * @param nodeInfo node information
      */
     public void addNode(Node node, NodeInfo nodeInfo) {
         lock.writeLock().lock();
@@ -78,32 +79,12 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     /**
      * add edge
      *
-     * @param fromNode node of origin
-     * @param toNode   node of destination
-     */
-    public void addEdge(Node fromNode, Node toNode) {
-        addEdge(fromNode, toNode);
-    }
-
-    /**
-     * add edge
-     *
-     * @param fromNode node of origin
-     * @param toNode   node of destination
-     * @return The result of adding an edge. returns false if the DAG result is a ring result
-     */
-    private boolean addEdge(Node fromNode, Node toNode) {
-        return addEdge(fromNode, toNode, null, false);
-    }
-
-    /**
-     * add edge
-     *
-     * @param fromNode        node of origin
-     * @param toNode          node of destination
-     * @param edge            edge description
-     * @param createNode      whether the node needs to be created if it does not exist
-     * @return The result of adding an edge. returns false if the DAG result is a ring result
+     * @param fromNode   node of origin
+     * @param toNode     node of destination
+     * @param edge       edge description
+     * @param createNode whether the node needs to be created if it does not exist
+     * @return The result of adding an edge. returns false if the DAG result is a
+     *         ring result
      */
     public boolean addEdge(Node fromNode, Node toNode, EdgeInfo edge, boolean createNode) {
         lock.writeLock().lock();
@@ -314,7 +295,9 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
 
     /**
      * Only DAG has a topological sort
-     * @return topologically sorted results, returns false if the DAG result is a ring result
+     * 
+     * @return topologically sorted results, returns false if the DAG result is a
+     *         ring result
      * @throws Exception errors
      */
     public List<Node> topologicalSort() throws Exception {
@@ -349,8 +332,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
      *
      * @param fromNode node of origin
      * @param toNode   node of destination
-     * @param edge  edge description
-     * @param edges edge set
+     * @param edge     edge description
+     * @param edges    edge set
      */
     private void addEdge(Node fromNode, Node toNode, EdgeInfo edge, Map<Node, Map<Node, EdgeInfo>> edges) {
         edges.putIfAbsent(fromNode, new HashMap<>());
@@ -362,8 +345,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
      * Whether an edge can be successfully added(fromNode -> toNode)
      * need to determine whether the DAG has cycle
      *
-     * @param fromNode     node of origin
-     * @param toNode       node of destination
+     * @param fromNode   node of origin
+     * @param toNode     node of destination
      * @param createNode whether to create a node
      * @return true if added
      */
@@ -380,7 +363,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
             }
         }
 
-        // Whether an edge can be successfully added(fromNode -> toNode),need to determine whether the DAG has cycle!
+        // Whether an edge can be successfully added(fromNode -> toNode),need to
+        // determine whether the DAG has cycle!
         int verticesCount = getNodesCount();
 
         Queue<Node> queue = new LinkedList<>();
@@ -406,7 +390,7 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     /**
      * Get all neighbor nodes of the node
      *
-     * @param node   Node id to be calculated
+     * @param node  Node id to be calculated
      * @param edges neighbor edge information
      * @return all neighbor nodes of the node
      */
@@ -425,16 +409,19 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
      * <p>
      * Directed acyclic graph (DAG) has topological ordering
      * Breadth First Search：
-     *    1、Traversal of all the vertices in the graph, the degree of entry is 0 vertex into the queue
-     *    2、Poll a vertex in the queue to update its adjacency (minus 1) and queue the adjacency if it is 0 after minus 1
-     *    3、Do step 2 until the queue is empty
-     * If you cannot traverse all the nodes, it means that the current graph is not a directed acyclic graph.
+     * 1、Traversal of all the vertices in the graph, the degree of entry is 0 vertex
+     * into the queue
+     * 2、Poll a vertex in the queue to update its adjacency (minus 1) and queue the
+     * adjacency if it is 0 after minus 1
+     * 3、Do step 2 until the queue is empty
+     * If you cannot traverse all the nodes, it means that the current graph is not
+     * a directed acyclic graph.
      * There is no topological sort.
      *
      *
      * @return key Returns the state
-     * if success (acyclic) is true, failure (acyclic) is looped,
-     * and value (possibly one of the topological sort results)
+     *         if success (acyclic) is true, failure (acyclic) is looped,
+     *         and value (possibly one of the topological sort results)
      */
     private Map.Entry<Boolean, List<Node>> topologicalSortImpl() {
         // node queue with degree of entry 0
@@ -458,14 +445,15 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
         }
 
         /*
-          After scanning, there is no node with 0 degree of entry,
-          indicating that there is a ring, and return directly
+         * After scanning, there is no node with 0 degree of entry,
+         * indicating that there is a ring, and return directly
          */
         if (zeroIndegreeNodeQueue.isEmpty()) {
             return new AbstractMap.SimpleEntry<>(false, topoResultList);
         }
 
-        // The topology algorithm is used to delete nodes with 0 degree of entry and its associated edges
+        // The topology algorithm is used to delete nodes with 0 degree of entry and its
+        // associated edges
         while (!zeroIndegreeNodeQueue.isEmpty()) {
             Node v = zeroIndegreeNodeQueue.poll();
             // Get the neighbor node
@@ -487,8 +475,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
         }
 
         // if notZeroIndegreeNodeMap is empty,there is no ring!
-        AbstractMap.SimpleEntry resultMap =
-                new AbstractMap.SimpleEntry(notZeroIndegreeNodeMap.isEmpty(), topoResultList);
+        AbstractMap.SimpleEntry resultMap = new AbstractMap.SimpleEntry(notZeroIndegreeNodeMap.isEmpty(),
+                topoResultList);
         return resultMap;
 
     }
