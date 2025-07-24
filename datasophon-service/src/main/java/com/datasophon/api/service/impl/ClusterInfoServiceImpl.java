@@ -17,9 +17,6 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.load.GlobalVariables;
@@ -45,8 +42,9 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
-import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pekko.actor.ActorRef;
@@ -61,8 +59,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceEntityTableDef.CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY;
-
 @Slf4j
 @Service("clusterInfoService")
 @Transactional
@@ -72,9 +68,6 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Autowired
     private ClusterInfoMapper clusterInfoMapper;
-
-    @Autowired
-    private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
 
     @Autowired
     private ClusterRoleUserService clusterUserService;
@@ -281,10 +274,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         prometheusMetrics.append("# TYPE service_role_instance_count gauge\n");
 
         // 为每个服务角色添加指标行
-        roleCountMap.forEach((roleName, count) -> {
-            prometheusMetrics.append(String.format("service_role_instance_count{role=\"%s\"} %d\n",
-                    roleName.replace("\"", "\\\""), count));
-        });
+        roleCountMap.forEach((roleName, count) -> prometheusMetrics.append(String.format("service_role_instance_count{role=\"%s\"} %d\n",
+                roleName.replace("\"", "\\\""), count)));
 
         // 添加EOF标记
         prometheusMetrics.append("# EOF\n");
@@ -354,9 +345,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             }
 
             // 使用传入的命名空间名称
-            String finalNamespace = namespace;
 
-            if (finalNamespace == null || finalNamespace.trim().isEmpty()) {
+            if (namespace == null || namespace.trim().isEmpty()) {
                 return Result.error("命名空间名称不能为空");
             }
 
@@ -365,23 +355,23 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
                 KubeUtil.testConnect(client);
 
                 // 检查命名空间是否存在，不存在就创建
-                if (!KubeUtil.checkNamespace(client, finalNamespace)) {
-                    log.info("命名空间 '{}' 不存在，开始创建", finalNamespace);
+                if (!KubeUtil.checkNamespace(client, namespace)) {
+                    log.info("命名空间 '{}' 不存在，开始创建", namespace);
 
                     // 创建命名空间
-                    if (!KubeUtil.createNamespace(client, finalNamespace)) {
-                        return Result.error("创建命名空间 '" + finalNamespace + "' 失败");
+                    if (!KubeUtil.createNamespace(client, namespace)) {
+                        return Result.error("创建命名空间 '" + namespace + "' 失败");
                     }
 
-                    log.info("成功创建命名空间：{}", finalNamespace);
+                    log.info("成功创建命名空间：{}", namespace);
                 } else {
-                    log.info("命名空间 '{}' 已存在，直接使用", finalNamespace);
+                    log.info("命名空间 '{}' 已存在，直接使用", namespace);
                 }
             }
 
             // 更新集群信息
             clusterInfo.setKubeConfig(kubeConfig);
-            clusterInfo.setNamespace(finalNamespace);
+            clusterInfo.setNamespace(namespace);
             this.updateById(clusterInfo);
 
             return Result.success("Kubernetes配置更新成功");

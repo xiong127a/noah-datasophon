@@ -19,7 +19,6 @@ package com.datasophon.api.security;
 
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,49 +28,84 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Spring Security用户详情服务实现
- * 负责加载用户信息以进行认证
+ * 负责加载用户信息以进行认证和授权
  */
 @Service
-public class PasswordAuthenticator implements UserDetailsService {
+public class CustomUserDetailsService implements UserDetailsService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PasswordAuthenticator.class);
+    private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
 
     @Autowired
     private UserInfoService userService;
 
+    /**
+     * 根据用户名加载用户详情
+     * 
+     * @param username 用户名
+     * @return UserDetails 用户详情
+     * @throws UsernameNotFoundException 如果用户未找到则抛出异常
+     */
     @Override
+    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 直接使用QueryChain查询用户
-        UserInfoEntity user = QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(username)
-                .one();
+        logger.debug("认证用户: {}", username);
+
+        // 调用服务方法获取用户
+        UserInfoEntity user = userService.getUserByUsername(username);
 
         if (user == null) {
-            logger.error("User not found with username: {}", username);
+            logger.error("用户未找到: {}", username);
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
         // 创建权限列表
+        List<SimpleGrantedAuthority> authorities = buildUserAuthority(user);
+
+        // 创建并返回UserDetails对象
+        return buildUserForAuthentication(user, authorities);
+    }
+
+    /**
+     * 构建用户的权限列表
+     * 
+     * @param user 用户实体
+     * @return 权限列表
+     */
+    private List<SimpleGrantedAuthority> buildUserAuthority(UserInfoEntity user) {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+        // 添加基本用户角色
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-        // 如果是管理员，添加管理员角色
+        // 管理员角色
         if (user.getUserType() != null && user.getUserType() == 1) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
 
-        // 返回Spring Security用户对象
+        // 这里可以添加更多的角色和权限，例如从数据库加载用户的角色和权限
+
+        return authorities;
+    }
+
+    /**
+     * 构建认证用户
+     * 
+     * @param user        用户实体
+     * @param authorities 权限列表
+     * @return UserDetails对象
+     */
+    private UserDetails buildUserForAuthentication(UserInfoEntity user, List<SimpleGrantedAuthority> authorities) {
         return new User(
                 user.getUsername(),
                 user.getPassword(),
-                true, // 所有用户默认为启用状态
+                true, // enabled
                 true, // accountNonExpired
                 true, // credentialsNonExpired
                 true, // accountNonLocked

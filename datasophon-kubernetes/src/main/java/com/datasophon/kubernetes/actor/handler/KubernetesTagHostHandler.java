@@ -5,10 +5,10 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeBuilder;
@@ -53,7 +53,7 @@ public class KubernetesTagHostHandler {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = String.format("%s-%s-%s", namespace,serviceName.toLowerCase(), serviceRoleName.toLowerCase());
-        String loggerName = String.format("%s-%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, namespace, serviceName,
+        String loggerName = String.format("%s-%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, namespace, serviceName,
                 serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }

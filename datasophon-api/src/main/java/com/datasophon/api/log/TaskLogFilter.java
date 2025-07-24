@@ -21,16 +21,16 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
-import com.datasophon.kubernetes.constants.Constant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.datasophon.common.Constants;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * task log filter
  */
+@Slf4j
 public class TaskLogFilter extends Filter<ILoggingEvent> {
 
-    private static Logger logger = LoggerFactory.getLogger(TaskLogFilter.class);
+
 
     /**
      * level
@@ -58,7 +58,7 @@ public class TaskLogFilter extends Filter<ILoggingEvent> {
 
         // 检查日志名称是否以指定前缀开头
         boolean isTaskLogger = event.getLoggerName() != null &&
-                event.getLoggerName().startsWith(Constant.TASK_LOG_LOGGER_NAME);
+                event.getLoggerName().startsWith(Constants.TASK_LOG_LOGGER_NAME);
 
         // 检查日志级别是否大于等于配置的级别
         boolean isLevelAllowed = level != null &&
@@ -70,12 +70,12 @@ public class TaskLogFilter extends Filter<ILoggingEvent> {
         }
 
         // 安全地记录调试信息
-        if (logger.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             String threadName = event.getThreadName() != null ? event.getThreadName() : "unknown";
             String loggerName = event.getLoggerName() != null ? event.getLoggerName() : "unknown";
             String levelName = level != null ? level.toString() : "unknown";
 
-            logger.debug("task log filter, thread name:{}, loggerName:{}, filterReply:{}, level:{}",
+            log.debug("task log filter, thread name:{}, loggerName:{}, filterReply:{}, level:{}",
                     threadName, loggerName, filterReply.name(), levelName);
         }
 

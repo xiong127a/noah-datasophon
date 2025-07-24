@@ -27,7 +27,6 @@ import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
@@ -66,7 +65,7 @@ public class KubernetesConfigureServiceHandler {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 

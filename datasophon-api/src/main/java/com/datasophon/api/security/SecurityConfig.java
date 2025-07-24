@@ -17,22 +17,23 @@
 
 package com.datasophon.api.security;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,83 +41,152 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
+/**
+ * Spring Security配置类
+ * 配置安全过滤链、认证管理器、密码编码器等
+ */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // 启用方法级安全注解（如@PreAuthorize）
+@Slf4j
 public class SecurityConfig {
 
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+        private final JwtTokenProvider tokenProvider;
+        private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    private final JwtTokenProvider tokenProvider;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+        @Autowired
+        public SecurityConfig(JwtTokenProvider tokenProvider, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                this.tokenProvider = tokenProvider;
+                this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        }
 
-    @Autowired
-    public SecurityConfig(JwtTokenProvider tokenProvider, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
-        this.tokenProvider = tokenProvider;
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-    }
+        /**
+         * 配置安全过滤链
+         * 
+         * @param http HttpSecurity对象
+         * @return 配置好的SecurityFilterChain
+         * @throws Exception 如果配置出错
+         */
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                // 使用 Lambda DSL 风格配置安全规则
+                http
+                                // 配置CORS
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(withDefaults())
-                .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(
-                        exceptionHandling -> exceptionHandling.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                .sessionManagement(
-                        sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.sameOrigin()))
-                .authorizeHttpRequests(authorize -> authorize
-                        // 静态资源
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/static/**"),
-                                new AntPathRequestMatcher("/webjars/**"),
-                                new AntPathRequestMatcher("/ui/**"),
-                                new AntPathRequestMatcher("/*.html"),
-                                new AntPathRequestMatcher("/*.ico"))
-                        .permitAll()
-                        // API接口
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/ddh/api/login"),
-                                new AntPathRequestMatcher("/ddh/api/register"),
-                                new AntPathRequestMatcher("/ddh/swagger-ui/**"),
-                                new AntPathRequestMatcher("/ddh/v3/api-docs/**"),
-                                new AntPathRequestMatcher("/ddh/api/user-info"), // 添加用户信息接口
-                                new AntPathRequestMatcher("/ddh/api/logout"))
-                        .permitAll()
-                        // 原有免登录接口
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/ddh/"),
-                                new AntPathRequestMatcher("/ddh/ssoEnable"))
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(new JwtAuthenticationFilter(tokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                                // 禁用CSRF（因为我们使用JWT令牌）
+                                .csrf(AbstractHttpConfigurer::disable)
 
-        return http.build();
-    }
+                                // 配置异常处理
+                                .exceptionHandling(exceptionHandling -> exceptionHandling
+                                                .authenticationEntryPoint(jwtAuthenticationEntryPoint))
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
-        configuration.setExposedHeaders(Collections.singletonList("x-auth-token"));
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                                // 使用无状态会话
+                                .sessionManagement(sessionManagement -> sessionManagement
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+                                // 配置头部安全选项
+                                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+                                // 配置请求授权规则
+                                .authorizeHttpRequests(authorize -> authorize
+                                                // 静态资源
+                                                .requestMatchers(
+                                                                "/static/**",
+                                                                "/webjars/**",
+                                                                "/ui/**",
+                                                                "/*.html",
+                                                                "/*.ico",
+                                                                "/favicon.ico")
+                                                .permitAll()
+
+                                                // 公开API端点
+                                                .requestMatchers(
+                                                                "/api/login",
+                                                                "/api/register",
+                                                                "/api/refresh-token")
+                                                .permitAll()
+
+                                                // Swagger文档
+                                                .requestMatchers(
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**")
+                                                .permitAll()
+
+                                                // 健康检查和监控端点
+                                                .requestMatchers(
+                                                                "/actuator/**",
+                                                                "/health",
+                                                                "/info")
+                                                .permitAll()
+
+                                                // 原有免登录接口
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/ssoEnable")
+                                                .permitAll()
+
+                                                // OPTIONS请求允许通过
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                                                // 所有其他请求需要认证
+                                                .anyRequest().authenticated())
+
+                                // 添加JWT过滤器
+                                .addFilterBefore(
+                                                new JwtAuthenticationFilter(tokenProvider),
+                                                UsernamePasswordAuthenticationFilter.class);
+
+                // 返回构建的过滤链
+                return http.build();
+        }
+
+        /**
+         * 配置CORS策略
+         * 
+         * @return CORS配置源
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOrigins(Collections.singletonList("*"));
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                configuration.setAllowedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "X-Requested-With",
+                                "Accept",
+                                "Origin",
+                                "Access-Control-Request-Method",
+                                "Access-Control-Request-Headers"));
+                configuration.setExposedHeaders(Arrays.asList("X-Auth-Token", "Authorization"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
+
+        /**
+         * 配置认证管理器
+         * 
+         * @param authConfig 认证配置
+         * @return 认证管理器
+         * @throws Exception 如果配置出错
+         */
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
+
+        /**
+         * 配置密码编码器
+         * 
+         * @return BCrypt密码编码器
+         */
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 }

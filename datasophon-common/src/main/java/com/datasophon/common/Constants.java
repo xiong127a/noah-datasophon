@@ -32,6 +32,13 @@ public final class Constants {
         public static final String DATA = "data";
         public static final String TOTAL = "total";
 
+        public static final String TASK_LOG_LOGGER_NAME = "TaskLogLogger";
+
+        public static final String ROLE_NODE_CNT = "roleNodeCnt";
+
+        public static final String CURRENT_NODE_CNT = "currentNodeCnt";
+        public static final String POD_NAME = "podName";
+
 
         public static final String DEPLOYMENT = "Deployment";
         public static final String STATEFULSET = "StatefulSet";

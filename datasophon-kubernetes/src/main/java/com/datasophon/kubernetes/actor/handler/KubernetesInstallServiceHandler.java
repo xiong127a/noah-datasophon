@@ -5,7 +5,6 @@ import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
@@ -29,7 +28,7 @@ public class KubernetesInstallServiceHandler {
     public KubernetesInstallServiceHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 

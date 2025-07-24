@@ -21,7 +21,6 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.FileUtils;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.DockerImageUtils;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
@@ -64,7 +63,7 @@ public class KubernetesYamlDeploymentHandler {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
@@ -400,9 +399,9 @@ public class KubernetesYamlDeploymentHandler {
                                 statusRunner.getProgram(), String.join(" ", statusRunner.getArgs()))
                         : "exit 0");
 
-        data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
+        data.put(Constants.ROLE_NODE_CNT, roleNodeCnt);
 
-        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
+        CacheUtils.put(serviceRoleFullName + "_" + Constants.ROLE_NODE_CNT, roleNodeCnt);
 
         // 调用处理特定服务配置的方法
         processServiceSpecificConfigs(namespace);

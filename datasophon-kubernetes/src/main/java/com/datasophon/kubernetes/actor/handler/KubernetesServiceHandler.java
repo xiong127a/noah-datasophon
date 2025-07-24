@@ -10,7 +10,6 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.ColorLogUtils;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
@@ -72,7 +71,7 @@ public class KubernetesServiceHandler {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
@@ -638,7 +637,7 @@ public class KubernetesServiceHandler {
         }
 
         // 获取StatefulSet的副本数
-        Integer replicaCount = getCountInKey(Constant.ROLE_NODE_CNT);
+        Integer replicaCount = getCountInKey(Constants.ROLE_NODE_CNT);
         if (replicaCount == null || replicaCount <= 0) {
             logger.warn("无法获取{}的副本数，无法创建LoadBalancer服务", serviceRoleFullName);
             return;
@@ -908,7 +907,7 @@ public class KubernetesServiceHandler {
         logger.info("当前 Deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
         // 获取期望的节点数
-        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constants.ROLE_NODE_CNT);
 
         // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
         if (nodeCount != null && replicas == nodeCount) {
@@ -940,7 +939,7 @@ public class KubernetesServiceHandler {
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
 
         // 获取期望的节点数
-        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constants.ROLE_NODE_CNT);
 
         // 如果当前副本数已经等于期望节点数，则直接返回，不执行更新操作
         if (nodeCount != null && replicas == nodeCount) {
@@ -968,8 +967,8 @@ public class KubernetesServiceHandler {
             InputStream yamlInputStream,
             RollableScalableResource<T> resource) {
 
-        logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-        CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
+        CacheUtils.removeKey(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
         List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(namespace).create();
         String resourceName = metadata.getFirst().getMetadata().getName();
         String resourceKind = metadata.getFirst().getKind();
@@ -995,7 +994,7 @@ public class KubernetesServiceHandler {
 
         logger.info("已启动的Pod列表: {}", podNames);
 
-        CacheUtils.put(serviceRoleFullName + "_" + Constant.POD_NAME, podNames);
+        CacheUtils.put(serviceRoleFullName + "_" + Constants.POD_NAME, podNames);
     }
 
     private void handleException(ExecResult execResult, String message, Exception e) {
@@ -1038,8 +1037,8 @@ public class KubernetesServiceHandler {
                         .withLabelSelector("app=" + serviceRoleFullName + "-svc")
                         .delete();
                 execResult.setExecResult(true);
-                CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-                CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.POD_NAME);
+                CacheUtils.removeKey(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
+                CacheUtils.removeKey(serviceRoleFullName + "_" + Constants.POD_NAME);
             } catch (Exception e) {
                 logger.error("停止deployment时发生异常: {}", e.getMessage(), e);
                 execResult.setExecErrOut("停止deployment时发生异常: " + e.getMessage());
@@ -1050,17 +1049,17 @@ public class KubernetesServiceHandler {
     }
 
     private void addProcessStatus() {
-        Integer nodeCount = getCountInKey(Constant.CURRENT_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constants.CURRENT_NODE_CNT);
         if (Objects.isNull(nodeCount)) {
-            CacheUtils.put(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT, 1);
+            CacheUtils.put(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT, 1);
         } else {
-            CacheUtils.put(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT, nodeCount + 1);
+            CacheUtils.put(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT, nodeCount + 1);
         }
     }
 
     private Boolean isFinalNode() {
-        Integer nodeCount = getCountInKey(Constant.ROLE_NODE_CNT);
-        Integer currentCount = getCountInKey(Constant.CURRENT_NODE_CNT);
+        Integer nodeCount = getCountInKey(Constants.ROLE_NODE_CNT);
+        Integer currentCount = getCountInKey(Constants.CURRENT_NODE_CNT);
         logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
         return currentCount.equals(nodeCount);
     }

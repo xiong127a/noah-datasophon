@@ -1,8 +1,8 @@
 package com.datasophon.kubernetes.actor.handler;
 
+import com.datasophon.common.Constants;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -42,7 +42,7 @@ public class KubernetesScaleServiceHandler {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 

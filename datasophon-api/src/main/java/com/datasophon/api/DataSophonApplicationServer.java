@@ -59,9 +59,7 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
         logger.info("开始启动 DataSophon-API...");
         SpringApplication.run(DataSophonApplicationServer.class, args);
         // add shutdown hook， close and shutdown resources
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            shutdown();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(DataSophonApplicationServer::shutdown));
     }
 
     @PostConstruct

@@ -18,16 +18,15 @@ package com.datasophon.api.log;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.sift.AbstractDiscriminator;
-import com.datasophon.kubernetes.constants.Constant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.datasophon.common.Constants;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-/**
- * Task Log Discriminator
- */
+@EqualsAndHashCode(callSuper = true)
+@Data
 public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
 
-    private static Logger logger = LoggerFactory.getLogger(TaskLogDiscriminator.class);
+
 
     /**
      * key
@@ -46,10 +45,10 @@ public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
     @Override
     public String getDiscriminatingValue(ILoggingEvent event) {
         String loggerName = event.getLoggerName();
-        String prefix = Constant.TASK_LOG_LOGGER_NAME + "-";
+        String prefix = Constants.TASK_LOG_LOGGER_NAME + "-";
         if (loggerName.startsWith(prefix)) {
-            return loggerName.substring(prefix.length(),
-                    loggerName.length()).replace("-","/");
+            return loggerName.substring(prefix.length()
+            ).replace("-","/");
         } else {
             return "unknown_task";
         }
@@ -65,15 +64,4 @@ public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
         return key;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public String getLogBase() {
-        return logBase;
-    }
-
-    public void setLogBase(String logBase) {
-        this.logBase = logBase;
-    }
 }

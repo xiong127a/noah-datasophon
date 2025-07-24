@@ -1,5 +1,6 @@
 package com.datasophon.kubernetes.strategy;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
@@ -7,7 +8,6 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -32,7 +32,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             startResult = serviceHandler.start(command);
-            Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constant.POD_NAME);
+            Object podNamesObj = CacheUtils.get(serviceRoleFullName + "_" + Constants.POD_NAME);
             List<String> podNames = (List<String>) podNamesObj;
 
             if (podNames == null || podNames.isEmpty()) {
@@ -86,7 +86,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
                                .append(i)
                                .append(".redis-redismaster.datasophon.svc.cluster.local:7000 ");
                     }
-                    if (newValue.length() > 0) {
+                    if (StrUtil.isNotBlank(newValue)) {
                         config.setValue(newValue.substring(0, newValue.length() - 1));
                         logger.info("RedisMasterAddr配置已更新为Kubernetes服务地址: {}", config.getValue());
                     }
@@ -119,7 +119,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
                             }
                         }
                         
-                        if (conflictFound && !adjustedWorker.isEmpty()) {
+                        if (conflictFound) {
                             Collections.rotate(adjustedWorker, 1);
                             attempts++;
                             logger.info("检测到主从节点冲突，执行第{}次位移调整", attempts);
@@ -133,7 +133,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
                                .append(".redis-redisworker.datasophon.svc.cluster.local:7001 ");
                     }
                     
-                    if (newValue.length() > 0) {
+                    if (StrUtil.isNotBlank(newValue)) {
                         config.setValue(newValue.substring(0, newValue.length() - 1));
                         logger.info("RedisSlaveAddr配置已更新为Kubernetes服务地址(经过冲突调整): {}", config.getValue());
                     }

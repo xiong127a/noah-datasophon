@@ -9,7 +9,6 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.kubernetes.constants.Constant;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -43,12 +42,12 @@ public class KubernetesAbstractHandlerStrategy {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
-        String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        String loggerName = String.format("%s-%s-%s", Constants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
     public int getCurrentRoleLoopIndex() {
-        Integer count = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        Integer count = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constants.CURRENT_NODE_CNT);
         if (Objects.isNull(count)) {
             count = getTotalRoleLoopCount();
         }
@@ -62,7 +61,7 @@ public class KubernetesAbstractHandlerStrategy {
      */
     public int getTotalRoleLoopCount() {
         // 使用与 getCurrentRoleLoopIndex 相同的缓存键格式，但添加 "_TOTAL" 后缀
-        return (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
+        return (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constants.ROLE_NODE_CNT);
     }
 
     /**
