@@ -290,11 +290,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
 
             // 如果开启了密码认证，但没有在JDBC URL中配置，添加认证参数
             if (enablePasswordAuth && !jdbcUrl.contains("user=") && !jdbcUrl.contains("password=")) {
-                if (jdbcUrl.contains(";")) {
-                    jdbcUrl += ";user=" + username + ";password=" + password;
-                } else {
-                    jdbcUrl += ";user=" + username + ";password=" + password;
-                }
+                jdbcUrl += ";user=" + username + ";password=" + password;
             }
 
             // 构建基本信息项列表

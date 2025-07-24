@@ -133,7 +133,6 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
                     // 如果创建成功，使用systemctl管理服务
                     MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
                     result = MinaUtils.safeExecCommand(session, "systemctl enable datasophon-worker");
-                    success &= (result != null && !result.startsWith("ERROR:"));
                 } else {
                     // 回退到传统方式
                     if ("kylin".equals(osId)) {
@@ -141,8 +140,8 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
                     } else {
                         result = MinaUtils.safeExecCommand(session, "update-rc.d datasophon-worker defaults");
                     }
-                    success &= (result != null && !result.startsWith("ERROR:"));
                 }
+                success &= (result != null && !result.startsWith("ERROR:"));
             } else {
                 // CentOS使用chkconfig
                 result = MinaUtils.safeExecCommand(session, "chkconfig --add datasophon-worker");

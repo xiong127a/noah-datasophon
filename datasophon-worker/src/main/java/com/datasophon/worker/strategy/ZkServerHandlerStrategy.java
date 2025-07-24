@@ -46,12 +46,9 @@ public class ZkServerHandlerStrategy extends AbstractHandlerStrategy implements 
             if (!FileUtil.exist("/etc/security/keytab/zkclient.service.keytab")) {
                 KerberosUtils.downloadKeytabFromMaster("zkcli/" + hostname, "zkclient.service.keytab");
             }
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
-        } else {
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
         }
+        startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+                command.getDecompressPackageName(), command.getRunAs());
         return startResult;
     }
 

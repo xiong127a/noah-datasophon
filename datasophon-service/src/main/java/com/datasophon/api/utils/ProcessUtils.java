@@ -589,12 +589,9 @@ public class ProcessUtils {
                 KubernetesDeploymentYamlHandler kubernetesDeploymentYamlHandler = new KubernetesDeploymentYamlHandler();
                 kubernetesServiceConfigureHandler.setNext(kubernetesDeploymentYamlHandler);
                 kubernetesDeploymentYamlHandler.setNext(kubernetesHostTagHandler);
-                kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
-                kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
-            } else {
-                kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
-                kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
             }
+            kubernetesHostTagHandler.setNext(kubernetesServiceRoleStopHandler);
+            kubernetesServiceRoleStopHandler.setNext(kubernetesServiceScaleHandler);
             return kubernetesHostTagHandler.handlerRequest(serviceRoleInfo);
         }
     }

@@ -907,12 +907,11 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                 if (stillEnabled) {
                     cacheLog.warn("ufw防火墙systemd服务仍然配置为自启动，请手动检查");
                     checkItem.setMessage("警告：ufw防火墙已关闭但自启动可能未完全禁用，建议手动执行 systemctl disable ufw");
-                    return true; // 仍返回true因为防火墙已停止
                 } else {
                     cacheLog.info("ufw防火墙已关闭且自启动已禁用");
                     checkItem.setMessage("ufw防火墙已关闭且自启动已禁用");
-                    return true;
                 }
+                return true; // 仍返回true因为防火墙已停止
             } else {
                 cacheLog.info("ufw防火墙已关闭且未配置自启动，无需修复");
                 checkItem.setMessage("ufw防火墙已关闭且未配置自启动");

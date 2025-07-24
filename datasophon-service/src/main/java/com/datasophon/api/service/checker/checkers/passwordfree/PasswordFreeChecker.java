@@ -58,13 +58,12 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                         cacheLog.info("免密登录命令执行成功");
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
                         checkItem.setMessage("免密登录配置正确");
-                        return checkItem;
                     } else {
                         cacheLog.warn("免密登录建立成功但命令执行失败");
                         checkItem.setStatus(CheckItem.Status.FAILED);
                         checkItem.setMessage("免密登录建立成功但命令执行失败，可能需要重新配置");
-                        return checkItem;
                     }
+                    return checkItem;
                 } else {
                     cacheLog.info("无法建立免密登录连接");
                 }

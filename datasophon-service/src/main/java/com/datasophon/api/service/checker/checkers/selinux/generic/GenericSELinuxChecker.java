@@ -342,14 +342,13 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                 // 使用setenforce命令（适用于CentOS, Kylin等）
                 cacheLog.info("使用setenforce命令设置SELinux为宽容模式...");
                 setenforceResult = execCommand(session, "setenforce 0");
-                tempFixSuccess = setenforceResult.isSuccess();
             } else {
                 // 尝试使用echo方法（适用于某些Ubuntu, Kylin V10等）
                 cacheLog.info("尝试使用echo方法设置SELinux为宽容模式...");
                 setenforceResult = execCommand(session,
                         "[ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce");
-                tempFixSuccess = setenforceResult.isSuccess();
             }
+            tempFixSuccess = setenforceResult.isSuccess();
 
             if (!tempFixSuccess) {
                 cacheLog.error("设置SELinux临时状态失败: %s", setenforceResult.getErrorOrOutput());
@@ -416,7 +415,6 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                     // 添加配置项
                     sedResult = execCommand(session, "echo 'SELINUX=disabled' | sudo tee -a /etc/selinux/config");
                 }
-                configFixSuccess = sedResult.isSuccess();
             } else {
                 // 创建配置文件
                 cacheLog.info("SELinux配置文件不存在，创建新的配置文件...");
@@ -426,8 +424,8 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                         "echo 'SELINUX=disabled' | sudo tee -a /etc/selinux/config && " +
                         "echo 'SELINUXTYPE=targeted' | sudo tee -a /etc/selinux/config";
                 sedResult = execCommand(session, createConfigCmd);
-                configFixSuccess = sedResult.isSuccess();
             }
+            configFixSuccess = sedResult.isSuccess();
 
             if (!configFixSuccess) {
                 cacheLog.error("修改SELinux配置文件失败: %s", sedResult.getErrorOrOutput());

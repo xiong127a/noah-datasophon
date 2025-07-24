@@ -286,12 +286,11 @@ public class HostInfo implements Serializable {
             if (this.status == CheckItem.Status.WAITING_FIX) {
                 // 如果是等待修复状态，更新checkResult以反映等待修复
                 this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
-                return;
             } else {
                 // 如果是修复中状态，更新checkResult以反映正在修复
                 this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
-                return;
             }
+            return;
         }
 
         if (checkItems == null || checkItems.isEmpty()) {

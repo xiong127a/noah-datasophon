@@ -53,13 +53,11 @@ public class InstallServiceActor extends AbstractActor {
                         if (ServiceRoleType.MASTER == command.getServiceRoleType()) {
                             logger.info("Start to {}", commands);
                             commands.add("krb5-server");
-                            commands.add("krb5-workstation");
-                            commands.add("krb5-libs");
                         } else {
                             logger.info("Start to {}", commands);
-                            commands.add("krb5-workstation");
-                            commands.add("krb5-libs");
                         }
+                        commands.add("krb5-workstation");
+                        commands.add("krb5-libs");
                         if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
                             commands.add("--skip-broken");
                         }

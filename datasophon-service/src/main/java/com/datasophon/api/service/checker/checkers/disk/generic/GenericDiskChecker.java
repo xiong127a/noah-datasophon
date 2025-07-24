@@ -91,14 +91,10 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
                         if (dirCheckResult.getStatus() == CheckItem.Status.FAILED) {
                                 failedDirectories.add(dir);
-                                resultMessage.append(dirCheckResult.getMessage());
-                                resultMessage.append(
-                                                "<hr style='border:none;height:1px;background-color:#f0f0f0;margin:20px 0'>");
-                        } else {
-                                resultMessage.append(dirCheckResult.getMessage());
-                                resultMessage.append(
-                                                "<hr style='border:none;height:1px;background-color:#f0f0f0;margin:20px 0'>");
                         }
+                    resultMessage.append(dirCheckResult.getMessage());
+                    resultMessage.append(
+                                    "<hr style='border:none;height:1px;background-color:#f0f0f0;margin:20px 0'>");
                 }
 
                 resultMessage.append("</div>");

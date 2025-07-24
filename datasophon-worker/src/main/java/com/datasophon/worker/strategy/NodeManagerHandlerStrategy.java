@@ -45,12 +45,9 @@ public class NodeManagerHandlerStrategy extends  AbstractHandlerStrategy impleme
             if (!FileUtil.exist("/etc/security/keytab/nm.service.keytab")) {
                 KerberosUtils.downloadKeytabFromMaster("nm/" + hostname, "nm.service.keytab");
             }
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
-        } else {
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
         }
+        startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+                command.getDecompressPackageName(), command.getRunAs());
         return startResult;
     }
 }

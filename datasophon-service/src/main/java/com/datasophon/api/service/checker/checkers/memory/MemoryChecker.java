@@ -138,13 +138,12 @@ public class MemoryChecker extends AbstractItemChecker {
                                                 cacheLog.info("==== 内存检查完成 ====");
                                                 cacheLog.info("内存检查结果: " + checkItem.getStatus());
 
-                                                return checkItem;
                                         } else {
                                                 checkItem.setStatus(CheckItem.Status.FAILED);
                                                 checkItem.setMessage("无法获取内存信息: 所有方法都失败");
                                                 cacheLog.error("无法获取内存信息: 所有方法都失败");
-                                                return checkItem;
                                         }
+                                    return checkItem;
                                 }
                         }
 
