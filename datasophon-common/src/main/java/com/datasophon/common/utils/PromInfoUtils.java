@@ -98,7 +98,7 @@ public class PromInfoUtils {
 
         List<PromResultInfo> hadoop_nameNode_threads = getPrometheusMetrics("http://172.31.96.16:9090/api/v1/query",
                 "up{job=\"hdfs\",instance=\"172.31.96.16:27001\"}");
-        for (PromResultInfo hadoop_nameNode_thread : hadoop_nameNode_threads) {
+        for (PromResultInfo hadoop_nameNode_thread : Objects.requireNonNull(hadoop_nameNode_threads)) {
             PromMetricInfo metric = hadoop_nameNode_thread.getMetric();
             log.info(metric.get__name__() + ":" + hadoop_nameNode_thread.getValue()[1]);
         }

@@ -36,6 +36,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
 
+import java.util.Objects;
+
 public class DispatcherWorkerActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(DispatcherWorkerActor.class);
@@ -64,7 +66,7 @@ public class DispatcherWorkerActor extends AbstractActor {
                             new StartWorkerHandler(command.getClusterId(), command.getClusterFrame()));
                     handlerChain.handle(session, hostInfo);
                     if (ObjectUtil.isNotEmpty(session)) {
-                        session.close();
+                        Objects.requireNonNull(session).close();
                     }
                 })
                 .matchAny(this::unhandled)

@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,28 +45,28 @@ public class ServletUtils {
      * 获取String参数
      */
     public static String getParameter(String name) {
-        return getRequest().getParameter(name);
+        return Objects.requireNonNull(getRequest()).getParameter(name);
     }
 
     /**
      * 获取String参数
      */
     public static String getParameter(String name, String defaultValue) {
-        return Convert.toStr(getRequest().getParameter(name), defaultValue);
+        return Convert.toStr(Objects.requireNonNull(getRequest()).getParameter(name), defaultValue);
     }
 
     /**
      * 获取Integer参数
      */
     public static Integer getParameterToInt(String name) {
-        return Convert.toInt(getRequest().getParameter(name));
+        return Convert.toInt(Objects.requireNonNull(getRequest()).getParameter(name));
     }
 
     /**
      * 获取Integer参数
      */
     public static Integer getParameterToInt(String name, Integer defaultValue) {
-        return Convert.toInt(getRequest().getParameter(name), defaultValue);
+        return Convert.toInt(Objects.requireNonNull(getRequest()).getParameter(name), defaultValue);
     }
 
     /**
@@ -73,7 +74,7 @@ public class ServletUtils {
      */
     public static HttpServletRequest getRequest() {
         try {
-            return getRequestAttributes().getRequest();
+            return Objects.requireNonNull(getRequestAttributes()).getRequest();
         } catch (Exception e) {
             return null;
         }
@@ -84,7 +85,7 @@ public class ServletUtils {
      */
     public static HttpServletResponse getResponse() {
         try {
-            return getRequestAttributes().getResponse();
+            return Objects.requireNonNull(getRequestAttributes()).getResponse();
         } catch (Exception e) {
             return null;
         }
@@ -94,7 +95,7 @@ public class ServletUtils {
      * 获取session
      */
     public static HttpSession getSession() {
-        return getRequest().getSession();
+        return Objects.requireNonNull(getRequest()).getSession();
     }
 
     public static ServletRequestAttributes getRequestAttributes() {

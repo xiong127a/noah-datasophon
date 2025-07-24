@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 /**
  * 结构化日志记录
@@ -206,7 +207,7 @@ public class LogEntry implements Serializable {
         // 根据日志级别设置样式
         String levelColor = level != null ? level.getColor() : "#000000";
         String bgColor = level != null ? level.getBackgroundColor() : "#ffffff";
-        String borderColor = switch (level) {
+        String borderColor = switch (Objects.requireNonNull(level)) {
             case ERROR -> "#ffccc7";
             case WARN -> "#ffe58f";
             case INFO -> "#b7eb8f";

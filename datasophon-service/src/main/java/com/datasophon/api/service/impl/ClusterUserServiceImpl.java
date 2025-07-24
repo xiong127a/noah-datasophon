@@ -253,7 +253,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             // 将返回结果转换为 Integer 类型
             int currentMaxUid;
             try {
-                currentMaxUid = Integer.parseInt(result.trim()); // 解析结果
+                currentMaxUid = Integer.parseInt(Objects.requireNonNull(result).trim()); // 解析结果
             } catch (NumberFormatException e) {
                 System.err.println("无法解析 UID: " + result);
                 continue;

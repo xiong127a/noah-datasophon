@@ -184,7 +184,7 @@ public class HostCheckActor extends AbstractActor {
                     checkedHost.setHostState(HostState.OFFLINE);
                   }
                 } catch (Exception e) {
-                  logger.warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
+                  Objects.requireNonNull(logger).warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
                   checkedHost.setHostState(HostState.OFFLINE);
                 }
                 continue; // 跳过下面的pingActor检测
@@ -204,7 +204,7 @@ public class HostCheckActor extends AbstractActor {
               checkedHost.setHostState(HostState.RUNNING);
               checkedHost.setManaged(MANAGED.YES);
             } catch (Exception e) {
-              logger.warn("host: " + host.getHostname() + " rpc error, cause: " + e.getMessage());
+              Objects.requireNonNull(logger).warn("host: " + host.getHostname() + " rpc error, cause: " + e.getMessage());
               checkedHost.setHostState(HostState.OFFLINE);
             }
             checkedHosts.add(checkedHost);

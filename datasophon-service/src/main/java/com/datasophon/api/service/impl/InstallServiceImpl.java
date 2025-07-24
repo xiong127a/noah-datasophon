@@ -1397,7 +1397,7 @@ public class InstallServiceImpl implements InstallService {
                 if (session != null) {
                     session.close();
                 }
-                session.close();
+                Objects.requireNonNull(session).close();
             }
         }
         return Result.success();

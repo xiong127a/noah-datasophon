@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
@@ -222,7 +223,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                                 // 获取主体信息
                                 String principal = configMap.getOrDefault("dfs.namenode.kerberos.principal",
                                                 "hdfs/_HOST@HADOOP.COM");
-                                principal = principal.replace("_HOST", nn1);
+                                principal = principal.replace("_HOST", Objects.requireNonNull(nn1));
                                 securityInfoItems.add(new InfoItem("principal", "服务主体", principal));
 
                                 // 将krb5配置文件路径添加到安全信息中

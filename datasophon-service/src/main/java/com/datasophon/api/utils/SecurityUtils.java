@@ -26,11 +26,13 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
+import java.util.Objects;
+
 public class SecurityUtils {
 
     public static HttpServletRequest getRequest() {
         HttpServletRequest request =
-                ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+                ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
         return request;
     }
 
@@ -49,7 +51,7 @@ public class SecurityUtils {
      * 获取用户ID
      */
     public static Long getUserId() {
-        return Convert.toLong(ServletUtils.getRequest().getHeader(Constants.DETAILS_USER_ID));
+        return Convert.toLong(Objects.requireNonNull(ServletUtils.getRequest()).getHeader(Constants.DETAILS_USER_ID));
     }
 
     /**

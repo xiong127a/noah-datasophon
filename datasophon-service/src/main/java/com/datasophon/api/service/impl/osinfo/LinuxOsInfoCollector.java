@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -460,7 +461,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             collectNetworkInfo(hostInfoTemp, session, osInfo, tempUpdater);
 
             // 设置硬件收集状态为成功
-            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
+            Objects.requireNonNull(osInfo).setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
             // 更新缓存
             if (cacheUpdater != null && hostInfoTemp != null) {
@@ -469,7 +470,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集Linux硬件信息失败: {}", e.getMessage(), e);
             // 设置硬件收集状态为错误
-            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+            Objects.requireNonNull(osInfo).setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
         }
     }
 

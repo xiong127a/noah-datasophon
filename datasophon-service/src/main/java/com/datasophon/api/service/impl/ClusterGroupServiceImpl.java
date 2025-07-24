@@ -167,7 +167,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             // 将返回结果转换为 Integer 类型
             int currentMaxGid;
             try {
-                currentMaxGid = Integer.parseInt(result.trim()); // 解析结果
+                currentMaxGid = Integer.parseInt(Objects.requireNonNull(result).trim()); // 解析结果
             } catch (NumberFormatException e) {
                 System.err.println("无法解析 GID: " + result);
                 continue;
@@ -357,6 +357,6 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     public static boolean isGroupExists(String groupName, String hostname) {
         String result = KubernetesMinaUtils.execCmdWithResult(hostname,
                 "egrep \"" + groupName + "\" /etc/group >& /dev/null");
-        return !result.equals(Constants.FAILED);
+        return !Objects.requireNonNull(result).equals(Constants.FAILED);
     }
 }
