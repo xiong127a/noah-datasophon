@@ -22,7 +22,7 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult createService() throws Exception {
+    public ExecResult createService() {
         Service yarnService;
         String rm1Addr = "http://" + globalVariables.get("${yarn.resourcemanager.webapp.address.rm1}");
         String rm2Addr = "http://" + globalVariables.get("${yarn.resourcemanager.webapp.address.rm2}");
@@ -46,7 +46,7 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(TenantResource resource) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) {
         execResult.setExecResult(true);
         if (CollUtil.isNotEmpty(resource.getYarnResourceList())) {
             Policy policy = getYarnPolicy(resource);
@@ -68,7 +68,7 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult deletePolicy(String policyName) throws Exception {
+    public ExecResult deletePolicy(String policyName) {
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());

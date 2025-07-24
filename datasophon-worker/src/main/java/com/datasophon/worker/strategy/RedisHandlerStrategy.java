@@ -16,7 +16,7 @@ public class RedisHandlerStrategy extends AbstractHandlerStrategy implements Ser
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult;

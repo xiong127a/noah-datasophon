@@ -22,7 +22,7 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
     }
 
     @Override
-    public ExecResult createService() throws Exception {
+    public ExecResult createService() {
         Service hbaseService;
         String zkUrl = globalVariables.get("${zkUrls}");
         String zkPort = globalVariables.get("${clientPort}");
@@ -47,7 +47,7 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
     }
 
     @Override
-    public ExecResult operatePolicy(TenantResource resource) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) {
         execResult.setExecResult(true);
         if (CollUtil.isNotEmpty(resource.getHbaseResourceList())) {
             Policy policy = getHbasePolicy(resource);
@@ -69,7 +69,7 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
     }
 
     @Override
-    public ExecResult deletePolicy(String policyName) throws Exception {
+    public ExecResult deletePolicy(String policyName) {
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hbasedev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());

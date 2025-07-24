@@ -25,7 +25,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult;

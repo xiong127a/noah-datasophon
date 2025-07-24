@@ -24,5 +24,5 @@ import java.sql.SQLException;
 
 public interface ServiceRoleStrategy {
 
-    ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException;
+    ExecResult handler(ServiceRoleOperateCommand command);
 }

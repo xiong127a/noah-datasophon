@@ -44,7 +44,7 @@ public class KubernetesKerberosUtils {
         }
     }
 
-    public static void createKeytabDir(String hostname) throws IOException {
+    public static void createKeytabDir(String hostname) {
         if (!KubernetesMinaUtils.checkPathExists(hostname, "/etc/security/keytab/")) {
             FileUtil.mkdir("/etc/security/keytab/");
             KubernetesMinaUtils.createDir(hostname, "/etc/security/keytab/");

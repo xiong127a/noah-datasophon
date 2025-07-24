@@ -62,7 +62,7 @@ public interface InstallService {
      * 启动/停止 主机上安装的服务启动
      *
      */
-    Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
+    Result generateHostServiceCommand(String clusterHostIds, String commandType);
 
     /**
      * 获取主机最近日志

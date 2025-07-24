@@ -20,7 +20,7 @@ public class HueHandlerStrategy extends AbstractHandlerStrategy implements Servi
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ExecResult execResult;
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());

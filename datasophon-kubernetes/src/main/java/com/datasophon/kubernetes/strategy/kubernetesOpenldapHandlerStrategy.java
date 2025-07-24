@@ -16,7 +16,7 @@ public class kubernetesOpenldapHandlerStrategy extends KubernetesAbstractHandler
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException, IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String hostname = command.getHostname();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {

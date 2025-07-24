@@ -6,11 +6,11 @@ public interface Client {
      * Starts the client
      *
      */
-    void start() throws Exception;
+    void start();
 
     /**
      * Stops the client
      *
      */
-    void stop() throws Exception;
+    void stop();
 }

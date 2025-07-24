@@ -48,19 +48,10 @@ public class FirewallChecker extends AbstractItemChecker {
 
             // 获取操作系统信息
             OsInfo osInfo;
-            try {
-                osInfo = getOsInfo(hostInfo);
-                if (osInfo == null || !osInfo.isValid()) {
-                    String errorMsg = "无法获取操作系统信息，防火墙检查失败";
-                    log.error(errorMsg);
-                    cacheLog.error(errorMsg);
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage(errorMsg);
-                    return checkItem;
-                }
-            } catch (InterruptedException e) {
-                String errorMsg = "获取操作系统信息过程被中断";
-                log.error(errorMsg, e);
+            osInfo = getOsInfo(hostInfo);
+            if (osInfo == null || !osInfo.isValid()) {
+                String errorMsg = "无法获取操作系统信息，防火墙检查失败";
+                log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage(errorMsg);
@@ -176,18 +167,10 @@ public class FirewallChecker extends AbstractItemChecker {
 
             // 获取操作系统信息
             OsInfo osInfo;
-            try {
-                osInfo = getOsInfo(hostInfo);
-                if (osInfo == null || !osInfo.isValid()) {
-                    String errorMsg = "无法获取操作系统信息，防火墙修复失败";
-                    log.error(errorMsg);
-                    cacheLog.error(errorMsg);
-                    checkItem.setMessage(errorMsg);
-                    return false;
-                }
-            } catch (InterruptedException e) {
-                String errorMsg = "获取操作系统信息过程被中断";
-                log.error(errorMsg, e);
+            osInfo = getOsInfo(hostInfo);
+            if (osInfo == null || !osInfo.isValid()) {
+                String errorMsg = "无法获取操作系统信息，防火墙修复失败";
+                log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setMessage(errorMsg);
                 return false;

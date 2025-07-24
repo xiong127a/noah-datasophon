@@ -37,7 +37,7 @@ public class ResourceManagerHandlerStrategy extends  AbstractHandlerStrategy imp
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();

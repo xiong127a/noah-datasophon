@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class KubernetesHostTagHandler extends ServiceHandler {
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         KubernetesGenerateHostTagCommand kubernetesGenerateHostTagCommand = new KubernetesGenerateHostTagCommand();
         kubernetesGenerateHostTagCommand.setHostName(serviceRoleInfo.getHostname());
         kubernetesGenerateHostTagCommand.setServiceName(serviceRoleInfo.getParentName());

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class KubernetesServiceConfigureHandler extends ServiceHandler {
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         // config
 
         ServiceRoleInfo cloneByStream = ObjectUtil.cloneByStream(serviceRoleInfo);

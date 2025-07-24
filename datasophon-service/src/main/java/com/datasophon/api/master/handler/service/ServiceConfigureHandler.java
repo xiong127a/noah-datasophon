@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 public class ServiceConfigureHandler extends ServiceHandler {
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         // config
         GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
         generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());

@@ -16,7 +16,7 @@ public class KubernetesTrinoHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         new ExecResult();
         ExecResult startResult;
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());

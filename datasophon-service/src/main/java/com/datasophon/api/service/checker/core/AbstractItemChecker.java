@@ -76,9 +76,8 @@ public abstract class AbstractItemChecker implements ItemChecker {
      * 
      * @param hostInfo 主机信息
      * @return 操作系统信息对象
-     * @throws InterruptedException 如果命令执行被中断
      */
-    protected OsInfo getOsInfo(HostInfo hostInfo) throws InterruptedException {
+    protected OsInfo getOsInfo(HostInfo hostInfo) {
         // 使用主机名作为缓存键
         String cacheKey = hostInfo.getIp();
 
@@ -509,7 +508,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
     }
 
     @Override
-    public final CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
+    public final CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         hostInfo.setClusterId(clusterId);
         logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getIp(), checkItem.getId());
 
@@ -620,7 +619,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
     }
 
     @Override
-    public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
+    public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         hostInfo.setClusterId(clusterId);
         logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getIp(),
                 checkItem.getId());

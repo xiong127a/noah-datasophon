@@ -72,7 +72,7 @@ public class SshSftpUtil {
 
     @FunctionalInterface
     public interface SessionFunction<S, R> {
-        R apply(S session) throws Exception;
+        R apply(S session);
     }
 
 }

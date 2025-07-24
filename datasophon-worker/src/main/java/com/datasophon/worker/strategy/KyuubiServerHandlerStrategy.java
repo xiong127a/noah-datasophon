@@ -24,8 +24,7 @@ public class KyuubiServerHandlerStrategy extends AbstractHandlerStrategy impleme
   }
 
   @Override
-  public ExecResult handler(ServiceRoleOperateCommand command)
-      throws SQLException, ClassNotFoundException {
+  public ExecResult handler(ServiceRoleOperateCommand command) {
     ExecResult startResult;
     if (command.getEnableKerberos()) {
       logger.info("start to get kyuubi keytab file");

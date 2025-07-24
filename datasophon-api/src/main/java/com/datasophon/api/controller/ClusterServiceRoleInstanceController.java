@@ -65,7 +65,7 @@ public class ClusterServiceRoleInstanceController {
      * 重启过时服务
      */
     @RequestMapping("/restartObsoleteService")
-    public Result restartObsoleteService(@RequestParam("roleGroupId") Integer roleGroupId) throws Exception {
+    public Result restartObsoleteService(@RequestParam("roleGroupId") Integer roleGroupId) {
         return clusterServiceRoleInstanceService.restartObsoleteService(roleGroupId);
     }
 

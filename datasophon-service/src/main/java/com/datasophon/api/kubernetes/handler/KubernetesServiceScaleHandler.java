@@ -26,7 +26,7 @@ public class KubernetesServiceScaleHandler extends ServiceHandler {
     private static final Logger logger = LoggerFactory.getLogger(KubernetesServiceScaleHandler.class);
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         KubernetesServiceScaleCommand kubernetesServiceScaleCommand = new KubernetesServiceScaleCommand();
         kubernetesServiceScaleCommand.setServiceName(serviceRoleInfo.getParentName());
         kubernetesServiceScaleCommand.setServiceRoleName(serviceRoleInfo.getName());

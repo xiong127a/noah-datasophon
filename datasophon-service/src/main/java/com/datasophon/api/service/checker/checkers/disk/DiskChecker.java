@@ -128,7 +128,7 @@ public class DiskChecker extends AbstractItemChecker {
      * 执行命令
      * 公开此方法供DiskCheckerStrategy实现类调用
      */
-    public CommandResult execCommand(ClientSession session, String command) throws InterruptedException {
+    public CommandResult execCommand(ClientSession session, String command) {
         // 检查参数
         if (session == null) {
             log.error("SSH会话为空，无法执行命令");

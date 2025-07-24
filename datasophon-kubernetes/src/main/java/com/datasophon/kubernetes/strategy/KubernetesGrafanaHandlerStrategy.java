@@ -35,7 +35,7 @@ public class KubernetesGrafanaHandlerStrategy extends KubernetesAbstractHandlerS
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         logger.info("开始处理Grafana服务角色操作命令");
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());

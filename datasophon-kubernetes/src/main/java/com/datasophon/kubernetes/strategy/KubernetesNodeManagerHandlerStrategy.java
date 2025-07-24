@@ -16,7 +16,7 @@ public class KubernetesNodeManagerHandlerStrategy extends KubernetesAbstractHand
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException, IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
         new ExecResult();
         ExecResult startResult;
         String hostname = command.getHostname();

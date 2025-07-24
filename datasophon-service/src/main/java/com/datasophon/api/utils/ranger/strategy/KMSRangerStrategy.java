@@ -30,7 +30,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     @Override
-    public ExecResult createService() throws Exception {
+    public ExecResult createService() {
         try {
             createRangerAdminUserIfNotExists();
             if (isKmsServiceExists("kmsdev")) {
@@ -82,7 +82,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     @Override
-    public ExecResult operatePolicy(TenantResource resource) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) {
         execResult.setExecResult(true);
         if (CollUtil.isNotEmpty(resource.getKmsResourceList())) {
             Policy policy = getKmsPolicy(resource);
@@ -104,7 +104,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     @Override
-    public ExecResult deletePolicy(String policyName) throws Exception {
+    public ExecResult deletePolicy(String policyName) {
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());

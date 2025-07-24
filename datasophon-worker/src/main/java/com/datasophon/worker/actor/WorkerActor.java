@@ -41,7 +41,7 @@ public class WorkerActor extends AbstractActor {
         }
 
         @Override
-        public void preStart() throws IOException {
+        public void preStart() {
                 ActorRef installServiceActor = getContext().actorOf(Props.create(InstallServiceActor.class),
                                 getActorRefName(InstallServiceActor.class));
                 ActorRef configureServiceActor = getContext().actorOf(Props.create(ConfigureServiceActor.class),

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class TransparentHugepageChecker extends AbstractItemChecker {
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 开始透明大页检查 ====");
             cacheLog.info("主机: " + hostInfo.getIp());

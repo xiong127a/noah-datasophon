@@ -73,7 +73,7 @@ public class TenantRangerActor extends AbstractActor {
         }
     }
 
-    private ExecResult addRoleUser(TenantRangerCommand rangerCommand) throws Exception {
+    private ExecResult addRoleUser(TenantRangerCommand rangerCommand) {
         ExecResult execResult = new ExecResult();
         RangerClient rangerClient;
         try {

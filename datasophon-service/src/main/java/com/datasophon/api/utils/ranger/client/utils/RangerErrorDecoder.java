@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class RangerErrorDecoder extends DefaultResponseErrorHandler {
 
     @Override
-    public void handleError(ClientHttpResponse response) throws IOException {
+    public void handleError(ClientHttpResponse response) {
         try {
             String statusText = response.getStatusText();
             int statusCode = response.getStatusCode().value();

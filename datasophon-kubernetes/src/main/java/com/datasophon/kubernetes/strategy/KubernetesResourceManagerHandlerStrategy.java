@@ -23,7 +23,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
 
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command)
-            throws SQLException, ClassNotFoundException, IOException {
+            throws IOException {
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         String hostname = command.getHostname();

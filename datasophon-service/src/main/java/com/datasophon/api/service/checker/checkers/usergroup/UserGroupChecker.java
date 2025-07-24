@@ -80,7 +80,7 @@ public class UserGroupChecker extends AbstractItemChecker {
     }
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 用户和组检查开始 ====");
             cacheLog.info("主机: " + hostInfo.getIp());

@@ -389,8 +389,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 检查firewalld防火墙
      */
-    protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         StringBuilder htmlOutput = new StringBuilder();
 
         // 添加通用样式
@@ -762,8 +761,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 修复firewalld防火墙
      */
-    protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 更新状态为正在检查防火墙当前状态
         checkItem.setMessage("正在检查firewalld防火墙当前状态...");
 
@@ -1031,8 +1029,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 修复iptables防火墙
      */
-    protected boolean fixIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected boolean fixIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 清空所有iptables规则
         cacheLog.info("正在清空iptables规则...");
         checkItem.setMessage("正在清空iptables规则...");

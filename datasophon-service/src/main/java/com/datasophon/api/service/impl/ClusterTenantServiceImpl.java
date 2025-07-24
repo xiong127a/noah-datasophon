@@ -80,7 +80,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     @Override
-    public Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception {
+    public Result saveOrUpdateTenant(ClusterTenant clusterTenant) {
         try {
             checkTenant(clusterTenant);
         } catch (Exception e) {

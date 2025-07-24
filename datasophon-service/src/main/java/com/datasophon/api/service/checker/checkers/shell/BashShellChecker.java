@@ -20,7 +20,7 @@ public class BashShellChecker extends AbstractItemChecker {
     private String bashPath;
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 开始Bash Shell检查 ====");
             cacheLog.info("主机: " + hostInfo.getIp());

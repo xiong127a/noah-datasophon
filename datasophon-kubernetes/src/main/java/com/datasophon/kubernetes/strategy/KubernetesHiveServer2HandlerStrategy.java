@@ -20,7 +20,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         // 旧的、手动的HDFS目录检查和Kerberos处理逻辑在此处被移除，

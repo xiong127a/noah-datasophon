@@ -26,7 +26,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
     private String javaVersionRawOutput = "";
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             // 从配置中获取Java版本和路径
             String minJavaVersion = checkerProperties.getJava().getMinVersion();

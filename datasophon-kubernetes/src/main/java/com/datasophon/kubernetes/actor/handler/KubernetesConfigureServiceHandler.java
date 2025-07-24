@@ -74,7 +74,7 @@ public class KubernetesConfigureServiceHandler {
             Integer myid,
             String serviceRoleName,
             RunAs runAs,
-            String hostName) throws Exception {
+            String hostName) {
         ExecResult execResult = new ExecResult();
 
         try {

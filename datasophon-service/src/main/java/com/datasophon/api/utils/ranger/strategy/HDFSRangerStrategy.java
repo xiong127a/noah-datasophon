@@ -23,7 +23,7 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult createService() throws Exception {
+    public ExecResult createService() {
         Service hadoopService;
         String nn1Add = "hdfs://" + globalVariables.get("${dfs.namenode.rpc-address.nameservice1.nn1}");
         String nn2Add = "hdfs://" + globalVariables.get("${dfs.namenode.rpc-address.nameservice1.nn2}");
@@ -47,7 +47,7 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(TenantResource resource) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) {
         execResult.setExecResult(true);
         if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
             Policy policy = getHdfsPolicy(resource);
@@ -69,7 +69,7 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult deletePolicy(String policyName) throws Exception {
+    public ExecResult deletePolicy(String policyName) {
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());

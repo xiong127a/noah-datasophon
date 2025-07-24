@@ -54,7 +54,7 @@ public class RangerClient implements Client {
     private final AtomicBoolean started = new AtomicBoolean(false);
 
     @Override
-    public void start() throws Exception {
+    public void start() {
         if (started.get()) {
             log.info("apache-ranger client is already started...");
             return;
@@ -103,7 +103,7 @@ public class RangerClient implements Client {
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop() {
         isStarted();
         this.started.set(false);
         log.info("Stopped apache-ranger client...");

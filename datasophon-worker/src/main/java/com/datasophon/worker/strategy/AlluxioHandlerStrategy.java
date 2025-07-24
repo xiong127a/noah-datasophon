@@ -17,7 +17,7 @@ public class AlluxioHandlerStrategy  extends AbstractHandlerStrategy implements 
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
 

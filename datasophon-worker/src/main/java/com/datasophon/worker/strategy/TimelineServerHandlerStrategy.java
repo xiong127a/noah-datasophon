@@ -17,7 +17,7 @@ public class TimelineServerHandlerStrategy extends AbstractHandlerStrategy imple
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getEnableKerberos()) {
             logger.info("start to get timelineserver keytab file");

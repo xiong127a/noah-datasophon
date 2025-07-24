@@ -17,9 +17,8 @@ public interface ItemChecker {
      * @param hostInfo 主机信息
      * @param checkItem 检查项
      * @return 更新后的检查项
-     * @throws Exception 如果执行过程中发生异常
      */
-    CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception;
+    CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem);
     
     /**
      * 执行修复
@@ -27,7 +26,6 @@ public interface ItemChecker {
      * @param hostInfo 主机信息
      * @param checkItem 检查项
      * @return 修复是否成功
-     * @throws Exception 如果执行过程中发生异常
      */
-    boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception;
+    boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem);
 } 

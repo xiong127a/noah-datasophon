@@ -26,7 +26,7 @@ import java.sql.SQLException;
 public class SupervisorFunction implements Function<Throwable, SupervisorStrategy.Directive> {
 
     @Override
-    public SupervisorStrategy.Directive apply(Throwable param) throws Exception {
+    public SupervisorStrategy.Directive apply(Throwable param) {
         switch (param) {
             case ArithmeticException arithmeticException -> {
                 System.out.println("meet ArithmeticException,just resume");

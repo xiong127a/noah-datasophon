@@ -36,7 +36,7 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
     // 判断是否为安装服务
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         KubernetesGenerateDeploymentYamlCommand kubernetesGenerateDeploymentYamlCommand = new KubernetesGenerateDeploymentYamlCommand();
         kubernetesGenerateDeploymentYamlCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
         kubernetesGenerateDeploymentYamlCommand.setServiceName(serviceRoleInfo.getParentName());

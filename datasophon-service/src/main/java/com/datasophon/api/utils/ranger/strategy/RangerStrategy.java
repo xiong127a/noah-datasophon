@@ -5,9 +5,9 @@ import com.datasophon.common.utils.ExecResult;
 
 public interface RangerStrategy {
 
-    ExecResult createService() throws Exception;
+    ExecResult createService();
 
-    ExecResult operatePolicy(TenantResource resource) throws Exception;
+    ExecResult operatePolicy(TenantResource resource);
 
-    ExecResult deletePolicy(String policyName) throws Exception;
+    ExecResult deletePolicy(String policyName);
 }

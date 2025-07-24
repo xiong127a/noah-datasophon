@@ -34,7 +34,7 @@ public class NodeManagerHandlerStrategy extends  AbstractHandlerStrategy impleme
     }
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         new ExecResult();
         ExecResult startResult;
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());

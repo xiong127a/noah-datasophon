@@ -31,7 +31,7 @@ public class KubernetesInstallServiceHandler {
      *
      * @return 执行结果
      */
-    public ExecResult install() throws IOException {
+    public ExecResult install() {
         ExecResult execResult = new ExecResult();
         try {
             execResult.setExecResult(true);

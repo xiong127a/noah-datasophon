@@ -22,7 +22,7 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult createService() throws Exception {
+    public ExecResult createService() {
         String hiveUrl;
         Service hiveService;
         String hiveServer2Host = globalVariables.get("${masterHiveServer2}");
@@ -50,7 +50,7 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(TenantResource resource) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) {
         execResult.setExecResult(true);
         if (CollUtil.isNotEmpty(resource.getHiveResourceList())) {
             Policy policy = getHivePolicy(resource);
@@ -72,7 +72,7 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult deletePolicy(String policyName) throws Exception {
+    public ExecResult deletePolicy(String policyName) {
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());

@@ -95,8 +95,7 @@ public class UbuntuFirewallChecker extends GenericFirewallChecker {
     /**
      * 检查Ubuntu特有的系统服务
      */
-    protected void checkUbuntuSpecificServices(ClientSession session, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected void checkUbuntuSpecificServices(ClientSession session, CheckLogger cacheLog) {
         // 检查Ubuntu特有的Apparmor服务
         CommandResult apparmorResult = execCommand(session, "systemctl status apparmor 2>/dev/null || echo 'Not Found'",
                 cacheLog);

@@ -36,7 +36,7 @@ public class Krb5KdcHandlerStrategy extends AbstractHandlerStrategy implements S
 
 
     @Override
-    public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
+    public ExecResult handler(ServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) &&

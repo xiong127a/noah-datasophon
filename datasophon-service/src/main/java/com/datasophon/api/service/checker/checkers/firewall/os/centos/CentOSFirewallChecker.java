@@ -102,8 +102,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 检查CentOS系统的firewalld防火墙
      */
-    protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("执行检查命令: systemctl status firewalld");
         CommandResult result = execCommand(session, "systemctl status firewalld", cacheLog);
 
@@ -365,8 +364,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 修复CentOS系统的firewalld防火墙
      */
-    protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 获取系统实际类型，用于显示正确的系统名称
         CommandResult osTypeResult = execCommand(session, "cat /etc/os-release | grep -i \"^NAME=\"", cacheLog);
         String osTypeStr = osTypeResult.isSuccess() ? osTypeResult.getOutput() : "";
@@ -456,8 +454,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 修复CentOS系统的iptables防火墙
      */
-    protected boolean fixIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected boolean fixIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 更新状态为正在检查iptables当前状态
         checkItem.setMessage("正在检查CentOS系统iptables防火墙当前状态...");
 
@@ -554,8 +551,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     /**
      * 提供额外的CentOS特定检查
      */
-    protected void checkCentOSSpecificServices(ClientSession session, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected void checkCentOSSpecificServices(ClientSession session, CheckLogger cacheLog) {
         // 检查NetworkManager防火墙服务
         CommandResult nmResult = execCommand(session,
                 "systemctl status NetworkManager-wait-online.service 2>/dev/null || echo 'Not Found'", cacheLog);
