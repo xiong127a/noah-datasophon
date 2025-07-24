@@ -36,7 +36,8 @@ public class KubernetesSRBEHandlerStrategy extends KubernetesAbstractHandlerStra
 
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         startResult = serviceHandler.start(command);

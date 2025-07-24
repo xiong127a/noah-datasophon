@@ -36,7 +36,8 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
 
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         startResult = serviceHandler.start(command);
@@ -67,19 +68,19 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
                     logger.info("当前是最后一次循环，开始执行添加CN操作");
 
                     // 计算需要添加的节点范围（Pod索引从0开始）
-                    int startPodIndex = existingNodesCount; // 新节点的起始Pod索引
+                    // 新节点的起始Pod索引
                     int endPodIndex = existingNodesCount + totalRoleLoopCount - 1; // 新节点的结束Pod索引
 
-                    logger.info("需要添加CN节点Pod索引范围: {} 到 {}", startPodIndex, endPodIndex);
+                    logger.info("需要添加CN节点Pod索引范围: {} 到 {}", existingNodesCount, endPodIndex);
 
                     // 检查是否有节点需要添加
-                    if (startPodIndex > endPodIndex) {
+                    if (existingNodesCount > endPodIndex) {
                         logger.warn("没有CN节点需要添加");
                         return startResult;
                     }
 
                     // 创建SQL语句列表 - 使用IntStream更优雅地生成
-                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(startPodIndex, endPodIndex)
+                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(existingNodesCount, endPodIndex)
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String cnHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
@@ -89,7 +90,7 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
                                         serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(
                                                 clusterId));
 
-                                logger.info("添加CN节点 {}: {}:{}", i - startPodIndex + 1, cnHost, "9050");
+                                logger.info("添加CN节点 {}: {}:{}", i - existingNodesCount + 1, cnHost, "9050");
 
                                 // 创建SQL语句（不需要MySQL命令行前缀，executeMySqlInPod会添加）
                                 return String.format("ALTER SYSTEM ADD COMPUTE NODE \"%s\"", cnHostPort);

@@ -20,7 +20,8 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
 
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         if (command.getEnableKerberos()) {
