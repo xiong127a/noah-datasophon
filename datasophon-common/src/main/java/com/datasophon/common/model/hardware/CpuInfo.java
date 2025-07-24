@@ -16,7 +16,6 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class CpuInfo extends HardwareInfo implements Serializable  {
     @Serial
-    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
