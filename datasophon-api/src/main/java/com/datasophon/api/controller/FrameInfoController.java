@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,11 +32,9 @@ import java.util.Arrays;
 @RequestMapping("api/frame")
 public class FrameInfoController {
 
-    private final FrameInfoService frameInfoService;
+    @Autowired
+    private FrameInfoService frameInfoService;
 
-    public FrameInfoController(FrameInfoService frameInfoService) {
-        this.frameInfoService = frameInfoService;
-    }
 
     /**
      * 列表

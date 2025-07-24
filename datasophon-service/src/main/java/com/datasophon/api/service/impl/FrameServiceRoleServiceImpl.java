@@ -53,14 +53,12 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     private static final String ROLE_NODE = "node";
     private static final String SERVICE_ROLE_CACHE_KEY_FORMAT = "%d_%s";
 
-    private final ClusterInfoService clusterInfoService;
-
-    private final FrameServiceService frameService;
     @Autowired
-    public FrameServiceRoleServiceImpl(@org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService, FrameServiceService frameService) {
-        this.clusterInfoService = clusterInfoService;
-        this.frameService = frameService;
-    }
+    private ClusterInfoService clusterInfoService;
+
+    @Autowired
+    private FrameServiceService frameService;
+
 
     @Override
     public Result getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType) {

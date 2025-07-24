@@ -10,7 +10,8 @@ import java.util.StringJoiner;
 
 public class HDFSResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
-    private final TenantHdfsResource hdfsResource;
+
+    private TenantHdfsResource hdfsResource;
 
     public HDFSResourceOperateStrategy(TenantFrameResource tenantResource) {
         super(tenantResource);

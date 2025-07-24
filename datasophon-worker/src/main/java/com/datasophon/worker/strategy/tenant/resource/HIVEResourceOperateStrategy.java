@@ -12,9 +12,11 @@ import java.util.StringJoiner;
 
 public class HIVEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
-    private final TenantHiveResource hiveResource;
 
-    private final String dbPathDir;
+    private TenantHiveResource hiveResource;
+
+
+    private String dbPathDir;
 
     public HIVEResourceOperateStrategy(TenantFrameResource tenantResource) {
         super(tenantResource);

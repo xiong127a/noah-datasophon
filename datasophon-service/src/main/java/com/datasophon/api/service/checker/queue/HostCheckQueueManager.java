@@ -1,48 +1,37 @@
 package com.datasophon.api.service.checker.queue;
 
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.common.LogEntryManager;
 import com.datasophon.api.service.checker.core.ItemChecker;
 import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.service.impl.HostCheckServiceImpl;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;
-import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.HostUtils;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -53,45 +42,64 @@ public class HostCheckQueueManager {
     private static final Logger logger = LoggerFactory.getLogger(HostCheckQueueManager.class);
 
     // 修改为优先队列，支持任务优先级
-    private final BlockingQueue<CheckTask> checkQueue = new PriorityBlockingQueue<>(100);
+    @Autowired
+    private BlockingQueue<CheckTask> checkQueue = new PriorityBlockingQueue<>(100);
     // 修复队列，独立于检查队列
-    private final BlockingQueue<FixTask> fixQueue = new PriorityBlockingQueue<>(50);
+    @Autowired
+    private BlockingQueue<FixTask> fixQueue = new PriorityBlockingQueue<>(50);
 
-    private final AtomicBoolean isRunning = new AtomicBoolean(true);
-    private final Map<String, Future<?>> runningTasks = new ConcurrentHashMap<>();
-    private final Map<String, Future<?>> runningFixTasks = new ConcurrentHashMap<>();
+
+    private AtomicBoolean isRunning = new AtomicBoolean(true);
+
+    private Map<String, Future<?>> runningTasks = new ConcurrentHashMap<>();
+
+    private Map<String, Future<?>> runningFixTasks = new ConcurrentHashMap<>();
 
     // 使用额外的Set保存队列中任务的key，避免遍历整个队列
-    private final Set<String> taskKeysInQueue = ConcurrentHashMap.newKeySet();
-    private final Set<String> fixTaskKeysInQueue = ConcurrentHashMap.newKeySet();
+    @Autowired
+    private Set<String> taskKeysInQueue = ConcurrentHashMap.newKeySet();
+    @Autowired
+    private Set<String> fixTaskKeysInQueue = ConcurrentHashMap.newKeySet();
 
     // 跟踪任务执行开始时间，用于超时监控
-    private final Map<String, Long> taskStartTimes = new ConcurrentHashMap<>();
-    private final Map<String, Long> fixTaskStartTimes = new ConcurrentHashMap<>();
+
+    private Map<String, Long> taskStartTimes = new ConcurrentHashMap<>();
+
+    private Map<String, Long> fixTaskStartTimes = new ConcurrentHashMap<>();
 
     // 任务超时时间（毫秒）
     private static final long TASK_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟
 
     // 记录处理统计信息
-    private final AtomicLong tasksProcessed = new AtomicLong(0);
-    private final AtomicLong tasksSucceeded = new AtomicLong(0);
-    private final AtomicLong tasksFailed = new AtomicLong(0);
+
+    private AtomicLong tasksProcessed = new AtomicLong(0);
+
+    private AtomicLong tasksSucceeded = new AtomicLong(0);
+
+    private AtomicLong tasksFailed = new AtomicLong(0);
 
     // 修复任务统计信息
-    private final AtomicLong fixTasksProcessed = new AtomicLong(0);
-    private final AtomicLong fixTasksSucceeded = new AtomicLong(0);
-    private final AtomicLong fixTasksFailed = new AtomicLong(0);
+
+    private AtomicLong fixTasksProcessed = new AtomicLong(0);
+
+    private AtomicLong fixTasksSucceeded = new AtomicLong(0);
+
+    private AtomicLong fixTasksFailed = new AtomicLong(0);
 
     // 添加任务执行时间统计
-    private final AtomicLong fixTasksTotalExecutionTimeMs = new AtomicLong(0);
-    private final AtomicLong fixTasksMaxExecutionTimeMs = new AtomicLong(0);
+
+    private AtomicLong fixTasksTotalExecutionTimeMs = new AtomicLong(0);
+
+    private AtomicLong fixTasksMaxExecutionTimeMs = new AtomicLong(0);
     // 检查任务执行时间统计
-    private final AtomicLong tasksTotalExecutionTimeMs = new AtomicLong(0);
-    private final AtomicLong tasksMaxExecutionTimeMs = new AtomicLong(0);
+
+    private AtomicLong tasksTotalExecutionTimeMs = new AtomicLong(0);
+
+    private AtomicLong tasksMaxExecutionTimeMs = new AtomicLong(0);
 
     // 检查项线程池 - 专门用于执行单个检查项
     @Getter
-    private final ExecutorService itemCheckExecutorService;
+    private ExecutorService itemCheckExecutorService;
 
     private Thread queueProcessorThread;
     private Thread fixQueueProcessorThread;
@@ -99,10 +107,12 @@ public class HostCheckQueueManager {
     private long fixQueueProcessorStartTime;
 
     // 定时任务标志
-    private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
+
+    private AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 定时任务调度器
-    private final TaskScheduler taskScheduler;
+
+    private TaskScheduler taskScheduler;
 
     // 定时任务的Future
     private ScheduledFuture<?> queueHealthMonitorTask;
@@ -111,54 +121,29 @@ public class HostCheckQueueManager {
     private long queueHealthMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
     private long taskTimeoutMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
 
-    private final ExecutorService checkExecutorService;
 
-    private final ExecutorService fixExecutorService;
+    private ExecutorService checkExecutorService;
 
-    private final ItemCheckerFactory itemCheckerFactory;
+
+    private ExecutorService fixExecutorService;
+
+
+    private ItemCheckerFactory itemCheckerFactory;
 
     // 添加上次执行时间记录
     private volatile String lastQueueHealthMonitorTime = null;
     private volatile String lastTaskTimeoutMonitorTime = null;
 
     // 添加日期格式化器
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     // 系统启动时间
     private static long applicationStartTime;
 
-    private final HostCheckServiceImpl hostCheckService;
+    @Autowired
+    private HostCheckServiceImpl hostCheckService;
 
-    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService,
-            @Qualifier("fixExecutor") ExecutorService fixExecutorService,
-            @Qualifier("checkExecutor") ExecutorService checkExecutorService, TaskScheduler taskScheduler) {
-        this.itemCheckerFactory = itemCheckerFactory;
-        this.hostCheckService = hostCheckService;
-        // 创建检查项线程池 - 负责检查项级别的任务
-        this.itemCheckExecutorService = new ThreadPoolExecutor(
-                4, // 核心线程数 - 减少并行度
-                8, // 最大线程数 - 减少并行度
-                30L, // 空闲线程存活时间
-                TimeUnit.SECONDS, // 时间单位
-                new LinkedBlockingQueue<>(100), // 有界工作队列
-                new ThreadFactory() {
-                    private final AtomicInteger counter = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r);
-                        t.setName("item-checker-" + counter.getAndIncrement());
-                        t.setDaemon(false); // 改为非守护线程，避免任务执行中断
-                        t.setPriority(Thread.NORM_PRIORITY);
-                        return t;
-                    }
-                },
-                new ThreadPoolExecutor.CallerRunsPolicy() // 改为调用者运行策略，防止任务丢失
-        );
-        this.fixExecutorService = fixExecutorService;
-        this.checkExecutorService = checkExecutorService;
-        this.taskScheduler = taskScheduler;
-    }
 
     @PostConstruct
     public void init() {
@@ -360,7 +345,8 @@ public class HostCheckQueueManager {
                     4, 8, 30L, TimeUnit.SECONDS,
                     new LinkedBlockingQueue<>(100),
                     new ThreadFactory() {
-                        private final AtomicInteger counter = new AtomicInteger(1);
+                        @Autowired
+    private AtomicInteger counter = new AtomicInteger(1);
 
                         @Override
                         public Thread newThread(Runnable r) {
@@ -764,10 +750,14 @@ public class HostCheckQueueManager {
      * 任务执行类，用于在线程池中执行主机检查任务
      */
     private class HostCheckTask implements Runnable {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final HostCheckServiceImpl hostCheckService;
-        private final String taskKey;
+
+    private Integer clusterId;
+
+    private HostInfo hostInfo;
+
+    private HostCheckServiceImpl hostCheckService;
+
+    private String taskKey;
 
         public HostCheckTask(Integer clusterId, HostInfo hostInfo,
                 HostCheckServiceImpl hostCheckService, String taskKey) {
@@ -826,11 +816,16 @@ public class HostCheckQueueManager {
 
     @Getter
     private static class FixTask implements Comparable<FixTask> {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final CheckItem checkItem;
-        private final HostCheckServiceImpl hostCheckService;
-        private final int priority;
+
+    private Integer clusterId;
+
+    private HostInfo hostInfo;
+
+    private CheckItem checkItem;
+
+    private HostCheckServiceImpl hostCheckService;
+
+    private int priority;
 
         public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
             this(clusterId, hostInfo, checkItem, null, 5);
@@ -858,10 +853,14 @@ public class HostCheckQueueManager {
 
     @Getter
     private static class CheckTask implements Comparable<CheckTask> {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final HostCheckServiceImpl hostCheckService;
-        private final int priority;
+
+    private Integer clusterId;
+
+    private HostInfo hostInfo;
+
+    private HostCheckServiceImpl hostCheckService;
+
+    private int priority;
 
         public CheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
             this(clusterId, hostInfo, hostCheckService, 5);
@@ -1449,12 +1448,18 @@ public class HostCheckQueueManager {
      * 修复任务执行类
      */
     private class HostFixTask implements Runnable {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final CheckItem checkItem;
-        private final String taskKey;
-        private final HostCheckServiceImpl hostCheckService;
-        private final ItemCheckerFactory itemCheckerFactory;
+
+    private Integer clusterId;
+
+    private HostInfo hostInfo;
+
+    private CheckItem checkItem;
+
+    private String taskKey;
+
+    private HostCheckServiceImpl hostCheckService;
+
+    private ItemCheckerFactory itemCheckerFactory;
 
         public HostFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, String taskKey,
                 HostCheckServiceImpl hostCheckService) {
@@ -1963,10 +1968,14 @@ public class HostCheckQueueManager {
      * 负责执行具体的修复操作并更新任务状态
      */
     private class ExecuteFixTaskJob implements Runnable {
-        private final FixTask fixTask;
-        private final List<CheckItem> fixItems;
-        private final long startTimeMs;
-        private final String taskKey;
+
+    private FixTask fixTask;
+
+    private List<CheckItem> fixItems;
+
+    private long startTimeMs;
+
+    private String taskKey;
         private static final int MAX_RETRY_ATTEMPTS = 3; // 最大重试次数
         private static final long RETRY_DELAY_MS = 5000; // 重试间隔时间，5秒
 

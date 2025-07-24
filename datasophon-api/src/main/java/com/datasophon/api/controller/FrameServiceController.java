@@ -27,6 +27,7 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.mybatisflex.core.query.QueryChain;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,14 +42,13 @@ import java.util.List;
 @RequestMapping("api/frame/service")
 public class FrameServiceController {
 
-    private final FrameServiceService frameVersionServiceService;
+    @Autowired
+    private FrameServiceService frameVersionServiceService;
 
-    private final FrameServiceRoleService frameServiceRoleService;
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
 
-    public FrameServiceController(FrameServiceService frameVersionServiceService, FrameServiceRoleService frameServiceRoleService) {
-        this.frameVersionServiceService = frameVersionServiceService;
-        this.frameServiceRoleService = frameServiceRoleService;
-    }
+
 
     /**
      * 列表

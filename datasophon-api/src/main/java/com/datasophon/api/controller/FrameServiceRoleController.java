@@ -22,6 +22,7 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,14 +35,13 @@ import java.util.Arrays;
 @RequestMapping("api/frame/service/role")
 public class FrameServiceRoleController {
 
-    private final FrameServiceRoleService frameServiceRoleService;
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
 
-    private final AlertGroupService alertGroupService;
+    @Autowired
+    private AlertGroupService alertGroupService;
 
-    public FrameServiceRoleController(FrameServiceRoleService frameServiceRoleService, AlertGroupService alertGroupService) {
-        this.frameServiceRoleService = frameServiceRoleService;
-        this.alertGroupService = alertGroupService;
-    }
+
 
     /**
      * 查询服务对应的角色列表

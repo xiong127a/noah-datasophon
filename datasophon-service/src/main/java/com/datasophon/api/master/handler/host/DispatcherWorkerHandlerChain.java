@@ -18,7 +18,6 @@
 package com.datasophon.api.master.handler.host;
 
 import com.datasophon.common.model.HostInfo;
-
 import org.apache.sshd.client.session.ClientSession;
 
 import java.net.UnknownHostException;
@@ -27,7 +26,8 @@ import java.util.List;
 
 public class DispatcherWorkerHandlerChain {
 
-    private final List<DispatcherWorkerHandler> handlers = new ArrayList<>();
+
+    private List<DispatcherWorkerHandler> handlers = new ArrayList<>();
 
     public void addHandler(DispatcherWorkerHandler handler) {
         this.handlers.add(handler);

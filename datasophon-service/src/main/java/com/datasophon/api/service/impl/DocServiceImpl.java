@@ -39,11 +39,7 @@ import java.nio.charset.StandardCharsets;
 @Service
 @Slf4j
 public class DocServiceImpl implements DocService {
-    @Autowired
-    public DocServiceImpl(ClusterServiceInstanceService serviceInstanceService, ResourceLoader resourceLoader) {
-        this.serviceInstanceService = serviceInstanceService;
-        this.resourceLoader = resourceLoader;
-    }
+
 
     /**
      * 文档类型枚举
@@ -54,8 +50,10 @@ public class DocServiceImpl implements DocService {
         GUIDE("guides", "-user-guide"),
         HELP("help", "-help");
 
-        private final String dirName;
-        private final String suffix;
+
+    private String dirName;
+
+    private String suffix;
 
         DocType(String dirName, String suffix) {
             this.dirName = dirName;
@@ -85,9 +83,11 @@ public class DocServiceImpl implements DocService {
 
     // 依赖注入
 
-    private final ClusterServiceInstanceService serviceInstanceService;
+    @Autowired
+    private ClusterServiceInstanceService serviceInstanceService;
 
-    private final ResourceLoader resourceLoader;
+    @Autowired
+    private ResourceLoader resourceLoader;
 
     @Override
     public Result getServiceDoc(Integer clusterId, Integer serviceId, String typeStr) {
