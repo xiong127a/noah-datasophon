@@ -8,22 +8,22 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +32,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 操作系统信息服务实现类
@@ -46,9 +45,9 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoServiceImpl.class);
 
-    private final OsInfoCollectorFactory osInfoCollectorFactory;
+    private  OsInfoCollectorFactory osInfoCollectorFactory;
 
-    private final SshConnectionPoolManager sshConnectionPoolManager;
+    private  SshConnectionPoolManager sshConnectionPoolManager;
 
     // 线程池配置
     private final ExecutorService hostInfoExecutor;

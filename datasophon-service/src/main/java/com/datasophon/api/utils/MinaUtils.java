@@ -204,6 +204,7 @@ public class MinaUtils {
         } catch (IOException e) {
             LOG.error("关闭命令通道异常", e);
         }
+        return null;
     }
 
     /**
@@ -256,6 +257,7 @@ public class MinaUtils {
         } catch (IOException e) {
             LOG.error("关闭命令通道异常", e);
         }
+        return null;
     }
 
     public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {

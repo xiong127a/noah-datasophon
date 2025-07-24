@@ -19,20 +19,18 @@ package com.datasophon.api.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.api.utils.ConfigGroupUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import com.datasophon.dao.mapper.ClusterServiceInstanceConfigMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -41,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import com.mybatisflex.core.query.QueryChain;
 
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
@@ -50,20 +47,17 @@ public class ClusterServiceInstanceConfigServiceImpl
                 implements
                 ClusterServiceInstanceConfigService {
 
-        private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-        private final ConfigVersionInfoService configVersionInfoService;
+    private final ConfigVersionInfoService configVersionInfoService;
 
-        public ClusterServiceInstanceConfigServiceImpl(ConfigVersionInfoService configVersionInfoService) {
-                this.configVersionInfoService = configVersionInfoService;
-        }
+    public ClusterServiceInstanceConfigServiceImpl(ClusterServiceRoleGroupConfigService roleGroupConfigService, ConfigVersionInfoService configVersionInfoService) {
+        this.roleGroupConfigService = roleGroupConfigService;
+        this.configVersionInfoService = configVersionInfoService;
+    }
 
-        @Autowired
-        public ClusterServiceInstanceConfigServiceImpl(ClusterServiceRoleGroupConfigService roleGroupConfigService) {
-                this.roleGroupConfigService = roleGroupConfigService;
-        }
 
-        @Override
+    @Override
         public Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,
                         Integer page, Integer pageSize) {
                 ClusterServiceRoleGroupConfig roleGroupConfig = roleGroupConfigService

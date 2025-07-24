@@ -2,7 +2,6 @@ package com.datasophon.api.service.impl.osinfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -16,7 +15,7 @@ public class OsInfoCollectorFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoCollectorFactory.class);
 
-    private final List<IOsInfoCollector> collectors;
+    private List<IOsInfoCollector> collectors;
 
     /**
      * 根据操作系统类型获取对应的收集器

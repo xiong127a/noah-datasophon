@@ -17,12 +17,9 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.FrameServiceService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
@@ -31,24 +28,27 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
-import com.mybatisflex.core.query.QueryChain;
 
 @Service("frameServiceService")
 public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, FrameServiceEntity>
         implements
         FrameServiceService {
 
-    ClusterInfoService clusterInfoService;
+    private final ClusterInfoService clusterInfoService;
 
-    FrameInfoMapper frameInfoMapper;
+    private final FrameInfoMapper frameInfoMapper;
 
-    final
-    ClusterServiceInstanceService serviceInstanceService;
+
+    private final ClusterServiceInstanceService serviceInstanceService;
 
     private final static List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER");
@@ -57,19 +57,12 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
             "SPARK3", "FLINK");
 
-    public FrameServiceServiceImpl(ClusterServiceInstanceService serviceInstanceService) {
+    public FrameServiceServiceImpl(ClusterInfoService clusterInfoService, FrameInfoMapper frameInfoMapper, ClusterServiceInstanceService serviceInstanceService) {
+        this.clusterInfoService = clusterInfoService;
+        this.frameInfoMapper = frameInfoMapper;
         this.serviceInstanceService = serviceInstanceService;
     }
 
-    @Autowired
-    public FrameServiceServiceImpl(FrameInfoMapper frameInfoMapper) {
-        this.frameInfoMapper = frameInfoMapper;
-    }
-
-    @Autowired
-    public FrameServiceServiceImpl(ClusterInfoService clusterInfoService) {
-        this.clusterInfoService = clusterInfoService;
-    }
 
     @Override
     public Result getAllFrameService(Integer clusterId) {
