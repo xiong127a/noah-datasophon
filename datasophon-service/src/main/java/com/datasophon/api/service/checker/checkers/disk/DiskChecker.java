@@ -13,7 +13,6 @@ import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +36,11 @@ public class DiskChecker extends AbstractItemChecker {
 
     /** 警告磁盘使用率阈值 */
     public static final int WARNING_DISK_USAGE_THRESHOLD = 80;
+
+    public DiskChecker(CheckerProperties checkerProperties, DiskCheckerFactory diskCheckerFactory) {
+        this.checkerProperties = checkerProperties;
+        this.diskCheckerFactory = diskCheckerFactory;
+    }
 
     /**
      * 获取全局最小可用空间百分比
@@ -128,6 +132,7 @@ public class DiskChecker extends AbstractItemChecker {
      * 执行命令
      * 公开此方法供DiskCheckerStrategy实现类调用
      */
+    @Override
     public CommandResult execCommand(ClientSession session, String command) {
         // 检查参数
         if (session == null) {
