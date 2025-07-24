@@ -29,8 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DiskCheckerFactory {
 
-    @Autowired
-    private List<DiskCheckerStrategy> diskCheckers;
+    private final List<DiskCheckerStrategy> diskCheckers;
 
     private final Map<String, DiskCheckerStrategy> checkerCache = new ConcurrentHashMap<>();
     private final GenericDiskChecker genericDiskChecker;

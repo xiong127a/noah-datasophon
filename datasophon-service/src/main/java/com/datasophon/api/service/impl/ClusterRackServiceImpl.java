@@ -37,8 +37,11 @@ import java.util.List;
 @Service("clusterRackService")
 public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, ClusterRack> implements ClusterRackService {
 
+    private final ClusterHostService hostService;
     @Autowired
-    private ClusterHostService hostService;
+    public ClusterRackServiceImpl(ClusterHostService hostService) {
+        this.hostService = hostService;
+    }
 
     @Override
     public List<ClusterRack> queryClusterRack(Integer clusterId) {

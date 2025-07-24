@@ -63,13 +63,16 @@ import java.util.Map;
 @Slf4j
 public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
 
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceInstanceService serviceInstanceService;
 
     /**
      * 配置文件内容缓存，5分钟过期
      */
     Cache<String, byte[]> CONFIG_FILE_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);
+    @Autowired
+    public ServiceConfigFileServiceImpl(ClusterServiceInstanceService serviceInstanceService) {
+        this.serviceInstanceService = serviceInstanceService;
+    }
 
     /**
      * 获取服务配置文件列表

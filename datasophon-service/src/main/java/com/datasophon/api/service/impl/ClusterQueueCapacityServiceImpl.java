@@ -19,8 +19,6 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -36,6 +34,8 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterQueueCapacityMapper;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 import com.datasophon.dao.model.Links;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +53,11 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterQueueCapacityServiceImpl.class);
 
+    private final ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    public ClusterQueueCapacityServiceImpl(ClusterServiceRoleInstanceService roleInstanceService) {
+        this.roleInstanceService = roleInstanceService;
+    }
 
     @Override
     public Result refreshToYarn(Integer clusterId) throws Exception {

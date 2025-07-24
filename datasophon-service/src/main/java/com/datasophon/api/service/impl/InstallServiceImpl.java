@@ -84,31 +84,38 @@ public class InstallServiceImpl implements InstallService {
     private static final AtomicInteger logCounter = new AtomicInteger(0);
     private static final int LOG_PRINT_INTERVAL = 10;
 
-    @Autowired
-    ClusterInfoService clusterInfoService;
 
-    @Autowired
-    ClusterHostService hostService;
+    private final ClusterInfoService clusterInfoService;
 
-    @Autowired
-    private HostCheckService hostCheckService;
 
-    @Autowired
-    private HostCheckQueueManager hostCheckQueueManager;
+    private final ClusterHostService hostService;
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final HostCheckService hostCheckService;
 
-    @Autowired
-    private OsInfoService osInfoService;
+    private final HostCheckQueueManager hostCheckQueueManager;
 
-    @Autowired
+    private final ApplicationContext applicationContext;
+
+    private final OsInfoService osInfoService;
+
+
     @Qualifier("osInfoExecutor")
-    private ExecutorService osInfoExecutor;
+    private final ExecutorService osInfoExecutor;
 
-    @Autowired
+
     @Qualifier("hardwareInfoExecutor")
-    private ExecutorService hardwareInfoExecutor;
+    private final ExecutorService hardwareInfoExecutor;
+    @Autowired
+    public InstallServiceImpl(ClusterInfoService clusterInfoService, ClusterHostService hostService, HostCheckService hostCheckService, HostCheckQueueManager hostCheckQueueManager, ApplicationContext applicationContext, OsInfoService osInfoService, ExecutorService osInfoExecutor, ExecutorService hardwareInfoExecutor) {
+        this.clusterInfoService = clusterInfoService;
+        this.hostService = hostService;
+        this.hostCheckService = hostCheckService;
+        this.hostCheckQueueManager = hostCheckQueueManager;
+        this.applicationContext = applicationContext;
+        this.osInfoService = osInfoService;
+        this.osInfoExecutor = osInfoExecutor;
+        this.hardwareInfoExecutor = hardwareInfoExecutor;
+    }
 
     @Override
     public Result getInstallStep(Integer type) {

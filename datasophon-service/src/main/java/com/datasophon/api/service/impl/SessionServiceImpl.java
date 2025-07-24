@@ -19,13 +19,15 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.SessionService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.dao.entity.SessionEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.SessionMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,23 +35,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.WebUtils;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service("sessionService")
 public class SessionServiceImpl extends ServiceImpl<SessionMapper, SessionEntity> implements SessionService {
 
-    private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
+    private static final Logger logger = LoggerFactory.getLogger(SessionServiceImpl.class);
 
     // 定义最大会话数量常量
     private static final int MAX_SESSIONS_PER_USER = 1;
 
+    private final SessionMapper sessionMapper;
+
     @Autowired
-    private SessionMapper sessionMapper;
+    public SessionServiceImpl(SessionMapper sessionMapper) {
+        this.sessionMapper = sessionMapper;
+    }
 
     /**
      * get user session from request

@@ -17,12 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.AlertManagersActor;
@@ -46,6 +42,10 @@ import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
 import com.datasophon.dao.model.MPage;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,22 +61,25 @@ import java.util.stream.Collectors;
 public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, NoticeGroupEntity>
         implements NoticeGroupService {
 
-    @Autowired
-    private NoticeGroupUserService noticeGroupUserService;
+    private final NoticeGroupUserService noticeGroupUserService;
 
-    @Autowired
-    private UserInfoService userInfoService;
+    private final UserInfoService userInfoService;
 
-    @Autowired
-    private ClusterAlertQuotaService clusterAlertQuotaService;
+    private final ClusterAlertQuotaService clusterAlertQuotaService;
 
-    @Autowired
-    private ServiceInstallService serviceInstallService;
+    private final ServiceInstallService serviceInstallService;
 
+    private final ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
+    private final ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
     @Autowired
-    private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
-    @Autowired
-    private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
+    public NoticeGroupServiceImpl(NoticeGroupUserService noticeGroupUserService, UserInfoService userInfoService, ClusterAlertQuotaService clusterAlertQuotaService, ServiceInstallService serviceInstallService, ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService, ClusterServiceRoleInstanceService clusterServiceRoleInstanceService) {
+        this.noticeGroupUserService = noticeGroupUserService;
+        this.userInfoService = userInfoService;
+        this.clusterAlertQuotaService = clusterAlertQuotaService;
+        this.serviceInstallService = serviceInstallService;
+        this.clusterServiceRoleGroupConfigService = clusterServiceRoleGroupConfigService;
+        this.clusterServiceRoleInstanceService = clusterServiceRoleInstanceService;
+    }
 
     @Override
     public Result saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup) {

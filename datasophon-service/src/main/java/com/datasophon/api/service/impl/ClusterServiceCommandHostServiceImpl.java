@@ -17,17 +17,17 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,11 +49,14 @@ public class ClusterServiceCommandHostServiceImpl
     private static final Long PROGRESS_COMPLETE = 100L;
     private static final Long PROGRESS_INITIAL = 0L;
 
-    @Autowired
-    private ClusterServiceCommandHostCommandService hostCommandService;
+    private final ClusterServiceCommandHostCommandService hostCommandService;
 
+    private final ClusterServiceCommandHostMapper hostMapper;
     @Autowired
-    private ClusterServiceCommandHostMapper hostMapper;
+    public ClusterServiceCommandHostServiceImpl(ClusterServiceCommandHostCommandService hostCommandService, ClusterServiceCommandHostMapper hostMapper) {
+        this.hostCommandService = hostCommandService;
+        this.hostMapper = hostMapper;
+    }
 
     @Override
     public Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize) {

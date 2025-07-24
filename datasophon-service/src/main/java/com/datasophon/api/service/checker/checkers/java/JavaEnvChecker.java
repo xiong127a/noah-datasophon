@@ -20,8 +20,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaEnvChecker.class);
 
-    @Autowired
-    private CheckerProperties checkerProperties;
+    private final CheckerProperties checkerProperties;
 
     // 保存Java版本的原始输出
     private String javaVersionRawOutput = "";

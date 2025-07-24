@@ -17,14 +17,9 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
@@ -40,7 +35,12 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +49,11 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Service("clusterYarnQueueService")
@@ -59,8 +63,11 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueServiceImpl.class);
 
+    private final ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    public ClusterYarnQueueServiceImpl(ClusterServiceRoleInstanceService roleInstanceService) {
+        this.roleInstanceService = roleInstanceService;
+    }
 
     @Override
     public Result listByPage(Integer clusterId, Integer page, Integer pageSize) {

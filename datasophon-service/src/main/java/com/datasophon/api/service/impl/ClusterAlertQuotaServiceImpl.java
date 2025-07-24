@@ -17,12 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.service.AlertGroupService;
@@ -39,25 +35,18 @@ import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.enums.QuotaState;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service("clusterAlertQuotaService")
@@ -71,11 +60,15 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
     private static final String ALERT_CONFIG_FORMAT = "prometheus";
     private static final String ALERT_OUTPUT_DIRECTORY = "alert_rules";
 
-    @Autowired
-    private AlertGroupService alertGroupService;
+    private final AlertGroupService alertGroupService;
+
+    private final NoticeGroupService noticeGroupService;
 
     @Autowired
-    private NoticeGroupService noticeGroupService;
+    public ClusterAlertQuotaServiceImpl(AlertGroupService alertGroupService, NoticeGroupService noticeGroupService) {
+        this.alertGroupService = alertGroupService;
+        this.noticeGroupService = noticeGroupService;
+    }
 
     @Override
     public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page,

@@ -33,18 +33,7 @@ import org.springframework.stereotype.Service;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -59,21 +48,25 @@ public class HostCheckServiceImpl implements HostCheckService {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
 
-    @Autowired
-    private ItemCheckerFactory itemCheckerFactory;
+    private final ItemCheckerFactory itemCheckerFactory;
 
-    @Autowired
-    private HostCheckQueueManager hostCheckQueueManager;
+    private final HostCheckQueueManager hostCheckQueueManager;
 
-    @Autowired
-    private AsyncCheckService asyncCheckService;
+    private final AsyncCheckService asyncCheckService;
 
-    @Autowired
+
     @Qualifier("checkExecutor")
-    private ExecutorService checkExecutor;
+    private final ExecutorService checkExecutor;
 
+    private final TaskManager taskManager;
     @Autowired
-    private TaskManager taskManager;
+    public HostCheckServiceImpl(ItemCheckerFactory itemCheckerFactory, HostCheckQueueManager hostCheckQueueManager, AsyncCheckService asyncCheckService, ExecutorService checkExecutor, TaskManager taskManager) {
+        this.itemCheckerFactory = itemCheckerFactory;
+        this.hostCheckQueueManager = hostCheckQueueManager;
+        this.asyncCheckService = asyncCheckService;
+        this.checkExecutor = checkExecutor;
+        this.taskManager = taskManager;
+    }
 
     /**
      * 任务执行状态枚举

@@ -20,6 +20,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSON;
@@ -33,7 +34,6 @@ import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.service.*;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
@@ -89,38 +89,31 @@ import static com.datasophon.common.Constants.UNDERLINE;
 public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     public static final String PROMETHEUS = "prometheus";
-    public static final String ALERTMANAGER = "ALERTMANAGER";
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallServiceImpl.class);
-    private static final List<String> MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES = Arrays.asList("Grafana", "AlertManager",
-            "Prometheus");
+
+    private final     FrameServiceService frameService;
+    private final ClusterServiceCommandService commandService;
+    private final ClusterInfoService clusterInfoService;
+    private final ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceCommandHostCommandService hostCommandService;
+    private final ClusterVariableService variableService;
+    private final ClusterServiceInstanceRoleGroupService roleGroupService;
+    private final ClusterServiceRoleGroupConfigService groupConfigService;
+    private final ClusterServiceRoleInstanceService roleInstanceService;
+    private final ConfigVersionInfoService configVersionInfoService;
     @Autowired
-    FrameInfoService frameInfoService;
-    @Autowired
-    FrameServiceService frameService;
-    @Autowired
-    FrameServiceRoleService frameServiceRole;
-    @Autowired
-    ClusterServiceCommandService commandService;
-    @Autowired
-    private ClusterInfoService clusterInfoService;
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
-    @Autowired
-    private ClusterServiceInstanceConfigService serviceInstanceConfigService;
-    @Autowired
-    private ClusterServiceCommandHostCommandService hostCommandService;
-    @Autowired
-    private ClusterVariableService variableService;
-    @Autowired
-    private ClusterHostService hostService;
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService roleGroupService;
-    @Autowired
-    private ClusterServiceRoleGroupConfigService groupConfigService;
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
-    @Autowired
-    private ConfigVersionInfoService configVersionInfoService;
+    public ServiceInstallServiceImpl(FrameServiceService frameService, ClusterServiceCommandService commandService, ClusterInfoService clusterInfoService, ClusterServiceInstanceService serviceInstanceService, ClusterServiceCommandHostCommandService hostCommandService, ClusterVariableService variableService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleGroupConfigService groupConfigService, ClusterServiceRoleInstanceService roleInstanceService, ConfigVersionInfoService configVersionInfoService) {
+        this.frameService = frameService;
+        this.commandService = commandService;
+        this.clusterInfoService = clusterInfoService;
+        this.serviceInstanceService = serviceInstanceService;
+        this.hostCommandService = hostCommandService;
+        this.variableService = variableService;
+        this.roleGroupService = roleGroupService;
+        this.groupConfigService = groupConfigService;
+        this.roleInstanceService = roleInstanceService;
+        this.configVersionInfoService = configVersionInfoService;
+    }
 
     /**
      * 处理配置列表，根据集群模式修改配置项的hidden和required属性
@@ -141,7 +134,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public Result getServiceConfigOption(Integer clusterId, String serviceName) {
-        List<ServiceConfig> list = null;
+        List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -354,15 +347,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return Result.success().put("versionCreated", versionCreated);
     }
 
-    private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
-
-    }
 
     @Override
     public Result saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list) {
-
-        checkOnSameNode(clusterId, list);
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey = clusterInfo.getClusterCode()
@@ -432,15 +419,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 clusterInfo.getClusterCode()
                         + UNDERLINE
                         + SERVICE_ROLE_HOST_MAPPING,
-                new com.fasterxml.jackson.core.type.TypeReference<HashMap<String, List<String>>>() {
+                new com.fasterxml.jackson.core.type.TypeReference<>() {
                 });
         return Result.success(map);
     }
 
     /**
-     * @param clusterId
-     * @param commandIds
-     * @return
      */
     @Override
     public Result startInstallService(Integer clusterId, List<String> commandIds) {
@@ -746,7 +730,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      */
     private Map<Generators, List<ServiceConfig>> parseConfigJson(String configJson) {
         return JSON.parseObject(configJson,
-                new TypeReference<Map<Generators, List<ServiceConfig>>>() {
+                new TypeReference<>() {
                 });
     }
 
@@ -857,44 +841,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         configVersionInfoService.updateCurrentVersion(configVersionInfo.getVersion(), refType, refId);
     }
 
-    /**
-     * 检查AlertManager、Grafana和Prometheus主角色是否部署在同一主机上
-     * 注意：此检查针对的是特定角色名称，而不是服务名
-     * 例如：Prometheus服务中的Prometheus角色（主角色）必须与AlertManager和Grafana部署在同一主机
-     * 但NodeExporter角色（工作角色）可以部署在任意主机上
-     */
-    private void checkOnSameNode(Integer clusterId, List<ServiceRoleHostMapping> list) {
-        // TODO: 暂时取消Prometheus、Grafana和AlertManager必须部署在同一主机的限制，后续需要根据实际情况决定是否恢复
-        /*
-         * Set<String> hostnameSet = list.stream()
-         * .filter(s ->
-         * MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES.contains(s.getServiceRole()))
-         * .map(ServiceRoleHostMapping::getHosts)
-         * .flatMap(Collection::stream)
-         * .collect(Collectors.toSet());
-         * if (CollectionUtils.isEmpty(hostnameSet)) {
-         * return;
-         * }
-         * 
-         * Set<String> installedHostnameSet = roleInstanceService.lambdaQuery()
-         * .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
-         * .in(
-         * ClusterServiceRoleInstanceEntity::getServiceRoleName,
-         * MUST_AT_SAME_NODE_BASIC_SERVICE_ROLES)
-         * .list().stream()
-         * .map(ClusterServiceRoleInstanceEntity::getHostname)
-         * .collect(Collectors.toSet());
-         * hostnameSet.addAll(installedHostnameSet);
-         * 
-         * if (hostnameSet.size() > 1) {
-         * throw new
-         * ServiceException(Status.BASIC_SERVICE_SELECT_MOST_ONE_HOST.getMsg());
-         * }
-         */
-
-        // 跳过检查，允许这些服务部署在不同主机上
-        return;
-    }
 
     private void serviceValidation(ServiceRoleHostMapping serviceRoleHostMapping) {
         String serviceRole = serviceRoleHostMapping.getServiceRole();
@@ -1107,7 +1053,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 // 映射子组名称为更友好的显示名称
                 List<String> friendlySubgroupNames = subgroups.stream()
                         .map(this::getFriendlySubgroupName)
-                        .collect(Collectors.toList());
+                        .toList();
 
                 for (int i = 0; i < friendlySubgroupNames.size(); i++) {
                     if (i > 0) {
@@ -1126,7 +1072,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         // 2. 再添加常规配置的变更
         if (!regularChangedConfigs.isEmpty()) {
-            if (sb.length() > 0) {
+            if (StrUtil.isNotBlank(sb)) {
                 sb.append(", ");
             } else {
                 sb.append("修改了 ");

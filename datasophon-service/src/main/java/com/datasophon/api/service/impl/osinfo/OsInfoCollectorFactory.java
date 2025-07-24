@@ -16,8 +16,7 @@ public class OsInfoCollectorFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoCollectorFactory.class);
 
-    @Autowired
-    private List<IOsInfoCollector> collectors;
+    private final List<IOsInfoCollector> collectors;
 
     /**
      * 根据操作系统类型获取对应的收集器

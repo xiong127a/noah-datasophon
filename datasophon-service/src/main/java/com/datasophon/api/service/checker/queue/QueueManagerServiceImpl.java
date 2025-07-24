@@ -28,15 +28,13 @@ import java.util.concurrent.ExecutorService;
 @Service
 public class QueueManagerServiceImpl implements QueueManagerService {
 
-    @Autowired
-    private HostCheckQueueManager hostCheckQueueManager;
+    private final HostCheckQueueManager hostCheckQueueManager;
 
     @Autowired
     @Lazy
     private AsyncCheckService asyncCheckService;
 
-    @Autowired
-    private SshConnectionPoolManager sshConnectionPoolManager;
+    private final SshConnectionPoolManager sshConnectionPoolManager;
 
     // 添加各种执行器
     @Autowired

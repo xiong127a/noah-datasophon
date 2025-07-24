@@ -46,11 +46,9 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoServiceImpl.class);
 
-    @Autowired
-    private OsInfoCollectorFactory osInfoCollectorFactory;
+    private final OsInfoCollectorFactory osInfoCollectorFactory;
 
-    @Autowired
-    private SshConnectionPoolManager sshConnectionPoolManager;
+    private final SshConnectionPoolManager sshConnectionPoolManager;
 
     // 线程池配置
     @Autowired

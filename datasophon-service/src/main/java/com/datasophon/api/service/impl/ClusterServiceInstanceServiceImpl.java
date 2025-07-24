@@ -20,9 +20,6 @@ package com.datasophon.api.service.impl;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.TimedCache;
 import com.alibaba.fastjson2.JSONArray;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
@@ -53,6 +50,8 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,24 +75,17 @@ public class ClusterServiceInstanceServiceImpl
         implements
         ClusterServiceInstanceService {
 
-    @Autowired
-    private ClusterServiceInstanceMapper serviceInstanceMapper;
+    private final ClusterServiceInstanceMapper serviceInstanceMapper;
 
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
-    @Autowired
-    private ClusterInfoService clusterInfoService;
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
+    private final ClusterServiceRoleInstanceService roleInstanceService;
+    private final ClusterInfoService clusterInfoService;
+    private final FrameServiceRoleService frameServiceRoleService;
 
-    @Autowired
-    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService roleGroupService;
+    private final ClusterServiceInstanceRoleGroupService roleGroupService;
 
-    @Autowired
-    private ClusterServiceRoleInstanceWebuisService webuisService;
+    private final ClusterServiceRoleInstanceWebuisService webuisService;
 
     // 创建一个定时缓存，缓存时间为10秒
     private static final TimedCache<String, ConnectionInfo> CONNECTION_INFO_CACHE = CacheUtil.newTimedCache(5000);
@@ -102,6 +94,16 @@ public class ClusterServiceInstanceServiceImpl
     static {
         // 每5秒检查一次过期缓存
         CONNECTION_INFO_CACHE.schedulePrune(2000);
+    }
+    @Autowired
+    public ClusterServiceInstanceServiceImpl(ClusterServiceInstanceMapper serviceInstanceMapper, ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, ClusterServiceRoleGroupConfigService roleGroupConfigService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceWebuisService webuisService) {
+        this.serviceInstanceMapper = serviceInstanceMapper;
+        this.roleInstanceService = roleInstanceService;
+        this.clusterInfoService = clusterInfoService;
+        this.frameServiceRoleService = frameServiceRoleService;
+        this.roleGroupConfigService = roleGroupConfigService;
+        this.roleGroupService = roleGroupService;
+        this.webuisService = webuisService;
     }
 
     @Override

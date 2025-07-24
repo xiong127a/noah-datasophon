@@ -1,5 +1,6 @@
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.AutoScaleService;
@@ -37,7 +38,7 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     @Scheduled(cron = "0 0 9 * * MON-FRI")
     public void scaleUp() {
         int clusterId = PropertyUtils.getInt("clusterId");
-        if (!isAutoScaleEnabled(clusterId)) {
+        if (BooleanUtil.isFalse(isAutoScaleEnabled(clusterId))) {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
@@ -55,7 +56,7 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     @Scheduled(cron = "0 0 18 * * MON-FRI")
     public void scaleDown() {
         int clusterId = PropertyUtils.getInt("clusterId");
-        if (!isAutoScaleEnabled(clusterId)) {
+        if (BooleanUtil.isFalse(isAutoScaleEnabled(clusterId))) {
             return;
         }
         String kubeConfig = getClusterInfoService().getKubeConfigByClusterId(clusterId);
@@ -71,14 +72,14 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     }
 
     @Override
-    public Result createAutoScaleTask(AutoScaleTaskVO taskVO) {
+    public Result<String> createAutoScaleTask(AutoScaleTaskVO taskVO) {
         //saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
         saveAutoScaleConfig(taskVO.getClusterId(), "true");
         return Result.success();
     }
 
     @Override
-    public Result updateAutoScaleTask(AutoScaleTaskVO taskVO) {
+    public Result<String> updateAutoScaleTask(AutoScaleTaskVO taskVO) {
         //saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
         saveAutoScaleConfig(taskVO.getClusterId(), "false");
         return Result.success();
@@ -90,13 +91,13 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     }
 
     @Override
-    public Result getAutoScaleTasks(AutoScaleTaskVO taskVO) {
+    public Result<String> getAutoScaleTasks(AutoScaleTaskVO taskVO) {
         Map<String, String> globalVariables = GlobalVariables.get(taskVO.getClusterId());
         return  Result.success(globalVariables.get("${enableAutoScale}") != null ? globalVariables.get("${enableAutoScale}") : "false");
     }
 
     @Override
-    public Result deleteAutoScaleTask(AutoScaleTaskVO taskVO) {
+    public Result<String> deleteAutoScaleTask(AutoScaleTaskVO taskVO) {
         return null;
     }
 }

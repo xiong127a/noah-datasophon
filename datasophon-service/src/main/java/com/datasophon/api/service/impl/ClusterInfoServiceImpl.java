@@ -66,41 +66,44 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         implements
         ClusterInfoService {
 
-    @Autowired
-    private ClusterInfoMapper clusterInfoMapper;
+    private final ClusterInfoMapper clusterInfoMapper;
 
-    @Autowired
-    private ClusterRoleUserService clusterUserService;
+    private final ClusterRoleUserService clusterUserService;
 
-    @Autowired
-    private AlertGroupService alertGroupService;
+    private final AlertGroupService alertGroupService;
 
-    @Autowired
-    private ClusterAlertGroupMapService groupMapService;
+    private final ClusterAlertGroupMapService groupMapService;
 
-    @Autowired
-    private ConfigBean configBean;
+    private final ConfigBean configBean;
 
-    @Autowired
-    private FrameServiceService frameServiceService;
+    private final FrameServiceService frameServiceService;
 
-    @Autowired
-    private ClusterHostService clusterHostService;
+    private final ClusterHostService clusterHostService;
 
-    @Autowired
-    private ClusterYarnSchedulerService yarnSchedulerService;
+    private final ClusterYarnSchedulerService yarnSchedulerService;
 
-    @Autowired
-    private ClusterNodeLabelService nodeLabelService;
+    private final ClusterNodeLabelService nodeLabelService;
 
-    @Autowired
-    private ClusterQueueCapacityService queueCapacityService;
+    private final ClusterQueueCapacityService queueCapacityService;
 
-    @Autowired
-    private ClusterRackService rackService;
+    private final ClusterRackService rackService;
 
+    private final ClusterServiceInstanceService clusterServiceInstanceService;
     @Autowired
-    private ClusterServiceInstanceService clusterServiceInstanceService;
+    public ClusterInfoServiceImpl(ClusterInfoMapper clusterInfoMapper, ClusterRoleUserService clusterUserService, AlertGroupService alertGroupService, ClusterAlertGroupMapService groupMapService, ConfigBean configBean, FrameServiceService frameServiceService, ClusterHostService clusterHostService, ClusterYarnSchedulerService yarnSchedulerService, ClusterNodeLabelService nodeLabelService, ClusterQueueCapacityService queueCapacityService, ClusterRackService rackService, ClusterServiceInstanceService clusterServiceInstanceService) {
+        this.clusterInfoMapper = clusterInfoMapper;
+        this.clusterUserService = clusterUserService;
+        this.alertGroupService = alertGroupService;
+        this.groupMapService = groupMapService;
+        this.configBean = configBean;
+        this.frameServiceService = frameServiceService;
+        this.clusterHostService = clusterHostService;
+        this.yarnSchedulerService = yarnSchedulerService;
+        this.nodeLabelService = nodeLabelService;
+        this.queueCapacityService = queueCapacityService;
+        this.rackService = rackService;
+        this.clusterServiceInstanceService = clusterServiceInstanceService;
+    }
 
     @Override
     public ClusterInfoEntity getClusterByClusterCode(String clusterCode) {

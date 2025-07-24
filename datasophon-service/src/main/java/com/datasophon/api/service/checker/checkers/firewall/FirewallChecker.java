@@ -23,8 +23,7 @@ public class FirewallChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(FirewallChecker.class);
 
-    @Autowired
-    private FirewallCheckerFactory firewallCheckerFactory;
+    private final FirewallCheckerFactory firewallCheckerFactory;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

@@ -18,18 +18,14 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.core.util.NumberUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.*;
+import com.datasophon.api.service.ClusterGroupService;
+import com.datasophon.api.service.ClusterUserGroupService;
+import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
@@ -48,7 +44,13 @@ import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.datasophon.dao.mapper.ClusterUserMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +60,12 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -69,14 +76,17 @@ import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
 public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUser> implements ClusterUserService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterUserServiceImpl.class);
-    @Autowired
-    private ClusterGroupService groupService;
+    private final ClusterGroupService groupService;
 
-    @Autowired
-    private ClusterHostService hostService;
+    private final ClusterHostService hostService;
 
+    private final ClusterUserGroupService userGroupService;
     @Autowired
-    private ClusterUserGroupService userGroupService;
+    public ClusterUserServiceImpl(ClusterGroupService groupService, ClusterHostService hostService, ClusterUserGroupService userGroupService) {
+        this.groupService = groupService;
+        this.hostService = hostService;
+        this.userGroupService = userGroupService;
+    }
 
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {

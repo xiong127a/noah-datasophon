@@ -87,29 +87,32 @@ public class LoadServiceMeta implements ApplicationRunner {
     private static final String PATH = "meta";
     private static final String HDFS = "HDFS";
     private static final String HADOOP = "HADOOP";
-    @Autowired
-    private FrameServiceService frameServiceService;
+    private final FrameServiceService frameServiceService;
 
-    @Autowired
-    private FrameInfoService frameInfoService;
+    private final FrameInfoService frameInfoService;
 
-    @Autowired
-    private FrameServiceRoleService roleService;
+    private final FrameServiceRoleService roleService;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+    private final ClusterInfoService clusterInfoService;
 
-    @Autowired
-    private ConfigBean configBean;
+    private final ConfigBean configBean;
 
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceInstanceService serviceInstanceService;
 
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService roleGroupService;
+    private final ClusterServiceInstanceRoleGroupService roleGroupService;
 
+    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
     @Autowired
-    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    public LoadServiceMeta(FrameServiceService frameServiceService, FrameInfoService frameInfoService, FrameServiceRoleService roleService, ClusterInfoService clusterInfoService, ConfigBean configBean, ClusterServiceInstanceService serviceInstanceService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleGroupConfigService roleGroupConfigService) {
+        this.frameServiceService = frameServiceService;
+        this.frameInfoService = frameInfoService;
+        this.roleService = roleService;
+        this.clusterInfoService = clusterInfoService;
+        this.configBean = configBean;
+        this.serviceInstanceService = serviceInstanceService;
+        this.roleGroupService = roleGroupService;
+        this.roleGroupConfigService = roleGroupConfigService;
+    }
 
     /**
      * 1、设置全局环境变量

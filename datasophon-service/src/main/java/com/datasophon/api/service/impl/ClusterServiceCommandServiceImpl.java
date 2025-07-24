@@ -76,29 +76,32 @@ public class ClusterServiceCommandServiceImpl
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandServiceImpl.class);
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+    private final ClusterInfoService clusterInfoService;
 
-    @Autowired
-    private ClusterServiceCommandHostService commandHostService;
+    private final ClusterServiceCommandHostService commandHostService;
 
-    @Autowired
-    private ClusterServiceCommandHostCommandService hostCommandService;
+    private final ClusterServiceCommandHostCommandService hostCommandService;
 
-    @Autowired
-    private FrameServiceService frameServiceService;
+    private final FrameServiceService frameServiceService;
 
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
+    private final FrameServiceRoleService frameServiceRoleService;
 
-    @Autowired
-    private ClusterServiceCommandService commandService;
+    private final ClusterServiceCommandService commandService;
 
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceInstanceService serviceInstanceService;
 
+    private final ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    public ClusterServiceCommandServiceImpl(ClusterInfoService clusterInfoService, ClusterServiceCommandHostService commandHostService, ClusterServiceCommandHostCommandService hostCommandService, FrameServiceService frameServiceService, FrameServiceRoleService frameServiceRoleService, ClusterServiceCommandService commandService, ClusterServiceInstanceService serviceInstanceService, ClusterServiceRoleInstanceService roleInstanceService) {
+        this.clusterInfoService = clusterInfoService;
+        this.commandHostService = commandHostService;
+        this.hostCommandService = hostCommandService;
+        this.frameServiceService = frameServiceService;
+        this.frameServiceRoleService = frameServiceRoleService;
+        this.commandService = commandService;
+        this.serviceInstanceService = serviceInstanceService;
+        this.roleInstanceService = roleInstanceService;
+    }
 
     @Override
     @Transactional

@@ -17,8 +17,6 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.service.ClusterUserService;
@@ -26,6 +24,8 @@ import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.datasophon.dao.mapper.ClusterUserGroupMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,11 +42,14 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     private static final int USER_GROUP_TYPE_MAIN = 1;
     private static final int USER_GROUP_TYPE_OTHER = 2;
 
-    @Autowired
-    private ClusterGroupService clusterGroupService;
+    private final ClusterGroupService clusterGroupService;
 
+    private final ClusterUserService userService;
     @Autowired
-    private ClusterUserService userService;
+    public ClusterUserGroupServiceImpl(ClusterGroupService clusterGroupService, ClusterUserService userService) {
+        this.clusterGroupService = clusterGroupService;
+        this.userService = userService;
+    }
 
     @Override
     public Long countGroupUserNum(Integer groupId) {

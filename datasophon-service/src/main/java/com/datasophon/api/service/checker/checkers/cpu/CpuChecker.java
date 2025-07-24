@@ -17,8 +17,7 @@ public class CpuChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(CpuChecker.class);
 
-    @Autowired
-    private CheckerProperties checkerProperties;
+    private final CheckerProperties checkerProperties;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

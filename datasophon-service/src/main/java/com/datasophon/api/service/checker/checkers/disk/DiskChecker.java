@@ -31,11 +31,9 @@ public class DiskChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(DiskChecker.class);
 
-    @Autowired
-    private CheckerProperties checkerProperties;
+    private final CheckerProperties checkerProperties;
 
-    @Autowired
-    private DiskCheckerFactory diskCheckerFactory;
+    private final DiskCheckerFactory diskCheckerFactory;
 
     /** 警告磁盘使用率阈值 */
     public static final int WARNING_DISK_USAGE_THRESHOLD = 80;

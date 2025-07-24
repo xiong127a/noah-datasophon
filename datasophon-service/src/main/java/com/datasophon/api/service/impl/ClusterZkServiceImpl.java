@@ -17,11 +17,11 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterZkService;
 import com.datasophon.dao.entity.ClusterZk;
 import com.datasophon.dao.mapper.ClusterZkMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +30,11 @@ import java.util.List;
 @Service("clusterZkService")
 public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZk> implements ClusterZkService {
 
+    private final ClusterZkMapper clusterZkMapper;
     @Autowired
-    private ClusterZkMapper clusterZkMapper;
+    public ClusterZkServiceImpl(ClusterZkMapper clusterZkMapper) {
+        this.clusterZkMapper = clusterZkMapper;
+    }
 
     @Override
     public Integer getMaxMyId(Integer clusterId) {

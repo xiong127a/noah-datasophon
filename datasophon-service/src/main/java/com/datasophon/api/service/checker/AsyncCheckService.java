@@ -48,12 +48,10 @@ public class AsyncCheckService {
     private static final Logger logger = LoggerFactory.getLogger(AsyncCheckService.class);
 
     // 检查器工厂
-    @Autowired
-    private ItemCheckerFactory itemCheckerFactory;
+    private final ItemCheckerFactory itemCheckerFactory;
 
     // 任务管理器
-    @Autowired
-    private TaskManager taskManager;
+    private final TaskManager taskManager;
 
     // 检查任务执行器
     @Autowired
@@ -107,8 +105,7 @@ public class AsyncCheckService {
 
     // 添加缓存命中和总请求计数，用于计算缓存命中率
 
-    @Autowired
-    private SshConnectionPoolManager sshConnectionPoolManager;
+    private final SshConnectionPoolManager sshConnectionPoolManager;
 
     @PostConstruct
     public void init() {

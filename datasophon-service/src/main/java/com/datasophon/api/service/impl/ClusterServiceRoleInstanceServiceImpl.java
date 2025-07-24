@@ -17,12 +17,6 @@
 
 package com.datasophon.api.service.impl;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
@@ -57,7 +51,13 @@ import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.kubernetes.actor.KubernetesLogActor;
 import com.datasophon.kubernetes.util.CommonUtil;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,32 +84,39 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceServiceImpl.class);
 
-    @Autowired
-    ClusterInfoService clusterInfoService;
 
-    @Autowired
-    FrameServiceRoleService frameServiceRoleService;
+    private final ClusterInfoService clusterInfoService;
 
-    @Autowired
-    FrameServiceService frameService;
 
-    @Autowired
-    ClusterServiceRoleInstanceService roleInstanceService;
+    private final FrameServiceRoleService frameServiceRoleService;
 
-    @Autowired
-    private ClusterServiceCommandService commandService;
 
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService roleGroupService;
+    private final FrameServiceService frameService;
 
-    @Autowired
-    private ClusterServiceRoleInstanceMapper roleInstanceMapper;
 
-    @Autowired
-    private ClusterAlertHistoryService alertHistoryService;
+    private final ClusterServiceRoleInstanceService roleInstanceService;
 
+    private final ClusterServiceCommandService commandService;
+
+    private final ClusterServiceInstanceRoleGroupService roleGroupService;
+
+    private final ClusterServiceRoleInstanceMapper roleInstanceMapper;
+
+    private final ClusterAlertHistoryService alertHistoryService;
+
+    private final ClusterServiceRoleInstanceWebuisService webuisService;
     @Autowired
-    private ClusterServiceRoleInstanceWebuisService webuisService;
+    public ClusterServiceRoleInstanceServiceImpl(ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, FrameServiceService frameService, ClusterServiceRoleInstanceService roleInstanceService, ClusterServiceCommandService commandService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceMapper roleInstanceMapper, ClusterAlertHistoryService alertHistoryService, ClusterServiceRoleInstanceWebuisService webuisService) {
+        this.clusterInfoService = clusterInfoService;
+        this.frameServiceRoleService = frameServiceRoleService;
+        this.frameService = frameService;
+        this.roleInstanceService = roleInstanceService;
+        this.commandService = commandService;
+        this.roleGroupService = roleGroupService;
+        this.roleInstanceMapper = roleInstanceMapper;
+        this.alertHistoryService = alertHistoryService;
+        this.webuisService = webuisService;
+    }
 
     @Override
     public List<ClusterServiceRoleInstanceEntity> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,

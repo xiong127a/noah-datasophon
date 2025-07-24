@@ -29,8 +29,7 @@ import java.util.Arrays;
  */
 public class MessageResolverUtils {
 
-    @Autowired
-    private static MessageSource messageSource = SpringUtil.getBean(MessageSource.class);
+    private final static MessageSource messageSource = SpringUtil.getBean(MessageSource.class);
 
     public MessageResolverUtils() {
     }

@@ -69,11 +69,15 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterGroupServiceImpl.class);
 
-    @Autowired
-    private ClusterHostService hostService;
+    private final ClusterHostService hostService;
+
+    private final ClusterUserGroupService userGroupService;
 
     @Autowired
-    private ClusterUserGroupService userGroupService;
+    public ClusterGroupServiceImpl(ClusterHostService hostService, ClusterUserGroupService userGroupService) {
+        this.hostService = hostService;
+        this.userGroupService = userGroupService;
+    }
 
     @Override
     public Result saveClusterGroup(Integer clusterId, String groupName) {

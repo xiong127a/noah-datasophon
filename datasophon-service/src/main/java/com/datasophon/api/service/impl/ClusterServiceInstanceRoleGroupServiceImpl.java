@@ -48,16 +48,19 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
         implements
         ClusterServiceInstanceRoleGroupService {
 
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private final ClusterServiceInstanceService serviceInstanceService;
 
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private final ClusterServiceRoleInstanceService roleInstanceService;
 
-    @Autowired
-    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     private static final String DEFAULT = "default";
+    @Autowired
+    public ClusterServiceInstanceRoleGroupServiceImpl(ClusterServiceInstanceService serviceInstanceService, ClusterServiceRoleInstanceService roleInstanceService, ClusterServiceRoleGroupConfigService roleGroupConfigService) {
+        this.serviceInstanceService = serviceInstanceService;
+        this.roleInstanceService = roleInstanceService;
+        this.roleGroupConfigService = roleGroupConfigService;
+    }
 
     @Override
     public ClusterServiceInstanceRoleGroup getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {

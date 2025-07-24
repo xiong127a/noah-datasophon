@@ -19,8 +19,7 @@ import java.util.Map;
 public class ItemCheckerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ItemCheckerFactory.class);
     
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
     
     // 按枚举类型存储检查器
     private final Map<ItemCode, ItemChecker> checkerMap = new HashMap<>();

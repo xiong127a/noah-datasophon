@@ -18,12 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.core.util.StrUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
@@ -47,7 +42,12 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterNodeLabelMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesUtil;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.pekko.actor.ActorSelection;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,14 +75,17 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterNodeLabelServiceImpl.class);
 
-    @Autowired
-    private ClusterHostService hostService;
+    private final ClusterHostService hostService;
 
-    @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private final ClusterServiceRoleInstanceService roleInstanceService;
 
+    private final ClusterInfoService clusterInfoService;
     @Autowired
-    private ClusterInfoService clusterInfoService;
+    public ClusterNodeLabelServiceImpl(ClusterHostService hostService, ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService) {
+        this.hostService = hostService;
+        this.roleInstanceService = roleInstanceService;
+        this.clusterInfoService = clusterInfoService;
+    }
 
     @Override
     public Result saveNodeLabel(Integer clusterId, String nodeLabel) {

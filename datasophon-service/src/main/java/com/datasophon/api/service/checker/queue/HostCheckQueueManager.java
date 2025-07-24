@@ -118,8 +118,7 @@ public class HostCheckQueueManager {
     @Qualifier("fixExecutor")
     private ExecutorService fixExecutorService;
 
-    @Autowired
-    private ItemCheckerFactory itemCheckerFactory;
+    private final ItemCheckerFactory itemCheckerFactory;
 
     // 添加上次执行时间记录
     private volatile String lastQueueHealthMonitorTime = null;
@@ -131,8 +130,7 @@ public class HostCheckQueueManager {
     // 系统启动时间
     private static long applicationStartTime;
 
-    @Autowired
-    private HostCheckServiceImpl hostCheckService;
+    private final HostCheckServiceImpl hostCheckService;
 
     public HostCheckQueueManager() {
         // 创建检查项线程池 - 负责检查项级别的任务
