@@ -72,19 +72,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterHostServiceImpl.class);
 
-    // 移除字段注入
-    @org.springframework.context.annotation.Lazy
-    private final ClusterServiceRoleInstanceService roleInstanceService;
-    private final ClusterRackService clusterRackService;
-
-    // 添加构造函数注入
     @Autowired
-    public ClusterHostServiceImpl(
-            @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService,
-            ClusterRackService clusterRackService) {
-        this.roleInstanceService = roleInstanceService;
-        this.clusterRackService = clusterRackService;
-    }
+    private ClusterServiceRoleInstanceService roleInstanceService;
+    @Autowired
+    private ClusterRackService clusterRackService;
+
 
     @Override
     public ClusterHostDO getClusterHostByHostname(String hostname) {

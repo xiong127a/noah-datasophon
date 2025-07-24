@@ -20,7 +20,7 @@ import jakarta.annotation.PreDestroy;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -48,31 +48,40 @@ public class AsyncCheckService {
     private static final Logger logger = LoggerFactory.getLogger(AsyncCheckService.class);
 
     // 检查器工厂
-    private final ItemCheckerFactory itemCheckerFactory;
+    @Autowired
+    private ItemCheckerFactory itemCheckerFactory;
 
     // 任务管理器
-    private final TaskManager taskManager;
+    @Autowired
+    private TaskManager taskManager;
 
     // 检查任务执行器
-    private final ExecutorService checkExecutor;
+    @Autowired
+    private ExecutorService checkExecutor;
 
     // 修复任务执行器
-    private final ExecutorService fixExecutor;
+    @Autowired
+    private ExecutorService fixExecutor;
 
     // 操作系统信息获取专用执行器
-    private final ExecutorService osInfoExecutor;
+    @Autowired
+    private ExecutorService osInfoExecutor;
 
     // 硬件信息获取专用执行器
-    private final ExecutorService hardwareInfoExecutor;
+    @Autowired
+    private ExecutorService hardwareInfoExecutor;
 
     // Hosts文件操作专用执行器
-    private final ExecutorService hostsFileExecutor;
+    @Autowired
+    private ExecutorService hostsFileExecutor;
 
     // 主机名设置专用执行器
-    private final ExecutorService hostnameExecutor;
+    @Autowired
+    private ExecutorService hostnameExecutor;
 
     // 定时任务启用标志
-    private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
+
+    private AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 定时任务执行间隔（默认值）
     private long taskCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
@@ -82,37 +91,21 @@ public class AsyncCheckService {
     private volatile long lastTaskCleanupTime = 0;
 
     // 定时任务调度器
-    private final TaskScheduler taskScheduler;
+    @Autowired
+    private TaskScheduler taskScheduler;
 
     // 定时任务的Future
     private ScheduledFuture<?> taskCleanupTask;
 
     // 添加连接池清理改进
-    private final Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
+
+    private Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
 
     // 添加缓存命中和总请求计数，用于计算缓存命中率
 
-    private final SshConnectionPoolManager sshConnectionPoolManager;
+    @Autowired
+    private SshConnectionPoolManager sshConnectionPoolManager;
 
-    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager,
-            SshConnectionPoolManager sshConnectionPoolManager, TaskScheduler taskScheduler,
-            @Qualifier("hostnameExecutor") ExecutorService hostnameExecutor,
-            @Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor,
-            @Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor,
-            @Qualifier("osInfoExecutor") ExecutorService osInfoExecutor,
-            @Qualifier("fixExecutor") ExecutorService fixExecutor,
-            @Qualifier("checkExecutor") ExecutorService checkExecutor) {
-        this.itemCheckerFactory = itemCheckerFactory;
-        this.taskManager = taskManager;
-        this.sshConnectionPoolManager = sshConnectionPoolManager;
-        this.taskScheduler = taskScheduler;
-        this.hostnameExecutor = hostnameExecutor;
-        this.hostsFileExecutor = hostsFileExecutor;
-        this.hardwareInfoExecutor = hardwareInfoExecutor;
-        this.osInfoExecutor = osInfoExecutor;
-        this.fixExecutor = fixExecutor;
-        this.checkExecutor = checkExecutor;
-    }
 
     @PostConstruct
     public void init() {

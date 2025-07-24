@@ -44,12 +44,10 @@ public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGr
         AlertGroupService {
 
 
-    private final ClusterAlertGroupMapService alertGroupMapService;
-
     @Autowired
-    public AlertGroupServiceImpl(ClusterAlertGroupMapService alertGroupMapService) {
-        this.alertGroupMapService = alertGroupMapService;
-    }
+    private ClusterAlertGroupMapService alertGroupMapService;
+
+
 
     @Override
     public Result<List<AlertGroupEntity>> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize) {

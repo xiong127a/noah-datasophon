@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterAlertHistory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,11 +33,8 @@ import java.util.Arrays;
 @RequestMapping("cluster/alert/history")
 public class ClusterAlertHistoryController {
 
-    private final ClusterAlertHistoryService clusterAlertHistoryService;
-
-    public ClusterAlertHistoryController(ClusterAlertHistoryService clusterAlertHistoryService) {
-        this.clusterAlertHistoryService = clusterAlertHistoryService;
-    }
+    @Autowired
+    private ClusterAlertHistoryService clusterAlertHistoryService;
 
     /**
      * 列表

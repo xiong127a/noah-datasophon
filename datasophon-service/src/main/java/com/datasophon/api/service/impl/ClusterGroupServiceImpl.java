@@ -69,17 +69,11 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterGroupServiceImpl.class);
 
-    @org.springframework.context.annotation.Lazy
-    private final ClusterHostService hostService;
-
-    private final ClusterUserGroupService userGroupService;
-
     @Autowired
-    public ClusterGroupServiceImpl(@org.springframework.context.annotation.Lazy ClusterHostService hostService,
-            ClusterUserGroupService userGroupService) {
-        this.hostService = hostService;
-        this.userGroupService = userGroupService;
-    }
+    private ClusterHostService hostService;
+    @Autowired
+    private ClusterUserGroupService userGroupService;
+
 
     @Override
     public Result saveClusterGroup(Integer clusterId, String groupName) {

@@ -3,6 +3,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,11 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/autoScale")
 public class AutoScaleController {
 
-    private final AutoScaleService autoScaleService;
+    @Autowired
+    private AutoScaleService autoScaleService;
 
-    public AutoScaleController(AutoScaleService autoScaleService) {
-        this.autoScaleService = autoScaleService;
-    }
 
     @PostMapping("/createAutoScaleTask")
     public Result createAutoScaleTask(@RequestBody AutoScaleTaskVO taskVO) {

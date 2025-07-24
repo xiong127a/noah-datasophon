@@ -20,6 +20,7 @@ package com.datasophon.api.configuration;
 import com.datasophon.api.interceptor.UserPermissionHandler;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.api.service.UserInfoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -46,13 +47,11 @@ public class AppConfiguration implements WebMvcConfigurer {
     public static final String PATH_PATTERN = "/**";
     public static final String LOCALE_LANGUAGE_COOKIE = "language";
 
-    private final ClusterRoleUserService clusterRoleUserService;
-    private final UserInfoService userInfoService;
+    @Autowired
+    private ClusterRoleUserService clusterRoleUserService;
+    @Autowired
+    private UserInfoService userInfoService;
 
-    public AppConfiguration(ClusterRoleUserService clusterRoleUserService, UserInfoService userInfoService) {
-        this.clusterRoleUserService = clusterRoleUserService;
-        this.userInfoService = userInfoService;
-    }
 
     @Bean
     public CorsFilter corsFilter() {

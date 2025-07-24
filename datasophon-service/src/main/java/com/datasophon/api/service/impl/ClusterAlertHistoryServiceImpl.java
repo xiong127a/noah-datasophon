@@ -50,19 +50,13 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
 
-    @org.springframework.context.annotation.Lazy
-    private final ClusterServiceRoleInstanceService roleInstanceService;
-
-    @org.springframework.context.annotation.Lazy
-    private final ClusterInfoService clusterInfoService;
 
     @Autowired
-    public ClusterAlertHistoryServiceImpl(
-            @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService,
-            @org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService) {
-        this.roleInstanceService = roleInstanceService;
-        this.clusterInfoService = clusterInfoService;
-    }
+    private ClusterServiceRoleInstanceService roleInstanceService;
+
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+
 
     @Override
     public void saveAlertHistory(String alertMessage) {

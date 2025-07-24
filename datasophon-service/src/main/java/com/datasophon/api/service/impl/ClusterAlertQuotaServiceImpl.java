@@ -60,17 +60,12 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
     private static final String ALERT_CONFIG_FORMAT = "prometheus";
     private static final String ALERT_OUTPUT_DIRECTORY = "alert_rules";
 
-    private final AlertGroupService alertGroupService;
-
-    @org.springframework.context.annotation.Lazy
-    private final NoticeGroupService noticeGroupService;
+    @Autowired
+    private AlertGroupService alertGroupService;
 
     @Autowired
-    public ClusterAlertQuotaServiceImpl(AlertGroupService alertGroupService,
-            @org.springframework.context.annotation.Lazy NoticeGroupService noticeGroupService) {
-        this.alertGroupService = alertGroupService;
-        this.noticeGroupService = noticeGroupService;
-    }
+    private NoticeGroupService noticeGroupService;
+
 
     @Override
     public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName,

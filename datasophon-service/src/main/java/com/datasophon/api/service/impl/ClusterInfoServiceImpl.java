@@ -66,53 +66,43 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         implements
         ClusterInfoService {
 
-    private final ClusterInfoMapper clusterInfoMapper;
-
-    private final ClusterRoleUserService clusterUserService;
-
-    private final AlertGroupService alertGroupService;
-
-    private final ClusterAlertGroupMapService groupMapService;
-
-    private final ConfigBean configBean;
-
-    @org.springframework.context.annotation.Lazy
-    private final FrameServiceService frameServiceService;
-
-    private final ClusterHostService clusterHostService;
-
-    private final ClusterYarnSchedulerService yarnSchedulerService;
-
-    private final ClusterNodeLabelService nodeLabelService;
-
-    private final ClusterQueueCapacityService queueCapacityService;
-
-    private final ClusterRackService rackService;
-
-    @org.springframework.context.annotation.Lazy
-    private final ClusterServiceInstanceService clusterServiceInstanceService;
+    @Autowired
+    private ClusterInfoMapper clusterInfoMapper;
 
     @Autowired
-    public ClusterInfoServiceImpl(ClusterInfoMapper clusterInfoMapper, ClusterRoleUserService clusterUserService,
-            AlertGroupService alertGroupService, ClusterAlertGroupMapService groupMapService, ConfigBean configBean,
-            @org.springframework.context.annotation.Lazy FrameServiceService frameServiceService,
-            ClusterHostService clusterHostService,
-            ClusterYarnSchedulerService yarnSchedulerService, ClusterNodeLabelService nodeLabelService,
-            ClusterQueueCapacityService queueCapacityService, ClusterRackService rackService,
-            @org.springframework.context.annotation.Lazy ClusterServiceInstanceService clusterServiceInstanceService) {
-        this.clusterInfoMapper = clusterInfoMapper;
-        this.clusterUserService = clusterUserService;
-        this.alertGroupService = alertGroupService;
-        this.groupMapService = groupMapService;
-        this.configBean = configBean;
-        this.frameServiceService = frameServiceService;
-        this.clusterHostService = clusterHostService;
-        this.yarnSchedulerService = yarnSchedulerService;
-        this.nodeLabelService = nodeLabelService;
-        this.queueCapacityService = queueCapacityService;
-        this.rackService = rackService;
-        this.clusterServiceInstanceService = clusterServiceInstanceService;
-    }
+    private ClusterRoleUserService clusterUserService;
+
+    @Autowired
+    private AlertGroupService alertGroupService;
+
+    @Autowired
+    private ClusterAlertGroupMapService groupMapService;
+
+    @Autowired
+    private ConfigBean configBean;
+
+    @Autowired
+    private FrameServiceService frameServiceService;
+
+    @Autowired
+    private ClusterHostService clusterHostService;
+
+    @Autowired
+    private ClusterYarnSchedulerService yarnSchedulerService;
+
+    @Autowired
+    private ClusterNodeLabelService nodeLabelService;
+
+    @Autowired
+    private ClusterQueueCapacityService queueCapacityService;
+
+    @Autowired
+    private ClusterRackService rackService;
+
+    @org.springframework.context.annotation.Lazy
+    @Autowired
+    private ClusterServiceInstanceService clusterServiceInstanceService;
+
 
     @Override
     public ClusterInfoEntity getClusterByClusterCode(String clusterCode) {
