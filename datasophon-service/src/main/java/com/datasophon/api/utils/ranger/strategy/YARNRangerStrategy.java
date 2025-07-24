@@ -84,7 +84,6 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
     private Policy getYarnPolicy(TenantResource resource) {
         List<String> queues = resource.getYarnResourceList()
                 .stream()
-                .map(t -> t)
                 .map(t -> t.getParentQueueName() + "." + t.getQueueName())
                 .collect(Collectors.toList());
         return simpleYarnPolicy(
