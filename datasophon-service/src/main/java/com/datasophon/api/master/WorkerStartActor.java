@@ -187,7 +187,7 @@ public class WorkerStartActor extends AbstractActor {
         }
 
         // 停止运行状态的服务
-        if (commandType.STOP_SERVICE.equals(commandType)) {
+        if (CommandType.STOP_SERVICE.equals(commandType)) {
             serviceRoleList = roleInstanceService
                     .getServiceRoleListByHostnameAndClusterId(hostname, clusterId).stream()
                     .filter(roleInstance -> (!ServiceRoleState.STOP.equals(roleInstance.getServiceRoleState()) &&
