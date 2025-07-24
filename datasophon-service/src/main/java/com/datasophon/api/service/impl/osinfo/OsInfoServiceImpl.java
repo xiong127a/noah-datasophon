@@ -91,7 +91,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     // 初始化
 
-
     @PostConstruct
     public void init() {
         logger.info("初始化OsInfoService...");
@@ -124,7 +123,10 @@ public class OsInfoServiceImpl implements OsInfoService {
     private void startTimeoutCheckTask() {
         cleanupExecutor.scheduleAtFixedRate(() -> {
             try {
-                queueManager.checkTimeouts();
+                // 添加空检查，避免NPE
+                if (queueManager != null) {
+                    queueManager.checkTimeouts();
+                }
             } catch (Exception e) {
                 logger.error("执行超时检查时发生异常: {}", e.getMessage(), e);
             }
@@ -284,19 +286,16 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         private List<HostInfo> sortedHostList = new ArrayList<>();
 
-
         private AtomicInteger processingHostCount = new AtomicInteger(0);
 
         // 增加并行度
         private static final int MAX_CONCURRENT_HOSTS = 10;
-
 
         private AtomicInteger totalHostCount = new AtomicInteger(0);
 
         private AtomicInteger completedHostCount = new AtomicInteger(0);
 
         private AtomicInteger basicInfoCompletedCount = new AtomicInteger(0);
-
 
         private List<HostInfo> waitForDetailInfoList = new ArrayList<>();
 
