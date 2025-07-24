@@ -141,12 +141,11 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
                         result = MinaUtils.safeExecCommand(session, "update-rc.d datasophon-worker defaults");
                     }
                 }
-                success &= (result != null && !result.startsWith("ERROR:"));
             } else {
                 // CentOS使用chkconfig
                 result = MinaUtils.safeExecCommand(session, "chkconfig --add datasophon-worker");
-                success &= (result != null && !result.startsWith("ERROR:"));
             }
+            success &= (result != null && !result.startsWith("ERROR:"));
 
             // 6. 安装环境变量脚本
             result = MinaUtils.safeExecCommand(session,

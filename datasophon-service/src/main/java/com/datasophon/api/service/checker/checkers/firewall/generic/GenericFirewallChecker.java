@@ -899,12 +899,11 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                     cacheLog.info("ufw防火墙已关闭且自启动已禁用");
                     checkItem.setMessage("ufw防火墙已关闭且自启动已禁用");
                 }
-                return true; // 仍返回true因为防火墙已停止
             } else {
                 cacheLog.info("ufw防火墙已关闭且未配置自启动，无需修复");
                 checkItem.setMessage("ufw防火墙已关闭且未配置自启动");
-                return true;
             }
+            return true; // 仍返回true因为防火墙已停止
         }
 
         // 增强active状态检测，兼容多语言
