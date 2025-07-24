@@ -43,7 +43,6 @@ public class RollingRestartInfo {
 
     /**
      * @param rollingParam "1,120,0"
-     * @return
      */
     public static RollingRestartInfo parse(String rollingParam) {
         if (StringUtils.isEmpty(rollingParam) || !rollingParam.contains(",")) {

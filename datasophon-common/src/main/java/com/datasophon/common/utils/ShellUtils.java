@@ -62,7 +62,6 @@ public class ShellUtils {
 
     /**
      * @param pathOrCommand 脚本路径或者命令
-     * @return
      */
     public static ExecResult exceShell(String pathOrCommand) {
         ExecResult result = new ExecResult();

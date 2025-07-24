@@ -131,9 +131,6 @@ public class HostInstallController {
     /**
      * 主机管理agent分发安装重试
      *
-     * @param clusterId
-     * @param ips
-     * @return
      */
     @PostMapping("/reStartDispatcherHostAgent")
     public Result reStartDispatcherHostAgent(@RequestParam("clusterId") Integer clusterId, @RequestParam("ips") String ips) {
@@ -143,9 +140,6 @@ public class HostInstallController {
     /**
      * 主机管理agent操作(启动(start)、停止(stop)、重启(restart))
      *
-     * @param clusterHostIds
-     * @param commandType
-     * @return
      */
     @PostMapping("/generateHostAgentCommand")
     public Result generateHostAgentCommand(
@@ -157,9 +151,6 @@ public class HostInstallController {
     /**
      * 启动/停止 主机上服务启动
      *
-     * @param clusterHostIds
-     * @param commandType
-     * @return
      */
     @PostMapping("/generateHostServiceCommand")
     public Result generateHostServiceCommand(

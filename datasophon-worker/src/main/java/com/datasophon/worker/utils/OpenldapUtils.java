@@ -29,9 +29,6 @@ public class OpenldapUtils {
     /**
      * 添加用户
      *
-     * @param lu
-     * @param ctx
-     * @return
      */
     public static boolean addUser(LdapUser lu, String userRootDn, LdapContext ctx) {
         BasicAttributes attrsbu = new BasicAttributes();
@@ -86,10 +83,6 @@ public class OpenldapUtils {
     /**
      * 获取ldap认证
      *
-     * @param url
-     * @param root
-     * @param pwd
-     * @return
      */
     public static LdapContext ldapConnect(String url, String root, String pwd) {
         String factory = "com.sun.jndi.ldap.LdapCtxFactory";

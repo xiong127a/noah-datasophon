@@ -63,8 +63,6 @@ public class RollingRestartUtils {
     /**
      * 更新实例执行结果
      *
-     * @param key
-     * @param execResult
      */
     public static void updateStatus(String key, boolean execResult) {
         serverInstanceExecuteResultMap.put(key, execResult);
@@ -84,7 +82,6 @@ public class RollingRestartUtils {
      * 对master 权限的实例进行排序
      * 从节点在前，主节点在后
      *
-     * @return
      */
     public static List<ServiceRoleInfo> sortMasterRole(List<ServiceRoleInfo> serviceRoleInfoList) {
         return serviceRoleInfoList.stream().sorted(Comparator.comparingInt(v -> (v.isSlave() ? 1 : 0))).collect(Collectors.toList());
@@ -93,8 +90,6 @@ public class RollingRestartUtils {
     /**
      * 获取 计数器，进行同步控制等待
      *
-     * @param key
-     * @return
      */
     public static CountDownLatch getCountDownLatchByServiceKey(String key) {
         bachIdMap.put(key, new CountDownLatch(1));

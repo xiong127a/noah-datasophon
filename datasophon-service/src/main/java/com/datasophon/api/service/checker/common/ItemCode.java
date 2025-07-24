@@ -37,14 +37,12 @@ public enum ItemCode {
      * -- GETTER --
      * 是否需要二次确认
      *
-     * @return 是否需要二次确认
      */
     private final boolean needConfirm; // 是否需要二次确认
     /**
      * -- GETTER --
      * 获取确认消息
      *
-     * @return 确认消息
      */
     private final String confirmMessage; // 确认消息
 

@@ -100,8 +100,6 @@ public class OperationLogAspect {
     /**
      * 添加基本url
      *
-     * @param url
-     * @param operationLogUrlMap
      */
     private void addCommonUrl(String url, Map<String, String> operationLogUrlMap) {
         operationLogUrlMap.put(url + "/save", "添加");
@@ -220,9 +218,6 @@ public class OperationLogAspect {
     /**
      * 解析和设置请求参数
      *
-     * @param point
-     * @param request
-     * @param op
      */
     private void setParams(ProceedingJoinPoint point, HttpServletRequest request, OperationLog op) {
         //操作用户
@@ -357,9 +352,6 @@ public class OperationLogAspect {
     /**
      * 解析并设置操作类型取值
      *
-     * @param op
-     * @param operationType
-     * @return
      */
     private void parserAndSetOperationType(OperationLog op, String operationType) {
         if (StrUtil.isNotEmpty(operationType) && operationType.contains("${") && MapUtil.isNotEmpty(op.getParamMap())) {
