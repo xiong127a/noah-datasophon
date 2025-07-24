@@ -22,21 +22,23 @@ package com.datasophon.kubernetes.util;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.UserEnum;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelExec;
 import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
-import org.apache.sshd.sftp.client.fs.SftpFileSystemProvider;
-import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -45,366 +47,360 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Kubernetes SSH/SFTP utility class for remote operations.
+ * Provides methods for executing commands, file transfer and management on
+ * remote hosts.
+ */
 @Slf4j
 public class KubernetesMinaUtils {
 
-    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(KubernetesMinaUtils.class);
+    private static final int COMMAND_TIMEOUT_SECONDS = 100000;
+    private static final int BUFFER_SIZE = 1024;
 
     /**
-     * 打开远程会话
+     * Opens a SSH connection to a remote host.
+     *
+     * @param sshHost The hostname or IP address of the remote host
+     * @param sshPort The SSH port number
+     * @param sshUser The SSH username
+     * @return A ClientSession if connection succeeds, null otherwise
+     * @throws IOException If connection or authentication fails
      */
-    public static ClientSession openConnection(String sshHost, Integer sshPort, String sshUser) {
-        SshClient sshClient = SshClient.setUpDefaultClient();
-        sshClient.start();
-        ClientSession session = null;
-        String privateKeyPath = System.getProperty("user.home") + Constants.ID_RSA;
-        try {
-            String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPath)));
-            session = sshClient.connect(sshUser, sshHost, sshPort).verify().getClientSession();
-            session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
-            if (session.auth().verify().isFailure()) {
-                LOG.info("验证失败");
-                return null;
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    public static ClientSession openConnection(String sshHost, Integer sshPort, String sshUser) throws IOException {
+        if (StringUtils.isAnyBlank(sshHost, sshUser) || sshPort == null) {
+            throw new IllegalArgumentException("SSH host, port, and user must not be null or empty");
         }
-        LOG.info(sshHost + " 连接成功");
+
+        ClientSession session;
+        try (SshClient sshClient = SshClient.setUpDefaultClient()) {
+            sshClient.start();
+            String privateKeyPath = System.getProperty("user.home") + Constants.ID_RSA;
+            try {
+                log.debug("Attempting to connect to {}@{}:{} using private key: {}",
+                        sshUser, sshHost, sshPort, privateKeyPath);
+
+                String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPath)));
+                session = sshClient.connect(sshUser, sshHost, sshPort).verify().getClientSession();
+                session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
+
+                if (session.auth().verify().isFailure()) {
+                    log.error("Authentication failed for {}@{}:{}", sshUser, sshHost, sshPort);
+                    return null;
+                }
+            } catch (IOException e) {
+                log.error("Failed to connect to {}@{}:{}: {}", sshUser, sshHost, sshPort, e.getMessage());
+                throw new IOException("SSH connection failed", e);
+            }
+        }
+        log.info("Successfully connected to {}@{}:{}", sshUser, sshHost, sshPort);
         return session;
     }
 
     /**
-     * 关闭远程会话
+     * Creates a KeyPair from a private key string.
+     * Note: This is a simplified implementation and should be improved for
+     * production use.
+     *
+     * @param privateKeyContent The private key content as string
+     * @return A KeyPair object
+     * @throws RuntimeException If key generation fails
      */
-    public static void closeConnection(ClientSession session) {
+    static KeyPair getKeyPairFromString(String privateKeyContent) {
         try {
-            session.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * 获取密钥对
-     */
-    static KeyPair getKeyPairFromString(String pk) {
-        final KeyPairGenerator rsa;
-        try {
-            rsa = KeyPairGenerator.getInstance("RSA");
-            final KeyPair keyPair = rsa.generateKeyPair();
+            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            final KeyPair keyPair = keyGen.generateKeyPair();
             final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            stream.write(pk.getBytes());
+            stream.write(privateKeyContent.getBytes());
             final ObjectOutputStream o = new ObjectOutputStream(stream);
             o.writeObject(keyPair);
             return keyPair;
         } catch (NoSuchAlgorithmException | IOException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to generate key pair: {}", e.getMessage());
+            throw new RuntimeException("Key pair generation failed", e);
         }
     }
 
     /**
-     * 同步执行,需要获取执行完的结果
+     * Executes a command on a remote host and returns the result.
      *
-     * @param command 命令
-     * @return 结果
+     * @param hostname The hostname or IP address of the remote host
+     * @param command  The command to execute
+     * @return The command output as string, null if execution fails, or
+     *         Constants.FAILED if exit status is 1
      */
     public static String execCmdWithResult(String hostname, String command) {
+        if (StringUtils.isAnyBlank(hostname, command)) {
+            log.error("Hostname and command must not be null or empty");
+            return null;
+        }
+
         return SshSftpUtil.withClientSession(hostname, session -> {
             session.resetAuthTimeout();
-            LOG.info("exe cmd: {}", command);
+            log.debug("Executing command on {}: {}", hostname, command);
 
-            // 命令返回的结果
-            // 返回结果流
             try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-                 ByteArrayOutputStream err = new ByteArrayOutputStream();
-                 ChannelExec ce = session.createExecChannel(command)) {
+                    ByteArrayOutputStream err = new ByteArrayOutputStream();
+                    ChannelExec ce = session.createExecChannel(command)) {
 
                 ce.setOut(out);
                 ce.setErr(err);
 
-                // 执行并等待
                 ce.open();
-                Set<ClientChannelEvent> events =
-                        ce.waitFor(
-                                EnumSet.of(ClientChannelEvent.CLOSED),
-                                TimeUnit.SECONDS.toMillis(100000));
-                // 检查请求是否超时
+                Set<ClientChannelEvent> events = ce.waitFor(
+                        EnumSet.of(ClientChannelEvent.CLOSED),
+                        TimeUnit.SECONDS.toMillis(COMMAND_TIMEOUT_SECONDS));
+
                 if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                    throw new Exception("mina 连接超时");
+                    log.error("Command execution timed out after {} seconds on {}: {}",
+                            COMMAND_TIMEOUT_SECONDS, hostname, command);
+                    throw new Exception("SSH command execution timed out");
                 }
 
                 int exitStatus = ce.getExitStatus();
-                LOG.info("mina result {}", exitStatus);
-                if (exitStatus == 1) {
-                    return Constants.FAILED;
+
+                // If there's error output, log it at appropriate level
+                String errorOutput = err.toString().trim();
+                if (!errorOutput.isEmpty()) {
+                    log.warn("Command on {} produced error output: {}", hostname, errorOutput);
                 }
 
-                LOG.info("exe cmd return : {}", out);
-                return out.toString().trim();
-
+                if (exitStatus == 0) {
+                    String result = out.toString().trim();
+                    log.debug("Command execution successful on {}. Output: {}", hostname,
+                            result.length() > 100 ? result.substring(0, 100) + "..." : result);
+                    return result;
+                } else {
+                    log.warn("Command on {} failed with exit status {}", hostname, exitStatus);
+                    return Constants.FAILED;
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Failed to execute command on {}: {}", hostname, e.getMessage());
                 return null;
             }
         });
     }
 
     /**
-     * 上传文件,相同路径ui覆盖
+     * Uploads a file to a remote host.
      *
-     * @param remotePath 远程目录地址
-     * @param inputFile  文件 File
+     * @param hostname   The hostname or IP address of the remote host
+     * @param remotePath The remote directory path
+     * @param inputFile  The local file path to upload
+     * @return true if upload succeeds, false otherwise
      */
     public static boolean uploadFile(String hostname, String remotePath, String inputFile) {
+        if (StringUtils.isAnyBlank(hostname, remotePath, inputFile)) {
+            log.error("Hostname, remote path, and input file must not be null or empty");
+            return false;
+        }
+
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             File uploadFile = new File(inputFile);
+            if (!uploadFile.exists() || !uploadFile.isFile()) {
+                log.error("Local file does not exist or is not a regular file: {}", inputFile);
+                return false;
+            }
+
             try (InputStream input = Files.newInputStream(uploadFile.toPath())) {
                 Path path = sftp.getDefaultDir().resolve(remotePath);
-                if (!Files.exists(path)) {
-                    LOG.info("create pathHome {} ", path);
-                    Files.createDirectories(path);
-                }
+                ensureDirectoryExists(path, hostname);
 
                 Path file = path.resolve(uploadFile.getName());
-                if (Files.exists(file)) {
-                    LOG.info("delete file  {}", file);
-                    Files.deleteIfExists(file);
-                }
+                deleteFileIfExists(file, hostname);
 
                 Files.copy(input, file);
-                LOG.info("file copy success");
+                log.info("Successfully uploaded file {} to {}:{}",
+                        uploadFile.getName(), hostname, remotePath);
                 return true;
-
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log.error("Failed to upload file {} to {}:{}: {}",
+                        inputFile, hostname, remotePath, e.getMessage());
+                return false;
             }
         });
     }
 
+    /**
+     * Uploads a file from an input stream to a remote host.
+     *
+     * @param hostname    The hostname or IP address of the remote host
+     * @param remotePath  The remote directory path
+     * @param inputStream The input stream containing file data
+     * @param fileName    The name to save the file as
+     * @return true if upload succeeds, false otherwise
+     */
     public static boolean uploadFile(String hostname, String remotePath, InputStream inputStream, String fileName) {
+        if (StringUtils.isAnyBlank(hostname, remotePath, fileName) || inputStream == null) {
+            log.error("Hostname, remote path, input stream, and file name must not be null or empty");
+            return false;
+        }
+
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             try {
                 Path path = sftp.getDefaultDir().resolve(remotePath);
-                if (!Files.exists(path)) {
-                    LOG.info("create pathHome {} ", path);
-                    Files.createDirectories(path);
-                }
+                ensureDirectoryExists(path, hostname);
 
                 Path file = path.resolve(fileName);
-                if (Files.exists(file)) {
-                    LOG.info("delete file  {}", file);
-                    Files.deleteIfExists(file);
-                }
+                deleteFileIfExists(file, hostname);
 
-                // Upload directly from InputStream
                 try (OutputStream outputStream = Files.newOutputStream(file)) {
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[BUFFER_SIZE];
                     int bytesRead;
                     while ((bytesRead = inputStream.read(buffer)) != -1) {
                         outputStream.write(buffer, 0, bytesRead);
                     }
                 }
 
-                LOG.info("file upload success");
+                log.info("Successfully uploaded stream as file {} to {}:{}",
+                        fileName, hostname, remotePath);
                 return true;
-
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log.error("Failed to upload stream as file {} to {}:{}: {}",
+                        fileName, hostname, remotePath, e.getMessage());
+                return false;
             }
         });
     }
 
     /**
-     * 下载文件
-     * @param hostname
-     * @param remotePath
-     * @param fileName
-     * @return
+     * Creates a directory on a remote host.
+     *
+     * @param hostname The hostname or IP address of the remote host
+     * @param path     The directory path to create
      */
-    public static InputStream downloadFile(String hostname, String remotePath, String fileName) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+    public static void createDir(String hostname, String path) {
+        if (StringUtils.isAnyBlank(hostname, path)) {
+             log.error("Hostname and path must not be null or empty for createDir operation");
+            return;
+        }
+
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             try {
-                // 拼接远程文件的完整路径
-                Path remoteFile = sftp.getDefaultDir().resolve(remotePath).resolve(fileName);
-
-                // 检查远程文件是否存在
-                if (!Files.exists(remoteFile)) {
-                    LOG.error("Remote file does not exist: {}", remoteFile);
-                    return null;  // 返回null表示文件不存在
-                }
-
-                // 返回远程文件的输入流
-                return Files.newInputStream(remoteFile);
-
+                Path remoteRoot = sftp.getDefaultDir().resolve(path);
+                ensureDirectoryExists(remoteRoot, hostname);
+                return true;
             } catch (IOException e) {
-                LOG.error("File download failed", e);
-                throw new RuntimeException(e);
+                log.error("Failed to create directory at {}:{}: {}", hostname, path, e.getMessage());
+                return false;
             }
         });
     }
-
 
     /**
-     * 创建目录
+     * Creates an empty file on a remote host.
+     *
+     * @param hostname The hostname or IP address of the remote host
+     * @param path     The file path to create
      */
-    public static boolean createDir(String hostname, String path) throws IOException {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            Path remoteRoot = sftp.getDefaultDir().resolve(path);
-            if (!Files.exists(remoteRoot)) {
-                Files.createDirectories(remoteRoot);
-            }
-            return true;
-        });
-    }
+    public static void createFile(String hostname, String path) {
+        if (StringUtils.isAnyBlank(hostname, path)) {
+            log.error("Hostname and path must not be null or empty");
+            return;
+        }
 
-    public static boolean createFile(String hostname, String path) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             Path remoteFile = sftp.getPath(path);
             try {
                 if (!Files.exists(remoteFile)) {
                     Files.createFile(remoteFile);
+                    log.info("Successfully created file at {}:{}", hostname, path);
+                } else {
+                    log.debug("File already exists at {}:{}", hostname, path);
                 }
                 return true;
             } catch (IOException e) {
-                log.error("Failed to create file at {}: {}", path, e.getMessage());
+                log.error("Failed to create file at {}:{}: {}", hostname, path, e.getMessage());
                 return false;
             }
         });
     }
 
+    /**
+     * Deletes a file on a remote host.
+     *
+     * @param hostname The hostname or IP address of the remote host
+     * @param path     The file path to delete
+     */
+    public static void deleteFile(String hostname, String path) {
+        if (StringUtils.isAnyBlank(hostname, path)) {
+            log.error("Hostname and path must not be null or empty for deleteFile operation");
+            return;
+        }
 
-    public static boolean deleteFile(String hostname, String path) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             try {
                 Path remoteFile = sftp.getPath(path);
                 if (Files.exists(remoteFile) && Files.isRegularFile(remoteFile)) {
                     Files.delete(remoteFile);
+                    log.info("Successfully deleted file at {}:{}", hostname, path);
                     return true;
+                } else {
+                    log.debug("File does not exist or is not a regular file at {}:{}", hostname, path);
+                    return false;
                 }
             } catch (IOException e) {
-                log.error("Failed to delete file at {}: {}", path, e.getMessage());
-            }
-            return false;
-        });
-    }
-
-
-    public static boolean writeUtf8String(String hostname, String content, String remoteFilePath) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteFile = sftp.getPath(remoteFilePath);
-                Path parentDir = remoteFile.getParent();
-
-                if (parentDir != null && !Files.exists(parentDir)) {
-                    Files.createDirectories(parentDir);
-                }
-
-                Files.write(remoteFile, content.replace("\r\n", "\n").getBytes(StandardCharsets.UTF_8));
-                return true;
-            } catch (IOException e) {
-                log.error("Failed to write content to file at {}: {}", remoteFilePath, e.getMessage());
+                log.error("Failed to delete file at {}:{}: {}", hostname, path, e.getMessage());
                 return false;
             }
         });
-    }
-
-    public static boolean deleteDirectory(SftpFileSystem sftp, String path) {
-        try {
-            Path remoteDir = sftp.getPath(path);
-            if (Files.exists(remoteDir) && Files.isDirectory(remoteDir)) {
-                Files.walkFileTree(remoteDir, new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                        Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-                return true;
-            }
-        } catch (IOException e) {
-            log.error("Failed to delete directory at {}: {}", path, e.getMessage());
-        }
-        return false;
-    }
-
-    public static boolean checkPathExists(String hostname, String path) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteRoot = sftp.getDefaultDir().resolve(path);
-                return Files.exists(remoteRoot);
-            } catch (Exception e) {
-                log.error("Failed to check path existence at {}: {}", path, e.getMessage());
-                return false;
-            }
-        });
-    }
-
-    public static void checkParentPath(String hostname, String path) {
-        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remotePath = sftp.getDefaultDir().resolve(path);
-                Path parentPath = remotePath.getParent();
-
-                if (!checkPathExists(hostname, parentPath.toString())) {
-                    createDir(hostname, parentPath.toString());
-                    execCmdWithResult(hostname, "chmod 777 " + parentPath);
-                }
-            } catch (Exception e) {
-                log.error("Failed to check or create path at {}: {}", path, e.getMessage());
-            }
-            return null;
-        });
-    }
-
-    public static boolean isDirectory(String hostname, String path) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteRoot = sftp.getDefaultDir().resolve(path);
-                return Files.isDirectory(remoteRoot);
-            } catch (Exception e) {
-                log.error("Failed to check if path is a directory at {}: {}", path, e.getMessage());
-                return false;
-            }
-        });
-    }
-
-    public static void checkSession(ClientSession session) {
-        if (session == null || !session.isOpen()) {
-            throw new RuntimeException("SSH session is not open or has been closed.");
-        }
     }
 
     /**
-     * 读取文件最后几行 <br>
-     * 相当于Linux系统中的tail命令 读取大小限制是2GB
+     * Checks if a path exists on a remote host.
      *
-     * @param filename 文件名
-     * @param charset  文件编码格式,传null默认使用defaultCharset
-     * @param rows     读取行数
-     * @throws IOException IOException
+     * @param hostname The hostname or IP address of the remote host
+     * @param path     The path to check
+     * @return true if the path exists, false otherwise
+     */
+    public static boolean checkPathExists(String hostname, String path) {
+        if (StringUtils.isAnyBlank(hostname, path)) {
+            log.error("Hostname and path must not be null or empty for checkPathExists operation");
+            return false;
+        }
+
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remoteRoot = sftp.getDefaultDir().resolve(path);
+                boolean exists = Files.exists(remoteRoot);
+                log.debug("Path {}:{} exists: {}", hostname, path, exists);
+                return exists;
+            } catch (Exception e) {
+                log.error("Failed to check path existence at {}:{}: {}", hostname, path, e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Reads the last N rows from a file.
+     * Similar to the Linux 'tail' command.
+     *
+     * @param filename The file path to read from
+     * @param charset  The character set to use, null for platform default
+     * @param rows     The number of rows to read
+     * @return The last N rows of the file as a string
+     * @throws IOException If file reading fails
      */
     public static String readLastRows(String filename, Charset charset, int rows) throws IOException {
+        if (StringUtils.isBlank(filename) || rows <= 0) {
+            throw new IllegalArgumentException("Filename must not be null or empty and rows must be positive");
+        }
+
         charset = charset == null ? Charset.defaultCharset() : charset;
-        byte[] lineSeparator = System.getProperty("line.separator").getBytes();
+        byte[] lineSeparator = System.lineSeparator().getBytes();
+
         try (RandomAccessFile rf = new RandomAccessFile(filename, "r")) {
-            // 每次读取的字节数要和系统换行符大小一致
+            // Each read should match the line separator size
             byte[] c = new byte[lineSeparator.length];
-            // 在获取到指定行数和读完文档之前,从文档末尾向前移动指针,遍历文档每一个字节
-            for (long pointer = rf.length(), lineSeparatorNum = 0; pointer >= 0 && lineSeparatorNum < rows; ) {
-                // 移动指针
+            // Navigate from file end until we find the requested number of lines
+            for (long pointer = rf.length(), lineSeparatorNum = 0; pointer >= 0 && lineSeparatorNum < rows;) {
                 rf.seek(pointer--);
-                // 读取数据
                 int readLength = rf.read(c);
                 if (readLength != -1 && Arrays.equals(lineSeparator, c)) {
                     lineSeparatorNum++;
                 }
-                // 扫描完依然没有找到足够的行数,将指针归0
+                // If we reach the start of file but haven't found enough line separators
                 if (pointer == -1 && lineSeparatorNum < rows) {
                     rf.seek(0);
                 }
@@ -412,83 +408,78 @@ public class KubernetesMinaUtils {
             byte[] tempbytes = new byte[(int) (rf.length() - rf.getFilePointer())];
             rf.readFully(tempbytes);
             return new String(tempbytes, charset);
+        } catch (IOException e) {
+            log.error("Failed to read last {} rows from file {}: {}", rows, filename, e.getMessage());
+            throw e;
         }
     }
 
-    public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows) {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            //charset = charset == null ? Charset.defaultCharset() : charset;
-
-            String linuxLineSeparator = "\n";
-            byte[] lineSeparator = linuxLineSeparator.getBytes(charset);
-
-            SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
-            Path filePath = sftp.getPath(remoteFilePath);
-
-            BasicFileAttributes attrs = provider.readAttributes(filePath, BasicFileAttributes.class);
-            long fileSize = attrs.size();
-
-            final int bufferSize = 8192;
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            int lineSeparatorCount = 0;
-            long position = fileSize;
-
-            try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
-                while (position > 0 && lineSeparatorCount < rows) {
-                    long start = Math.max(position - bufferSize, 0);
-                    ByteBuffer buffer = ByteBuffer.allocate((int) (position - start));
-                    channel.position(start);
-                    channel.read(buffer);
-                    buffer.flip();
-
-                    for (int i = buffer.limit() - 1; i >= 0; i--) {
-                        byte b = buffer.get(i);
-                        byteArrayOutputStream.write(b);
-                        if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(buffer, lineSeparator, i)) {
-                            lineSeparatorCount++;
-                            if (lineSeparatorCount >= rows) break;
-                        }
-                    }
-                    position = start;
-                }
-            }
-
-            byteArrayOutputStream.flush();
-            byte[] byteArray = byteArrayOutputStream.toByteArray();
-
-            return new StringBuilder(new String(byteArray, charset)).reverse().toString();
-        });
-    }
-
-    private static boolean checkLineSeparator(ByteBuffer buffer, byte[] lineSeparator, int index) {
-        // Simple check for line separator
-        for (int i = 0; i < lineSeparator.length; i++) {
-            if (index - i < 0 || buffer.get(index - i) != lineSeparator[lineSeparator.length - 1 - i]) {
-                return false;
-            }
+    /**
+     * Creates a user and group on a remote host if they don't already exist.
+     *
+     * @param hostname The hostname or IP address of the remote host
+     * @param user     The username to create
+     * @param group    The group name to create
+     * @throws IllegalArgumentException If user or group IDs are not found
+     */
+    public static void createUserAndGroup(String hostname, String user, String group) {
+        if (StringUtils.isAnyBlank(hostname, user, group)) {
+            throw new IllegalArgumentException("Hostname, user, and group must not be null or empty");
         }
-        return true;
-    }
 
-    public static void createUserAndGroup(String hostname, String user, String group) throws IOException {
         Integer userId = UserEnum.getUserIdByUsername(user);
         Integer groupId = UserEnum.getGroupIdByGroupName(group);
 
         if (userId == null || groupId == null) {
-            throw new IllegalArgumentException("User or group ID not found.");
+            throw new IllegalArgumentException("User or group ID not found");
         }
 
         SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             String command = String.format(
                     "if ! getent group %s > /dev/null; then groupadd -g %d %s; fi && " +
                             "if ! getent passwd %s > /dev/null; then useradd -m -u %d -g %d %s; fi",
-                    group, groupId, group, user, userId, groupId, user
-            );
+                    group, groupId, group, user, userId, groupId, user);
 
-            execCmdWithResult(hostname, command);
+            String result = execCmdWithResult(hostname, command);
+            boolean success = result != null && !Constants.FAILED.equals(result);
 
-            return true;
+            if (success) {
+                log.info("Successfully created/verified user {} and group {} on {}", user, group, hostname);
+            } else {
+                log.error("Failed to create user {} and group {} on {}", user, group, hostname);
+            }
+
+            return success;
         });
     }
 
+    // Helper methods to reduce code duplication
+
+    /**
+     * Ensures a directory exists on the remote host, creating it if necessary.
+     *
+     * @param path     The path to ensure exists
+     * @param hostname The hostname (for logging purposes)
+     * @throws IOException If directory creation fails
+     */
+    private static void ensureDirectoryExists(Path path, String hostname) throws IOException {
+        if (!Files.exists(path)) {
+            log.debug("Creating directory at {}:{}", hostname, path);
+            Files.createDirectories(path);
+        }
+    }
+
+    /**
+     * Deletes a file if it exists on the remote host.
+     *
+     * @param file     The file path to delete
+     * @param hostname The hostname (for logging purposes)
+     * @throws IOException If file deletion fails
+     */
+    private static void deleteFileIfExists(Path file, String hostname) throws IOException {
+        if (Files.exists(file)) {
+            log.debug("Deleting existing file at {}:{}", hostname, file);
+            Files.deleteIfExists(file);
+        }
+    }
 }
