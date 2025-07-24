@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { axiosPost, axiosGet } from '../utils/request.js'
+import { axiosPost, axiosGet, axiosJsonPost } from '../utils/request'
 
 interface UserInfo {
   id?: string
@@ -35,13 +35,22 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     
     try {
-      // 调用登录API - 使用完整路径
+      // 调用登录API - 使用表单格式，表单方式能让Spring Security正确处理请求
       const res = await axiosPost('/ddh/api/login', loginForm)
       
       if (res && res.code === 200) {
+        // 后端API返回的token字段可能在data.token或data.SESSION_ID中
+        const tokenValue = res.data.token || res.data.SESSION_ID
+        // 用户信息可能在data.user或data.USER_INFO中
+        const userData = res.data.user || res.data.USER_INFO
+        
+        if (!tokenValue) {
+          throw new Error('登录成功但未返回token')
+        }
+        
         // 设置token和用户信息
-        setToken(res.data.token)
-        setUserInfo(res.data.user)
+        setToken(tokenValue)
+        setUserInfo(userData)
         return res.data
       } else {
         throw new Error(res?.msg || '登录失败')

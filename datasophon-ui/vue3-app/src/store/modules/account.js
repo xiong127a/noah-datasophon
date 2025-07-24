@@ -94,7 +94,7 @@ const actions = {
   // 登录
   login({ commit }, userInfo) {
     return new Promise((resolve, reject) => {
-      axiosPost('/api/login', userInfo)
+      axiosPost('/ddh/api/login', userInfo)
         .then(res => {
           if (res.code === 200) {
             const { token, user } = res.data
@@ -120,7 +120,7 @@ const actions = {
   // 登出
   logout({ commit }) {
     return new Promise((resolve, reject) => {
-      axiosPost('/api/logout')
+      axiosPost('/ddh/api/logout')
         .then(res => {
           // 清空用户信息
           commit('clearUser')
@@ -139,7 +139,7 @@ const actions = {
   // 获取用户信息
   getUserInfo({ commit }) {
     return new Promise((resolve, reject) => {
-      axiosGet('/api/user/info')
+      axiosGet('/ddh/api/user-info')
         .then(res => {
           if (res.code === 200) {
             commit('setUser', res.data)
@@ -157,7 +157,7 @@ const actions = {
   // 获取用户权限和角色
   getUserPermissions({ commit }) {
     return new Promise((resolve, reject) => {
-      axiosGet('/api/user/permissions')
+      axiosGet('/ddh/api/user/permissions')
         .then(res => {
           if (res.code === 200) {
             const { permissions, roles } = res.data
@@ -179,7 +179,7 @@ const actions = {
   // 获取用户所属租户列表
   getUserTenants({ commit }) {
     return new Promise((resolve, reject) => {
-      axiosGet('/api/user/tenants')
+      axiosGet('/ddh/api/user/tenants')
         .then(res => {
           if (res.code === 200) {
             commit('setTenants', res.data)

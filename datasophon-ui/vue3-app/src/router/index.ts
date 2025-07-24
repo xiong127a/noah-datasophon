@@ -156,6 +156,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/login/Login.vue'), // 修正路径指向正确的登录组件
     meta: { title: '登录' }
   },
+  // 登录调试页面
+  {
+    path: '/login-debug',
+    name: 'LoginDebug',
+    component: () => import('../views/LoginDebug.vue'),
+    meta: { title: '登录调试' }
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -175,20 +182,21 @@ router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title} | Noah大数据平台` || 'Noah大数据平台'
   
   // 判断是否需要登录权限
-  if (to.path !== '/login') {
+  const publicPaths = ['/login', '/login-debug']
+  if (!publicPaths.includes(to.path)) {
     if (checkAuthorization()) {
       next() // 已登录，允许访问
     } else {
       next({ path: '/login', query: { redirect: to.fullPath } }) // 未登录，跳转到登录页面
     }
   } else {
-    // 如果是访问登录页面且已登录，重定向到首页
-    if (checkAuthorization()) {
+    // 如果是访问登录页面且已登录，重定向到首页（调试页面除外）
+    if (to.path === '/login' && checkAuthorization()) {
       next({ path: '/' })
     } else {
-      next() // 未登录，允许访问登录页面
+      next() // 未登录，允许访问登录页面和调试页面
     }
   }
 })
 
-export default router 
+export default router

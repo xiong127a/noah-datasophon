@@ -43,6 +43,21 @@ const getToken = () => localStorage.getItem('token')
 // 请求拦截器
 service.interceptors.request.use(
   config => {
+    // 添加详细的请求日志
+    console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`)
+    console.log(`[Request Headers]`, config.headers)
+    console.log(`[Request Data]`, config.data)
+    
+    // 登录接口不需要添加token
+    if (config.url?.includes('/login')) {
+      // 确保登录请求使用JSON格式
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json;charset=UTF-8'
+      }
+      console.log(`[Login Request] Content-Type: ${config.headers['Content-Type']}`)
+      return config;
+    }
+    
     // 获取token
     const token = getToken()
     
@@ -50,11 +65,15 @@ service.interceptors.request.use(
     if (token) {
       // 使用Bearer认证方案
       config.headers['Authorization'] = `Bearer ${token}`
+      console.log(`[Auth Token] Bearer token added`)
+    } else {
+      console.log(`[Auth Token] No token found`)
     }
     
     return config
   },
   error => {
+    console.error(`[Request Error]`, error)
     return Promise.reject(error)
   }
 )
@@ -62,10 +81,16 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
+    console.log(`[Response] ${response.status} ${response.config.url}`)
+    console.log(`[Response Headers]`, response.headers)
+    console.log(`[Response Data]`, response.data)
+    
     const res = response.data
     
     // 如果返回的状态码不是200，说明接口请求有问题
     if (res.code !== 200) {
+      console.error(`[Response Error] Code: ${res.code}, Message: ${res.msg}`)
+      
       // token失效
       if (res.code === 401 || res.code === 403) {
         notify.error(res.msg || '登录已过期，请重新登录')
@@ -82,69 +107,33 @@ service.interceptors.response.use(
       
       return Promise.reject(res)
     } else {
+      console.log(`[Response Success] Code: ${res.code}`)
       return res
     }
   },
   error => {
-    // 特殊处理模拟登录接口
-    if (error.config && error.config.url === '/ddh/api/login' && error.response && error.response.status === 401) {
-      console.log('使用模拟登录接口')
-      
-      // 从请求数据中获取用户名和密码
-      let requestData = {}
-      try {
-        // 尝试从请求数据中解析用户名和密码
-        if (error.config.data) {
-          if (error.config.headers['Content-Type'] === 'application/x-www-form-urlencoded') {
-            // 处理表单提交格式
-            const params = new URLSearchParams(error.config.data);
-            requestData = {
-              username: params.get('username'),
-              password: params.get('password')
-            }
-          } else {
-            // 处理JSON格式
-            requestData = JSON.parse(error.config.data)
-          }
-        }
-      } catch (e) {
-        console.error('解析请求数据失败', e)
+    console.error(`[Response Error]`, error)
+    console.error(`[Response Error Details]`, {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers,
+        data: error.config?.data
       }
-      
-      // 验证用户名和密码（只有admin/123456可以登录）
-      if (requestData.username === 'admin' && requestData.password === '123456') {
-        // 模拟登录成功响应，适配JWT格式
-        const mockResponse = {
-          code: 200,
-          msg: '登录成功',
-          data: {
-            token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlkIjoiMSIsInJvbGVzIjoiQURNSU4iLCJpYXQiOjE2MTQ5MjY2NDIsImV4cCI6MTYxNDkzMzg0Mn0.mock-signature',
-            user: {
-              id: '1',
-              username: 'admin',
-              userType: 1,
-              roles: ['ADMIN'],
-              avatar: ''
-            }
-          }
-        }
-        return mockResponse
-      } else {
-        // 返回登录失败响应
-        return Promise.reject({
-          code: 401,
-          msg: '用户名或密码错误',
-          data: null
-        })
-      }
-    }
+    })
     
     // 处理HTTP状态码错误
     if (error.response) {
-      const { status } = error.response
+      const { status, data } = error.response
       
       // 处理401/403：未授权/禁止访问
       if (status === 401 || status === 403) {
+        console.error(`[Auth Error] Status: ${status}, Data:`, data)
         notify.error('登录已过期或没有权限，请重新登录')
         // 清除认证信息
         localStorage.removeItem('token')
@@ -158,10 +147,11 @@ service.interceptors.response.use(
       } else if (status >= 500) {
         notify.error('服务器错误，请联系管理员')
       } else {
-        notify.error(error.response.data?.msg || '请求失败')
+        notify.error(data?.msg || error.response.data?.msg || '请求失败')
       }
     } else {
       // 请求被取消或网络错误等
+      console.error(`[Network Error]`, error.message)
       notify.error('网络错误，请检查您的网络连接')
     }
     
@@ -183,6 +173,16 @@ export function axiosPost(url, params = {}, showLoading = false) {
     loadingInstance = loading.service();
   }
   
+  // 登录接口处理添加日志
+  if (url.includes('/login')) {
+    console.log("[Request]", "POST", url);
+    console.log("[Request Headers]", {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': 'application/x-www-form-urlencoded'
+    });
+    console.log("[Request Data]", params);
+  }
+  
   return new Promise((resolve, reject) => {
     service({
       method: 'post',
@@ -193,6 +193,17 @@ export function axiosPost(url, params = {}, showLoading = false) {
       },
       transformRequest: [
         function(data) {
+          // 对于登录请求，使用URLSearchParams处理
+          if (url.includes('/login')) {
+            const urlSearchParams = new URLSearchParams();
+            Object.keys(data).forEach(key => {
+              urlSearchParams.append(key, data[key]);
+            });
+            console.log("[Login Request] Content-Type: application/x-www-form-urlencoded");
+            return urlSearchParams.toString();
+          }
+          
+          // 对于其他请求，使用传统方式
           let ret = ''
           for (let it in data) {
             ret += encodeURIComponent(it) + '=' + encodeURIComponent(data[it]) + '&'
@@ -210,6 +221,20 @@ export function axiosPost(url, params = {}, showLoading = false) {
       .catch(err => {
         if (showLoading && loadingInstance) {
           loadingInstance.close()
+        }
+        if (url.includes('/login')) {
+          console.log("[Response Error]", err);
+          console.log("[Response Error Details]", {
+            message: err.message,
+            status: err.response?.status,
+            statusText: err.response?.statusText,
+            data: err.response?.data,
+            headers: err.response?.headers
+          });
+          
+          if (err.response?.status === 401) {
+            console.log("[Auth Error] Status: 401, Data:", err.response?.data);
+          }
         }
         reject(err)
       })
@@ -371,4 +396,4 @@ export function checkAuthorization() {
   return !!getToken()
 }
 
-export default service 
+export default service

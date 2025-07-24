@@ -116,6 +116,11 @@
             </svg>
             登录
           </button>
+          
+          <!-- 错误信息 -->
+          <div v-if="errorMsg" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {{ errorMsg }}
+          </div>
         </form>
       </div>
       
@@ -133,7 +138,6 @@ import { useRouter } from 'vue-router'
 import { useVuelidate } from '@vuelidate/core'
 import { required, minLength } from '@vuelidate/validators'
 import { useUserStore } from '@/stores/user'
-import { axiosPost, setAuthorization } from '@/utils/request'
 
 // 路由和状态管理
 const router = useRouter()
@@ -141,12 +145,13 @@ const userStore = useUserStore()
 
 // 响应式状态
 const loginForm = reactive({
-  username: '',
-  password: '',
+  username: 'admin',  // 默认值方便测试
+  password: 'admin123', // 默认值方便测试
   rememberMe: false
 })
 
 const showPassword = ref(false)
+const errorMsg = ref('')
 
 // 表单验证规则
 const rules = {
@@ -163,18 +168,23 @@ const currentYear = computed(() => new Date().getFullYear())
 const handleLogin = async () => {
   const isFormCorrect = await v$.value.$validate()
   if (!isFormCorrect) return
+  
+  errorMsg.value = ''
     
   try {
+    console.log('提交登录:', loginForm)
     // 使用用户存储的login方法
     const userData = await userStore.login({
       username: loginForm.username,
       password: loginForm.password
     })
     
+    console.log('登录成功:', userData)
     // 登录成功后跳转到首页
     router.push('/')
   } catch (error) {
     console.error('登录失败:', error)
+    errorMsg.value = error.message || '登录失败，请检查用户名和密码'
   }
 }
 
