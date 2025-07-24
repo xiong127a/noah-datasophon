@@ -107,6 +107,12 @@ public class AsyncCheckService {
 
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
+    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager, SshConnectionPoolManager sshConnectionPoolManager) {
+        this.itemCheckerFactory = itemCheckerFactory;
+        this.taskManager = taskManager;
+        this.sshConnectionPoolManager = sshConnectionPoolManager;
+    }
+
     @PostConstruct
     public void init() {
         logger.info("初始化异步检查服务...");
@@ -937,7 +943,7 @@ public class AsyncCheckService {
                     if (fixResult) {
                         item.setStatus(CheckItem.Status.SUCCESS);
                         if (item.getMessage() == null || item.getMessage().isEmpty() ||
-                                item.getMessage().equals("正在修复...")) {
+                                "正在修复...".equals(item.getMessage())) {
                             item.setMessage("修复成功");
                         }
 
@@ -953,7 +959,7 @@ public class AsyncCheckService {
                     } else {
                         item.setStatus(CheckItem.Status.FAILED);
                         if (item.getMessage() == null || item.getMessage().isEmpty() ||
-                                item.getMessage().equals("正在修复...")) {
+                                "正在修复...".equals(item.getMessage())) {
                             item.setMessage("修复失败");
                         }
 
