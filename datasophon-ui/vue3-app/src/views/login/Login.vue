@@ -1,31 +1,64 @@
 <template>
-  <div class="login-container">
+  <div 
+      class="login-container" 
+      @mousemove="handleGlobalMouseMove" 
+      @click="handleGlobalClick"
+      ref="containerRef"
+    >
+
     <!-- 动态背景 -->
     <div class="background">
       <!-- 多层次动态背景 -->
       <div class="blur-circle circle-1"></div>
       <div class="blur-circle circle-2"></div>
       <div class="blur-circle circle-3"></div>
+      <div class="blur-circle circle-4"></div>
+      <div class="blur-circle circle-5"></div>
       
-      <!-- 星星点点效果 -->
+      <!-- 增强星星点点效果 -->
       <div class="stars">
-        <div v-for="n in 30" :key="`star-${n}`" class="star" :style="`--index: ${n}`"></div>
+        <div v-for="n in 100" :key="`star-${n}`" class="star" :style="`--index: ${n}`"></div>
+      </div>
+      
+      <!-- 流星效果 -->
+      <div class="meteors">
+        <div v-for="n in 5" :key="`meteor-${n}`" class="meteor" :style="`--delay: ${n * 3}s`"></div>
       </div>
       
       <!-- 网格背景 -->
       <div class="grid-overlay"></div>
       
-      <!-- 动态粒子 -->
+      <!-- 增强动态粒子 -->
       <div class="particles">
-        <div v-for="n in 20" :key="`particle-${n}`" class="particle" :style="`--i: ${n}`"></div>
+        <div v-for="n in 50" :key="`particle-${n}`" class="particle" :style="`--i: ${n}`"></div>
+      </div>
+      
+      <!-- 浮动几何图形 -->
+      <div class="floating-shapes">
+        <div v-for="n in 8" :key="`shape-${n}`" class="floating-shape" :style="`--index: ${n}`"></div>
       </div>
       
       <!-- 光影效果 -->
       <div class="shimmer-effect"></div>
       
-      <!-- 渐变光线 -->
+      <!-- 增强渐变光线 -->
       <div class="light-beam light-beam-1"></div>
       <div class="light-beam light-beam-2"></div>
+      <div class="light-beam light-beam-3"></div>
+      
+      <!-- 脉冲波纹 -->
+      <div class="pulse-waves">
+        <div v-for="n in 3" :key="`wave-${n}`" class="pulse-wave" :style="`--delay: ${n * 2}s`"></div>
+      </div>
+      
+      <!-- 动态渐变覆盖 -->
+      <div class="dynamic-gradient"></div>
+      
+      <!-- 边缘光效 -->
+      <div class="edge-glow edge-glow-top"></div>
+      <div class="edge-glow edge-glow-bottom"></div>
+      <div class="edge-glow edge-glow-left"></div>
+      <div class="edge-glow edge-glow-right"></div>
     </div>
     
     <!-- 登录卡片 -->
@@ -94,9 +127,12 @@
                 @mouseenter="eyeHover = true"
                 @mouseleave="eyeHover = false"
               >
-                <span class="eye-icon" :class="{'open': passwordVisible, 'hover': eyeHover}">
-                  <span class="eye-lid"></span>
-                </span>
+                <svg class="eye-icon" :class="{'visible': passwordVisible, 'hover': eyeHover}" viewBox="0 0 24 24" fill="none">
+                  <path v-if="!passwordVisible" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle v-if="!passwordVisible" cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path v-if="passwordVisible" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line v-if="passwordVisible" x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </button>
               <span class="input-focus-effect"></span>
             </div>
@@ -105,7 +141,7 @@
             </transition>
           </div>
           
-          <!-- 记住我和忘记密码 -->
+          <!-- 记住我选项 -->
           <div class="form-options">
             <label class="remember-option">
               <input
@@ -120,10 +156,6 @@
               </span>
               <span>记住我</span>
             </label>
-            <button type="button" class="forgot-password" @click="handleForgotPassword">
-              忘记密码?
-              <span class="forgot-line"></span>
-            </button>
           </div>
           
           <!-- 登录按钮 -->
@@ -197,6 +229,7 @@ import { useUserStore } from '@/stores/user';
 // 路由和状态
 const router = useRouter();
 const userStore = useUserStore();
+const containerRef = ref(null);
 
 // 表单数据
 const loginForm = reactive({
@@ -214,7 +247,13 @@ const loginCard = ref(null);
 const logoHover = ref(false);
 const eyeHover = ref(false);
 const buttonHover = ref(false);
+
+// 鼠标位置
 const mousePosition = reactive({ x: 0, y: 0 });
+
+
+
+
 
 // 表单验证规则
 const rules = {
@@ -251,10 +290,7 @@ const togglePasswordVisibility = () => {
   passwordVisible.value = !passwordVisible.value;
 };
 
-// 处理忘记密码
-const handleForgotPassword = () => {
-  alert('忘记密码功能即将上线');
-};
+
 
 // 关闭错误消息
 const dismissError = () => {
@@ -283,6 +319,80 @@ const handleLogin = async () => {
       loginCard.value.classList.add('shake');
       setTimeout(() => loginCard.value.classList.remove('shake'), 820);
     }
+  }
+};
+
+// 处理全局鼠标移动
+const handleGlobalMouseMove = (event) => {
+  // 更新动态背景元素位置
+  updateDynamicElements(event);
+};
+
+// 更新动态元素
+const updateDynamicElements = (event) => {
+  const { clientX, clientY } = event;
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  
+  const offsetX = (clientX - centerX) / centerX;
+  const offsetY = (clientY - centerY) / centerY;
+  
+  // 更新模糊圆圈位置
+  const circles = document.querySelectorAll('.blur-circle');
+  circles.forEach((circle, index) => {
+    const factor = (index + 1) * 0.1;
+    circle.style.transform = `translate(${offsetX * 50 * factor}px, ${offsetY * 50 * factor}px)`;
+  });
+  
+  // 更新浮动图形
+  const shapes = document.querySelectorAll('.floating-shape');
+  shapes.forEach((shape, index) => {
+    const factor = (index + 1) * 0.05;
+    shape.style.transform = `translate(${offsetX * 30 * factor}px, ${offsetY * 30 * factor}px) rotate(${offsetX * 10}deg)`;
+  });
+};
+
+// 处理全局点击
+const handleGlobalClick = (event) => {
+  createClickRipple(event.clientX, event.clientY);
+  playClickSound();
+};
+
+// 创建点击波纹效果
+const createClickRipple = (x, y) => {
+  const ripple = document.createElement('div');
+  ripple.className = 'click-ripple';
+  ripple.style.left = (x - 25) + 'px';
+  ripple.style.top = (y - 25) + 'px';
+  
+  document.body.appendChild(ripple);
+  
+  setTimeout(() => {
+    ripple.remove();
+  }, 1000);
+};
+
+// 播放点击音效（可选）
+const playClickSound = () => {
+  // 创建音频上下文进行音效播放
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch (e) {
+    // 静默处理音频错误
   }
 };
 
@@ -318,6 +428,49 @@ const handleCardMouseLeave = () => {
   }
 };
 
+// 初始化增强特效
+const initEnhancedEffects = () => {
+  // 初始化星星动画
+  const stars = document.querySelectorAll('.star');
+  stars.forEach((star, index) => {
+    const delay = Math.random() * 5;
+    const duration = 2 + Math.random() * 3;
+    star.style.animationDelay = `${delay}s`;
+    star.style.animationDuration = `${duration}s`;
+  });
+  
+  // 初始化浮动图形
+  const shapes = document.querySelectorAll('.floating-shape');
+  shapes.forEach((shape, index) => {
+    const delay = Math.random() * 3;
+    const duration = 8 + Math.random() * 4;
+    shape.style.animationDelay = `${delay}s`;
+    shape.style.animationDuration = `${duration}s`;
+  });
+  
+  // 启动背景动画循环
+  startBackgroundAnimations();
+};
+
+// 启动背景动画循环
+const startBackgroundAnimations = () => {
+  // 动态渐变动画
+  const gradient = document.querySelector('.dynamic-gradient');
+  if (gradient) {
+    setInterval(() => {
+      const hue = Math.random() * 360;
+      gradient.style.background = `
+        radial-gradient(circle at ${Math.random() * 100}% ${Math.random() * 100}%, 
+          hsla(${hue}, 70%, 50%, 0.1) 0%, 
+          transparent 50%),
+        radial-gradient(circle at ${Math.random() * 100}% ${Math.random() * 100}%, 
+          hsla(${(hue + 120) % 360}, 70%, 50%, 0.1) 0%, 
+          transparent 50%)
+      `;
+    }, 3000);
+  }
+};
+
 // 初始化
 onMounted(() => {
   // 激活进入动画
@@ -339,6 +492,9 @@ onMounted(() => {
     particle.style.setProperty('--delay', `${delay}s`);
     particle.style.setProperty('--duration', `${duration}s`);
   });
+  
+  // 初始化增强特效
+  initEnhancedEffects();
 });
 </script>
 
@@ -356,7 +512,10 @@ onMounted(() => {
   position: relative;
   overflow: hidden;
   background-color: #000511;
+
 }
+
+
 
 /* 背景效果 */
 .background {
@@ -400,6 +559,258 @@ onMounted(() => {
   top: 40%;
   left: 30%;
   animation: float 18s ease-in-out 2s infinite alternate;
+}
+
+.circle-4 {
+  width: 180px;
+  height: 180px;
+  background: rgba(34, 197, 94, 0.1);
+  top: 30%;
+  right: 30%;
+  animation: float 15s ease-in-out 1s infinite alternate;
+}
+
+.circle-5 {
+  width: 220px;
+  height: 220px;
+  background: rgba(251, 146, 60, 0.1);
+  bottom: 40%;
+  right: 20%;
+  animation: float 22s ease-in-out 3s infinite alternate;
+}
+
+
+
+/* 点击波纹效果 */
+.click-ripple {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9997;
+  animation: rippleExpand 1s ease-out forwards;
+}
+
+@keyframes rippleExpand {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* 流星效果 */
+.meteors {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.meteor {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 1) 0%, transparent 100%);
+  border-radius: 50%;
+  top: -5%;
+  left: calc(10% + var(--delay, 0s) * 15%);
+  animation: meteorFall 8s linear var(--delay, 0s) infinite;
+}
+
+@keyframes meteorFall {
+  0% {
+    transform: translateY(-100vh) translateX(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(-80vh) translateX(20px) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  90% {
+    transform: translateY(100vh) translateX(200px) scale(1);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    transform: translateY(120vh) translateX(220px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* 浮动几何图形 */
+.floating-shapes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.floating-shape {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  top: calc(10% + (var(--index) % 8) * 10%);
+  left: calc(10% + (var(--index) % 10) * 8%);
+  animation: shapeFloat 8s ease-in-out infinite;
+  transition: transform 0.3s ease;
+}
+
+.floating-shape:nth-child(odd) {
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.floating-shape:nth-child(even) {
+  transform: rotate(45deg);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+@keyframes shapeFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-20px) rotate(90deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(180deg);
+  }
+  75% {
+    transform: translateY(-30px) rotate(270deg);
+  }
+}
+
+/* 脉冲波纹 */
+.pulse-waves {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.pulse-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulseExpand 6s ease-out var(--delay, 0s) infinite;
+}
+
+@keyframes pulseExpand {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(8);
+    opacity: 0;
+  }
+}
+
+/* 动态渐变覆盖 */
+.dynamic-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 50%, 
+    hsla(240, 70%, 50%, 0.1) 0%, 
+    transparent 50%);
+  animation: gradientShift 10s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background: radial-gradient(circle at 20% 30%, 
+      hsla(240, 70%, 50%, 0.1) 0%, 
+      transparent 50%);
+  }
+  25% {
+    background: radial-gradient(circle at 80% 20%, 
+      hsla(300, 70%, 50%, 0.1) 0%, 
+      transparent 50%);
+  }
+  50% {
+    background: radial-gradient(circle at 70% 80%, 
+      hsla(180, 70%, 50%, 0.1) 0%, 
+      transparent 50%);
+  }
+  75% {
+    background: radial-gradient(circle at 30% 70%, 
+      hsla(60, 70%, 50%, 0.1) 0%, 
+      transparent 50%);
+  }
+}
+
+/* 边缘光效 */
+.edge-glow {
+  position: absolute;
+  z-index: 1;
+}
+
+.edge-glow-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(59, 130, 246, 0.5) 50%, 
+    transparent 100%);
+  animation: edgeGlowMove 8s ease-in-out infinite;
+}
+
+.edge-glow-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(168, 85, 247, 0.5) 50%, 
+    transparent 100%);
+  animation: edgeGlowMove 8s ease-in-out 2s infinite;
+}
+
+.edge-glow-left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(0deg, 
+    transparent 0%, 
+    rgba(34, 197, 94, 0.5) 50%, 
+    transparent 100%);
+  animation: edgeGlowMove 8s ease-in-out 4s infinite;
+}
+
+.edge-glow-right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2px;
+  background: linear-gradient(0deg, 
+    transparent 0%, 
+    rgba(251, 146, 60, 0.5) 50%, 
+    transparent 100%);
+  animation: edgeGlowMove 8s ease-in-out 6s infinite;
+}
+
+@keyframes edgeGlowMove {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes float {
@@ -547,6 +958,12 @@ onMounted(() => {
 .light-beam-2 {
   top: 70%;
   animation: light-move 18s linear 2s infinite;
+}
+
+.light-beam-3 {
+  top: 50%;
+  animation: light-move 12s linear 4s infinite;
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.2), transparent);
 }
 
 @keyframes light-move {
@@ -867,64 +1284,42 @@ onMounted(() => {
   padding: 6px;
   cursor: pointer;
   z-index: 2;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .visibility-toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.05);
 }
 
-/* 眼睛图标动画 */
+.visibility-toggle:active {
+  transform: translateY(-50%) scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* SVG眼睛图标 */
 .eye-icon {
-  position: relative;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: all 0.2s ease;
+  stroke: currentColor;
 }
 
-.eye-icon::after {
-  content: '';
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 50%;
-  transition: all 0.3s ease;
+.eye-icon.hover {
+  color: rgba(99, 102, 241, 0.8);
+  transform: scale(1.1);
 }
 
-.eye-lid {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border-radius: 0 0 20px 20px;
-  border-top: 2px solid rgba(255, 255, 255, 0.5);
-  top: 0;
-  transform-origin: top;
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
-}
-
-.eye-icon.open .eye-lid {
-  transform: scaleY(1);
-}
-
-.eye-icon.hover, .eye-icon.hover .eye-lid {
-  border-color: rgba(255, 255, 255, 0.8);
-}
-
-.eye-icon.hover::after {
-  background: rgba(255, 255, 255, 0.8);
-  transform: scale(1.2);
+.eye-icon.visible {
+  color: rgba(99, 102, 241, 0.7);
 }
 
 .error-text {
@@ -941,8 +1336,9 @@ onMounted(() => {
 /* 记住我选项 */
 .form-options {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  margin-bottom: 8px;
 }
 
 .remember-option {
@@ -1005,36 +1401,7 @@ onMounted(() => {
   opacity: 1;
 }
 
-.forgot-password {
-  background: transparent;
-  border: none;
-  color: #a5b4fc;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 4px 8px;
-  border-radius: 6px;
-  position: relative;
-}
 
-.forgot-password:hover {
-  color: #818cf8;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.forgot-line {
-  position: absolute;
-  bottom: 2px;
-  left: 8px;
-  width: 0;
-  height: 1px;
-  background: #a5b4fc;
-  transition: width 0.3s ease;
-}
-
-.forgot-password:hover .forgot-line {
-  width: calc(100% - 16px);
-}
 
 /* 登录按钮 */
 .button-wrapper {
@@ -1345,4 +1712,4 @@ document.addEventListener('DOMContentLoaded', function() {
   link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
   document.head.appendChild(link);
 });
-</script> 
+</script>
