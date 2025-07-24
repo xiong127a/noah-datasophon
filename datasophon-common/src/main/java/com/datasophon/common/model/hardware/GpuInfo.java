@@ -146,8 +146,8 @@ public class GpuInfo extends HardwareInfo {
     public void updateDetectedStatus() {
         // 如果有设备数量或者供应商信息，则认为检测到了GPU
         this.detected = (deviceCount != null && deviceCount > 0) ||
-                (vendor != null && !vendor.isEmpty() && !vendor.equalsIgnoreCase("未检测到")
-                        && !vendor.equalsIgnoreCase("无"));
+                (vendor != null && !vendor.isEmpty() && !"未检测到".equalsIgnoreCase(vendor)
+                        && !"无".equalsIgnoreCase(vendor));
     }
 
     /**
@@ -180,7 +180,7 @@ public class GpuInfo extends HardwareInfo {
         // 在GpuInfo.java中，我们确保前端能够正确处理状态
         if (status == OsInfoStatusEnum.SUCCESS &&
                 (deviceCount == null || deviceCount == 0 ||
-                        (vendor != null && (vendor.equalsIgnoreCase("未检测到") || vendor.equalsIgnoreCase("加载中..."))))) {
+                        (vendor != null && ("未检测到".equalsIgnoreCase(vendor) || "加载中...".equalsIgnoreCase(vendor))))) {
             // 如果后端明确设置了SUCCESS但我们需要保持LOADING状态，则实际上转为SUCCESS
             // 这样修改后，前端通过getGpuStatus()会用loading状态显示加载动画，但后端真实状态是SUCCESS
             super.setStatus(status);

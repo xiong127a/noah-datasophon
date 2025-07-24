@@ -383,7 +383,7 @@ public class ConfigGroupUtils {
                         String jmxPort = String.valueOf(jmxPortObj);
 
                         // 检查是否是有效的端口号
-                        if (StrUtil.isNotBlank(jmxPort) && !jmxPort.equals("null")) {
+                        if (StrUtil.isNotBlank(jmxPort) && !"null".equals(jmxPort)) {
                             // 将角色名转为小写下划线格式
                             String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2")
                                     .toLowerCase();

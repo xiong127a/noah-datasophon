@@ -396,7 +396,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
 
             // 检查配置文件是否存在
             CommandResult configCheck = execCommand(session, "[ -f /etc/selinux/config ] && echo 'exists'");
-            boolean configExists = configCheck.isSuccess() && configCheck.getOutput().trim().equals("exists");
+            boolean configExists = configCheck.isSuccess() && "exists".equals(configCheck.getOutput().trim());
 
             boolean configFixSuccess;
             CommandResult sedResult;

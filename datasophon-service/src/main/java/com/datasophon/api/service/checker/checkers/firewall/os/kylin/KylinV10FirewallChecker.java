@@ -105,7 +105,7 @@ public class KylinV10FirewallChecker extends CentOSFirewallChecker {
             htmlOutput.append("<div class='analysis'>");
             htmlOutput.append("<h4>分析结果</h4>");
             boolean isRunning = statusResult.getOutput().contains("active (running)");
-            boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
+            boolean isEnabled = "enabled".equals(enabledResult.getOutput().trim());
 
             if (isRunning || isEnabled) {
                 checkItem.setStatus(CheckItem.Status.FAILED);

@@ -34,19 +34,19 @@ public class TenantResourceDispatcherActor extends AbstractActor {
         try {
             Map<String, String> roleHostMap = getRoleHostMap(tenantFrameResource.getClusterId());
 
-            if (tenantFrameResource.getServiceName().equals("YARN")) {
+            if ("YARN".equals(tenantFrameResource.getServiceName())) {
                 TenantYarnResource tenantYarnResource = (TenantYarnResource) tenantFrameResource;
                 tenantYarnResource.setClusterId(tenantFrameResource.getClusterId());
                 ActorRef resourceActorRef = ActorUtils.getLocalActor(YarnQueueActor.class, "yarnQueueActor");
                 resourceActorRef.tell(tenantYarnResource, ActorRef.noSender());
             } else {
                 String serviceMasterRoleName = getServiceMasterRoleName(tenantFrameResource.getServiceName());
-                if (tenantFrameResource.getServiceName().equals("KAFKA")) {
+                if ("KAFKA".equals(tenantFrameResource.getServiceName())) {
                     String zkAddr = GlobalVariables.get(tenantFrameResource.getClusterId()).get("${kafkaZkAddr}");
                     TenantKafkaResource kafkaResource = (TenantKafkaResource) tenantFrameResource;
                     kafkaResource.setKafkaZkAddr(zkAddr);
                 }
-                if (tenantFrameResource.getServiceName().equals("HIVE")) {
+                if ("HIVE".equals(tenantFrameResource.getServiceName())) {
                     String hiveMetastoreDir = GlobalVariables.get(tenantFrameResource.getClusterId())
                             .get("${hive.metastore.warehouse.dir}");
                     TenantHiveResource hiveResource = (TenantHiveResource) tenantFrameResource;

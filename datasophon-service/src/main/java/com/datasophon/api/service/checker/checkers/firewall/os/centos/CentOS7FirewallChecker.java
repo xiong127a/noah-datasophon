@@ -117,7 +117,7 @@ public class CentOS7FirewallChecker extends CentOSFirewallChecker {
 
         // 检查是否启用了SELinux（可能影响防火墙规则）
         CommandResult selinuxResult = execCommand(session, "getenforce 2>/dev/null || echo 'Unknown'", cacheLog);
-        if (selinuxResult.isSuccess() && !selinuxResult.getOutput().trim().equalsIgnoreCase("Disabled")) {
+        if (selinuxResult.isSuccess() && !"Disabled".equalsIgnoreCase(selinuxResult.getOutput().trim())) {
             cacheLog.warn("SELinux状态: %s，可能影响防火墙规则", selinuxResult.getOutput().trim());
         }
 

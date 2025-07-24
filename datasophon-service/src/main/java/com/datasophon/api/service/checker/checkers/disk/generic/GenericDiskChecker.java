@@ -174,7 +174,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         // 检查是否为目标目录或其父目录
                         if (targetDir.equals(mountPoint) || // 直接匹配
                                         targetDir.startsWith(mountPoint + "/") || // 是父目录
-                                        mountPoint.equals("/")) { // 根目录是所有目录的父目录
+                                        "/".equals(mountPoint)) { // 根目录是所有目录的父目录
 
                                 // 如果找到多个匹配，优先使用最具体的挂载点
                                 if (targetLine == null || parts[5].length() > targetLine.split("\\s+")[5].length()) {

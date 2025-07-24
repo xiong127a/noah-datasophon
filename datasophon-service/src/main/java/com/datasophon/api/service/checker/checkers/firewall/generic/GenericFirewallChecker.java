@@ -155,7 +155,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                     // 检查firewalld状态
                     CommandResult statusResult = execCommand(session, "systemctl is-active firewalld", cacheLog);
                     if (statusResult.isSuccess()) {
-                        if (statusResult.getOutput().trim().equals("active")) {
+                        if ("active".equals(statusResult.getOutput().trim())) {
                             log.warn("额外检查发现firewalld服务处于active状态");
                             cacheLog.warn("额外检查发现firewalld服务处于active状态");
                             result.setStatus(CheckItem.Status.FAILED);
@@ -454,7 +454,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
 
         // 分析结果
         boolean isRunning = statusResult.getOutput().contains("active (running)");
-        boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
+        boolean isEnabled = "enabled".equals(enabledResult.getOutput().trim());
 
         htmlOutput.append("<div class=\"result-summary\">");
         htmlOutput.append("<h3><i class=\"fas fa-chart-bar\"></i> 分析结果</h3>");
@@ -583,7 +583,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                 statusOutput.contains("status: active") ||
                 statusOutput.contains("status：active") ||
                 statusOutput.contains("状态：活动");
-        boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
+        boolean isEnabled = "enabled".equals(enabledResult.getOutput().trim());
 
         htmlOutput.append("<div class=\"result-summary\">");
         htmlOutput.append("<h3><i class=\"fas fa-chart-bar\"></i> 分析结果</h3>");
@@ -768,7 +768,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
             checkItem.setMessage("正在检查firewalld防火墙自启动状态...");
 
             CommandResult isEnabledResult = execCommand(session, "systemctl is-enabled firewalld", cacheLog);
-            if (isEnabledResult.isSuccess() && isEnabledResult.getOutput().trim().equals("disabled")) {
+            if (isEnabledResult.isSuccess() && "disabled".equals(isEnabledResult.getOutput().trim())) {
                 cacheLog.info("firewalld防火墙已关闭且已禁用自启动，无需修复");
                 checkItem.setMessage("firewalld防火墙已关闭且已禁用自启动");
                 return true;
@@ -850,13 +850,13 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
             // 检查systemd服务是否启用
             CommandResult enabledResult = execCommand(session, "systemctl is-enabled ufw 2>/dev/null || echo 'unknown'",
                     cacheLog);
-            boolean isServiceEnabled = enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled");
+            boolean isServiceEnabled = enabledResult.isSuccess() && "enabled".equals(enabledResult.getOutput().trim());
 
             // 同时检查ufw配置文件
             CommandResult confEnabledResult = execCommand(session,
                     "grep -q 'ENABLED=yes' /etc/ufw/ufw.conf && echo 'enabled' || echo 'disabled'", cacheLog);
             boolean isConfEnabled = confEnabledResult.isSuccess()
-                    && confEnabledResult.getOutput().trim().equals("enabled");
+                    && "enabled".equals(confEnabledResult.getOutput().trim());
 
             if (isServiceEnabled || isConfEnabled) {
                 // 同时执行两种禁用方式以确保彻底禁用
@@ -888,7 +888,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                 CommandResult verifyEnabledResult = execCommand(session,
                         "systemctl is-enabled ufw 2>/dev/null || echo 'unknown'", cacheLog);
                 boolean stillEnabled = verifyEnabledResult.isSuccess()
-                        && verifyEnabledResult.getOutput().trim().equals("enabled");
+                        && "enabled".equals(verifyEnabledResult.getOutput().trim());
 
                 if (stillEnabled) {
                     cacheLog.warn("ufw防火墙systemd服务仍然配置为自启动，请手动检查");

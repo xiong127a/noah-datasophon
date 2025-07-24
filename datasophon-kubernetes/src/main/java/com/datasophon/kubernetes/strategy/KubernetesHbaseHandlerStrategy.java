@@ -77,7 +77,7 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
 
         for (ServiceConfig config : list) {
             String name = config.getName();
-            if (name != null && name.equals("hbase.zookeeper.quorum")) {
+            if (name != null && "hbase.zookeeper.quorum".equals(name)) {
                 try {
                     String value = (String) config.getValue();// 获取当前配置值
                     String[] split = value.split(",");

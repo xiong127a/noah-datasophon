@@ -283,9 +283,9 @@ public class KubernetesUtil {
                 podName = pod.getMetadata().getName();
                 // 检查pod是否正在创建
                 String phase = pod.getStatus().getPhase();
-                if (phase.equals("Pending")) {
+                if ("Pending".equals(phase)) {
                     log.info("Pod {} is pending, waiting for it to be running...", podName);
-                } else if (phase.equals("Running")) {
+                } else if ("Running".equals(phase)) {
                     log.info("Pod {} is running.", podName);
                     break;
                 }

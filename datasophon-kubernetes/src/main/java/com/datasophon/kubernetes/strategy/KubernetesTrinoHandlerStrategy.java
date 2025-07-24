@@ -33,7 +33,7 @@ public class KubernetesTrinoHandlerStrategy extends KubernetesAbstractHandlerStr
 
         for (ServiceConfig config : list) {
             String name = config.getName();
-            if (name != null && name.equals("discovery.uri")) {
+            if (name != null && "discovery.uri".equals(name)) {
                 try {
                     String value = (String) config.getValue();// 获取当前配置值
                     config.setValue(FileUtils.replaceHost(value, "trino-trinocoordinator.datasophon.svc.cluster.local")); // 去掉最后一个逗号

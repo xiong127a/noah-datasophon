@@ -127,7 +127,7 @@ public class ServiceConfigController {
             String serviceName = serviceConfigFileService.getServiceName(serviceInstanceId);
 
             // 根据不同格式设置不同的文件扩展名
-            String fileExtension = format.equals("tar.gz") ? ".tar.gz" : "." + format;
+            String fileExtension = "tar.gz".equals(format) ? ".tar.gz" : "." + format;
             String fileName = serviceName + "_configs" + fileExtension;
 
             // 设置响应头

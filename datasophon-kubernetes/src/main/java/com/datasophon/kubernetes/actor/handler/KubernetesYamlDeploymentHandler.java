@@ -221,14 +221,14 @@ public class KubernetesYamlDeploymentHandler {
             addConfigFile(volumeConfigMapSet, "keytab", "/etc/security/keytab/");
             addConfigFile(volumeConfigMapSet, "krd5conf", "/etc/krb5.conf");
         } else {
-            if (serviceRoleName.equals("KafkaBroker") || serviceRoleName.equals("efak")) {
+            if ("KafkaBroker".equals(serviceRoleName) || "efak".equals(serviceRoleName)) {
                 Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
                 while (iterator.hasNext()) {
                     ServiceConfigVolume config = iterator.next();
                     String value = (String) config.getValue();
                     if (value.endsWith(".sh")) {
                         String fileName = value.substring(value.lastIndexOf('/') + 1);
-                        if (!fileName.equals("kafka-server-start.sh")) {
+                        if (!"kafka-server-start.sh".equals(fileName)) {
                             iterator.remove(); // 从集合中删除
                         }
                     }

@@ -101,7 +101,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     private void setRequired(List<FrameServiceEntity> list, String type) {
-        List<String> requireService = type.equals("custom") ? CUSTOM_REQUIRED_SERVICE : DATALAKE_REQUIRED_SERVICE;
+        List<String> requireService = "custom".equals(type) ? CUSTOM_REQUIRED_SERVICE : DATALAKE_REQUIRED_SERVICE;
         for (FrameServiceEntity frameServiceEntity : list) {
             frameServiceEntity.setIsRequired(requireService.contains(frameServiceEntity.getServiceName()));
         }

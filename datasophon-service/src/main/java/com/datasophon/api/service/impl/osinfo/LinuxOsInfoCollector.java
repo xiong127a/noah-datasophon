@@ -2018,7 +2018,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 memorySize = memorySize / 1024.0;
                             } else if (unit.contains("TB")) {
                                 memorySize = memorySize * 1024.0;
-                            } else if (unit.equals("B")) {
+                            } else if ("B".equals(unit)) {
                                 memorySize = memorySize / (1024.0 * 1024.0 * 1024.0);
                             }
 
@@ -2190,7 +2190,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 if (ifaceMatcher.find()) {
                     currentIface = ifaceMatcher.group(1);
                     // 跳过回环接口
-                    if (!currentIface.equals("lo")) {
+                    if (!"lo".equals(currentIface)) {
                         interfaces.put(currentIface, new InterfaceInfo());
                         interfaces.get(currentIface).setName(currentIface);
                         interfaces.get(currentIface).setStatus("UP"); // 默认设置为UP状态
@@ -2209,7 +2209,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             }
                         }
                     }
-                } else if (currentIface != null && !currentIface.equals("lo")) {
+                } else if (currentIface != null && !"lo".equals(currentIface)) {
                     Matcher ipv4Matcher = ipv4Pattern.matcher(line);
                     if (ipv4Matcher.find()) {
                         String ip = ipv4Matcher.group(1);
@@ -2251,7 +2251,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         Matcher netDevMatcher = netDevPattern.matcher(line);
                         if (netDevMatcher.find()) {
                             String ifaceName = netDevMatcher.group(1).trim();
-                            if (!ifaceName.equals("lo") && interfaces.containsKey(ifaceName)) {
+                            if (!"lo".equals(ifaceName) && interfaces.containsKey(ifaceName)) {
                                 try {
                                     // 接收字节数在第2个分组
                                     long rxBytes = Long.parseLong(netDevMatcher.group(2));

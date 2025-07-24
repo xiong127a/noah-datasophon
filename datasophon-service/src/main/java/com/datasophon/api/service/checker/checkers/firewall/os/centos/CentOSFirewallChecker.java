@@ -232,7 +232,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
                 message.append("</pre>");
                 message.append("</div>");
 
-                if (enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled")) {
+                if (enabledResult.isSuccess() && "enabled".equals(enabledResult.getOutput().trim())) {
                     cacheLog.info(osName + " firewalld自启动状态: 已启用");
                     message.append(
                             "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
@@ -400,7 +400,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             checkItem.setMessage("正在检查" + osName + "系统firewalld防火墙自启动状态...");
 
             CommandResult isEnabledResult = execCommand(session, "systemctl is-enabled firewalld", cacheLog);
-            if (isEnabledResult.isSuccess() && isEnabledResult.getOutput().trim().equals("disabled")) {
+            if (isEnabledResult.isSuccess() && "disabled".equals(isEnabledResult.getOutput().trim())) {
                 cacheLog.info(osName + "系统firewalld防火墙已关闭且已禁用自启动，无需修复");
                 checkItem.setMessage(osName + "系统firewalld防火墙已关闭且已禁用自启动");
                 return true;

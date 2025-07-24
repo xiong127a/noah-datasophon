@@ -122,7 +122,7 @@ public class ApiDocController {
                     Set<String> patterns = extractPatterns(info);
                     // 过滤掉无URL模式的占位符
                     patterns.stream()
-                            .filter(p -> !p.equals("[无URL模式]"))
+                            .filter(p -> !"[无URL模式]".equals(p))
                             .forEach(paths::add);
                 } catch (Exception e) {
                     logger.warn("处理路径信息时出错: {}", e.getMessage());

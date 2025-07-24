@@ -54,7 +54,7 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
         ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
         ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
 
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && "RangerUsersync".equals(command.getServiceRoleName())) {
             logger.info("setup ranger user sync");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sh");
@@ -74,7 +74,7 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
         ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
         ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
 
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && "RangerKms".equals(command.getServiceRoleName())) {
             logger.info("setup ranger kms");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sh");

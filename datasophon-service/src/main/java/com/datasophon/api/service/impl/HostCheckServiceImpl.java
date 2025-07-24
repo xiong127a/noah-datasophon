@@ -1594,23 +1594,23 @@ public class HostCheckServiceImpl implements HostCheckService {
     private List<LogEntry> filterLogEntries(List<LogEntry> entries, LogEntry.Type type, LogEntry.Level level,
             String filterMode) {
         // 检查是否需要过滤
-        if ((type == null || type.name().equals("ALL")) &&
-                (filterMode.equals("all") || level == null || level.name().equals("ALL"))) {
+        if ((type == null || "ALL".equals(type.name())) &&
+                ("all".equals(filterMode) || level == null || "ALL".equals(level.name()))) {
             return entries; // 不需要过滤
         }
 
         List<LogEntry> filtered = new ArrayList<>();
         for (LogEntry entry : entries) {
             // 按类型过滤
-            if (type != null && !type.name().equals("ALL") && entry.getType() != type) {
+            if (type != null && !"ALL".equals(type.name()) && entry.getType() != type) {
                 continue;
             }
 
             // 按级别过滤
-            if (level != null && !level.name().equals("ALL")) {
-                if (filterMode.equals("exact") && entry.getLevel() != level) {
+            if (level != null && !"ALL".equals(level.name())) {
+                if ("exact".equals(filterMode) && entry.getLevel() != level) {
                     continue;
-                } else if (filterMode.equals("min") && !entry.getLevel().isHigherOrEqual(level)) {
+                } else if ("min".equals(filterMode) && !entry.getLevel().isHigherOrEqual(level)) {
                     continue;
                 }
             }

@@ -687,7 +687,7 @@ public class MinaUtils {
         try {
             // 使用简单的命令来验证连接可用性，设置3秒超时
             CommandResult result = execCmdWithResultObject(session, "echo 'connection_test'", 3);
-            return result.isSuccess() && result.getOutput().trim().equals("connection_test");
+            return result.isSuccess() && "connection_test".equals(result.getOutput().trim());
         } catch (Exception e) {
             LOG.warn("SSH连接验证失败: {}", e.getMessage());
             return false;
