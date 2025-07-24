@@ -66,7 +66,8 @@ public class KyuubiServerHandlerStrategy extends ServiceHandlerAbstract  impleme
 
   @Override
   public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-      Map<String, ClusterServiceRoleInstanceEntity> map) {
+                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+      ServiceRoleStrategy.super.handlerServiceRoleCheck(roleInstanceEntity, map);
   }
 
 }

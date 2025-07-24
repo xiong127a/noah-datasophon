@@ -18,6 +18,7 @@ public class AlluxioHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
 
+        ServiceRoleStrategy.super.handlerConfig(clusterId, list);
     }
 
     @Override
