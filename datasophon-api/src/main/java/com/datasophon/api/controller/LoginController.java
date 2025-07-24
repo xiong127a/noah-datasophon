@@ -28,6 +28,7 @@ import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,6 +41,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -65,29 +67,50 @@ public class LoginController {
     private UserInfoService userInfoService;
 
     /**
-     * 用户登录API
+     * 用户登录API - JSON格式
      * 
      * @param loginRequest 包含用户名和密码的请求
      * @return 带有JWT令牌的响应
      */
-    @PostMapping("/login")
-    public Result login(@RequestBody @Valid LoginRequest loginRequest) {
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Result loginJson(@RequestBody @Valid LoginRequest loginRequest) {
+        return processLogin(loginRequest.getUsername(), loginRequest.getPassword());
+    }
+
+    /**
+     * 用户登录API - 表单格式
+     * 
+     * @param username 用户名
+     * @param password 密码
+     * @return 带有JWT令牌的响应
+     */
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Result loginForm(@RequestParam("username") String username, @RequestParam("password") String password) {
+        return processLogin(username, password);
+    }
+
+    /**
+     * 处理登录逻辑
+     * 
+     * @param username 用户名
+     * @param password 密码
+     * @return 登录结果
+     */
+    private Result processLogin(String username, String password) {
         try {
-            logger.debug("尝试登录用户: {}", loginRequest.getUsername());
+            logger.debug("尝试登录用户: {}", username);
 
             // 验证用户名和密码
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getUsername(),
-                            loginRequest.getPassword()));
+                    new UsernamePasswordAuthenticationToken(username, password));
 
             // 设置认证信息到上下文
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             // 获取用户详情
-            UserInfoEntity user = userInfoService.getUserByUsername(loginRequest.getUsername());
+            UserInfoEntity user = userInfoService.getUserByUsername(username);
             if (user == null) {
-                logger.error("登录成功但未找到用户实体: {}", loginRequest.getUsername());
+                logger.error("登录成功但未找到用户实体: {}", username);
                 return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
             }
 
@@ -117,7 +140,7 @@ public class LoginController {
                     .put(Constants.MSG, Status.LOGIN_SUCCESS.getMsg());
 
         } catch (BadCredentialsException e) {
-            logger.error("登录失败: 用户名或密码错误: {}", loginRequest.getUsername());
+            logger.error("登录失败: 用户名或密码错误: {}", username);
             return Result.error(Status.USER_NAME_PASSWD_ERROR.getCode(),
                     Status.USER_NAME_PASSWD_ERROR.getMsg());
         } catch (Exception e) {
