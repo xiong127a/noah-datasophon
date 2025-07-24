@@ -25,7 +25,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ResourceUtils;
@@ -62,10 +61,8 @@ public class OperationLogAspect {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
-    final
-    OperationLogService operationLogService;
+    private final OperationLogService operationLogService;
 
-    private final ClusterServiceInstanceService serviceInstanceService;
 
     public OperationLogAspect(OperationLogService operationLogService) {
         this.operationLogService = operationLogService;
