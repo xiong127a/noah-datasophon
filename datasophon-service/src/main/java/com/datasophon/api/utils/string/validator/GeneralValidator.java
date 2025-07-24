@@ -1,8 +1,8 @@
-package com.datasophon.api.utils.StringValidator;
+package com.datasophon.api.utils.string.validator;
 
 import cn.hutool.core.lang.Validator;
 
-public class NotEmptyValidator implements StringValidator {
+public class GeneralValidator implements StringValidator {
 
     private StringValidator nextValidator;
 
@@ -13,7 +13,7 @@ public class NotEmptyValidator implements StringValidator {
 
     @Override
     public void validate(String data) throws Exception {
-        Validator.validateNotEmpty(data, "输入值不能为空");
+        Validator.validateGeneral(data, "输入值应该为 英文字母 、数字或下划线");
         if (nextValidator != null) {
             nextValidator.validate(data);
         }

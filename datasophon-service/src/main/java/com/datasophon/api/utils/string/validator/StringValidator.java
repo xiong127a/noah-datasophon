@@ -1,4 +1,4 @@
-package com.datasophon.api.utils.StringValidator;
+package com.datasophon.api.utils.string.validator;
 
 public interface StringValidator {
     void setNext(StringValidator nextValidator);

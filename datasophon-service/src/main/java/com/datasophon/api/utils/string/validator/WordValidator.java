@@ -1,9 +1,8 @@
-package com.datasophon.api.utils.StringValidator;
+package com.datasophon.api.utils.string.validator;
 
 import cn.hutool.core.lang.Validator;
-import cn.hutool.core.util.StrUtil;
 
-public class GeneralValidator implements StringValidator {
+public class WordValidator implements StringValidator{
 
     private StringValidator nextValidator;
 
@@ -14,7 +13,7 @@ public class GeneralValidator implements StringValidator {
 
     @Override
     public void validate(String data) throws Exception {
-        Validator.validateGeneral(data, "输入值应该为 英文字母 、数字或下划线");
+        Validator.validateWord(data, "输入值只能为纯字母");
         if (nextValidator != null) {
             nextValidator.validate(data);
         }

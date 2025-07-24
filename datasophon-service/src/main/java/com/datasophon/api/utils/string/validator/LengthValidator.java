@@ -1,4 +1,4 @@
-package com.datasophon.api.utils.StringValidator;
+package com.datasophon.api.utils.string.validator;
 
 import cn.hutool.core.util.StrUtil;
 

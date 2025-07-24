@@ -1,8 +1,8 @@
-package com.datasophon.api.utils.StringValidator;
+package com.datasophon.api.utils.string.validator;
 
 import cn.hutool.core.lang.Validator;
 
-public class WordValidator implements StringValidator{
+public class NotEmptyValidator implements StringValidator {
 
     private StringValidator nextValidator;
 
@@ -13,7 +13,7 @@ public class WordValidator implements StringValidator{
 
     @Override
     public void validate(String data) throws Exception {
-        Validator.validateWord(data, "输入值只能为纯字母");
+        Validator.validateNotEmpty(data, "输入值不能为空");
         if (nextValidator != null) {
             nextValidator.validate(data);
         }
