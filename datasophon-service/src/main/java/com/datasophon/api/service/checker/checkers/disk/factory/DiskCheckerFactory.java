@@ -22,8 +22,8 @@ public class DiskCheckerFactory {
     private final Map<String, DiskCheckerStrategy> checkerCache = new ConcurrentHashMap<>();
     private final GenericDiskChecker genericDiskChecker;
 
-    public DiskCheckerFactory(List<DiskCheckerStrategy> diskCheckers, List<DiskCheckerStrategy> checkers) {
-        this.diskCheckers = diskCheckers; // 确保初始化diskCheckers成员变量
+    public DiskCheckerFactory(List<DiskCheckerStrategy> checkers) {
+        this.diskCheckers = checkers; // 存储所有检查器
         this.genericDiskChecker = checkers.stream()
                 .filter(checker -> checker instanceof GenericDiskChecker)
                 .map(checker -> (GenericDiskChecker) checker)
