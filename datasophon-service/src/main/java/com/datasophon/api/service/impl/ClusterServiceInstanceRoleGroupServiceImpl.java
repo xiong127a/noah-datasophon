@@ -23,7 +23,8 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.RoleEntityService;
+import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
@@ -52,16 +53,22 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
     private ClusterServiceInstanceService serviceInstanceService;
 
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private RoleEntityService roleEntityService;
+
+    @Autowired
+    private RoleGroupEntityService roleGroupEntityService;
 
     @Autowired
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     private static final String DEFAULT = "default";
+
     @Autowired
-    public ClusterServiceInstanceRoleGroupServiceImpl(ClusterServiceInstanceService serviceInstanceService, ClusterServiceRoleInstanceService roleInstanceService, ClusterServiceRoleGroupConfigService roleGroupConfigService) {
+    public ClusterServiceInstanceRoleGroupServiceImpl(ClusterServiceInstanceService serviceInstanceService,
+            RoleEntityService roleEntityService,
+            ClusterServiceRoleGroupConfigService roleGroupConfigService) {
         this.serviceInstanceService = serviceInstanceService;
-        this.roleInstanceService = roleInstanceService;
+        this.roleEntityService = roleEntityService;
         this.roleGroupConfigService = roleGroupConfigService;
     }
 
@@ -107,26 +114,14 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
 
     @Override
     public Result bind(String roleInstanceIds, Integer roleGroupId) {
-        String[] ids = roleInstanceIds.split(",");
-        for (String id : ids) {
-            ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(id);
-            if (!isSameRoleGroup(roleInstanceEntity, Arrays.asList(ids))) {
-                return Result.error(Status.NEED_SAME_ROLE_GROUP.getMsg());
-            }
-            // 判断新角色组与原角色组配置是否相同，不相同则需标识该角色实例需要重启
-            if (!isSameConfig(roleInstanceEntity.getRoleGroupId(), roleGroupId)) {
-                roleInstanceEntity.setNeedRestart(NeedRestart.YES);
-            }
-            roleInstanceEntity.setRoleGroupId(roleGroupId);
-            roleInstanceService.updateById(roleInstanceEntity);
-        }
-        return Result.success();
+        // 委托给roleGroupEntityService处理
+        return roleGroupEntityService.bindRoleInstances(roleInstanceIds, roleGroupId);
     }
 
     private boolean isSameRoleGroup(ClusterServiceRoleInstanceEntity roleInstanceEntity, List<String> ids) {
 
         // query role instance by hostname and servicename
-        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+        List<ClusterServiceRoleInstanceEntity> roleList = roleEntityService
                 .listRoleIns(roleInstanceEntity.getHostname(), roleInstanceEntity.getServiceName());
         List<String> listIds = roleList.stream().map(e -> e.getId().toString()).toList();
         return new HashSet<>(ids).containsAll(listIds);
@@ -191,16 +186,8 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
 
     @Override
     public void updateToNeedRestart(Integer roleGroupId) {
-        List<ClusterServiceRoleInstanceEntity> roleInstanceList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId)
-                .list();
-
-        if (roleInstanceList != null && !roleInstanceList.isEmpty()) {
-            for (ClusterServiceRoleInstanceEntity roleInstance : roleInstanceList) {
-                roleInstance.setNeedRestart(NeedRestart.YES);
-                roleInstanceService.updateById(roleInstance);
-            }
-        }
+        // 委托给roleGroupEntityService处理
+        roleGroupEntityService.updateToNeedRestart(roleGroupId);
     }
 
     private boolean hasRoleInstanceUse(Integer roleGroupId) {

@@ -17,21 +17,24 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.api.service.RoleInstanceQueryService;
+import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.mybatisflex.core.query.QueryChain;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 服务角色实例查询服务实现类
- * 这个服务仅用于提供查询功能，避免循环依赖
+ * 服务角色实例实体服务实现类
+ * 整合了查询和更新功能，避免循环依赖
  */
 @Service
-public class RoleInstanceQueryServiceImpl implements RoleInstanceQueryService {
+public class RoleEntityServiceImpl implements RoleEntityService {
 
     @Autowired
     private ClusterServiceRoleInstanceMapper roleInstanceMapper;
@@ -64,11 +67,15 @@ public class RoleInstanceQueryServiceImpl implements RoleInstanceQueryService {
                 .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
                 .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
 
-        if (hostname != null && !hostname.isEmpty()) {
+        if (StringUtils.isNotBlank(hostname)) {
             query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
         }
 
-        return query.one();
+        List<ClusterServiceRoleInstanceEntity> list = query.list();
+        if (Objects.nonNull(list) && !list.isEmpty()) {
+            return list.getFirst();
+        }
+        return null;
     }
 
     @Override
@@ -77,5 +84,23 @@ public class RoleInstanceQueryServiceImpl implements RoleInstanceQueryService {
                 .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
                 .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName)
                 .list();
+    }
+
+    @Override
+    public boolean updateRoleGroupId(Integer roleInstanceId, Integer roleGroupId, boolean needRestart) {
+        ClusterServiceRoleInstanceEntity roleInstance = getById(roleInstanceId);
+        if (roleInstance != null) {
+            roleInstance.setRoleGroupId(roleGroupId);
+            if (needRestart) {
+                roleInstance.setNeedRestart(NeedRestart.YES);
+            }
+            return roleInstanceMapper.update(roleInstance) > 0;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean updateById(ClusterServiceRoleInstanceEntity roleInstance) {
+        return roleInstanceMapper.update(roleInstance) > 0;
     }
 }

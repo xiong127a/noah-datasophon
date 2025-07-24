@@ -18,15 +18,15 @@
 package com.datasophon.api.service;
 
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.enums.NeedRestart;
 
 import java.util.List;
 
 /**
- * 服务角色实例查询服务
- * 这个接口专门用于查询服务角色实例，避免循环依赖
+ * 服务角色实例实体服务
+ * 这个接口整合了查询和更新功能，避免循环依赖
  */
-public interface RoleInstanceQueryService {
-
+public interface RoleEntityService {
     /**
      * 根据主机名和集群ID获取服务角色列表
      * 
@@ -70,4 +70,22 @@ public interface RoleInstanceQueryService {
      * @return 服务角色实例列表
      */
     List<ClusterServiceRoleInstanceEntity> listRoleIns(String hostname, String serviceName);
+
+    /**
+     * 更新角色实例的角色组ID
+     * 
+     * @param roleInstanceId 角色实例ID
+     * @param roleGroupId    角色组ID
+     * @param needRestart    是否需要重启
+     * @return 是否更新成功
+     */
+    boolean updateRoleGroupId(Integer roleInstanceId, Integer roleGroupId, boolean needRestart);
+
+    /**
+     * 更新角色实例信息
+     * 
+     * @param roleInstance 角色实例
+     * @return 是否更新成功
+     */
+    boolean updateById(ClusterServiceRoleInstanceEntity roleInstance);
 }

@@ -29,6 +29,7 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
@@ -104,6 +105,9 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Autowired
     private ClusterServiceInstanceRoleGroupService roleGroupService;
+
+    @Autowired
+    private RoleGroupEntityService roleGroupEntityService;
 
     @Autowired
     private ClusterServiceRoleInstanceMapper roleInstanceMapper;
@@ -215,7 +219,8 @@ public class ClusterServiceRoleInstanceServiceImpl
         }
 
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : cluServiceRoleInstList) {
-            ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getById(roleInstanceEntity.getRoleGroupId());
+                            ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService
+                    .getById(roleInstanceEntity.getRoleGroupId());
             if (Objects.nonNull(roleGroup)) {
                 roleInstanceEntity.setRoleGroupName(roleGroup.getRoleGroupName());
             }
@@ -370,7 +375,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public Result restartObsoleteService(Integer roleGroupId) {
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getById(roleGroupId);
+        ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService.getById(roleGroupId);
         List<ClusterServiceRoleInstanceEntity> list = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
                 .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId)
                 .and(ClusterServiceRoleInstanceEntity::getNeedRestart).eq(NeedRestart.YES)
