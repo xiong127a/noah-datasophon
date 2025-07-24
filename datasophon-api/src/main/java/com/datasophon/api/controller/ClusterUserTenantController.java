@@ -4,6 +4,7 @@ import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.common.utils.Result;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -15,11 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class ClusterUserTenantController {
 
-    private final ClusterUserTenantService clusterUserTenantService;
+    @Autowired
+    private ClusterUserTenantService clusterUserTenantService;
 
-    public ClusterUserTenantController(ClusterUserTenantService clusterUserTenantService) {
-        this.clusterUserTenantService = clusterUserTenantService;
-    }
 
     @RequestMapping(value = "/add", method = RequestMethod.GET)
     public Result add(@RequestParam("clusterId") @NotNull Integer clusterId, @RequestParam("userId") @NotNull Integer userId, @RequestParam("tenantIds") @NotBlank String tenantIds) {

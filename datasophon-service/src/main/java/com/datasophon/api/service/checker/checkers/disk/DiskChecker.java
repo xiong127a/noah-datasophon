@@ -13,6 +13,7 @@ import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -30,17 +31,14 @@ public class DiskChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(DiskChecker.class);
 
-    private final CheckerProperties checkerProperties;
+    @Autowired
+    private CheckerProperties checkerProperties;
 
-    private final DiskCheckerFactory diskCheckerFactory;
+    @Autowired
+    private DiskCheckerFactory diskCheckerFactory;
 
     /** 警告磁盘使用率阈值 */
     public static final int WARNING_DISK_USAGE_THRESHOLD = 80;
-
-    public DiskChecker(CheckerProperties checkerProperties, DiskCheckerFactory diskCheckerFactory) {
-        this.checkerProperties = checkerProperties;
-        this.diskCheckerFactory = diskCheckerFactory;
-    }
 
     /**
      * 获取全局最小可用空间百分比

@@ -85,25 +85,34 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceServiceImpl.class);
 
-    private final ClusterInfoService clusterInfoService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
 
     @org.springframework.context.annotation.Lazy
-    private final FrameServiceRoleService frameServiceRoleService;
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
 
-    private final FrameServiceService frameService;
+    @Autowired
+    private FrameServiceService frameService;
 
     @org.springframework.context.annotation.Lazy
-    private final ClusterServiceRoleInstanceService roleInstanceService;
+    @Autowired
+    private ClusterServiceRoleInstanceService roleInstanceService;
 
-    private final ClusterServiceCommandService commandService;
+    @Autowired
+    private ClusterServiceCommandService commandService;
 
-    private final ClusterServiceInstanceRoleGroupService roleGroupService;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupService roleGroupService;
 
-    private final ClusterServiceRoleInstanceMapper roleInstanceMapper;
+    @Autowired
+    private ClusterServiceRoleInstanceMapper roleInstanceMapper;
 
-    private final ClusterAlertHistoryService alertHistoryService;
+    @Autowired
+    private ClusterAlertHistoryService alertHistoryService;
 
-    private final ClusterServiceRoleInstanceWebuisService webuisService;
+    @Autowired
+    private ClusterServiceRoleInstanceWebuisService webuisService;
 
     @Autowired
     public ClusterServiceRoleInstanceServiceImpl(

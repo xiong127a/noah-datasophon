@@ -48,11 +48,14 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
         implements
         ClusterServiceInstanceRoleGroupService {
 
-    private final ClusterServiceInstanceService serviceInstanceService;
+    @Autowired
+    private ClusterServiceInstanceService serviceInstanceService;
 
-    private final ClusterServiceRoleInstanceService roleInstanceService;
+    @Autowired
+    private ClusterServiceRoleInstanceService roleInstanceService;
 
-    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    @Autowired
+    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     private static final String DEFAULT = "default";
     @Autowired

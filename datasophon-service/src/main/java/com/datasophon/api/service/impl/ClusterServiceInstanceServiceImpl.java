@@ -75,17 +75,24 @@ public class ClusterServiceInstanceServiceImpl
         implements
         ClusterServiceInstanceService {
 
-    private final ClusterServiceInstanceMapper serviceInstanceMapper;
+    @Autowired
+    private ClusterServiceInstanceMapper serviceInstanceMapper;
 
-    private final ClusterServiceRoleInstanceService roleInstanceService;
-    private final ClusterInfoService clusterInfoService;
-    private final FrameServiceRoleService frameServiceRoleService;
+    @Autowired
+    private ClusterServiceRoleInstanceService roleInstanceService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
 
-    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    @Autowired
+    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-    private final ClusterServiceInstanceRoleGroupService roleGroupService;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupService roleGroupService;
 
-    private final ClusterServiceRoleInstanceWebuisService webuisService;
+    @Autowired
+    private ClusterServiceRoleInstanceWebuisService webuisService;
 
     // 创建一个定时缓存，缓存时间为10秒
     private static final TimedCache<String, ConnectionInfo> CONNECTION_INFO_CACHE = CacheUtil.newTimedCache(5000);
@@ -94,16 +101,6 @@ public class ClusterServiceInstanceServiceImpl
     static {
         // 每5秒检查一次过期缓存
         CONNECTION_INFO_CACHE.schedulePrune(2000);
-    }
-    @Autowired
-    public ClusterServiceInstanceServiceImpl(ClusterServiceInstanceMapper serviceInstanceMapper, @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, ClusterServiceRoleGroupConfigService roleGroupConfigService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceWebuisService webuisService) {
-        this.serviceInstanceMapper = serviceInstanceMapper;
-        this.roleInstanceService = roleInstanceService;
-        this.clusterInfoService = clusterInfoService;
-        this.frameServiceRoleService = frameServiceRoleService;
-        this.roleGroupConfigService = roleGroupConfigService;
-        this.roleGroupService = roleGroupService;
-        this.webuisService = webuisService;
     }
 
     @Override

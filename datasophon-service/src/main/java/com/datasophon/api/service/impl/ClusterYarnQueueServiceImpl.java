@@ -63,11 +63,8 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueServiceImpl.class);
 
-    private final ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
-    public ClusterYarnQueueServiceImpl(ClusterServiceRoleInstanceService roleInstanceService) {
-        this.roleInstanceService = roleInstanceService;
-    }
+    private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
     public Result listByPage(Integer clusterId, Integer page, Integer pageSize) {

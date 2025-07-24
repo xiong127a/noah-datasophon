@@ -60,14 +60,11 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterUserTenantServiceImpl.class);
 
-    private final ClusterUserService clusterUserService;
-
-    private final ClusterTenantService clusterTenantService;
     @Autowired
-    public ClusterUserTenantServiceImpl(ClusterUserService clusterUserService, ClusterTenantService clusterTenantService) {
-        this.clusterUserService = clusterUserService;
-        this.clusterTenantService = clusterTenantService;
-    }
+    private ClusterUserService clusterUserService;
+
+    @Autowired
+    private ClusterTenantService clusterTenantService;
 
     @Override
     public Result addUserToTenant(Integer clusterId, Integer userId, String tenantIds) {

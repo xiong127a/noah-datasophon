@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,11 +33,9 @@ import java.util.Arrays;
 @RequestMapping("api/cluster/service/command/host/command")
 public class ClusterServiceCommandHostCommandController {
 
-    private final ClusterServiceCommandHostCommandService clusterServiceCommandHostCommandService;
+    @Autowired
+    private ClusterServiceCommandHostCommandService clusterServiceCommandHostCommandService;
 
-    public ClusterServiceCommandHostCommandController(ClusterServiceCommandHostCommandService clusterServiceCommandHostCommandService) {
-        this.clusterServiceCommandHostCommandService = clusterServiceCommandHostCommandService;
-    }
 
     /**
      * 列表

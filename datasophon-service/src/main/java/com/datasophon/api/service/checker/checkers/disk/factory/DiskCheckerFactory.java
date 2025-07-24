@@ -5,6 +5,7 @@ import com.datasophon.api.service.checker.checkers.disk.generic.GenericDiskCheck
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -17,10 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DiskCheckerFactory {
 
-    private final List<DiskCheckerStrategy> diskCheckers;
+    @Autowired
+    private List<DiskCheckerStrategy> diskCheckers;
 
-    private final Map<String, DiskCheckerStrategy> checkerCache = new ConcurrentHashMap<>();
-    private final GenericDiskChecker genericDiskChecker;
+    @Autowired
+    private Map<String, DiskCheckerStrategy> checkerCache = new ConcurrentHashMap<>();
+    @Autowired
+    private GenericDiskChecker genericDiskChecker;
 
     public DiskCheckerFactory(List<DiskCheckerStrategy> checkers) {
         this.diskCheckers = checkers; // 存储所有检查器

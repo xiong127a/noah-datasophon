@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterUserGroup;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,11 +31,9 @@ import java.util.Arrays;
 @RequestMapping("api/clusterusergroup")
 public class ClusterUserGroupController {
 
-    private final ClusterUserGroupService clusterUserGroupService;
+    @Autowired
+    private ClusterUserGroupService clusterUserGroupService;
 
-    public ClusterUserGroupController(ClusterUserGroupService clusterUserGroupService) {
-        this.clusterUserGroupService = clusterUserGroupService;
-    }
 
     /**
      * 列表

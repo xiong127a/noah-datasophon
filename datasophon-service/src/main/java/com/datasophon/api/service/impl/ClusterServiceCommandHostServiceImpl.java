@@ -49,14 +49,11 @@ public class ClusterServiceCommandHostServiceImpl
     private static final Long PROGRESS_COMPLETE = 100L;
     private static final Long PROGRESS_INITIAL = 0L;
 
-    private final ClusterServiceCommandHostCommandService hostCommandService;
-
-    private final ClusterServiceCommandHostMapper hostMapper;
     @Autowired
-    public ClusterServiceCommandHostServiceImpl(ClusterServiceCommandHostCommandService hostCommandService, ClusterServiceCommandHostMapper hostMapper) {
-        this.hostCommandService = hostCommandService;
-        this.hostMapper = hostMapper;
-    }
+    private ClusterServiceCommandHostCommandService hostCommandService;
+
+    @Autowired
+    private ClusterServiceCommandHostMapper hostMapper;
 
     @Override
     public Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize) {

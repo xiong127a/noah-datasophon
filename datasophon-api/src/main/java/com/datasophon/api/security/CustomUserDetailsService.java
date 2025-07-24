@@ -21,6 +21,7 @@ import com.datasophon.api.service.UserInfoService;
 import com.datasophon.dao.entity.UserInfoEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -41,11 +42,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
 
-    private final UserInfoService userService;
+    @Autowired
+    private UserInfoService userService;
 
-    public CustomUserDetailsService(UserInfoService userService) {
-        this.userService = userService;
-    }
+
 
     /**
      * 根据用户名加载用户详情

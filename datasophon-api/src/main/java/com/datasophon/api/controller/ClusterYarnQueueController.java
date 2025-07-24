@@ -20,6 +20,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterYarnQueueService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterYarnQueue;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,11 +33,9 @@ import java.util.Arrays;
 @RequestMapping("cluster/yarn/queue")
 public class ClusterYarnQueueController {
 
-    private final ClusterYarnQueueService clusterYarnQueueService;
+    @Autowired
+    private ClusterYarnQueueService clusterYarnQueueService;
 
-    public ClusterYarnQueueController(ClusterYarnQueueService clusterYarnQueueService) {
-        this.clusterYarnQueueService = clusterYarnQueueService;
-    }
 
     /**
      * 列表

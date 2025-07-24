@@ -21,6 +21,7 @@ import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.mybatisflex.core.query.QueryChain;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,11 +33,9 @@ import java.util.List;
 @RequestMapping("cluster/service/instance/role/group")
 public class ClusterServiceInstanceRoleGroupController {
 
-    private final ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService;
 
-    public ClusterServiceInstanceRoleGroupController(ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService) {
-        this.clusterServiceInstanceRoleGroupService = clusterServiceInstanceRoleGroupService;
-    }
 
     /**
      * 列表

@@ -3,6 +3,7 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterTenant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,11 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("cluster/tenant")
 public class ClusterTenantController {
 
-    private final ClusterTenantService clusterTenantService;
+    @Autowired
+    private ClusterTenantService clusterTenantService;
 
-    public ClusterTenantController(ClusterTenantService clusterTenantService) {
-        this.clusterTenantService = clusterTenantService;
-    }
 
     /**
      * 查询租户列表

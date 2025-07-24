@@ -31,6 +31,7 @@ import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import com.datasophon.dao.mapper.ClusterServiceInstanceConfigMapper;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -47,14 +48,12 @@ public class ClusterServiceInstanceConfigServiceImpl
                 implements
                 ClusterServiceInstanceConfigService {
 
-    private final ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    @Autowired
+    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-    private final ConfigVersionInfoService configVersionInfoService;
+    @Autowired
+    private ConfigVersionInfoService configVersionInfoService;
 
-    public ClusterServiceInstanceConfigServiceImpl(ClusterServiceRoleGroupConfigService roleGroupConfigService, ConfigVersionInfoService configVersionInfoService) {
-        this.roleGroupConfigService = roleGroupConfigService;
-        this.configVersionInfoService = configVersionInfoService;
-    }
 
 
     @Override

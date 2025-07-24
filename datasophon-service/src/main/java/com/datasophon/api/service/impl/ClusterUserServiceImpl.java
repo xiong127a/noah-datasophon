@@ -76,17 +76,14 @@ import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
 public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUser> implements ClusterUserService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterUserServiceImpl.class);
-    private final ClusterGroupService groupService;
-
-    private final ClusterHostService hostService;
-
-    private final ClusterUserGroupService userGroupService;
     @Autowired
-    public ClusterUserServiceImpl(ClusterGroupService groupService, ClusterHostService hostService, ClusterUserGroupService userGroupService) {
-        this.groupService = groupService;
-        this.hostService = hostService;
-        this.userGroupService = userGroupService;
-    }
+    private ClusterGroupService groupService;
+
+    @Autowired
+    private ClusterHostService hostService;
+
+    @Autowired
+    private ClusterUserGroupService userGroupService;
 
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {

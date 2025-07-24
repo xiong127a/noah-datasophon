@@ -30,11 +30,8 @@ import java.util.List;
 @Service("clusterZkService")
 public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZk> implements ClusterZkService {
 
-    private final ClusterZkMapper clusterZkMapper;
     @Autowired
-    public ClusterZkServiceImpl(ClusterZkMapper clusterZkMapper) {
-        this.clusterZkMapper = clusterZkMapper;
-    }
+    private ClusterZkMapper clusterZkMapper;
 
     @Override
     public Integer getMaxMyId(Integer clusterId) {
