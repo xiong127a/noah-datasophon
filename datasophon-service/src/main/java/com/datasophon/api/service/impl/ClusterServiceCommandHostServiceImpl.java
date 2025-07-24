@@ -149,8 +149,7 @@ public class ClusterServiceCommandHostServiceImpl
         // 计算平均进度和完成百分比
         long avgProgress = calculateAverage(totalProgress, totalCount);
         long completedProgress = calculatePercentage(completedCount, totalCount);
-        long finalProgress = Math.max(avgProgress, completedProgress);
-        return finalProgress;
+        return Math.max(avgProgress, completedProgress);
     }
 
     /**

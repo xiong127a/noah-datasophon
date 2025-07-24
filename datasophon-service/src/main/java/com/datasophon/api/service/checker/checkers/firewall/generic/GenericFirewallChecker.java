@@ -336,7 +336,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
      */
     private String getCentosStyleCss() {
 
-        String cssStyles = """
+        return """
                 <style>
                 @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600&display=swap');
                 * { box-sizing: border-box; }
@@ -370,8 +370,6 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
                 .success-message p { margin: 0; color: #333; font-size: 14px; }
                 </style>
                 """;
-
-        return cssStyles;
     }
 
     /**
