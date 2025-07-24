@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
  * Ubuntu 22系统专用的SELinux检查器实现
  */
 public class Ubuntu22SELinuxChecker extends UbuntuSELinuxChecker {
+    
+    public Ubuntu22SELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(Ubuntu22SELinuxChecker.class);
 

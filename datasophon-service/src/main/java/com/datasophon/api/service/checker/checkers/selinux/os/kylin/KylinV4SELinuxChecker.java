@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
  * Kylin V4系统专用的SELinux检查器实现
  */
 public class KylinV4SELinuxChecker extends KylinSELinuxChecker {
+    
+    public KylinV4SELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(KylinV4SELinuxChecker.class);
 

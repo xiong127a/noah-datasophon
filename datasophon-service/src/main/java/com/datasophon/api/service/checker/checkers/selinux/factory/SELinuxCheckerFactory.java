@@ -2,9 +2,6 @@ package com.datasophon.api.service.checker.checkers.selinux.factory;
 
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxCheckerStrategy;
 import com.datasophon.api.service.checker.checkers.selinux.generic.GenericSELinuxChecker;
-import com.datasophon.api.service.checker.checkers.selinux.os.centos.CentOSSELinuxChecker;
-import com.datasophon.api.service.checker.checkers.selinux.os.kylin.KylinSELinuxChecker;
-import com.datasophon.api.service.checker.checkers.selinux.os.ubuntu.UbuntuSELinuxChecker;
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
@@ -16,6 +13,7 @@ import java.util.Optional;
 /**
  * SELinux检查器工厂类
  * 根据操作系统类型创建对应的SELinux检查器实例
+ * 
  * @author 63588
  */
 public class SELinuxCheckerFactory {
@@ -38,7 +36,7 @@ public class SELinuxCheckerFactory {
                 .filter(checker -> checker instanceof GenericSELinuxChecker)
                 .map(checker -> (GenericSELinuxChecker) checker)
                 .findFirst()
-                .orElse(new GenericSELinuxChecker());
+                .orElseThrow(() -> new IllegalStateException("无法找到GenericSELinuxChecker实例，请确保它已被正确配置"));
     }
 
     /**

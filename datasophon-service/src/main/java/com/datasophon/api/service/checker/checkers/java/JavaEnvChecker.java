@@ -1,25 +1,27 @@
 package com.datasophon.api.service.checker.checkers.java;
 
 import com.datasophon.api.config.CheckerProperties;
-import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.core.AbstractItemChecker;
+import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
+import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 
 @Component
 public class JavaEnvChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaEnvChecker.class);
 
-    private final CheckerProperties checkerProperties;
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

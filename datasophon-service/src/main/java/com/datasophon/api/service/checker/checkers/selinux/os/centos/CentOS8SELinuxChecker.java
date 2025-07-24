@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
  * CentOS 8系统专用的SELinux检查器实现
  */
 public class CentOS8SELinuxChecker extends CentOSSELinuxChecker {
+    
+    public CentOS8SELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(CentOS8SELinuxChecker.class);
 

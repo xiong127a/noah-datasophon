@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
  * Ubuntu 24系统专用的SELinux检查器实现
  */
 public class Ubuntu24SELinuxChecker extends UbuntuSELinuxChecker {
+    
+    public Ubuntu24SELinuxChecker(com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory selinuxCheckerFactory) {
+        super(selinuxCheckerFactory);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(Ubuntu24SELinuxChecker.class);
 

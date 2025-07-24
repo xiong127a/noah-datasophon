@@ -15,10 +15,15 @@ import java.util.Set;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PolicyItem {
+    @Builder.Default
     private List<PolicyItemAccess> accesses = Lists.newArrayList();
+    @Builder.Default
     private Set<String> users = Sets.newHashSet();
+    @Builder.Default
     private List<String> groups = Lists.newArrayList();
+    @Builder.Default
     private List<String> roles = Lists.newArrayList();
+    @Builder.Default
     private List<PolicyItemCondition> conditions = Lists.newArrayList();
     private Boolean delegateAdmin;
 
