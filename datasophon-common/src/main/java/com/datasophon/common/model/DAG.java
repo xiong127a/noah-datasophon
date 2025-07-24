@@ -458,9 +458,9 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
             }
         }
 
-        /**
-         * After scanning, there is no node with 0 degree of entry,
-         * indicating that there is a ring, and return directly
+        /*
+          After scanning, there is no node with 0 degree of entry,
+          indicating that there is a ring, and return directly
          */
         if (zeroIndegreeNodeQueue.isEmpty()) {
             return new AbstractMap.SimpleEntry<>(false, topoResultList);
