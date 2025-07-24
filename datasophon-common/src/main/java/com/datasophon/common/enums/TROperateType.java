@@ -1,5 +1,5 @@
 package com.datasophon.common.enums;
 
 public enum TROperateType {
-    ADD, UPDATE, DELETE, NONE;
+    ADD, UPDATE, DELETE, NONE
 }
