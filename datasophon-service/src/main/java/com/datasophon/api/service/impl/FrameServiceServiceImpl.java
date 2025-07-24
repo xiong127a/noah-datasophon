@@ -30,6 +30,7 @@ import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -47,7 +48,6 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
 
     private final FrameInfoMapper frameInfoMapper;
 
-
     private final ClusterServiceInstanceService serviceInstanceService;
 
     private final static List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
@@ -57,12 +57,13 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
             "SPARK3", "FLINK");
 
-    public FrameServiceServiceImpl(ClusterInfoService clusterInfoService, FrameInfoMapper frameInfoMapper, ClusterServiceInstanceService serviceInstanceService) {
+    public FrameServiceServiceImpl(@org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService,
+            FrameInfoMapper frameInfoMapper,
+            ClusterServiceInstanceService serviceInstanceService) {
         this.clusterInfoService = clusterInfoService;
         this.frameInfoMapper = frameInfoMapper;
         this.serviceInstanceService = serviceInstanceService;
     }
-
 
     @Override
     public Result getAllFrameService(Integer clusterId) {

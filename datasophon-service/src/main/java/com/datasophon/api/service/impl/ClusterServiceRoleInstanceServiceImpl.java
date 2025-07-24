@@ -61,6 +61,7 @@ import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -84,15 +85,11 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceServiceImpl.class);
 
-
     private final ClusterInfoService clusterInfoService;
-
 
     private final FrameServiceRoleService frameServiceRoleService;
 
-
     private final FrameServiceService frameService;
-
 
     private final ClusterServiceRoleInstanceService roleInstanceService;
 
@@ -105,8 +102,18 @@ public class ClusterServiceRoleInstanceServiceImpl
     private final ClusterAlertHistoryService alertHistoryService;
 
     private final ClusterServiceRoleInstanceWebuisService webuisService;
+
     @Autowired
-    public ClusterServiceRoleInstanceServiceImpl(ClusterInfoService clusterInfoService, FrameServiceRoleService frameServiceRoleService, FrameServiceService frameService, ClusterServiceRoleInstanceService roleInstanceService, ClusterServiceCommandService commandService, ClusterServiceInstanceRoleGroupService roleGroupService, ClusterServiceRoleInstanceMapper roleInstanceMapper, ClusterAlertHistoryService alertHistoryService, ClusterServiceRoleInstanceWebuisService webuisService) {
+    public ClusterServiceRoleInstanceServiceImpl(
+            @org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService,
+            FrameServiceRoleService frameServiceRoleService,
+            FrameServiceService frameService,
+            ClusterServiceRoleInstanceService roleInstanceService,
+            ClusterServiceCommandService commandService,
+            ClusterServiceInstanceRoleGroupService roleGroupService,
+            ClusterServiceRoleInstanceMapper roleInstanceMapper,
+            @org.springframework.context.annotation.Lazy ClusterAlertHistoryService alertHistoryService,
+            ClusterServiceRoleInstanceWebuisService webuisService) {
         this.clusterInfoService = clusterInfoService;
         this.frameServiceRoleService = frameServiceRoleService;
         this.frameService = frameService;
