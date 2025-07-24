@@ -18,82 +18,201 @@
 
 package com.datasophon.common.utils;
 
-import com.datasophon.common.Constants;
+import cn.hutool.core.collection.ListUtil;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * 统一API响应结果封装
+ * 
+ * @param <T> 响应数据类型
+ */
 @Data
-public class Result extends HashMap<String, Object> {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Result<T> implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * 状态码
+     */
     private Integer code;
+
+    /**
+     * 返回消息
+     */
     private String msg;
 
-    private Object data;
+    private long total;
 
-    public Result() {
+    /**
+     * 返回数据
+     */
+    private T data;
+
+    /**
+     * 元数据
+     */
+    private Map<String, Object> meta;
+
+    /**
+     * 错误详情
+     */
+    private List<Map<String, Object>> errors;
+
+    /**
+     * 构造函数
+     * 
+     * @param code 状态码
+     * @param msg  消息
+     */
+    public Result(Integer code, String msg) {
+        this.code = code;
+        this.msg = msg;
+        this.meta = new HashMap<>();
     }
 
-    public static Result error() {
-        return error(500, "未知异常，请联系管理员");
+    /**
+     * 构造函数
+     * 
+     * @param code 状态码
+     * @param msg  消息
+     * @param data 数据
+     */
+    public Result(Integer code, String msg, T data) {
+        this(code, msg);
+        this.data = data;
     }
 
-    public static Result error(String msg) {
+    /**
+     * 构造函数
+     * 
+     * @param code    状态码
+     * @param success 消息
+     * @param data    数据
+     * @param count   总数
+     */
+    public Result(Integer code, String success, T data, long count) {
+        this(code, success);
+        this.data = data;
+        this.total = count;
+    }
+
+    /**
+     * 返回服务器错误
+     * 
+     * @return 错误结果
+     */
+    public static <T> Result<T> error() {
+        return error(500, "Internal server error");
+    }
+
+    /**
+     * 返回指定消息的错误
+     * 
+     * @param msg 错误消息
+     * @return 错误结果
+     */
+    public static <T> Result<T> error(String msg) {
         return error(500, msg);
     }
 
-    public static Result error(int code, String msg) {
-        Result result = new Result();
-        result.put("code", code);
-        result.put("msg", msg);
+    /**
+     * 返回指定状态码和消息的错误
+     * 
+     * @param code 状态码
+     * @param msg  错误消息
+     * @return 错误结果
+     */
+    public static <T> Result<T> error(int code, String msg) {
+        return new Result<>(code, msg);
+    }
+
+    /**
+     * 返回带有详细错误信息的错误
+     * 
+     * @param code   状态码
+     * @param msg    错误消息
+     * @param errors 错误详情列表
+     * @return 错误结果
+     */
+    public static <T> Result<T> error(int code, String msg, List<Map<String, Object>> errors) {
+        Result<T> result = error(code, msg);
+        result.setErrors(errors);
         return result;
     }
 
-    public static Result success(Map<String, Object> map) {
-        Result result = new Result();
-        result.putAll(map);
-        return result;
+    /**
+     * 返回带有数据的成功结果
+     * 
+     * @param data 数据
+     * @return 成功结果
+     */
+    public static <T> Result<T> success(T data) {
+        return new Result<>(200, "success", data);
     }
 
-    public Integer getCode() {
-        return (Integer) this.get(Constants.CODE);
+    /**
+     * 返回不带数据的成功结果
+     * 
+     * @return 成功结果
+     */
+    public static <T> Result<T> success() {
+        return new Result<>(200, "success");
     }
 
-    public Object getData() {
-        return this.get(Constants.DATA);
+    /**
+     * 返回空集合和总数为0的结果
+     * 
+     * @return 成功结果，包含空列表和总数0
+     */
+    public static <T> Result<List<T>> successEmptyCount() {
+        return new Result<>(200, "success", ListUtil.empty(), 0);
     }
 
+    /**
+     * 返回带有数据和总数的成功结果
+     * 
+     * @param data  数据
+     * @param count 总数
+     * @return 成功结果
+     */
+    public static <T> Result<T> success(T data, long count) {
+        return new Result<>(200, "success", data, count);
+    }
+
+    /**
+     * 判断是否成功
+     * 
+     * @return 是否成功
+     */
     public boolean isSuccess() {
-        return this.getCode() == 200;
+        return this.code != null && this.code >= 200 && this.code < 300;
     }
 
-    public static Result success(Object data) {
-        Result result = new Result();
-        result.put(Constants.CODE, 200);
-        result.put(Constants.MSG, "success");
-        result.put("data", data);
-        return result;
-    }
-    public static Result success() {
-        Result result = new Result();
-        result.put(Constants.CODE, 200);
-        result.put(Constants.MSG, "success");
-        return result;
-    }
-
-    public static Result successEmptyCount() {
-        Result result = success(new ArrayList<>(0));
-        result.put(Constants.TOTAL, 0);
-        return result;
-    }
-
-    @Override
-    public Result put(String key, Object value) {
-        super.put(key, value);
+    /**
+     * 在结果中添加自定义属性
+     * 
+     * @param key   键
+     * @param value 值
+     * @return 当前对象，支持链式调用
+     */
+    public Result<T> put(String key, Object value) {
+        if (this.meta == null) {
+            this.meta = new HashMap<>();
+        }
+        this.meta.put(key, value);
         return this;
     }
 }
