@@ -17,125 +17,105 @@
 
 package com.datasophon.api.configuration;
 
-import com.datasophon.api.interceptor.LocaleChangeInterceptor;
 import com.datasophon.api.interceptor.UserPermissionHandler;
+import com.datasophon.api.service.ClusterRoleUserService;
+import com.datasophon.api.service.UserInfoService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 
 import java.util.Locale;
 
 /**
  * application configuration
+ * 
+ * @author 63588
  */
 @Configuration
 public class AppConfiguration implements WebMvcConfigurer {
 
-
     public static final String PATH_PATTERN = "/**";
     public static final String LOCALE_LANGUAGE_COOKIE = "language";
+
+    private final ClusterRoleUserService clusterRoleUserService;
+    private final UserInfoService userInfoService;
+
+    public AppConfiguration(ClusterRoleUserService clusterRoleUserService, UserInfoService userInfoService) {
+        this.clusterRoleUserService = clusterRoleUserService;
+        this.userInfoService = userInfoService;
+    }
 
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOrigin("*");
-        config.addAllowedMethod("*");
+        config.addAllowedOriginPattern("*");
         config.addAllowedHeader("*");
+        config.addAllowedMethod("GET");
+        config.addAllowedMethod("POST");
+        config.addAllowedMethod("PUT");
+        config.addAllowedMethod("DELETE");
+        config.addAllowedMethod("PATCH");
+        config.addAllowedMethod("OPTIONS");
+        config.addAllowedMethod("HEAD");
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
         configSource.registerCorsConfiguration(PATH_PATTERN, config);
         return new CorsFilter(configSource);
     }
 
-    // 不再需要登录拦截器
-    // @Bean
-    // public LoginHandlerInterceptor loginInterceptor() {
-    // return new LoginHandlerInterceptor();
-    // }
-
     /**
-     * Cookie
-     * 
-     * @return local resolver
+     * cookie
+     *
+     * @return locale resolver
      */
-    @Bean(name = "localeResolver")
+    @Bean
     public LocaleResolver localeResolver() {
-        CookieLocaleResolver localeResolver = new CookieLocaleResolver();
-        localeResolver.setCookieName(LOCALE_LANGUAGE_COOKIE);
-        /* set default locale **/
+        // 使用构造函数方式创建CookieLocaleResolver并设置cookie名称
+        CookieLocaleResolver localeResolver = new CookieLocaleResolver(LOCALE_LANGUAGE_COOKIE);
+        /* set default locale */
         localeResolver.setDefaultLocale(Locale.SIMPLIFIED_CHINESE);
-        /* set language tag compliant **/
+        /* set language tag compliant */
         localeResolver.setLanguageTagCompliant(false);
         return localeResolver;
     }
 
     @Bean
     public LocaleChangeInterceptor localeChangeInterceptor() {
-        return new LocaleChangeInterceptor();
+        LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
+        interceptor.setParamName("language");
+        return interceptor;
     }
 
     @Bean
     public UserPermissionHandler userPermissionHandler() {
-        return new UserPermissionHandler();
+        return new UserPermissionHandler(clusterRoleUserService, userInfoService);
+    }
+
+    @Override
+    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
+        // 替换过期的favorPathExtension方法
+        configurer
+                .mediaType("json", MediaType.APPLICATION_JSON)
+                .mediaType("xml", MediaType.APPLICATION_XML)
+                .ignoreAcceptHeader(false)
+                .useRegisteredExtensionsOnly(true)
+                .defaultContentType(MediaType.APPLICATION_JSON);
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // i18n
         registry.addInterceptor(localeChangeInterceptor());
         registry.addInterceptor(userPermissionHandler());
-        // 不再需要登录拦截器，由Spring Security JWT认证处理
-        // registry.addInterceptor(loginInterceptor())
-        // .addPathPatterns("/**")
-        // .excludePathPatterns(
-        // LOGIN_PATH_PATTERN,
-        // "/error",
-        // "/service/install/downloadPackage",
-        // "/cluster/alert/history/save",
-        // "/cluster/kerberos/downloadKeytab",
-        // "/index.html",
-        // "/",
-        // "/static/**",
-        // "/ssoEnable",
-        // "/saveSsoUser",
-        // "/sso/*",
-        // "/lic/**",
-        // "/actuator/**",
-        // "/api/cluster/grafana/kerberos/*");
     }
-
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/front/static/resources/bundle-main/static/");
-        registry.addResourceHandler("doc.html").addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
-        registry.addResourceHandler("/ui/**").addResourceLocations("file:ui/");
-    }
-
-    @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/ui/").setViewName("forward:/ui/index.html");
-        registry.addViewController("/").setViewName("index");
-    }
-
-    /**
-     * Turn off suffix-based content negotiation
-     *
-     * @param configurer configurer
-     */
-    @Override
-    public void configureContentNegotiation(final ContentNegotiationConfigurer configurer) {
-        configurer.favorPathExtension(false);
-    }
-
 }
