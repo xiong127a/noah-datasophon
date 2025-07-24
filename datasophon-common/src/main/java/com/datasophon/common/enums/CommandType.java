@@ -21,6 +21,7 @@ import com.datasophon.common.Constants;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
+import lombok.Setter;
 
 public enum CommandType {
 
@@ -35,9 +36,11 @@ public enum CommandType {
     UNINSTALL_SERVICE(7, "UNINSTALL", "卸载");
 
 
+    @Setter
     @Getter
     private int value;
 
+    @Setter
     private String desc;
 
     @Getter
@@ -49,16 +52,9 @@ public enum CommandType {
         this.cnDesc = cnDesc;
     }
 
-    public void setValue(int value) {
-        this.value = value;
-    }
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     public void setZnDesc(String cnDesc) {

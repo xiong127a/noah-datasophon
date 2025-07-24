@@ -155,10 +155,6 @@ public class LogEntry implements Serializable {
         this.type = type;
     }
 
-    public Level getStackTraceLevel() {
-        return stackTraceLevel;
-    }
-
     /**
      * 获取日志创建时间的时间戳
      */
