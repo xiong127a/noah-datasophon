@@ -2232,7 +2232,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             Pattern txDataPattern = Pattern.compile("\\s+(\\d+)\\s+\\d+\\s+\\d+"); // 匹配TX数据行的字节数
 
             // 使用备用命令补充网络流量数据
-            if (ifstatInfo.isEmpty() || !ifstatInfo.contains("bytes")) {
+            if (!ifstatInfo.contains("bytes")) {
                 logger.info("ip -s link 命令输出格式不匹配，尝试使用备用命令");
                 // 备用命令：获取网络流量统计
                 CommandResult netDevResult = MinaUtils.execCmdWithResultObject(session, "cat /proc/net/dev");
