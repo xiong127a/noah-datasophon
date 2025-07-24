@@ -81,9 +81,9 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
                 try {
                     String value = (String) config.getValue();// 获取当前配置值
                     String[] split = value.split(",");
-                    String newValue = "";
+                    StringBuilder newValue = new StringBuilder();
                     for (int i = 0; i < split.length; i++){
-                        newValue+= "zookeeper-zkserver-" + i + ".zookeeper-zkserver.datasophon.svc.cluster.local:2181,";
+                        newValue.append("zookeeper-zkserver-").append(i).append(".zookeeper-zkserver.datasophon.svc.cluster.local:2181,");
                     }
                      config.setValue(newValue.substring(0, newValue.length() - 1)); // 去掉最后一个逗号
                 } catch (Exception e) {
