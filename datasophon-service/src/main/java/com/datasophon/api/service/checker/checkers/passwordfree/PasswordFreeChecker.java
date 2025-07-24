@@ -558,20 +558,6 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 Thread.sleep(RETRY_DELAY_MS);
             }
         }
-
-        // 这里正常不会执行到，因为循环中已经有返回或抛出异常
-        // 但为了代码完整性，返回最后的结果或抛出异常
-        if (result != null) {
-            return result;
-        } else if (lastException != null) {
-            if (lastException instanceof RuntimeException) {
-                throw (RuntimeException) lastException;
-            } else {
-                throw new RuntimeException("执行命令失败: " + lastException.getMessage(), lastException);
-            }
-        } else {
-            return new CommandResult("", "未知错误，命令执行结果和异常均为null", -1);
-        }
     }
 
     @Override
