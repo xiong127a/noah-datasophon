@@ -1079,7 +1079,7 @@ public class AsyncCheckService {
                                 logger.info("正在同步hosts文件到主机: {}", ip);
 
                                 // 调用主机检查服务更新hosts文件
-                                com.datasophon.common.utils.Result updateResult = hostCheckService.updateHostsFile(
+                                Result updateResult = hostCheckService.updateHostsFile(
                                         clusterId,
                                         ip, hostsContent);
 

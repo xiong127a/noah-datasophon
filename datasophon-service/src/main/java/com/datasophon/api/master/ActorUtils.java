@@ -46,6 +46,9 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author 63588
+ */
 public class ActorUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ActorUtils.class);
@@ -56,7 +59,7 @@ public class ActorUtils {
 
     private static Random rand;
 
-    private ActorUtils() throws NoSuchAlgorithmException {
+    private ActorUtils() {
     }
 
     /**
@@ -117,7 +120,7 @@ public class ActorUtils {
         rand = SecureRandom.getInstanceStrong();
     }
 
-    public static ActorRef getLocalActor(Class actorClass, String actorName) {
+    public static <T> ActorRef getLocalActor(Class<T> actorClass, String actorName) {
         ActorSelection actorSelection = actorSystem.actorSelection("/user/" + actorName);
         Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
         Future<ActorRef> future = actorSelection.resolveOne(timeout);
@@ -130,13 +133,11 @@ public class ActorUtils {
         if (Objects.isNull(actorRef)) {
             logger.info("create actor {}", actorName);
             actorRef = createActor(actorClass, actorName);
-        } else {
-            // logger.info("find actor {}", actorName);
         }
         return actorRef;
     }
 
-    private static ActorRef createActor(Class actorClass, String actorName) {
+    private static <T> ActorRef createActor(Class<T> actorClass, String actorName) {
         ActorRef actorRef;
         try {
             actorRef = actorSystem.actorOf(Props.create(actorClass).withDispatcher("my-forkjoin-dispatcher"),
@@ -181,7 +182,7 @@ public class ActorUtils {
     /**
      * Get ActorRef name from Class name.
      */
-    public static String getActorRefName(Class clazz) {
+    public static <T> String getActorRefName(Class<T> clazz) {
         return StringUtils.uncapitalize(clazz.getSimpleName());
     }
 

@@ -463,7 +463,7 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
          * indicating that there is a ring, and return directly
          */
         if (zeroIndegreeNodeQueue.isEmpty()) {
-            return new AbstractMap.SimpleEntry(false, topoResultList);
+            return new AbstractMap.SimpleEntry<>(false, topoResultList);
         }
 
         // The topology algorithm is used to delete nodes with 0 degree of entry and its associated edges
