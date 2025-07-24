@@ -20,6 +20,7 @@ package com.datasophon.common.enums;
 import com.datasophon.common.Constants;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
 
 public enum CommandType {
 
@@ -34,20 +35,18 @@ public enum CommandType {
     UNINSTALL_SERVICE(7, "UNINSTALL", "卸载");
 
 
+    @Getter
     private int value;
 
     private String desc;
 
+    @Getter
     private String cnDesc;
 
     CommandType(int value, String desc, String cnDesc) {
         this.value = value;
         this.desc = desc;
         this.cnDesc = cnDesc;
-    }
-
-    public int getValue() {
-        return value;
     }
 
     public void setValue(int value) {
@@ -60,10 +59,6 @@ public enum CommandType {
 
     public void setDesc(String desc) {
         this.desc = desc;
-    }
-
-    public String getCnDesc() {
-        return cnDesc;
     }
 
     public void setZnDesc(String cnDesc) {

@@ -16,6 +16,11 @@
  */
 package com.datasophon.common.command;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public enum OlapOpsType {
 
     ADD_BE(1, "backend"),
@@ -29,22 +34,6 @@ public enum OlapOpsType {
 
     OlapOpsType(int value, String desc) {
         this.value = value;
-        this.desc = desc;
-    }
-
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    public void setDesc(String desc) {
         this.desc = desc;
     }
 

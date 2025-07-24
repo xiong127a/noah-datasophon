@@ -19,7 +19,10 @@ package com.datasophon.dao.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
 public enum CommandState {
 
     // 命令状态 1：正在运行2：成功3：失败
@@ -29,6 +32,7 @@ public enum CommandState {
     FAILED(3, "失败"),
     CANCEL(4, "取消");
 
+    @Getter
     @EnumValue
     private int value;
 
@@ -39,21 +43,9 @@ public enum CommandState {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     @Override

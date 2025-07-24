@@ -19,12 +19,16 @@ package com.datasophon.dao.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
 public enum NeedRestart {
 
     NO(1, false),
     YES(2, true);
 
+    @Getter
     @EnumValue
     private int value;
 
@@ -35,21 +39,9 @@ public enum NeedRestart {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
     @JsonValue
     public boolean isDesc() {
         return desc;
-    }
-
-    public void setDesc(boolean desc) {
-        this.desc = desc;
     }
 
 }

@@ -17,9 +17,12 @@
 
 package com.datasophon.common.lifecycle;
 
+import lombok.Getter;
+
 /**
  * This enum is used to represent the server status, include master/worker.
  */
+@Getter
 public enum ServerStatus {
 
     RUNNING(0, "The current server is running"),
@@ -35,11 +38,4 @@ public enum ServerStatus {
         this.desc = desc;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
 }

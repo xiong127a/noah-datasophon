@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.config;
 
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -23,17 +24,15 @@ public class TaskManager implements ApplicationContextAware {
     // 正在运行的任务列表
     private final Map<String, TaskInfo> tasks = new ConcurrentHashMap<>();
 
-    // Spring应用上下文
-    private ApplicationContext applicationContext;
-
     /**
-     * 获取Spring应用上下文
-     * 
+     * -- GETTER --
+     *  获取Spring应用上下文
+     *
      * @return 应用上下文
      */
-    public ApplicationContext getApplicationContext() {
-        return applicationContext;
-    }
+    // Spring应用上下文
+    @Getter
+    private ApplicationContext applicationContext;
 
     /**
      * 设置Spring应用上下文

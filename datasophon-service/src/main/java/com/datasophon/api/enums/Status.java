@@ -17,6 +17,7 @@
 package com.datasophon.api.enums;
 
 import com.alibaba.fastjson2.JSONObject;
+import lombok.Getter;
 
 /**
  * status enum
@@ -97,6 +98,7 @@ public enum Status {
 
     KUBERNETES_NAMESPACE_NOT_EXIST(80001, "kubernetes namespace not exist", "Kubernetes命令空间不存在");
 
+    @Getter
     private final int code;
     private final String enMsg;
     private final String zhMsg;
@@ -105,10 +107,6 @@ public enum Status {
         this.code = code;
         this.enMsg = enMsg;
         this.zhMsg = zhMsg;
-    }
-
-    public int getCode() {
-        return this.code;
     }
 
     public JSONObject toJson() {

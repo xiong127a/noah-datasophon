@@ -17,6 +17,8 @@
 
 package com.datasophon.common.model;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 
 import java.util.*;
@@ -25,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Setter
+@Getter
 public class DAGGraph<Node, NodeInfo, EdgeInfo> {
 
     private static final Logger logger = LoggerFactory.getLogger(DAGGraph.class);
@@ -40,30 +44,6 @@ public class DAGGraph<Node, NodeInfo, EdgeInfo> {
         nodesMap = new HashMap<>();
         edgesMap = new HashMap<>();
         reverseEdgesMap = new HashMap<>();
-    }
-
-    public Map<Node, NodeInfo> getNodesMap() {
-        return nodesMap;
-    }
-
-    public void setNodesMap(Map<Node, NodeInfo> nodesMap) {
-        this.nodesMap = nodesMap;
-    }
-
-    public Map<Node, Map<Node, EdgeInfo>> getEdgesMap() {
-        return edgesMap;
-    }
-
-    public void setEdgesMap(Map<Node, Map<Node, EdgeInfo>> edgesMap) {
-        this.edgesMap = edgesMap;
-    }
-
-    public Map<Node, Map<Node, EdgeInfo>> getReverseEdgesMap() {
-        return reverseEdgesMap;
-    }
-
-    public void setReverseEdgesMap(Map<Node, Map<Node, EdgeInfo>> reverseEdgesMap) {
-        this.reverseEdgesMap = reverseEdgesMap;
     }
 
     public void addNode(Node node, NodeInfo nodeInfo) {

@@ -17,10 +17,13 @@
 
 package com.datasophon.common.enums;
 
+import lombok.Getter;
+
 /**
  * 操作范围枚举
  * 用于定义队列管理器操作的作用范围
  */
+@Getter
 public enum ScopeCode {
     /** 所有组件 */
     ALL("all"),
@@ -33,10 +36,6 @@ public enum ScopeCode {
 
     ScopeCode(String code) {
         this.code = code;
-    }
-
-    public String getCode() {
-        return code;
     }
 
     /**

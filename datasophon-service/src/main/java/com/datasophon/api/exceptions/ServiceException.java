@@ -17,10 +17,14 @@
 package com.datasophon.api.exceptions;
 
 import com.datasophon.api.enums.Status;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * service exception
  */
+@Setter
+@Getter
 public class ServiceException extends RuntimeException {
 
     /**
@@ -45,11 +49,4 @@ public class ServiceException extends RuntimeException {
         super(message);
     }
 
-    public Integer getCode() {
-        return this.code;
-    }
-
-    public void setCode(Integer code) {
-        this.code = code;
-    }
 }

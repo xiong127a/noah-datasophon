@@ -1,11 +1,13 @@
 package com.datasophon.common.enums;
 
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * Linux发行版枚举
  * 表示支持的操作系统发行版及版本
  */
+@Getter
 public enum OsDistribution {
     CENTOS("CentOS", "centos"),
     CENTOS7("CentOS 7", "centos"),
@@ -32,14 +34,6 @@ public enum OsDistribution {
     OsDistribution(String displayName, String identifier) {
         this.displayName = displayName;
         this.identifier = identifier;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getIdentifier() {
-        return identifier;
     }
 
     /**

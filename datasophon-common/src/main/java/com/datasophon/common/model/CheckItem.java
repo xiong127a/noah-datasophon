@@ -3,6 +3,7 @@ package com.datasophon.common.model;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
@@ -17,6 +18,7 @@ public class CheckItem implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @Getter
     public enum Status {
         WAITING(0, "待检查"),
         SUCCESS(1, "通过"),
@@ -33,14 +35,6 @@ public class CheckItem implements Serializable {
         Status(int code, String desc) {
             this.code = code;
             this.desc = desc;
-        }
-
-        public int getCode() {
-            return code;
-        }
-
-        public String getDesc() {
-            return desc;
         }
 
         public static Status getByCode(int code) {

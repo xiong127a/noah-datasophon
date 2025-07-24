@@ -13,6 +13,7 @@ import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.HostUtils;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +90,7 @@ public class HostCheckQueueManager {
     private final AtomicLong tasksMaxExecutionTimeMs = new AtomicLong(0);
 
     // 检查项线程池 - 专门用于执行单个检查项
+    @Getter
     private final ExecutorService itemCheckExecutorService;
 
     private Thread queueProcessorThread;
@@ -825,6 +827,7 @@ public class HostCheckQueueManager {
         }
     }
 
+    @Getter
     private static class FixTask implements Comparable<FixTask> {
         private final Integer clusterId;
         private final HostInfo hostInfo;
@@ -850,32 +853,13 @@ public class HostCheckQueueManager {
             this.priority = priority;
         }
 
-        public Integer getClusterId() {
-            return clusterId;
-        }
-
-        public HostInfo getHostInfo() {
-            return hostInfo;
-        }
-
-        public CheckItem getCheckItem() {
-            return checkItem;
-        }
-
-        public HostCheckServiceImpl getHostCheckService() {
-            return hostCheckService;
-        }
-
-        public int getPriority() {
-            return priority;
-        }
-
         @Override
         public int compareTo(FixTask other) {
             return Integer.compare(this.priority, other.priority);
         }
     }
 
+    @Getter
     private static class CheckTask implements Comparable<CheckTask> {
         private final Integer clusterId;
         private final HostInfo hostInfo;
@@ -891,22 +875,6 @@ public class HostCheckQueueManager {
             this.hostInfo = hostInfo;
             this.hostCheckService = hostCheckService;
             this.priority = priority;
-        }
-
-        public Integer getClusterId() {
-            return clusterId;
-        }
-
-        public HostInfo getHostInfo() {
-            return hostInfo;
-        }
-
-        public HostCheckServiceImpl getHostCheckService() {
-            return hostCheckService;
-        }
-
-        public int getPriority() {
-            return priority;
         }
 
         @Override
@@ -1814,10 +1782,6 @@ public class HostCheckQueueManager {
         } catch (Exception e) {
             logger.error("处理修复队列任务时发生异常", e);
         }
-    }
-
-    public ExecutorService getItemCheckExecutorService() {
-        return itemCheckExecutorService;
     }
 
     /**

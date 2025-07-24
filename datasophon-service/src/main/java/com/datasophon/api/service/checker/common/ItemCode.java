@@ -92,10 +92,6 @@ public enum ItemCode {
         return null;
     }
 
-    public String getCode() {
-        return code;
-    }
-
     public String getDescription() {
         return name;
     }

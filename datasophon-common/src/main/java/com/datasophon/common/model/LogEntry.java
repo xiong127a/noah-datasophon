@@ -1,6 +1,7 @@
 package com.datasophon.common.model;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -15,6 +16,7 @@ import java.util.Objects;
 /**
  * 结构化日志记录
  */
+@Setter
 @Getter
 public class LogEntry implements Serializable {
     @Serial
@@ -153,44 +155,8 @@ public class LogEntry implements Serializable {
         this.type = type;
     }
 
-    public void setTimestamp(Date timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public void setLevel(Level level) {
-        this.level = level;
-    }
-
-    public void setThreadName(String threadName) {
-        this.threadName = threadName;
-    }
-
-    public void setClassName(String className) {
-        this.className = className;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public void setLineNumber(int lineNumber) {
-        this.lineNumber = lineNumber;
-    }
-
-    public void setType(Type type) {
-        this.type = type;
-    }
-
-    public void setStackTraceLevel(Level stackTraceLevel) {
-        this.stackTraceLevel = stackTraceLevel;
-    }
-
     public Level getStackTraceLevel() {
         return stackTraceLevel;
-    }
-
-    public Type getType() {
-        return type;
     }
 
     /**

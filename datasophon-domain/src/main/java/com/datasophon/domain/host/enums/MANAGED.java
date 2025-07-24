@@ -18,7 +18,11 @@
 package com.datasophon.domain.host.enums;
 
 import com.mybatisflex.annotation.EnumValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 public enum MANAGED {
 
     YES(1, true),
@@ -31,22 +35,6 @@ public enum MANAGED {
 
     MANAGED(int value, boolean desc) {
         this.value = value;
-        this.desc = desc;
-    }
-
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
-    public boolean isDesc() {
-        return desc;
-    }
-
-    public void setDesc(boolean desc) {
         this.desc = desc;
     }
 

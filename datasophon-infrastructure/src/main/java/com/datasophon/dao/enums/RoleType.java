@@ -19,7 +19,10 @@ package com.datasophon.dao.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
 public enum RoleType {
 
     MASTER(1, "master"),
@@ -27,6 +30,7 @@ public enum RoleType {
     CLIENT(3, "client"),
     SLAVE(4, "slave");
 
+    @Getter
     @EnumValue
     private int value;
 
@@ -37,20 +41,9 @@ public enum RoleType {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     @Override

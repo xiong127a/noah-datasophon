@@ -1,8 +1,11 @@
 package com.datasophon.api.service.checker.common;
 
+import lombok.Getter;
+
 /**
  * 命令执行结果
  */
+@Getter
 public class CommandResult {
     private final String output; // 命令输出
     private final String error; // 错误输出
@@ -29,26 +32,6 @@ public class CommandResult {
     public static CommandResult fromMinaCommandResult(CommandResult minaResult) {
         return new CommandResult(minaResult.getCommand(), minaResult.getExitCode(),
                 minaResult.getOutput(), minaResult.getError());
-    }
-
-    public String getOutput() {
-        return output;
-    }
-
-    public String getError() {
-        return error;
-    }
-
-    public int getExitCode() {
-        return exitCode;
-    }
-
-    public boolean isSuccess() {
-        return success;
-    }
-
-    public String getCommand() {
-        return command;
     }
 
     /**

@@ -44,6 +44,12 @@ public class GpuInfo extends HardwareInfo {
 
     /**
      * GPU信息（原始输出）
+     * -- SETTER --
+     *  设置GPU信息字符串
+     *  兼容旧代码中的setGpuInfo调用
+     *
+     * @param info GPU信息字符串
+
      */
     private String info;
 
@@ -218,16 +224,6 @@ public class GpuInfo extends HardwareInfo {
      */
     public String getInfo() {
         return this.info != null ? this.info : (this.model != null ? this.model : "未知GPU");
-    }
-
-    /**
-     * 设置GPU信息字符串
-     * 兼容旧代码中的setGpuInfo调用
-     * 
-     * @param info GPU信息字符串
-     */
-    public void setInfo(String info) {
-        this.info = info;
     }
 
     /**

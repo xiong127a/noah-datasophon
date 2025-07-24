@@ -19,9 +19,12 @@ package com.datasophon.dao.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Arrays;
 
+@Setter
 public enum ClusterState {
 
     DELETING(4, "删除中"),
@@ -31,6 +34,7 @@ public enum ClusterState {
     RUNNING(2, "正在运行"),
     NEED_CONFIG(1, "待配置");
 
+    @Getter
     @EnumValue
     private int value;
 
@@ -41,21 +45,9 @@ public enum ClusterState {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     public static ClusterState of(int value) {

@@ -19,12 +19,14 @@ package com.datasophon.worker.log;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.sift.AbstractDiscriminator;
 import com.datasophon.worker.utils.TaskConstants;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Task Log Discriminator
  */
+@Setter
 public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskLogDiscriminator.class);
@@ -65,15 +67,8 @@ public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
         return key;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
-
     public String getLogBase() {
         return logBase;
     }
 
-    public void setLogBase(String logBase) {
-        this.logBase = logBase;
-    }
 }

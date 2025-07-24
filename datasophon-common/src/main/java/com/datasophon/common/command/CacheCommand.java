@@ -16,19 +16,8 @@ public class CacheCommand implements Serializable {
         this.isDelete = isDelete;
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
     public Boolean isDelete() {
         return isDelete;
     }
 
-    public void setIsDelete(Boolean delete) {
-        isDelete = delete;
-    }
 }

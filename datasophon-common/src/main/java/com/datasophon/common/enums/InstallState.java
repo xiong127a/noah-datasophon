@@ -18,7 +18,10 @@
 package com.datasophon.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
 public enum InstallState {
 
     // 安装状态1:正在安装 2：安装成功 3：安装失败
@@ -26,6 +29,7 @@ public enum InstallState {
     SUCCESS(2, "安装成功"),
     FAILED(3, "安装失败");
 
+    @Getter
     private int value;
 
     private String desc;
@@ -35,20 +39,9 @@ public enum InstallState {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     @Override

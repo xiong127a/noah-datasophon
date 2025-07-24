@@ -60,6 +60,10 @@ public class HostInfo implements Serializable {
 
     /**
      * 检查项列表
+     * -- SETTER --
+     *  设置检查项列表
+     *  重写此方法以在设置新的检查项时标记状态缓存为脏
+
      */
     private List<CheckItem> checkItems;
 
@@ -194,14 +198,6 @@ public class HostInfo implements Serializable {
             }
         }
         return false;
-    }
-
-    /**
-     * 设置检查项列表
-     * 重写此方法以在设置新的检查项时标记状态缓存为脏
-     */
-    public void setCheckItems(List<CheckItem> checkItems) {
-        this.checkItems = checkItems;
     }
 
     /**

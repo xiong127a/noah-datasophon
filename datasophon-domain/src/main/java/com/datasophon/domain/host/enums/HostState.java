@@ -19,13 +19,17 @@ package com.datasophon.domain.host.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
 public enum HostState {
 
     RUNNING(1, "正在运行"),
     OFFLINE(2, "掉线"),
     EXISTS_ALARM(3, "存在告警");
 
+    @Getter
     @EnumValue
     private int value;
 
@@ -36,21 +40,9 @@ public enum HostState {
         this.desc = desc;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
-
     @JsonValue
     public String getDesc() {
         return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
     }
 
     @Override
