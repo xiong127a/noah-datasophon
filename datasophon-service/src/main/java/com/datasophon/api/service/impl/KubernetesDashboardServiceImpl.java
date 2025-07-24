@@ -77,6 +77,7 @@ import java.util.stream.Collectors;
 
 /**
  * Kubernetes仪表盘服务实现类
+ * @author 63588
  */
 @Service("kubernetesDashboardService")
 @Slf4j
@@ -87,8 +88,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
      *
      * @param <T> 资源类型
      */
-        @Data
-        private record PaginatedResult<T>(List<T> items, long total, int totalPages) {
+    private record PaginatedResult<T>(List<T> items, long total, int totalPages) {
 
     }
 
@@ -1949,7 +1949,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 jobMap.put("jobStatus", jobStatus);
 
                 // 统计各种状态
-                if (status.equals("Unknown")) {
+                if ("Unknown".equals(status)) {
                     unknownCount++;
                 }
 
