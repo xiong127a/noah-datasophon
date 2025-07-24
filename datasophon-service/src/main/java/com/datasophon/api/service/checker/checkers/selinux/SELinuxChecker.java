@@ -203,11 +203,9 @@ public class SELinuxChecker extends AbstractItemChecker {
 
                                                 // 使用当前任务的HostInfo和CheckItem对象获取集群ID和主机名
                                                 Integer clusterId = null;
-                                                if (this.currentHostInfo != null) {
-                                                        clusterId = this.currentHostInfo.get().getClusterId();
-                                                }
+                                            clusterId = this.currentHostInfo.get().getClusterId();
 
-                                                // 设置日志键
+                                            // 设置日志键
                                                 this.setCurrentLogKey(clusterId, hostnamePart, itemId);
                                                 logger.info("已从线程名恢复日志键: 集群ID={}, 主机名={}, 检查项ID={}",
                                                                 clusterId, hostnamePart, itemId);

@@ -463,7 +463,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             Objects.requireNonNull(osInfo).setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
             // 更新缓存
-            if (cacheUpdater != null && hostInfoTemp != null) {
+            if (cacheUpdater != null) {
                 cacheUpdater.updateCache(hostInfoTemp);
             }
         } catch (Exception e) {

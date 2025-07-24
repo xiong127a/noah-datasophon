@@ -35,13 +35,11 @@ public class UbuntuSELinuxChecker extends GenericSELinuxChecker {
                         }
 
                         // 确保设置日志键
-                        if (selinuxChecker != null) {
-                                // 获取集群ID
-                                Integer clusterId = hostInfo.getClusterId();
-                                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
-                        }
+                    // 获取集群ID
+                    Integer clusterId = hostInfo.getClusterId();
+                    selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
-                        // 优先检查AppArmor状态
+                    // 优先检查AppArmor状态
                         cacheLog.info("在Ubuntu系统上检查AppArmor状态（Ubuntu默认使用AppArmor而非SELinux）...");
                         CommandResult apparmorStatusResult = execCommand(session,
                                         "command -v aa-status && aa-status || echo 'AppArmor未安装'");
@@ -192,13 +190,11 @@ public class UbuntuSELinuxChecker extends GenericSELinuxChecker {
                         }
 
                         // 确保设置日志键
-                        if (selinuxChecker != null) {
-                                // 获取集群ID
-                                Integer clusterId = hostInfo.getClusterId();
-                                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
-                        }
+                    // 获取集群ID
+                    Integer clusterId = hostInfo.getClusterId();
+                    selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
-                        // 先检查SELinux工具是否安装
+                    // 先检查SELinux工具是否安装
                         cacheLog.info("检查Ubuntu系统上SELinux工具是否安装...");
                         CommandResult selinuxUtilsResult = execCommand(session,
                                         "dpkg -l | grep -E 'selinux-utils|selinux-basics'");

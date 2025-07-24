@@ -536,16 +536,13 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
      * @throws InterruptedException 如果命令执行被中断
      */
     protected CommandResult execCommand(ClientSession session, String command) throws InterruptedException {
-        if (selinuxChecker != null) {
-            // 命令执行前记录一下当前的命令
-            log.debug("执行命令: {}", command);
+        // 命令执行前记录一下当前的命令
+        log.debug("执行命令: {}", command);
 
-            // 调用SELinuxChecker的execCommand方法
-            // UbuntuSELinuxChecker等子类应该已经设置了正确的日志键
-            return selinuxChecker.execCommand(session, command);
-        }
+        // 调用SELinuxChecker的execCommand方法
+        // UbuntuSELinuxChecker等子类应该已经设置了正确的日志键
+        return selinuxChecker.execCommand(session, command);
         // 如果没有selinuxChecker，返回错误结果
         // 根据CommandResult构造函数定义，参数顺序为：output, error, exitCode
-        return new CommandResult("", "SELinux检查器未初始化", 1);
     }
 }

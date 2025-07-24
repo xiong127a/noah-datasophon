@@ -181,9 +181,7 @@ public class WorkerStartActor extends AbstractActor {
             serviceRoleList = roleInstanceService
                     .listStoppedServiceRoleListByHostnameAndClusterId(hostname, clusterId);
             // 重启时重刷服务配置以支持磁盘故障等问题
-            if (true) {
-                roleInstanceService.updateToNeedRestartByHost(hostname);
-            }
+            roleInstanceService.updateToNeedRestartByHost(hostname);
         }
 
         // 停止运行状态的服务

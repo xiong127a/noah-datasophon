@@ -35,11 +35,9 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             }
 
             // 确保设置日志键
-            if (selinuxChecker != null) {
-                // 获取集群ID
-                Integer clusterId = hostInfo.getClusterId();
-                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
-            }
+            // 获取集群ID
+            Integer clusterId = hostInfo.getClusterId();
+            selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 检查麒麟版本
             cacheLog.info("检查麒麟版本信息...");
@@ -358,11 +356,9 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             }
 
             // 确保设置日志键
-            if (selinuxChecker != null) {
-                // 获取集群ID
-                Integer clusterId = hostInfo.getClusterId();
-                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
-            }
+            // 获取集群ID
+            Integer clusterId = hostInfo.getClusterId();
+            selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 检查麒麟版本
             cacheLog.info("检查麒麟版本信息...");
