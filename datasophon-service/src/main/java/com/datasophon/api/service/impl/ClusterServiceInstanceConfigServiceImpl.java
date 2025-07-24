@@ -103,7 +103,7 @@ public class ClusterServiceInstanceConfigServiceImpl
                 // 从角色组配置中提取版本号
                 List<Integer> versionNumbers = list.stream()
                                 .map(ClusterServiceRoleGroupConfig::getConfigVersion)
-                                .collect(Collectors.toList());
+                                .toList();
 
                 // 获取配置版本详情信息
                 List<ConfigVersionInfoEntity> versionInfoList = configVersionInfoService

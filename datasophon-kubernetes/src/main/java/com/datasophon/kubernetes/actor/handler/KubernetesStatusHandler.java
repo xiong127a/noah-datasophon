@@ -47,7 +47,7 @@ public class KubernetesStatusHandler {
             List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", serviceRoleFullName).list().getItems();
 
             //没有对应的pod ，状态为 false
-            List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+            List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).toList();
             if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
                 execResult.setExecResult(false);
                 return execResult;
