@@ -37,7 +37,7 @@ public class FileOperateActor extends AbstractActor {
                 .match(FileOperateCommand.class, fileOperateCommand -> {
                     ExecResult execResult = new ExecResult();
                     TreeSet<String> lines = fileOperateCommand.getLines();
-                    if (Objects.nonNull(lines) && lines.size() > 0) {
+                    if (Objects.nonNull(lines) && !lines.isEmpty()) {
                         File file = FileUtil.writeLines(lines, fileOperateCommand.getPath(), Charset.defaultCharset());
                         if (file.exists()) {
                             execResult.setExecResult(true);

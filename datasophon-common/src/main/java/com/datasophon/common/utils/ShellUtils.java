@@ -200,7 +200,7 @@ public class ShellUtils {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
                 }
-                if (stringBuffer.length() != 0) {
+                if (!stringBuffer.isEmpty()) {
                     logger.info(stringBuffer.toString());
                 }
             } catch (Exception e) {
@@ -217,7 +217,7 @@ public class ShellUtils {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
                 }
-                if (stringBuffer.length() != 0) {
+                if (!stringBuffer.isEmpty()) {
                     logger.error(stringBuffer.toString());
                 }
             } catch (Exception e) {
@@ -243,7 +243,7 @@ public class ShellUtils {
                     stringBuffer.append(line);
                     stringBuffer.append(System.lineSeparator());
                 }
-                if (stringBuffer.length() != 0) {
+                if (!stringBuffer.isEmpty()) {
                     log.trace(stringBuffer.toString());
                 }
             } catch (Exception e) {

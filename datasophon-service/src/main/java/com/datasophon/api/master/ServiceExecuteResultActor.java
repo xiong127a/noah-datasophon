@@ -114,7 +114,7 @@ public class ServiceExecuteResultActor extends AbstractActor {
     }
 
     public void listCancelCommand(DAGGraph<String, ServiceNode, String> dag, String node, List<String> commandIds) {
-        if (dag.getSubsequentNodes(node).size() == 0) {
+        if (dag.getSubsequentNodes(node).isEmpty()) {
             return;
         }
         Set<String> subsequentNodes = dag.getSubsequentNodes(node);

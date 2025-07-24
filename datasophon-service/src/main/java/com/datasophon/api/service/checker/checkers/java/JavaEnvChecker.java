@@ -598,7 +598,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                     stackTrace.append(element.toString()).append("\n");
                 }
             }
-            if (stackTrace.length() > 0) {
+            if (!stackTrace.isEmpty()) {
                 detailsBuilder.append("<p><strong>堆栈跟踪:</strong></p>");
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(stackTrace.toString()));
             }
@@ -682,7 +682,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
         for (String line : lines) {
             line = line.trim();
             if (!line.isEmpty()) {
-                if (fullVersion.length() > 0) {
+                if (!fullVersion.isEmpty()) {
                     fullVersion.append(", ");
                 }
                 fullVersion.append(line);

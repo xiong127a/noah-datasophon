@@ -92,7 +92,7 @@ public class DateUtils {
             sb.append(minutes).append("分钟");
         }
         
-        if (seconds > 0 || sb.length() == 0) {
+        if (seconds > 0 || sb.isEmpty()) {
             sb.append(seconds).append("秒");
         }
         
