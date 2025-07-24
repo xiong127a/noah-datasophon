@@ -84,23 +84,13 @@ public class KubernetesYamlDeploymentHandler {
                 logStr = appHome + Constants.SLASH + logFileName;
             }
 
-            // if (!KubernetesMinaUtils.checkPathExists(hostname, logStr)) {
-            // KubernetesMinaUtils.checkParentPath(hostname, logStr);
-            // }
-
             List<String> needService = Arrays.asList("TRINO", "PRESTO", "NEBULAGRAPH");
 
             if (needService.contains(serviceName) || logFile.contains("${hostname}")) {
                 // 挂载日志目录
                 int lastSlashIndex = logStr.lastIndexOf('/');
                 logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
-            } else {
-                // KubernetesMinaUtils.createFile(hostname, logStr);
             }
-
-            // KubernetesMinaUtils.execCmdWithResult(hostname,
-            // String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(),
-            // logStr));
             addConfigFile(volumePathSet, "logs", logStr);
         } catch (Exception e) {
             logger.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
@@ -626,22 +616,27 @@ public class KubernetesYamlDeploymentHandler {
 
                 // 仅当不存在相同配置时才添加
                 if (!exists) {
-                    String hadoopRole = "hdfs-namenode";
-                    if (conf.contains("yarn") || conf.contains("mapred")) {
-                        hadoopRole = "yarn-resourcemanager";
-                    }
-
-                    String fileName = conf.substring(conf.lastIndexOf('/') + 1);
-                    String configName = hadoopRole + "-" + fileName.replace(".", "-");
-
-                    ServiceConfigVolume fileConfig = new ServiceConfigVolume();
-                    fileConfig.setName(configName);
-                    fileConfig.setValue(conf);
-                    fileConfig.setFileName(fileName);
+                    ServiceConfigVolume fileConfig = getFileConfig(conf);
                     volumeConfigMapSet.add(fileConfig);
                 }
             }
         }
+    }
+
+    private static ServiceConfigVolume getFileConfig(String conf) {
+        String hadoopRole = "hdfs-namenode";
+        if (conf.contains("yarn") || conf.contains("mapred")) {
+            hadoopRole = "yarn-resourcemanager";
+        }
+
+        String fileName = conf.substring(conf.lastIndexOf('/') + 1);
+        String configName = hadoopRole + "-" + fileName.replace(".", "-");
+
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+        fileConfig.setName(configName);
+        fileConfig.setValue(conf);
+        fileConfig.setFileName(fileName);
+        return fileConfig;
     }
 
     // 提取出一个通用方法，用于从配置中提取目录
