@@ -1,16 +1,15 @@
 package com.datasophon.api.service.checker.checkers.filehandle;
 
 import com.datasophon.api.config.CheckerProperties;
-import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.core.AbstractItemChecker;
+import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
-import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,6 +18,10 @@ public class FileHandleChecker extends AbstractItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(FileHandleChecker.class);
 
     private final CheckerProperties checkerProperties;
+
+    public FileHandleChecker(CheckerProperties checkerProperties) {
+        this.checkerProperties = checkerProperties;
+    }
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {

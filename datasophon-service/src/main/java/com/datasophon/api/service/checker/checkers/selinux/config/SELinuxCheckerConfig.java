@@ -15,6 +15,7 @@ import java.util.List;
 /**
  * SELinux检查器配置类
  * 用于注册所有SELinux检查器实现类作为Spring Bean
+ * @author 63588
  */
 @Configuration
 public class SELinuxCheckerConfig {
