@@ -180,7 +180,6 @@ public class LogEntry implements Serializable {
             case WARN -> "#ffe58f";
             case INFO -> "#b7eb8f";
             case DEBUG -> "#d9d9d9";
-            default -> "#d9d9d9";
         };
 
         // 获取时间戳格式化字符串
