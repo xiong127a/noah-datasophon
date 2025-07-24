@@ -167,7 +167,7 @@ public class KubernetesUtil {
     public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts,
             String serviceRoleFullName, String cmd, String hostname) throws Exception {
         // delete job
-        log.debug("delete job if need ,job name: " + name);
+        log.debug("delete job if need ,job name: {}", name);
         client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
@@ -188,7 +188,7 @@ public class KubernetesUtil {
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
         String podName;
         podName = waitForCreatePodOfJob(namespace, name, client, waitPodStartTime, waitPodTimeout);
-        log.debug("Pod name: " + podName);
+        log.debug("Pod name: {}", podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
 
@@ -237,7 +237,7 @@ public class KubernetesUtil {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    log.info("p> " + line); // You can replace this with your desired logging mechanism
+                    log.info("p> {}", line); // You can replace this with your desired logging mechanism
                 }
             } catch (IOException e) {
                 log.error(e.getMessage(), e);
@@ -256,7 +256,7 @@ public class KubernetesUtil {
         }
 
         boolean flag = isJobEndSuccess.get();
-        log.info("Job completed with success status: " + flag);
+        log.info("Job completed with success status: {}", flag);
         if (!flag) {
             throw new RuntimeException("Job failed.");
         }
@@ -487,8 +487,6 @@ public class KubernetesUtil {
 
             // 获取日志内容
             int actualLines = tailLines >= 0 ? tailLines : Integer.MAX_VALUE;
-            // log.debug("Fetching {} lines of log from pod: {}, container: {}",
-            // actualLines, podName, serviceRoleFullName);
 
             String logContent = client.pods()
                     .inNamespace(namespace)
