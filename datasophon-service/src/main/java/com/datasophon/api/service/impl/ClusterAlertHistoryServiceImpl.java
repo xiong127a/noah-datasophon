@@ -50,14 +50,16 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
 
-
+    @org.springframework.context.annotation.Lazy
     private final ClusterServiceRoleInstanceService roleInstanceService;
 
-
+    @org.springframework.context.annotation.Lazy
     private final ClusterInfoService clusterInfoService;
 
     @Autowired
-    public ClusterAlertHistoryServiceImpl(ClusterServiceRoleInstanceService roleInstanceService, ClusterInfoService clusterInfoService) {
+    public ClusterAlertHistoryServiceImpl(
+            @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService,
+            @org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService) {
         this.roleInstanceService = roleInstanceService;
         this.clusterInfoService = clusterInfoService;
     }
@@ -67,7 +69,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         logger.warn("Receive Alert Message : {}", alertMessage);
         ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
         ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                        2L, TimeUnit.SECONDS),
+                2L, TimeUnit.SECONDS),
                 alertActor, alertMessage,
                 ActorUtils.actorSystem.dispatcher(),
                 ActorRef.noSender());

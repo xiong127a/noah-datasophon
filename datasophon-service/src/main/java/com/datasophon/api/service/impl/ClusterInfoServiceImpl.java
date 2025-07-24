@@ -76,6 +76,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     private final ConfigBean configBean;
 
+    @org.springframework.context.annotation.Lazy
     private final FrameServiceService frameServiceService;
 
     private final ClusterHostService clusterHostService;
@@ -88,9 +89,17 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     private final ClusterRackService rackService;
 
+    @org.springframework.context.annotation.Lazy
     private final ClusterServiceInstanceService clusterServiceInstanceService;
+
     @Autowired
-    public ClusterInfoServiceImpl(ClusterInfoMapper clusterInfoMapper, ClusterRoleUserService clusterUserService, AlertGroupService alertGroupService, ClusterAlertGroupMapService groupMapService, ConfigBean configBean, FrameServiceService frameServiceService, ClusterHostService clusterHostService, ClusterYarnSchedulerService yarnSchedulerService, ClusterNodeLabelService nodeLabelService, ClusterQueueCapacityService queueCapacityService, ClusterRackService rackService, ClusterServiceInstanceService clusterServiceInstanceService) {
+    public ClusterInfoServiceImpl(ClusterInfoMapper clusterInfoMapper, ClusterRoleUserService clusterUserService,
+            AlertGroupService alertGroupService, ClusterAlertGroupMapService groupMapService, ConfigBean configBean,
+            @org.springframework.context.annotation.Lazy FrameServiceService frameServiceService,
+            ClusterHostService clusterHostService,
+            ClusterYarnSchedulerService yarnSchedulerService, ClusterNodeLabelService nodeLabelService,
+            ClusterQueueCapacityService queueCapacityService, ClusterRackService rackService,
+            @org.springframework.context.annotation.Lazy ClusterServiceInstanceService clusterServiceInstanceService) {
         this.clusterInfoMapper = clusterInfoMapper;
         this.clusterUserService = clusterUserService;
         this.alertGroupService = alertGroupService;
@@ -277,8 +286,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         prometheusMetrics.append("# TYPE service_role_instance_count gauge\n");
 
         // 为每个服务角色添加指标行
-        roleCountMap.forEach((roleName, count) -> prometheusMetrics.append(String.format("service_role_instance_count{role=\"%s\"} %d\n",
-                roleName.replace("\"", "\\\""), count)));
+        roleCountMap.forEach((roleName, count) -> prometheusMetrics
+                .append(String.format("service_role_instance_count{role=\"%s\"} %d\n",
+                        roleName.replace("\"", "\\\""), count)));
 
         // 添加EOF标记
         prometheusMetrics.append("# EOF\n");

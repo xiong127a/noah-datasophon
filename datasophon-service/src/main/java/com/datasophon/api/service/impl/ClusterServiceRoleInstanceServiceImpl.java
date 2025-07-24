@@ -87,10 +87,12 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     private final ClusterInfoService clusterInfoService;
 
+    @org.springframework.context.annotation.Lazy
     private final FrameServiceRoleService frameServiceRoleService;
 
     private final FrameServiceService frameService;
 
+    @org.springframework.context.annotation.Lazy
     private final ClusterServiceRoleInstanceService roleInstanceService;
 
     private final ClusterServiceCommandService commandService;
@@ -106,9 +108,9 @@ public class ClusterServiceRoleInstanceServiceImpl
     @Autowired
     public ClusterServiceRoleInstanceServiceImpl(
             @org.springframework.context.annotation.Lazy ClusterInfoService clusterInfoService,
-            FrameServiceRoleService frameServiceRoleService,
+            @org.springframework.context.annotation.Lazy FrameServiceRoleService frameServiceRoleService,
             FrameServiceService frameService,
-            ClusterServiceRoleInstanceService roleInstanceService,
+            @org.springframework.context.annotation.Lazy ClusterServiceRoleInstanceService roleInstanceService,
             ClusterServiceCommandService commandService,
             ClusterServiceInstanceRoleGroupService roleGroupService,
             ClusterServiceRoleInstanceMapper roleInstanceMapper,
