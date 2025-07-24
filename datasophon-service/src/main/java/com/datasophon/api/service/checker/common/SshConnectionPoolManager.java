@@ -36,7 +36,7 @@ public class SshConnectionPoolManager {
     private Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
 
     // 连接锁，防止并发问题
-    @Autowired
+   
     private Map<String, Object> connectionLocks = new ConcurrentHashMap<>();
 
     // 添加连接池清理改进
