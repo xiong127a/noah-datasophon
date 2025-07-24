@@ -16,7 +16,7 @@ public class KubernetesTimelineServerHandlerStrategy extends KubernetesAbstractH
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getEnableKerberos()) {
             logger.info("start to get timelineserver keytab file");

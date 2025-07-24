@@ -137,7 +137,7 @@ public class RangerUtil {
     }
 
     private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username,
-                                                     Cache<Integer, RangerClient> clientCache) throws Exception {
+                                                     Cache<Integer, RangerClient> clientCache) {
         if (clusterTenant == null) {
             throw new IllegalArgumentException("Cluster tenant cannot be null");
         }

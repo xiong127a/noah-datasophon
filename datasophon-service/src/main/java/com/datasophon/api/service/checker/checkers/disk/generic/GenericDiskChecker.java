@@ -115,7 +115,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
         /**
          * 执行命令的辅助方法
          */
-        protected CommandResult execCommand(ClientSession session, String command) throws InterruptedException {
+        protected CommandResult execCommand(ClientSession session, String command) {
                 log.debug("执行命令: {}", command);
 
                 if (session == null) {

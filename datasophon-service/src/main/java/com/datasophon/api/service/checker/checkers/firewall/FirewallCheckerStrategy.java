@@ -29,9 +29,8 @@ public interface FirewallCheckerStrategy {
      * @param checkItem 检查项
      * @param cacheLog  日志缓存
      * @return 修复是否成功
-     * @throws InterruptedException 如果修复过程被中断
      */
-    boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException;
+    boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog);
 
     /**
      * 获取支持的操作系统类型

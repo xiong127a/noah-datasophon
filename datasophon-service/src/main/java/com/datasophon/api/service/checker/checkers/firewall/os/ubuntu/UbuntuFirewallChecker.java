@@ -60,7 +60,7 @@ public class UbuntuFirewallChecker extends GenericFirewallChecker {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== Ubuntu防火墙修复开始 ====");
 
         // 获取SSH会话

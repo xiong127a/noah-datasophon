@@ -184,15 +184,7 @@ public class FirewallChecker extends AbstractItemChecker {
 
             // 执行修复
             boolean result;
-            try {
-                result = strategy.fix(hostInfo, checkItem, cacheLog);
-            } catch (InterruptedException e) {
-                String errorMsg = "修复防火墙被中断: " + e.getMessage();
-                log.error(errorMsg, e);
-                cacheLog.error(errorMsg);
-                checkItem.setMessage(errorMsg);
-                return false;
-            }
+            result = strategy.fix(hostInfo, checkItem, cacheLog);
 
             // 记录修复结果
             if (result) {

@@ -53,7 +53,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== CentOS防火墙修复开始 ====");
 
         checkItem.setMessage("正在修复CentOS系统防火墙配置...");

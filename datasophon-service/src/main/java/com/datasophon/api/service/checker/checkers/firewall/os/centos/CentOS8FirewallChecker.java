@@ -62,7 +62,7 @@ public class CentOS8FirewallChecker extends CentOSFirewallChecker {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== CentOS 8防火墙修复开始 ====");
 
         // 获取SSH会话
@@ -111,7 +111,7 @@ public class CentOS8FirewallChecker extends CentOSFirewallChecker {
     /**
      * 检查CentOS 8特有的服务
      */
-    private void checkCentOS8SpecificServices(ClientSession session, CheckLogger cacheLog) throws InterruptedException {
+    private void checkCentOS8SpecificServices(ClientSession session, CheckLogger cacheLog) {
         // 调用父类的通用检查
         checkCentOSSpecificServices(session, cacheLog);
 

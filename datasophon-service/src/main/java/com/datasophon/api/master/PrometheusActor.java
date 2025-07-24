@@ -403,7 +403,7 @@ public class PrometheusActor extends AbstractActor {
 
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceEntity prometheusInstance,
             boolean isKubernetes,
-            ServiceRoleInfo serviceRoleInfo) throws Exception {
+            ServiceRoleInfo serviceRoleInfo) {
         Integer clusterId = serviceRoleInfo.getClusterId();
         // Validate critical parameters
         if (prometheusInstance == null || prometheusInstance.getHostname() == null) {

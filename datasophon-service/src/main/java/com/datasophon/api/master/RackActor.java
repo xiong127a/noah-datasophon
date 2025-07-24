@@ -128,7 +128,7 @@ public class RackActor extends AbstractActor {
      */
     private void generateRackPropertiesForNode(ClusterServiceRoleInstanceEntity nameNode,
             Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterInfoEntity clusterInfo) throws Exception {
+            ClusterInfoEntity clusterInfo) {
         // 构建服务角色信息
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(NAME_NODE_ROLE);

@@ -28,7 +28,7 @@ public class ClusterTenantController {
      * 保存
      */
     @RequestMapping(value = "/save", method = RequestMethod.POST)
-    public Result save(@RequestBody ClusterTenant clusterTenant) throws Exception {
+    public Result save(@RequestBody ClusterTenant clusterTenant) {
         return clusterTenantService.saveOrUpdateTenant(clusterTenant);
     }
 
@@ -36,7 +36,7 @@ public class ClusterTenantController {
      * 更新
      */
     @RequestMapping(value = "/update", method = RequestMethod.POST)
-    public Result update(@RequestBody ClusterTenant clusterTenant) throws Exception {
+    public Result update(@RequestBody ClusterTenant clusterTenant) {
         return clusterTenantService.saveOrUpdateTenant(clusterTenant);
     }
 

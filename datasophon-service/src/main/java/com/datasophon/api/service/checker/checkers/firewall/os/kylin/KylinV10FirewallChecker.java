@@ -178,7 +178,7 @@ public class KylinV10FirewallChecker extends CentOSFirewallChecker {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== 麒麟V10防火墙修复开始 ====");
 
         // 获取SSH会话
@@ -227,8 +227,7 @@ public class KylinV10FirewallChecker extends CentOSFirewallChecker {
     /**
      * 检查麒麟V10特有的服务
      */
-    private void checkKylinV10SpecificServices(ClientSession session, CheckLogger cacheLog)
-            throws InterruptedException {
+    private void checkKylinV10SpecificServices(ClientSession session, CheckLogger cacheLog) {
         // 调用父类的通用检查
         checkCentOSSpecificServices(session, cacheLog);
 

@@ -43,7 +43,7 @@ public class HadoopUtils {
 
     public static ExecResult configQueueProp(ClusterInfoEntity clusterInfo,
                                              HashMap<Generators, List<ServiceConfig>> configFileMap,
-                                             ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
+                                             ClusterServiceRoleInstanceEntity roleInstanceEntity) {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName("ResourceManager");
         serviceRoleInfo.setParentName("YARN");

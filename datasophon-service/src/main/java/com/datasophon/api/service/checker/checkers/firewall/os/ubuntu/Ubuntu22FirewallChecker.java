@@ -65,7 +65,7 @@ public class Ubuntu22FirewallChecker extends UbuntuFirewallChecker {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== Ubuntu 22.04防火墙修复开始 ====");
 
         // 获取SSH会话
@@ -117,8 +117,7 @@ public class Ubuntu22FirewallChecker extends UbuntuFirewallChecker {
     /**
      * 检查Ubuntu 22.04特有的服务
      */
-    private void checkUbuntu22SpecificServices(ClientSession session, CheckLogger cacheLog)
-            throws InterruptedException {
+    private void checkUbuntu22SpecificServices(ClientSession session, CheckLogger cacheLog) {
         // 调用父类方法
         checkUbuntuSpecificServices(session, cacheLog);
 

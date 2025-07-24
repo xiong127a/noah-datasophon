@@ -25,7 +25,7 @@ public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrat
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());

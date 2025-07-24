@@ -233,7 +233,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     }
 
     @Override
-    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
+    public boolean fix(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         cacheLog.info("==== 通用防火墙修复开始 ====");
 
         checkItem.setMessage("正在修复防火墙配置...");

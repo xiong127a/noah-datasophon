@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface KubernetesServiceRoleStrategy {
 
-    ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException;
+    ExecResult handler(KubernetesServiceRoleOperateCommand command);
 
     /**
      * 获取服务配置时修改配置，根据ServiceName调用

@@ -565,22 +565,12 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 cacheLog.info("开始执行检查 %s...", checkItem.getItemName());
 
                 // 执行具体检查逻辑，确保捕获InterruptedException
-                try {
-                    doCheck(hostInfo, checkItem);
-                    // 添加日志确认状态
-                    logger.info("doCheck执行后检查项状态: {}, 消息: {}", checkItem.getStatus(), checkItem.getMessage());
-                    // 立即更新一次状态
-                    updateCheckStatus(clusterId, hostInfo, checkItem);
-                } catch (InterruptedException e) {
-                    // 捕获中断异常
-                    logger.info("检查项在执行过程中被中断: {}", checkItem.getItemName());
-                    cacheLog.info("检查项在执行过程中被中断");
-                    checkItem.setStatus(CheckItem.Status.SKIPPED);
-                    checkItem.setMessage("检查已终止");
-                    updateCheckStatus(clusterId, hostInfo, checkItem);
-                    Thread.currentThread().interrupt(); // 重置中断状态
-                    return checkItem;
-                }
+                doCheck(hostInfo, checkItem);
+                // 添加日志确认状态
+                logger.info("doCheck执行后检查项状态: {}, 消息: {}", checkItem.getStatus(), checkItem.getMessage());
+                // 立即更新一次状态
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+
 
                 // 特殊检查：如果doCheck执行完成后状态仍为CHECKING，则强制设置为FAILED
                 if (checkItem.getStatus() == CheckItem.Status.CHECKING) {
@@ -749,10 +739,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     /**
      * 执行具体的检查逻辑
-     * 
-     * @throws InterruptedException 如果检查过程被中断
+     *
      */
-    protected abstract CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException;
+    protected abstract CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem);
 
     /**
      * 执行具体的修复逻辑

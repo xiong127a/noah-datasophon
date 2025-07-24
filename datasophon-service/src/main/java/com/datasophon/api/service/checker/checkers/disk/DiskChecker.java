@@ -61,7 +61,7 @@ public class DiskChecker extends AbstractItemChecker {
     }
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         // 获取操作系统信息
         OsInfo osInfo = getOsInfo(hostInfo);
         if (osInfo == null) {

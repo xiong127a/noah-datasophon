@@ -36,7 +36,7 @@ public class KubernetesHistoryServerHandlerStrategy extends KubernetesAbstractHa
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         String hostname = command.getHostname();
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());

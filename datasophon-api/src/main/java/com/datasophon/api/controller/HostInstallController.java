@@ -155,7 +155,7 @@ public class HostInstallController {
     @PostMapping("/generateHostServiceCommand")
     public Result generateHostServiceCommand(
             @RequestParam String clusterHostIds,
-            @RequestParam String commandType) throws Exception {
+            @RequestParam String commandType) {
         return installService.generateHostServiceCommand(clusterHostIds, commandType);
     }
 

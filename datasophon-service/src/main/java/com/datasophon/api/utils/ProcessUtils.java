@@ -690,7 +690,7 @@ public class ProcessUtils {
 
     public static ExecResult configServiceRoleInstance(ClusterInfoEntity clusterInfo,
             Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
+            ClusterServiceRoleInstanceEntity roleInstanceEntity) {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(roleInstanceEntity.getServiceRoleName());
         serviceRoleInfo.setParentName(roleInstanceEntity.getServiceName());

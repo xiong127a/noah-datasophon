@@ -23,7 +23,7 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public ExecResult handler(KubernetesServiceRoleOperateCommand command) throws IOException {
+    public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
