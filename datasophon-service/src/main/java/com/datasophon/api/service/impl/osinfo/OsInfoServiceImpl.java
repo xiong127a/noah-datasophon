@@ -80,7 +80,7 @@ public class OsInfoServiceImpl implements OsInfoService {
     private ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
     // 连接锁，用于避免多线程对同一主机的并发连接
-    @Autowired
+
     private ConcurrentMap<String, Object> connectionLocks = new ConcurrentHashMap<>();
 
     // 每个主机的最大连接数
