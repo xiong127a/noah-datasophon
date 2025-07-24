@@ -75,7 +75,6 @@ public class SubmitTaskNodeActor extends AbstractActor {
                         }
                         if (!completeTaskList.containsKey(previousNode)) {
                             readyToSubmitTaskList.remove(node);
-                            continue;
                         }
                     }
                     if (activeTaskList.containsKey(node)) {
@@ -170,7 +169,6 @@ public class SubmitTaskNodeActor extends AbstractActor {
                         logger.info("----------------------{}", Thread.currentThread().getName());
 
                     } else {
-                        continue;
                     }
                 }
             }
