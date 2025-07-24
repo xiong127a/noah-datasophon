@@ -120,7 +120,7 @@ public class OpenldapUtils {
         LdapContext ctx = null;
         Control[] connCtls = null;
         try {
-            ctx = new InitialLdapContext(env, connCtls);
+            ctx = new InitialLdapContext(env, null);
         } catch (javax.naming.AuthenticationException e) {
             System.out.println("认证失败：");
             e.printStackTrace();
