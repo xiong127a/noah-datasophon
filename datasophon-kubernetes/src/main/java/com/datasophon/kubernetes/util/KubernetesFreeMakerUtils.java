@@ -90,7 +90,7 @@ public class KubernetesFreeMakerUtils {
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
 
-    public static void generateConfigFile(String namespace,Generators generators,
+    public static void generateConfigFile(String namespace, Generators generators,
             List<ServiceConfig> configs,
             String extPath, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
@@ -132,7 +132,7 @@ public class KubernetesFreeMakerUtils {
 
         // 3.产生输出
         String configMapName = generateConfigMapName(serviceRoleFullName, generators);
-        writeToConfigMap(namespace,template, data, configMapName, generators.getFilename(), serviceRoleFullName);
+        writeToConfigMap(namespace, template, data, configMapName, generators.getFilename(), serviceRoleFullName);
     }
 
     /**
@@ -159,7 +159,7 @@ public class KubernetesFreeMakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToConfigMap(String namespace,Template template, Map<String, Object> data,
+    public static void writeToConfigMap(String namespace, Template template, Map<String, Object> data,
             String configMapName,
             String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
@@ -167,7 +167,7 @@ public class KubernetesFreeMakerUtils {
         String generatedContent = FreemarkerUtils.renderTemplateToString(template, data);
 
         // 将内容创建为 ConfigMap
-        cacheConfigMap(namespace,configMapName, generatedContent, fileName, serviceRoleFullName);
+        cacheConfigMap(namespace, configMapName, generatedContent, fileName, serviceRoleFullName);
     }
 
     /**
@@ -176,7 +176,7 @@ public class KubernetesFreeMakerUtils {
      * @param configMapName    ConfigMap 的名称
      * @param generatedContent 渲染后的配置内容
      */
-    public static void cacheConfigMap(String namespace,String configMapName, String generatedContent,
+    public static void cacheConfigMap(String namespace, String configMapName, String generatedContent,
             String fileName, String serviceRoleFullName) {
         if (StrUtil.startWith(fileName, Constants.KUBERNETES_CONFIG_PREFIX)) {
             return;
@@ -211,13 +211,13 @@ public class KubernetesFreeMakerUtils {
         configMapCache.put(serviceRoleFullName, cache);
     }
 
-    public static void createConfigMap(String namespace,String serviceRoleFullName, KubernetesClient client) {
+    public static void createConfigMap(String namespace, String serviceRoleFullName, KubernetesClient client) {
         Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
         if (cache == null || cache.isEmpty()) {
             log.info("No ConfigMaps found for {}", serviceRoleFullName);
             return;
         }
-        
+
         Set<String> keySet = cache.keySet();
         for (String configMapName : keySet) {
             ConfigMap configMap = cache.get(configMapName);
@@ -226,7 +226,7 @@ public class KubernetesFreeMakerUtils {
             // 创建新的 ConfigMap
             try {
                 // 使用 createOrReplace 创建或替换ConfigMap
-                client.configMaps().inNamespace(namespace).createOrReplace(configMap);
+                client.configMaps().inNamespace(namespace).resource(configMap).serverSideApply();
                 log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, namespace);
 
                 // 添加彩色日志输出
@@ -247,7 +247,7 @@ public class KubernetesFreeMakerUtils {
      * @param secretData          包含Secret数据的Map
      * @param secretSuffix        Secret名称后缀，通常为"-db-secret"
      */
-    public static void cacheDatabaseSecret(String namespace,String serviceRoleFullName, Map<String, String> secretData,
+    public static void cacheDatabaseSecret(String namespace, String serviceRoleFullName, Map<String, String> secretData,
             String secretSuffix) {
         if (secretData == null || secretData.isEmpty()) {
             log.warn("数据库凭据为空，不创建Secret");
@@ -295,7 +295,7 @@ public class KubernetesFreeMakerUtils {
      * @param serviceRoleFullName 服务角色全名
      * @param client              Kubernetes客户端
      */
-    public static void createSecrets(String namespace,String serviceRoleFullName, KubernetesClient client) {
+    public static void createSecrets(String namespace, String serviceRoleFullName, KubernetesClient client) {
         Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
         if (cache == null || cache.isEmpty()) {
             log.info("No Secrets found for {}", serviceRoleFullName);
@@ -308,7 +308,7 @@ public class KubernetesFreeMakerUtils {
 
             try {
                 // 使用createOrReplace创建或替换Secret
-                client.secrets().inNamespace(namespace).createOrReplace(secret);
+                client.secrets().inNamespace(namespace).resource(secret).serverSideApply();
                 log.info("Secret {} 已成功创建在命名空间 {}", secretName, namespace);
 
                 // 添加彩色日志输出
@@ -333,20 +333,7 @@ public class KubernetesFreeMakerUtils {
      * @return 规范化的ConfigMap名称
      */
     public static String generateConfigMapName(String serviceRoleFullName, Generators generators) {
-        if (serviceRoleFullName == null || generators == null) {
-            throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
-        }
-
-        // 获取文件名
-        String filename = generators.getFilename();
-
-        // 转换文件名为有效的Kubernetes资源名称
-        // - 替换点、下划线为连字符
-        // - 限制长度避免超过Kubernetes命名限制
-        String normalizedFilename = filename.replace('.', '-').replace("_", "-");
-
-        // 构建完整的ConfigMap名称
-        String configMapName = serviceRoleFullName.toLowerCase() + "-" + normalizedFilename;
+        String configMapName = getConfigMapName(serviceRoleFullName, generators);
 
         // 确保名称符合Kubernetes命名规则：小写字母、数字和连字符
         configMapName = configMapName.replaceAll("[^a-z0-9-]", "-");
@@ -360,6 +347,23 @@ public class KubernetesFreeMakerUtils {
         configMapName = configMapName.replaceAll("^-+|-+$", "");
 
         return configMapName;
+    }
+
+    private static String getConfigMapName(String serviceRoleFullName, Generators generators) {
+        if (serviceRoleFullName == null || generators == null) {
+            throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
+        }
+
+        // 获取文件名
+        String filename = generators.getFilename();
+
+        // 转换文件名为有效的Kubernetes资源名称
+        // - 替换点、下划线为连字符
+        // - 限制长度避免超过Kubernetes命名限制
+        String normalizedFilename = filename.replace('.', '-').replace("_", "-");
+
+        // 构建完整的ConfigMap名称
+        return serviceRoleFullName.toLowerCase() + "-" + normalizedFilename;
     }
 
     /**
@@ -393,13 +397,13 @@ public class KubernetesFreeMakerUtils {
      * @param client  Kubernetes客户端
      * @param jobName Job名称
      */
-    private static void watchJobCompletion(String namespace,KubernetesClient client, String jobName) {
+    private static void watchJobCompletion(String namespace, KubernetesClient client, String jobName) {
         try {
             // 等待Job完成，最多等待30秒
             int maxRetries = 30;
             int retryCount = 0;
             while (retryCount < maxRetries) {
-                Job job = client.batch().jobs().inNamespace(namespace).withName(jobName).get();
+                Job job = client.batch().v1().jobs().inNamespace(namespace).withName(jobName).get();
                 if (job == null) {
                     log.warn("Job {} 不存在", jobName);
                     break;
@@ -454,7 +458,7 @@ public class KubernetesFreeMakerUtils {
      * @param kubeConfig          Kubernetes配置
      * @param serviceRoleFullName 服务角色全名
      */
-    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName,Integer clusterId) {
+    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName, Integer clusterId) {
         // 获取该服务角色的配置缓存
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
         if (StrUtil.equals("prometheus-update", serviceRoleFullName)) {
@@ -474,7 +478,6 @@ public class KubernetesFreeMakerUtils {
             String jobName = "prometheus-configs-updater-" + System.currentTimeMillis();
             String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
             // 确定PVC名称
-            String pvcName = serviceRoleFullName;
 
             // 确定Pod名称 - 使用索引为0的Pod
             String podName = serviceRoleFullName + "-0";
@@ -482,7 +485,7 @@ public class KubernetesFreeMakerUtils {
             // 配置挂载路径 - 与Prometheus Pod相同
             String configMountPath = "/opt/datasophon/prometheus/configs";
 
-            log.info("准备创建Job {} 写入 {} 个配置文件到PVC: {}", jobName, configsCache.size(), pvcName);
+            log.info("准备创建Job {} 写入 {} 个配置文件到PVC: {}", jobName, configsCache.size(), serviceRoleFullName);
 
             // 构建命令脚本
             StringBuilder scriptBuilder = new StringBuilder();
@@ -562,7 +565,7 @@ public class KubernetesFreeMakerUtils {
                     .addNewVolume()
                     .withName("prometheus-data")
                     .withNewPersistentVolumeClaim()
-                    .withClaimName(pvcName)
+                    .withClaimName(serviceRoleFullName)
                     .endPersistentVolumeClaim()
                     .endVolume()
                     .withRestartPolicy("Never")
@@ -572,12 +575,12 @@ public class KubernetesFreeMakerUtils {
                     .build();
 
             // 提交Job到Kubernetes
-            client.batch().jobs().inNamespace(namespace).createOrReplace(job);
+            client.batch().v1().jobs().inNamespace(namespace).resource(job).serverSideApply();
 
             log.info("创建批量配置更新Job: {}, 写入 {} 个配置文件", jobName, configsCache.size());
 
             // 监控Job执行状态
-            watchJobCompletion(namespace,client, jobName);
+            watchJobCompletion(namespace, client, jobName);
 
             // 清空缓存
             prometheusConfigCache.remove(serviceRoleFullName);
