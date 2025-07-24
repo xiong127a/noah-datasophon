@@ -136,7 +136,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             // 添加文件句柄数信息 - 当前会话值仅作为参考
             if (currentFileHandles > 0) {
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "当前会话文件句柄数", String.valueOf(currentFileHandles) + " (仅供参考)", HtmlStyleHelper.Colors.GRAY));
+                        "当前会话文件句柄数", currentFileHandles + " (仅供参考)", HtmlStyleHelper.Colors.GRAY));
             }
 
             detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
