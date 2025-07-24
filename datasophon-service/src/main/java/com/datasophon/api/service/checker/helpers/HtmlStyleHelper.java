@@ -198,15 +198,19 @@ public class HtmlStyleHelper {
     public static String determineColor(double value, double threshold, boolean higherIsBetter) {
         // 绿色
         if (higherIsBetter) {
-            if (value < threshold * 0.7)
+            if (value < threshold * 0.7) {
                 return "#f5222d"; // 红色
-            if (value < threshold * 0.9)
+            }
+            if (value < threshold * 0.9) {
                 return "#faad14"; // 黄色
+            }
         } else {
-            if (value > threshold * 1.3)
+            if (value > threshold * 1.3) {
                 return "#f5222d"; // 红色
-            if (value > threshold * 1.1)
+            }
+            if (value > threshold * 1.1) {
                 return "#faad14"; // 黄色
+            }
         }
         return "#52c41a"; // 绿色
     }

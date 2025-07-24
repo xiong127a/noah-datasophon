@@ -152,8 +152,9 @@ public class ConnectionInfo implements Serializable {
      * @return 查找到的值或默认值
      */
     public String getBasicInfoValue(String key, String defaultValue) {
-        if (basicInfoItems == null)
+        if (basicInfoItems == null) {
             return defaultValue;
+        }
         return basicInfoItems.stream()
                 .filter(item -> key.equals(item.getKey()))
                 .map(InfoItem::getValue)
@@ -168,8 +169,9 @@ public class ConnectionInfo implements Serializable {
      * @return 查找到的值或默认值
      */
     public String getSecurityInfoValue(String key, String defaultValue) {
-        if (securityInfoItems == null)
+        if (securityInfoItems == null) {
             return defaultValue;
+        }
         return securityInfoItems.stream()
                 .filter(item -> key.equals(item.getKey()))
                 .map(InfoItem::getValue)
@@ -184,8 +186,9 @@ public class ConnectionInfo implements Serializable {
      * @return 查找到的值或默认值
      */
     public String getConnectInfoValue(String key, String defaultValue) {
-        if (connectInfoItems == null)
+        if (connectInfoItems == null) {
             return defaultValue;
+        }
         return connectInfoItems.stream()
                 .filter(item -> key.equals(item.getKey()))
                 .map(InfoItem::getValue)

@@ -78,8 +78,9 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
                 .and(ClusterUserTenant::getUserId).eq(userId)
                 .and(ClusterUserTenant::getTenantId).in(tenantIdList)
                 .list();
-        if (CollUtil.isNotEmpty(list))
+        if (CollUtil.isNotEmpty(list)) {
             return Result.error("当前用户授权已存在");
+        }
         List<ClusterUserTenant> addUserTenant = tenantIdList.stream()
                 .map(t -> ClusterUserTenant.builder().tenantId(t).clusterId(clusterId).userId(userId).build())
                 .collect(Collectors.toList());

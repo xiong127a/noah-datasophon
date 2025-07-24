@@ -320,8 +320,9 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
 
             public boolean isTimeout() {
-                if (processStartTime == 0)
+                if (processStartTime == 0) {
                     return false;
+                }
                 return (System.currentTimeMillis() - processStartTime) > HOST_TIMEOUT;
             }
 
@@ -1594,8 +1595,9 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     @Override
     public synchronized void updateHostInfoCache(HostInfo hostInfo) {
-        if (hostInfo == null)
+        if (hostInfo == null) {
             return;
+        }
 
         try {
             // 标记状态已更新，以便前端能察觉到变化

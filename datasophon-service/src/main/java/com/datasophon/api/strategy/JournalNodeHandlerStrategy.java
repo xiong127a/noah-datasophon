@@ -40,8 +40,9 @@ public class JournalNodeHandlerStrategy implements ServiceRoleStrategy {
             // 生成包含所有JournalNode的URL
             StringBuilder journalNodesUrl = new StringBuilder("qjournal://");
             for (int i = 0; i < hosts.size(); i++) {
-                if (i > 0)
+                if (i > 0) {
                     journalNodesUrl.append(";");
+                }
                 journalNodesUrl.append(hosts.get(i)).append(":8485");
             }
             journalNodesUrl.append("/meta");

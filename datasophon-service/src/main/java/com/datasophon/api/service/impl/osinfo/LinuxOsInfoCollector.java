@@ -1207,10 +1207,12 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                     // 计算已用和可用内存
                                     if (freeKB != null) {
                                         long availableKB = freeKB;
-                                        if (bufferKB != null)
+                                        if (bufferKB != null) {
                                             availableKB += bufferKB;
-                                        if (cacheKB != null)
+                                        }
+                                        if (cacheKB != null) {
                                             availableKB += cacheKB;
+                                        }
 
                                         long usedKB = totalKB - availableKB;
 

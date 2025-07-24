@@ -243,8 +243,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 // 计算百分比
                                 float percentAvailable = (Float.parseFloat(available.replace("G", "")) / minDiskSpaceGB)
                                                 * 100;
-                                if (percentAvailable > 100)
-                                        percentAvailable = 100;
+                                if (percentAvailable > 100) {
+                                    percentAvailable = 100;
+                                }
 
                                 message.append(
                                                 "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
@@ -332,8 +333,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
                                 // 计算百分比
                                 float percentAvailable = (availableGB / minDiskSpaceGB) * 100;
-                                if (percentAvailable > 100)
-                                        percentAvailable = 100;
+                                if (percentAvailable > 100) {
+                                    percentAvailable = 100;
+                                }
 
                                 message.append(
                                                 "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
@@ -494,8 +496,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
                         // 计算可用空间百分比
                         float percentAvailable = (availableGB / minDiskSpaceGB) * 100;
-                        if (percentAvailable > 100)
-                                percentAvailable = 100;
+                        if (percentAvailable > 100) {
+                            percentAvailable = 100;
+                        }
 
                         message.append(
                                         "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");

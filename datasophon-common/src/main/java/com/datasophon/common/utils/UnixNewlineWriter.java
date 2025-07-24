@@ -30,7 +30,9 @@ public class UnixNewlineWriter extends Writer {
                 if (c == '\r') {
                 // 记录CR状态，等待下一个字符
                 lastCharWasCR = true;
-            } else target.write(c);
+            } else {
+                    target.write(c);
+                }
         }
     }
 

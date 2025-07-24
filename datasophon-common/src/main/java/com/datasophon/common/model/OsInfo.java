@@ -184,18 +184,24 @@ public class OsInfo implements Serializable {
      */
     public void setHardwareCollectionStatus(OsInfoStatusEnum status) {
         // 更新所有硬件组件的状态
-        if (cpuInfo != null)
+        if (cpuInfo != null) {
             cpuInfo.setStatus(status);
-        if (memoryInfo != null)
+        }
+        if (memoryInfo != null) {
             memoryInfo.setStatus(status);
-        if (diskInfo != null)
+        }
+        if (diskInfo != null) {
             diskInfo.setStatus(status);
-        if (swapInfo != null)
+        }
+        if (swapInfo != null) {
             swapInfo.setStatus(status);
-        if (gpuInfo != null)
+        }
+        if (gpuInfo != null) {
             gpuInfo.setStatus(status);
-        if (networkInfo != null)
+        }
+        if (networkInfo != null) {
             networkInfo.setStatus(status);
+        }
     }
 
     /**

@@ -105,9 +105,10 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
 
     private String kinitHbaseStr(TenantHbaseResource hbaseResource) {
         String kbString = "";
-        if (hbaseResource.getEnableKerberos())
+        if (hbaseResource.getEnableKerberos()) {
             kbString =
                     "kinit -kt /etc/security/keytab/hbase.keytab " + "hbase/" + Convert.toStr(CacheUtils.get(Constants.HOSTNAME)) + "@HADOOP.COM";
+        }
         return kbString;
     }
 }

@@ -247,8 +247,9 @@ public class ClusterServiceInstanceServiceImpl
      * 例如：从 "ZkServer_默认_storage_classes" 提取出 "storage_classes"
      */
     private String extractKubernetesBaseConfigName(String fullName) {
-        if (fullName == null)
+        if (fullName == null) {
             return null;
+        }
 
         // 查找最后一个下划线
         int lastUnderscoreIndex = fullName.lastIndexOf("_");

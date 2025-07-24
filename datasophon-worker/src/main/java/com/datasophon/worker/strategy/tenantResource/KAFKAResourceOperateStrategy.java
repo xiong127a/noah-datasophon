@@ -111,7 +111,9 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
 
     private String kinitKafkaStr(TenantKafkaResource kafkaResource) {
         String kbString = "";
-        if (kafkaResource.getEnableKerberos()) kbString = kinitKbStr("kafka");
+        if (kafkaResource.getEnableKerberos()) {
+            kbString = kinitKbStr("kafka");
+        }
         return kbString;
     }
 

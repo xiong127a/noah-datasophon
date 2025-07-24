@@ -173,8 +173,9 @@ public class KubernetesScaleServiceHandler {
 
         // 获取当前副本数
         Integer replicas = getReplicas(existingResource);
-        if (replicas == null)
+        if (replicas == null) {
             replicas = 0;
+        }
         logger.info("Current {}: {} Replicas: {}", resourceType, serviceRoleFullName, replicas);
 
         int newReplicas = replicas + 1;
@@ -193,8 +194,9 @@ public class KubernetesScaleServiceHandler {
             } catch (KubernetesClientException e) {
                 if (e.getCode() == 409) { // 冲突错误
                     logger.warn("Scale conflict detected, retrying... ({}/{})", retry + 1, maxRetries);
-                    if (retry == maxRetries - 1)
+                    if (retry == maxRetries - 1) {
                         throw e;
+                    }
                 } else {
                     throw e;
                 }
@@ -239,8 +241,9 @@ public class KubernetesScaleServiceHandler {
                 } catch (KubernetesClientException e) {
                     if (e.getCode() == 409) { // 冲突错误
                         logger.warn("Scale conflict detected, retrying... ({}/{})", retry + 1, maxRetries);
-                        if (retry == maxRetries - 1)
+                        if (retry == maxRetries - 1) {
                             throw e;
+                        }
                     } else {
                         throw e;
                     }
