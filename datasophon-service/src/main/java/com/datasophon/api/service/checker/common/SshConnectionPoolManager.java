@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SshConnectionPoolManager {
 
     // SSH连接池 - 按主机名缓存SSH连接
-    @Autowired
+
     private Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
 
     // 连接锁，防止并发问题
@@ -40,17 +40,17 @@ public class SshConnectionPoolManager {
     private Map<String, Object> connectionLocks = new ConcurrentHashMap<>();
 
     // 添加连接池清理改进
-    @Autowired
+
     private Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
 
     // 添加缓存命中和总请求计数，用于计算缓存命中率
-    @Autowired
+
     private Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
-    @Autowired
+
     private Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
 
     // 定时任务启用标志
-    @Autowired
+
     private AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 从配置文件读取配置，如果未配置则使用默认值
@@ -76,9 +76,9 @@ public class SshConnectionPoolManager {
     @Autowired
     private ExecutorService checkExecutor;
     // 添加连接超时监控
-    @Autowired
+
     private Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
-    @Autowired
+
     private Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
 
     // 重试等待时间上限（10分钟）
