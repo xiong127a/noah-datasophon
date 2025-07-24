@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { checkAuthorization } from '../utils/request'
+
+// 检查认证状态的简化函数
+const checkAuthorization = () => !!localStorage.getItem('token')
 
 // 布局组件
 import MainLayout from '../layouts/MainLayout.vue'
@@ -153,15 +155,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/login/Login.vue'), // 修正路径指向正确的登录组件
+    component: () => import('../views/login/Login.vue'), // 使用正确的登录组件
     meta: { title: '登录' }
-  },
-  // 登录调试页面
-  {
-    path: '/login-debug',
-    name: 'LoginDebug',
-    component: () => import('../views/LoginDebug.vue'),
-    meta: { title: '登录调试' }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -182,7 +177,7 @@ router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title} | Noah大数据平台` || 'Noah大数据平台'
   
   // 判断是否需要登录权限
-  const publicPaths = ['/login', '/login-debug']
+  const publicPaths = ['/login'] // 移除 '/login-debug'
   if (!publicPaths.includes(to.path)) {
     if (checkAuthorization()) {
       next() // 已登录，允许访问
@@ -190,11 +185,11 @@ router.beforeEach((to, from, next) => {
       next({ path: '/login', query: { redirect: to.fullPath } }) // 未登录，跳转到登录页面
     }
   } else {
-    // 如果是访问登录页面且已登录，重定向到首页（调试页面除外）
+    // 如果是访问登录页面且已登录，重定向到首页
     if (to.path === '/login' && checkAuthorization()) {
       next({ path: '/' })
     } else {
-      next() // 未登录，允许访问登录页面和调试页面
+      next() // 未登录，允许访问登录页面
     }
   }
 })

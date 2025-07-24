@@ -1,4 +1,4 @@
-declare module '../utils/request' {
+declare module '*/utils/request' {
   export function axiosPost(url: string, params?: any, showLoading?: boolean): Promise<any>;
   export function axiosJsonPost(url: string, params?: any, showLoading?: boolean): Promise<any>;
   export function axiosGet(url: string, params?: any, showLoading?: boolean): Promise<any>;
