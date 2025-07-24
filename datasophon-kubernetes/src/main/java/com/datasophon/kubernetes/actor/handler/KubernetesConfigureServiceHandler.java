@@ -226,7 +226,30 @@ public class KubernetesConfigureServiceHandler {
 
     private void addToCustomList(Iterator<ServiceConfig> iterator, ArrayList<ServiceConfig> customConfList,
             ServiceConfig config) {
-        List<JSONObject> list = Convert.toList(JSONObject.class, config.getValue());
+        // 使用hutool的Convert工具类进行安全类型转换
+        Object value = config.getValue();
+        List<JSONObject> list;
+
+        if (value instanceof List) {
+            // 检查是否是List类型
+            try {
+                // 使用Convert工具类进行安全转换
+                list = Convert.toList(JSONObject.class, value);
+            } catch (Exception e) {
+                logger.error("Failed to convert value to List<JSONObject>: {}", e.getMessage());
+                // 转换失败时返回空列表
+                list = new ArrayList<>();
+            }
+        } else if (value instanceof JSONArray) {
+            // 如果是JSONArray类型，直接转换
+            JSONArray jsonArray = (JSONArray) value;
+            list = jsonArray.toJavaList(JSONObject.class);
+        } else {
+            logger.warn("Unexpected value type in addToCustomList: {}",
+                    value != null ? value.getClass().getName() : "null");
+            list = new ArrayList<>();
+        }
+
         iterator.remove();
         for (JSONObject json : list) {
             if (Objects.nonNull(json)) {
