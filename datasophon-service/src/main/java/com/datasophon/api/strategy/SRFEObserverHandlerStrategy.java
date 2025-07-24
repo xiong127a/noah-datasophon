@@ -70,7 +70,7 @@ public class SRFEObserverHandlerStrategy implements ServiceRoleStrategy {
                     frontend.setHostName(hostMap.get(frontend.getHostName()));
                 }
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }

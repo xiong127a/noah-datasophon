@@ -62,7 +62,7 @@ public class SRBEHandlerStrategy implements ServiceRoleStrategy {
                     frontend.setHostName(hostMap.get(frontend.getHostName()));
                 }
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), backends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }

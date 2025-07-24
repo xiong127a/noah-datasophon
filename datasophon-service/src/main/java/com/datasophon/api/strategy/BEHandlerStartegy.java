@@ -55,7 +55,7 @@ public class BEHandlerStartegy implements ServiceRoleStrategy {
             try {
                 List<ProcInfo> backends = OlapUtils.showBackends(feMaster);
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), backends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
 

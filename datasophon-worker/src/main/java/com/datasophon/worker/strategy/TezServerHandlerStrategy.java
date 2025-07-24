@@ -116,7 +116,7 @@ public class TezServerHandlerStrategy extends AbstractHandlerStrategy implements
 
             // tez lib uri 启动清理
             return conf.get("tez.lib.uris");
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return null;
     }

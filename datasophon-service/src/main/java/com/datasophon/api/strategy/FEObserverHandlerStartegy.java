@@ -61,7 +61,7 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
             try {
                 List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
 
