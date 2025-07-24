@@ -17,276 +17,335 @@
 
 package com.datasophon.common.utils;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.ProcInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 
+/**
+ * Utility class for interacting with Doris/StarRocks databases.
+ * Provides methods for cluster management operations such as adding followers,
+ * observers, backends,
+ * and retrieving cluster node status.
+ */
 public class OlapUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(OlapUtils.class);
 
+    // Constants for database connections and operations
+    private static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    private static final String DEFAULT_USER = "root";
+    private static final String DEFAULT_PASSWORD = "";
+    private static final int FE_QUERY_PORT = 9030;
+    private static final int FE_RPC_PORT = 9010;
+    private static final int BE_RPC_PORT = 9050;
+
+    // SQL statement constants
+    private static final String ADD_FOLLOWER_SQL = "ALTER SYSTEM ADD FOLLOWER ?";
+    private static final String ADD_OBSERVER_SQL = "ALTER SYSTEM ADD OBSERVER ?";
+    private static final String ADD_BACKEND_SQL = "ALTER SYSTEM ADD BACKEND ?";
+    private static final String ADD_COMPUTE_NODE_SQL = "ALTER SYSTEM ADD COMPUTE NODE ?";
+    private static final String SHOW_FRONTENDS_SQL = "SHOW PROC '/frontends'";
+    private static final String SHOW_BACKENDS_SQL = "SHOW PROC '/backends'";
+    private static final String SHOW_COMPUTE_NODES_SQL = "SHOW PROC '/compute_nodes'";
+
+    /**
+     * Adds a follower node to the Doris/StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the follower node to add
+     * @return The execution result
+     */
     public static ExecResult addFollower(String feMaster, String hostname) {
         ExecResult execResult = new ExecResult();
-        String sql = "ALTER SYSTEM add FOLLOWER \"" + hostname + ":9010\";";
-        logger.info("Add fe to cluster , the sql is {}", sql);
+        logger.info("Adding follower node: {} to cluster with master: {}", hostname, feMaster);
+
         try {
-            executeSql(feMaster, hostname, sql);
+            executeSql(feMaster, ADD_FOLLOWER_SQL, hostname + ":" + FE_RPC_PORT);
             execResult.setExecResult(true);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (Exception e) {
+            logger.error("Failed to add follower: {}", hostname, e);
         }
         return execResult;
     }
 
+    /**
+     * Adds an observer node to the Doris/StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the observer node to add
+     * @return The execution result
+     */
     public static ExecResult addObserver(String feMaster, String hostname) {
         ExecResult execResult = new ExecResult();
-        String sql = "ALTER SYSTEM add OBSERVER \"" + hostname + ":9010\";";
-        logger.info("Add fe to cluster , the sql is {}", sql);
+        logger.info("Adding observer node: {} to cluster with master: {}", hostname, feMaster);
+
         try {
-            executeSql(feMaster, hostname, sql);
+            executeSql(feMaster, ADD_OBSERVER_SQL, hostname + ":" + FE_RPC_PORT);
             execResult.setExecResult(true);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (Exception e) {
+            logger.error("Failed to add observer: {}", hostname, e);
         }
         return execResult;
     }
 
+    /**
+     * Adds a backend node to the Doris/StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the backend node to add
+     * @return The execution result
+     */
     public static ExecResult addBackend(String feMaster, String hostname) {
         ExecResult execResult = new ExecResult();
-        String sql = "ALTER SYSTEM add BACKEND  \"" + hostname + ":9050\";";
-        logger.info("Add be to cluster , the sql is {}", sql);
+        logger.info("Adding backend node: {} to cluster with master: {}", hostname, feMaster);
 
         try {
-            executeSql(feMaster, hostname, sql);
+            executeSql(feMaster, ADD_BACKEND_SQL, hostname + ":" + BE_RPC_PORT);
             execResult.setExecResult(true);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (Exception e) {
+            logger.error("Failed to add backend: {}", hostname, e);
         }
         return execResult;
     }
 
+    /**
+     * Adds a compute node to the Doris/StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the compute node to add
+     * @return The execution result
+     */
     public static ExecResult addCn(String feMaster, String hostname) {
         ExecResult execResult = new ExecResult();
-        String sql = "ALTER SYSTEM add COMPUTE NODE \"" + hostname + ":9050\";";
-        logger.info("Add cn to cluster , the sql is {}", sql);
+        logger.info("Adding compute node: {} to cluster with master: {}", hostname, feMaster);
 
         try {
-            executeSql(feMaster, hostname, sql);
+            executeSql(feMaster, ADD_COMPUTE_NODE_SQL, hostname + ":" + BE_RPC_PORT);
             execResult.setExecResult(true);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (Exception e) {
+            logger.error("Failed to add compute node: {}", hostname, e);
         }
         return execResult;
     }
 
-    private static void executeSql(String feMaster, String hostname,
-                                   String sql) throws ClassNotFoundException, SQLException {
-        Connection connection = getConnection(feMaster);
-        Statement statement = connection.createStatement();
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
-            statement.executeUpdate(sql);
+    /**
+     * Executes a SQL statement with parameters using JDBC.
+     *
+     * @param feMaster The master FE hostname
+     * @param sql      The SQL statement to execute
+     * @param params   The parameters for the SQL statement
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
+    private static void executeSql(String feMaster, String sql, String... params)
+            throws SQLException, ClassNotFoundException {
+        try (Connection connection = getConnection(feMaster);
+                PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < params.length; i++) {
+                preparedStatement.setString(i + 1, params[i]);
+            }
+
+            preparedStatement.executeUpdate();
         }
-        close(connection, statement);
     }
 
-    public static ExecResult addFollowerBySqlClient(String feMaster,
-                                                    String hostname) {
-        String sqlCommand =
-                "mysql -h"
-                        + feMaster
-                        + " -uroot -P9030 -e"
-                        + " 'ALTER SYSTEM add FOLLOWER  \""
-                        + hostname
-                        + ":9010\"';";
-        // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+    /**
+     * Adds a follower node using the mysql CLI client.
+     * This is an alternative to JDBC when direct database access is preferred.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the follower node to add
+     * @return The execution result
+     */
+    public static ExecResult addFollowerBySqlClient(String feMaster, String hostname) {
+        String[] command = {
+                "mysql",
+                "-h", feMaster,
+                "-u" + DEFAULT_USER,
+                "-P" + FE_QUERY_PORT,
+                "-e", String.format("ALTER SYSTEM ADD FOLLOWER \"%s:%d\"", hostname, FE_RPC_PORT)
+        };
+
+        return ShellUtils.exceShell(String.join(" ", command));
     }
 
-    public static ExecResult addObserverBySqlClient(String feMaster,
-                                                    String hostname) {
-        String sqlCommand =
-                "mysql -h"
-                        + feMaster
-                        + " -uroot -P9030 -e"
-                        + " 'ALTER SYSTEM add OBSERVER  \""
-                        + hostname
-                        + ":9010\"';";
-        // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+    /**
+     * Adds an observer node using the mysql CLI client.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the observer node to add
+     * @return The execution result
+     */
+    public static ExecResult addObserverBySqlClient(String feMaster, String hostname) {
+        String[] command = {
+                "mysql",
+                "-h", feMaster,
+                "-u" + DEFAULT_USER,
+                "-P" + FE_QUERY_PORT,
+                "-e", String.format("ALTER SYSTEM ADD OBSERVER \"%s:%d\"", hostname, FE_RPC_PORT)
+        };
+
+        return ShellUtils.exceShell(String.join(" ", command));
     }
 
-    public static ExecResult addBackendBySqlClient(String feMaster,
-                                                   String hostname) {
-        String sqlCommand =
-                "mysql -h"
-                        + feMaster
-                        + " -uroot -P9030 -e"
-                        + " 'ALTER SYSTEM add BACKEND  \""
-                        + hostname
-                        + ":9050\"';";
-        // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+    /**
+     * Adds a backend node using the mysql CLI client.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the backend node to add
+     * @return The execution result
+     */
+    public static ExecResult addBackendBySqlClient(String feMaster, String hostname) {
+        String[] command = {
+                "mysql",
+                "-h", feMaster,
+                "-u" + DEFAULT_USER,
+                "-P" + FE_QUERY_PORT,
+                "-e", String.format("ALTER SYSTEM ADD BACKEND \"%s:%d\"", hostname, BE_RPC_PORT)
+        };
+
+        return ShellUtils.exceShell(String.join(" ", command));
     }
 
-    public static ExecResult addCnBySqlClient(String feMaster,
-                                                   String hostname) {
-        String sqlCommand =
-                "mysql -h"
-                        + feMaster
-                        + " -uroot -P9030 -e"
-                        + " 'ALTER SYSTEM add COMPUTE NODE \""
-                        + hostname
-                        + ":9050\"';";
-        // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+    /**
+     * Adds a compute node using the mysql CLI client.
+     *
+     * @param feMaster The master FE hostname
+     * @param hostname The hostname of the compute node to add
+     * @return The execution result
+     */
+    public static ExecResult addCnBySqlClient(String feMaster, String hostname) {
+        String[] command = {
+                "mysql",
+                "-h", feMaster,
+                "-u" + DEFAULT_USER,
+                "-P" + FE_QUERY_PORT,
+                "-e", String.format("ALTER SYSTEM ADD COMPUTE NODE \"%s:%d\"", hostname, BE_RPC_PORT)
+        };
+
+        return ShellUtils.exceShell(String.join(" ", command));
     }
 
+    /**
+     * Creates a database connection to the specified FE master node.
+     *
+     * @param feMaster The master FE hostname
+     * @return A database connection
+     * @throws ClassNotFoundException If the driver class is not found
+     * @throws SQLException           If a database access error occurs
+     */
     private static Connection getConnection(String feMaster) throws ClassNotFoundException, SQLException {
-//        String username = "root";
-//        String password = "";
-        String url = "jdbc:mysql://" + feMaster + ":9030";
-        // 加载驱动
-        Class.forName("com.mysql.cj.jdbc.Driver");
+        String url = String.format("jdbc:mysql://%s:%d", feMaster, FE_QUERY_PORT);
+
+        // Load the driver
+        Class.forName(JDBC_DRIVER);
+
         Properties info = new Properties();
-        info.setProperty("user", "root");
-        info.setProperty("password", "");
+        info.setProperty("user", DEFAULT_USER);
+        info.setProperty("password", DEFAULT_PASSWORD);
+
         return DriverManager.getConnection(url, info);
-//        return DriverManager.getConnection(url, username, password);
     }
 
-    private static void close(Connection connection, Statement statement) throws SQLException {
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
-            statement.close();
-            connection.close();
-        }
-    }
-
+    /**
+     * Returns a list of frontends in the Doris cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @return A list of ProcInfo objects representing the frontends
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
     public static List<ProcInfo> showFrontends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/frontends';";
-        // logger.info("sql is {}", sql);
-        return executeQueryProcInfo(feMaster, sql);
+        return executeQueryProcInfo(feMaster, SHOW_FRONTENDS_SQL, "HostName");
     }
 
+    /**
+     * Returns a list of frontends in the StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @return A list of ProcInfo objects representing the frontends
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
     public static List<ProcInfo> showSRFrontends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/frontends';";
-        // logger.info("sql is {}", sql);
-        return executeQuerySRProcInfo(feMaster, sql);
+        return executeQueryProcInfo(feMaster, SHOW_FRONTENDS_SQL, "IP");
     }
 
-    public static List<ProcInfo> listDeadFrontends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/frontends';";
-        // logger.info("sql is {}", sql);
-        return getDeadProcInfos(feMaster, sql);
-    }
-
-    public static List<ProcInfo> listDeadBackends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/frontends';";
-        // logger.info("sql is {}",sql);
-        return getDeadProcInfos(feMaster, sql);
-    }
-
+    /**
+     * Returns a list of backends in the Doris cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @return A list of ProcInfo objects representing the backends
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
     public static List<ProcInfo> showBackends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/backends';";
-        // logger.info("sql is {}",sql);
-        return executeQueryProcInfo(feMaster, sql);
+        return executeQueryProcInfo(feMaster, SHOW_BACKENDS_SQL, "HostName");
     }
 
+    /**
+     * Returns a list of backends in the StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @return A list of ProcInfo objects representing the backends
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
     public static List<ProcInfo> showSRBackends(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/backends';";
-        // logger.info("sql is {}",sql);
-        return executeQuerySRProcInfo(feMaster, sql);
+        return executeQueryProcInfo(feMaster, SHOW_BACKENDS_SQL, "IP");
     }
 
+    /**
+     * Returns a list of compute nodes in the StarRocks cluster.
+     *
+     * @param feMaster The master FE hostname
+     * @return A list of ProcInfo objects representing the compute nodes
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
     public static List<ProcInfo> showSRComputes(String feMaster) throws SQLException, ClassNotFoundException {
-        String sql = "SHOW PROC '/compute_nodes';";
-        // logger.info("sql is {}",sql);
-        return executeQuerySRProcInfo(feMaster, sql);
+        return executeQueryProcInfo(feMaster, SHOW_COMPUTE_NODES_SQL, "IP");
     }
 
-    public static List<ProcInfo> executeQueryProcInfo(String feMaster,
-                                                      String sql) throws SQLException, ClassNotFoundException {
-        Connection connection = getConnection(feMaster);
-        Statement statement = connection.createStatement();
-        ArrayList<ProcInfo> list = new ArrayList<>();
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
-            ResultSet resultSet = statement.executeQuery(sql);
+    /**
+     * Executes a query and converts the result to a list of ProcInfo objects.
+     *
+     * @param feMaster       The master FE hostname
+     * @param sql            The SQL query to execute
+     * @param hostColumnName The name of the column that contains the hostname
+     * @return A list of ProcInfo objects
+     * @throws SQLException           If a database access error occurs
+     * @throws ClassNotFoundException If the driver class is not found
+     */
+    private static List<ProcInfo> executeQueryProcInfo(String feMaster, String sql, String hostColumnName)
+            throws SQLException, ClassNotFoundException {
+
+        List<ProcInfo> list = new ArrayList<>();
+
+        try (Connection connection = getConnection(feMaster);
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(sql)) {
+
             while (resultSet.next()) {
                 ProcInfo procInfo = new ProcInfo();
-                procInfo.setHostName(resultSet.getString("HostName"));
+                procInfo.setHostName(resultSet.getString(hostColumnName));
                 procInfo.setAlive(resultSet.getBoolean("Alive"));
                 procInfo.setErrMsg(resultSet.getString("ErrMsg"));
                 list.add(procInfo);
             }
         }
-        close(connection, statement);
-        return list;
-    }
 
-    public static List<ProcInfo> executeQuerySRProcInfo(String feMaster,
-                                                      String sql) throws SQLException, ClassNotFoundException {
-        Connection connection = getConnection(feMaster);
-        Statement statement = connection.createStatement();
-        ArrayList<ProcInfo> list = new ArrayList<>();
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
-            ResultSet resultSet = statement.executeQuery(sql);
-            while (resultSet.next()) {
-                ProcInfo procInfo = new ProcInfo();
-                procInfo.setHostName(resultSet.getString("IP"));
-                procInfo.setAlive(resultSet.getBoolean("Alive"));
-                procInfo.setErrMsg(resultSet.getString("ErrMsg"));
-                list.add(procInfo);
-            }
-        }
-        close(connection, statement);
         return list;
-    }
-
-    public static List<ProcInfo> executeQuerySql(String feMaster,
-                                                 String sql) throws SQLException, ClassNotFoundException {
-        Connection connection = getConnection(feMaster);
-        long start = System.currentTimeMillis();
-        Statement statement = connection.createStatement();
-        ArrayList<ProcInfo> list = new ArrayList<>();
-        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
-            ResultSet resultSet = statement.executeQuery(sql);
-            while (resultSet.next()) {
-                System.out.println(resultSet.getString(1));
-            }
-        }
-        long end = System.currentTimeMillis();
-        System.out.println(end - start);
-        close(connection, statement);
-        return list;
-    }
-
-    private static List<ProcInfo> getDeadProcInfos(String feMaster,
-                                                   String sql) throws SQLException, ClassNotFoundException {
-        List<ProcInfo> list = executeQueryProcInfo(feMaster, sql);
-        ArrayList<ProcInfo> deadList = new ArrayList<>();
-        for (ProcInfo procInfo : list) {
-            if (!procInfo.getAlive()) {
-                deadList.add(procInfo);
-            }
-        }
-        return deadList;
     }
 }
