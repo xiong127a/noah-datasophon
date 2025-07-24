@@ -28,7 +28,7 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.RackActor;
 import com.datasophon.api.service.ClusterRackService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
 import com.datasophon.common.Constants;
@@ -73,10 +73,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     private static final Logger logger = LoggerFactory.getLogger(ClusterHostServiceImpl.class);
 
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private RoleInstanceQueryService roleInstanceQueryService;
     @Autowired
     private ClusterRackService clusterRackService;
-
 
     @Override
     public ClusterHostDO getClusterHostByHostname(String hostname) {
@@ -197,7 +196,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public Result<List<ClusterServiceRoleInstanceEntity>> getRoleListByHostname(Integer clusterId, String hostname) {
-        List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+        List<ClusterServiceRoleInstanceEntity> list = roleInstanceQueryService
                 .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
             roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());

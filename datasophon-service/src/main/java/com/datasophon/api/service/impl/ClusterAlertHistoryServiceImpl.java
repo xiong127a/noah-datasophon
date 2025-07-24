@@ -22,7 +22,7 @@ import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.alert.AlertActor;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.utils.Result;
@@ -50,13 +50,11 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
 
-
     @Autowired
-    private ClusterServiceRoleInstanceService roleInstanceService;
+    private RoleInstanceQueryService roleInstanceQueryService;
 
     @Autowired
     private ClusterInfoService clusterInfoService;
-
 
     @Override
     public void saveAlertHistory(String alertMessage) {
@@ -99,7 +97,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     @Override
     public void removeAlertByRoleInstanceIds(List<Integer> ids) {
-        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceService.getById(ids.getFirst());
+        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService.getById(ids.getFirst());
         ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
         QueryWrapper query = QueryWrapper.create()
                 .where(Constants.IS_ENABLED + " = 1")
