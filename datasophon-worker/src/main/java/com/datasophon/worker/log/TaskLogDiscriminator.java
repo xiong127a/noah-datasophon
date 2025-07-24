@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TaskLogDiscriminator extends AbstractDiscriminator<ILoggingEvent> {
 
-    private static Logger logger = LoggerFactory.getLogger(TaskLogDiscriminator.class);
+    private static final Logger logger = LoggerFactory.getLogger(TaskLogDiscriminator.class);
 
     /**
      * key

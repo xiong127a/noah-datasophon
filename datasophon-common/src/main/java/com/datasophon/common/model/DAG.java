@@ -40,17 +40,17 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     /**
      * node map, key is node, value is node information
      */
-    private volatile Map<Node, NodeInfo> nodesMap;
+    private final Map<Node, NodeInfo> nodesMap;
 
     /**
      * edge map. key is node of origin;value is Map with key for destination node and value for edge
      */
-    private volatile Map<Node, Map<Node, EdgeInfo>> edgesMap;
+    private final Map<Node, Map<Node, EdgeInfo>> edgesMap;
 
     /**
      * reversed edge set，key is node of destination, value is Map with key for origin node and value for edge
      */
-    private volatile Map<Node, Map<Node, EdgeInfo>> reverseEdgesMap;
+    private final Map<Node, Map<Node, EdgeInfo>> reverseEdgesMap;
 
     public DAG() {
         nodesMap = new HashMap<>();

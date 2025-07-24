@@ -4,8 +4,8 @@ public class RangerClientException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
     private Throwable cause;
-    private int status;
-    private String message;
+    private final int status;
+    private final String message;
 
     public RangerClientException(int status, String message) {
         this.status = status;

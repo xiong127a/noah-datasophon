@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class ServiceConfigFileMap {
 
-    private static HashMap<String, Map<Generators, List<ServiceConfig>>> map =
+    private static final HashMap<String, Map<Generators, List<ServiceConfig>>> map =
             new HashMap<>();
 
     public static void put(String key, Map<Generators, List<ServiceConfig>> configs) {

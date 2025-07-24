@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TaskLogFilter extends Filter<ILoggingEvent> {
 
-    private static Logger logger = LoggerFactory.getLogger(TaskLogFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(TaskLogFilter.class);
 
     /**
      * level

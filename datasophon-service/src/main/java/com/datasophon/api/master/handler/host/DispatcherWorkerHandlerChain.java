@@ -27,7 +27,7 @@ import java.util.List;
 
 public class DispatcherWorkerHandlerChain {
 
-    private List<DispatcherWorkerHandler> handlers = new ArrayList<>();
+    private final List<DispatcherWorkerHandler> handlers = new ArrayList<>();
 
     public void addHandler(DispatcherWorkerHandler handler) {
         this.handlers.add(handler);

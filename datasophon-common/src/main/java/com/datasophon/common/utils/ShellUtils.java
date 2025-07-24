@@ -45,7 +45,7 @@ public class ShellUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ShellUtils.class);
 
-    private static ProcessBuilder processBuilder = new ProcessBuilder();
+    private static final ProcessBuilder processBuilder = new ProcessBuilder();
 
     public static Process exec(List<String> command) {
         Process process = null;

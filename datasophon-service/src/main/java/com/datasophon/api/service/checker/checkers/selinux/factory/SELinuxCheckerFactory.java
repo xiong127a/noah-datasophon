@@ -22,7 +22,7 @@ public class SELinuxCheckerFactory {
     private static final Logger log = LoggerFactory.getLogger(SELinuxCheckerFactory.class);
 
     private final List<SELinuxCheckerStrategy> checkerStrategies;
-    private GenericSELinuxChecker defaultChecker;
+    private final GenericSELinuxChecker defaultChecker;
 
     /**
      * 通过Spring注入的构造函数

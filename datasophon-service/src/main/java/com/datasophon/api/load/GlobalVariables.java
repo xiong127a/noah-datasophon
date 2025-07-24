@@ -9,7 +9,7 @@ import java.util.Map;
 public class GlobalVariables {
 
     // （ clusterId -> (变量名称 -> 变量值) ）
-    private static Map<Integer, Map<String, String>> map = new HashMap<>();
+    private static final Map<Integer, Map<String, String>> map = new HashMap<>();
 
     public static void put(Integer key, Map<String, String> value) {
         map.put(key, value);

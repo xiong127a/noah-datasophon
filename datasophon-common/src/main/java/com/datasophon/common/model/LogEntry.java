@@ -27,11 +27,11 @@ public class LogEntry implements Serializable {
         WARN(2, "#faad14", "#fff7e6"), // 黄色/橙色
         ERROR(3, "#f5222d", "#fff1f0"); // 红色
 
-        private int value;
+        private final int value;
         @Getter
-        private String color; // 主要颜色（用于强调文本）
+        private final String color; // 主要颜色（用于强调文本）
         @Getter
-        private String backgroundColor; // 背景色（用于整行）
+        private final String backgroundColor; // 背景色（用于整行）
 
         Level(int value) {
             this.value = value;
@@ -72,8 +72,8 @@ public class LogEntry implements Serializable {
         CHECK("检查日志", "#1890ff"),
         FIX("修复日志", "#722ed1");
 
-        private String displayName;
-        private String color;
+        private final String displayName;
+        private final String color;
 
         Type(String displayName, String color) {
             this.displayName = displayName;

@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 public class UnixUtils {
 
-    private static Long TIMEOUT = 60L;
+    private static final Long TIMEOUT = 60L;
 
     private static final Logger logger = LoggerFactory.getLogger(UnixUtils.class);
 

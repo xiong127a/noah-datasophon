@@ -46,7 +46,7 @@ public class ServiceConfigMap {
      * 集群启动LoadMeta加载所有service_ddl.json中所有的配置 key为：DDP-1.2.0_HDFS_config
      * 保存配置的时候放进的是保存时传入的配置                 key为：noah_HDFS_config
      */
-    private static HashMap<String, List<ServiceConfig>> map = new HashMap<>();
+    private static final HashMap<String, List<ServiceConfig>> map = new HashMap<>();
 
     public static void put(String key, List<ServiceConfig> configs) {
         map.put(key, configs);

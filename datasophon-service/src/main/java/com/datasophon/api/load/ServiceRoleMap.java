@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 public class ServiceRoleMap {
 
-    private static HashMap<String, ServiceRoleInfo> map = new HashMap<>();
+    private static final HashMap<String, ServiceRoleInfo> map = new HashMap<>();
 
     public static void put(String key, ServiceRoleInfo value) {
         map.put(key, value);
