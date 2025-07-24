@@ -1,13 +1,11 @@
 package com.datasophon.worker.strategy.tenantResource;
 
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
-import com.datasophon.common.model.TenantResource.TenantHdfsResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantHdfsResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.StringJoiner;
 
 public class HDFSResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {

@@ -1,4 +1,4 @@
-package com.datasophon.common.model.TenantResource;
+package com.datasophon.common.model.tenant.resource;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -2,15 +2,13 @@ package com.datasophon.worker.strategy.tenantResource;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
-import com.datasophon.common.model.TenantResource.TenantHiveResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantHiveResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.utils.KerberosUtils;
 
 import java.util.StringJoiner;
-
-import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 public class HIVEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 

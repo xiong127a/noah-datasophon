@@ -1,6 +1,6 @@
 package com.datasophon.worker.strategy.tenantResource;
 
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 
 import java.lang.reflect.Constructor;
 

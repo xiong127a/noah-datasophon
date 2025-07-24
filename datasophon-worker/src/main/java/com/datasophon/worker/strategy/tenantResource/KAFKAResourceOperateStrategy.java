@@ -2,15 +2,11 @@ package com.datasophon.worker.strategy.tenantResource;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
-import com.datasophon.common.model.TenantResource.TenantHbaseResource;
-import com.datasophon.common.model.TenantResource.TenantKafkaResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantKafkaResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
-import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.StringJoiner;
 
 public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {

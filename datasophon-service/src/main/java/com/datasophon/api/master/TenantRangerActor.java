@@ -8,7 +8,7 @@ import com.datasophon.api.utils.ranger.client.model.Role;
 import com.datasophon.api.utils.ranger.strategy.AbstractRangerStrategy;
 import com.datasophon.api.utils.ranger.strategy.RangerStrategyFactory;
 import com.datasophon.common.command.TenantRangerCommand;
-import com.datasophon.common.model.TenantResource.TenantResource;
+import com.datasophon.common.model.tenant.resource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -6,8 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
-import com.datasophon.common.model.TenantResource.TenantResource;
-import com.datasophon.common.model.TenantResource.TenantYarnResource;
+import com.datasophon.common.model.tenant.resource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
 import org.slf4j.LoggerFactory;
 

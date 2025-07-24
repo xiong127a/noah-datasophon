@@ -1,10 +1,10 @@
 package com.datasophon.api.master;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
-import com.datasophon.common.model.TenantResource.TenantHiveResource;
-import com.datasophon.common.model.TenantResource.TenantKafkaResource;
-import com.datasophon.common.model.TenantResource.TenantYarnResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantHiveResource;
+import com.datasophon.common.model.tenant.resource.TenantKafkaResource;
+import com.datasophon.common.model.tenant.resource.TenantYarnResource;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.pekko.actor.AbstractActor;

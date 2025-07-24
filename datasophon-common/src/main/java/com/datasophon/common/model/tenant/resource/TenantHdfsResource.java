@@ -1,16 +1,16 @@
-package com.datasophon.common.model.TenantResource;
+package com.datasophon.common.model.tenant.resource;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantKmsResource extends TenantFrameResource {
+public class TenantHdfsResource extends TenantFrameResource {
 
     /**
-     * keyname
+     * hdfs路径
      */
-    private String keyname;
+    private String hdfsPath;
 
     /**
      * hdfs空间配额

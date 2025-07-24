@@ -3,7 +3,7 @@ package com.datasophon.worker.strategy.tenantResource;
 import cn.hutool.core.convert.Convert;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.TenantResource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.utils.ExecResult;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;

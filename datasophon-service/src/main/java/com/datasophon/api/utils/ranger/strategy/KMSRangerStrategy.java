@@ -10,8 +10,8 @@ import com.datasophon.api.utils.ranger.client.model.PolicyResource;
 import com.datasophon.api.utils.ranger.client.model.Service;
 import com.datasophon.api.utils.ranger.client.model.User;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
-import com.datasophon.common.model.TenantResource.TenantKmsResource;
-import com.datasophon.common.model.TenantResource.TenantResource;
+import com.datasophon.common.model.tenant.resource.TenantKmsResource;
+import com.datasophon.common.model.tenant.resource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
 import org.slf4j.LoggerFactory;
 
