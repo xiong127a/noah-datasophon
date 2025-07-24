@@ -98,9 +98,9 @@ public class ShellUtils {
                 result.setExecResult(true);
                 result.setExecOut(execOut);
             } else {
-                result.setExecOut("call shell failed. error code is :" + exitValue + ", error: " + errorBuffer.toString());
+                result.setExecOut("call shell failed. error code is :" + exitValue + ", error: " + errorBuffer);
                 log.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
-                log.error("Error output: {}", errorBuffer.toString());
+                log.error("Error output: {}", errorBuffer);
             }
 
         } catch (Exception e) {

@@ -595,7 +595,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             StringBuilder stackTrace = new StringBuilder();
             for (StackTraceElement element : e.getStackTrace()) {
                 if (element.getClassName().contains("datasophon")) {
-                    stackTrace.append(element.toString()).append("\n");
+                    stackTrace.append(element).append("\n");
                 }
             }
             if (!stackTrace.isEmpty()) {

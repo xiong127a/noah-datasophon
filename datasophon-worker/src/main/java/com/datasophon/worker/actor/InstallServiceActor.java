@@ -51,12 +51,12 @@ public class InstallServiceActor extends AbstractActor {
                         commands.add("install");
                         commands.add("-y");
                         if (ServiceRoleType.MASTER == command.getServiceRoleType()) {
-                            logger.info("Start to {}", commands.toString());
+                            logger.info("Start to {}", commands);
                             commands.add("krb5-server");
                             commands.add("krb5-workstation");
                             commands.add("krb5-libs");
                         } else {
-                            logger.info("Start to {}", commands.toString());
+                            logger.info("Start to {}", commands);
                             commands.add("krb5-workstation");
                             commands.add("krb5-libs");
                         }
