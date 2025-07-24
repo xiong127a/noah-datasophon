@@ -59,16 +59,15 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
-        byte[] keyBytes;
-        // 检查是否已经是Base64编码
-        if (secretKeyString.length() < 32) {
-            logger.warn("JWT密钥长度不足，推荐至少32个字符。当前长度: {}", secretKeyString.length());
-            // 使用安全随机生成器生成密钥
-            keyBytes = Base64.getEncoder().encode(secretKeyString.getBytes());
-        } else {
-            keyBytes = Decoders.BASE64.decode(secretKeyString);
+        try {
+            // 直接使用安全的密钥生成方式，不依赖配置的密钥
+            // 这将生成一个适合HS512算法的足够长度的安全密钥
+            this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+            logger.info("成功初始化JWT密钥，使用安全随机生成的HS512密钥");
+        } catch (Exception e) {
+            logger.error("初始化JWT密钥失败", e);
+            throw new SecurityException("无法初始化JWT密钥", e);
         }
-        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     /**
