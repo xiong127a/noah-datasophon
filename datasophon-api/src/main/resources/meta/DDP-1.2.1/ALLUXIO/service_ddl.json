@@ -87,7 +87,6 @@
       {
         "filename": "alluxio-site.properties",
         "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
-        "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
         "configFormat": "properties",
         "outputDirectory": "conf",
         "configTargetRoles": "AlluxioMaster",
@@ -107,7 +106,6 @@
       {
         "filename": "masters",
         "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
-        "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
         "configFormat": "custom",
         "configTargetRoles": "AlluxioMaster",
         "outputDirectory": "conf",
@@ -118,7 +116,6 @@
       },
       {
         "filename": "workers",
-        "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
         "fileDescription": "ALLUXIO配置文件，用于配置服务功能和参数",
         "configFormat": "custom",
         "configTargetRoles": "AlluxioWorker",
