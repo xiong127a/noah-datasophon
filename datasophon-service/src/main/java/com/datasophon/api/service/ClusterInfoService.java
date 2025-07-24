@@ -98,7 +98,6 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     /**
      * Retrieves the list of Kubernetes namespaces for a cluster.
      *
-     * @param clusterId  The ID of the cluster.
      * @param kubeConfig The Kubernetes configuration content.
      * @return A Result object containing the list of namespaces.
      */
