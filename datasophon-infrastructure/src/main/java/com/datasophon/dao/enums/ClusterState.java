@@ -17,16 +17,20 @@
 
 package com.datasophon.dao.enums;
 
-import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.mybatisflex.annotation.EnumValue;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.Arrays;
 
-@Setter
+/**
+ * 集群状态
+ *
+ * @author 63588
+ * @since 2022/8/13
+ **/
+@Getter
 public enum ClusterState {
-
     DELETING(4, "删除中"),
 
     STOP(3, "停止"),
@@ -36,10 +40,15 @@ public enum ClusterState {
 
     @Getter
     @EnumValue
-    private int value;
+    private final int value;
 
-    private String desc;
-
+    private final String desc;
+    /**
+     * 构造函数
+     *
+     * @param value 枚举值
+     * @param desc  枚举描述
+     */
     ClusterState(int value, String desc) {
         this.value = value;
         this.desc = desc;
