@@ -38,30 +38,31 @@ public class PlaceholderUtils {
         // String regex = "\\$\\{(\\w+)\\s*(([\\+\\-])\\s*(\\d+))?\\}";
         String regex = "\\$\\{(.*?)\\}";
         // String regex = "\\[.*?\\]";
-        String replacePlaceholders = PlaceholderUtils.replacePlaceholders("[\n" +
-                "    {\n" +
-                "      \"name\": \"apiHost\",\n" +
-                "      \"label\": \"DDH管理端地址\",\n" +
-                "      \"description\": \"DDH管理端地址\",\n" +
-                "      \"required\": true,\n" +
-                "      \"type\": \"input\",\n" +
-                "      \"value\": \"\",\n" +
-                "      \"configurableInWizard\": true,\n" +
-                "      \"hidden\": false,\n" +
-                "      \"defaultValue\": \"${apiHost}:${apiPort}\"\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"name\": \"apiPort\",\n" +
-                "      \"label\": \"DDH管理端端口\",\n" +
-                "      \"description\": \"DDH管理端端口\",\n" +
-                "      \"required\": true,\n" +
-                "      \"type\": \"input\",\n" +
-                "      \"value\": \"\",\n" +
-                "      \"configurableInWizard\": true,\n" +
-                "      \"hidden\": false,\n" +
-                "      \"defaultValue\": \"${apiPort}\"\n" +
-                "    }\n" +
-                "  ]", paramMap, regex);
+        String replacePlaceholders = PlaceholderUtils.replacePlaceholders("""
+                [
+                    {
+                      "name": "apiHost",
+                      "label": "DDH管理端地址",
+                      "description": "DDH管理端地址",
+                      "required": true,
+                      "type": "input",
+                      "value": "",
+                      "configurableInWizard": true,
+                      "hidden": false,
+                      "defaultValue": "${apiHost}:${apiPort}"
+                    },
+                    {
+                      "name": "apiPort",
+                      "label": "DDH管理端端口",
+                      "description": "DDH管理端端口",
+                      "required": true,
+                      "type": "input",
+                      "value": "",
+                      "configurableInWizard": true,
+                      "hidden": false,
+                      "defaultValue": "${apiPort}"
+                    }
+                  ]""", paramMap, regex);
 
         System.out.println(replacePlaceholders);
         List<String> newEquipmentNoList = PlaceholderUtils.getNewEquipmentNoList("001", "002");
