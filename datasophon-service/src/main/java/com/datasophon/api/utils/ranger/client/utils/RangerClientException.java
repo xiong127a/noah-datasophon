@@ -6,7 +6,6 @@ public class RangerClientException extends RuntimeException {
 
     @Serial
     private static final long serialVersionUID = 1L;
-    private Throwable cause;
     private final int status;
     private final String message;
 
@@ -24,7 +23,6 @@ public class RangerClientException extends RuntimeException {
         super(message, cause);
         this.status = 500;
         this.message = message;
-        this.cause = cause;
     }
 
     /**

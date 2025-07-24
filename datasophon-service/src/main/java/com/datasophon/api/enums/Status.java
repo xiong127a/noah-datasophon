@@ -100,12 +100,10 @@ public enum Status {
 
     @Getter
     private final int code;
-    private final String enMsg;
     private final String zhMsg;
 
     Status(int code, String enMsg, String zhMsg) {
         this.code = code;
-        this.enMsg = enMsg;
         this.zhMsg = zhMsg;
     }
 
