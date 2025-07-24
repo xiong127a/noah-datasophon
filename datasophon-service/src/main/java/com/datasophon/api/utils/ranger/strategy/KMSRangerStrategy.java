@@ -36,8 +36,12 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
             if (isKmsServiceExists()) {
                 logger.info("kmsdev service already exists");
                 execResult.setExecResult(true);
-                RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
-                logger.info("Config KMS Ranger plugin successfully");
+                if (rangerKmsClient != null) {
+                    RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
+                    logger.info("Config KMS Ranger plugin successfully");
+                } else {
+                    logger.warn("rangerKmsClient is null, skipping updateDefaultPolicy");
+                }
                 return execResult;
             }
 
@@ -45,10 +49,16 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
             String kmsUrl = "kms://http@" + rangerKmsHost + ":9292/kms";
             Service kmsService = createKmsService("kmsdev", kmsUrl);
 
-            rangerKmsClient.getServices().createService(kmsService);
-            RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
-            logger.info("Config KMS Ranger plugin successfully");
-            execResult.setExecResult(true);
+            if (rangerKmsClient != null) {
+                rangerKmsClient.getServices().createService(kmsService);
+                RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
+                logger.info("Config KMS Ranger plugin successfully");
+                execResult.setExecResult(true);
+            } else {
+                logger.error("rangerKmsClient is null, cannot createService");
+                execResult.setExecErrOut("rangerKmsClient is null");
+                execResult.setExecResult(false);
+            }
         } catch (RangerClientException e) {
             handleRangerClientException(e);
         }
@@ -71,10 +81,13 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     private boolean isKmsServiceExists() throws RangerClientException {
+        if (rangerKmsClient == null) {
+            logger.warn("rangerKmsClient is null in isKmsServiceExists");
+            return false;
+        }
         Service kmsService = rangerKmsClient.getServices().getServiceByName("kmsdev");
         return Objects.nonNull(kmsService);
     }
-
 
     private void handleRangerClientException(RangerClientException e) {
         logger.error("Failed to configure KMS Ranger plugin", e);
@@ -87,12 +100,13 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
         if (CollUtil.isNotEmpty(resource.getKmsResourceList())) {
             Policy policy = getKmsPolicy(resource);
             try {
-//                if (Objects.isNull(resource.getId())) {
+                // if (Objects.isNull(resource.getId())) {
                 rangerClient.getPolicies().createPolicy(policy);
-//                } else {
-//                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
-//                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
-//                }
+                // } else {
+                // Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev",
+                // resource.getTenantName());
+                // rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+                // }
                 logger.info("operate kms policy success");
             } catch (Exception e) {
                 logger.error("operate kms policy failed");
@@ -118,7 +132,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     private Policy getKmsPolicy(TenantResource resource) {
-        List<String> keynames = resource.getKmsResourceList()
+        List<String> keynames = resource.getKmsResourceList().stream()
                 .map(TenantKmsResource::getKeyname)
                 .collect(Collectors.toList());
         return simpleKmsPolicy(
@@ -138,12 +152,12 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
                                 .put("username", "keyadmin")
                                 .put("password", "keyadmin")
                                 .put("provider", kmsUrl)
-                                .build()
-                )
+                                .build())
                 .build();
     }
 
-    public Policy simpleKmsPolicy(String serviceName, String policyName, List<String> keyNameList, List<String> roleList) {
+    public Policy simpleKmsPolicy(String serviceName, String policyName, List<String> keyNameList,
+            List<String> roleList) {
         Map<String, PolicyResource> resources = new HashMap<>();
         PolicyResource policyResource = new PolicyResource();
         policyResource.setIsRecursive(true);
