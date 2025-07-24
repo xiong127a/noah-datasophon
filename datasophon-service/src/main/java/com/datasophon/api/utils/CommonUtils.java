@@ -37,7 +37,7 @@ public class CommonUtils {
     }
 
     public static RoleType convertRoleType(String roleType) {
-        if (roleType == null || "".equals(roleType.trim())) {
+        if (roleType == null || roleType.trim().isEmpty()) {
             logger.error("Convert role type failed, roleType is null.");
             return null;
         }
