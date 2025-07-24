@@ -15,17 +15,16 @@ import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ScheduledTasksStatus;
 import com.datasophon.common.utils.Result;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -42,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 异步检查服务
  * 提供基于Spring异步任务的检查项执行
+ * @author 63588
  */
 @Service
 public class AsyncCheckService {
@@ -94,7 +94,14 @@ public class AsyncCheckService {
 
     private final SshConnectionPoolManager sshConnectionPoolManager;
 
-    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager, SshConnectionPoolManager sshConnectionPoolManager, TaskScheduler taskScheduler, @Qualifier("hostnameExecutor") ExecutorService hostnameExecutor, @Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor, @Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor, @Qualifier("osInfoExecutor") ExecutorService osInfoExecutor, @Qualifier("fixExecutor") ExecutorService fixExecutor, @Qualifier("checkExecutor") ExecutorService checkExecutor) {
+    public AsyncCheckService(ItemCheckerFactory itemCheckerFactory, TaskManager taskManager,
+            SshConnectionPoolManager sshConnectionPoolManager, TaskScheduler taskScheduler,
+            @Qualifier("hostnameExecutor") ExecutorService hostnameExecutor,
+            @Qualifier("hostsFileExecutor") ExecutorService hostsFileExecutor,
+            @Qualifier("hardwareInfoExecutor") ExecutorService hardwareInfoExecutor,
+            @Qualifier("osInfoExecutor") ExecutorService osInfoExecutor,
+            @Qualifier("fixExecutor") ExecutorService fixExecutor,
+            @Qualifier("checkExecutor") ExecutorService checkExecutor) {
         this.itemCheckerFactory = itemCheckerFactory;
         this.taskManager = taskManager;
         this.sshConnectionPoolManager = sshConnectionPoolManager;
@@ -125,18 +132,19 @@ public class AsyncCheckService {
             scheduledTasksEnabled.set(true);
         }
 
-        if (taskScheduler == null) {
+        TaskScheduler actualScheduler = taskScheduler;
+        if (actualScheduler == null) {
             logger.info("TaskScheduler未注入，创建自定义TaskScheduler");
             ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
             scheduler.setPoolSize(2);
             scheduler.setThreadNamePrefix("async-check-scheduler-");
             scheduler.initialize();
-            taskScheduler = scheduler;
+            actualScheduler = scheduler;
         }
 
         // 启动任务清理定时任务（每60秒执行一次）
         if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
-            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+            taskCleanupTask = actualScheduler.scheduleAtFixedRate(
                     this::cleanupTasks, taskCleanupIntervalMs);
             logger.info("任务清理定时任务已启动，执行间隔: {}毫秒", taskCleanupIntervalMs);
         }
@@ -214,7 +222,8 @@ public class AsyncCheckService {
         // 如果任务已经在运行，则重新调度
         if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
             taskCleanupTask.cancel(false);
-            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+            TaskScheduler actualScheduler = taskScheduler;
+            taskCleanupTask = actualScheduler.scheduleAtFixedRate(
                     this::cleanupTasks, intervalMs);
             logger.info("任务清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
@@ -667,7 +676,8 @@ public class AsyncCheckService {
 
         if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
             taskCleanupTask.cancel(false);
-            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+            TaskScheduler actualScheduler = taskScheduler;
+            taskCleanupTask = actualScheduler.scheduleAtFixedRate(
                     this::cleanupTasks, intervalMs);
             logger.info("任务清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
         }

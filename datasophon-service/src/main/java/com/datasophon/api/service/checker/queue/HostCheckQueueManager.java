@@ -129,7 +129,9 @@ public class HostCheckQueueManager {
 
     private final HostCheckServiceImpl hostCheckService;
 
-    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService, @Qualifier("fixExecutor") ExecutorService fixExecutorService, @Qualifier("checkExecutor") ExecutorService checkExecutorService, TaskScheduler taskScheduler) {
+    public HostCheckQueueManager(ItemCheckerFactory itemCheckerFactory, HostCheckServiceImpl hostCheckService,
+            @Qualifier("fixExecutor") ExecutorService fixExecutorService,
+            @Qualifier("checkExecutor") ExecutorService checkExecutorService, TaskScheduler taskScheduler) {
         this.itemCheckerFactory = itemCheckerFactory;
         this.hostCheckService = hostCheckService;
         // 创建检查项线程池 - 负责检查项级别的任务
@@ -200,25 +202,26 @@ public class HostCheckQueueManager {
      * 启动定时任务
      */
     public void startScheduledTasks() {
-        if (taskScheduler == null) {
+        TaskScheduler actualScheduler = taskScheduler;
+        if (actualScheduler == null) {
             logger.info("TaskScheduler未注入，创建自定义TaskScheduler");
             ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
             scheduler.setPoolSize(2);
             scheduler.setThreadNamePrefix("host-check-scheduler-");
             scheduler.initialize();
-            taskScheduler = scheduler;
+            actualScheduler = scheduler;
         }
 
         // 启动队列健康监控任务（每60秒执行一次）
         if (queueHealthMonitorTask == null || queueHealthMonitorTask.isCancelled()) {
-            queueHealthMonitorTask = taskScheduler.scheduleAtFixedRate(
+            queueHealthMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::monitorQueueHealth, 60000);
             logger.info("队列健康监控定时任务已启动，执行间隔: 60秒");
         }
 
         // 启动任务超时监控（每60秒执行一次）
         if (taskTimeoutMonitorTask == null || taskTimeoutMonitorTask.isCancelled()) {
-            taskTimeoutMonitorTask = taskScheduler.scheduleAtFixedRate(
+            taskTimeoutMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::checkForTaskTimeouts, 60000);
             logger.info("任务超时监控定时任务已启动，执行间隔: 60秒");
         }
@@ -311,7 +314,6 @@ public class HostCheckQueueManager {
         }
     }
 
-
     /**
      * 添加主机检查任务
      */
@@ -386,14 +388,11 @@ public class HostCheckQueueManager {
             scheduledTasksEnabled.set(true);
         }
 
-        // 7. 确保定时任务在运行
-        if (taskScheduler == null) {
-            logger.info("TaskScheduler未初始化，正在创建...");
-            ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-            scheduler.setPoolSize(2);
-            scheduler.setThreadNamePrefix("host-check-scheduler-");
-            scheduler.initialize();
-            taskScheduler = scheduler;
+        // 7. 确保有可用的定时任务调度器
+        TaskScheduler currentScheduler = taskScheduler;
+        if (currentScheduler == null) {
+            logger.info("TaskScheduler未初始化，需要使用另一种方式获取或创建调度器");
+            // 此处不能直接给final字段赋值，后续使用可用的调度器
         }
 
         // 8. 启动所有定时任务
@@ -1052,14 +1051,15 @@ public class HostCheckQueueManager {
      * 仅启动队列健康监控任务
      */
     public void startQueueHealthMonitor() {
-        if (taskScheduler == null) {
+        TaskScheduler actualScheduler = taskScheduler;
+        if (actualScheduler == null) {
             logger.info("TaskScheduler未注入，无法启动队列健康监控");
             return;
         }
 
         // 启动队列健康监控任务（每2分钟执行一次）
         if (queueHealthMonitorTask == null || queueHealthMonitorTask.isCancelled()) {
-            queueHealthMonitorTask = taskScheduler.scheduleAtFixedRate(
+            queueHealthMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::monitorQueueHealth, 120000);
             logger.info("队列健康监控定时任务已启动，执行间隔: 2分钟");
         }
@@ -1069,14 +1069,15 @@ public class HostCheckQueueManager {
      * 仅启动任务超时监控任务
      */
     public void startTaskTimeoutMonitor() {
-        if (taskScheduler == null) {
+        TaskScheduler actualScheduler = taskScheduler;
+        if (actualScheduler == null) {
             logger.info("TaskScheduler未注入，无法启动任务超时监控");
             return;
         }
 
         // 启动任务超时监控（每30秒执行一次）
         if (taskTimeoutMonitorTask == null || taskTimeoutMonitorTask.isCancelled()) {
-            taskTimeoutMonitorTask = taskScheduler.scheduleAtFixedRate(
+            taskTimeoutMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::checkForTaskTimeouts, 30000);
             logger.info("任务超时监控定时任务已启动，执行间隔: 30秒");
         }
@@ -1227,7 +1228,8 @@ public class HostCheckQueueManager {
 
         if (queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled()) {
             queueHealthMonitorTask.cancel(false);
-            queueHealthMonitorTask = taskScheduler.scheduleAtFixedRate(
+            TaskScheduler actualScheduler = taskScheduler;
+            queueHealthMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::monitorQueueHealth, intervalMs);
             logger.info("队列健康监控已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
@@ -1248,7 +1250,8 @@ public class HostCheckQueueManager {
 
         if (taskTimeoutMonitorTask != null && !taskTimeoutMonitorTask.isCancelled()) {
             taskTimeoutMonitorTask.cancel(false);
-            taskTimeoutMonitorTask = taskScheduler.scheduleAtFixedRate(
+            TaskScheduler actualScheduler = taskScheduler;
+            taskTimeoutMonitorTask = actualScheduler.scheduleAtFixedRate(
                     this::checkForTaskTimeouts, intervalMs);
             logger.info("任务超时监控已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
@@ -1515,8 +1518,7 @@ public class HostCheckQueueManager {
                         ItemChecker passwordFreeChecker = itemCheckerFactory.getChecker(ItemCode.PASSWORD_FREE);
                         if (passwordFreeChecker == null) {
                             String errorMsg = "未找到免密登录检查器";
-                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg
-                            );
+                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg);
                             LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                             logger.error(errorMsg);
@@ -1540,8 +1542,7 @@ public class HostCheckQueueManager {
                             fixTasksSucceeded.incrementAndGet();
 
                             String successMsg = String.format("主机 %s 的免密登录修复任务执行成功", hostInfo.getIp());
-                            LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg
-                            );
+                            LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg);
                             LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                             logger.info(successMsg);
@@ -1561,8 +1562,7 @@ public class HostCheckQueueManager {
                     } catch (Exception e) {
                         String errorMsg = String.format("执行主机 %s 的免密登录修复任务时发生异常: %s",
                                 hostInfo.getIp(), e.getMessage());
-                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg
-                        );
+                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg);
                         LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -1592,8 +1592,7 @@ public class HostCheckQueueManager {
 
                         String successMsg = String.format("主机 %s 的修复任务 %s 执行成功",
                                 hostInfo.getIp(), checkItem.getItemName());
-                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg
-                        );
+                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg);
                         LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                         logger.info(successMsg);

@@ -2,21 +2,9 @@ package com.datasophon.api.service.checker.checkers.disk.factory;
 
 import com.datasophon.api.service.checker.checkers.disk.DiskCheckerStrategy;
 import com.datasophon.api.service.checker.checkers.disk.generic.GenericDiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.alpine.AlpineDiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOS7DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOS8DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOSDiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.kylin.KylinDiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.kylin.KylinV10DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.kylin.KylinV4DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.Ubuntu22DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.Ubuntu24DiskChecker;
-import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.UbuntuDiskChecker;
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -34,7 +22,8 @@ public class DiskCheckerFactory {
     private final Map<String, DiskCheckerStrategy> checkerCache = new ConcurrentHashMap<>();
     private final GenericDiskChecker genericDiskChecker;
 
-    public DiskCheckerFactory(List<DiskCheckerStrategy> checkers) {
+    public DiskCheckerFactory(List<DiskCheckerStrategy> diskCheckers, List<DiskCheckerStrategy> checkers) {
+        this.diskCheckers = diskCheckers;
         this.genericDiskChecker = checkers.stream()
                 .filter(checker -> checker instanceof GenericDiskChecker)
                 .map(checker -> (GenericDiskChecker) checker)
