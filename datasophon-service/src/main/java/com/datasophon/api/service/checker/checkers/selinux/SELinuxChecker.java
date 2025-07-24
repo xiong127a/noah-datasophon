@@ -144,7 +144,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         SELinuxCheckerStrategy strategy = selinuxCheckerFactory.getChecker(osInfo);
 
                         // 执行修复
-                        boolean result = false;
+                        boolean result;
                         try {
                                 result = strategy.fix(hostInfo, checkItem, cacheLog);
                         } catch (InterruptedException e) {

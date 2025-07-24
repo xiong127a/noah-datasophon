@@ -38,7 +38,8 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
 
         if (command.getEnableKerberos()) {

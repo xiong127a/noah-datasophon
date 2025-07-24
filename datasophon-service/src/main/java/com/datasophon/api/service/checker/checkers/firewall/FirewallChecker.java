@@ -200,7 +200,7 @@ public class FirewallChecker extends AbstractItemChecker {
             FirewallCheckerStrategy strategy = firewallCheckerFactory.getChecker(osInfo);
 
             // 执行修复
-            boolean result = false;
+            boolean result;
             try {
                 result = strategy.fix(hostInfo, checkItem, cacheLog);
             } catch (InterruptedException e) {

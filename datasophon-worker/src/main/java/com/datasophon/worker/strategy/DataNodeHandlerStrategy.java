@@ -37,7 +37,8 @@ public class DataNodeHandlerStrategy extends AbstractHandlerStrategy implements 
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getEnableKerberos()) {
             logger.info("start to get datanode keytab file");

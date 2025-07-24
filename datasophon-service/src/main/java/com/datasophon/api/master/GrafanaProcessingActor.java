@@ -26,7 +26,8 @@ public class GrafanaProcessingActor extends AbstractActor {
     private void processSqlite3Command(Sqlite3ExecCommand command) {
         try {
             logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
-            ExecResult execResult = new ExecResult();
+            new ExecResult();
+            ExecResult execResult;
 
             String dbFilePath = "/opt/datasophon/grafana/data/grafana.db";
             execResult = Sqlite3Utils.updateDatasource(dbFilePath, command.getUrl());

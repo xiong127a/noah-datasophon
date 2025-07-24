@@ -75,7 +75,7 @@ public class TenantRangerActor extends AbstractActor {
 
     private ExecResult addRoleUser(TenantRangerCommand rangerCommand) throws Exception {
         ExecResult execResult = new ExecResult();
-        RangerClient rangerClient = null;
+        RangerClient rangerClient;
         try {
             rangerClient = getRangerClient(rangerCommand.getClusterId());
             RangerUtil.setRoleUser(rangerClient, rangerCommand.getRoleName(), rangerCommand.getUserList());

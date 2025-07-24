@@ -41,7 +41,8 @@ public class FEHandlerStrategy extends AbstractHandlerStrategy implements Servic
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         logger.info("FEHandlerStrategy start fe"+ JSONUtil.toJsonStr(command));
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {

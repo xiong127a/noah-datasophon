@@ -84,7 +84,8 @@ public class MasterServiceActor extends AbstractActor {
                 if (CancelCommandMap.exists(serviceRoleInfo.getHostCommandId())) {
                     continue;
                 }
-                ExecResult execResult = new ExecResult();
+                new ExecResult();
+                ExecResult execResult;
                 Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
                 ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.getOneServiceRole(
                         serviceRoleInfo.getName(),

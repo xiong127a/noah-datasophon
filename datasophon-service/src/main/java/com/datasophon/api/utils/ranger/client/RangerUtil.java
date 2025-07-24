@@ -31,8 +31,8 @@ public class RangerUtil {
     private static final Cache<Integer, RangerClient> clientKmsCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
 
     public static void updateDefaultPolicy(RangerClient rangerClient, String serviceName) {
-        List<String> accessTypeList = new ArrayList<>();
-        String policyName = "";
+        List<String> accessTypeList;
+        String policyName;
         PolicyItem policyItem = new PolicyItem();
         policyItem.setRoles(Collections.singletonList(SUPER_ROLE_NAME));
         switch (serviceName) {

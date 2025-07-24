@@ -136,7 +136,7 @@ public class ShellUtils {
     }
 
     public static ExecResult execWithStatus(String workPath, List<String> command, long timeout) {
-        Process process = null;
+        Process process;
         ExecResult result = new ExecResult();
         try {
             processBuilder.directory(new File(workPath));
@@ -162,7 +162,7 @@ public class ShellUtils {
     }
 
     public static ExecResult execWithStatus(String workPath, List<String> command, long timeout, Logger logger) {
-        Process process = null;
+        Process process;
         ExecResult result = new ExecResult();
         try {
             processBuilder.directory(new File(workPath));

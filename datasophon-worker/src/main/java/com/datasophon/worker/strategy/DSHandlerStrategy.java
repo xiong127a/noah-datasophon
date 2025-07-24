@@ -38,7 +38,8 @@ public class DSHandlerStrategy extends AbstractHandlerStrategy implements Servic
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {

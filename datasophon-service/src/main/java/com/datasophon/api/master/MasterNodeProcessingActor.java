@@ -26,7 +26,8 @@ public class MasterNodeProcessingActor extends AbstractActor {
     private void processOlapSqlCommand(OlapSqlExecCommand command) {
         try {
             logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
-            ExecResult execResult = new ExecResult();
+            new ExecResult();
+            ExecResult execResult;
             String tip = command.getOpsType().getDesc();
             execResult = switch (command.getOpsType()) {
                 case ADD_BE -> OlapUtils.addBackend(command.getFeMaster(), command.getHostName());

@@ -40,7 +40,8 @@ public class StartServiceActor extends AbstractActor {
         return ReceiveBuilder.create()
                 .match(ServiceRoleOperateCommand.class, command -> {
                     logger.info("start to start service role {}", command.getServiceRoleName());
-                    ExecResult startResult = new ExecResult();
+                    new ExecResult();
+                    ExecResult startResult;
                     ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(),
                             command.getServiceRoleName());
 

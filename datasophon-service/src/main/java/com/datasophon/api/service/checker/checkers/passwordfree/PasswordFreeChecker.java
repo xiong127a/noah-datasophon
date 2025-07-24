@@ -349,7 +349,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
             // 检查是否已有SSH密钥
             boolean keysExist = Files.exists(privateKeyPath) && Files.exists(publicKeyPath);
-            String publicKeyContent = null;
+            String publicKeyContent;
 
             if (!keysExist) {
                 // 生成SSH密钥对

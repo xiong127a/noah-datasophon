@@ -36,7 +36,8 @@ public class StorageHandlerStrategy extends AbstractHandlerStrategy implements S
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         String hostname = CacheUtils.getString(Constants.HOSTNAME);

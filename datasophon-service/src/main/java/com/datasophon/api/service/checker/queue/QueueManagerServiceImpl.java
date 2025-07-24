@@ -421,7 +421,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
      */
     private OperationResult pauseScheduledTaskDirect(String taskId) {
         boolean success = false;
-        String message = "";
+        String message;
 
         // 根据任务ID执行相应操作
         switch (taskId) {
@@ -507,7 +507,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
      */
     private OperationResult resumeScheduledTaskDirect(String taskId) {
         boolean success = false;
-        String message = "";
+        String message;
 
         // 根据任务ID执行相应操作
         switch (taskId) {
@@ -716,7 +716,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
      */
     private OperationResult updateTaskIntervalDirect(String taskId, long intervalMs) {
         boolean success = false;
-        String message = "";
+        String message;
 
         // 根据任务ID执行相应操作
         try {

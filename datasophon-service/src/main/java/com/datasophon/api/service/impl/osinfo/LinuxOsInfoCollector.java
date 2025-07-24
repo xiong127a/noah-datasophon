@@ -2116,7 +2116,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 尝试多种命令获取IP地址信息，优先使用ip地址
             CommandResult ipInfoResult = MinaUtils.execCmdWithResultObject(session, "ip addr show");
-            String ipInfo = "";
+            String ipInfo;
 
             if (ipInfoResult.isSuccess()) {
                 ipInfo = ipInfoResult.getOutput().trim();

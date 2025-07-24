@@ -43,7 +43,8 @@ public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implem
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
-        ExecResult startResult = new ExecResult();
+        new ExecResult();
+        ExecResult startResult;
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getEnableRangerPlugin()) {
