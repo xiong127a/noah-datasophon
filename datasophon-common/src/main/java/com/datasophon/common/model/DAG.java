@@ -397,11 +397,8 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
     private Set<Node> getNeighborNodes(Node node, final Map<Node, Map<Node, EdgeInfo>> edges) {
         final Map<Node, EdgeInfo> neighborEdges = edges.get(node);
 
-        if (neighborEdges == null) {
-            return Collections.EMPTY_MAP.keySet();
-        }
+        return Objects.requireNonNullElse(neighborEdges, Collections.EMPTY_MAP).keySet();
 
-        return neighborEdges.keySet();
     }
 
     /**
