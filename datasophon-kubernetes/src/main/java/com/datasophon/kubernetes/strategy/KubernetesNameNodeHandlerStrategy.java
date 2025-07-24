@@ -95,7 +95,6 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
         // 遍历所有配置
         for (ServiceConfig config : list) {
             String name = config.getName();
-            Object value = config.getValue();
 
             // 处理NameNode HA相关配置
             switch (name) {
@@ -104,32 +103,28 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                     String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 case "dfs.namenode.rpc-address.nameservice1.nn2": {
                     // NameNode2 RPC地址使用pod-1的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":8020";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn1": {
                     // NameNode1 HTTP地址使用pod-0的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 case "dfs.namenode.http-address.nameservice1.nn2": {
                     // NameNode2 HTTP地址使用pod-1的FQDN格式
                     String newValue = NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":9870";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 case "dfs.namenode.shared.edits.dir": {
                     // NameNode共享编辑目录，使用JournalNode各个Pod的FQDN列表
@@ -146,8 +141,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                     }
                     newValue.append("/nameservice1");
                     config.setValue(newValue.toString());
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 // 处理ZooKeeper地址 - ha.zookeeper.quorum
                 case "ha.zookeeper.quorum": {
@@ -163,8 +157,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 // 处理ZooKeeper地址 - hadoop.zk.address
                 case "hadoop.zk.address": {
@@ -180,30 +173,26 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
                                 .append(CLUSTER_DOMAIN).append(":2181");
                     }
                     config.setValue(zkServers.toString());
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 // 处理DataNode数据传输地址 - 使用完整的FQDN格式
                 case "dfs.datanode.address": {
                     // 使用DataNode服务的完整FQDN
                     String newValue = DATANODE_SERVICE + "." + namespace + "." + CLUSTER_DOMAIN + ":1026";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 // 处理DataNode HTTP地址 - 使用完整的FQDN格式
                 case "dfs.datanode.http.address": {
                     // 使用DataNode服务的完整FQDN
                     String newValue = DATANODE_SERVICE + "." + namespace + "." + CLUSTER_DOMAIN + ":1025";
                     config.setValue(newValue);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
                 case "dfs.nameservices": {
                     String clusterName = CacheUtils.getString("cluster_name");
                     config.setValue(clusterName);
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                    break;
+                                        break;
                 }
             }
         }
