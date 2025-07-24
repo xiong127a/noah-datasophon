@@ -43,7 +43,7 @@ public class SRFEObserverHandlerStrategy extends AbstractHandlerStrategy impleme
     public ExecResult handler(ServiceRoleOperateCommand command) {
         new ExecResult();
         ExecResult startResult;
-        logger.info("FEObserverHandlerStrategy start fe observer" + JSONUtil.toJsonStr(command));
+        logger.info("FEObserverHandlerStrategy start fe observer{}", JSONUtil.toJsonStr(command));
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
             logger.info("first start fe observer");

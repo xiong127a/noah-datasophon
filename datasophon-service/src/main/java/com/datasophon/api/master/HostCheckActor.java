@@ -204,7 +204,7 @@ public class HostCheckActor extends AbstractActor {
               checkedHost.setHostState(HostState.RUNNING);
               checkedHost.setManaged(MANAGED.YES);
             } catch (Exception e) {
-              Objects.requireNonNull(logger).warn("host: " + host.getHostname() + " rpc error, cause: " + e.getMessage());
+                Objects.requireNonNull(logger).warn("host: {} rpc error, cause: {}", host.getHostname(), e.getMessage());
               checkedHost.setHostState(HostState.OFFLINE);
             }
             checkedHosts.add(checkedHost);

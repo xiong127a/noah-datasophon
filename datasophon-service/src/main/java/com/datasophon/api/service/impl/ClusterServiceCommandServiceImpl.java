@@ -284,7 +284,7 @@ public class ClusterServiceCommandServiceImpl
                 logger.info("命令 {} 进度更新为 {}% 并更新数据库", commandEntity.getCommandId(), finalProgress);
             }
         } catch (Exception e) {
-            logger.error("计算命令进度时出错: " + e.getMessage(), e);
+            logger.error("计算命令进度时出错: {}", e.getMessage(), e);
         }
     }
 
@@ -361,7 +361,7 @@ public class ClusterServiceCommandServiceImpl
                         commandEntity.getCommandId(), commandEntity.getCommandState());
             }
         } catch (Exception e) {
-            logger.error("实时计算命令状态出错: " + e.getMessage(), e);
+            logger.error("实时计算命令状态出错: {}", e.getMessage(), e);
         }
     }
 

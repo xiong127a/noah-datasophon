@@ -189,12 +189,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("create ldap user {} success", username);
             } else {
-                logger.error("create ldap user " + username + " failed");
+                logger.error("create ldap user {} failed", username);
                 logger.error(execResult.getExecOut());
                 logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            logger.error("create ldap user " + username + " failed");
+            logger.error("create ldap user {} failed", username);
             logger.error(e.getMessage());
         }
 
@@ -308,11 +308,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (openldapProcess(ldapCommand)) {
                 logger.info("create ldap user {} success", username);
             } else {
-                logger.error("create ldap user " + username + " failed");
+                logger.error("create ldap user {} failed", username);
 
             }
         } catch (Exception e) {
-            logger.error("create ldap user " + username + " failed");
+            logger.error("create ldap user {} failed", username);
             logger.error(e.getMessage());
         }
 
@@ -412,12 +412,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("delete ldap user {} success", clusterUser.getUsername());
             } else {
-                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error("delete ldap user {} failed", clusterUser.getUsername());
                 logger.error(execResult.getExecOut());
                 logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error("delete ldap user {} failed", clusterUser.getUsername());
             logger.error(e.getMessage());
         }
 
@@ -459,10 +459,10 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (openldapProcess(ldapCommand)) {
                 logger.info("delete ldap user {} success", clusterUser.getUsername());
             } else {
-                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error("delete ldap user {} failed", clusterUser.getUsername());
             }
         } catch (Exception e) {
-            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error("delete ldap user {} failed", clusterUser.getUsername());
             logger.error(e.getMessage());
         }
 

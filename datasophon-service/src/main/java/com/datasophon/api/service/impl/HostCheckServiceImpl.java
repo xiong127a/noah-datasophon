@@ -715,7 +715,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             }
         } catch (Exception e) {
-            logger.error("执行检查失败: " + e.getMessage(), e);
+            logger.error("执行检查失败: {}", e.getMessage(), e);
 
             checkItem.setMessage("检查失败: " + e.getMessage());
             asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
@@ -1801,7 +1801,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             return Result.success("已跳过该检查项");
         } catch (Exception e) {
-            logger.error("跳过检查项时出错: " + e.getMessage(), e);
+            logger.error("跳过检查项时出错: {}", e.getMessage(), e);
             return Result.error("跳过检查项失败: " + e.getMessage());
         }
     }

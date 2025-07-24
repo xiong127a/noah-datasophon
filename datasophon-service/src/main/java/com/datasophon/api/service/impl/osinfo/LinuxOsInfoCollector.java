@@ -489,7 +489,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     logger.error("命令执行失败: {}, 错误: {}", command, commandResult.getError());
                 }
             } catch (Exception e) {
-                logger.error("执行命令时出错: " + command, e);
+                logger.error("执行命令时出错: {}", command, e);
             } finally {
                 if (cacheUpdater != null && hostInfo != null) {
                     cacheUpdater.updateCache(hostInfo);

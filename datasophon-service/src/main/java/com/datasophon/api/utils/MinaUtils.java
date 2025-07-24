@@ -63,7 +63,7 @@ public class MinaUtils {
                     LOG.info("已添加ED25519密钥认证");
                     authAdded = true;
                 } catch (Exception e) {
-                    LOG.warn("ED25519密钥加载失败: " + e.getMessage());
+                    LOG.warn("ED25519密钥加载失败: {}", e.getMessage());
                 }
             }
 
@@ -76,7 +76,7 @@ public class MinaUtils {
                     LOG.info("已添加RSA密钥认证");
                     authAdded = true;
                 } catch (Exception e) {
-                    LOG.warn("RSA密钥加载失败: " + e.getMessage());
+                    LOG.warn("RSA密钥加载失败: {}", e.getMessage());
                 }
             }
 
@@ -92,14 +92,14 @@ public class MinaUtils {
                 return null;
             }
         } catch (IOException e) {
-            LOG.error("免密登录失败: " + e.getMessage());
+            LOG.error("免密登录失败: {}", e.getMessage());
             return null;
         } catch (Exception e) {
-            LOG.error("连接异常: " + e.getMessage());
+            LOG.error("连接异常: {}", e.getMessage());
             return null;
         }
 
-        LOG.info(sshIp + " 连接成功");
+        LOG.info("{} 连接成功", sshIp);
         return session;
     }
 
@@ -379,7 +379,7 @@ public class MinaUtils {
             }
             return null;
         }
-        LOG.info(sshIp + " 密码连接成功");
+        LOG.info("{} 密码连接成功", sshIp);
         return session;
     }
 

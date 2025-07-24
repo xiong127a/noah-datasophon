@@ -140,7 +140,7 @@ public class LoadServiceMeta implements ApplicationRunner {
                     try {
                         parseServiceDdl(frameCode, clusters, frameInfo, serviceName, serviceDdl);
                     } catch (Exception e) {
-                        logger.error("invalid service ddl file: " + serviceName, e);
+                        logger.error("invalid service ddl file: {}", serviceName, e);
                     }
                 }
             }

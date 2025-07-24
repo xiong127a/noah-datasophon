@@ -296,7 +296,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 验证home目录是否已成功创建
             return checkUserHomeExists(hostInfo, username);
         } catch (Exception e) {
-            logger.error("为用户 " + username + " 创建home目录时发生错误", e);
+            logger.error("为用户 {} 创建home目录时发生错误", username, e);
             cacheLog.error("为用户 " + username + " 创建home目录时发生错误: " + e.getMessage());
             return false;
         }
@@ -726,7 +726,7 @@ public class UserGroupChecker extends AbstractItemChecker {
                 }
             }
         } catch (IOException e) {
-            logger.error("解析服务配置文件时发生错误: " + file.getAbsolutePath(), e);
+            logger.error("解析服务配置文件时发生错误: {}", file.getAbsolutePath(), e);
             cacheLog.error("解析文件 " + file.getAbsolutePath() + " 时发生错误: " + e.getMessage());
         }
     }
@@ -823,7 +823,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
             return result.isSuccess();
         } catch (Exception e) {
-            logger.error("创建用户时发生错误: " + username, e);
+            logger.error("创建用户时发生错误: {}", username, e);
             cacheLog.error("创建用户 " + username + " 时发生错误: " + e.getMessage());
             return false;
         }
@@ -838,7 +838,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
             return result.isSuccess();
         } catch (Exception e) {
-            logger.error("创建组时发生错误: " + groupname, e);
+            logger.error("创建组时发生错误: {}", groupname, e);
             cacheLog.error("创建组 " + groupname + " 时发生错误: " + e.getMessage());
             return false;
         }

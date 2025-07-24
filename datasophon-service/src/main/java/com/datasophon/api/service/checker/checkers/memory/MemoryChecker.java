@@ -278,7 +278,7 @@ public class MemoryChecker extends AbstractItemChecker {
 
                         return checkItem;
                 } catch (Exception e) {
-                        logger.error("内存检查失败: " + e.getMessage(), e);
+                    logger.error("内存检查失败: {}", e.getMessage(), e);
                         cacheLog.error("内存检查失败: " + e.getMessage());
                         checkItem.setStatus(CheckItem.Status.FAILED);
                         checkItem.setMessage("内存检查失败: " + e.getMessage());

@@ -44,7 +44,7 @@ public class SRFEHandlerStrategy extends AbstractHandlerStrategy implements Serv
     public ExecResult handler(ServiceRoleOperateCommand command) {
         new ExecResult();
         ExecResult startResult;
-        logger.info("FEHandlerStrategy start fe"+ JSONUtil.toJsonStr(command));
+        logger.info("FEHandlerStrategy start fe{}", JSONUtil.toJsonStr(command));
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
             if (command.isSlave()) {

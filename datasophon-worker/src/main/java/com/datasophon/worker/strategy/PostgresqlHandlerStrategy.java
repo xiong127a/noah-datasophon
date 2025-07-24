@@ -31,7 +31,7 @@ public class PostgresqlHandlerStrategy extends AbstractHandlerStrategy implement
                 logger.info(backupShell);
                 execResult = ShellUtils.exceShell(backupShell);
                 if (!execResult.getExecResult()) {
-                    logger.error("copy data from master failed --> " + execResult.getExecErrOut());
+                    logger.error("copy data from master failed --> {}", execResult.getExecErrOut());
                     return execResult;
                 } else {
                     logger.info("copy data from master success");

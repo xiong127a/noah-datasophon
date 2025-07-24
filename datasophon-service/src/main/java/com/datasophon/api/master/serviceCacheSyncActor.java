@@ -33,12 +33,12 @@ public class serviceCacheSyncActor extends AbstractActor {
     }
 
     private void handleConfigMapCache(ConfigMapCacheCommand configMapCacheCommand) {
-        logger.info("receive cache configMap ： " + configMapCacheCommand.getKey());
+        logger.info("receive cache configMap ： {}", configMapCacheCommand.getKey());
 
         ServiceConfigMap.put(
                 configMapCacheCommand.getKey(),
                 configMapCacheCommand.getConfigs());
-        logger.info("sync cache configMap： " + configMapCacheCommand.getKey());
+        logger.info("sync cache configMap： {}", configMapCacheCommand.getKey());
 
         ExecResult result = new ExecResult();
         result.setExecResult(true);
@@ -47,7 +47,7 @@ public class serviceCacheSyncActor extends AbstractActor {
     }
 
     private void handleVariableCache(VariableCacheCommand variableCacheCommand) {
-        logger.info("receive cache variable " + variableCacheCommand.getKey());
+        logger.info("receive cache variable {}", variableCacheCommand.getKey());
 
         Map<String, String> globalVariables = GlobalVariables.get(variableCacheCommand.getClusterId());
 
@@ -60,7 +60,7 @@ public class serviceCacheSyncActor extends AbstractActor {
     }
 
     private void handleCache(CacheCommand cacheCommand) {
-        logger.info("get cache key " + cacheCommand.getKey());
+        logger.info("get cache key {}", cacheCommand.getKey());
 
         String key = cacheCommand.getKey();
         ExecResult result = new ExecResult();
@@ -75,7 +75,7 @@ public class serviceCacheSyncActor extends AbstractActor {
             result.setObject(CacheUtils.get(key));
             logger.info("get cache value success");
         } else {
-            logger.warn("Cache key not found: " + key);
+            logger.warn("Cache key not found: {}", key);
             result.setExecResult(false);
         }
 

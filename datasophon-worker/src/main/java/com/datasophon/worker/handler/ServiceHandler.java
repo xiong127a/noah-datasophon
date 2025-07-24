@@ -161,7 +161,7 @@ public class ServiceHandler {
                         command.add("sh");
                     }
                 } catch (Exception e) {
-                    logger.warn("read shell script file: " + shell + " error, reason: " + e.getMessage());
+                    logger.warn("read shell script file: {} error, reason: {}", shell, e.getMessage());
                     command.add("sh");
                 }
             } else {

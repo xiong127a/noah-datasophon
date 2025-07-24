@@ -122,7 +122,7 @@ public class ShellUtils {
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 String line;
                 while ((line = br.readLine()) != null) {
-                    log.info("脚本返回的数据如下： " + line);
+                    log.info("脚本返回的数据如下： {}", line);
                     stringBuffer.append(line);
                 }
                 in.close();
@@ -146,7 +146,7 @@ public class ShellUtils {
             getOutput(process);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                log.info("script execute success --> " + String.join(" ", command));
+                log.info("script execute success --> {}", String.join(" ", command));
                 result.setExecResult(true);
                 result.setExecOut("script execute success");
             } else {
@@ -172,7 +172,7 @@ public class ShellUtils {
             getOutput(process, logger);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success --> " + String.join(" ", command));
+                logger.info("script execute success --> {}", String.join(" ", command));
                 result.setExecResult(true);
                 result.setExecOut("script execute success --> " + String.join(" ", command));
             } else {

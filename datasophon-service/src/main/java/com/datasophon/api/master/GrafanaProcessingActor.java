@@ -25,16 +25,16 @@ public class GrafanaProcessingActor extends AbstractActor {
 
     private void processSqlite3Command(Sqlite3ExecCommand command) {
         try {
-            logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
+            logger.info("MasterNodeProcessingActor receive message: {}", JSONUtil.toJsonStr(command));
             new ExecResult();
             ExecResult execResult;
 
             String dbFilePath = "/opt/datasophon/grafana/data/grafana.db";
             execResult = Sqlite3Utils.updateDatasource(dbFilePath, command.getUrl());
             if (execResult.getExecResult()) {
-                logger.info(command.getGrafanaIp() + " update success");
+                logger.info("{} update success", command.getGrafanaIp());
             } else {
-                logger.info(command.getGrafanaIp() + " update failed");
+                logger.info("{} update failed", command.getGrafanaIp());
             }
             int tryTimes = 0;
             while (!execResult.getExecResult() && tryTimes < 3) {
@@ -44,10 +44,10 @@ public class GrafanaProcessingActor extends AbstractActor {
                     execResult = Sqlite3Utils.updateDatasource(dbFilePath, command.getUrl());
 
                     if (execResult.getExecResult()) {
-                        logger.info(command.getGrafanaIp() + " update success");
+                        logger.info("{} update success", command.getGrafanaIp());
                         break;
                     } else {
-                        logger.info(command.getGrafanaIp() + " update failed");
+                        logger.info("{} update failed", command.getGrafanaIp());
                     }
                     tryTimes++;
                 } catch (InterruptedException e) {

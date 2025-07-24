@@ -25,7 +25,7 @@ public class MasterNodeProcessingActor extends AbstractActor {
 
     private void processOlapSqlCommand(OlapSqlExecCommand command) {
         try {
-            logger.info("MasterNodeProcessingActor receive message: " + JSONUtil.toJsonStr(command));
+            logger.info("MasterNodeProcessingActor receive message: {}", JSONUtil.toJsonStr(command));
             new ExecResult();
             ExecResult execResult;
             String tip = command.getOpsType().getDesc();
@@ -36,9 +36,9 @@ public class MasterNodeProcessingActor extends AbstractActor {
                 case ADD_CN -> OlapUtils.addCn(command.getFeMaster(), command.getHostName());
             };
             if (execResult.getExecResult()) {
-                logger.info(command.getHostName() + " " + tip + " added success");
+                logger.info("{} {} added success", command.getHostName(), tip);
             } else {
-                logger.info(command.getHostName() + " " + tip + " added failed");
+                logger.info("{} {} added failed", command.getHostName(), tip);
             }
             int tryTimes = 0;
             while (!execResult.getExecResult() && tryTimes < 3) {
@@ -53,10 +53,10 @@ public class MasterNodeProcessingActor extends AbstractActor {
                         case ADD_CN -> OlapUtils.addCnBySqlClient(command.getFeMaster(), command.getHostName());
                     };
                     if (execResult.getExecResult()) {
-                        logger.info(command.getHostName() + " " + tip + " added success");
+                        logger.info("{} {} added success", command.getHostName(), tip);
                         break;
                     } else {
-                        logger.info(command.getHostName() + " " + tip + " added failed");
+                        logger.info("{} {} added failed", command.getHostName(), tip);
                     }
                     tryTimes++;
                 } catch (InterruptedException e) {

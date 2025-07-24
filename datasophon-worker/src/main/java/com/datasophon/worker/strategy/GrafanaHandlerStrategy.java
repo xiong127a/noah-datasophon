@@ -43,7 +43,7 @@ public class GrafanaHandlerStrategy extends AbstractHandlerStrategy implements S
     public ExecResult handler(ServiceRoleOperateCommand command) {
         new ExecResult();
         ExecResult startResult;
-        logger.info("GrafanaHandlerStrategy start grafana" + JSONUtil.toJsonStr(command));
+        logger.info("GrafanaHandlerStrategy start grafana{}", JSONUtil.toJsonStr(command));
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
 
         String localHostName = null;
