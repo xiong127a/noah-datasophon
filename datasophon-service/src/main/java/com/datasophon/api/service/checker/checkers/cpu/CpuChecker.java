@@ -19,6 +19,10 @@ public class CpuChecker extends AbstractItemChecker {
 
     private final CheckerProperties checkerProperties;
 
+    public CpuChecker(CheckerProperties checkerProperties) {
+        this.checkerProperties = checkerProperties;
+    }
+
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
