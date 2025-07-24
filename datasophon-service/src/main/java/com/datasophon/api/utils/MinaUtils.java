@@ -151,64 +151,58 @@ public class MinaUtils {
         session.resetAuthTimeout();
         LOG.info("执行命令: {}", command);
         // 命令返回的结果
-        ChannelExec ce = null;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayOutputStream err = new ByteArrayOutputStream();
-        try {
-            ce = session.createExecChannel(command);
-            ce.setOut(out);
-            ce.setErr(err);
-            // 打开通道并执行命令
-            ce.open();
-
-            // 等待命令执行完成或超时
-            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
-                    TimeUnit.SECONDS.toMillis(100000));
-
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                LOG.error("命令执行超时: {}", command);
-                return new CommandResult(command, 124, "", "命令执行超时");
-            }
-
-            int exitStatus = ce.getExitStatus();
-            LOG.info("命令退出状态: {}", exitStatus);
-
-            String outResult = out.toString();
-            String errResult = err.toString();
-
-            if (exitStatus != 0) {
-                // 处理常见的错误并尝试替代解决方案
-                if (command.contains("chkconfig") && exitStatus == 127) {
-                    LOG.warn("chkconfig命令不存在，尝试使用systemctl替代...");
-                    String serviceName = command.substring(command.lastIndexOf(" ") + 1);
-                    return execCmdWithResultObject(session, "systemctl enable " + serviceName);
-                } else if (command.contains("\\cp") && exitStatus == 1) {
-                    LOG.warn("复制文件失败，尝试使用sudo...");
-                    return execCmdWithResultObject(session, "sudo " + command);
-                } else if (command.contains("service") && command.contains("restart")) {
-                    LOG.warn("service命令启动服务失败，尝试使用systemctl...");
-                    String serviceName = command.substring(command.indexOf("service ") + 8, command.lastIndexOf(" "));
-                    LOG.info("尝试使用systemctl重启服务: {}", serviceName);
-                    return execCmdWithResultObject(session, "systemctl restart " + serviceName);
-                }
-
-                LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
-                return new CommandResult(command, exitStatus, outResult, errResult);
-            }
-
-            LOG.info("命令执行结果: {}", outResult);
-            return new CommandResult(command, 0, outResult, "");
-        } catch (IOException e) {
-            LOG.error("执行命令异常: {} - {}", command, e.getMessage());
-            return new CommandResult(command, -1, "", e.getMessage());
-        } finally {
+        try (ChannelExec ce = session.createExecChannel(command)) {
             try {
-                if (ce != null) {
-                    ce.close();
+                ce.setOut(out);
+                ce.setErr(err);
+                // 打开通道并执行命令
+                ce.open();
+
+                // 等待命令执行完成或超时
+                Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
+                        TimeUnit.SECONDS.toMillis(100000));
+
+                if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                    LOG.error("命令执行超时: {}", command);
+                    return new CommandResult(command, 124, "", "命令执行超时");
                 }
+
+                int exitStatus = ce.getExitStatus();
+                LOG.info("命令退出状态: {}", exitStatus);
+
+                String outResult = out.toString();
+                String errResult = err.toString();
+
+                if (exitStatus != 0) {
+                    // 处理常见的错误并尝试替代解决方案
+                    if (command.contains("chkconfig") && exitStatus == 127) {
+                        LOG.warn("chkconfig命令不存在，尝试使用systemctl替代...");
+                        String serviceName = command.substring(command.lastIndexOf(" ") + 1);
+                        return execCmdWithResultObject(session, "systemctl enable " + serviceName);
+                    } else if (command.contains("\\cp") && exitStatus == 1) {
+                        LOG.warn("复制文件失败，尝试使用sudo...");
+                        return execCmdWithResultObject(session, "sudo " + command);
+                    } else if (command.contains("service") && command.contains("restart")) {
+                        LOG.warn("service命令启动服务失败，尝试使用systemctl...");
+                        String serviceName = command.substring(command.indexOf("service ") + 8, command.lastIndexOf(" "));
+                        LOG.info("尝试使用systemctl重启服务: {}", serviceName);
+                        return execCmdWithResultObject(session, "systemctl restart " + serviceName);
+                    }
+
+                    LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
+                    return new CommandResult(command, exitStatus, outResult, errResult);
+                }
+
+                LOG.info("命令执行结果: {}", outResult);
+                return new CommandResult(command, 0, outResult, "");
             } catch (IOException e) {
-                LOG.error("关闭命令通道异常", e);
+                LOG.error("执行命令异常: {} - {}", command, e.getMessage());
+                return new CommandResult(command, -1, "", e.getMessage());
             }
+        } catch (IOException e) {
+            LOG.error("关闭命令通道异常", e);
         }
     }
 
@@ -224,49 +218,43 @@ public class MinaUtils {
         session.resetAuthTimeout();
         LOG.info("执行命令(超时{}秒): {}", timeoutSeconds, command);
         // 命令返回的结果
-        ChannelExec ce = null;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayOutputStream err = new ByteArrayOutputStream();
-        try {
-            ce = session.createExecChannel(command);
-            ce.setOut(out);
-            ce.setErr(err);
-            // 打开通道并执行命令
-            ce.open();
-
-            // 等待命令执行完成或超时
-            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
-                    TimeUnit.SECONDS.toMillis(timeoutSeconds));
-
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                LOG.error("命令执行超时: {}", command);
-                return new CommandResult(command, 124, "", "命令执行超时");
-            }
-
-            int exitStatus = ce.getExitStatus();
-            LOG.info("命令退出状态: {}", exitStatus);
-
-            String outResult = out.toString();
-            String errResult = err.toString();
-
-            if (exitStatus != 0) {
-                LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
-                return new CommandResult(command, exitStatus, outResult, errResult);
-            }
-
-            LOG.info("命令执行结果: {}", outResult);
-            return new CommandResult(command, 0, outResult, "");
-        } catch (IOException e) {
-            LOG.error("执行命令异常: {} - {}", command, e.getMessage());
-            return new CommandResult(command, -1, "", e.getMessage());
-        } finally {
+        try (ChannelExec ce = session.createExecChannel(command)) {
             try {
-                if (ce != null) {
-                    ce.close();
+                ce.setOut(out);
+                ce.setErr(err);
+                // 打开通道并执行命令
+                ce.open();
+
+                // 等待命令执行完成或超时
+                Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
+                        TimeUnit.SECONDS.toMillis(timeoutSeconds));
+
+                if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                    LOG.error("命令执行超时: {}", command);
+                    return new CommandResult(command, 124, "", "命令执行超时");
                 }
+
+                int exitStatus = ce.getExitStatus();
+                LOG.info("命令退出状态: {}", exitStatus);
+
+                String outResult = out.toString();
+                String errResult = err.toString();
+
+                if (exitStatus != 0) {
+                    LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
+                    return new CommandResult(command, exitStatus, outResult, errResult);
+                }
+
+                LOG.info("命令执行结果: {}", outResult);
+                return new CommandResult(command, 0, outResult, "");
             } catch (IOException e) {
-                LOG.error("关闭命令通道异常", e);
+                LOG.error("执行命令异常: {} - {}", command, e.getMessage());
+                return new CommandResult(command, -1, "", e.getMessage());
             }
+        } catch (IOException e) {
+            LOG.error("关闭命令通道异常", e);
         }
     }
 

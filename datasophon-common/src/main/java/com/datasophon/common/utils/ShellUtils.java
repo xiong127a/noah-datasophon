@@ -322,49 +322,43 @@ public class ShellUtils {
         }
         session.resetAuthTimeout();
         logger.info("执行命令: {}", command);
-        
-        ChannelExec ce = null;
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayOutputStream err = new ByteArrayOutputStream();
-        try {
-            ce = session.createExecChannel(command);
-            ce.setOut(out);
-            ce.setErr(err);
-            ce.open();
-
-            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
-
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                logger.error("命令执行超时: {}", command);
-                return "ERROR: Command timed out";
-            }
-
-            int exitStatus = ce.getExitStatus();
-            logger.info("命令执行状态: {}", exitStatus);
-            
-            String outResult = out.toString();
-            String errResult = err.toString();
-            
-            if (exitStatus != 0) {
-                if (!errResult.isEmpty()) {
-                    logger.error("命令执行失败: {} - 错误信息: {}", command, errResult);
-                    return "ERROR: " + errResult;
-                }
-            }
-
-            logger.info("命令执行结果: {}", outResult);
-            return outResult;
-        } catch (Exception e) {
-            logger.error("执行命令异常: {} - {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
-        } finally {
+        try (ChannelExec ce = session.createExecChannel(command)) {
             try {
-                if (ce != null) {
-                    ce.close();
+                ce.setOut(out);
+                ce.setErr(err);
+                ce.open();
+
+                Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
+
+                if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                    logger.error("命令执行超时: {}", command);
+                    return "ERROR: Command timed out";
                 }
+
+                int exitStatus = ce.getExitStatus();
+                logger.info("命令执行状态: {}", exitStatus);
+
+                String outResult = out.toString();
+                String errResult = err.toString();
+
+                if (exitStatus != 0) {
+                    if (!errResult.isEmpty()) {
+                        logger.error("命令执行失败: {} - 错误信息: {}", command, errResult);
+                        return "ERROR: " + errResult;
+                    }
+                }
+
+                logger.info("命令执行结果: {}", outResult);
+                return outResult;
             } catch (Exception e) {
-                logger.error("关闭命令通道异常", e);
+                logger.error("执行命令异常: {} - {}", command, e.getMessage());
+                return "ERROR: " + e.getMessage();
             }
+        } catch (Exception e) {
+            logger.error("关闭命令通道异常", e);
         }
     }
 }
