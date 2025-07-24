@@ -19,14 +19,13 @@ public interface IOsInfoCollector {
 
     /**
      * 收集操作系统信息
-     * 
+     *
      * @param hostInfo     主机信息
      * @param session      SSH会话
      * @param osInfo       操作系统信息对象（输出参数）
      * @param cacheUpdater 缓存更新函数
-     * @return 操作系统信息对象
      */
-    OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+    void collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
      * 收集硬件信息（CPU、内存、存储等）

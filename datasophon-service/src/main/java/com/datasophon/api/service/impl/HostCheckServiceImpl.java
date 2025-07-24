@@ -594,7 +594,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     /**
      * 异步执行检查项，返回结果为是否成功
      */
-    private boolean executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+    private void executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         try {
             logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}",
                     checkItem.getItemName(),
@@ -639,7 +639,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     cacheLog.error("详细错误: " + e.getMessage());
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
                     asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                    return false;
+                    return;
                 }
 
                 logger.debug("正在获取检查器: {}", itemCodeEnum);
@@ -653,7 +653,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     cacheLog.error(errorMsg);
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
                     asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                    return false;
+                    return;
                 }
 
                 logger.debug("成功获取检查器: {}, 类型: {}",
@@ -695,7 +695,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                     // 更新缓存，确保前端能看到最新状态
                     asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
-                    return result;
                 } catch (Exception e) {
                     String errorMsg = "执行检查项 " + checkItem.getItemName() + " 时发生异常: " + e.getMessage();
                     logger.error(errorMsg, e);
@@ -705,7 +704,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED,
                             "执行检查时发生异常: " + e.getMessage());
                     asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                    return false;
                 }
             } catch (Exception e) {
                 String errorMsg = "处理检查项 " + checkItem.getItemName() + " 的检查器时发生异常: " + e.getMessage();
@@ -715,7 +713,6 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "系统错误: " + e.getMessage());
                 asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                return false;
             }
         } catch (Exception e) {
             logger.error("执行检查失败: " + e.getMessage(), e);
@@ -729,7 +726,6 @@ public class HostCheckServiceImpl implements HostCheckService {
             cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
             cacheLog.error("==== 检查失败 ====");
 
-            return false;
         }
     }
 

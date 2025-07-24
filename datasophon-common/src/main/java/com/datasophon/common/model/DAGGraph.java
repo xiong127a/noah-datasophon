@@ -70,19 +70,17 @@ public class DAGGraph<Node, NodeInfo, EdgeInfo> {
         nodesMap.put(node, nodeInfo);
     }
 
-    public boolean addEdge(Node fromNode, Node toNode, boolean createNode) {
+    public void addEdge(Node fromNode, Node toNode, boolean createNode) {
         // 由于有向图中边是有向的，v->w 边
         if (!isLegalAddEdge(fromNode, toNode, createNode)) {
             logger.error("serious error: add edge({} -> {}) is invalid, cause cycle！", fromNode, toNode);
-            return false;
+            return;
         }
         addNodeIfAbsent(fromNode, null);
         addNodeIfAbsent(toNode, null);
 
         addEdge(fromNode, toNode, edgesMap);
         addEdge(toNode, fromNode, reverseEdgesMap);
-
-        return true;
 
     }
 

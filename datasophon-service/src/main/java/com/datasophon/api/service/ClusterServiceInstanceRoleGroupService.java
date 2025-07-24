@@ -32,7 +32,7 @@ public interface ClusterServiceInstanceRoleGroupService
 
     ClusterServiceInstanceRoleGroup getRoleGroupByServiceInstanceId(Integer id);
 
-    Result saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName);
+    void saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName);
 
     Result bind(String roleInstanceIds, Integer roleGroupId);
 

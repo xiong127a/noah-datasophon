@@ -625,12 +625,11 @@ public class FreemarkerUtils {
 
     /**
      * 处理数组类型的值
-     * 
+     *
      * @param config 配置项
      * @param logger 日志对象
-     * @return 处理后的字符串值
      */
-    public static String conventToStr(ServiceConfig config, Logger logger) {
+    public static void conventToStr(ServiceConfig config, Logger logger) {
         try {
             if (config.getValue() instanceof JSONArray value) {
                 List<String> strs = value.toJavaList(String.class);
@@ -653,7 +652,6 @@ public class FreemarkerUtils {
                     logger.info("Config set value to: {}", config.getValue());
                 }
 
-                return finalValue;
             } else if (config.getValue() instanceof List<?> list) {
 
                 if (logger != null) {
@@ -676,14 +674,12 @@ public class FreemarkerUtils {
                     logger.info("Config set value to: {}", config.getValue());
                 }
 
-                return finalValue;
             }
         } catch (Exception e) {
             if (logger != null) {
                 logger.error("处理数组类型值失败: {}", e.getMessage(), e);
             }
         }
-        return String.valueOf(config.getValue());
     }
 
     /**

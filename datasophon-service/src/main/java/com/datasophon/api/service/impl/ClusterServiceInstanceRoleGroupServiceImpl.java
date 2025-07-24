@@ -71,11 +71,11 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
     }
 
     @Override
-    public Result saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName) {
+    public void saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName) {
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
         // is repeat name
         if (isRepeatRoleGroupName(serviceInstanceId, roleGroupName)) {
-            return Result.error(Status.REPEAT_ROLE_GROUP_NAME.getMsg());
+            return;
         }
         ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
         roleGroup.setRoleGroupType("custom");
@@ -92,7 +92,6 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
         roleGroupConfig.setId(null);
         roleGroupConfig.setRoleGroupId(roleGroup.getId());
         roleGroupConfigService.save(roleGroupConfig);
-        return Result.success();
     }
 
     private boolean isRepeatRoleGroupName(Integer serviceInstanceId, String roleGroupName) {

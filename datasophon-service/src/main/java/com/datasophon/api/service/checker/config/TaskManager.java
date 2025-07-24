@@ -48,13 +48,12 @@ public class TaskManager implements ApplicationContextAware {
 
     /**
      * 注册任务
-     * 
+     *
      * @param type        任务类型
      * @param description 任务描述
      * @param future      任务Future
-     * @return 任务ID
      */
-    public String registerTask(String type, String description, CompletableFuture<?> future) {
+    public void registerTask(String type, String description, CompletableFuture<?> future) {
         String taskId = generateTaskId(type);
 
         TaskInfo taskInfo = new TaskInfo();
@@ -66,7 +65,6 @@ public class TaskManager implements ApplicationContextAware {
         tasks.put(taskId, taskInfo);
         logger.info("注册任务: {}, 描述: {}", taskId, description);
 
-        return taskId;
     }
 
     /**

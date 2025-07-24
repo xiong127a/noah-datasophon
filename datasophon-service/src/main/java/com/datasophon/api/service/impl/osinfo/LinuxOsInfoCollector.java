@@ -43,7 +43,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     }
 
     @Override
-    public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
+    public void collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
             if (hostInfo != null) {
                 // 设置初始状态为加载中
@@ -200,7 +200,6 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             }
 
-            return osInfo;
         } catch (Exception e) {
             logger.error("收集Linux操作系统信息失败: {}", e.getMessage(), e);
             if (hostInfo != null && cacheUpdater != null) {
@@ -208,7 +207,6 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 hostInfo.setMessage("收集Linux操作系统信息失败: " + e.getMessage());
                 cacheUpdater.updateCache(hostInfo);
             }
-            return osInfo;
         }
     }
 

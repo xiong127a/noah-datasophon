@@ -22,10 +22,10 @@ public class ServiceApis {
     private final RestTemplate restTemplate;
     private final String baseUrl;
 
-    public Service createService(final Service service) throws RangerClientException {
+    public void createService(final Service service) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/service";
-            return restTemplate.postForObject(url, service, Service.class);
+            restTemplate.postForObject(url, service, Service.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to create service: {}. Error: {}", service, e.getMessage(), e);
             throw new RangerClientException("Failed to create service: " + e.getMessage(), e);

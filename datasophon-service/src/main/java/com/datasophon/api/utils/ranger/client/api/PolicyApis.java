@@ -22,10 +22,10 @@ public class PolicyApis {
     private final RestTemplate restTemplate;
     private final String baseUrl;
 
-    public Policy createPolicy(final Policy policy) throws RangerClientException {
+    public void createPolicy(final Policy policy) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/policy";
-            return restTemplate.postForObject(url, policy, Policy.class);
+            restTemplate.postForObject(url, policy, Policy.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to create policy: {}. Error: {}", policy, e.getMessage(), e);
             throw new RangerClientException("Failed to create policy: " + e.getMessage(), e);
@@ -50,10 +50,10 @@ public class PolicyApis {
         }
     }
 
-    public Policy updatePolicy(final int policyId, final Policy policy) throws RangerClientException {
+    public void updatePolicy(final int policyId, final Policy policy) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/policy/" + policyId;
-            return restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(policy), Policy.class).getBody();
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(policy), Policy.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to update policy: {}. Error: {}", policy, e.getMessage(), e);
             throw new RangerClientException("Failed to update policy: " + e.getMessage(), e);

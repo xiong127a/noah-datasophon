@@ -285,7 +285,7 @@ public class ConfigureServiceHandler {
         }
     }
 
-    private String conventToStr(ServiceConfig config) {
+    private void conventToStr(ServiceConfig config) {
         JSONArray value = (JSONArray) config.getValue();
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
@@ -296,7 +296,6 @@ public class ConfigureServiceHandler {
         }
         config.setValue(finalValue);
         logger.info("config set value to {}", config.getValue());
-        return finalValue;
     }
 
     private void mkdir(String path, RunAs runAs) {

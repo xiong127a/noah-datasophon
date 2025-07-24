@@ -741,14 +741,13 @@ public class ProcessUtils {
 
     /**
      * 并集：左边集合与右边集合合并
-     *
      */
-    public static List<ServiceConfig> addAll(List<ServiceConfig> left, List<ServiceConfig> right) {
+    public static void addAll(List<ServiceConfig> left, List<ServiceConfig> right) {
         if (left == null) {
-            return null;
+            return;
         }
         if (right == null) {
-            return left;
+            return;
         }
         // 使用LinkedList方便插入和删除
         List<ServiceConfig> res = new LinkedList<>(right);
@@ -764,7 +763,6 @@ public class ProcessUtils {
                 left.add(item);
             }
         }
-        return left;
     }
 
     public static void syncUserGroupToHosts(List<ClusterHostDO> hostList, String groupName, String operate) {

@@ -16,10 +16,10 @@ public class RoleApis {
     private final RestTemplate restTemplate;
     private final String baseUrl;
 
-    public Role createRole(final Role role) throws RangerClientException {
+    public void createRole(final Role role) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/roles";
-            return restTemplate.postForObject(url, role, Role.class);
+            restTemplate.postForObject(url, role, Role.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to create role: {}. Error: {}", role, e.getMessage(), e);
             throw new RangerClientException("Failed to create role: " + e.getMessage(), e);
@@ -56,10 +56,10 @@ public class RoleApis {
         }
     }
 
-    public Role addUserAndGroups(final Integer id, final Role role) throws RangerClientException {
+    public void addUserAndGroups(final Integer id, final Role role) throws RangerClientException {
         try {
             String url = baseUrl + "/service/roles/roles/" + id;
-            return restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(role), Role.class).getBody();
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(role), Role.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to add user and groups to role: {}. Error: {}", role, e.getMessage(), e);
             throw new RangerClientException("Failed to add user and groups to role: " + e.getMessage(), e);

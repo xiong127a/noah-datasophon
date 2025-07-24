@@ -77,12 +77,12 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
 
     /**
      * add edge
+     *
      * @param fromNode node of origin
      * @param toNode   node of destination
-     * @return The result of adding an edge. returns false if the DAG result is a ring result
      */
-    public boolean addEdge(Node fromNode, Node toNode) {
-        return addEdge(fromNode, toNode, false);
+    public void addEdge(Node fromNode, Node toNode) {
+        addEdge(fromNode, toNode, false);
     }
 
     /**

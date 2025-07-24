@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -21,10 +20,10 @@ public class UserApis {
     private final RestTemplate restTemplate;
     private final String baseUrl;
 
-    public User createUser(final User user) throws RangerClientException {
+    public void createUser(final User user) throws RangerClientException {
         try {
             String url = baseUrl + "/service/xusers/secure/users";
-            return restTemplate.postForObject(url, user, User.class);
+            restTemplate.postForObject(url, user, User.class);
         } catch (HttpClientErrorException e) {
             log.error("Failed to create user: {}. Error: {}", user, e.getMessage(), e);
             throw new RangerClientException("Failed to create user: " + e.getMessage(), e);

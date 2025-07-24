@@ -31,7 +31,7 @@ import java.util.List;
  */
 public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
 
-    boolean removeByGroupIds(List<Integer> list);
+    void removeByGroupIds(List<Integer> list);
 
     List<NoticeGroupUserEntity> listByGroupId(Integer id);
 

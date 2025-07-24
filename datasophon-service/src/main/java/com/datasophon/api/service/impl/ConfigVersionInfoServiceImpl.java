@@ -69,7 +69,7 @@ public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoM
 
         @Override
         @Transactional(rollbackFor = Exception.class)
-        public boolean updateCurrentVersion(Integer version, String refType, Integer refId) {
+        public void updateCurrentVersion(Integer version, String refType, Integer refId) {
                 // 先将所有版本设置为非当前版本
                 boolean updateAll = UpdateChain.of(ConfigVersionInfoEntity.class)
                                 .set(ConfigVersionInfoEntity::getIsCurrent, false)
@@ -85,6 +85,5 @@ public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoM
                                 .and(ConfigVersionInfoEntity::getRefId).eq(refId)
                                 .update();
 
-                return updateAll && updateOne;
         }
 }

@@ -33,11 +33,11 @@ public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMappe
         NoticeGroupUserService {
 
     @Override
-    public boolean removeByGroupIds(List<Integer> list) {
+    public void removeByGroupIds(List<Integer> list) {
         if (CollectionUtil.isEmpty(list)) {
-            return false;
+            return;
         }
-        return this.remove(QueryChain.of(NoticeGroupUserEntity.class)
+        this.remove(QueryChain.of(NoticeGroupUserEntity.class)
                 .where(NoticeGroupUserEntity::getNoticeGroupId).in(list));
     }
 

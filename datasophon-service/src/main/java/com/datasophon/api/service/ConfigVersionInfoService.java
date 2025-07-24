@@ -54,9 +54,8 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @param version 版本号
      * @param refType 引用类型(SERVICE/ROLE_GROUP)
      * @param refId   关联对象ID
-     * @return 是否更新成功
      */
-    boolean updateCurrentVersion(Integer version, String refType, Integer refId);
+    void updateCurrentVersion(Integer version, String refType, Integer refId);
 
     /**
      * 获取指定引用类型的最大版本号

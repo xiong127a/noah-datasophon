@@ -242,11 +242,10 @@ public class HostInfo implements Serializable {
      * 对于需要同时更新多个检查项的场景，性能更优
      *
      * @param updates 检查项ID与新状态的映射
-     * @return 状态是否发生变化
      */
-    public boolean batchUpdateCheckItems(Map<Integer, CheckItem.Status> updates) {
+    public void batchUpdateCheckItems(Map<Integer, CheckItem.Status> updates) {
         if (checkItems == null || updates == null || updates.isEmpty()) {
-            return false;
+            return;
         }
 
         boolean anyChange = false;
@@ -264,7 +263,6 @@ public class HostInfo implements Serializable {
             calculateStatus();
         }
 
-        return anyChange;
     }
 
     /**
