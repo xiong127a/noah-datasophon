@@ -14,7 +14,6 @@ import com.datasophon.dao.entity.OperationLog;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.model.MPage;
 import com.mybatisflex.core.query.QueryChain;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,14 +31,19 @@ import java.util.stream.Collectors;
 @RequestMapping("api/log")
 public class OperationLogController {
 
-    @Autowired
-    private OperationLogService operationLogService;
+    private final OperationLogService operationLogService;
+    private final ClusterInfoService clusterInfoService;
+    private final FrameInfoMapper frameInfoMapper;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
-
-    @Autowired
-    private FrameInfoMapper frameInfoMapper;
+    // 如果只有一个构造函数，甚至可以省略@Autowired注解
+    public OperationLogController(
+            OperationLogService operationLogService,
+            ClusterInfoService clusterInfoService,
+            FrameInfoMapper frameInfoMapper) {
+        this.operationLogService = operationLogService;
+        this.clusterInfoService = clusterInfoService;
+        this.frameInfoMapper = frameInfoMapper;
+    }
 
     /**
      * 列表带分页
