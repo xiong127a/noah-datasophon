@@ -20,6 +20,7 @@ package com.datasophon.dao.entity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.QuotaState;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -33,6 +34,7 @@ import com.mybatisflex.annotation.Table;
 @Table("t_ddh_cluster_alert_quota")
 public class ClusterAlertQuota implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

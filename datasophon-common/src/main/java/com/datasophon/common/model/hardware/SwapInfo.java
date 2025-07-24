@@ -3,6 +3,8 @@ package com.datasophon.common.model.hardware;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
+
 /**
  * 交换空间信息类
  * 存储主机交换空间的详细信息和状态
@@ -10,6 +12,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class SwapInfo extends HardwareInfo {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

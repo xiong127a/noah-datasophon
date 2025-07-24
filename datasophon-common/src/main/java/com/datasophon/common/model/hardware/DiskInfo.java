@@ -3,6 +3,7 @@ package com.datasophon.common.model.hardware;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.util.List;
 
 /**
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class DiskInfo extends HardwareInfo {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
@@ -93,6 +95,7 @@ public class DiskInfo extends HardwareInfo {
      */
     @Data
     public static class PhysicalDisk implements java.io.Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         /**
@@ -171,6 +174,7 @@ public class DiskInfo extends HardwareInfo {
      */
     @Data
     public static class DiskPartition implements java.io.Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         /**

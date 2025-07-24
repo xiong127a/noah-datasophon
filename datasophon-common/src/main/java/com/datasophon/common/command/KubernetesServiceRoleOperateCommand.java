@@ -7,6 +7,7 @@ import com.datasophon.common.model.ServiceConfig;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Map;
 @Data
 public class KubernetesServiceRoleOperateCommand extends BaseCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6454341380133032878L;
     private Integer serviceRoleInstanceId;
 

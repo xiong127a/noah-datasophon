@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -29,6 +30,7 @@ import com.mybatisflex.annotation.Table;
 @Table("t_ddh_cluster_alert_rule")
 public class ClusterAlertRule implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

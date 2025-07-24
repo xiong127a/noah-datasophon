@@ -3,6 +3,7 @@ package com.datasophon.common.model;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ public class OsInfoLegacy {
      */
     @Data
     public static class NetworkInterface implements Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         private String name; // 网卡名称
@@ -34,6 +36,7 @@ public class OsInfoLegacy {
 
         @Data
         public static class NetworkStats implements Serializable {
+            @Serial
             private static final long serialVersionUID = 1L;
 
             private Long txBytes; // 发送字节数

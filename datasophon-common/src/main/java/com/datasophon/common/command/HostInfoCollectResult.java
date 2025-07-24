@@ -18,6 +18,7 @@
 
 package com.datasophon.common.command;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.Data;
@@ -25,6 +26,7 @@ import lombok.Data;
 @Data
 public class HostInfoCollectResult implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 4197649708954689128L;
     private int coreNum;
     private double totalMem;

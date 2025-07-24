@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.Data;
@@ -31,6 +32,7 @@ import com.mybatisflex.annotation.Table;
 @Accessors(chain = true)
 public class FrameServiceEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

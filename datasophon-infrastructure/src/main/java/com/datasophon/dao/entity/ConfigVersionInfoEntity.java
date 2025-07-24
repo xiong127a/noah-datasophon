@@ -22,6 +22,7 @@ import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -34,6 +35,7 @@ import java.util.Date;
 @Table("t_ddh_config_version_info")
 public class ConfigVersionInfoEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

@@ -19,6 +19,7 @@ package com.datasophon.common.model;
 
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -28,6 +29,7 @@ import java.io.Serializable;
 @Data
 public class TemplateRequestMessage implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

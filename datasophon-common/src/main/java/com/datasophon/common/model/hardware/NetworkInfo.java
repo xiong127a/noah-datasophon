@@ -3,6 +3,7 @@ package com.datasophon.common.model.hardware;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.util.List;
 
 /**
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class NetworkInfo extends HardwareInfo {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
@@ -58,6 +60,7 @@ public class NetworkInfo extends HardwareInfo {
      */
     @Data
     public static class NetworkInterface implements java.io.Serializable {
+        @Serial
         private static final long serialVersionUID = 1L;
 
         /**

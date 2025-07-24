@@ -17,6 +17,7 @@
 
 package com.datasophon.common.command;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.Data;
@@ -26,6 +27,7 @@ import lombok.EqualsAndHashCode;
 @Data
 public class ServiceRoleOperateCommandResult extends BaseCommandResult implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -566450658744102059L;
     private ServiceRoleOperateCommand serviceRoleOperateCommand;
 }

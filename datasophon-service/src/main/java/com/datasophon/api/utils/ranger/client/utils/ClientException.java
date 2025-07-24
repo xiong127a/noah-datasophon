@@ -1,7 +1,10 @@
 package com.datasophon.api.utils.ranger.client.utils;
 
+import java.io.Serial;
+
 public class ClientException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

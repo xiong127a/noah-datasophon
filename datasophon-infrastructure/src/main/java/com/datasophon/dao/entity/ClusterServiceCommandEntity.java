@@ -23,6 +23,7 @@ import com.mybatisflex.annotation.Table;
 import com.datasophon.dao.enums.CommandState;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -30,6 +31,7 @@ import java.util.Date;
 @Data
 public class ClusterServiceCommandEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

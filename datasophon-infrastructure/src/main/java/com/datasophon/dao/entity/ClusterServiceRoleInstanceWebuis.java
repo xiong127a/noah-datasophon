@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.Data;
@@ -28,6 +29,7 @@ import com.mybatisflex.annotation.Table;
 @Table("t_ddh_cluster_service_role_instance_webuis")
 public class ClusterServiceRoleInstanceWebuis implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

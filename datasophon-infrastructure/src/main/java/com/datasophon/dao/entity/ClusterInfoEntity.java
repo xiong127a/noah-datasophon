@@ -19,6 +19,7 @@ package com.datasophon.dao.entity;
 
 import com.datasophon.dao.enums.ClusterState;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -33,6 +34,7 @@ import com.mybatisflex.annotation.Table;
 @Table("t_ddh_cluster_info")
 public class ClusterInfoEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

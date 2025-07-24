@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import com.mybatisflex.annotation.Id;
@@ -33,6 +34,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NoticeGroupUserEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

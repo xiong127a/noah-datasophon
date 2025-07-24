@@ -24,6 +24,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -34,6 +35,7 @@ import java.util.Date;
 @AllArgsConstructor
 public class UserInfoEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

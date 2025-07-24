@@ -7,6 +7,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleRunner;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import java.util.Map;
 @Data
 public class KubernetesGenerateDeploymentYamlCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -4211566568993105684L;
 
     private Integer clusterId;

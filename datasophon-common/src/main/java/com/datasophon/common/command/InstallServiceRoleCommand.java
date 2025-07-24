@@ -37,6 +37,7 @@ import java.util.Map;
 public class InstallServiceRoleCommand extends BaseCommand implements Serializable {
 
     @Serial
+    @Serial
     private static final long serialVersionUID = -8610024764701745463L;
 
     private Map<Generators, List<ServiceConfig>> cofigFileMap;

@@ -17,6 +17,7 @@
 
 package com.datasophon.common.command;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import lombok.Data;
 @Data
 public class ExecuteCmdCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 8665156195475027337L;
 
     private List<String> commands;

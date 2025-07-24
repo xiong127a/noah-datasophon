@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -30,6 +31,7 @@ import com.mybatisflex.annotation.Table;
 @Data
 public class AlertGroupEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

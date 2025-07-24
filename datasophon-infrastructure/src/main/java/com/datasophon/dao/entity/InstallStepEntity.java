@@ -21,12 +21,14 @@ import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Table("t_ddh_install_step")
 @Data
 public class InstallStepEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

@@ -22,12 +22,14 @@ import com.datasophon.common.model.RunAs;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class ServiceRoleOperateCommand extends BaseCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6454341380133032878L;
     private Integer serviceRoleInstanceId;
 

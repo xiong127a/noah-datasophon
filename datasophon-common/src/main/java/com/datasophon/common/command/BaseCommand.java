@@ -20,6 +20,7 @@ package com.datasophon.common.command;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleRunner;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.Data;
@@ -27,6 +28,7 @@ import lombok.Data;
 @Data
 public class BaseCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -1495156573211152639L;
     private String serviceName;
 

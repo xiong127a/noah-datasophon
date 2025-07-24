@@ -23,6 +23,7 @@ import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.model.ServiceNode;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import lombok.Data;
 @Data
 public class SubmitActiveTaskNodeCommand implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 3733897759707096649L;
 
     private CommandType commandType;

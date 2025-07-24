@@ -3,6 +3,7 @@ package com.datasophon.common.model.hardware;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -11,6 +12,7 @@ import java.io.Serializable;
  */
 @Data
 public abstract class HardwareInfo implements Serializable {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

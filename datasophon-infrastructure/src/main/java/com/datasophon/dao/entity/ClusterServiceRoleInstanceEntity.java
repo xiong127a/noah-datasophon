@@ -21,6 +21,7 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -34,6 +35,7 @@ import com.mybatisflex.annotation.Table;
 @Data
 public class ClusterServiceRoleInstanceEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

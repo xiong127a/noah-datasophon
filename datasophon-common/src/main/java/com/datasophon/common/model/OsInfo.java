@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -28,6 +29,7 @@ import java.io.Serializable;
 @Builder
 @ToString(exclude = {"diskInfos"})
 public class OsInfo implements Serializable {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private Integer id;

@@ -2,6 +2,7 @@ package com.datasophon.common.model;
 
 import lombok.Getter;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 import java.text.SimpleDateFormat;
@@ -16,6 +17,7 @@ import java.util.Objects;
  */
 @Getter
 public class LogEntry implements Serializable {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

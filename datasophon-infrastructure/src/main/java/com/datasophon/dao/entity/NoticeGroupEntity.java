@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.entity;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -36,6 +37,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NoticeGroupEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

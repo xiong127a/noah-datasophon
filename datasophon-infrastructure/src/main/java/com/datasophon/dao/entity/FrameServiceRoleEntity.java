@@ -19,6 +19,7 @@ package com.datasophon.dao.entity;
 
 import com.datasophon.dao.enums.RoleType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -34,6 +35,7 @@ import com.mybatisflex.annotation.Table;
 @Accessors(chain = true)
 public class FrameServiceRoleEntity implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
