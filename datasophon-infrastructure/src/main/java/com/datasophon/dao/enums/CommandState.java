@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
+@Getter
 public enum CommandState {
 
     // 命令状态 1：正在运行2：成功3：失败

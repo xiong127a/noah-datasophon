@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
+@Getter
 public enum HostState {
 
     RUNNING(1, "正在运行"),

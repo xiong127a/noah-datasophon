@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
+@Getter
 public enum InstallState {
 
     // 安装状态1:正在安装 2：安装成功 3：安装失败

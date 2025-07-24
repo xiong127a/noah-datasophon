@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
+@Getter
 public enum QuotaState {
 
     RUNNING(1, "启用"),
