@@ -17,19 +17,18 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
 import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.mapper.AlertGroupMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,11 +43,16 @@ public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGr
         implements
         AlertGroupService {
 
+
+    private final ClusterAlertGroupMapService alertGroupMapService;
+
     @Autowired
-    private ClusterAlertGroupMapService alertGroupMapService;
+    public AlertGroupServiceImpl(ClusterAlertGroupMapService alertGroupMapService) {
+        this.alertGroupMapService = alertGroupMapService;
+    }
 
     @Override
-    public Result getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize) {
+    public Result<List<AlertGroupEntity>> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize) {
         // 查询告警组映射关系
         List<ClusterAlertGroupMap> alertGroupMapList = QueryChain.of(ClusterAlertGroupMap.class)
                 .where(ClusterAlertGroupMap::getClusterId).eq(clusterId)
@@ -113,11 +117,11 @@ public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGr
             });
         }
 
-        return Result.success(alertGroupList).put(Constants.TOTAL, count);
+        return Result.success(alertGroupList,count);
     }
 
     @Override
-    public Result saveAlertGroup(AlertGroupEntity alertGroup) {
+    public Result<String> saveAlertGroup(AlertGroupEntity alertGroup) {
 
         // 名称校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
