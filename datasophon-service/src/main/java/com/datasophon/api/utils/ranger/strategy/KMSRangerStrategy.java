@@ -120,7 +120,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     private Policy getKmsPolicy(TenantResource resource) {
         List<String> keynames = resource.getKmsResourceList()
                 .stream()
-                .map(t -> (TenantKmsResource) t)
+                .map(t -> t)
                 .map(TenantKmsResource::getKeyname)
                 .collect(Collectors.toList());
         return simpleKmsPolicy(

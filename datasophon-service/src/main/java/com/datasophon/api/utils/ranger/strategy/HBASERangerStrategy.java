@@ -85,7 +85,7 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
     private Policy getHbasePolicy(TenantResource resource) {
         List<String> hbaseNamespaces = resource.getHbaseResourceList()
                 .stream()
-                .map(t -> (TenantHbaseResource) t)
+                .map(t -> t)
                 .map(t -> t.getHbaseNamespace() + ":*")
                 .collect(Collectors.toList());
         return simpleHbasePolicy(

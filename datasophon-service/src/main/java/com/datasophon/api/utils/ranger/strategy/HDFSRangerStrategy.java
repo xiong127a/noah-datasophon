@@ -85,7 +85,7 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
     private Policy getHdfsPolicy(TenantResource resource) {
         List<String> hdfsPaths = resource.getHdfsResourceList()
                 .stream()
-                .map(t -> (TenantHdfsResource) t)
+                .map(t -> t)
                 .map(TenantHdfsResource::getHdfsPath)
                 .collect(Collectors.toList());
         return simpleHdfsPolicy(

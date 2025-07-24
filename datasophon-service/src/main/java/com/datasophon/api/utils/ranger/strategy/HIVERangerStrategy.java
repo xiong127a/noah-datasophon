@@ -88,7 +88,7 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
     private Policy getHivePolicy(TenantResource resource) {
         List<String> hiveDatabases = resource.getHiveResourceList()
                 .stream()
-                .map(t -> (TenantHiveResource) t)
+                .map(t -> t)
                 .map(TenantHiveResource::getHiveDatabase)
                 .collect(Collectors.toList());
         return simpleHivePolicyForDatabase(
