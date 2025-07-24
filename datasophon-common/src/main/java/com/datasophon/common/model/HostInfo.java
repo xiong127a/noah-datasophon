@@ -276,7 +276,7 @@ public class HostInfo implements Serializable {
      * 4. 如果所有检查项都成功，则状态为SUCCESS
      * 5. 如果有等待检查的项目，则状态为WAITING
      * 6. 如果所有项目都被跳过，则状态为SKIPPED
-     *
+     * <p>
      * 该方法同时设置status和checkResult字段，确保两者一致
      */
     public void calculateStatus() {

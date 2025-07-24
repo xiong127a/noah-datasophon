@@ -423,7 +423,7 @@ public class DAG<Node, NodeInfo, EdgeInfo> {
 
     /**
      * Determine whether there are ring and topological sorting results
-     *
+     * <p>
      * Directed acyclic graph (DAG) has topological ordering
      * Breadth First Search：
      *    1、Traversal of all the vertices in the graph, the degree of entry is 0 vertex into the queue
