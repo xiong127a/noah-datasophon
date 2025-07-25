@@ -69,3 +69,23 @@
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);
 }
+
+/* 添加vue-sonner全局样式 */
+.global-toast-container {
+  --toast-icon-size: 20px !important;
+  --toast-font-size: 14px !important;
+  font-family: var(--font-family);
+}
+
+/* 确保toast显示在所有内容之上 */
+[data-sonner-toaster] {
+  z-index: 9999 !important;
+}
+
+/* 自定义toast样式 */
+.my-toast-success {
+  background-color: rgba(22, 163, 74, 0.95) !important;
+  color: white !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3) !important;
+}

@@ -132,7 +132,15 @@ onMounted(async () => {
       <router-view></router-view>
       
       <!-- 使用Sonner的Toaster组件替换原Toast组件 -->
-      <Toaster position="top-right" richColors closeButton expand />
+      <Toaster 
+        position="top-right" 
+        richColors 
+        closeButton 
+        expand
+        theme="system"
+        style="z-index: 9999;"
+        className="global-toast-container"
+      />
     </AuthProvider>
   </div>
 </template>

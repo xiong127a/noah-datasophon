@@ -3,7 +3,10 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import { Toaster } from 'vue-sonner'
+import { Toaster, toast } from 'vue-sonner'
+
+// 全局挂载vue-sonner，以便在任何地方访问
+window.vueSonner = { toast, Toaster }
 
 // 导入SVG图标系统
 import 'virtual:svg-icons-register'

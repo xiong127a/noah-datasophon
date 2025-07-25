@@ -186,6 +186,8 @@
         </form>
       </div>
       
+      <!-- 注：Toaster组件已在App.vue中全局注册，这里不需要重复添加 -->
+      
       <!-- 页脚信息 -->
       <div class="footer">
         <div class="feature-tags">
@@ -324,7 +326,9 @@ const handleLogin = async () => {
       }
       
       // 登录成功，显示成功通知
-      toast.success('登录成功，正在进入系统...');
+      console.log('[Toast] 准备显示成功通知，toast对象:', toast);
+      toast.success('登录成功，正在进入系统...', 3000);
+      console.log('[Toast] 成功调用toast.success');
       
       // 登录成功后跳转
       setTimeout(() => {
@@ -339,7 +343,10 @@ const handleLogin = async () => {
     console.error('[Login] 登录过程发生错误:', error);
     
     // 显示错误通知
-    toast.error(error.message || '登录失败，请检查用户名和密码');
+    const errorMessage = error && error.message ? error.message : '登录失败，请检查用户名和密码';
+    console.log('[Toast] 准备显示错误通知，toast对象:', toast);
+    toast.error(errorMessage, 4000);
+    console.log('[Toast] 成功调用toast.error:', errorMessage);
     
     // 添加卡片震动效果
     if (loginCard.value) {
