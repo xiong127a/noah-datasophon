@@ -230,9 +230,9 @@
                     </div>
                     
                     <!-- 文本内容 -->
-                    <div class="ultra-notification-text">
-                      <h3 class="ultra-notification-title">{{ notification.title }}</h3>
-                      <p class="ultra-notification-message">{{ notification.message }}</p>
+                    <div class="ultra-notification-text-container">
+                      <div v-if="notification.title" class="ultra-notification-title">{{ notification.title }}</div>
+                      <div v-if="notification.message" class="ultra-notification-message">{{ notification.message }}</div>
                     </div>
                   </div>
                   
@@ -1963,25 +1963,33 @@ onMounted(() => {
   flex-grow: 1;
 }
 
+.ultra-notification-text-container {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .ultra-notification-title {
+  display: block;
+  width: 100%;
   font-size: 16px;
   font-weight: 700;
   margin: 0 0 5px 0;
   color: #fff;
   letter-spacing: 0.01em;
-  opacity: 0;
-  transform: translateY(-8px);
-  animation: text-fade-in 0.4s forwards 0.4s;
+  opacity: 1;
 }
 
 .ultra-notification-message {
+  display: block;
+  width: 100%;
   font-size: 14px;
   line-height: 1.4;
   margin: 0;
-  color: rgba(255, 255, 255, 0.8);
-  opacity: 0;
-  transform: translateY(-4px);
-  animation: text-fade-in 0.4s forwards 0.6s;
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 1;
 }
 
 .ultra-notification-progress {
