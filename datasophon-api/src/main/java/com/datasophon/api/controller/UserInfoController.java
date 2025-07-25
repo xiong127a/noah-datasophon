@@ -26,6 +26,10 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,7 +46,31 @@ public class UserInfoController {
     @Autowired
     private UserInfoService userInfoService;
 
+    /**
+     * 获取当前登录用户信息
+     */
+    @GetMapping("/getUserInfo")
+    public Result getCurrentUserInfo() {
+        // 从Spring Security上下文中获取当前认证用户
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return Result.error("未登录或会话已过期");
+        }
 
+        // 获取用户名
+        String username = authentication.getName();
+
+        // 根据用户名获取用户信息
+        UserInfoEntity userInfo = userInfoService.getUserByUsername(username);
+        if (userInfo == null) {
+            return Result.error("用户信息不存在");
+        }
+
+        // 出于安全考虑，清除敏感字段
+        userInfo.setPassword(null);
+
+        return Result.success().put(Constants.DATA, userInfo);
+    }
 
     /**
      * 列表带分页
