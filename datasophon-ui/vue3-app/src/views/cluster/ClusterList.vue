@@ -184,17 +184,17 @@
       <div class="fixed inset-0 flex items-center justify-center p-4">
         <DialogPanel class="w-full max-w-6xl rounded-xl bg-white shadow-xl overflow-hidden">
           <div class="flex justify-between items-center p-4 border-b border-gray-100">
-            <DialogTitle class="text-lg font-medium leading-6 text-gray-900">
-              配置集群
-            </DialogTitle>
-            <button 
-              @click="handleCancel"
+          <DialogTitle class="text-lg font-medium leading-6 text-gray-900">
+            配置集群
+          </DialogTitle>
+              <button 
+                @click="handleCancel"
               class="text-gray-400 hover:text-gray-500 transition-colors"
-            >
+              >
               <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
               </svg>
-            </button>
+              </button>
           </div>
           <div class="p-6 max-h-[80vh] overflow-y-auto">
             <div v-if="stepsComponentLoaded">
@@ -232,14 +232,14 @@
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4">
         <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden">
-          <AddColony 
-            v-if="editModalVisible" 
-            :detail="currentEditObj || {}" 
-            :callBack="handleEditComplete" 
-            @cancel="handleEditModalClose"
-            @success="handleEditComplete"
-            ref="addColonyForm"
-          />
+            <AddColony 
+              v-if="editModalVisible" 
+              :detail="currentEditObj || {}" 
+              :callBack="handleEditComplete" 
+              @cancel="handleEditModalClose"
+              @success="handleEditComplete"
+              ref="addColonyForm"
+            />
         </DialogPanel>
       </div>
     </Dialog>
@@ -426,18 +426,18 @@ const getColonyList = async () => {
 
 // 处理集群数据
 const processClusterData = () => {
-  dataSource.value.forEach((item) => {
-    let arr = []
+      dataSource.value.forEach((item) => {
+        let arr = []
     if (item.clusterManagerList && Array.isArray(item.clusterManagerList)) {
       item.clusterManagerList.forEach((childItem) => {
         if (childItem && childItem.username) {
           arr.push(childItem.username)
         }
-      })
+        })
     }
     item.userManageName = arr.join(",")
-  })
-}
+      })
+    }
 
 // 进入集群
 const getInto = async (row) => {

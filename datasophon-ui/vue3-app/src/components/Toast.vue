@@ -3,53 +3,72 @@
     <TransitionGroup 
       name="toast" 
       tag="div" 
-      class="fixed top-0 right-0 z-50 p-4 space-y-2 max-w-sm flex flex-col items-end"
+      class="fixed top-0 right-0 z-50 p-4 space-y-3 max-w-md flex flex-col items-end"
     >
       <div 
         v-for="toast in toasts" 
         :key="toast.id" 
-        class="toast bg-white shadow-lg rounded-lg overflow-hidden border-l-4 flex items-center p-4 w-full max-w-sm transform transition-all duration-300 ease-out"
+        class="toast-card"
         :class="{
-          'border-green-500': toast.type === 'success',
-          'border-red-500': toast.type === 'error',
-          'border-yellow-500': toast.type === 'warning',
-          'border-blue-500': toast.type === 'info'
+          'toast-success': toast.type === 'success',
+          'toast-error': toast.type === 'error',
+          'toast-warning': toast.type === 'warning',
+          'toast-info': toast.type === 'info'
         }"
       >
-        <div class="flex-shrink-0 mr-3">
-          <!-- Success icon -->
-          <svg v-if="toast.type === 'success'" class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-          </svg>
+        <!-- Toast内部容器 -->
+        <div class="toast-inner">
+          <!-- 图标区域 -->
+          <div class="toast-icon">
+            <!-- Success icon -->
+            <svg v-if="toast.type === 'success'" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" class="toast-icon-circle"></circle>
+              <path d="M8 12l3 3 6-6" class="toast-icon-path"></path>
+            </svg>
+            
+            <!-- Error icon -->
+            <svg v-if="toast.type === 'error'" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" class="toast-icon-circle"></circle>
+              <path d="M15 9l-6 6m0-6l6 6" class="toast-icon-path"></path>
+            </svg>
+            
+            <!-- Warning icon -->
+            <svg v-if="toast.type === 'warning'" viewBox="0 0 24 24">
+              <path d="M12 3l9 16H3l9-16z" class="toast-icon-path"></path>
+              <path d="M12 10v4m0 3v.01" class="toast-icon-dot"></path>
+            </svg>
+            
+            <!-- Info icon -->
+            <svg v-if="toast.type === 'info'" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" class="toast-icon-circle"></circle>
+              <path d="M12 8v5m0 3v.01" class="toast-icon-path"></path>
+            </svg>
+          </div>
           
-          <!-- Error icon -->
-          <svg v-if="toast.type === 'error'" class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-          </svg>
+          <!-- 内容区域 -->
+          <div class="toast-content">
+            <p class="toast-message">{{ toast.message }}</p>
+          </div>
           
-          <!-- Warning icon -->
-          <svg v-if="toast.type === 'warning'" class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-          </svg>
-          
-          <!-- Info icon -->
-          <svg v-if="toast.type === 'info'" class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-          </svg>
+          <!-- 关闭按钮 -->
+          <button 
+            @click="removeToast(toast.id)" 
+            class="toast-close"
+            aria-label="关闭通知"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
         
-        <div class="flex-1 pr-3">
-          <p class="text-sm text-gray-700">{{ toast.message }}</p>
+        <!-- 进度条 -->
+        <div class="toast-progress-container">
+          <div 
+            class="toast-progress-bar"
+            :style="{ animationDuration: `${toast.duration}ms` }"
+          ></div>
         </div>
-        
-        <button 
-          @click="removeToast(toast.id)" 
-          class="flex-shrink-0 text-gray-400 hover:text-gray-500 focus:outline-none"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-          </svg>
-        </button>
       </div>
     </TransitionGroup>
   </div>
@@ -73,24 +92,287 @@ export default {
 </script>
 
 <style scoped>
+/* Toast容器 */
+.toast-card {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  position: relative;
+  transform-origin: right top;
+  animation: toast-pulse 2s infinite alternate ease-in-out;
+}
+
+/* 脉冲动画 */
+@keyframes toast-pulse {
+  0% {
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.1),
+      0 2px 8px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  }
+  100% {
+    box-shadow: 
+      0 8px 30px rgba(0, 0, 0, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  }
+}
+
+.toast-inner {
+  display: flex;
+  padding: 14px 16px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* 类型特定样式 */
+.toast-success {
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(220, 252, 231, 0.98));
+  border-left: 4px solid #10B981;
+}
+
+.toast-error {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.98), rgba(254, 215, 215, 0.98));
+  border-left: 4px solid #DC2626;
+}
+
+.toast-warning {
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(254, 243, 199, 0.98));
+  border-left: 4px solid #F59E0B;
+}
+
+.toast-info {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.98));
+  border-left: 4px solid #3B82F6;
+}
+
+/* 图标样式 */
+.toast-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-success .toast-icon svg {
+  stroke: #10B981;
+}
+
+.toast-error .toast-icon svg {
+  stroke: #DC2626;
+}
+
+.toast-warning .toast-icon svg {
+  stroke: #F59E0B;
+}
+
+.toast-info .toast-icon svg {
+  stroke: #3B82F6;
+}
+
+.toast-icon-circle {
+  fill: transparent;
+}
+
+.toast-success .toast-icon-circle {
+  stroke: rgba(16, 185, 129, 0.2);
+}
+
+.toast-error .toast-icon-circle {
+  stroke: rgba(239, 68, 68, 0.2);
+}
+
+.toast-warning .toast-icon-path {
+  fill: rgba(245, 158, 11, 0.2);
+  stroke: #F59E0B;
+}
+
+.toast-warning .toast-icon-dot {
+  fill: none;
+  stroke: #F59E0B;
+}
+
+.toast-info .toast-icon-circle {
+  stroke: rgba(59, 130, 246, 0.2);
+}
+
+/* 文字内容样式 */
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1F2937;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.toast-success .toast-message {
+  color: #065F46;
+}
+
+.toast-error .toast-message {
+  color: #B91C1C;
+  font-weight: 500;
+}
+
+.toast-warning .toast-message {
+  color: #92400E;
+}
+
+.toast-info .toast-message {
+  color: #1E40AF;
+}
+
+/* 关闭按钮样式 */
+.toast-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 0;
+  transition: background-color 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
+}
+
+.toast-close:active {
+  transform: scale(0.95);
+}
+
+.toast-close svg {
+  width: 16px;
+  height: 16px;
+  stroke: #9CA3AF;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 进度条样式 */
+.toast-progress-container {
+  height: 3px;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-progress-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  animation: toast-progress linear forwards;
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.toast-success .toast-progress-bar {
+  background-color: #10B981;
+}
+
+.toast-error .toast-progress-bar {
+  background-color: #EF4444;
+}
+
+.toast-warning .toast-progress-bar {
+  background-color: #F59E0B;
+}
+
+.toast-info .toast-progress-bar {
+  background-color: #3B82F6;
+}
+
 /* 进入和离开动画 */
-.toast-enter-active,
+.toast-enter-active {
+  animation: toast-in 0.3s ease-out forwards;
+}
+
 .toast-leave-active {
-  transition: all 0.3s ease;
+  animation: toast-out 0.5s ease-in forwards;
 }
 
-.toast-enter-from {
-  transform: translateX(100%);
-  opacity: 0;
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-5%) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
 
-.toast-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(120%) scale(0.85);
+  }
 }
 
 /* 确保消息平滑移动 */
 .toast-move {
-  transition: transform 0.3s ease;
+  transition: transform 0.5s ease;
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .toast-card {
+    max-width: 300px;
+  }
+  
+  .toast-inner {
+    padding: 12px;
+  }
+  
+  .toast-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+  }
+  
+  .toast-message {
+    font-size: 0.85rem;
+  }
 }
 </style> 

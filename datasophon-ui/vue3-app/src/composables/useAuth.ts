@@ -5,11 +5,11 @@ import { useUserStore } from '@/stores/user'
  * 认证服务 - 提供认证状态管理和JWT处理
  */
 const token = ref<string | null>(null)
-const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value)
 
 // 跟踪上次认证检查时间
 const lastAuthCheck = ref(Date.now())
-
+  
 /**
  * 认证服务 
  * 提供登录、登出和认证状态管理功能
@@ -56,7 +56,7 @@ export const authService = {
   getAuthHeader() {
     return {
       Authorization: token.value ? `Bearer ${token.value}` : ''
-    }
+      }
   },
   
   /**
@@ -82,8 +82,8 @@ export const authService = {
     
     console.log('[Auth] User logged out')
   }
-}
-
+  }
+  
 // 初始化认证服务
 authService.init()
 

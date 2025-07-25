@@ -182,126 +182,70 @@
           <!-- 顶部通知组件 -->
           <Teleport to="body">
             <transition
-              enter-active-class="transition-all duration-300 ease-out"
-              enter-from-class="transform -translate-y-full opacity-0"
-              enter-to-class="transform translate-y-0 opacity-100"
-              leave-active-class="transition-all duration-200 ease-in"
-              leave-from-class="transform translate-y-0 opacity-100"
-              leave-to-class="transform -translate-y-full opacity-0"
+              enter-active-class="transition-all duration-500 ease-out"
+              enter-from-class="transform translate-y-[-120%] opacity-0 scale-95"
+              enter-to-class="transform translate-y-0 opacity-100 scale-100"
+              leave-active-class="transition-all duration-300 ease-in"
+              leave-from-class="transform translate-y-0 opacity-100 scale-100"
+              leave-to-class="transform translate-y-[-120%] opacity-0 scale-95"
             >
               <div
                 v-if="notification.show"
-                class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-auto"
+                class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md w-auto"
+                @mouseenter="pauseNotificationTimer"
+                @mouseleave="resumeNotificationTimer"
               >
                 <!-- 通知卡片 -->
                 <div
-                  class="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 overflow-hidden"
+                  class="ultra-notification"
                   :class="{
-                    'shadow-green-500/20': notification.type === 'success',
-                    'shadow-red-500/20': notification.type === 'error'
+                    'ultra-notification-success': notification.type === 'success',
+                    'ultra-notification-error': notification.type === 'error'
                   }"
                 >
-                  <!-- 顶部装饰条 -->
-                  <div
-                    class="h-1 w-full"
-                    :class="{
-                      'bg-gradient-to-r from-green-400 to-emerald-500': notification.type === 'success',
-                      'bg-gradient-to-r from-red-400 to-rose-500': notification.type === 'error'
-                    }"
-                  ></div>
-                  
-                  <!-- 内容区域 -->
-                  <div class="p-4">
-                    <div class="flex items-center space-x-3">
-                      <!-- 图标 -->
-                      <div
-                        class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                        :class="{
-                          'bg-green-100 dark:bg-green-900/30': notification.type === 'success',
-                          'bg-red-100 dark:bg-red-900/30': notification.type === 'error'
-                        }"
-                      >
-                        <!-- 成功图标 -->
-                        <svg
-                          v-if="notification.type === 'success'"
-                          class="w-5 h-5 text-green-600 dark:text-green-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M5 13l4 4L19 7"
-                          ></path>
-                        </svg>
-                        
-                        <!-- 错误图标 -->
-                        <svg
-                          v-if="notification.type === 'error'"
-                          class="w-5 h-5 text-red-600 dark:text-red-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M6 18L18 6M6 6l12 12"
-                          ></path>
+                  <!-- 内容容器 -->
+                  <div class="ultra-notification-content">
+                    <!-- 图标容器 -->
+                    <div 
+                      class="ultra-notification-icon-wrapper"
+                      :class="{
+                        'success-icon-wrapper': notification.type === 'success',
+                        'error-icon-wrapper': notification.type === 'error'
+                      }"
+                    >
+                      <!-- 成功图标 -->
+                      <div v-if="notification.type === 'success'" class="ultra-success-icon">
+                        <svg viewBox="0 0 24 24" stroke-width="3">
+                          <polyline class="success-check" points="6,12 10,16 18,8" />
                         </svg>
                       </div>
                       
-                      <!-- 文本内容 -->
-                      <div class="flex-1 min-w-0">
-                        <p
-                          class="text-sm font-medium text-gray-900 dark:text-white"
-                          :class="{
-                            'text-green-800 dark:text-green-200': notification.type === 'success',
-                            'text-red-800 dark:text-red-200': notification.type === 'error'
-                          }"
-                        >
-                          {{ notification.title }}
-                        </p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          {{ notification.message }}
-                        </p>
-                      </div>
-                      
-                      <!-- 关闭按钮 -->
-                      <button
-                        @click="hideNotification"
-                        class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      <!-- 错误图标 -->
+                      <div v-if="notification.type === 'error'" class="ultra-error-icon">
+                        <svg viewBox="0 0 24 24" stroke-width="3">
+                          <line class="error-line-1" x1="8" y1="8" x2="16" y2="16" />
+                          <line class="error-line-2" x1="16" y1="8" x2="8" y2="16" />
                         </svg>
-                      </button>
+                      </div>
                     </div>
                     
-                    <!-- 进度条 -->
-                    <div class="mt-3 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        class="h-full rounded-full transition-all duration-75 ease-linear"
-                        :class="{
-                          'bg-gradient-to-r from-green-400 to-emerald-500': notification.type === 'success',
-                          'bg-gradient-to-r from-red-400 to-rose-500': notification.type === 'error'
-                        }"
-                        style="animation: progress 3s linear forwards;"
-                      ></div>
+                    <!-- 文本内容 -->
+                    <div class="ultra-notification-text">
+                      <h3 class="ultra-notification-title">{{ notification.title }}</h3>
+                      <p class="ultra-notification-message">{{ notification.message }}</p>
                     </div>
                   </div>
                   
-                  <!-- 装饰性渐变 -->
-                  <div
-                    class="absolute inset-0 pointer-events-none opacity-20"
-                    :class="{
-                      'bg-gradient-to-br from-green-500/10 via-transparent to-emerald-500/5': notification.type === 'success',
-                      'bg-gradient-to-br from-red-500/10 via-transparent to-rose-500/5': notification.type === 'error'
-                    }"
-                  ></div>
+                  <!-- 进度条 -->
+                  <div class="ultra-notification-progress">
+                    <div 
+                      class="ultra-notification-progress-bar"
+                      :style="{ 
+                        animationDuration: `${notification.remainingTime || notification.duration}ms`,
+                        animationPlayState: notification.isPaused ? 'paused' : 'running' 
+                      }"
+                    ></div>
+                  </div>
                 </div>
               </div>
             </transition>
@@ -366,7 +310,10 @@ const notification = reactive({
   type: 'success', // 'success' | 'error'
   title: '',
   message: '',
-  timer: null
+  timer: null,
+  duration: 3000, // 通知显示总时长
+  remainingTime: 3000, // 剩余显示时间
+  isPaused: false // 是否暂停动画
 });
 
 // 鼠标位置
@@ -419,7 +366,7 @@ const dismissError = () => {
 };
 
 // 显示通知
-const showNotification = (type, title, message, duration = 3000) => {
+const showNotification = (type, title, message, duration = 4000) => {
   // 清除之前的定时器
   if (notification.timer) {
     clearTimeout(notification.timer);
@@ -429,6 +376,9 @@ const showNotification = (type, title, message, duration = 3000) => {
   notification.title = title;
   notification.message = message;
   notification.show = true;
+  notification.duration = duration; // 设置总时长
+  notification.remainingTime = duration; // 初始化剩余时间
+  notification.isPaused = false; // 确保动画是运行的
   
   // 自动隐藏
   notification.timer = setTimeout(() => {
@@ -443,6 +393,16 @@ const hideNotification = () => {
     clearTimeout(notification.timer);
     notification.timer = null;
   }
+};
+
+// 暂停通知动画
+const pauseNotificationTimer = () => {
+  notification.isPaused = true;
+};
+
+// 恢复通知动画
+const resumeNotificationTimer = () => {
+  notification.isPaused = false;
 };
 
 // 登录处理
@@ -1873,6 +1833,328 @@ onMounted(() => {
   }
   to {
     width: 0%;
+  }
+}
+
+/* 通知卡片样式 */
+.ultra-notification {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 14px;
+  box-shadow: 
+    0 15px 35px -5px rgba(0, 0, 0, 0.35), 
+    0 8px 12px -6px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: linear-gradient(145deg, rgba(24, 24, 27, 0.95), rgba(15, 15, 15, 0.98));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  overflow: hidden;
+  transform-origin: top center;
+  animation: notification-slide-in 0.5s cubic-bezier(0.15, 1.15, 0.6, 1.25) forwards, 
+             notification-glow 3s infinite alternate ease-in-out;
+}
+
+.ultra-notification.ultra-notification-success {
+  background: linear-gradient(145deg, rgba(6, 78, 59, 0.9), rgba(4, 58, 44, 0.98));
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.ultra-notification.ultra-notification-error {
+  background: linear-gradient(145deg, rgba(127, 29, 29, 0.9), rgba(107, 25, 25, 0.98));
+  border-color: rgba(252, 165, 165, 0.25);
+}
+
+.ultra-notification-glow {
+  position: absolute;
+  inset: -5px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  animation: glow-pulse 3s infinite ease-in-out;
+  z-index: -1;
+}
+
+.ultra-notification-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  gap: 16px;
+}
+
+.ultra-notification-icon-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.success-icon-wrapper {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.9), rgba(6, 95, 70, 0.9));
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.error-icon-wrapper {
+  background: linear-gradient(145deg, rgba(220, 38, 38, 0.9), rgba(185, 28, 28, 0.9));
+  border: 1px solid rgba(252, 165, 165, 0.25);
+}
+
+.ultra-success-icon,
+.ultra-error-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  transform: scale(0.8);
+  animation: icon-appear 0.4s forwards 0.3s;
+}
+
+.ultra-success-icon svg,
+.ultra-error-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: #fff;
+  fill: none;
+}
+
+.success-check {
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: dash 0.5s forwards 0.6s;
+}
+
+.error-line-1,
+.error-line-2 {
+  stroke: #fff;
+  stroke-linecap: round;
+}
+
+.error-line-1 {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: dash 0.3s forwards 0.6s;
+}
+
+.error-line-2 {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: dash 0.3s forwards 0.8s;
+}
+
+.ultra-notification-text {
+  flex-grow: 1;
+}
+
+.ultra-notification-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+  color: #fff;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transform: translateY(-8px);
+  animation: text-fade-in 0.4s forwards 0.4s;
+}
+
+.ultra-notification-message {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transform: translateY(-4px);
+  animation: text-fade-in 0.4s forwards 0.6s;
+}
+
+.ultra-notification-progress {
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ultra-notification-progress-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.3));
+  animation: progress-bar-fill linear forwards;
+}
+
+.ultra-notification-success .ultra-notification-progress-bar {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.85));
+}
+
+.ultra-notification-error .ultra-notification-progress-bar {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.7), rgba(220, 38, 38, 0.85));
+}
+
+.ultra-notification-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ultra-notification-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  filter: blur(1px);
+  opacity: 0;
+  animation: particle-float 3s ease-in-out infinite alternate;
+}
+
+@keyframes notification-slide-in {
+  0% {
+    transform: translateY(-25px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(5px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes glow-pulse {
+  0% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes progress-bar-fill {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+    background: rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    transform: translate(20px, 20px) scale(1.5);
+    opacity: 0.1;
+    background: rgba(168, 85, 247, 0.3);
+  }
+}
+
+/* 图标动画 */
+.success-icon {
+  animation: icon-appear 0.5s ease-in-out forwards 0.3s;
+}
+
+.error-icon {
+  animation: icon-appear 0.5s ease-in-out forwards 0.3s;
+}
+
+.checkmark-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: dash 1s ease-in-out forwards 0.5s;
+}
+
+.error-path-1 {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: dash 0.6s ease-in-out forwards 0.5s;
+}
+
+.error-path-2 {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: dash 0.6s ease-in-out forwards 0.7s;
+}
+
+@keyframes icon-appear {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 重置通知动画 */
+@keyframes notification-slide-in {
+  from {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.ultra-notification {
+  animation: notification-slide-in 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6) forwards;
+}
+
+@keyframes notification-glow {
+  0% {
+    box-shadow: 
+      0 15px 35px -5px rgba(0, 0, 0, 0.35), 
+      0 8px 12px -6px rgba(0, 0, 0, 0.25),
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  }
+  100% {
+    box-shadow: 
+      0 15px 35px -5px rgba(0, 0, 0, 0.4), 
+      0 8px 12px -6px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
   }
 }
 </style> 
