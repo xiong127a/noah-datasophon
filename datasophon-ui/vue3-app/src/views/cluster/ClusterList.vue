@@ -235,45 +235,48 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
-import { useSettingsStore } from '../../stores/settings'
-import { useUserStore } from '../../stores/user'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import SvgIcon from '@/components/SvgIcon.vue'
+// 添加Headless UI组件导入
 import { Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
+
+// 导入子组件
 import AddColony from './components/AddColony.vue'
 import AuthCluster from './components/AuthCluster.vue'
-import SvgIcon from '@/components/SvgIcon.vue'
-import { axiosPost, axiosJsonPost, axiosGet } from '@/utils/request'
-import { changeRouter } from '@/utils/changeRouter'
-import API from '@/api/httpApi/cluster'
 
-// 提醒函数
-const message = {
-  success(msg) {
-    alert(msg); // 临时实现，稍后将替换为toast组件
-  },
-  error(msg) {
-    alert(msg); // 临时实现，稍后将替换为toast组件
-  }
+// 导入API和请求工具
+import { clusterApi } from '@/api/httpApi'
+import { axiosPost } from '@/utils/request'
+import { changeRouter } from '@/utils/changeRouter'
+import { useToast } from '@/composables/useToast'
+import { useUserStore } from '@/stores/user'
+import { useSettingsStore } from '@/stores/settings'
+
+// 获取store和toast功能
+const userStore = useUserStore()
+const settingsStore = useSettingsStore()
+const { toast } = useToast()
+
+// 定义API常量（后台API路径）
+const API_PATHS = {
+  getServiceListByCluster: '/service/getListByCluster',
+  getColonyList: '/colony/queryColony',
+  deleteColony: '/colony/delColony'
 }
 
-// Store和Router
-const settingsStore = useSettingsStore()
-const userStore = useUserStore()
+// 组件状态
 const router = useRouter()
-
-// 响应式状态
-const visible = ref(false)
 const dataSource = ref([])
-const confirmLoading = ref(false)
-const clusterId = ref('') // 操作的集群ID
-const depType = ref('')
+const editModalVisible = ref(false)
+const currentEditObj = ref(null)
+const addColonyForm = ref(null)
 const authModalVisible = ref(false)
 const currentClusterForAuth = ref(null)
-const styleConsistencyApplied = ref(false)
-const editModalVisible = ref(false) // 控制编辑模态框显示
-const currentEditObj = ref(null) // 存储当前编辑的集群数据
-const addColonyForm = ref(null) // 表单引用
+// 添加缺失的变量
+const visible = ref(false)
+const clusterId = ref('')
+const depType = ref('')
 
 // 计算属性
 const user = computed(() => userStore.user)
@@ -289,15 +292,6 @@ onMounted(() => {
 })
 
 // 方法
-const getInto = (row) => {
-  axiosPost(API.getServiceListByCluster, {
-    clusterId: row.id,
-  }).then((res) => {
-    changeRouter(res.data, row.id, router)
-    router.push("/service-manage")
-  })
-}
-
 const addColony = (obj) => {
   editModalVisible.value = true
   currentEditObj.value = obj
@@ -334,33 +328,93 @@ const forceRefreshModal = () => {
   }, 100)
 }
 
-const delectColony = (obj) => {
-  if (confirm(`确定要删除集群 "${obj.clusterName}" 吗？此操作不可恢复。`)) {
-    // 调用删除API
-    axiosPost(API.deleteColony, { id: obj.id }).then(res => {
-      if (res.code === 200) {
-        message.success('删除成功')
-        getColonyList()
-      } else {
-        message.error(res.msg || '删除失败')
+// 获取集群列表
+const getColonyList = async () => {
+  try {
+    // 使用API库调用方式
+    const res = await clusterApi.getClusterList({})
+    if (res && res.code === 200) {
+      dataSource.value = res.data || []
+      processClusterData()
+    }
+  } catch (err) {
+    console.error('API调用错误:', err)
+    // 回退到直接HTTP调用
+    try {
+      const res = await axiosPost(API_PATHS.getColonyList, {})
+      if (res && res.code === 200) {
+        dataSource.value = res.data || []
+        processClusterData()
       }
-    })
+    } catch (fallbackErr) {
+      console.error('回退API调用也失败:', fallbackErr)
+      toast('获取集群列表失败', 'error')
+    }
   }
 }
 
-const getColonyList = () => {
-  axiosPost(API.getColonyList, {}).then((res) => {
-    if (res.code === 200) {
-      dataSource.value = res.data
-      dataSource.value.forEach((item) => {
-        let arr = []
-        item.clusterManagerList.map((childItem) => {
+// 处理集群数据
+const processClusterData = () => {
+  dataSource.value.forEach((item) => {
+    let arr = []
+    if (item.clusterManagerList && Array.isArray(item.clusterManagerList)) {
+      item.clusterManagerList.forEach((childItem) => {
+        if (childItem && childItem.username) {
           arr.push(childItem.username)
-        })
-        item["userManageName"] = arr.join(",")
+        }
       })
     }
+    item.userManageName = arr.join(",")
   })
+}
+
+// 进入集群
+const getInto = async (row) => {
+  try {
+    const res = await axiosPost(API_PATHS.getServiceListByCluster, {
+      clusterId: row.id,
+    })
+    if (res && res.data) {
+      changeRouter(res.data, row.id, router)
+      router.push("/service-manage")
+    }
+  } catch (err) {
+    console.error('进入集群失败:', err)
+    toast('进入集群失败', 'error')
+  }
+}
+
+// 删除集群
+const delectColony = async (obj) => {
+  if (!confirm(`确定要删除集群 "${obj.clusterName}" 吗？此操作不可恢复。`)) {
+    return
+  }
+  
+  try {
+    // 尝试使用API库方式
+    const res = await clusterApi.deleteCluster(obj.id)
+    if (res && res.code === 200) {
+      toast('删除成功', 'success')
+      getColonyList()
+    } else {
+      toast(res?.msg || '删除失败', 'error')
+    }
+  } catch (err) {
+    console.error('删除集群失败:', err)
+    // 回退到直接HTTP调用
+    try {
+      const res = await axiosPost(API_PATHS.deleteColony, { id: obj.id })
+      if (res && res.code === 200) {
+        toast('删除成功', 'success')
+        getColonyList()
+      } else {
+        toast(res?.msg || '删除失败', 'error')
+      }
+    } catch (fallbackErr) {
+      console.error('回退API调用也失败:', fallbackErr)
+      toast('删除集群失败', 'error')
+    }
+  }
 }
 
 // 集群授权

@@ -38,13 +38,15 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    cors: true, // 启用CORS
     proxy: {
       // 将/ddh前缀的请求代理到后端服务
       '/ddh': {
         target: 'http://localhost:8081',
         changeOrigin: true,
-        // 是否重写路径
-        rewrite: (path) => path
+        secure: false,
+        // 不需要重写路径
+        // rewrite: (path) => path
       }
     }
   }

@@ -39,22 +39,75 @@ export const useUserStore = defineStore('user', () => {
       const res = await axiosPost('/ddh/api/login', loginForm)
       
       if (res && res.code === 200) {
-        // 后端API返回的token字段可能在data.token或data.SESSION_ID中
-        const tokenValue = res.data.token || res.data.SESSION_ID
-        // 用户信息可能在data.user或data.USER_INFO中
-        const userData = res.data.user || res.data.USER_INFO
+        // 打印完整的登录响应以便调试
+        console.log('Login response data:', JSON.stringify(res.data, null, 2))
+        
+        // 后端API返回的token字段可能在data.token, data.SESSION_ID, 或直接在data中
+        let tokenValue = null
+        
+        // 查找token (尝试所有可能的位置)
+        if (res.data.token) {
+          tokenValue = res.data.token
+        } else if (res.data.SESSION_ID) {
+          tokenValue = res.data.SESSION_ID
+        } else if (res.data.authorization) {
+          tokenValue = res.data.authorization
+        } else if (typeof res.data === 'string' && res.data.length > 10) {
+          // 有时整个data就是token
+          tokenValue = res.data
+        }
+        
+        // 确保用户数据存在
+        const userData = res.data.user || res.data.USER_INFO || res.data || {}
         
         if (!tokenValue) {
+          console.error('登录成功但找不到token格式，响应数据:', res.data)
           throw new Error('登录成功但未返回token')
         }
         
+        // 清理token中可能存在的空格或不可见字符
+        tokenValue = tokenValue.trim()
+        console.log(`[Auth Debug] 原始token: "${tokenValue.substring(0, 10)}..."`);
+        console.log(`[Auth Debug] token字符分析:`, 
+          [...tokenValue.substring(0, 20)].map(c => ({ 
+            char: c, 
+            code: c.charCodeAt(0), 
+            hex: c.charCodeAt(0).toString(16)
+          }))
+        );
+        
+        // 检查token是否是有效的JWT格式 (header.payload.signature)
+        const isValidJwt = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(tokenValue);
+        console.log(`[Auth Debug] Token是否符合JWT格式: ${isValidJwt}`);
+        
         // 设置token和用户信息
+        console.log(`[Auth] 设置token: ${tokenValue.substring(0, 10)}...`)
+
+        // 确保token不以Bearer开头，因为我们会在请求拦截器中添加
+        if (tokenValue.startsWith('Bearer ')) {
+          // 如果已经包含Bearer前缀，保持不变
+          console.log('[Auth] Token已包含Bearer前缀');
+        } else {
+          // 不要在这里添加Bearer前缀，让请求拦截器处理
+          console.log('[Auth] Token不包含Bearer前缀，将由请求拦截器添加');
+        }
+
         setToken(tokenValue)
         setUserInfo(userData)
+        
+        // 显式调用setAuthorization函数以确保请求中使用token
+        import('../utils/request').then(requestModule => {
+          requestModule.setAuthorization(tokenValue)
+          console.log('[Auth] 已通过setAuthorization设置token')
+        })
+        
         return res.data
       } else {
         throw new Error(res?.msg || '登录失败')
       }
+    } catch (error) {
+      console.error('登录过程出错:', error)
+      throw error
     } finally {
       loading.value = false
     }

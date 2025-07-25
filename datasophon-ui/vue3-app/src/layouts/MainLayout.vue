@@ -21,17 +21,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import AppHeader from '../components/header/AppHeader.vue';
 import { useSettingsStore } from '../stores/settings';
+import AppHeader from '../components/header/AppHeader.vue';
 
-// 路由相关
-const route = useRoute();
+// 路由和设置store
 const router = useRouter();
-
-// 菜单状态管理
+const route = useRoute();
 const settingsStore = useSettingsStore();
+
+// 菜单数据
 const menuData = ref([
   { path: '/', title: '首页', icon: 'home' },
   { path: '/host', title: '主机管理', icon: 'host' },
@@ -98,6 +98,18 @@ const onFirstMenuSelect = (key: string) => {
     return;
   }
   
+  // 特殊处理集群管理路径 - 始终导航到子路径
+  if (key === '/colony-manage') {
+    const targetPath = '/colony-manage/list';
+    console.log('正在导航到集群管理子路径:', targetPath);
+    router.push(targetPath).catch(err => {
+      if (err.name !== 'NavigationDuplicated') {
+        throw err;
+      }
+    });
+    return;
+  }
+
   // 跳转到菜单路径
   if (route.path !== key) {
     router.push(key).catch(err => {
@@ -112,6 +124,30 @@ const onFirstMenuSelect = (key: string) => {
 const onRouteChanged = (path: string) => {
   console.log('路由已变更到:', path);
 };
+
+// 监听路由变化以更新菜单状态
+watch(() => route.path, (newPath, oldPath) => {
+  console.log(`[路由变更] 从 ${oldPath} 到 ${newPath}`);
+  console.log('[路由状态] 当前路由:', route);
+  
+  // 更新激活的菜单
+  for (const item of menuData.value) {
+    if (newPath === item.path || newPath.startsWith(item.path + '/')) {
+      console.log(`[菜单状态] 激活菜单: ${item.path} (${item.title})`);
+      activeFirstMenuKey.value = item.path;
+      settingsStore.setActiveFirstMenu(item.path);
+      break;
+    }
+  }
+  
+  // 特殊处理集群管理路径
+  if (newPath === '/colony-manage') {
+    console.log('[路由修正] 检测到集群管理路径，自动修正到子路径');
+    router.replace('/colony-manage/list').catch(err => {
+      console.error('[路由错误]', err);
+    });
+  }
+}, { immediate: true });
 
 // 设置初始激活菜单
 onMounted(() => {

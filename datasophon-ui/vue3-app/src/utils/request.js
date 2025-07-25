@@ -31,6 +31,8 @@ const loading = {
 
 // 创建axios实例
 const service = axios.create({
+  // 不设置baseURL，让请求走代理
+  // baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 60000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json;charset=UTF-8'
@@ -43,37 +45,50 @@ const getToken = () => localStorage.getItem('token')
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    // 添加详细的请求日志
-    console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`)
-    console.log(`[Request Headers]`, config.headers)
-    console.log(`[Request Data]`, config.data)
-    
-    // 登录接口不需要添加token
-    if (config.url?.includes('/login')) {
-      // 确保登录请求使用JSON格式
-      if (!config.headers['Content-Type']) {
-        config.headers['Content-Type'] = 'application/json;charset=UTF-8'
+    // 添加token到请求头
+    const token = getToken()
+    if (token) {
+      // 符合RFC 6750标准：Authorization: Bearer <token>
+      // 1. 确保token本身不包含空格等特殊字符
+      // 2. 确保Bearer和token之间有且仅有一个空格
+      const cleanToken = token.trim(); // 移除可能的前后空格
+      
+      // 检查token格式，适当添加Bearer前缀
+      let formattedToken;
+      if (cleanToken.startsWith('Bearer ')) {
+        // 已经有Bearer前缀，确保格式正确
+        const parts = cleanToken.split(' ');
+        if (parts.length >= 2) {
+          // 确保Bearer和token之间只有一个空格
+          formattedToken = `Bearer ${parts.slice(1).join('')}`;
+        } else {
+          formattedToken = cleanToken; // 格式异常，保持不变
+        }
+      } else {
+        // 添加Bearer前缀
+        formattedToken = `Bearer ${cleanToken}`;
       }
-      console.log(`[Login Request] Content-Type: ${config.headers['Content-Type']}`)
-      return config;
+      
+      config.headers['Authorization'] = formattedToken;
+      
+      // 详细的调试日志
+      console.log(`[Auth Debug] 原始token长度: ${token.length}字符`);
+      console.log(`[Auth Debug] 格式化后的Authorization头: "${formattedToken.substring(0, 25)}..."`);
+    } else {
+      console.log('[Auth Debug] No token found in localStorage')
     }
     
-    // 获取token
-    const token = getToken()
-    
-    // 设置token
-    if (token) {
-      // 使用Bearer认证方案
-      config.headers['Authorization'] = `Bearer ${token}`
-      console.log(`[Auth Token] Bearer token added`)
-    } else {
-      console.log(`[Auth Token] No token found`)
+    // 监控请求
+    console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`);
+    console.log(`[Request Headers]`, config.headers);
+    if (config.data) {
+      console.log(`[Request Data]`, config.data);
     }
     
     return config
   },
   error => {
-    console.error(`[Request Error]`, error)
+    console.log("[Request Error]", error);
     return Promise.reject(error)
   }
 )
@@ -81,78 +96,38 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
-    console.log(`[Response] ${response.status} ${response.config.url}`)
-    console.log(`[Response Headers]`, response.headers)
-    console.log(`[Response Data]`, response.data)
+    // 监控响应
+    console.log(`[Response] ${response.status} ${response.config.url}`);
+    console.log(`[Response Headers]`, response.headers);
+    console.log(`[Response Data]`, response.data);
     
-    const res = response.data
-    
-    // 如果返回的状态码不是200，说明接口请求有问题
-    if (res.code !== 200) {
-      console.error(`[Response Error] Code: ${res.code}, Message: ${res.msg}`)
-      
-      // token失效
-      if (res.code === 401 || res.code === 403) {
-        notify.error(res.msg || '登录已过期，请重新登录')
-        // 清除token
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
-        // 跳转到登录页
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 1500)
-      } else {
-        notify.error(res.msg || '系统错误')
-      }
-      
-      return Promise.reject(res)
+    if (response.data.code === 200) {
+      console.log("[Response Success] Code:", response.data.code);
     } else {
-      console.log(`[Response Success] Code: ${res.code}`)
-      return res
+      console.log("[Response Error] Code:", response.data.code, "Message:", response.data.msg);
     }
+    
+    return response.data
   },
   error => {
-    console.error(`[Response Error]`, error)
-    console.error(`[Response Error Details]`, {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        headers: error.config?.headers,
-        data: error.config?.data
-      }
-    })
+    // 处理CORS错误和网络错误
+    if (error.message === 'Network Error') {
+      console.error('[CORS Error] 可能是跨域问题或网络连接问题');
+      console.error('[推荐解决方案] 检查后端CORS配置是否允许前端域名和所有请求头');
+    }
     
-    // 处理HTTP状态码错误
-    if (error.response) {
-      const { status, data } = error.response
+    console.log("[Response Error]", error);
+    
+    // 处理401未授权错误
+    if (error.response && error.response.status === 401) {
+      console.error('登录已过期或没有权限，请重新登录');
+      removeAuthorization();
       
-      // 处理401/403：未授权/禁止访问
-      if (status === 401 || status === 403) {
-        console.error(`[Auth Error] Status: ${status}, Data:`, data)
-        notify.error('登录已过期或没有权限，请重新登录')
-        // 清除认证信息
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
-        // 跳转到登录页
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 1500)
-      } else if (status === 404) {
-        notify.error('请求的资源不存在')
-      } else if (status >= 500) {
-        notify.error('服务器错误，请联系管理员')
-      } else {
-        notify.error(data?.msg || error.response.data?.msg || '请求失败')
+      // 如果不是登录页，跳转到登录页
+      const currentPath = window.location.hash.slice(1);
+      if (currentPath !== '/login') {
+        window.location.href = '/#/login';
       }
-    } else {
-      // 请求被取消或网络错误等
-      console.error(`[Network Error]`, error.message)
-      notify.error('网络错误，请检查您的网络连接')
     }
     
     return Promise.reject(error)

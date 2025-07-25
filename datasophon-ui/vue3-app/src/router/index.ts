@@ -103,7 +103,7 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '集群管理', icon: 'colony', rightSide: true },
         children: [
           {
-            path: '/colony-manage/list',
+            path: 'list',
             name: '集群列表管理',
             component: () => import('../views/cluster/ClusterList.vue'),
             meta: { title: '集群管理', icon: 'cluster' },
@@ -111,13 +111,13 @@ const routes: RouteRecordRaw[] = [
             alias: '/cluster/list'
           },
           {
-            path: '/colony-manage/storage',
+            path: 'storage',
             name: '存储库管理',
             component: () => import('../views/cluster/StorageManage.vue'),
             meta: { title: '存储库管理', icon: 'storage' }
           },
           {
-            path: '/colony-manage/framework',
+            path: 'framework',
             name: '集群框架',
             component: () => import('../views/cluster/FrameworkManage.vue'),
             meta: { title: '集群框架', icon: 'framework' }

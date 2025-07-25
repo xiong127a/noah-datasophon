@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/vue": "^1.7.23",
     "@vuelidate/core": "^2.0.3",
     "@vuelidate/validators": "^2.0.4",
     "axios": "^1.11.0",
@@ -17,7 +18,6 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
