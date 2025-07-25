@@ -40,7 +40,7 @@
         <revision>1.2.1</revision>
         <pekko.version>1.1.5</pekko.version>
         <commons.httpclient>3.0.1</commons.httpclient>
-        <commons.lang>2.6</commons.lang>
+        <commons.lang>3.18.0</commons.lang>
         <druid.version>1.2.27</druid.version>
         <fastjson2.version>2.0.57</fastjson2.version>
         <hutool.version>5.8.9</hutool.version>
@@ -130,8 +130,8 @@
                 <version>${druid.version}</version>
             </dependency>
             <dependency>
-                <groupId>commons-lang</groupId>
-                <artifactId>commons-lang</artifactId>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
                 <version>${commons.lang}</version>
             </dependency>
             <dependency>
