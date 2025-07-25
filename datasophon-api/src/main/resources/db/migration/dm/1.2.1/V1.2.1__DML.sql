@@ -445,7 +445,7 @@ INSERT INTO "DATASOPHON"."t_ddh_session"("id","user_id","ip","last_login_time") 
 INSERT INTO "DATASOPHON"."t_ddh_session"("id","user_id","ip","last_login_time") VALUES('d25dd005-ceb6-4414-bfdf-9279a23c2ba6',1,'192.168.75.12','2023-02-12 20:34:57');
 
 SET IDENTITY_INSERT "DATASOPHON"."t_ddh_user_info" ON;
-INSERT INTO "DATASOPHON"."t_ddh_user_info"("id","username","password","email","phone","create_time","user_type") VALUES(1,'admin','0192023a7bbd73250516f069df18b500','xxx@163.com','1865xx','2022-05-10 16:05:18',1);
+INSERT INTO "DATASOPHON"."t_ddh_user_info"("id","username","password","email","phone","create_time","user_type") VALUES(1,'admin','$2a$12$CxjcBsUr5xC1SoJ9J6tuuO9e7AYYz3sHKXnCKBR1ZdL94Y6ZRy9tu','xxx@163.com','1865xx','2022-05-10 16:05:18',1);
 
 SET IDENTITY_INSERT "DATASOPHON"."t_ddh_user_info" OFF;
 

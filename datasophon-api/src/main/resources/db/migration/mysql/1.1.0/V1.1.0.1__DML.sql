@@ -424,4 +424,4 @@ INSERT INTO `t_ddh_session` VALUES ('d25dd005-ceb6-4414-bfdf-9279a23c2ba6', 1, '
 -- ----------------------------
 -- Records of t_ddh_user_info
 -- ----------------------------
-INSERT INTO `t_ddh_user_info` VALUES (1, 'admin', '0192023a7bbd73250516f069df18b500', 'xxx@163.com', '1865xx', '2022-05-10 16:05:18', 1);
+INSERT INTO `t_ddh_user_info` VALUES (1, 'admin', '$2a$12$CxjcBsUr5xC1SoJ9J6tuuO9e7AYYz3sHKXnCKBR1ZdL94Y6ZRy9tu', 'xxx@163.com', '1865xx', '2022-05-10 16:05:18', 1);
