@@ -216,12 +216,12 @@ import { useRouter } from 'vue-router';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import { useUserStore } from '@/stores/user';
-import { useVueSonner } from '@/composables/useVueSonner';
+import { toast } from 'vue-sonner';
 
 // 路由和状态
 const router = useRouter();
 const userStore = useUserStore();
-const { toast } = useVueSonner();
+// 直接使用vue-sonner的toast函数
 const containerRef = ref(null);
 
 // 表单数据
@@ -326,8 +326,8 @@ const handleLogin = async () => {
       }
       
       // 登录成功，显示成功通知
-      console.log('[Toast] 准备显示成功通知，toast对象:', toast);
-      toast.success('登录成功，正在进入系统...', 3000);
+      console.log('[Toast] 准备显示成功通知');
+      toast.success('登录成功，正在进入系统...', { duration: 3000 });
       console.log('[Toast] 成功调用toast.success');
       
       // 登录成功后跳转
@@ -344,8 +344,8 @@ const handleLogin = async () => {
     
     // 显示错误通知
     const errorMessage = error && error.message ? error.message : '登录失败，请检查用户名和密码';
-    console.log('[Toast] 准备显示错误通知，toast对象:', toast);
-    toast.error(errorMessage, 4000);
+    console.log('[Toast] 准备显示错误通知');
+    toast.error(errorMessage, { duration: 4000 });
     console.log('[Toast] 成功调用toast.error:', errorMessage);
     
     // 添加卡片震动效果
