@@ -181,74 +181,7 @@
           
           <!-- 顶部通知组件 -->
           <Teleport to="body">
-            <transition
-              enter-active-class="transition-all duration-500 ease-out"
-              enter-from-class="transform translate-y-[-120%] opacity-0 scale-95"
-              enter-to-class="transform translate-y-0 opacity-100 scale-100"
-              leave-active-class="transition-all duration-300 ease-in"
-              leave-from-class="transform translate-y-0 opacity-100 scale-100"
-              leave-to-class="transform translate-y-[-120%] opacity-0 scale-95"
-            >
-              <div
-                v-if="notification.show"
-                class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md w-auto"
-                @mouseenter="pauseNotificationTimer"
-                @mouseleave="resumeNotificationTimer"
-              >
-                <!-- 通知卡片 -->
-                <div
-                  class="ultra-notification"
-                  :class="{
-                    'ultra-notification-success': notification.type === 'success',
-                    'ultra-notification-error': notification.type === 'error'
-                  }"
-                >
-                  <!-- 内容容器 -->
-                  <div class="ultra-notification-content">
-                    <!-- 图标容器 -->
-                  <div
-                      class="ultra-notification-icon-wrapper"
-                    :class="{
-                        'success-icon-wrapper': notification.type === 'success',
-                        'error-icon-wrapper': notification.type === 'error'
-                        }"
-                      >
-                        <!-- 成功图标 -->
-                      <div v-if="notification.type === 'success'" class="ultra-success-icon">
-                        <svg viewBox="0 0 24 24" stroke-width="3">
-                          <polyline class="success-check" points="6,12 10,16 18,8" />
-                        </svg>
-                      </div>
-                        
-                        <!-- 错误图标 -->
-                      <div v-if="notification.type === 'error'" class="ultra-error-icon">
-                        <svg viewBox="0 0 24 24" stroke-width="3">
-                          <line class="error-line-1" x1="8" y1="8" x2="16" y2="16" />
-                          <line class="error-line-2" x1="16" y1="8" x2="8" y2="16" />
-                        </svg>
-                      </div>
-                      </div>
-                      
-                      <!-- 文本内容 -->
-                    <div class="ultra-notification-text-container">
-                      <div v-if="notification.title" class="ultra-notification-title">{{ notification.title }}</div>
-                      <div v-if="notification.message" class="ultra-notification-message">{{ notification.message }}</div>
-                      </div>
-                    </div>
-                    
-                    <!-- 进度条 -->
-                  <div class="ultra-notification-progress">
-                      <div
-                      class="ultra-notification-progress-bar"
-                      :style="{ 
-                        animationDuration: `${notification.remainingTime || notification.duration}ms`,
-                        animationPlayState: notification.isPaused ? 'paused' : 'running' 
-                      }"
-                      ></div>
-                    </div>
-                </div>
-              </div>
-            </transition>
+            <!-- 通知组件已由vue-sonner替代 -->
           </Teleport>
         </form>
       </div>
@@ -281,10 +214,12 @@ import { useRouter } from 'vue-router';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import { useUserStore } from '@/stores/user';
+import { useVueSonner } from '@/composables/useVueSonner';
 
 // 路由和状态
 const router = useRouter();
 const userStore = useUserStore();
+const { toast } = useVueSonner();
 const containerRef = ref(null);
 
 // 表单数据
@@ -304,17 +239,7 @@ const logoHover = ref(false);
 const eyeHover = ref(false);
 const buttonHover = ref(false);
 
-// 通知状态
-const notification = reactive({
-  show: false,
-  type: 'success', // 'success' | 'error'
-  title: '',
-  message: '',
-  timer: null,
-  duration: 3000, // 通知显示总时长
-  remainingTime: 3000, // 剩余显示时间
-  isPaused: false // 是否暂停动画
-});
+// 通知状态已由vue-sonner替代
 
 // 鼠标位置
 const mousePosition = reactive({ x: 0, y: 0 });
@@ -365,45 +290,7 @@ const dismissError = () => {
   errorMsg.value = '';
 };
 
-// 显示通知
-const showNotification = (type, title, message, duration = 4000) => {
-  // 清除之前的定时器
-  if (notification.timer) {
-    clearTimeout(notification.timer);
-  }
-  
-  notification.type = type;
-  notification.title = title;
-  notification.message = message;
-  notification.show = true;
-  notification.duration = duration; // 设置总时长
-  notification.remainingTime = duration; // 初始化剩余时间
-  notification.isPaused = false; // 确保动画是运行的
-  
-  // 自动隐藏
-  notification.timer = setTimeout(() => {
-    hideNotification();
-  }, duration);
-};
-
-// 隐藏通知
-const hideNotification = () => {
-  notification.show = false;
-  if (notification.timer) {
-    clearTimeout(notification.timer);
-    notification.timer = null;
-  }
-};
-
-// 暂停通知动画
-const pauseNotificationTimer = () => {
-  notification.isPaused = true;
-};
-
-// 恢复通知动画
-const resumeNotificationTimer = () => {
-  notification.isPaused = false;
-};
+// 通知函数已由vue-sonner替代
 
 // 登录处理
 const handleLogin = async () => {
@@ -437,7 +324,7 @@ const handleLogin = async () => {
       }
       
       // 登录成功，显示成功通知
-      showNotification('success', '登录成功', '正在进入系统...', 1500);
+      toast.success('登录成功，正在进入系统...');
       
       // 登录成功后跳转
       setTimeout(() => {
@@ -452,7 +339,7 @@ const handleLogin = async () => {
     console.error('[Login] 登录过程发生错误:', error);
     
     // 显示错误通知
-    showNotification('error', '登录失败', error.message || '请检查用户名和密码');
+    toast.error(error.message || '登录失败，请检查用户名和密码');
     
     // 添加卡片震动效果
     if (loginCard.value) {

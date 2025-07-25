@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useToast } from './useToast'
+import { useVueSonner } from './useVueSonner'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 

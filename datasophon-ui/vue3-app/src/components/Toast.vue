@@ -80,8 +80,8 @@ import { useVueSonner } from '@/composables/useVueSonner'
 export default {
   name: 'Toast',
   setup() {
-    // 使用Toast组合式API
-    const { toasts, remove: removeToast } = useToast()
+    // 使用vue-sonner组合式API
+    const { toasts, remove: removeToast } = useVueSonner()
     
     return {
       toasts,

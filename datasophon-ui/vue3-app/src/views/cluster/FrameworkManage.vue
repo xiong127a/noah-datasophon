@@ -1,3 +1,11 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { Dialog, DialogPanel } from '@headlessui/vue';
+import { useVueSonner } from '@/composables/useVueSonner';
+import { useErrorHandler } from '@/composables/useErrorHandler';
+import { getFrameList, deleteService } from '@/api/httpApi/cluster';
+</script>
+
 <template>
   <div class="container mx-auto p-4">
     <div class="flex justify-between items-center mb-6">
@@ -142,7 +150,7 @@ const showDeleteConfirmDialog = ref(false);
 const serviceToDelete = ref(null);
 
 // 工具实例
-const toast = useToast();
+const { toast } = useVueSonner();
 const errorHandler = useErrorHandler();
 
 // 计算属性：获取当前选中框架的服务列表
