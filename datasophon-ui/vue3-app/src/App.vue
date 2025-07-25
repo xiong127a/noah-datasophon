@@ -19,15 +19,23 @@ const initializeApp = async () => {
     
     // 检查本地存储中是否有token
     const hasToken = localStorage.getItem('auth_token')
+    console.log(`[App] localStorage token检查: ${hasToken ? '存在' : '不存在'}`)
     
     if (hasToken) {
       console.log('[App] 发现本地存储的token，验证有效性')
+      console.log(`[App] Token值: ${hasToken.substring(0, 15)}...`)
+      
+      // 确保token已加载到authService中
+      if (!userStore.token) {
+        console.log('[App] 从localStorage同步token到userStore')
+        userStore.setToken(hasToken)
+      }
       
       // 验证token有效性
       const userData = await userStore.getUserInfo()
       
       if (userData) {
-        console.log('[App] Token有效，用户已登录')
+        console.log('[App] Token有效，用户已登录:', userData.username)
         // 如果当前在登录页，跳转到首页
         if (router.currentRoute.value.path === '/login') {
           router.push('/')
@@ -60,6 +68,7 @@ const initializeApp = async () => {
       router.push('/login')
     }
   } finally {
+    console.log('[App] 初始化完成，设置isInitializing = false')
     isInitializing.value = false
   }
 }

@@ -1,11 +1,11 @@
 import { computed, ref, watch } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '../stores/user'
 
 /**
  * 认证服务 - 提供认证状态管理和JWT处理
  */
 const token = ref<string | null>(null)
-  const isAuthenticated = computed(() => !!token.value)
+const isAuthenticated = computed(() => !!token.value)
 
 // 跟踪上次认证检查时间
 const lastAuthCheck = ref(Date.now())
@@ -43,7 +43,7 @@ export const authService = {
   setToken(newToken: string) {
     token.value = newToken
     localStorage.setItem('auth_token', newToken)
-    console.log('[Auth] Token updated')
+    console.log('[Auth] Token updated and saved to localStorage')
     
     // 更新最后认证检查时间
     this.updateLastAuthCheck()
@@ -54,9 +54,24 @@ export const authService = {
    * 用于请求拦截器
    */
   getAuthHeader() {
-    return {
-      Authorization: token.value ? `Bearer ${token.value}` : ''
+    // 先尝试从内存中获取token
+    let currentToken = token.value;
+    
+    // 如果内存中没有，尝试从localStorage中获取
+    if (!currentToken) {
+      currentToken = localStorage.getItem('auth_token');
+      
+      // 如果在localStorage中找到了token，同步到内存中
+      if (currentToken) {
+        token.value = currentToken;
+        console.log('[Auth] Token synchronized from localStorage');
       }
+    }
+    
+    // 返回带前缀的认证头
+    return {
+      Authorization: currentToken ? `Bearer ${currentToken}` : ''
+    }
   },
   
   /**
@@ -82,7 +97,7 @@ export const authService = {
     
     console.log('[Auth] User logged out')
   }
-  }
+}
   
 // 初始化认证服务
 authService.init()

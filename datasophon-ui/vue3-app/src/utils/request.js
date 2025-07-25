@@ -13,17 +13,48 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    // 从authService获取认证头部，这是VueUse推荐的方式
-    const headers = authService.getAuthHeader()
+    // 详细输出当前请求信息
+    console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`);
+    
+    // 检查localStorage中的token
+    const localToken = localStorage.getItem('auth_token');
+    console.log(`[Auth] localStorage token: ${localToken ? '存在' : '不存在'}`);
+    
+    // 从authService获取认证头部
+    const headers = authService.getAuthHeader();
+    
+    // 记录认证状态
+    console.log(`[Auth] authService.isAuthenticated: ${authService.isAuthenticated.value}`);
+    console.log(`[Auth] token from authService: ${authService.token.value ? '存在' : '不存在'}`);
     
     // 添加认证头部
     if (headers.Authorization) {
-      config.headers['Authorization'] = headers.Authorization
-      console.log(`[Auth] 添加认证头: ${headers.Authorization.substring(0, 15)}...`)
+      config.headers['Authorization'] = headers.Authorization;
+      console.log(`[Auth] 添加认证头: ${headers.Authorization}`);
+    } else {
+      console.log(`[Auth] 警告: 无法添加认证头，未找到有效token`);
+      
+      // 尝试从localStorage直接获取
+      if (localToken) {
+        config.headers['Authorization'] = `Bearer ${localToken}`;
+        console.log(`[Auth] 从localStorage添加认证头: Bearer ${localToken.substring(0, 15)}...`);
+      }
     }
     
-    // 监控请求（可选，生产环境可移除）
-    console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`);
+    // 如果是POST请求，检查Content-Type和数据
+    if (config.method === 'post') {
+      console.log(`[Request] POST请求Content-Type: ${config.headers['Content-Type']}`);
+      
+      if (config.data) {
+        if (typeof config.data === 'object') {
+          console.log(`[Request] 请求数据类型: 对象, 键: ${Object.keys(config.data).join(', ')}`);
+        } else {
+          console.log(`[Request] 请求数据类型: ${typeof config.data}`);
+        }
+      } else {
+        console.log(`[Request] 请求无数据`);
+      }
+    }
     
     return config
   },
@@ -36,12 +67,15 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
+    console.log(`[Response] ${response.config.url} 状态码: ${response.status}`);
     return response.data
   },
   error => {
     // 处理401未授权错误
     if (error.response && error.response.status === 401) {
       console.error('登录已过期或没有权限');
+      console.error(`[Auth Error] URL: ${error.config.url}, Method: ${error.config.method}`);
+      console.error(`[Auth Error] Headers: ${JSON.stringify(error.config.headers)}`);
       
       // 返回自定义错误信息，不跳转页面
       return Promise.reject({
@@ -57,6 +91,7 @@ service.interceptors.response.use(
 
 // 简化的请求方法，使用标准Promise接口
 export function axiosPost(url, params = {}, showLoading = false) {
+  console.log(`[axiosPost] 调用 ${url} 参数:`, params);
   return service({
     method: 'post',
     url,
@@ -70,7 +105,9 @@ export function axiosPost(url, params = {}, showLoading = false) {
         Object.keys(data).forEach(key => {
           urlSearchParams.append(key, data[key]);
         });
-        return urlSearchParams.toString();
+        const result = urlSearchParams.toString();
+        console.log(`[transformRequest] 转换结果: ${result}`);
+        return result;
       }
     ]
   })

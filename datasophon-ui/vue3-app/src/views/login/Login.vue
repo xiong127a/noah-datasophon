@@ -422,6 +422,17 @@ const handleLogin = async () => {
     });
     
     if (success) {
+      // 验证token是否正确存储
+      const storedToken = localStorage.getItem('auth_token');
+      const memoryToken = userStore.token;
+      console.log('[Login] 登录成功检查:');
+      console.log(`[Login] localStorage token: ${storedToken ? '已保存' : '未保存'}`);
+      console.log(`[Login] userStore token: ${memoryToken ? '已保存' : '未保存'}`);
+      
+      if (storedToken) {
+        console.log(`[Login] Token值: ${storedToken.substring(0, 15)}...`);
+      }
+      
       // 登录成功，显示成功通知
       showNotification('success', '登录成功', '正在进入系统...', 1500);
       
