@@ -70,7 +70,7 @@
         <junit.version>5.9.0</junit.version>
         <org.freemarker.verion>2.3.34</org.freemarker.verion>
         <commons-codec.version>1.15</commons-codec.version>
-        <commons-compress.version>1.21</commons-compress.version>
+        <commons-compress.version>1.27.1</commons-compress.version>
         <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
         <jackson.version>2.18.4</jackson.version>
         <ant.version>1.10.12</ant.version>
