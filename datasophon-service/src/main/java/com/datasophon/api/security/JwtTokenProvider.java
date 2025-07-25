@@ -17,18 +17,12 @@
 
 package com.datasophon.api.security;
 
-import com.datasophon.api.service.AuthTokenService;
-import com.datasophon.dao.entity.AuthTokenEntity;
-import com.datasophon.dao.entity.UserInfoEntity;
-import com.datasophon.api.utils.HttpUtils;
-
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -50,9 +44,6 @@ public class JwtTokenProvider {
 
     private static final String AUTHORITIES_KEY = "auth";
     private static final String USER_ID_KEY = "uid";
-
-    @Autowired
-    private AuthTokenService authTokenService;
 
     @Value("${jwt.secret:aSingleVeryVerySecretKeyForDatasophonAppSignatureNeeds}")
     private String secretKeyString;
@@ -82,10 +73,9 @@ public class JwtTokenProvider {
      * 创建JWT访问令牌
      * 
      * @param authentication 认证对象
-     * @param request        HTTP请求
      * @return JWT令牌字符串
      */
-    public String createToken(Authentication authentication, HttpServletRequest request) {
+    public String createToken(Authentication authentication) {
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
@@ -101,7 +91,7 @@ public class JwtTokenProvider {
             userId = ((User) principal).getUsername();
         }
 
-        String token = Jwts.builder()
+        return Jwts.builder()
                 .setSubject(authentication.getName())
                 .claim(AUTHORITIES_KEY, authorities)
                 .claim(USER_ID_KEY, userId)
@@ -109,20 +99,25 @@ public class JwtTokenProvider {
                 .setExpiration(validity)
                 .signWith(secretKey, SignatureAlgorithm.HS512)
                 .compact();
+    }
 
-        // 生成刷新令牌
-        String refreshToken = authTokenService.createRefreshToken(userId);
+    /**
+     * 创建刷新令牌
+     * 
+     * @param userId 用户ID
+     * @return 刷新令牌字符串
+     */
+    public String createRefreshToken(String userId) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + refreshTokenValidityInMilliseconds);
 
-        // 保存令牌到数据库
-        try {
-            UserInfoEntity user = new UserInfoEntity();
-            user.setId(Integer.valueOf(userId));
-            authTokenService.createToken(user, token, refreshToken, request, validity);
-        } catch (Exception e) {
-            logger.error("保存令牌到数据库失败", e);
-        }
-
-        return token;
+        return Jwts.builder()
+                .setSubject(userId)
+                .claim("type", "refresh")
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .compact();
     }
 
     /**
@@ -158,22 +153,6 @@ public class JwtTokenProvider {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
-
-            // 检查数据库中的令牌状态
-            AuthTokenEntity tokenEntity = authTokenService.getByToken(token);
-            if (tokenEntity == null) {
-                logger.error("JWT令牌在数据库中不存在");
-                return false;
-            }
-
-            if (Boolean.TRUE.equals(tokenEntity.getIsRevoked())) {
-                logger.error("JWT令牌已被撤销: {}", tokenEntity.getRevokedReason());
-                return false;
-            }
-
-            // 更新最后访问时间
-            authTokenService.updateAccessTime(tokenEntity.getId());
-
             return true;
         } catch (ExpiredJwtException e) {
             logger.error("JWT令牌已过期: {}", e.getMessage());
@@ -236,16 +215,29 @@ public class JwtTokenProvider {
     }
 
     /**
+     * 从令牌中获取Claims
+     * 
+     * @param token JWT令牌
+     * @return Claims对象
+     */
+    public Claims getClaimsFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    /**
      * 为刷新令牌创建一个新的访问令牌
      * 
-     * @param userId  用户ID
-     * @param request HTTP请求
+     * @param userId 用户ID
      * @return 新的访问令牌
      */
-    public String createTokenForRefresh(Integer userId, HttpServletRequest request) {
+    public String createTokenForRefresh(Integer userId) {
         Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
         User principal = new User(userId.toString(), "", authorities);
         Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
-        return createToken(authentication, request);
+        return createToken(authentication);
     }
 }

@@ -17,31 +17,81 @@
 
 package com.datasophon.api.utils;
 
-import com.datasophon.common.Constants;
-
-import org.apache.commons.lang.StringUtils;
-
+import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+/**
+ * HTTP请求工具类
+ */
 public class HttpUtils {
 
-    public static String getClientIpAddress(HttpServletRequest request) {
-        String clientIp = request.getHeader(Constants.HTTP_X_FORWARDED_FOR);
+    private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-        if (StringUtils.isNotEmpty(clientIp) && !clientIp.equalsIgnoreCase(Constants.HTTP_HEADER_UNKNOWN)) {
-            int index = clientIp.indexOf(Constants.COMMA);
-            if (index != -1) {
-                return clientIp.substring(0, index);
-            } else {
-                return clientIp;
+    private static final String UNKNOWN = "unknown";
+    private static final String LOCALHOST_IP = "127.0.0.1";
+    private static final String LOCALHOST_IPV6 = "0:0:0:0:0:0:0:1";
+
+    private static final String[] IP_HEADERS = {
+            "X-Forwarded-For",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP",
+            "HTTP_CLIENT_IP",
+            "HTTP_X_FORWARDED_FOR"
+    };
+
+    /**
+     * 获取客户端真实IP地址
+     *
+     * @param request HTTP请求
+     * @return 客户端IP地址
+     */
+    public static String getClientIpAddress(HttpServletRequest request) {
+        if (request == null) {
+            return UNKNOWN;
+        }
+
+        // 先尝试从各种代理头中获取
+        String ip = null;
+        for (String header : IP_HEADERS) {
+            ip = request.getHeader(header);
+            if (!isUnknownIp(ip)) {
+                break;
             }
         }
 
-        clientIp = request.getHeader(Constants.HTTP_X_REAL_IP);
-        if (StringUtils.isNotEmpty(clientIp) && !clientIp.equalsIgnoreCase(Constants.HTTP_HEADER_UNKNOWN)) {
-            return clientIp;
+        // 如果仍未获取到，直接从请求中获取
+        if (isUnknownIp(ip)) {
+            ip = request.getRemoteAddr();
+            if (LOCALHOST_IP.equals(ip) || LOCALHOST_IPV6.equals(ip)) {
+                // 根据网卡获取本机配置的IP地址
+                try {
+                    ip = InetAddress.getLocalHost().getHostAddress();
+                } catch (UnknownHostException e) {
+                    logger.error("获取本地IP地址失败", e);
+                }
+            }
         }
 
-        return request.getRemoteAddr();
+        // 对于通过多个代理的情况，第一个IP为客户端真实IP，多个IP会按照','分隔
+        if (ip != null && ip.indexOf(",") > 0) {
+            ip = ip.substring(0, ip.indexOf(","));
+        }
+
+        return ip == null ? UNKNOWN : ip;
+    }
+
+    /**
+     * 判断IP是否为unknown
+     *
+     * @param ip IP地址
+     * @return 如果为unknown返回true
+     */
+    private static boolean isUnknownIp(String ip) {
+        return StrUtil.isBlank(ip) || UNKNOWN.equalsIgnoreCase(ip);
     }
 }

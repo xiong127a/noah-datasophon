@@ -19,10 +19,13 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.JwtTokenProvider;
+import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
+import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.Data;
 import org.slf4j.Logger;
@@ -64,9 +67,10 @@ public class LoginController {
     private JwtTokenProvider tokenProvider;
 
     @Autowired
+    private AuthTokenService authTokenService;
+
+    @Autowired
     private UserInfoService userInfoService;
-
-
 
     /**
      * 用户登录API - JSON格式
@@ -75,8 +79,8 @@ public class LoginController {
      * @return 带有JWT令牌的响应
      */
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Result loginJson(@RequestBody @Valid LoginRequest loginRequest) {
-        return processLogin(loginRequest.getUsername(), loginRequest.getPassword());
+    public Result loginJson(@RequestBody @Valid LoginRequest loginRequest, HttpServletRequest request) {
+        return processLogin(loginRequest.getUsername(), loginRequest.getPassword(), request);
     }
 
     /**
@@ -87,8 +91,11 @@ public class LoginController {
      * @return 带有JWT令牌的响应
      */
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Result loginForm(@RequestParam("username") String username, @RequestParam("password") String password) {
-        return processLogin(username, password);
+    public Result loginForm(
+            @RequestParam("username") String username,
+            @RequestParam("password") String password,
+            HttpServletRequest request) {
+        return processLogin(username, password, request);
     }
 
     /**
@@ -96,9 +103,10 @@ public class LoginController {
      * 
      * @param username 用户名
      * @param password 密码
+     * @param request  HTTP请求
      * @return 登录结果
      */
-    private Result processLogin(String username, String password) {
+    private Result processLogin(String username, String password, HttpServletRequest request) {
         try {
             logger.debug("尝试登录用户: {}", username);
 
@@ -116,9 +124,12 @@ public class LoginController {
                 return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
             }
 
+            // 先撤销用户之前的令牌（可选，如果需要单点登录）
+            // authTokenService.revokeAllUserTokens(user.getId(), "用户重新登录");
+
             // 生成JWT令牌
-            String accessToken = tokenProvider.createToken(authentication);
-            String refreshToken = tokenProvider.createRefreshToken(user.getId().toString());
+            String accessToken = tokenProvider.createToken(authentication, request);
+            String refreshToken = authTokenService.createRefreshToken(user.getId().toString());
 
             // 清除密码等敏感信息
             user.setPassword(null);
@@ -155,30 +166,19 @@ public class LoginController {
      * 刷新令牌API
      * 
      * @param refreshRequest 包含刷新令牌的请求
+     * @param request        HTTP请求
      * @return 带有新JWT令牌的响应
      */
     @PostMapping("/refresh-token")
-    public Result refreshToken(@RequestBody RefreshTokenRequest refreshRequest) {
+    public Result refreshToken(@RequestBody RefreshTokenRequest refreshRequest, HttpServletRequest request) {
         try {
-            // 验证刷新令牌
+            // 使用AuthTokenService验证并刷新令牌
             String refreshToken = refreshRequest.getRefreshToken();
-            if (!tokenProvider.validateToken(refreshToken)) {
+            String newAccessToken = authTokenService.refreshAccessToken(refreshToken, request);
+
+            if (newAccessToken == null) {
                 return Result.error(Status.LOGIN_SESSION_FAILED.getCode(), "刷新令牌无效或已过期");
             }
-
-            // 从刷新令牌中获取用户ID
-            String userId = tokenProvider.getUserIdFromToken(refreshToken);
-            UserInfoEntity user = userInfoService.getById(Long.parseLong(userId));
-
-            if (user == null) {
-                return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
-            }
-
-            // 创建新的认证对象
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            // 生成新的访问令牌
-            String newAccessToken = tokenProvider.createToken(authentication);
 
             // 返回新令牌
             Map<String, Object> responseData = new HashMap<>();
@@ -199,7 +199,23 @@ public class LoginController {
      * 登出
      */
     @PostMapping(value = { "/logout", "/signOut" })
-    public Result logout() {
+    public Result logout(HttpServletRequest request) {
+        try {
+            // 获取认证令牌
+            String token = tokenProvider.resolveToken(request);
+            if (token != null) {
+                // 通过令牌获取数据库记录
+                AuthTokenEntity tokenEntity = authTokenService.getByToken(token);
+                if (tokenEntity != null) {
+                    // 撤销令牌
+                    authTokenService.revokeToken(tokenEntity.getId(), "用户主动登出");
+                    logger.debug("用户令牌已撤销: {}", tokenEntity.getId());
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("登出过程中出错", e);
+        }
+
         // 清除Spring Security上下文
         SecurityContextHolder.clearContext();
         return Result.success().put(Constants.MSG, "登出成功");
