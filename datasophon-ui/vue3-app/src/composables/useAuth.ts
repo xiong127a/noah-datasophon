@@ -1,77 +1,106 @@
-import { computed, ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useUserStore } from '../stores/user'
 
-/**
- * 认证服务 - 提供认证状态管理和JWT处理
- */
+// 创建响应式状态
 const token = ref<string | null>(null)
-const isAuthenticated = computed(() => !!token.value)
-
-// 跟踪上次认证检查时间
+const isAuthenticated = ref(false)
 const lastAuthCheck = ref(Date.now())
-  
+
 /**
- * 认证服务 
- * 提供登录、登出和认证状态管理功能
+ * 认证服务
+ * 提供token管理和认证状态检查
  */
 export const authService = {
-  // 公开响应式状态
+  // 直接导出响应式状态
   token,
   isAuthenticated,
   lastAuthCheck,
   
   /**
-   * 初始化认证状态
-   * 从localStorage加载token
+   * 初始化认证服务
    */
   init() {
-    // 从本地存储中获取令牌
-    const savedToken = localStorage.getItem('auth_token')
-    if (savedToken) {
-      token.value = savedToken
-      console.log('[Auth] Token loaded from storage')
-      
-      // 更新最后认证检查时间
-      this.updateLastAuthCheck()
+    // 从localStorage获取token
+    const storedToken = localStorage.getItem('auth_token')
+    if (storedToken) {
+      token.value = storedToken
+      isAuthenticated.value = true
+      console.log('[Auth] 从localStorage恢复token')
+    } else {
+      console.log('[Auth] localStorage中没有找到token')
     }
+    
+    // 设置事件监听器以在其他标签页中同步token
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'auth_token') {
+        if (event.newValue) {
+          token.value = event.newValue
+          isAuthenticated.value = true
+          console.log('[Auth] 从其他标签页同步token')
+        } else {
+          token.value = null
+          isAuthenticated.value = false
+          console.log('[Auth] 从其他标签页清除token')
+        }
+      }
+    })
   },
   
   /**
-   * 设置认证令牌
-   * @param newToken 新的JWT令牌
+   * 设置token
+   * @param newToken 新token
    */
   setToken(newToken: string) {
-    token.value = newToken
-    localStorage.setItem('auth_token', newToken)
-    console.log('[Auth] Token updated and saved to localStorage')
+    // 获取userStore确保token状态同步
+    const userStore = useUserStore()
     
-    // 更新最后认证检查时间
-    this.updateLastAuthCheck()
+    token.value = newToken
+    isAuthenticated.value = !!newToken
+    localStorage.setItem('auth_token', newToken)
+    
+    // 同步到用户store
+    userStore.setToken(newToken)
+    
+    console.log('[Auth] Token已设置并同步到userStore')
   },
   
   /**
-   * 获取认证头部
-   * 用于请求拦截器
+   * 获取认证头
+   * @returns 带有Authorization的头信息
    */
   getAuthHeader() {
-    // 先尝试从内存中获取token
-    let currentToken = token.value;
-    
-    // 如果内存中没有，尝试从localStorage中获取
-    if (!currentToken) {
-      currentToken = localStorage.getItem('auth_token');
+    try {
+      // 优先使用userStore中的token
+      const userStore = useUserStore()
+      let authToken = userStore.token
       
-      // 如果在localStorage中找到了token，同步到内存中
-      if (currentToken) {
-        token.value = currentToken;
-        console.log('[Auth] Token synchronized from localStorage');
+      // 如果userStore中没有token，尝试从localStorage获取
+      if (!authToken) {
+        authToken = localStorage.getItem('auth_token')
+        
+        // 如果在localStorage中找到token，同步到userStore
+        if (authToken) {
+          console.log('[Auth] 从localStorage同步token到userStore')
+          userStore.setToken(authToken)
+          token.value = authToken
+          isAuthenticated.value = true
+        }
       }
+      
+      // 使用token构建认证头
+      if (authToken) {
+        console.log('[Auth] 构建认证头：Bearer ' + authToken.substring(0, 10) + '...')
+        return {
+          Authorization: `Bearer ${authToken}`
+        }
+      }
+      
+      console.log('[Auth] 无token，返回空认证头')
+      return {}
+    } catch (error) {
+      console.error('[Auth] 获取认证头失败:', error)
+      return {}
     }
-    
-    // 返回带前缀的认证头
-    return {
-      Authorization: currentToken ? `Bearer ${currentToken}` : ''
-      }
   },
   
   /**
@@ -82,22 +111,22 @@ export const authService = {
   },
   
   /**
-   * 登出 - 清除认证状态
+   * 登出 - 调用集中的userStore登出方法
    */
   logout() {
-    // 获取user store以便清除用户信息
+    // 获取user store以便统一登出
     const userStore = useUserStore()
     
-    // 清除token
+    // 使用userStore统一登出，避免重复调用
+    userStore.logout()
+    
+    // 清除本地状态
     token.value = null
-    localStorage.removeItem('auth_token')
+    isAuthenticated.value = false
     
-    // 清除用户信息
-    userStore.clearUser()
-    
-    console.log('[Auth] User logged out')
+    console.log('[Auth] 调用userStore登出')
   }
-  }
+}
   
 // 初始化认证服务
 authService.init()
@@ -115,11 +144,23 @@ export function useAuth() {
    * @returns 当前认证状态
    */
   const checkAuth = () => {
-    // 如果令牌存在，更新最后检查时间并返回true
-    if (token.value) {
+    // 优先使用userStore的认证状态
+    if (userStore.isLoggedIn) {
       authService.updateLastAuthCheck()
+      isAuthenticated.value = true
       return true
     }
+    
+    // 如果userStore没有token，但本地有token
+    if (token.value) {
+      // 同步token到userStore
+      userStore.setToken(token.value)
+      authService.updateLastAuthCheck()
+      isAuthenticated.value = true
+      return true
+    }
+    
+    isAuthenticated.value = false
     return false
   }
   
@@ -132,8 +173,14 @@ export function useAuth() {
    * 这样可以避免频繁调用getUserInfo
    */
   const validateToken = async () => {
+    // 检查userStore是否已经在登出过程中
+    if (userStore.isLoggingOut) {
+      console.log('[Auth] 正在登出过程中，跳过token验证')
+      return false
+    }
+    
     // 如果没有token，直接返回false
-    if (!token.value) return false
+    if (!userStore.token && !token.value) return false
     
     // 检查上次认证时间
     const now = Date.now()
@@ -169,16 +216,17 @@ export function useAuth() {
     isAuthenticated,
     lastAuthCheck,
     
-    // 暴露方法
-    login: (newToken: string) => {
-      authService.setToken(newToken)
-    },
-    logout: authService.logout,
+    // 认证服务方法
     checkAuth,
     validateToken,
-    getAuthHeader: authService.getAuthHeader
+    
+    // 直接使用authService的方法
+    init: authService.init,
+    setToken: authService.setToken,
+    getAuthHeader: authService.getAuthHeader,
+    updateLastAuthCheck: authService.updateLastAuthCheck,
+    
+    // 使用userStore的登出方法
+    logout: userStore.logout
   }
-}
-
-// 默认导出组合式函数
-export default useAuth 
+} 

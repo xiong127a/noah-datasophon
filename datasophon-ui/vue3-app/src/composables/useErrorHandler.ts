@@ -115,10 +115,15 @@ export const errorHandler = {
         const router = useRouter()
         const userStore = useUserStore()
         
-        console.log('[Auth] 认证错误触发登出流程')
-        // 使用静默登出，不调用API
-        userStore.logout({ silent: true })
-        router.push('/login')
+        // 检查是否正在登出过程中，避免重复登出
+        if (!userStore.isLoggingOut) {
+          console.log('[Auth] 认证错误触发登出流程')
+          // 使用静默登出，不调用API
+          userStore.logout({ silent: true })
+          router.push('/login')
+        } else {
+          console.log('[Auth] 已在登出过程中，跳过重复登出')
+        }
       }
     } finally {
       // 延迟重置错误处理状态，防止过快连续触发

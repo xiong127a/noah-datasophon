@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { authService } from '../composables/useAuth'
+import { useUserStore } from '../stores/user'
 
 // 检查认证状态的简化函数
 const checkAuthorization = () => authService.isAuthenticated.value
@@ -180,6 +181,15 @@ router.beforeEach((to, from, next) => {
   // 调试输出
   console.log(`[Router] 路由变化: ${from.path} -> ${to.path}`)
   console.log(`[Router] 当前认证状态: ${checkAuthorization() ? '已登录' : '未登录'}`)
+  
+  // 获取userStore以检查登出状态
+  const userStore = useUserStore()
+  
+  // 如果正在登出过程中，允许导航继续
+  if (userStore.isLoggingOut) {
+    console.log('[Router] 检测到正在登出过程中，允许导航继续')
+    return next()
+  }
   
   // 判断是否需要登录权限
   const publicPaths = ['/login'] // 移除 '/login-debug'

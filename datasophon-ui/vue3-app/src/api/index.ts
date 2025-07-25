@@ -37,7 +37,7 @@ type AxiosRequestConfig = {
 
 // 环境变量配置
 // 如果将来需要切换环境，可以从环境变量中获取
-const API_PREFIX = '/ddh/api';
+const API_PREFIX = '';  // 移除/ddh/api前缀，让所有请求使用完整路径
 const API_TIMEOUT = 60000;
 
 // 简单的通知系统（后续可替换为实际UI组件）

@@ -619,9 +619,10 @@ export default {
     
     // 退出登录
     logout() {
-      // 在实际应用中，这里应该调用Vuex/Pinia store的方法
-      // this.$store.dispatch('logout');
-      this.$router.push('/login');
+      // 使用统一的用户store登出方法
+      const userStore = useUserStore()
+      userStore.logout()
+      this.$router.push('/login')
     },
     
     // 头像加载失败时使用默认图标

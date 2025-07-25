@@ -414,12 +414,15 @@ const handleLogin = async () => {
     
   try {
     console.log('正在尝试登录:', { username: loginForm.username });
+    console.log('[Login] 调用userStore.login');
     
     // 使用userStore的login方法发送登录请求
     const success = await userStore.login({
       username: loginForm.username,
       password: loginForm.password
     });
+    
+    console.log('[Login] 登录结果:', success);
     
     if (success) {
       // 验证token是否正确存储
@@ -438,7 +441,7 @@ const handleLogin = async () => {
       
       // 登录成功后跳转
       setTimeout(() => {
-      router.push('/');
+        router.push('/');
       }, 800);
     } else {
       // 登录失败，显示来自store的错误
@@ -446,6 +449,8 @@ const handleLogin = async () => {
       throw new Error(errorMessage);
     }
   } catch (error) {
+    console.error('[Login] 登录过程发生错误:', error);
+    
     // 显示错误通知
     showNotification('error', '登录失败', error.message || '请检查用户名和密码');
     
