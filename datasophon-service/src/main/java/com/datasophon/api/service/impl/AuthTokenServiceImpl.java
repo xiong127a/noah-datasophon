@@ -144,7 +144,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      * @return 是否成功更新
      */
     @Override
-    public boolean updateAccessTime(String tokenId) {
+    public boolean updateAccessTime(Long tokenId) {
         return authTokenMapper.updateLastAccessTime(tokenId, new Date());
     }
 
@@ -156,7 +156,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      * @return 是否成功撤销
      */
     @Override
-    public boolean revokeToken(String tokenId, String reason) {
+    public boolean revokeToken(Long tokenId, String reason) {
         return authTokenMapper.revokeToken(tokenId, reason);
     }
 

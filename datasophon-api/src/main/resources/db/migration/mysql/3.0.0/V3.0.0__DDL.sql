@@ -4,8 +4,8 @@ DROP TABLE IF EXISTS `t_ddh_access_token`;
 
 -- 创建新表
 CREATE TABLE `t_ddh_auth_token` (
-  `id` varchar(128) NOT NULL COMMENT '主键，可以使用UUID',
-  `user_id` int(10) NOT NULL COMMENT '关联的用户ID',
+  `id` bigint NOT NULL COMMENT '主键，使用雪花算法生成',
+  `user_id` int NOT NULL COMMENT '关联的用户ID',
   `token` varchar(2048) NOT NULL COMMENT 'JWT访问令牌',
   `refresh_token` varchar(2048) DEFAULT NULL COMMENT '刷新令牌',
   `token_type` varchar(50) DEFAULT 'Bearer' COMMENT '令牌类型，默认为Bearer',
@@ -14,7 +14,7 @@ CREATE TABLE `t_ddh_auth_token` (
   `issued_at` datetime NOT NULL COMMENT '令牌颁发时间',
   `expires_at` datetime NOT NULL COMMENT '令牌过期时间',
   `last_access_time` datetime DEFAULT NULL COMMENT '最后访问时间',
-  `is_revoked` tinyint(1) DEFAULT '0' COMMENT '是否已被撤销，0-有效，1-已撤销',
+  `is_revoked` tinyint DEFAULT '0' COMMENT '是否已被撤销，0-有效，1-已撤销',
   `revoked_reason` varchar(128) DEFAULT NULL COMMENT '撤销原因',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录更新时间',

@@ -17,7 +17,6 @@
 
 package com.datasophon.api.security;
 
-import cn.hutool.extra.servlet.ServletUtil;
 import com.datasophon.common.security.JwtTokenProviderBase;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -30,15 +29,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * 持久化令牌管理器
@@ -121,7 +115,6 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
             // 创建新令牌记录
             AuthTokenEntity authToken = new AuthTokenEntity();
             // 设置主键id，使用UUID生成唯一标识符
-            authToken.setId(UUID.randomUUID().toString());
             authToken.setUserId(user.getId());
             authToken.setToken(token);
             authToken.setRefreshToken(refreshToken);
@@ -188,43 +181,8 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
      * @param tokenId 令牌ID
      * @return 是否更新成功
      */
-    public boolean updateAccessTime(String tokenId) {
+    public boolean updateAccessTime(Long tokenId) {
         return authTokenMapper.updateAccessTime(tokenId, new Date());
     }
 
-    /**
-     * 撤销令牌
-     * 
-     * @param tokenId 令牌ID
-     * @param reason  撤销原因
-     * @return 是否成功撤销
-     */
-    public boolean revokeToken(String tokenId, String reason) {
-        return authTokenMapper.revokeToken(tokenId, reason);
-    }
-
-    /**
-     * 根据令牌获取令牌记录
-     * 
-     * @param token 令牌字符串
-     * @return 令牌实体
-     */
-    public AuthTokenEntity getByToken(String token) {
-        return authTokenMapper.getByToken(token);
-    }
-
-    /**
-     * 为刷新令牌创建一个新的访问令牌
-     * 
-     * @param userId  用户ID
-     * @param request HTTP请求
-     * @return 新的访问令牌
-     */
-    public String createTokenForRefresh(Integer userId, HttpServletRequest request) {
-        Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
-        User principal = new User(userId.toString(), "", authorities);
-        Authentication authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                principal, null, authorities);
-        return createToken(authentication, request);
-    }
 }

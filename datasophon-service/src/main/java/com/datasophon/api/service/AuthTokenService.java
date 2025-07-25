@@ -56,7 +56,7 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @param tokenId 令牌ID
      * @return 是否成功更新
      */
-    boolean updateAccessTime(String tokenId);
+    boolean updateAccessTime(Long tokenId);
 
     /**
      * 撤销令牌
@@ -65,7 +65,7 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @param reason  撤销原因
      * @return 是否成功撤销
      */
-    boolean revokeToken(String tokenId, String reason);
+    boolean revokeToken(Long tokenId, String reason);
 
     /**
      * 撤销用户的所有令牌

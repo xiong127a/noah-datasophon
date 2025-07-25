@@ -41,8 +41,8 @@ public class AuthTokenEntity implements Serializable {
     /**
      * 主键ID
      */
-    @Id(keyType = KeyType.None) // 非自增主键，需要显式设置
-    private String id;
+    @Id(keyType = KeyType.Generator, value = "snowflakeId")
+    private Long id;
 
     /**
      * 关联的用户ID

@@ -76,7 +76,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @param reason 撤销原因
      * @return 是否成功撤销
      */
-    default boolean revokeToken(@Param("id") String id, @Param("reason") String reason) {
+    default boolean revokeToken(@Param("id") Long id, @Param("reason") String reason) {
         return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getIsRevoked, true)
                 .set(AuthTokenEntity::getRevokedReason, reason)
@@ -101,7 +101,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
             return;
         }
 
-        List<String> tokenIdsToDelete = allTokens.stream()
+        List<Long> tokenIdsToDelete = allTokens.stream()
                 .skip(maxTokensPerUser)
                 .map(AuthTokenEntity::getId)
                 .toList();
@@ -120,7 +120,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @param lastAccessTime 最后访问时间
      * @return 更新是否成功
      */
-    default boolean updateLastAccessTime(@Param("id") String id, @Param("lastAccessTime") Date lastAccessTime) {
+    default boolean updateLastAccessTime(@Param("id") Long id, @Param("lastAccessTime") Date lastAccessTime) {
         return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getLastAccessTime, lastAccessTime)
                 .set(AuthTokenEntity::getUpdatedAt, new Date())
@@ -131,7 +131,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     /**
      * 更新最后访问时间（与updateLastAccessTime相同，用于兼容性）
      */
-    default boolean updateAccessTime(@Param("id") String id, @Param("lastAccessTime") Date lastAccessTime) {
+    default boolean updateAccessTime(@Param("id") Long id, @Param("lastAccessTime") Date lastAccessTime) {
         return updateLastAccessTime(id, lastAccessTime);
     }
 
@@ -142,7 +142,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @return 删除的记录数
      */
     default int deleteExpiredTokens(@Param("cutoffDate") Date cutoffDate) {
-        List<String> expiredTokenIds = QueryChain.of(AuthTokenEntity.class)
+        List<Long> expiredTokenIds = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getExpiresAt).lt(cutoffDate)
                 .select(AuthTokenEntity::getId)
                 .list()
@@ -180,7 +180,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @return 删除的记录数
      */
     default int deleteOldestTokens(@Param("userId") Integer userId, @Param("count") int count) {
-        List<String> oldestTokenIds = QueryChain.of(AuthTokenEntity.class)
+        List<Long> oldestTokenIds = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
                 .orderBy(AuthTokenEntity::getIssuedAt, true)
