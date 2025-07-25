@@ -21,10 +21,14 @@ import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+
+import static com.datasophon.dao.entity.table.ClusterRoleUserEntityTableDef.CLUSTER_ROLE_USER_ENTITY;
+import static com.datasophon.dao.entity.table.UserInfoEntityTableDef.USER_INFO_ENTITY;
 
 /**
  * 集群角色用户中间表
@@ -38,16 +42,18 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
 
     /**
      * 获取指定集群的所有管理员
+     * 使用MyBatis-Flex的QueryChain实现优雅的SQL构建
      *
      * @param clusterId 集群ID
      * @return 管理员用户列表
      */
     default List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Integer clusterId) {
+        // 使用表定义常量和类型安全的QueryChain构建优雅的SQL
         return QueryChain.of(ClusterRoleUserEntity.class)
-                .select("u.*")
-                .from("t_ddh_cluster_role_user c") // 给表起别名
-                .leftJoin("t_ddh_user_info u").on("u.id = c.user_id")
-                .where("c.cluster_id = #{clusterId}", clusterId)
+                .select(USER_INFO_ENTITY.ALL_COLUMNS)
+                .from(CLUSTER_ROLE_USER_ENTITY)
+                .leftJoin(USER_INFO_ENTITY).on(USER_INFO_ENTITY.ID.eq(CLUSTER_ROLE_USER_ENTITY.USER_ID))
+                .where(CLUSTER_ROLE_USER_ENTITY.CLUSTER_ID.eq(clusterId))
                 .listAs(UserInfoEntity.class);
     }
 }

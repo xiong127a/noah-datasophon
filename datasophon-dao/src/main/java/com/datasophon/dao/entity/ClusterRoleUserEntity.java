@@ -19,6 +19,7 @@ package com.datasophon.dao.entity;
 
 import com.datasophon.dao.enums.UserType;
 import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.RelationManyToOne;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
@@ -27,7 +28,6 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_role_user")
-
 public class ClusterRoleUserEntity implements Serializable {
 
     @Serial
@@ -51,4 +51,10 @@ public class ClusterRoleUserEntity implements Serializable {
      */
     private Integer userId;
 
+    /**
+     * 关联的用户信息 - 多对一关系
+     * 使用Relations注解实现优雅的关联查询
+     */
+    @RelationManyToOne(selfField = "userId", targetField = "id")
+    private UserInfoEntity userInfo;
 }
