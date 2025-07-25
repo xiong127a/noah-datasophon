@@ -63,6 +63,13 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     }
 
     /**
+     * 根据令牌查询（与findByToken相同，用于兼容性）
+     */
+    default AuthTokenEntity getByToken(@Param("token") String token) {
+        return findByToken(token);
+    }
+
+    /**
      * 使令牌失效
      * 
      * @param id     令牌ID
@@ -122,6 +129,13 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     }
 
     /**
+     * 更新最后访问时间（与updateLastAccessTime相同，用于兼容性）
+     */
+    default boolean updateAccessTime(@Param("id") String id, @Param("lastAccessTime") Date lastAccessTime) {
+        return updateLastAccessTime(id, lastAccessTime);
+    }
+
+    /**
      * 删除过期的令牌
      * 
      * @param cutoffDate 截止日期
@@ -141,5 +155,46 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
         }
 
         return this.deleteBatchByIds(expiredTokenIds);
+    }
+
+    /**
+     * 获取用户有效令牌数量
+     * 
+     * @param userId 用户ID
+     * @return 有效令牌数量
+     */
+    default int countValidTokensByUserId(@Param("userId") Integer userId) {
+        long count = QueryChain.of(AuthTokenEntity.class)
+                .where(AuthTokenEntity::getUserId).eq(userId)
+                .and(AuthTokenEntity::getIsRevoked).eq(false)
+                .and(AuthTokenEntity::getExpiresAt).gt(new Date())
+                .count();
+        return (int) count;
+    }
+
+    /**
+     * 删除用户最旧的令牌
+     * 
+     * @param userId 用户ID
+     * @param count  要删除的令牌数量
+     * @return 删除的记录数
+     */
+    default int deleteOldestTokens(@Param("userId") Integer userId, @Param("count") int count) {
+        List<String> oldestTokenIds = QueryChain.of(AuthTokenEntity.class)
+                .where(AuthTokenEntity::getUserId).eq(userId)
+                .and(AuthTokenEntity::getIsRevoked).eq(false)
+                .orderBy(AuthTokenEntity::getIssuedAt, true)
+                .limit(count)
+                .select(AuthTokenEntity::getId)
+                .list()
+                .stream()
+                .map(AuthTokenEntity::getId)
+                .toList();
+
+        if (oldestTokenIds.isEmpty()) {
+            return 0;
+        }
+
+        return this.deleteBatchByIds(oldestTokenIds);
     }
 }

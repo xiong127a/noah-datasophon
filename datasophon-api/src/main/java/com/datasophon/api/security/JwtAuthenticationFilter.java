@@ -17,100 +17,55 @@
 
 package com.datasophon.api.security;
 
+import com.datasophon.common.security.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * JWT认证过滤器
- * 用于处理JWT令牌的认证
+ * 从请求头中提取JWT令牌并验证，设置认证信息到SecurityContext
  */
+@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    // 不需要验证令牌的路径
-    private static final List<String> AUTH_WHITELIST = Arrays.asList(
-            "/api/login",
-            "/api/register",
-            "/api/refresh-token",
-            "/swagger-ui",
-            "/v3/api-docs");
+    @Autowired
+    private TokenProvider tokenProvider;
 
-
-    private JwtTokenProvider tokenProvider;
-
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
-        this.tokenProvider = tokenProvider;
-    }
-
-
-    /**
-     * 过滤请求，验证JWT令牌
-     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
-
-        String path = request.getRequestURI();
-
-        // 对于白名单路径，跳过令牌验证
-        if (shouldSkipAuthentication(path)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         try {
+            // 从请求头中获取JWT令牌
             String jwt = tokenProvider.resolveToken(request);
 
-            if (StringUtils.hasText(jwt)) {
-                if (tokenProvider.validateToken(jwt)) {
-                    Authentication auth = tokenProvider.getAuthentication(jwt);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("已设置认证: {}, URI: {}",
-                                auth.getName(), request.getRequestURI());
-                    }
-                } else {
-                    logger.debug("无效的JWT令牌");
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("{\"error\":\"无效的令牌\",\"status\":401}");
-                    return;
-                }
-            } else {
-                logger.debug("未找到JWT令牌, URI: {}", request.getRequestURI());
+            // 验证令牌有效性
+            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+                // 获取认证信息
+                Authentication auth = tokenProvider.getAuthentication(jwt);
+                // 设置到Spring Security上下文
+                SecurityContextHolder.getContext().setAuthentication(auth);
+                logger.debug("已设置认证信息到SecurityContext: {}", auth.getName());
             }
         } catch (Exception e) {
-            logger.error("无法设置用户认证: {}", e.getMessage());
+            logger.error("无法设置用户认证信息: {}", e.getMessage());
             SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"error\":\"认证失败\",\"status\":401}");
-            return;
         }
 
+        // 继续过滤器链
         filterChain.doFilter(request, response);
-    }
-
-    /**
-     * 检查是否应该跳过认证
-     * 
-     * @param path 请求路径
-     * @return 如果应该跳过则返回true
-     */
-    private boolean shouldSkipAuthentication(String path) {
-        return AUTH_WHITELIST.stream()
-                .anyMatch(path::startsWith);
     }
 }

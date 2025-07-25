@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.security.JwtTokenProvider;
+import com.datasophon.common.security.TokenProvider;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.dao.entity.AuthTokenEntity;
@@ -67,7 +67,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     private AuthTokenMapper authTokenMapper;
 
     @Autowired
-    private JwtTokenProvider tokenProvider;
+    private TokenProvider tokenProvider;
 
     /**
      * 创建新的认证令牌

@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.security;
+package com.datasophon.common.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -30,37 +30,38 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.security.Key;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Component
-public class JwtTokenProvider {
+/**
+ * JWT令牌提供者基础实现类
+ * 处理JWT令牌的创建、验证和解析等基本功能
+ */
+public class JwtTokenProviderBase implements TokenProvider {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProviderBase.class);
 
-    private static final String AUTHORITIES_KEY = "auth";
-    private static final String USER_ID_KEY = "uid";
+    protected static final String AUTHORITIES_KEY = "auth";
+    protected static final String USER_ID_KEY = "uid";
 
     @Value("${jwt.secret:aSingleVeryVerySecretKeyForDatasophonAppSignatureNeeds}")
-    private String secretKeyString;
+    protected String secretKeyString;
 
     @Value("${jwt.expiration:86400000}")
-    private long tokenValidityInMilliseconds; // 默认24小时
+    protected long tokenValidityInMilliseconds; // 默认24小时
 
     @Value("${jwt.refresh-expiration:2592000000}") // 默认30天
-    private long refreshTokenValidityInMilliseconds;
+    protected long refreshTokenValidityInMilliseconds;
 
-    private Key secretKey;
+    protected Key secretKey;
 
     @PostConstruct
     public void init() {
         try {
-            // 直接使用安全的密钥生成方式，不依赖配置的密钥
-            // 这将生成一个适合HS512算法的足够长度的安全密钥
+            // 使用安全的密钥生成方式，生成适合HS512算法的密钥
             this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
             logger.info("成功初始化JWT密钥，使用安全随机生成的HS512密钥");
         } catch (Exception e) {
@@ -69,12 +70,7 @@ public class JwtTokenProvider {
         }
     }
 
-    /**
-     * 创建JWT访问令牌
-     * 
-     * @param authentication 认证对象
-     * @return JWT令牌字符串
-     */
+    @Override
     public String createToken(Authentication authentication) {
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -83,11 +79,10 @@ public class JwtTokenProvider {
         Date now = new Date();
         Date validity = new Date(now.getTime() + tokenValidityInMilliseconds);
 
-        // 从认证对象中获取用户ID，假设principal是UserDetails的实现
+        // 从认证对象中获取用户ID
         Object principal = authentication.getPrincipal();
         String userId = null;
         if (principal instanceof User) {
-            // 从用户详情中获取用户名作为ID
             userId = ((User) principal).getUsername();
         }
 
@@ -101,12 +96,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /**
-     * 创建刷新令牌
-     * 
-     * @param userId 用户ID
-     * @return 刷新令牌字符串
-     */
+    @Override
     public String createRefreshToken(String userId) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + refreshTokenValidityInMilliseconds);
@@ -120,12 +110,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /**
-     * 从令牌中获取认证信息
-     * 
-     * @param token JWT令牌
-     * @return 认证对象
-     */
+    @Override
     public Authentication getAuthentication(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -144,12 +129,7 @@ public class JwtTokenProvider {
         return new UsernamePasswordAuthenticationToken(principal, token, authorities);
     }
 
-    /**
-     * 验证令牌的有效性
-     * 
-     * @param token JWT令牌
-     * @return 如果令牌有效返回true
-     */
+    @Override
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
@@ -168,12 +148,7 @@ public class JwtTokenProvider {
         return false;
     }
 
-    /**
-     * 从请求中解析JWT令牌
-     * 
-     * @param request HTTP请求
-     * @return 令牌字符串，如果没有找到返回null
-     */
+    @Override
     public String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
@@ -182,62 +157,24 @@ public class JwtTokenProvider {
         return null;
     }
 
-    /**
-     * 从令牌中获取用户ID
-     * 
-     * @param token JWT令牌
-     * @return 用户ID
-     */
+    @Override
     public String getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
+        Claims claims = getClaimsFromToken(token);
         return claims.get(USER_ID_KEY, String.class);
     }
 
-    /**
-     * 获取令牌过期时间
-     * 
-     * @param token JWT令牌
-     * @return 过期时间
-     */
+    @Override
     public Date getExpirationDateFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
+        Claims claims = getClaimsFromToken(token);
         return claims.getExpiration();
     }
 
-    /**
-     * 从令牌中获取Claims
-     * 
-     * @param token JWT令牌
-     * @return Claims对象
-     */
+    @Override
     public Claims getClaimsFromToken(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    /**
-     * 为刷新令牌创建一个新的访问令牌
-     * 
-     * @param userId 用户ID
-     * @return 新的访问令牌
-     */
-    public String createTokenForRefresh(Integer userId) {
-        Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
-        User principal = new User(userId.toString(), "", authorities);
-        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
-        return createToken(authentication);
     }
 }
