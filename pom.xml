@@ -54,7 +54,7 @@
         <mybatis-flex.version>1.11.1</mybatis-flex.version>
         <mysql.connector.version>8.4.0</mysql.connector.version>
         <sqlite.connector.version>3.48.0.0</sqlite.connector.version>
-        <org.apache.sshd.version>2.9.2</org.apache.sshd.version>
+        <org.apache.sshd.version>2.15.0</org.apache.sshd.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spotless.ratchetFrom>origin/dev</spotless.ratchetFrom>
