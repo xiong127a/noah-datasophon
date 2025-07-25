@@ -337,7 +337,6 @@ import { useRouter } from 'vue-router';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import { useUserStore } from '@/stores/user';
-import { authService } from '@/composables/useAuth'; // 修复正确的导入路径
 
 // 路由和状态
 const router = useRouter();
@@ -452,21 +451,32 @@ const handleLogin = async () => {
   if (!isFormCorrect) return;
   
   errorMsg.value = '';
-    
+  
   try {
-    // 使用authService进行登录，这是VueUse推荐的方式
-    const success = await authService.login({
+    console.log('正在尝试登录:', { username: loginForm.username });
+    
+    // 使用userStore的login方法发送登录请求
+    const success = await userStore.login({
       username: loginForm.username,
       password: loginForm.password
     });
     
     if (success) {
-      router.push('/');
+      // 登录成功，显示成功通知
+      showNotification('success', '登录成功', '正在进入系统...', 1500);
+      
+      // 登录成功后跳转
+      setTimeout(() => {
+        router.push('/');
+      }, 800);
     } else {
-      throw new Error('登录失败，请检查用户名和密码');
+      // 登录失败，显示来自store的错误
+      const errorMessage = userStore.loginError || '登录失败，请检查用户名和密码';
+      throw new Error(errorMessage);
     }
   } catch (error) {
-    errorMsg.value = error.message || '登录失败，请检查用户名和密码';
+    // 显示错误通知
+    showNotification('error', '登录失败', error.message || '请检查用户名和密码');
     
     // 添加卡片震动效果
     if (loginCard.value) {
