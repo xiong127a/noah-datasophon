@@ -18,6 +18,7 @@
 package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
+import jakarta.validation.constraints.NotNull;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSONObject;
@@ -47,7 +48,6 @@ import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
