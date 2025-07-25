@@ -178,22 +178,130 @@
           </button>
           </div>
           
-          <!-- 错误消息 -->
-          <transition name="fade">
-            <div v-if="errorMsg" class="error-message">
-              <div class="error-icon">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 8v5M12 16h.01M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z"></path>
-                </svg>
+          <!-- 美化通知组件 -->
+          <Teleport to="body">
+            <transition
+              enter-active-class="transition duration-300 ease-out"
+              enter-from-class="transform translate-y-2 opacity-0 scale-95"
+              enter-to-class="transform translate-y-0 opacity-100 scale-100"
+              leave-active-class="transition duration-200 ease-in"
+              leave-from-class="transform translate-y-0 opacity-100 scale-100"
+              leave-to-class="transform translate-y-2 opacity-0 scale-95"
+            >
+              <div
+                v-if="notification.show"
+                class="fixed top-4 right-4 z-50 max-w-sm w-full bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                :class="{
+                  'ring-2 ring-green-500/20': notification.type === 'success',
+                  'ring-2 ring-red-500/20': notification.type === 'error'
+                }"
+              >
+                <!-- 顶部装饰条 -->
+                <div
+                  class="h-1 w-full"
+                  :class="{
+                    'bg-gradient-to-r from-green-400 to-emerald-500': notification.type === 'success',
+                    'bg-gradient-to-r from-red-400 to-rose-500': notification.type === 'error'
+                  }"
+                ></div>
+                
+                <div class="p-4">
+                  <div class="flex items-start space-x-3">
+                    <!-- 图标 -->
+                    <div
+                      class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                      :class="{
+                        'bg-green-100 dark:bg-green-900/30': notification.type === 'success',
+                        'bg-red-100 dark:bg-red-900/30': notification.type === 'error'
+                      }"
+                    >
+                      <!-- 成功图标 -->
+                      <svg
+                        v-if="notification.type === 'success'"
+                        class="w-5 h-5 text-green-600 dark:text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
+                      </svg>
+                      
+                      <!-- 错误图标 -->
+                      <svg
+                        v-if="notification.type === 'error'"
+                        class="w-5 h-5 text-red-600 dark:text-red-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        ></path>
+                      </svg>
+                    </div>
+                    
+                    <!-- 内容 -->
+                    <div class="flex-1 min-w-0">
+                      <h4
+                        class="text-sm font-semibold text-gray-900 dark:text-white mb-1"
+                        :class="{
+                          'text-green-800 dark:text-green-200': notification.type === 'success',
+                          'text-red-800 dark:text-red-200': notification.type === 'error'
+                        }"
+                      >
+                        {{ notification.title }}
+                      </h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-300">
+                        {{ notification.message }}
+                      </p>
+                    </div>
+                    
+                    <!-- 关闭按钮 -->
+                    <button
+                      @click="hideNotification"
+                      class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <!-- 进度条 -->
+                  <div
+                    class="mt-3 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+                    v-if="notification.show"
+                  >
+                    <div
+                      class="h-full rounded-full transition-all duration-75 ease-linear"
+                      :class="{
+                        'bg-gradient-to-r from-green-400 to-emerald-500': notification.type === 'success',
+                        'bg-gradient-to-r from-red-400 to-rose-500': notification.type === 'error'
+                      }"
+                      style="animation: progress 3s linear forwards;"
+                    ></div>
+                  </div>
+                </div>
+                
+                <!-- 装饰性光效 -->
+                <div
+                  class="absolute inset-0 pointer-events-none"
+                  :class="{
+                    'bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5': notification.type === 'success',
+                    'bg-gradient-to-br from-red-500/5 via-transparent to-rose-500/5': notification.type === 'error'
+                  }"
+                ></div>
               </div>
-              <p>{{ errorMsg }}</p>
-              <button type="button" class="close-button" @click="dismissError">
-                <svg viewBox="0 0 24 24">
-                  <path d="M18 6L6 18M6 6l12 12"></path>
-                </svg>
-              </button>
-          </div>
-          </transition>
+            </transition>
+          </Teleport>
         </form>
       </div>
       
@@ -248,6 +356,15 @@ const logoHover = ref(false);
 const eyeHover = ref(false);
 const buttonHover = ref(false);
 
+// 通知状态
+const notification = reactive({
+  show: false,
+  type: 'success', // 'success' | 'error'
+  title: '',
+  message: '',
+  timer: null
+});
+
 // 鼠标位置
 const mousePosition = reactive({ x: 0, y: 0 });
 
@@ -297,6 +414,33 @@ const dismissError = () => {
   errorMsg.value = '';
 };
 
+// 显示通知
+const showNotification = (type, title, message, duration = 3000) => {
+  // 清除之前的定时器
+  if (notification.timer) {
+    clearTimeout(notification.timer);
+  }
+  
+  notification.type = type;
+  notification.title = title;
+  notification.message = message;
+  notification.show = true;
+  
+  // 自动隐藏
+  notification.timer = setTimeout(() => {
+    hideNotification();
+  }, duration);
+};
+
+// 隐藏通知
+const hideNotification = () => {
+  notification.show = false;
+  if (notification.timer) {
+    clearTimeout(notification.timer);
+    notification.timer = null;
+  }
+};
+
 // 登录处理
 const handleLogin = async () => {
   const isFormCorrect = await v$.value.$validate();
@@ -310,9 +454,16 @@ const handleLogin = async () => {
       password: loginForm.password
     });
     
-    router.push('/');
+    // 显示成功通知
+    showNotification('success', '登录成功', '欢迎回来！正在跳转到主页...', 2000);
+    
+    // 延迟跳转以显示成功消息
+    setTimeout(() => {
+      router.push('/');
+    }, 1500);
   } catch (error) {
-    errorMsg.value = error.message || '登录失败，请检查用户名和密码';
+    // 显示错误通知
+    showNotification('error', '登录失败', error.message || '请检查用户名和密码');
     
     // 添加卡片震动效果
     if (loginCard.value) {
@@ -1699,6 +1850,16 @@ onMounted(() => {
   .feature-tags {
     flex-wrap: wrap;
     justify-content: center;
+  }
+}
+
+/* 通知进度条动画 */
+@keyframes progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
   }
 }
 </style> 
