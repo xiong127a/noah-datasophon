@@ -42,7 +42,7 @@
         <pekko.version>1.1.5</pekko.version>
         <commons.httpclient>3.0.1</commons.httpclient>
         <commons.lang>2.6</commons.lang>
-        <druid.version>1.2.24</druid.version>
+        <druid.version>1.2.27</druid.version>
         <fastjson2.version>2.0.57</fastjson2.version>
         <hutool.version>5.8.9</hutool.version>
         <java.version>21</java.version>
