@@ -4,7 +4,7 @@
     <!-- 表单容器 -->
     <div class="w-full bg-white overflow-hidden rounded-xl relative">
       <!-- 表单头部 -->
-      <div class="text-center py-6 bg-gradient-to-r from-blue-500 to-blue-700 relative overflow-hidden">
+      <div class="sticky top-0 z-10 text-center py-6 bg-gradient-to-r from-blue-500 to-blue-700 relative overflow-hidden">
         <!-- 闪光效果 -->
         <div class="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-radial-shine opacity-70 transform -rotate-30 pointer-events-none"></div>
         
@@ -17,7 +17,7 @@
       </div>
       
       <!-- 表单内容 -->
-      <div class="p-6 bg-gray-50">
+      <div class="p-6 bg-gray-50 max-h-[calc(80vh-120px)] overflow-y-auto">
         <form @submit.prevent="handleSubmit" ref="formRef" class="space-y-6">
           <!-- 基本信息部分 -->
           <div class="bg-white rounded-xl p-5 shadow-sm hover:translate-y-[-2px] hover:shadow transition duration-300 ease-out">
@@ -100,7 +100,9 @@
               <Listbox v-model="formState.clusterFrame">
                 <div class="relative mt-1">
                   <ListboxButton
-                    class="w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                    class="w-full cursor-default rounded-xl bg-white py-2.5 pl-3.5 pr-10 text-left border border-gray-300 
+                           focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 
+                           hover:border-blue-400 transition duration-200 text-sm"
                   >
                     <span class="block truncate">{{ formState.clusterFrame || '请选择集群框架' }}</span>
                     <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -110,12 +112,16 @@
                     </span>
                   </ListboxButton>
                   <transition
-                    leave-active-class="transition duration-100 ease-in"
-                    leave-from-class="opacity-100"
-                    leave-to-class="opacity-0"
+                    enter="transition duration-200 ease-out"
+                    enter-from="opacity-0 translate-y-1"
+                    enter-to="opacity-100 translate-y-0"
+                    leave="transition duration-150 ease-in"
+                    leave-from="opacity-100 translate-y-0"
+                    leave-to="opacity-0 translate-y-1"
                   >
                     <ListboxOptions
-                      class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                      class="absolute z-50 mt-1.5 max-h-60 w-full overflow-auto rounded-xl bg-white py-2 text-sm 
+                             shadow-lg ring-1 ring-black/5 focus:outline-none transform origin-top"
                     >
                       <ListboxOption
                         v-for="item in filteredFrameList"
@@ -125,8 +131,8 @@
                       >
                         <li
                           :class="[
-                            active ? 'text-blue-900 bg-blue-100' : 'text-gray-900',
-                            'cursor-default select-none relative py-2 pl-3 pr-9'
+                            active ? 'text-blue-900 bg-blue-50' : 'text-gray-900',
+                            'cursor-pointer select-none relative py-2.5 pl-3.5 pr-9 hover:bg-blue-50/70'
                           ]"
                         >
                           <span
@@ -176,13 +182,13 @@
               <!-- PVM选择 -->
               <div 
                 @click="selectDepType('PVM')"
-                :class="{ 'border-blue-500 bg-blue-50/30': formState.depType === 'PVM' }"
-                class="relative flex items-center border rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-blue-500/70 hover:bg-blue-50/20"
+                :class="{ 'border-blue-500 bg-blue-50/50 shadow-md': formState.depType === 'PVM' }"
+                class="relative flex items-center border rounded-xl p-4.5 cursor-pointer transition-all duration-300 hover:border-blue-400 hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <!-- 图标 -->
                 <div class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full mr-4 flex-shrink-0
                           transition duration-300 ease-out shadow-sm"
-                     :class="{ 'bg-blue-100/50 shadow-blue-500/20': formState.depType === 'PVM' }">
+                     :class="{ 'bg-blue-100/70 shadow-blue-500/20': formState.depType === 'PVM' }">
                   <img src="@/assets/img/os-logos/linux-tux.svg" alt="Linux" class="w-6 h-6">
                 </div>
                 
@@ -199,8 +205,8 @@
                 
                 <!-- 选中标记 -->
                 <div v-if="formState.depType === 'PVM'"
-                     class="absolute top-4 right-4 w-5.5 h-5.5 bg-blue-500 rounded-full flex items-center justify-center shadow-md shadow-blue-500/30">
-                  <svg class="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                     class="absolute top-4 right-4 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md shadow-blue-500/30">
+                  <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                   </svg>
                 </div>
@@ -209,13 +215,13 @@
               <!-- Kubernetes选择 -->
               <div 
                 @click="selectDepType('Kubernetes')"
-                :class="{ 'border-blue-500 bg-blue-50/30': formState.depType === 'Kubernetes' }"
-                class="relative flex items-center border rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-blue-500/70 hover:bg-blue-50/20"
+                :class="{ 'border-blue-500 bg-blue-50/50 shadow-md': formState.depType === 'Kubernetes' }"
+                class="relative flex items-center border rounded-xl p-4.5 cursor-pointer transition-all duration-300 hover:border-blue-400 hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <!-- 图标 -->
                 <div class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full mr-4 flex-shrink-0
                           transition duration-300 ease-out shadow-sm"
-                     :class="{ 'bg-blue-100/50 shadow-blue-500/20': formState.depType === 'Kubernetes' }">
+                     :class="{ 'bg-blue-100/70 shadow-blue-500/20': formState.depType === 'Kubernetes' }">
                   <img src="@/assets/images/kubernetes-logo.svg" alt="Kubernetes" class="w-6 h-6">
                 </div>
                 
@@ -232,8 +238,8 @@
                 
                 <!-- 选中标记 -->
                 <div v-if="formState.depType === 'Kubernetes'"
-                     class="absolute top-4 right-4 w-5.5 h-5.5 bg-blue-500 rounded-full flex items-center justify-center shadow-md shadow-blue-500/30">
-                  <svg class="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                     class="absolute top-4 right-4 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md shadow-blue-500/30">
+                  <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                   </svg>
                 </div>
@@ -248,7 +254,7 @@
       </div>
       
       <!-- 按钮区域 -->
-      <div class="flex justify-center py-5 px-7 bg-white border-t border-gray-100 gap-4">
+      <div class="flex justify-center py-5 px-7 bg-white border-t border-gray-100 gap-4 sticky bottom-0 shadow-inner">
         <button
           type="button"
           @click="handleSubmit"

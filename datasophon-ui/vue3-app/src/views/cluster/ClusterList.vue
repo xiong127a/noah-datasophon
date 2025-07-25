@@ -230,8 +230,8 @@
     <!-- 编辑集群模态框 -->
     <Dialog :open="editModalVisible" @close="handleEditModalClose" class="relative z-50">
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
-      <div class="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden">
+      <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
+        <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden my-8">
           <AddColony 
             v-if="editModalVisible" 
             :detail="currentEditObj || {}" 
