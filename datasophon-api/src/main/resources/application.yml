@@ -79,10 +79,11 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    baseline-version: 2.2.0
+    baseline-version: 0
     clean-disabled: true
     out-of-order: false
     validate-on-migrate: true
+    placeholder-replacement: false
 
 # Jasypt加密配置
 jasypt:
