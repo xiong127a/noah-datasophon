@@ -17,6 +17,7 @@
 
 package com.datasophon.api.security;
 
+import cn.hutool.extra.servlet.ServletUtil;
 import com.datasophon.common.security.JwtTokenProviderBase;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * 持久化令牌管理器
@@ -117,6 +119,8 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
             }
             // 创建新令牌记录
             AuthTokenEntity authToken = new AuthTokenEntity();
+            // 设置主键id，使用UUID生成唯一标识符
+            authToken.setId(UUID.randomUUID().toString());
             authToken.setUserId(user.getId());
             // 用户名字段在两个实体中不同步，需要从用户实体获取
             // authToken.setUserName(user.getUsername()); // AuthTokenEntity没有这个字段
