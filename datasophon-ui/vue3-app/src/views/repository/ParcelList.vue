@@ -347,7 +347,7 @@ const handleDownload = async (comp: Component, url: string) => {
 
       // 开始监控任务进度
       viewTaskLog(comp)
-    }
+      }
   } catch (error) {
     console.error('下载组件失败:', error)
   }
@@ -407,7 +407,7 @@ const viewTaskLog = async (comp: Component) => {
         rolllogThread.value = window.setTimeout(() => {
           viewTaskLog(comp)
         }, 3000)
-      }
+    }
     }
   } catch (error) {
     console.error('获取任务进度失败:', error)

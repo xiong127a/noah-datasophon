@@ -160,7 +160,7 @@
       
       <!-- 创建新集群卡片 -->
       <div 
-        @click="addColony({})"
+        @click="() => addColony({})"
         class="bg-white rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-md hover:-translate-y-1"
       >
         <div class="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mb-4">
@@ -232,14 +232,14 @@
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4">
         <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden">
-            <AddColony 
-              v-if="editModalVisible" 
-              :detail="currentEditObj || {}" 
-              :callBack="handleEditComplete" 
-              @cancel="handleEditModalClose"
-              @success="handleEditComplete"
-              ref="addColonyForm"
-            />
+          <AddColony 
+            v-if="editModalVisible" 
+            :detail="currentEditObj || {}" 
+            :callBack="handleEditComplete" 
+            @cancel="handleEditModalClose"
+            @success="handleEditComplete"
+            ref="addColonyForm"
+          />
         </DialogPanel>
       </div>
     </Dialog>
@@ -349,6 +349,12 @@ onMounted(() => {
 
 // 方法
 const addColony = (obj) => {
+  // 防止参数是函数引用
+  if (typeof obj === 'function') {
+    console.error('addColony接收到了一个函数而不是预期的对象:', obj)
+    obj = {} // 重置为空对象
+  }
+  
   editModalVisible.value = true
   currentEditObj.value = obj
   
