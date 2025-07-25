@@ -41,15 +41,10 @@ public class ApiExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(Exception.class)
-    public Result exceptionHandler(Exception e, HandlerMethod hm) {
-        ApiException ce = hm.getMethodAnnotation(ApiException.class);
-        if (ce == null) {
-            logger.error(e.getMessage(), e);
-            return Result.error(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(), e.getMessage());
-        }
-        Status st = ce.value();
-        logger.error(st.getMsg(), e);
-        return Result.error(st.getCode(), st.getMsg());
+    public Result exceptionHandler(Exception e) {
+        // 无法从参数获取HandlerMethod，改用更通用的处理方式
+        logger.error("未处理的异常：", e);
+        return Result.error(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
