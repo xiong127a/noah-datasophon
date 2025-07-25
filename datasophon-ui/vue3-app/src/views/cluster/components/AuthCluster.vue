@@ -230,12 +230,14 @@ const handleSubmit = () => {
     userIdsString = userIds.toString()
   }
   
-  // 构建URL查询参数
-  const url = `${API_PATHS.authCluster}?clusterId=${props.detail.id}&userIds=${userIdsString}`
-  
+  // 使用API函数替代直接的URL构建
   loading.value = true
-  // 使用get方法，通过URL传参
-  axiosGet(url)
+  
+  // 使用authCluster函数
+  clusterApi.authCluster({
+    clusterId: props.detail.id,
+    userIds: userIdsString
+  })
     .then((res) => {
       loading.value = false
       if (res.code === 200) {

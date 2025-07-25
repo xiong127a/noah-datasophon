@@ -12,7 +12,7 @@ export function getClusterList(params = {}) {
  * 添加集群
  */
 export function addColony(params) {
-  return axiosPost(API_PATHS.addColony, params)
+  return axiosPost(API_PATHS.saveColony, params)
 }
 
 /**
@@ -42,7 +42,7 @@ export function updateColony(params) {
  * 保存/创建集群
  */
 export function saveColony(params) {
-  return axiosPost(API_PATHS.addColony, params)
+  return axiosPost(API_PATHS.saveColony, params)
 }
 
 /**
@@ -69,4 +69,6 @@ export function queryAllUser(params = {}) {
 /**
  * 集群授权
  */
-export const authCluster = API_PATHS.authCluster 
+export function authCluster(params = {}) {
+  return axiosPost(API_PATHS.authCluster, params)
+} 

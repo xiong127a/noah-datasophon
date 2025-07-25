@@ -9,13 +9,13 @@ const API_PATHS = {
   getUserInfo: '/ddh/api/user/getUserInfo',
   
   // 集群相关
-  getColonyList: '/ddh/api/colony/queryColony',
-  addColony: '/ddh/api/colony/addColony',
-  updateColony: '/ddh/api/colony/updateColony',
-  deleteColony: '/ddh/api/colony/deleteColony',
+  getColonyList: '/ddh/api/cluster/list',
+  saveColony: '/ddh/api/cluster/save',
+  updateColony: '/ddh/api/cluster/update',
+  deleteColony: '/ddh/api/cluster/delete',
   getFrameList: '/ddh/api/frame/list',
   deleteService: '/ddh/api/frame/service/delete',
-  authCluster: '/ddh/api/colony/updateAuth',
+  authCluster: '/ddh/api/cluster/user/saveClusterManager',
   
   // 服务相关
   getServiceListByCluster: '/ddh/api/service/getServiceListByCluster',
