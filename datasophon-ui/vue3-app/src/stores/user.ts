@@ -1,164 +1,174 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { axiosPost, axiosGet, axiosJsonPost } from '../utils/request'
+import { axiosPost } from '@/utils/request'
+import API_PATHS from '@/api/httpApi/apiPaths'
 
-interface UserInfo {
-  id?: string
+// 用户接口定义
+interface User {
+  id?: number | string
   username?: string
-  avatar?: string
-  roles?: string[]
-  userType?: number // 1 = admin, 2 = regular user, etc.
-  [key: string]: any // 允许更多属性
+  email?: string
+  userType?: number
+  [key: string]: any
 }
 
+// 登录凭证接口
+interface LoginCredentials {
+  username: string
+  password: string
+}
+
+/**
+ * 用户状态管理Store
+ * 管理用户登录、用户信息和权限
+ */
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('token') || '')
-  const userInfo = ref<UserInfo>(JSON.parse(localStorage.getItem('userInfo') || '{}'))
+  // 状态
+  const user = ref<User | null>(null)
+  const token = ref<string | null>(null)
   const loading = ref(false)
+  const loginError = ref<string | null>(null)
   
   // 计算属性
-  const user = computed(() => userInfo.value)
-  const isAdmin = computed(() => userInfo.value?.userType === 1 || userInfo.value?.roles?.includes('ADMIN'))
-  const isLoggedIn = computed(() => !!token.value && !!userInfo.value?.id)
+  const isLoggedIn = computed(() => !!token.value)
+  const isAdmin = computed(() => user.value?.userType === 1)
   
-  function setToken(value: string) {
-    token.value = value
-    localStorage.setItem('token', value)
+  // 获取令牌
+  const getToken = () => {
+    return token.value
   }
   
-  function setUserInfo(info: UserInfo) {
-    userInfo.value = info
-    localStorage.setItem('userInfo', JSON.stringify(info))
+  // 设置令牌
+  const setToken = (newToken: string) => {
+    token.value = newToken
+    localStorage.setItem('auth_token', newToken)
   }
   
-  async function login(loginForm: { username: string; password: string }) {
+  // 设置用户信息
+  const setUser = (userData: User) => {
+    user.value = userData
+    localStorage.setItem('auth_user', JSON.stringify(userData))
+  }
+  
+  // 清除用户和认证信息
+  const clearUser = () => {
+    user.value = null
+    token.value = null
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+    loginError.value = null
+  }
+  
+  // 初始化 - 从localStorage加载状态
+  const initializeFromStorage = () => {
+    // 加载token
+    const storedToken = localStorage.getItem('auth_token')
+    if (storedToken) {
+      token.value = storedToken
+    }
+    
+    // 加载用户信息
+    const storedUser = localStorage.getItem('auth_user')
+    if (storedUser) {
+      try {
+        user.value = JSON.parse(storedUser)
+      } catch (e) {
+        console.error('Failed to parse stored user data', e)
+        localStorage.removeItem('auth_user') // 清除无效数据
+      }
+    }
+  }
+  
+  // 登录方法
+  const login = async (credentials: LoginCredentials) => {
     loading.value = true
+    loginError.value = null
     
     try {
-      // 调用登录API - 使用表单格式，表单方式能让Spring Security正确处理请求
-      const res = await axiosPost('/ddh/api/login', loginForm)
+      const response = await axiosPost(API_PATHS.login, credentials)
       
-      if (res && res.code === 200) {
-        // 打印完整的登录响应以便调试
-        console.log('Login response data:', JSON.stringify(res.data, null, 2))
-        
-        // 后端API返回的token字段可能在data.token, data.SESSION_ID, 或直接在data中
-        let tokenValue = null
-        
-        // 查找token (尝试所有可能的位置)
-        if (res.data.token) {
-          tokenValue = res.data.token
-        } else if (res.data.SESSION_ID) {
-          tokenValue = res.data.SESSION_ID
-        } else if (res.data.authorization) {
-          tokenValue = res.data.authorization
-        } else if (typeof res.data === 'string' && res.data.length > 10) {
-          // 有时整个data就是token
-          tokenValue = res.data
-        }
-        
-        // 确保用户数据存在
-        const userData = res.data.user || res.data.USER_INFO || res.data || {}
+      if (response && response.code === 200) {
+        // 提取token和用户信息
+        const tokenValue = response.data?.token
+        const userData = response.data?.user || {}
         
         if (!tokenValue) {
-          console.error('登录成功但找不到token格式，响应数据:', res.data)
-          throw new Error('登录成功但未返回token')
+          throw new Error('Login successful but no token returned')
         }
         
-        // 清理token中可能存在的空格或不可见字符
-        tokenValue = tokenValue.trim()
-        console.log(`[Auth Debug] 原始token: "${tokenValue.substring(0, 10)}..."`);
-        console.log(`[Auth Debug] token字符分析:`, 
-          [...tokenValue.substring(0, 20)].map(c => ({ 
-            char: c, 
-            code: c.charCodeAt(0), 
-            hex: c.charCodeAt(0).toString(16)
-          }))
-        );
-        
-        // 检查token是否是有效的JWT格式 (header.payload.signature)
-        const isValidJwt = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(tokenValue);
-        console.log(`[Auth Debug] Token是否符合JWT格式: ${isValidJwt}`);
-        
-        // 设置token和用户信息
-        console.log(`[Auth] 设置token: ${tokenValue.substring(0, 10)}...`)
-
-        // 确保token不以Bearer开头，因为我们会在请求拦截器中添加
-        if (tokenValue.startsWith('Bearer ')) {
-          // 如果已经包含Bearer前缀，保持不变
-          console.log('[Auth] Token已包含Bearer前缀');
-        } else {
-          // 不要在这里添加Bearer前缀，让请求拦截器处理
-          console.log('[Auth] Token不包含Bearer前缀，将由请求拦截器添加');
-        }
-
+        // 保存状态
         setToken(tokenValue)
-        setUserInfo(userData)
+        setUser(userData)
         
-        // 显式调用setAuthorization函数以确保请求中使用token
-        import('../utils/request').then(requestModule => {
-          requestModule.setAuthorization(tokenValue)
-          console.log('[Auth] 已通过setAuthorization设置token')
-        })
-        
-        return res.data
+        return true
       } else {
-        throw new Error(res?.msg || '登录失败')
+        throw new Error(response?.msg || 'Login failed')
       }
-    } catch (error) {
-      console.error('登录过程出错:', error)
-      throw error
+    } catch (error: any) {
+      loginError.value = error.message || 'Login failed'
+      return false
     } finally {
       loading.value = false
     }
   }
   
-  async function getUserInfo() {
-    if (!token.value) return null
+  // 登出方法
+  const logout = async () => {
+    try {
+      // 尝试调用登出API
+      if (token.value) {
+        await axiosPost(API_PATHS.logout, {})
+      }
+    } catch (error) {
+      console.error('Logout API call failed', error)
+    } finally {
+      // 无论API是否成功，都清除本地状态
+      clearUser()
+    }
+  }
+  
+  // 获取用户信息
+  const getUserInfo = async () => {
+    if (!token.value) {
+      return null
+    }
     
     try {
-      // 获取用户信息API
-      const res = await axiosGet('/ddh/api/user-info')
+      const response = await axiosPost(API_PATHS.getUserInfo, {})
       
-      if (res && res.code === 200) {
-        setUserInfo(res.data)
-        return res.data
+      if (response && response.code === 200) {
+        setUser(response.data || {})
+        return user.value
+      } else {
+        throw new Error('Failed to fetch user info')
       }
-      return null
     } catch (error) {
-      console.error('获取用户信息失败', error)
+      console.error('Error fetching user info', error)
       return null
     }
   }
   
-  async function logout() {
-    try {
-      if (token.value) {
-        // 调用登出API
-        await axiosPost('/ddh/api/logout')
-      }
-    } catch (error) {
-      console.error('登出失败', error)
-    } finally {
-      // 无论API是否成功，都清除本地存储
-      token.value = ''
-      userInfo.value = {}
-      localStorage.removeItem('token')
-      localStorage.removeItem('userInfo')
-    }
-  }
+  // 初始化状态
+  initializeFromStorage()
   
   return {
-    token,
-    userInfo,
+    // 状态
     user,
-    isAdmin,
-    isLoggedIn,
+    token,
     loading,
-    setToken,
-    setUserInfo,
+    loginError,
+    
+    // 计算属性
+    isLoggedIn,
+    isAdmin,
+    
+    // 方法
     login,
-    getUserInfo,
-    logout
+    logout,
+    setUser,
+    setToken,
+    getToken,
+    clearUser,
+    getUserInfo
   }
 }) 

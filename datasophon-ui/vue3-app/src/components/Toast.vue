@@ -55,11 +55,21 @@
   </div>
 </template>
 
-<script setup>
+<script>
 import { useToast } from '@/composables/useToast'
 
-// 使用Toast组合式API
-const { toasts, remove: removeToast } = useToast()
+export default {
+  name: 'Toast',
+  setup() {
+    // 使用Toast组合式API
+    const { toasts, remove: removeToast } = useToast()
+    
+    return {
+      toasts,
+      removeToast
+    }
+  }
+}
 </script>
 
 <style scoped>

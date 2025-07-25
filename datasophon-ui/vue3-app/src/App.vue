@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // App.vue - 根组件
-import { default as Toast } from './components/Toast.vue'
+import Toast from './components/Toast.vue'
 import { useUserStore } from './stores/user'
 import { onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { default as AuthProvider } from './components/AuthProvider.vue'
+import AuthProvider from './components/AuthProvider.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

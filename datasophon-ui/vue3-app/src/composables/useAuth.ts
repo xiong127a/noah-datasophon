@@ -1,119 +1,128 @@
-import { ref, computed } from 'vue'
-import { useLocalStorage } from '@vueuse/core'
-import axios from 'axios'
+import { computed, ref, watch } from 'vue'
+import { useUserStore } from '@/stores/user'
 
-// 认证接口定义
-interface AuthUser {
-  id?: number | string
-  username?: string
-  email?: string
-  userType?: number
-  [key: string]: any
-}
+/**
+ * 认证服务 - 提供认证状态管理和JWT处理
+ */
+const token = ref<string | null>(null)
+const isAuthenticated = computed(() => !!token.value)
 
-interface AuthState {
-  token: string | null
-  user: AuthUser | null
-  isLoading: boolean
-}
+// 跟踪上次认证检查时间
+const lastAuthCheck = ref(Date.now())
 
-// 创建认证组合式API
-export function useAuth() {
-  // 使用localStorage持久化认证状态
-  const token = useLocalStorage<string | null>('auth_token', null)
-  const user = useLocalStorage<AuthUser | null>('auth_user', null)
-  const isLoading = ref(false)
+/**
+ * 认证服务 
+ * 提供登录、登出和认证状态管理功能
+ */
+export const authService = {
+  // 公开响应式状态
+  token,
+  isAuthenticated,
+  lastAuthCheck,
   
-  // 计算属性
-  const isAuthenticated = computed(() => !!token.value)
-  const isAdmin = computed(() => user.value?.userType === 1 || false)
-  
-  // 登录方法
-  const login = async (credentials: { username: string; password: string }): Promise<boolean> => {
-    isLoading.value = true
-    
-    try {
-      const response = await axios.post('/ddh/api/login', credentials, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        transformRequest: [(data) => {
-          const params = new URLSearchParams()
-          for (const key in data) {
-            params.append(key, data[key])
-          }
-          return params.toString()
-        }]
-      })
+  /**
+   * 初始化认证状态
+   * 从localStorage加载token
+   */
+  init() {
+    // 从本地存储中获取令牌
+    const savedToken = localStorage.getItem('auth_token')
+    if (savedToken) {
+      token.value = savedToken
+      console.log('[Auth] Token loaded from storage')
       
-      if (response.data && response.data.code === 200) {
-        console.log('[Auth] 登录成功, 解析返回数据')
-        
-        // 提取token和用户信息
-        const responseData = response.data
-        let tokenValue = responseData.data?.token
-        const userData = responseData.data?.user || {}
-        
-        if (!tokenValue) {
-          throw new Error('登录成功但未返回token')
-        }
-        
-        // 保存认证状态
-        tokenValue = tokenValue.trim()
-        token.value = tokenValue
-        user.value = userData
-        
-        // 兼容旧系统 - 同时设置旧的token键
-        localStorage.setItem('token', tokenValue)
-        
-        console.log('[Auth] 认证状态已保存')
-        return true
-      } else {
-        throw new Error(response.data?.msg || '登录失败')
-      }
-    } catch (error) {
-      console.error('[Auth] 登录失败:', error)
-      logout() // 确保清除任何可能的部分状态
-      return false
-    } finally {
-      isLoading.value = false
+      // 更新最后认证检查时间
+      this.updateLastAuthCheck()
     }
-  }
+  },
   
-  // 注销方法
-  const logout = () => {
-    token.value = null
-    user.value = null
-    // 兼容旧系统 - 同时清除旧的token键
-    localStorage.removeItem('token')
-    console.log('[Auth] 已注销')
-  }
-  
-  // 获取认证头
-  const getAuthHeader = () => {
-    if (!token.value) return {}
+  /**
+   * 设置认证令牌
+   * @param newToken 新的JWT令牌
+   */
+  setToken(newToken: string) {
+    token.value = newToken
+    localStorage.setItem('auth_token', newToken)
+    console.log('[Auth] Token updated')
     
+    // 更新最后认证检查时间
+    this.updateLastAuthCheck()
+  },
+  
+  /**
+   * 获取认证头部
+   * 用于请求拦截器
+   */
+  getAuthHeader() {
     return {
-      'Authorization': token.value.startsWith('Bearer ') 
-        ? token.value.trim() 
-        : `Bearer ${token.value.trim()}`
+      Authorization: token.value ? `Bearer ${token.value}` : ''
     }
+  },
+  
+  /**
+   * 更新最后认证检查时间
+   */
+  updateLastAuthCheck() {
+    lastAuthCheck.value = Date.now()
+  },
+  
+  /**
+   * 登出 - 清除认证状态
+   */
+  logout() {
+    // 获取user store以便清除用户信息
+    const userStore = useUserStore()
+    
+    // 清除token
+    token.value = null
+    localStorage.removeItem('auth_token')
+    
+    // 清除用户信息
+    userStore.clearUser()
+    
+    console.log('[Auth] User logged out')
+  }
+}
+
+// 初始化认证服务
+authService.init()
+
+/**
+ * 导出组合式函数
+ * 提供使用认证服务的简便方法
+ */
+export function useAuth() {
+  // 获取user store
+  const userStore = useUserStore()
+  
+  /**
+   * 检查认证状态
+   * @returns 当前认证状态
+   */
+  const checkAuth = () => {
+    // 如果令牌存在，更新最后检查时间并返回true
+    if (token.value) {
+      authService.updateLastAuthCheck()
+      return true
+    }
+    return false
   }
   
   return {
-    // 状态
+    // 暴露响应式状态
     token,
-    user,
-    isLoading,
     isAuthenticated,
-    isAdmin,
+    lastAuthCheck,
     
-    // 方法
-    login,
-    logout,
-    getAuthHeader
+    // 暴露方法
+    login: (newToken: string) => {
+      authService.setToken(newToken)
+    },
+    logout: authService.logout,
+    checkAuth,
+    getAuthHeader: authService.getAuthHeader
   }
 }
 
-// 创建全局单例实例
-export const authService = useAuth() 
+// 默认导出组合式函数
+export default useAuth 

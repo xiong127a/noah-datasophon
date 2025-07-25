@@ -1,106 +1,159 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
-// 集群类型
-export interface Cluster {
-  id: string | number
-  name: string
-  depType: 'K8S' | 'Linux'
-  desc?: string
-  status: 'running' | 'stopped' | 'error'
+/**
+ * 菜单项类型定义
+ */
+interface MenuItem {
+  id?: string | number;
+  name?: string;
+  title?: string;
+  path: string;
+  icon?: string;
+  children?: MenuItem[];
+  [key: string]: any;
 }
 
-// 菜单项类型
-export interface MenuItem {
-  name: string
-  path: string
-  meta: {
-    icon: string
-    title: string
-  }
-  component?: string
-  id?: string | number
-}
-
+/**
+ * 设置状态Store
+ * 管理应用程序设置和全局状态
+ */
 export const useSettingsStore = defineStore('settings', () => {
-  // 状态
-  const currentCluster = ref<Cluster | null>(null)
-  const clusters = ref<Cluster[]>([])
-  const sidebarCollapsed = ref(false)
-  const activeFirstMenu = ref<string>('')  // 使用ref正确声明
-  
-  // 服务菜单相关状态
+  // 集群相关状态
   const isCluster = ref(false)
-  const clusterId = ref<string | number | null>(null)
+  const clusterId = ref('')
   const menuData = ref<MenuItem[]>([])
   
-  // 方法
-  function setCurrentCluster(cluster: Cluster) {
-    currentCluster.value = cluster
-  }
+  // 菜单状态
+  const activeFirstMenu = ref(localStorage.getItem('activeFirstMenu') || '/')
   
-  function setClusters(newClusters: Cluster[]) {
-    clusters.value = newClusters
-  }
+  // 主题设置
+  const theme = ref(localStorage.getItem('theme') || 'light')
+  const primaryColor = ref(localStorage.getItem('primaryColor') || '#1890ff')
   
-  function toggleSidebar() {
-    sidebarCollapsed.value = !sidebarCollapsed.value
-  }
+  // 布局设置
+  const layout = ref(localStorage.getItem('layout') || 'side')
+  const navTheme = ref(localStorage.getItem('navTheme') || 'dark')
+  const contentWidth = ref(localStorage.getItem('contentWidth') || 'fixed')
+  const fixedHeader = ref(localStorage.getItem('fixedHeader') === 'true')
   
-  function setActiveFirstMenu(key: string) {
-    activeFirstMenu.value = key  // 使用.value访问ref的值
-  }
+  // 多语言设置
+  const locale = ref(localStorage.getItem('locale') || 'zh-CN')
   
-  // 设置是否为集群状态
+  // 设置集群相关状态
   function setIsCluster(value: boolean) {
     isCluster.value = value
   }
   
-  // 设置当前集群ID
-  function setClusterId(id: string | number | null) {
+  function setClusterId(id: string) {
     clusterId.value = id
   }
   
-  // 设置菜单数据
   function setMenuData(data: MenuItem[]) {
     menuData.value = data
   }
   
-  // 初始化
-  function init() {
-    // 初始化集群列表
-    clusters.value = [
-      { id: '1', name: '测试集群1', depType: 'K8S', status: 'running' },
-      { id: '2', name: '生产环境', depType: 'Linux', status: 'running' },
-      { id: '3', name: '开发环境', depType: 'Linux', status: 'warning' as any }
-    ]
-    
-    // 设置默认集群
-    if (clusters.value.length > 0) {
-      currentCluster.value = clusters.value[0]
-    }
+  // 设置当前激活的一级菜单
+  function setActiveFirstMenu(path: string) {
+    activeFirstMenu.value = path
+    localStorage.setItem('activeFirstMenu', path)
   }
   
-  // 初始调用
-  init()
+  // 设置主题
+  function setTheme(value: string) {
+    theme.value = value
+    localStorage.setItem('theme', value)
+  }
+  
+  // 设置主色调
+  function setPrimaryColor(value: string) {
+    primaryColor.value = value
+    localStorage.setItem('primaryColor', value)
+    
+    // 实际应用主题色变量
+    document.documentElement.style.setProperty('--primary-color', value)
+  }
+  
+  // 设置布局
+  function setLayout(value: string) {
+    layout.value = value
+    localStorage.setItem('layout', value)
+  }
+  
+  // 设置导航栏主题
+  function setNavTheme(value: string) {
+    navTheme.value = value
+    localStorage.setItem('navTheme', value)
+  }
+  
+  // 设置内容区宽度
+  function setContentWidth(value: string) {
+    contentWidth.value = value
+    localStorage.setItem('contentWidth', value)
+  }
+  
+  // 设置固定头部
+  function setFixedHeader(value: boolean) {
+    fixedHeader.value = value
+    localStorage.setItem('fixedHeader', value.toString())
+  }
+  
+  // 设置语言
+  function setLocale(value: string) {
+    locale.value = value
+    localStorage.setItem('locale', value)
+  }
+  
+  // 重置所有设置到默认值
+  function resetSettings() {
+    // 重置主题设置
+    setTheme('light')
+    setPrimaryColor('#1890ff')
+    
+    // 重置布局设置
+    setLayout('side')
+    setNavTheme('dark')
+    setContentWidth('fixed')
+    setFixedHeader(false)
+    
+    // 重置多语言设置
+    setLocale('zh-CN')
+  }
   
   return {
-    // 状态
-    currentCluster,
-    clusters,
-    sidebarCollapsed,
-    activeFirstMenu,
+    // 集群相关状态
     isCluster,
     clusterId,
     menuData,
     
-    // 方法
-    setCurrentCluster,
-    setClusters,
-    toggleSidebar,
-    setActiveFirstMenu,
+    // 菜单状态
+    activeFirstMenu,
+    
+    // 主题设置
+    theme,
+    primaryColor,
+    
+    // 布局设置
+    layout,
+    navTheme,
+    contentWidth,
+    fixedHeader,
+    
+    // 多语言设置
+    locale,
+    
+    // 设置方法
     setIsCluster,
     setClusterId,
-    setMenuData
+    setMenuData,
+    setActiveFirstMenu,
+    setTheme,
+    setPrimaryColor,
+    setLayout,
+    setNavTheme,
+    setContentWidth,
+    setFixedHeader,
+    setLocale,
+    resetSettings
   }
 }) 

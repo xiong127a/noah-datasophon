@@ -276,7 +276,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, nextTick, onMounted, defineAsyncComponent, h } from 'vue'
 import { useRouter } from 'vue-router'
 import SvgIcon from '@/components/SvgIcon.vue'
 import { Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
@@ -287,7 +287,7 @@ import AuthCluster from './components/AuthCluster.vue'
 
 // 异步加载Steps组件
 const stepsComponent = defineAsyncComponent(() => 
-  import('@/components/steps').catch(() => {
+  import('../../components/steps').catch(() => {
     console.error('Failed to load Steps component')
     return { render: () => h('div', 'Failed to load component') }
   })
