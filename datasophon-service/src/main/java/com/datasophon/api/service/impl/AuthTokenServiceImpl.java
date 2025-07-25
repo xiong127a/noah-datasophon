@@ -20,6 +20,7 @@ package com.datasophon.api.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
+import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -68,6 +69,9 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
 
     @Autowired
     private PersistentTokenManager tokenProvider;
+
+    @Autowired
+    private UserInfoService userInfoService;
 
     /**
      * 创建新的认证令牌
@@ -218,17 +222,32 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
                 return null;
             }
 
-            // 获取用户ID
-            String userId = tokenProvider.getUserIdFromToken(refreshToken);
-            if (StrUtil.isBlank(userId)) {
-                logger.error("Refresh token has no user ID");
+            // 获取用户ID或用户名
+            String userIdentifier = tokenProvider.getUserIdFromToken(refreshToken);
+            if (StrUtil.isBlank(userIdentifier)) {
+                logger.error("Refresh token has no user identifier");
+                return null;
+            }
+
+            UserInfoEntity user = null;
+            try {
+                // 尝试将标识符解析为整数ID
+                Integer userId = Integer.parseInt(userIdentifier);
+                user = userInfoService.getById(userId);
+            } catch (NumberFormatException e) {
+                // 如果不是整数，则尝试作为用户名处理
+                user = userInfoService.getUserByUsername(userIdentifier);
+            }
+
+            if (user == null) {
+                logger.error("User not found for identifier: {}", userIdentifier);
                 return null;
             }
 
             // 创建认证对象
             Collection<GrantedAuthority> authorities = Collections
                     .singletonList(new SimpleGrantedAuthority("ROLE_USER"));
-            User principal = new User(userId, "", authorities);
+            User principal = new User(user.getUsername(), "", authorities);
             Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
             // 生成新的访问令牌
@@ -238,8 +257,6 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
             Date expiresAt = tokenProvider.getExpirationDateFromToken(accessToken);
 
             // 记录令牌到数据库
-            UserInfoEntity user = new UserInfoEntity();
-            user.setId(Integer.parseInt(userId));
             createToken(user, accessToken, refreshToken, request, expiresAt);
 
             return accessToken;

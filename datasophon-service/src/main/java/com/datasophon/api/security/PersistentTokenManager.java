@@ -17,11 +17,11 @@
 
 package com.datasophon.api.security;
 
-import cn.hutool.extra.servlet.ServletUtil;
 import com.datasophon.common.security.JwtTokenProviderBase;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.AuthTokenMapper;
+import com.datasophon.api.service.UserInfoService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -53,6 +53,9 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
     @Autowired
     private AuthTokenMapper authTokenMapper;
 
+    @Autowired
+    private UserInfoService userInfoService;
+
     /**
      * 创建令牌并保存到数据库
      * 
@@ -63,24 +66,29 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
     public String createToken(Authentication authentication, HttpServletRequest request) {
         String token = super.createToken(authentication);
 
-        // 从认证对象中获取用户ID
+        // 从认证对象中获取用户名
         Object principal = authentication.getPrincipal();
-        String userId = null;
+        String username = null;
         if (principal instanceof User) {
-            userId = ((User) principal).getUsername();
+            username = ((User) principal).getUsername();
         }
 
         // 生成刷新令牌
-        String refreshToken = createRefreshToken(userId);
+        String refreshToken = createRefreshToken(username);
 
         // 获取令牌过期时间
         Date validity = getExpirationDateFromToken(token);
 
         // 保存令牌到数据库
         try {
-            UserInfoEntity user = new UserInfoEntity();
-            user.setId(Integer.valueOf(userId));
-            createToken(user, token, refreshToken, request, validity);
+            // 根据用户名查询用户信息
+            UserInfoEntity user = userInfoService.getUserByUsername(username);
+
+            if (user != null) {
+                createToken(user, token, refreshToken, request, validity);
+            } else {
+                logger.error("保存令牌失败：未找到用户信息 [{}]", username);
+            }
         } catch (Exception e) {
             logger.error("保存令牌到数据库失败", e);
         }
