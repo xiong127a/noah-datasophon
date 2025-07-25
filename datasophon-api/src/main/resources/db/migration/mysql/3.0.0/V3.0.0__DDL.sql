@@ -1,5 +1,6 @@
 -- 删除旧表
 DROP TABLE IF EXISTS `t_ddh_session`;
+DROP TABLE IF EXISTS `t_ddh_access_token`;
 
 -- 创建新表
 CREATE TABLE `t_ddh_auth_token` (

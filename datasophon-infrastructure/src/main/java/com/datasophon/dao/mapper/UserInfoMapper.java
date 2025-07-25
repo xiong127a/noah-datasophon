@@ -19,13 +19,7 @@ package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.UserInfoEntity;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import com.mybatisflex.core.BaseMapper;
-import com.mybatisflex.core.query.QueryWrapper;
-import java.util.Date;
-
-import static com.datasophon.dao.entity.table.UserInfoEntityTableDef.USER_INFO_ENTITY;
-import static com.datasophon.dao.entity.table.AccessTokenEntityTableDef.ACCESS_TOKEN_ENTITY;
 
 /**
  * 用户信息表
@@ -34,22 +28,4 @@ import static com.datasophon.dao.entity.table.AccessTokenEntityTableDef.ACCESS_T
 @Mapper
 public interface UserInfoMapper extends BaseMapper<UserInfoEntity> {
 
-    /**
-     * 根据token查询用户信息
-     * 
-     * @param token 令牌
-     * @return 用户信息
-     */
-    default UserInfoEntity queryUserByToken(@Param("token") String token) {
-        Date now = new Date();
-
-        QueryWrapper queryWrapper = QueryWrapper.create()
-                .select(USER_INFO_ENTITY.ALL_COLUMNS)
-                .from(USER_INFO_ENTITY)
-                .leftJoin(ACCESS_TOKEN_ENTITY).on(ACCESS_TOKEN_ENTITY.USER_ID.eq(USER_INFO_ENTITY.ID))
-                .where(ACCESS_TOKEN_ENTITY.TOKEN.eq(token))
-                .and(ACCESS_TOKEN_ENTITY.EXPIRE_TIME.gt(now));
-
-        return this.selectOneByQuery(queryWrapper);
-    }
 }
