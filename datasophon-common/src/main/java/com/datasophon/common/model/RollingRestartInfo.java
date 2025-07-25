@@ -18,7 +18,7 @@
 package com.datasophon.common.model;
 
 import lombok.Data;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
 

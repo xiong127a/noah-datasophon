@@ -24,7 +24,7 @@ import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.common.model.StartWorkerMessage;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;

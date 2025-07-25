@@ -13,7 +13,7 @@ import com.datasophon.common.model.hardware.InterfaceInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;

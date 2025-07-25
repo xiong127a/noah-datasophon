@@ -57,7 +57,7 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.mybatisflex.core.query.QueryChain;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;

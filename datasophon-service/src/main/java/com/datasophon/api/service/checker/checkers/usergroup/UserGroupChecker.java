@@ -13,7 +13,7 @@ import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

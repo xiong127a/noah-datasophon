@@ -17,7 +17,7 @@
 package com.datasophon.common.utils;
 
 import org.apache.commons.collections.BeanMap;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 

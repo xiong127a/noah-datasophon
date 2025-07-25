@@ -27,7 +27,7 @@ import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 

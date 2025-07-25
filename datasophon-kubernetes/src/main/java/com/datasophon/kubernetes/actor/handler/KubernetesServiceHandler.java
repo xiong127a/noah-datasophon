@@ -26,7 +26,7 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.math.IntRange;
+import org.apache.commons.lang3.Range;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -271,8 +271,8 @@ public class KubernetesServiceHandler {
             boolean isNodePort) {
 
         // 定义有效端口范围
-        final IntRange VALID_PORT_RANGE = new IntRange(1, 65535);
-        final IntRange VALID_NODEPORT_RANGE = new IntRange(30000, 32767);
+        final Range<Integer> VALID_PORT_RANGE =  Range.of(1, 65535);
+        final Range<Integer> VALID_NODEPORT_RANGE = Range.of(30000, 32767);
 
         // 用于ClusterIP的重复端口检查
         List<Integer> processedClusterPorts = new ArrayList<>();
@@ -321,7 +321,7 @@ public class KubernetesServiceHandler {
                 }
 
                 // 验证端口范围
-                if (!VALID_PORT_RANGE.containsInteger(port)) {
+                if (!VALID_PORT_RANGE.contains(port)) {
                     logger.warn("配置{}中的端口{}无效，已跳过", configName, port);
                     continue;
                 }
@@ -342,7 +342,7 @@ public class KubernetesServiceHandler {
                 if (isNodePort) {
                     int[] nodePorts = StrUtil.splitToInt(entry.getValue(), ',');
                     for (int nodePort : nodePorts) {
-                        if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
+                        if (!VALID_NODEPORT_RANGE.contains(nodePort)) {
                             logger.warn("NodePort值{}无效，已跳过", nodePort);
                             continue;
                         }
@@ -366,7 +366,7 @@ public class KubernetesServiceHandler {
      * 创建服务端口对象
      */
     private ServicePort createServicePort(int port, String nodePortValue, String portType, int index,
-            boolean isNodePort, IntRange validNodePortRange) {
+            boolean isNodePort, Range<Integer> validNodePortRange) {
         ServicePort servicePort = new ServicePort();
         servicePort.setPort(port);
         servicePort.setTargetPort(new IntOrString(port));
@@ -378,7 +378,7 @@ public class KubernetesServiceHandler {
                 int nodePort = Integer.parseInt(nodePortValue);
 
                 // 验证NodePort范围
-                if (!validNodePortRange.containsInteger(nodePort)) {
+                if (!validNodePortRange.contains(nodePort)) {
                     logger.warn("NodePort值{}无效，将使用随机端口", nodePort);
                 } else {
                     servicePort.setNodePort(nodePort);
@@ -565,7 +565,7 @@ public class KubernetesServiceHandler {
         // 定义NodePort的有效范围常量
         final int MIN_NODEPORT = 30000;
         final int MAX_NODEPORT = 32767;
-        final IntRange VALID_NODEPORT_RANGE = new IntRange(MIN_NODEPORT, MAX_NODEPORT);
+        final Range<Integer> VALID_NODEPORT_RANGE = Range.of(MIN_NODEPORT, MAX_NODEPORT);
 
         // 统计每个容器端口对应的NodePort数量
         Map<Integer, Integer> portToNodePortCountMap = new HashMap<>();
@@ -587,7 +587,7 @@ public class KubernetesServiceHandler {
             }
 
             // 检查端口是否在有效范围内
-            if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
+            if (!VALID_NODEPORT_RANGE.contains(nodePort)) {
                 logger.warn("无效的NodePort值 {} 用于 {}，将使用随机端口", nodePort, serviceRoleFullName);
                 port.setNodePort(null);
             }

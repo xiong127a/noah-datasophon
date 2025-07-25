@@ -24,7 +24,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.PromMetricInfo;
 import com.datasophon.common.model.PromResponceInfo;
 import com.datasophon.common.model.PromResultInfo;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

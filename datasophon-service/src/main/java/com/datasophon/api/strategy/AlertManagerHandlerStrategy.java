@@ -29,7 +29,7 @@ import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.model.MPage;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;

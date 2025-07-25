@@ -32,7 +32,7 @@ import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import lombok.Data;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

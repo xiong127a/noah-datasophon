@@ -22,7 +22,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.mybatisflex.core.query.QueryChain;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

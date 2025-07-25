@@ -37,7 +37,7 @@ import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
