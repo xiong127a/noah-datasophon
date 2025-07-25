@@ -70,6 +70,7 @@ public class ClusterActor extends AbstractActor {
 
     private void handleClusterCommand(ClusterCommand clusterCommand) {
         try {
+            clusterCommand.setClusterId(6);
             ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);

@@ -14,7 +14,7 @@
       <div 
         v-for="(item, index) in filteredDataSource" 
         :key="index"
-        class="bg-white rounded-xl shadow-card overflow-hidden border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+        class="bg-white rounded-xl shadow-card overflow-hidden border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative"
         :class="{
           'border-l-orange-500': item.depType === 'PVM',
           'border-l-blue-500': item.depType === 'Kubernetes',
@@ -38,7 +38,7 @@
           <div class="flex items-center space-x-4">
             <div class="h-10 w-10 flex items-center justify-center">
               <img v-if="item.depType === 'PVM'" src="@/assets/img/os-logos/linux-tux.svg" alt="Linux" class="w-9 h-9" />
-              <img v-else-if="item.depType === 'Kubernetes'" src="@/assets/images/kubernetes-logo.svg" alt="Kubernetes" class="w-9 h-9" />
+              <img v-else-if="item.depType === 'Kubernetes'" src="@/assets/kubernetes-logo.svg" alt="Kubernetes" class="w-9 h-9" />
               <svg-icon v-else icon-class="colony" class="w-9 h-9 text-primary" />
             </div>
             <div class="flex-1 min-w-0">
@@ -76,6 +76,12 @@
                 : 'bg-primary hover:bg-primary-600 text-white'"
             >
               <span>进入集群</span>
+              <!-- 禁用状态特殊标记 -->
+              <div v-if="item.clusterStateCode === 1" class="absolute right-0 top-0">
+                <div class="bg-red-500 text-white text-[10px] font-bold py-1 px-2 transform rotate-45 translate-x-[18px] -translate-y-[10px]">
+                  无法访问
+                </div>
+              </div>
             </button>
             
             <!-- 次要按钮组 -->
@@ -173,22 +179,33 @@
     </div>
 
     <!-- 配置集群的modal (使用 Headless UI Dialog) -->
-    <Dialog :open="visible" @close="visible = false" class="relative z-50">
+    <Dialog :open="visible" @close="handleCancel" class="relative z-50">
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel class="w-full max-w-6xl rounded-xl bg-white p-6 shadow-xl">
-          <DialogTitle class="text-lg font-medium leading-6 text-gray-900">
-            配置集群
-          </DialogTitle>
-          <div class="mt-4 p-6">
-            <p class="text-gray-600">此功能需要Steps组件，正在开发中...</p>
-            <div class="mt-6 flex justify-end">
-              <button 
-                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
-                @click="handleCancel"
-              >
-                关闭
-              </button>
+        <DialogPanel class="w-full max-w-6xl rounded-xl bg-white shadow-xl overflow-hidden">
+          <div class="flex justify-between items-center p-4 border-b border-gray-100">
+            <DialogTitle class="text-lg font-medium leading-6 text-gray-900">
+              配置集群
+            </DialogTitle>
+            <button 
+              @click="handleCancel"
+              class="text-gray-400 hover:text-gray-500 transition-colors"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div class="p-6 max-h-[80vh] overflow-y-auto">
+            <div v-if="stepsComponentLoaded">
+              <!-- Steps组件将在此处渲染 -->
+              <component :is="stepsComponent" :clusterId="clusterId" :depType="depType" />
+            </div>
+            <div v-else class="flex flex-col items-center justify-center py-12">
+              <div class="mb-4">
+                <div class="w-10 h-10 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+              </div>
+              <p class="text-gray-600">正在加载配置向导...</p>
             </div>
           </div>
         </DialogPanel>
@@ -199,7 +216,7 @@
     <Dialog :open="authModalVisible" @close="handleAuthModalClose" class="relative z-50">
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <DialogPanel class="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden">
           <AuthCluster 
             v-if="currentClusterForAuth" 
             :detail="currentClusterForAuth" 
@@ -214,19 +231,43 @@
     <Dialog :open="editModalVisible" @close="handleEditModalClose" class="relative z-50">
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel class="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
-          <DialogTitle class="text-lg font-medium leading-6 text-gray-900">
-            {{ currentEditObj && JSON.stringify(currentEditObj) !== '{}' ? '编辑集群配置' : '创建新集群' }}
+        <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden">
+          <AddColony 
+            v-if="editModalVisible" 
+            :detail="currentEditObj || {}" 
+            :callBack="handleEditComplete" 
+            @cancel="handleEditModalClose"
+            @success="handleEditComplete"
+            ref="addColonyForm"
+          />
+        </DialogPanel>
+      </div>
+    </Dialog>
+    
+    <!-- 删除确认对话框 -->
+    <Dialog :open="deleteModalVisible" @close="hideDeleteModal" class="relative z-50">
+      <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
+      <div class="fixed inset-0 flex items-center justify-center p-4">
+        <DialogPanel class="w-full max-w-xs rounded-xl bg-white p-6 text-center shadow-xl">
+          <DialogTitle class="text-lg font-medium text-gray-900 mb-4">
+            确认删除
           </DialogTitle>
-          <div class="mt-4">
-            <AddColony 
-              v-if="editModalVisible" 
-              :detail="currentEditObj || {}" 
-              :callBack="handleEditComplete" 
-              @cancel="handleEditModalClose"
-              @success="handleEditComplete"
-              ref="addColonyForm"
-            />
+          <p class="text-sm text-gray-600 mb-6">
+            确认删除当前{{ currentEditObj?.clusterName || '' }}集群？
+          </p>
+          <div class="flex justify-center space-x-4">
+            <button 
+              @click="confirmDelete"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              确定
+            </button>
+            <button
+              @click="hideDeleteModal"
+              class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 transition-colors"
+            >
+              取消
+            </button>
           </div>
         </DialogPanel>
       </div>
@@ -235,35 +276,37 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import SvgIcon from '@/components/SvgIcon.vue'
-// 添加Headless UI组件导入
 import { Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
 
 // 导入子组件
 import AddColony from './components/AddColony.vue'
 import AuthCluster from './components/AuthCluster.vue'
 
+// 异步加载Steps组件
+const stepsComponent = defineAsyncComponent(() => 
+  import('@/components/steps').catch(() => {
+    console.error('Failed to load Steps component')
+    return { render: () => h('div', 'Failed to load component') }
+  })
+)
+
 // 导入API和请求工具
-import { clusterApi } from '@/api/httpApi'
-import { axiosPost } from '@/utils/request'
+import { axiosPost, axiosGet, axiosJsonPost } from '@/utils/request'
 import { changeRouter } from '@/utils/changeRouter'
 import { useToast } from '@/composables/useToast'
 import { useUserStore } from '@/stores/user'
 import { useSettingsStore } from '@/stores/settings'
+import { errorHandler } from '@/composables/useErrorHandler'
+import API_PATHS from '@/api/httpApi/apiPaths'
+import * as clusterApi from '@/api/httpApi/cluster'
 
 // 获取store和toast功能
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
 const { toast } = useToast()
-
-// 定义API常量（后台API路径）
-const API_PATHS = {
-  getServiceListByCluster: '/service/getListByCluster',
-  getColonyList: '/colony/queryColony',
-  deleteColony: '/colony/delColony'
-}
 
 // 组件状态
 const router = useRouter()
@@ -273,10 +316,12 @@ const currentEditObj = ref(null)
 const addColonyForm = ref(null)
 const authModalVisible = ref(false)
 const currentClusterForAuth = ref(null)
-// 添加缺失的变量
 const visible = ref(false)
 const clusterId = ref('')
 const depType = ref('')
+const stepsComponentLoaded = ref(false)
+const deleteModalVisible = ref(false)
+const clusterToDelete = ref(null)
 
 // 计算属性
 const user = computed(() => userStore.user)
@@ -289,6 +334,17 @@ const filteredDataSource = computed(() => {
 // 生命周期钩子
 onMounted(() => {
   getColonyList()
+  
+  // 尝试预加载Steps组件
+  try {
+    import('@/components/steps').then(() => {
+      stepsComponentLoaded.value = true
+    }).catch(err => {
+      console.error('Failed to preload Steps component:', err)
+    })
+  } catch (err) {
+    console.error('Error during Steps component import:', err)
+  }
 })
 
 // 方法
@@ -330,27 +386,42 @@ const forceRefreshModal = () => {
 
 // 获取集群列表
 const getColonyList = async () => {
-  try {
-    // 使用API库调用方式
-    const res = await clusterApi.getClusterList({})
-    if (res && res.code === 200) {
-      dataSource.value = res.data || []
-      processClusterData()
-    }
-  } catch (err) {
-    console.error('API调用错误:', err)
-    // 回退到直接HTTP调用
-    try {
-      const res = await axiosPost(API_PATHS.getColonyList, {})
-      if (res && res.code === 200) {
-        dataSource.value = res.data || []
-        processClusterData()
+  // 使用错误处理包装API调用
+  const result = await errorHandler.withErrorHandling(
+    async () => {
+      // 首先尝试使用API模块
+      try {
+        const res = await clusterApi.getClusterList({})
+        if (res && res.code === 200) {
+          dataSource.value = res.data || []
+          processClusterData()
+          return res
+        }
+        throw new Error('获取集群数据失败')
+      } catch (primaryError) {
+        // 如果是认证错误，直接抛出
+        if (primaryError.isAuthError) {
+          throw primaryError
+        }
+        
+        // 尝试备用方法
+        console.log('主API调用失败，尝试备用方法')
+        const res = await axiosPost(API_PATHS.getColonyList, {})
+        if (res && res.code === 200) {
+          dataSource.value = res.data || []
+          processClusterData()
+          return res
+        }
+        throw new Error('获取集群列表失败')
       }
-    } catch (fallbackErr) {
-      console.error('回退API调用也失败:', fallbackErr)
-      toast('获取集群列表失败', 'error')
+    },
+    {
+      defaultMessage: '无法加载集群数据，请检查网络连接',
+      redirectOnAuthError: false // 不跳转登录页
     }
-  }
+  )
+  
+  return result
 }
 
 // 处理集群数据
@@ -370,51 +441,85 @@ const processClusterData = () => {
 
 // 进入集群
 const getInto = async (row) => {
+  if (row.clusterStateCode === 1) {
+    toast.warning('当前集群未配置完成，无法访问')
+    return
+  }
+  
   try {
-    const res = await axiosPost(API_PATHS.getServiceListByCluster, {
-      clusterId: row.id,
-    })
+    // 使用错误处理
+    const res = await errorHandler.withErrorHandling(
+      async () => {
+        return await axiosPost(API_PATHS.getServiceListByCluster, {
+          clusterId: row.id,
+        })
+      },
+      { defaultMessage: '进入集群失败' }
+    )
+    
     if (res && res.data) {
       changeRouter(res.data, row.id, router)
       router.push("/service-manage")
     }
   } catch (err) {
     console.error('进入集群失败:', err)
-    toast('进入集群失败', 'error')
+    // 错误已通过errorHandler处理
   }
 }
 
-// 删除集群
-const delectColony = async (obj) => {
-  if (!confirm(`确定要删除集群 "${obj.clusterName}" 吗？此操作不可恢复。`)) {
-    return
-  }
+// 显示删除确认对话框
+const delectColony = (obj) => {
+  currentEditObj.value = obj
+  clusterToDelete.value = obj
+  deleteModalVisible.value = true
+}
+
+// 隐藏删除确认对话框
+const hideDeleteModal = () => {
+  deleteModalVisible.value = false
+  setTimeout(() => {
+    clusterToDelete.value = null
+  }, 300)
+}
+
+// 确认删除操作
+const confirmDelete = async () => {
+  if (!clusterToDelete.value) return
   
-  try {
-    // 尝试使用API库方式
-    const res = await clusterApi.deleteCluster(obj.id)
-    if (res && res.code === 200) {
-      toast('删除成功', 'success')
-      getColonyList()
-    } else {
-      toast(res?.msg || '删除失败', 'error')
-    }
-  } catch (err) {
-    console.error('删除集群失败:', err)
-    // 回退到直接HTTP调用
-    try {
-      const res = await axiosPost(API_PATHS.deleteColony, { id: obj.id })
-      if (res && res.code === 200) {
-        toast('删除成功', 'success')
-        getColonyList()
-      } else {
-        toast(res?.msg || '删除失败', 'error')
+  // 使用错误处理包装API调用
+  const result = await errorHandler.withErrorHandling(
+    async () => {
+      // 首先尝试使用API库方式
+      try {
+        const url = `${API_PATHS.deleteColony}?clusterId=${clusterToDelete.value.id}`
+        const params = JSON.stringify([clusterToDelete.value.id])
+        
+        const res = await axiosJsonPost(url, params)
+        if (res && res.code === 200) {
+          toast.success('删除成功')
+          getColonyList()
+          hideDeleteModal()
+          return res
+        }
+        throw new Error(res?.msg || '删除失败')
+      } catch (err) {
+        // 如果是认证错误，直接抛出
+        if (err.isAuthError) throw err
+        
+        // 回退方式
+        console.log('使用回退方式删除集群')
+        const res = await axiosPost(API_PATHS.deleteColony, { id: clusterToDelete.value.id })
+        if (res && res.code === 200) {
+          toast.success('删除成功')
+          getColonyList()
+          hideDeleteModal()
+          return res
+        }
+        throw new Error(res?.msg || '删除失败')
       }
-    } catch (fallbackErr) {
-      console.error('回退API调用也失败:', fallbackErr)
-      toast('删除集群失败', 'error')
-    }
-  }
+    },
+    { defaultMessage: '删除集群失败' }
+  )
 }
 
 // 集群授权
@@ -435,6 +540,11 @@ const handleAuthComplete = () => {
 
 // 配置集群
 const configCluster = (row) => {
+  if (row.clusterStateCode === 2) {
+    toast.warning('集群正在运行中，无法进行配置')
+    return
+  }
+  
   clusterId.value = row.id
   settingsStore.setClusterId(row.id)
   visible.value = true
@@ -466,15 +576,6 @@ const formatDate = (dateString) => {
   })
 }
 
-// 获取集群类型样式类
-const getClusterTypeClass = (depType) => {
-  switch(depType) {
-    case 'PVM': return 'linux-type'
-    case 'Kubernetes': return 'k8s-type'
-    default: return 'default-type'
-  }
-}
-
 // 获取集群类型文本
 const getClusterTypeText = (depType) => {
   switch(depType) {
@@ -484,3 +585,9 @@ const getClusterTypeText = (depType) => {
   }
 }
 </script>
+
+<style>
+.shadow-card {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+</style>

@@ -352,7 +352,7 @@ import { Dialog, DialogPanel, TransitionChild, Listbox, ListboxButton, ListboxOp
 import { useVuelidate } from '@vuelidate/core'
 import { required, maxLength } from '@vuelidate/validators'
 import { axiosPost, axiosJsonPost } from '@/utils/request'
-import API from '@/api/httpApi/cluster'
+import * as clusterApi from '@/api/httpApi/cluster'
 
 // Props
 const props = defineProps({
@@ -467,7 +467,7 @@ const handleSubmit = async () => {
     if (isEdit.value) params.id = props.detail.id
     
     loading.value = true
-    const ajaxApi = isEdit.value ? API.updateColony : API.saveColony
+    const ajaxApi = isEdit.value ? clusterApi.updateColony : clusterApi.saveColony
     
     try {
       const res = await axiosJsonPost(ajaxApi + (isEdit.value ? "?clusterId=" + props.detail.id : ""), params)
@@ -493,7 +493,7 @@ const handleSubmit = async () => {
 
 const getFrameList = async () => {
   try {
-    const res = await axiosPost(API.getFrameList, {})
+    const res = await axiosPost(clusterApi.getFrameList, {})
     if (res.code === 200) {
       frameList.value = res.data
     } else {

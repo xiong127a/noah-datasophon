@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { authService } from '../composables/useAuth'
 
 // 检查认证状态的简化函数
-const checkAuthorization = () => !!localStorage.getItem('token')
+const checkAuthorization = () => authService.isAuthenticated.value
 
 // 布局组件
 import MainLayout from '../layouts/MainLayout.vue'
@@ -176,19 +177,27 @@ router.beforeEach((to, from, next) => {
   // 设置标题
   document.title = `${to.meta.title} | Noah大数据平台` || 'Noah大数据平台'
   
+  // 调试输出
+  console.log(`[Router] 路由变化: ${from.path} -> ${to.path}`)
+  console.log(`[Router] 当前认证状态: ${checkAuthorization() ? '已登录' : '未登录'}`)
+  
   // 判断是否需要登录权限
   const publicPaths = ['/login'] // 移除 '/login-debug'
   if (!publicPaths.includes(to.path)) {
     if (checkAuthorization()) {
+      console.log(`[Router] 已登录，允许访问: ${to.path}`)
       next() // 已登录，允许访问
     } else {
+      console.log(`[Router] 未登录，重定向到登录页`)
       next({ path: '/login', query: { redirect: to.fullPath } }) // 未登录，跳转到登录页面
     }
   } else {
     // 如果是访问登录页面且已登录，重定向到首页
     if (to.path === '/login' && checkAuthorization()) {
+      console.log(`[Router] 已登录用户访问登录页，重定向到首页`)
       next({ path: '/' })
     } else {
+      console.log(`[Router] 允许访问公开页面: ${to.path}`)
       next() // 未登录，允许访问登录页面
     }
   }

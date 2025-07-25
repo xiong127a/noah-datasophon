@@ -151,7 +151,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue'
 import { axiosPost, axiosGet } from '@/utils/request'
-import API from '@/api/httpApi/cluster'
+import * as clusterApi from '@/api/httpApi/cluster'
+import API_PATHS from '@/api/httpApi/apiPaths'
 
 // Props
 const props = defineProps({
@@ -196,7 +197,7 @@ const formCancel = () => {
 
 // 查询所有用户
 const queryAllUser = () => {
-  axiosPost(API.queryAllUser, {})
+  axiosPost(clusterApi.queryAllUser, {})
     .then((res) => {
       if (res.code === 200) {
         userList.value = res.data
@@ -230,7 +231,7 @@ const handleSubmit = () => {
   }
   
   // 构建URL查询参数
-  const url = `${API.authCluster}?clusterId=${props.detail.id}&userIds=${userIdsString}`
+  const url = `${API_PATHS.authCluster}?clusterId=${props.detail.id}&userIds=${userIdsString}`
   
   loading.value = true
   // 使用get方法，通过URL传参

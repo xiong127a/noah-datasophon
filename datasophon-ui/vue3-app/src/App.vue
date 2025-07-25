@@ -1,106 +1,63 @@
 <script setup lang="ts">
 // App.vue - 根组件
-import Toast from './components/Toast.vue'
-import { useToast } from './composables/useToast'
+import { default as Toast } from './components/Toast.vue'
 import { useUserStore } from './stores/user'
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { default as AuthProvider } from './components/AuthProvider.vue'
 
-const { toasts, removeToast } = useToast()
-const userStore = useUserStore()
 const router = useRouter()
+const userStore = useUserStore()
 
-// 全局认证监听
-const authCheckInterval = ref(null)
-
-onMounted(async () => {
-  // 如果有token但没有用户信息，尝试获取用户信息
-  if (localStorage.getItem('token') && !userStore.userInfo?.id) {
-    try {
-      await userStore.getUserInfo()
-      console.log('[Auth] 用户信息已更新')
-    } catch (error) {
-      console.error('[Auth] 获取用户信息失败', error)
+// 监听认证状态
+onMounted(() => {
+  // 监听路由变化，在用户明确要访问登录页时清除认证
+  watch(() => router.currentRoute.value.path, (newPath) => {
+    // 用户主动访问登录页，则清除认证状态
+    if (newPath === '/login' && userStore.isLoggedIn) {
+      console.log('[Auth] 用户访问登录页，清除现有认证状态')
+      userStore.logout()
     }
-  }
-  
-  // 定期检查认证状态
-  authCheckInterval.value = setInterval(() => {
-    if (router.currentRoute.value.path !== '/login' && !localStorage.getItem('token')) {
-      console.warn('[Auth] 检测到认证状态丢失，重定向到登录页')
-      router.push('/login')
-    }
-  }, 10000) // 每10秒检查一次
-})
-
-onBeforeUnmount(() => {
-  if (authCheckInterval.value) {
-    clearInterval(authCheckInterval.value)
-  }
+  })
 })
 </script>
 
 <template>
   <div class="app-container">
-    <router-view></router-view>
-    <Toast />
-    <!-- 添加Toast组件实现 -->
-    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      <TransitionGroup name="toast">
-        <div
-          v-for="toast in toasts"
-          :key="toast.id"
-          :class="[
-            'px-4 py-2 rounded-lg shadow-lg min-w-[300px] flex items-center',
-            {
-              'bg-green-100 text-green-800 border-l-4 border-green-500': toast.type === 'success',
-              'bg-red-100 text-red-800 border-l-4 border-red-500': toast.type === 'error',
-              'bg-blue-100 text-blue-800 border-l-4 border-blue-500': toast.type === 'info',
-              'bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500': toast.type === 'warning',
-            }
-          ]"
-        >
-          <div class="flex-grow">{{ toast.message }}</div>
-          <button 
-            class="ml-2 text-gray-500 hover:text-gray-700"
-            @click="removeToast(toast.id)"
-          >
-            &times;
-          </button>
-        </div>
-      </TransitionGroup>
-    </div>
+    <!-- 授权提供器，提供全局认证功能 -->
+    <AuthProvider>
+      <!-- 路由视图 -->
+      <router-view></router-view>
+      
+      <!-- Toast通知组件 -->
+      <Toast />
+    </AuthProvider>
   </div>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
-
 <style>
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
+:root {
+  --primary-color: #1890ff;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-.toast-enter-from {
-  transform: translateY(-30px);
-  opacity: 0;
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f2f5;
+  color: rgba(0, 0, 0, 0.85);
 }
 
-.toast-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 </style>

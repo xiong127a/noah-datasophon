@@ -109,7 +109,7 @@ const onFirstMenuSelect = (key: string) => {
     });
     return;
   }
-
+  
   // 跳转到菜单路径
   if (route.path !== key) {
     router.push(key).catch(err => {

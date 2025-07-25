@@ -1,118 +1,89 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 interface Toast {
-  id: string
+  id: number
   message: string
-  type: 'success' | 'error' | 'info' | 'warning'
+  type: 'success' | 'error' | 'warning' | 'info'
   duration: number
-  createdAt: number
 }
 
-// 创建一个简单的事件总线
-const toastBus = {
-  callbacks: {} as Record<string, Function[]>,
-  
-  on(event: string, callback: Function) {
-    if (!this.callbacks[event]) {
-      this.callbacks[event] = []
-    }
-    this.callbacks[event].push(callback)
-  },
-  
-  emit(event: string, data?: any) {
-    const callbacks = this.callbacks[event]
-    if (callbacks) {
-      callbacks.forEach(callback => callback(data))
-    }
-  }
-}
+// 创建全局共享的状态
+const toasts = ref<Toast[]>([])
+let nextId = 0
 
+/**
+ * Toast通知系统
+ * 提供简单易用的消息提示功能
+ */
 export function useToast() {
-  const toasts = ref<Toast[]>([])
-  
-  // 生成唯一ID
-  const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 9)
-  }
-  
-  // 添加新的toast
-  const addToast = (message: string, type: Toast['type'], duration: number = 3000) => {
-    const id = generateId()
-    const newToast: Toast = {
+  /**
+   * 添加一条Toast消息
+   * @param message 消息内容
+   * @param type 消息类型
+   * @param duration 显示时长(毫秒)
+   * @returns toast对象的ID
+   */
+  const add = (
+    message: string,
+    type: Toast['type'] = 'info',
+    duration: number = 3000
+  ): number => {
+    const id = nextId++
+    const toast: Toast = {
       id,
       message,
       type,
-      duration,
-      createdAt: Date.now()
+      duration
     }
     
-    toasts.value.push(newToast)
+    // 添加到列表
+    toasts.value.push(toast)
     
-    // 自动移除
+    // 设置自动移除
     if (duration > 0) {
       setTimeout(() => {
-        removeToast(id)
+        remove(id)
       }, duration)
     }
     
     return id
   }
   
-  // 从列表中移除toast
-  const removeToast = (id: string) => {
+  /**
+   * 移除指定ID的Toast消息
+   * @param id Toast ID
+   */
+  const remove = (id: number): void => {
     const index = toasts.value.findIndex(t => t.id === id)
     if (index !== -1) {
       toasts.value.splice(index, 1)
     }
   }
   
-  // 快捷方法
-  const toast = (message: string, type: Toast['type'] = 'info', duration: number = 3000) => {
-    return addToast(message, type, duration)
+  /**
+   * 清除所有Toast消息
+   */
+  const clear = (): void => {
+    toasts.value = []
   }
   
-  toast.success = (message: string, duration: number = 3000) => {
-    return addToast(message, 'success', duration)
+  // 提供各种类型的快捷方法
+  const toast = {
+    success: (message: string, duration?: number) => add(message, 'success', duration),
+    error: (message: string, duration?: number) => add(message, 'error', duration),
+    warning: (message: string, duration?: number) => add(message, 'warning', duration),
+    info: (message: string, duration?: number) => add(message, 'info', duration)
   }
-  
-  toast.error = (message: string, duration: number = 3000) => {
-    return addToast(message, 'error', duration)
-  }
-  
-  toast.info = (message: string, duration: number = 3000) => {
-    return addToast(message, 'info', duration)
-  }
-  
-  toast.warning = (message: string, duration: number = 3000) => {
-    return addToast(message, 'warning', duration)
-  }
-  
-  // 全局访问方式
-  // 从任何地方调用 window.showToast('消息', 'success')
-  if (typeof window !== 'undefined') {
-    window.showToast = (message: string, type: Toast['type'] = 'info', duration: number = 3000) => {
-      toastBus.emit('show-toast', { message, type, duration })
-      return null // 全局调用时不返回id
-    }
-  }
-  
-  // 监听全局事件
-  toastBus.on('show-toast', (data: { message: string, type: Toast['type'], duration: number }) => {
-    const { message, type, duration } = data
-    addToast(message, type, duration)
-  })
   
   return {
     toasts,
-    toast,
-    addToast,
-    removeToast
+    add,
+    remove,
+    clear,
+    toast
   }
 }
 
-// 为window对象添加showToast方法
-declare global {
-  interface Window {
-    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning', duration?: number) => string | null
-  }
-} 
+// 创建一个全局单例实例
+const toastInstance = useToast()
+export { toastInstance as toast } 

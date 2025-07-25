@@ -1,49 +1,65 @@
-import api from '../index';
+import { axiosPost, axiosGet, axiosDelete } from '@/utils/request'
+import API_PATHS from './apiPaths'
 
-// 集群管理API
-export default {
-  /**
-   * 获取集群列表
-   * @param {Object} params - 查询参数
-   * @returns {Promise}
-   */
-  getClusterList(params) {
-    return api.get('/colony/queryColony', params);
-  },
+/**
+ * 获取集群列表
+ */
+export function getClusterList(params = {}) {
+  return axiosPost(API_PATHS.getColonyList, params)
+}
 
-  /**
-   * 创建新集群
-   * @param {Object} data - 集群数据
-   * @returns {Promise}
-   */
-  createCluster(data) {
-    return api.post('/colony/addColony', data);
-  },
+/**
+ * 添加集群
+ */
+export function addColony(params) {
+  return axiosPost(API_PATHS.addColony, params)
+}
 
-  /**
-   * 获取集群详情
-   * @param {string|number} id - 集群ID
-   * @returns {Promise}
-   */
-  getClusterDetail(id) {
-    return api.get(`/colony/getColonyInfoById`, { id });
-  },
+/**
+ * 删除集群
+ */
+export function deleteColony(params) {
+  return axiosPost(API_PATHS.deleteColony, params)
+}
 
-  /**
-   * 更新集群信息
-   * @param {Object} data - 集群数据
-   * @returns {Promise}
-   */
-  updateCluster(data) {
-    return api.put('/colony/updateColony', data);
-  },
+/**
+ * 获取集群服务列表
+ */
+export function getServiceListByCluster(clusterId) {
+  return axiosPost(API_PATHS.getServiceListByCluster, {
+    clusterId
+  })
+}
 
-  /**
-   * 删除集群
-   * @param {string|number} id - 集群ID
-   * @returns {Promise}
-   */
-  deleteCluster(id) {
-    return api.delete('/colony/delColony', { id });
-  }
-}; 
+/**
+ * 更新集群
+ */
+export function updateColony(params) {
+  return axiosPost(API_PATHS.updateColony, params)
+}
+
+/**
+ * 保存/创建集群
+ */
+export function saveColony(params) {
+  return axiosPost(API_PATHS.addColony, params)
+}
+
+/**
+ * 获取集群框架列表
+ */
+export function getFrameList(params = {}) {
+  return axiosPost(API_PATHS.getFrameList, params)
+}
+
+/**
+ * 查询所有用户
+ */
+export function queryAllUser(params = {}) {
+  return axiosPost(API_PATHS.queryAllUser, params)
+}
+
+/**
+ * 集群授权
+ */
+export const authCluster = API_PATHS.authCluster 
