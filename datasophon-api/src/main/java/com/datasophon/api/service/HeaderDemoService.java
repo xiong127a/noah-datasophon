@@ -1,6 +1,6 @@
 package com.datasophon.api.service;
 
-import com.datasophon.api.common.HeaderContextHolder;
+import com.datasophon.common.web.HeaderContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
