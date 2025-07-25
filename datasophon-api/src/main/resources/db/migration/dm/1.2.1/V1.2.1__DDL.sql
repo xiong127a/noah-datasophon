@@ -1,12 +1,3 @@
-CREATE TABLE "DATASOPHON"."t_ddh_access_token"
-(
- "id" INT NOT NULL,
- "user_id" INT NULL,
- "token" VARCHAR(255) NULL,
- "create_time" TIMESTAMP(0) NULL,
- "update_time" TIMESTAMP(0) NULL,
- "expire_time" TIMESTAMP(0) NULL
-);
 CREATE TABLE "DATASOPHON"."t_ddh_alert_group"
 (
  "id" INT IDENTITY(24,1) NOT NULL,

@@ -79,7 +79,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 2.2.0
     clean-disabled: true
     out-of-order: false
     validate-on-migrate: true

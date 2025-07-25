@@ -1,9 +1,5 @@
 SET FOREIGN_KEY_CHECKS=0;
 
-ALTER TABLE `migration_history` MODIFY COLUMN `version` varchar(128) NOT NULL FIRST;
-
-ALTER TABLE `migration_history` MODIFY COLUMN `execute_user` varchar(128) NOT NULL AFTER `version`;
-
 CREATE TABLE `misval`  (
                                  `Id` bigint NULL DEFAULT NULL,
                                  `Sepal.Length` double NULL DEFAULT NULL,
