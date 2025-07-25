@@ -113,11 +113,14 @@ export const useUserStore = defineStore('user', () => {
   }
   
   // 登出方法
-  const logout = async () => {
+  const logout = async (options = { silent: false }) => {
     try {
-      // 尝试调用登出API
-      if (token.value) {
+      // 只有在非静默模式下才调用登出API
+      if (!options.silent && token.value) {
+        console.log('[User] 调用登出API')
         await axiosPost(API_PATHS.logout, {})
+      } else if (options.silent) {
+        console.log('[User] 静默登出，跳过API调用')
       }
     } catch (error) {
       console.error('Logout API call failed', error)

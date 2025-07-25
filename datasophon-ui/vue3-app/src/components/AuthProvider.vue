@@ -36,10 +36,9 @@ export default {
           // 仅当连续多次检测到认证问题时，才考虑跳转登录页
           if (authErrorCount.value >= SERIOUS_AUTH_ERRORS_COUNT) {
             console.log('[Auth] 检测到多次认证状态失效，重定向到登录页')
-            errorHandler.handleError(
-              { isAuthError: true, message: '登录状态已过期，请重新登录' },
-              { redirectOnAuthError: true } // 此时允许重定向
-            )
+            // 使用静默登出模式并重定向
+            userStore.logout({ silent: true })
+            router.push('/login')
             authErrorCount.value = 0 // 重置计数
           } else {
             console.log(`[Auth] 检测到认证状态异常 (${authErrorCount.value}/${SERIOUS_AUTH_ERRORS_COUNT})`)

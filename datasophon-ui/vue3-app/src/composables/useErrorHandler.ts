@@ -70,21 +70,29 @@ export const errorHandler = {
       
       // 获取错误消息
       let errorMessage = finalOptions.defaultMessage as string
+      let isActualAuthError = false
       
       // 尝试从错误对象中提取更详细的消息
       if (error) {
-        if (error.isAuthError) {
+        // 更精确地判断是否为认证错误 - 只有真正的认证问题才会触发登出
+        if (
+          // 明确标记为认证错误
+          error.isAuthError || 
+          // 响应状态码为401未授权
+          (error.response && error.response.status === 401) || 
+          // 错误消息包含明确的认证失败关键词
+          (error.message && 
+           (error.message.includes('登录已过期') || 
+            error.message.includes('token无效') || 
+            error.message.includes('未授权') ||
+            error.message.includes('unauthorized'))
+          )
+        ) {
+          isActualAuthError = true
           errorMessage = error.message || '登录已过期或权限不足'
           
-          // 如果需要重定向到登录页
-          if (finalOptions.redirectOnAuthError) {
-            const router = useRouter()
-            const userStore = useUserStore()
-            
-            // 登出并跳转到登录页
-            userStore.logout()
-            router.push('/login')
-          }
+          // 记录认证错误详情
+          console.log('[Auth Error] 检测到认证错误:', error)
         } else if (error.response?.data?.msg) {
           // API响应中的错误消息
           errorMessage = error.response.data.msg
@@ -102,6 +110,16 @@ export const errorHandler = {
         toast.error(errorMessage)
       }
       
+      // 只有在确实是认证错误时才考虑重定向
+      if (isActualAuthError && finalOptions.redirectOnAuthError) {
+        const router = useRouter()
+        const userStore = useUserStore()
+        
+        console.log('[Auth] 认证错误触发登出流程')
+        // 使用静默登出，不调用API
+        userStore.logout({ silent: true })
+        router.push('/login')
+      }
     } finally {
       // 延迟重置错误处理状态，防止过快连续触发
       setTimeout(() => {

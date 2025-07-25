@@ -42,8 +42,8 @@ const initializeApp = async () => {
         }
       } else {
         console.log('[App] Token无效，清除认证状态')
-        // 清除无效的认证状态
-        userStore.logout()
+        // 使用静默登出，避免调用后端API
+        userStore.logout({ silent: true })
         // 如果不在登录页，跳转到登录页
         if (router.currentRoute.value.path !== '/login') {
           toast.toast.warning('登录已过期')
@@ -52,7 +52,7 @@ const initializeApp = async () => {
       }
     } else {
       console.log('[App] 未找到本地存储的token')
-      // 确保用户处于未登录状态
+      // 确保用户处于未登录状态，使用静默清除方式
       userStore.clearUser()
       // 如果不在登录页，跳转到登录页
       if (router.currentRoute.value.path !== '/login') {
@@ -61,8 +61,8 @@ const initializeApp = async () => {
     }
   } catch (error) {
     console.error('[App] 初始化过程发生错误:', error)
-    // 出现错误时，清除状态并跳转到登录页
-    userStore.logout()
+    // 出现错误时，使用静默登出清除状态并跳转到登录页
+    userStore.logout({ silent: true })
     if (router.currentRoute.value.path !== '/login') {
       toast.toast.error('验证失败')
       router.push('/login')
