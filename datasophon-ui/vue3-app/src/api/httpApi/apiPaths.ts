@@ -32,7 +32,14 @@ const API_PATHS = {
   getClusterServiceConfigs: '/ddh/api/cluster/getClusterServiceConfigs',
   updateClusterServiceConfigs: '/ddh/api/cluster/updateClusterServiceConfigs',
   validateClusterConfigs: '/ddh/api/cluster/validateClusterConfigs',
-  startClusterDeploy: '/ddh/api/cluster/startDeploy'
+  startClusterDeploy: '/ddh/api/cluster/startDeploy',
+
+  // 存储库相关
+  getParcelList: '/ddh/api/parcel/list',
+  getParcelParse: '/ddh/api/parcel/parse',
+  downloadComponent: '/ddh/api/parcel/download',
+  installComponent: '/ddh/api/parcel/install',
+  getParcelProcess: '/ddh/api/parcel/process'
 }
 
 export default API_PATHS 

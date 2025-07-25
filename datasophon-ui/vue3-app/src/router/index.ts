@@ -114,7 +114,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'storage',
             name: '存储库管理',
-            component: () => import('../views/cluster/StorageManage.vue'),
+            component: () => import('../views/repository/ParcelList.vue'),
             meta: { title: '存储库管理', icon: 'storage' }
           },
           {

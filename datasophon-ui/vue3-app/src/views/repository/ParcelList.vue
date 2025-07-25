@@ -220,7 +220,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useToast } from '@/composables/useToast'
+import { errorHandler } from '@/composables/useErrorHandler'
+import * as parcelApi from '@/api/httpApi/parcel'
+
+const { toast } = useToast()
+const ddhParcelPath = ref("file:///opt/datasophon/DDP/packages")
 
 interface Component {
   name: string
@@ -283,75 +289,129 @@ const confirmDeleteRepo = () => {
   confirmDialog.visible = false
 }
 
+// 获取存储库列表
+onMounted(async () => {
+  getParcelList()
+})
+
+// 获取存储库列表
+const getParcelList = async () => {
+  try {
+    const res = await errorHandler.withErrorHandling(
+      async () => await parcelApi.getParcelList({}),
+      { defaultMessage: '获取存储库列表失败' }
+    )
+
+    if (res && res.code === 200 && res.data) {
+      parcelList.value = res.data || []
+    }
+  } catch (error) {
+    console.error('获取存储库列表失败:', error)
+  }
+}
+
 // 解析存储库
-const onSearch = (parcel: Parcel) => {
+const onSearch = async (parcel: Parcel) => {
   if (!parcel.parcelPath) {
-    alert('请输入存储库地址')
+    toast.warning('请输入存储库地址')
     return
   }
   
-  // 模拟API调用
-  setTimeout(() => {
-    parcel.components = [
-      {
-        name: 'hadoop',
-        label: 'Apache Hadoop',
-        version: '3.3.4',
-        description: 'Apache Hadoop是一个开源软件框架，用于在计算机集群上存储数据和运行应用程序。'
-      },
-      {
-        name: 'spark',
-        label: 'Apache Spark',
-        version: '3.4.0',
-        description: 'Apache Spark是一个快速、通用、可扩展的大数据处理引擎。'
-      },
-      {
-        name: 'hive',
-        label: 'Apache Hive',
-        version: '3.1.3',
-        description: 'Apache Hive是一个建立在Hadoop之上的数据仓库基础设施。'
-      }
-    ]
-  }, 500)
+  try {
+    const res = await errorHandler.withErrorHandling(
+      async () => await parcelApi.getParcelParse({ url: parcel.parcelPath }),
+      { defaultMessage: '解析存储库失败' }
+    )
+
+    if (res && res.code === 200 && res.data) {
+      parcel.components = res.data.components
+    }
+  } catch (error) {
+    console.error('解析存储库失败:', error)
+  }
 }
 
 // 下载组件
-const handleDownload = (comp: Component, url: string) => {
-  comp.state = 'executing'
-  comp.step = 'download'
-  comp.process = 0
-  
-  // 模拟下载进度
-  const interval = setInterval(() => {
-    if (comp.process !== undefined) {
-      comp.process += 10
-      
-      if (comp.process >= 100) {
-        clearInterval(interval)
-        comp.state = 'success'
-        comp.md5 = 'mock-md5-' + Math.random().toString(36).substring(7)
-      }
+const handleDownload = async (comp: Component, url: string) => {
+  try {
+    const res = await errorHandler.withErrorHandling(
+      async () => await parcelApi.downloadComponent({ url, parcelName: comp.name }),
+      { defaultMessage: '下载组件失败' }
+    )
+
+    if (res && res.code === 200 && res.data) {
+      comp.md5 = res.data.md5
+      comp.process = (res.data.process * 100)
+      comp.state = res.data.state
+      comp.step = res.data.step
+
+      // 开始监控任务进度
+      viewTaskLog(comp)
     }
-  }, 300)
+  } catch (error) {
+    console.error('下载组件失败:', error)
+  }
 }
 
 // 安装组件
-const handleInstall = (comp: Component, url: string) => {
-  comp.state = 'executing'
-  comp.step = 'install'
-  comp.process = 0
+const handleInstall = async (comp: Component, url: string) => {
+  try {
+    const res = await errorHandler.withErrorHandling(
+      async () => await parcelApi.installComponent({ md5: comp.md5, packageName: comp.name }),
+      { defaultMessage: '安装组件失败' }
+    )
+
+    if (res && res.code === 200 && res.data) {
+      comp.process = (res.data.process * 100)
+      comp.state = res.data.state
+      comp.step = res.data.step
+
+      // 开始监控任务进度
+      viewTaskLog(comp)
+    }
+  } catch (error) {
+    console.error('安装组件失败:', error)
+  }
+}
+
+// 查看任务进度
+const taskObj = ref<Component | null>(null)
+const rolllogThread = ref<number | null>(null)
+
+const viewTaskLog = async (comp: Component) => {
+  taskObj.value = comp
   
-  // 模拟安装进度
-  const interval = setInterval(() => {
-    if (comp.process !== undefined) {
-      comp.process += 8
-      
-      if (comp.process >= 100) {
-        clearInterval(interval)
-        comp.state = 'success'
+  try {
+    const response = await errorHandler.withErrorHandling(
+      async () => await parcelApi.getParcelProcess({ md5: comp.md5 }),
+      { defaultMessage: '获取任务进度失败', showToast: false }
+    )
+
+    if (response && response.code === 200 && response.data) {
+      comp.state = response.data.state
+      comp.process = (response.data.process * 100)
+
+      // 清除之前的定时器
+      if (rolllogThread.value) {
+        clearTimeout(rolllogThread.value)
+        rolllogThread.value = null
+      }
+
+      // 任务完成
+      if (response.data.process >= 100 && response.data.state !== 'executing') {
+        return
+      }
+
+      // 任务未完成，继续获取进度
+      if (response.data.process <= 100 && response.data.state === 'executing') {
+        rolllogThread.value = window.setTimeout(() => {
+          viewTaskLog(comp)
+        }, 3000)
       }
     }
-  }, 400)
+  } catch (error) {
+    console.error('获取任务进度失败:', error)
+  }
 }
 
 // 格式化状态
