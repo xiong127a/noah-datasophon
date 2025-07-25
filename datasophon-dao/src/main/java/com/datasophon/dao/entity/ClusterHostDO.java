@@ -17,11 +17,12 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.enums.HostState;
+import com.datasophon.dao.enums.MANAGED;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
-import com.datasophon.domain.host.enums.HostState;
-import com.datasophon.domain.host.enums.MANAGED;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

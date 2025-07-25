@@ -1,7 +1,6 @@
 package com.datasophon.api.master.alert;
 
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.service.ClusterAlertHistoryService;
@@ -13,14 +12,14 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.domain.host.enums.HostState;
+import com.datasophon.dao.enums.HostState;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.ServiceState;
-import com.datasophon.domain.alert.gateway.AlertHistoryGateway;
-import com.datasophon.domain.alert.model.AlertHistory;
-import com.datasophon.domain.alert.model.AlertLabels;
-import com.datasophon.domain.alert.model.AlertMessage;
-import com.datasophon.domain.alert.model.Alerts;
+import com.datasophon.api.alert.gateway.AlertHistoryGateway;
+import com.datasophon.api.alert.model.AlertHistory;
+import com.datasophon.api.alert.model.AlertLabels;
+import com.datasophon.api.alert.model.AlertMessage;
+import com.datasophon.api.alert.model.Alerts;
 
 import java.util.Date;
 import java.util.List;

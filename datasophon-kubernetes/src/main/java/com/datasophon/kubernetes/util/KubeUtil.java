@@ -1,8 +1,8 @@
 package com.datasophon.kubernetes.util;
 
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.domain.host.enums.HostState;
-import com.datasophon.domain.host.enums.MANAGED;
+import com.datasophon.dao.enums.HostState;
+import com.datasophon.dao.enums.MANAGED;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;

@@ -1,4 +1,3 @@
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -16,24 +15,37 @@
  *  limitations under the License.
  */
 
-package com.datasophon.domain.alert.model;
+package com.datasophon.dao.enums;
 
-import lombok.Data;
+import com.mybatisflex.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
 
-import java.util.List;
+@Getter
+public enum HostState {
 
-/**
- * alertManager发送的告警json格式
- */
-@Data
-public class AlertMessage {
+    RUNNING(1, "正在运行"),
+    OFFLINE(2, "掉线"),
+    EXISTS_ALARM(3, "存在告警");
 
-    private String receiver;
-    private String status;
-    private List<Alerts> alerts;
-    private String externalURL;
-    private String version;
-    private String groupKey;
-    private int truncatedAlerts;
+    @Getter
+    @EnumValue
+    private final int value;
 
+    private final String desc;
+
+    HostState(int value, String desc) {
+        this.value = value;
+        this.desc = desc;
+    }
+
+    @JsonValue
+    public String getDesc() {
+        return desc;
+    }
+
+    @Override
+    public String toString() {
+        return this.desc;
+    }
 }

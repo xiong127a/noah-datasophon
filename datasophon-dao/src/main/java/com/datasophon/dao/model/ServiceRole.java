@@ -1,4 +1,4 @@
-package com.datasophon.domain.host.model;
+package com.datasophon.dao.model;
 
 import lombok.Data;
 

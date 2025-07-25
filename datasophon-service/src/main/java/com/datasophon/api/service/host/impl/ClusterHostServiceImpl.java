@@ -18,7 +18,6 @@
 package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
-import jakarta.validation.constraints.NotNull;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSONObject;
@@ -45,8 +44,8 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterHostMapper;
-import com.datasophon.domain.host.enums.HostState;
-import com.datasophon.domain.host.enums.MANAGED;
+import com.datasophon.dao.enums.HostState;
+import com.datasophon.dao.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -422,7 +421,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         return Result.success();
     }
 
-    private static @NotNull ClusterHostDO getClusterHostDO(Integer clusterId, ClusterHostDO kubernetesHost) {
+    private static ClusterHostDO getClusterHostDO(Integer clusterId, ClusterHostDO kubernetesHost) {
         ClusterHostDO clusterHostDO = new ClusterHostDO();
         clusterHostDO.setClusterId(clusterId);
         clusterHostDO.setCreateTime(kubernetesHost.getCreateTime());

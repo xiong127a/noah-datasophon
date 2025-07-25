@@ -1,10 +1,10 @@
-package com.datasophon.dao.alert;
+package com.datasophon.api.alert;
 
+import com.datasophon.api.alert.gateway.AlertHistoryGateway;
+import com.datasophon.api.alert.model.AlertHistory;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
-import com.datasophon.domain.alert.gateway.AlertHistoryGateway;
-import com.datasophon.domain.alert.model.AlertHistory;
 import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;

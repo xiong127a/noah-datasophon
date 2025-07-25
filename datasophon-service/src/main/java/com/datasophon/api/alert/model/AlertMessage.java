@@ -1,3 +1,4 @@
+
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -15,30 +16,24 @@
  *  limitations under the License.
  */
 
-package com.datasophon.domain.host.enums;
+package com.datasophon.api.alert.model;
 
-import com.mybatisflex.annotation.EnumValue;
-import lombok.Getter;
+import lombok.Data;
 
+import java.util.List;
 
 /**
- * @author 63588
+ * alertManager发送的告警json格式
  */
+@Data
+public class AlertMessage {
 
-@Getter
-public enum MANAGED {
-
-    YES(1, true),
-    NO(2, false);
-
-    @EnumValue
-    private final int value;
-
-    private final boolean desc;
-
-    MANAGED(int value, boolean desc) {
-        this.value = value;
-        this.desc = desc;
-    }
+    private String receiver;
+    private String status;
+    private List<Alerts> alerts;
+    private String externalURL;
+    private String version;
+    private String groupKey;
+    private int truncatedAlerts;
 
 }

@@ -16,18 +16,14 @@
  *  limitations under the License.
  */
 
-package com.datasophon.domain.alert.model;
+package com.datasophon.api.alert.model;
 
 import lombok.Data;
 
 @Data
-public class AlertLabels {
+public class Annotations {
 
-    private String alertname;
-    private int clusterId;
-    private String serviceRoleName;
-    private String instance;
-    private String job;
-    private String severity;
+    private String description;
+    private String summary;
 
 }

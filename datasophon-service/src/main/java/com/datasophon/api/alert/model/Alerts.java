@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.domain.alert.model;
+package com.datasophon.api.alert.model;
 
 import lombok.Data;
 

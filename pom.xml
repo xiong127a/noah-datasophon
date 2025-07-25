@@ -33,7 +33,6 @@
         <module>datasophon-worker</module>
         <module>datasophon-ui</module>
         <module>datasophon-service</module>
-        <module>datasophon-domain</module>
         <module>datasophon-kubernetes</module>
     </modules>
 
@@ -371,83 +370,6 @@
 <!--            </extension>-->
 <!--        </extensions>-->
         <plugins>
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-dependency-plugin</artifactId>-->
-<!--                <version>3.5.0</version> &lt;!&ndash; 使用最新版本 &ndash;&gt;-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>copy-jars</id>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>copy</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <artifactItems>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-common</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-worker</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-service</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-api</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-kubernetes</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-ui</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-infrastructure</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                                <artifactItem>-->
-<!--                                    <groupId>${project.groupId}</groupId>-->
-<!--                                    <artifactId>datasophon-domain</artifactId>-->
-<!--                                    <version>${project.version}</version>-->
-<!--                                    <type>jar</type>-->
-<!--                                    <overWrite>true</overWrite>-->
-<!--                                </artifactItem>-->
-<!--                            </artifactItems>-->
-<!--                            <outputDirectory>${project.build.directory}</outputDirectory> &lt;!&ndash; 调整路径 &ndash;&gt;-->
-<!--                            <stripVersion>false</stripVersion>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -481,69 +403,12 @@
                     </execution>
                 </executions>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>com.diffplug.spotless</groupId>-->
-<!--                <artifactId>spotless-maven-plugin</artifactId>-->
-<!--                <version>${spotless.version}</version>-->
-<!--                <configuration>-->
-<!--                    <java>-->
-<!--                        <eclipse>-->
-<!--                            <file>style/spotless_datasophon_formatter.xml</file>-->
-<!--                        </eclipse>-->
-<!--                        <removeUnusedImports />-->
-<!--                        <importOrder>-->
-<!--                            <file>style/eclipse.importorder</file>-->
-<!--                        </importOrder>-->
-<!--                    </java>-->
-<!--                    <pom>-->
-<!--                        <sortPom>-->
-<!--                            <encoding>UTF-8</encoding>-->
-<!--                            <nrOfIndentSpace>4</nrOfIndentSpace>-->
-<!--                            <keepBlankLines>true</keepBlankLines>-->
-<!--                            <indentBlankLines>false</indentBlankLines>-->
-<!--                            <indentSchemaLocation>true</indentSchemaLocation>-->
-<!--                            <spaceBeforeCloseEmptyElement>true</spaceBeforeCloseEmptyElement>-->
-<!--                            <sortModules>false</sortModules>-->
-<!--                            <sortExecutions>false</sortExecutions>-->
-<!--                            <predefinedSortOrder>custom_1</predefinedSortOrder>-->
-<!--                            <expandEmptyElements>false</expandEmptyElements>-->
-<!--                            <sortProperties>false</sortProperties>-->
-<!--                        </sortPom>-->
-<!--                        <replace>-->
-<!--                            <name>Leading blank line</name>-->
-<!--                            <search>project</search>-->
-<!--                            <replacement>project</replacement>-->
-<!--                        </replace>-->
-<!--                    </pom>-->
-<!--                    <markdown>-->
-<!--                        <includes>-->
-<!--                            <include>docs/**/*.md</include>-->
-<!--                        </includes>-->
-<!--                        <excludes>-->
-<!--                            <exclude>**/.github/**/*.md</exclude>-->
-<!--                        </excludes>-->
-<!--                        <flexmark />-->
-<!--                    </markdown>-->
-<!--                </configuration>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <goals>-->
-<!--                            <goal>check</goal>-->
-<!--                        </goals>-->
-<!--                        <phase>compile</phase>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>${versions-maven-plugin.version}</version>
             </plugin>
 
-            <!-- flatten-maven-plugin 已被移除 -->
-
-            <!-- 统一设置所有资源文件的换行符为LF -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>

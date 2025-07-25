@@ -1,6 +1,6 @@
-package com.datasophon.domain.alert.gateway;
+package com.datasophon.api.alert.gateway;
 
-import com.datasophon.domain.alert.model.AlertHistory;
+import com.datasophon.api.alert.model.AlertHistory;
 
 public interface AlertHistoryGateway {
     boolean hasEnabledAlertHistory(String alertname, int clusterId, String hostname);

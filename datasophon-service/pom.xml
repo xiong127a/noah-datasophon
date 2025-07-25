@@ -46,11 +46,6 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-domain</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.pekko</groupId>
             <artifactId>pekko-actor_3</artifactId>
         </dependency>

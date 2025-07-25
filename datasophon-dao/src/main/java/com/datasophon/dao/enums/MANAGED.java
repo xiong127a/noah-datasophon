@@ -15,38 +15,30 @@
  *  limitations under the License.
  */
 
-package com.datasophon.domain.host.enums;
+package com.datasophon.dao.enums;
 
 import com.mybatisflex.annotation.EnumValue;
-import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
-import lombok.Setter;
+
+
+/**
+ * @author 63588
+ */
 
 @Getter
-public enum HostState {
+public enum MANAGED {
 
-    RUNNING(1, "正在运行"),
-    OFFLINE(2, "掉线"),
-    EXISTS_ALARM(3, "存在告警");
+    YES(1, true),
+    NO(2, false);
 
-    @Getter
     @EnumValue
     private final int value;
 
-    private final String desc;
+    private final boolean desc;
 
-    HostState(int value, String desc) {
+    MANAGED(int value, boolean desc) {
         this.value = value;
         this.desc = desc;
     }
 
-    @JsonValue
-    public String getDesc() {
-        return desc;
-    }
-
-    @Override
-    public String toString() {
-        return this.desc;
-    }
 }
