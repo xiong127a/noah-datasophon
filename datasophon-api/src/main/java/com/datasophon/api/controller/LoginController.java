@@ -18,10 +18,11 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.enums.Status;
-import com.datasophon.api.security.JwtTokenProvider;
+import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.security.TokenProvider;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -64,7 +65,7 @@ public class LoginController {
     private AuthenticationManager authenticationManager;
 
     @Autowired
-    private JwtTokenProvider tokenProvider;
+    private PersistentTokenManager tokenProvider;
 
     @Autowired
     private AuthTokenService authTokenService;

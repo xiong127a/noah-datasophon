@@ -17,6 +17,7 @@
 
 package com.datasophon.api.security;
 
+import com.datasophon.common.security.TokenProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -51,146 +52,146 @@ import java.util.Collections;
 @Slf4j
 public class SecurityConfig {
 
-    @Autowired
-    private JwtTokenProvider tokenProvider;
-    @Autowired
-    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+        @Autowired
+        private TokenProvider tokenProvider;
+        @Autowired
+        private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    @Autowired
-    public SecurityConfig(JwtTokenProvider tokenProvider, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
-        this.tokenProvider = tokenProvider;
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-    }
+        @Autowired
+        public SecurityConfig(TokenProvider tokenProvider, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                this.tokenProvider = tokenProvider;
+                this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        }
 
-    /**
-     * 配置安全过滤链
-     *
-     * @param http HttpSecurity对象
-     * @return 配置好的SecurityFilterChain
-     * @throws Exception 如果配置出错
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // 使用 Lambda DSL 风格配置安全规则
-        http
-                // 配置CORS
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        /**
+         * 配置安全过滤链
+         *
+         * @param http HttpSecurity对象
+         * @return 配置好的SecurityFilterChain
+         * @throws Exception 如果配置出错
+         */
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                // 使用 Lambda DSL 风格配置安全规则
+                http
+                                // 配置CORS
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 禁用CSRF（因为我们使用JWT令牌）
-                .csrf(AbstractHttpConfigurer::disable)
+                                // 禁用CSRF（因为我们使用JWT令牌）
+                                .csrf(AbstractHttpConfigurer::disable)
 
-                // 配置异常处理
-                .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                                // 配置异常处理
+                                .exceptionHandling(exceptionHandling -> exceptionHandling
+                                                .authenticationEntryPoint(jwtAuthenticationEntryPoint))
 
-                // 使用无状态会话
-                .sessionManagement(sessionManagement -> sessionManagement
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                // 使用无状态会话
+                                .sessionManagement(sessionManagement -> sessionManagement
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 配置头部安全选项
-                .headers(headers -> headers
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+                                // 配置头部安全选项
+                                .headers(headers -> headers
+                                                .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-                // 配置请求授权规则
-                .authorizeHttpRequests(authorize -> authorize
-                        // 静态资源
-                        .requestMatchers(
-                                "/static/**",
-                                "/webjars/**",
-                                "/ui/**",
-                                "/*.html",
-                                "/*.ico",
-                                "/favicon.ico")
-                        .permitAll()
+                                // 配置请求授权规则
+                                .authorizeHttpRequests(authorize -> authorize
+                                                // 静态资源
+                                                .requestMatchers(
+                                                                "/static/**",
+                                                                "/webjars/**",
+                                                                "/ui/**",
+                                                                "/*.html",
+                                                                "/*.ico",
+                                                                "/favicon.ico")
+                                                .permitAll()
 
-                        // 公开API端点
-                        .requestMatchers(
-                                "/api/login",
-                                "/api/register",
-                                "/api/refresh-token")
-                        .permitAll()
+                                                // 公开API端点
+                                                .requestMatchers(
+                                                                "/api/login",
+                                                                "/api/register",
+                                                                "/api/refresh-token")
+                                                .permitAll()
 
-                        // Swagger文档
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**")
-                        .permitAll()
+                                                // Swagger文档
+                                                .requestMatchers(
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**")
+                                                .permitAll()
 
-                        // 健康检查和监控端点
-                        .requestMatchers(
-                                "/actuator/**",
-                                "/health",
-                                "/info")
-                        .permitAll()
+                                                // 健康检查和监控端点
+                                                .requestMatchers(
+                                                                "/actuator/**",
+                                                                "/health",
+                                                                "/info")
+                                                .permitAll()
 
-                        // 原有免登录接口
-                        .requestMatchers(
-                                "/",
-                                "/ssoEnable")
-                        .permitAll()
+                                                // 原有免登录接口
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/ssoEnable")
+                                                .permitAll()
 
-                        // OPTIONS请求允许通过
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                // OPTIONS请求允许通过
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 所有其他请求需要认证
-                        .anyRequest().authenticated())
+                                                // 所有其他请求需要认证
+                                                .anyRequest().authenticated())
 
-                // 添加JWT过滤器
-                .addFilterBefore(
-                        new JwtAuthenticationFilter(tokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                                // 添加JWT过滤器
+                                .addFilterBefore(
+                                                new JwtAuthenticationFilter(tokenProvider),
+                                                UsernamePasswordAuthenticationFilter.class);
 
-        // 返回构建的过滤链
-        return http.build();
-    }
+                // 返回构建的过滤链
+                return http.build();
+        }
 
-    /**
-     * 配置CORS策略
-     *
-     * @return CORS配置源
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // 使用allowedOriginPatterns代替allowedOrigins解决CORS错误
-        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList("X-Auth-Token", "Authorization"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        /**
+         * 配置CORS策略
+         *
+         * @return CORS配置源
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                // 使用allowedOriginPatterns代替allowedOrigins解决CORS错误
+                configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                configuration.setAllowedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "X-Requested-With",
+                                "Accept",
+                                "Origin",
+                                "Access-Control-Request-Method",
+                                "Access-Control-Request-Headers"));
+                configuration.setExposedHeaders(Arrays.asList("X-Auth-Token", "Authorization"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 
-    /**
-     * 配置认证管理器
-     *
-     * @param authConfig 认证配置
-     * @return 认证管理器
-     * @throws Exception 如果配置出错
-     */
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        /**
+         * 配置认证管理器
+         *
+         * @param authConfig 认证配置
+         * @return 认证管理器
+         * @throws Exception 如果配置出错
+         */
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    /**
-     * 配置密码编码器
-     *
-     * @return BCrypt密码编码器
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        /**
+         * 配置密码编码器
+         *
+         * @return BCrypt密码编码器
+         */
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 }

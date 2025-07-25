@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.common.security.TokenProvider;
+import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.dao.entity.AuthTokenEntity;
@@ -67,7 +67,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     private AuthTokenMapper authTokenMapper;
 
     @Autowired
-    private TokenProvider tokenProvider;
+    private PersistentTokenManager tokenProvider;
 
     /**
      * 创建新的认证令牌
@@ -232,7 +232,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
             Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
             // 生成新的访问令牌
-            String accessToken = tokenProvider.createToken(authentication);
+            String accessToken = tokenProvider.createToken(authentication, request);
 
             // 获取过期时间
             Date expiresAt = tokenProvider.getExpirationDateFromToken(accessToken);

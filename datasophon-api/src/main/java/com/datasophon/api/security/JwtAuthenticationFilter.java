@@ -45,6 +45,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private TokenProvider tokenProvider;
 
+    /**
+     * 无参构造函数，使用自动注入的TokenProvider
+     */
+    public JwtAuthenticationFilter() {
+        // 默认构造函数，使用自动注入的TokenProvider
+    }
+
+    /**
+     * 有参构造函数，便于SecurityConfig中配置
+     *
+     * @param tokenProvider 令牌提供者
+     */
+    public JwtAuthenticationFilter(TokenProvider tokenProvider) {
+        this.tokenProvider = tokenProvider;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
