@@ -96,7 +96,6 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
 
         // 创建新的令牌实体
         AuthTokenEntity authToken = new AuthTokenEntity();
-        authToken.setId(UUID.randomUUID().toString());
         authToken.setUserId(user.getId());
         authToken.setToken(token);
         authToken.setRefreshToken(refreshToken);
