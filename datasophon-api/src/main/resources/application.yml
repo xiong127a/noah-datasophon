@@ -158,3 +158,15 @@ jwt:
   secret: ZGF0YXNvcGhvbkpXVFNlY3JldEtleUZvclNwcmluZ0Jvb3QzQXBwbGljYXRpb25TZWNyZXQ=
   # Token有效期（毫秒）- 默认24小时
   expiration: 86400000
+
+# 应用自定义配置
+app:
+  headers:
+    names:
+      - Authorization
+      - X-User-Id
+      - X-Tenant-Id
+      - X-Client-Version
+      - X-Request-ID
+      - grafanaHost
+      # 可以添加更多需要处理的请求头
