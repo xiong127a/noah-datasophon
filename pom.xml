@@ -52,7 +52,7 @@
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
         <mybatis.spring.version>3.0.5</mybatis.spring.version>
-        <mybatis-flex.version>1.11.0</mybatis-flex.version>
+        <mybatis-flex.version>1.11.1</mybatis-flex.version>
         <mysql.connector.version>8.4.0</mysql.connector.version>
         <sqlite.connector.version>3.48.0.0</sqlite.connector.version>
         <org.apache.sshd.version>2.9.2</org.apache.sshd.version>
