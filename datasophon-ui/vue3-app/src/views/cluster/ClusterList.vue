@@ -296,7 +296,7 @@ const stepsComponent = defineAsyncComponent(() =>
 // 导入API和请求工具
 import { axiosPost, axiosGet, axiosJsonPost } from '@/utils/request'
 import { changeRouter } from '@/utils/changeRouter'
-import { useToast } from '@/composables/useToast'
+import { useVueSonner } from '@/composables/useVueSonner'
 import { useUserStore } from '@/stores/user'
 import { useSettingsStore } from '@/stores/settings'
 import { errorHandler } from '@/composables/useErrorHandler'
@@ -306,7 +306,7 @@ import * as clusterApi from '@/api/httpApi/cluster'
 // 获取store和toast功能
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
-const { toast } = useToast()
+const { toast } = useVueSonner()
 
 // 组件状态
 const router = useRouter()

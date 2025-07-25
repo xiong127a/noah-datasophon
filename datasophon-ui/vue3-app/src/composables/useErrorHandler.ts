@@ -58,7 +58,7 @@ export const errorHandler = {
     
     // 合并选项
     const finalOptions = { ...defaultOptions, ...options }
-    const { toast } = useToast()
+    const { toast } = useVueSonner()
     
     try {
       this.isHandlingError.value = true

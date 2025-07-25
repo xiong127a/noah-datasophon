@@ -142,7 +142,7 @@
 import { ref, onMounted } from 'vue'
 import { axiosPost } from '@/utils/request'
 import API_PATHS from '@/api/httpApi/apiPaths'
-import { useToast } from '@/composables/useToast'
+import { useVueSonner } from '@/composables/useVueSonner'
 
 export default {
   name: 'Steps',
@@ -157,7 +157,7 @@ export default {
     }
   },
   setup(props) {
-    const { toast } = useToast()
+    const { toast } = useVueSonner()
     const loading = ref(true)
     const error = ref(null)
     const currentStep = ref(0)

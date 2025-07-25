@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // App.vue - 根组件
-import Toast from './components/Toast.vue'
+// 移除旧的Toast组件导入
 import { useUserStore } from './stores/user'
 import { onMounted, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from './composables/useToast'
+// 引入新的toast系统
+import { toast } from './composables/useVueSonner'
+import { Toaster } from 'vue-sonner'
 import AuthProvider from './components/AuthProvider.vue'
-import config from './config' // 修正导入路径
+import config from './config/index.js' // 修正导入路径
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -129,8 +131,8 @@ onMounted(async () => {
       <!-- 路由视图 -->
       <router-view></router-view>
       
-      <!-- Toast通知组件 -->
-      <Toast />
+      <!-- 使用Sonner的Toaster组件替换原Toast组件 -->
+      <Toaster position="top-right" richColors closeButton expand />
     </AuthProvider>
   </div>
 </template>

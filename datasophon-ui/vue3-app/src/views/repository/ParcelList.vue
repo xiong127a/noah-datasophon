@@ -221,11 +221,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { useToast } from '@/composables/useToast'
+import { useVueSonner } from '@/composables/useVueSonner'
 import { errorHandler } from '@/composables/useErrorHandler'
 import * as parcelApi from '@/api/httpApi/parcel'
 
-const { toast } = useToast()
+const { toast } = useVueSonner()
 const ddhParcelPath = ref("file:///opt/datasophon/DDP/packages")
 
 interface Component {

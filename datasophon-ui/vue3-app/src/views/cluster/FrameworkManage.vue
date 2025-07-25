@@ -131,7 +131,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
 import { getFrameList, deleteService } from '@/api/httpApi/cluster';
-import { useToast } from '@/composables/useToast';
+import { useVueSonner } from '@/composables/useVueSonner';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
 // 状态管理

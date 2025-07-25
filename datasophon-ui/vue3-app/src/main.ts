@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { Toaster } from 'vue-sonner'
 
 // 导入SVG图标系统
 import 'virtual:svg-icons-register'
@@ -18,6 +19,9 @@ const app = createApp(App)
 app.use(createPinia())
 // 使用路由
 app.use(router)
+
+// 注册全局组件
+app.component('Toaster', Toaster)
 
 // 设置SVG图标
 setupSvgIcon(app)

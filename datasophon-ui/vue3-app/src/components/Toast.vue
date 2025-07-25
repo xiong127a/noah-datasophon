@@ -75,7 +75,7 @@
 </template>
 
 <script>
-import { useToast } from '@/composables/useToast'
+import { useVueSonner } from '@/composables/useVueSonner'
 
 export default {
   name: 'Toast',

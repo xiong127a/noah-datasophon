@@ -333,9 +333,11 @@ import config from '@/config' // 导入配置文件
 import API_PATHS from '@/api/httpApi/apiPaths' // 导入API路径
 import FormFieldIndicator from '@/components/FormFieldIndicator.vue' // 导入字段验证指示器
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
+import { useVueSonner } from '@/composables/useVueSonner' // 导入项目现有的toast系统
 
 // 获取用户状态
 const userStore = useUserStore()
+const { toast } = useVueSonner()
 
 // Props
 const props = defineProps({
@@ -443,7 +445,7 @@ const handleSubmit = async () => {
     
     // 如果还是没有找到用户信息，提示用户重新登录
     if (!currentUser || !currentUser.username) {
-      alert('无法获取用户信息，请重新登录后再试')
+      toast.error('无法获取用户信息，请重新登录后再试')
       return
     }
     
@@ -484,21 +486,24 @@ const handleSubmit = async () => {
       loading.value = false
       
       if (res.code === 200) {
-        alert('保存成功')
+        // 使用toast提示替代alert
+        toast.success('保存成功')
         // 触发成功事件
         emit('success')
         props.callBack()
       } else {
-        alert(res.msg || '保存失败')
+        // 使用toast提示替代alert
+        toast.error(res.msg || '保存失败')
       }
     } catch (error) {
       loading.value = false
-      alert('保存失败，请检查网络连接')
+      // 使用toast提示替代alert
+      toast.error('保存失败，请检查网络连接')
       console.error('保存集群失败:', error)
     }
   } else {
     // 表单验证失败
-    alert('请完善表单信息')
+    toast.warning('请完善表单信息')
   }
 }
 
@@ -509,11 +514,11 @@ const getFrameList = async () => {
     if (res.code === 200) {
       frameList.value = res.data
     } else {
-      alert(res.msg || '获取框架列表失败')
+      toast.error(res.msg || '获取框架列表失败')
     }
   } catch (error) {
     console.error('获取框架列表失败:', error)
-    alert('获取框架列表失败，请检查网络连接')
+    toast.error('获取框架列表失败，请检查网络连接')
   }
 }
 
