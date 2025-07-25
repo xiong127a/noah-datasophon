@@ -1,4 +1,4 @@
-import { axiosPost, axiosGet, axiosDelete } from '@/utils/request'
+import { axiosPost, axiosGet, axiosDelete, axiosJsonPost } from '@/utils/request'
 import API_PATHS from './apiPaths'
 
 /**
@@ -12,7 +12,7 @@ export function getClusterList(params = {}) {
  * 添加集群
  */
 export function addColony(params) {
-  return axiosPost(API_PATHS.saveColony, params)
+  return axiosJsonPost(API_PATHS.saveColony, params)
 }
 
 /**
@@ -35,14 +35,14 @@ export function getServiceListByCluster(clusterId) {
  * 更新集群
  */
 export function updateColony(params) {
-  return axiosPost(API_PATHS.updateColony, params)
+  return axiosJsonPost(API_PATHS.updateColony, params)
 }
 
 /**
  * 保存/创建集群
  */
 export function saveColony(params) {
-  return axiosPost(API_PATHS.saveColony, params)
+  return axiosJsonPost(API_PATHS.saveColony, params)
 }
 
 /**

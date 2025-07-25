@@ -71,7 +71,7 @@ export const authService = {
     // 返回带前缀的认证头
     return {
       Authorization: currentToken ? `Bearer ${currentToken}` : ''
-    }
+      }
   },
   
   /**
@@ -97,7 +97,7 @@ export const authService = {
     
     console.log('[Auth] User logged out')
   }
-}
+  }
   
 // 初始化认证服务
 authService.init()
@@ -123,6 +123,46 @@ export function useAuth() {
     return false
   }
   
+  // 检查token有效期（10小时）- 避免频繁调用getUserInfo
+  const tokenTtl = 1000 * 60 * 60 * 10 // 10小时
+  
+  /**
+   * 验证token是否仍然有效
+   * 如果距离上次验证不到10小时，则认为有效
+   * 这样可以避免频繁调用getUserInfo
+   */
+  const validateToken = async () => {
+    // 如果没有token，直接返回false
+    if (!token.value) return false
+    
+    // 检查上次认证时间
+    const now = Date.now()
+    const timeSinceLastCheck = now - lastAuthCheck.value
+    
+    // 如果距离上次认证检查不到设定的TTL，则认为token仍然有效
+    if (timeSinceLastCheck < tokenTtl) {
+      console.log(`[Auth] Token still valid, last check was ${Math.round(timeSinceLastCheck / 1000 / 60)} minutes ago`)
+      return true
+    }
+    
+    // 如果超过TTL，则尝试使用getUserInfo验证token有效性
+    console.log(`[Auth] Token validation needed, last check was ${Math.round(timeSinceLastCheck / 1000 / 60)} minutes ago`)
+    
+    try {
+      const user = await userStore.getUserInfo()
+      if (user) {
+        // 更新最后检查时间
+        authService.updateLastAuthCheck()
+        return true
+      }
+    } catch (error) {
+      console.error('[Auth] Token validation failed:', error)
+    }
+    
+    // 验证失败
+    return false
+  }
+  
   return {
     // 暴露响应式状态
     token,
@@ -135,6 +175,7 @@ export function useAuth() {
     },
     logout: authService.logout,
     checkAuth,
+    validateToken,
     getAuthHeader: authService.getAuthHeader
   }
 }

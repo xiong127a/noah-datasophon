@@ -6,6 +6,7 @@ import { onMounted, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from './composables/useToast'
 import AuthProvider from './components/AuthProvider.vue'
+import config from './config' // 修正导入路径
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -21,9 +22,12 @@ const initializeApp = async () => {
     const hasToken = localStorage.getItem('auth_token')
     console.log(`[App] localStorage token检查: ${hasToken ? '存在' : '不存在'}`)
     
+    // 检查本地存储中是否有用户信息
+    const hasUserInfo = localStorage.getItem('auth_user') || localStorage.getItem(config.userKey)
+    console.log(`[App] localStorage 用户信息检查: ${hasUserInfo ? '存在' : '不存在'}`)
+    
     if (hasToken) {
       console.log('[App] 发现本地存储的token，验证有效性')
-      console.log(`[App] Token值: ${hasToken.substring(0, 15)}...`)
       
       // 确保token已加载到authService中
       if (!userStore.token) {
@@ -31,17 +35,40 @@ const initializeApp = async () => {
         userStore.setToken(hasToken)
       }
       
-      // 验证token有效性
+      // 如果本地已有用户信息，则不需要调用API
+      if (hasUserInfo) {
+        try {
+          const userInfoObj = JSON.parse(hasUserInfo)
+          if (userInfoObj && userInfoObj.username) {
+            console.log('[App] 从本地存储加载用户信息:', userInfoObj.username)
+            userStore.setUser(userInfoObj)
+            
+            // 如果当前在登录页，跳转到首页
+            if (router.currentRoute.value.path === '/login') {
+              router.push('/')
+            }
+            
+            // 早期返回，不再调用API
+            isInitializing.value = false
+            return
+          }
+        } catch (e) {
+          console.error('[App] 解析本地存储的用户信息失败', e)
+        }
+      }
+      
+      // 只有在本地没有用户信息的情况下，才调用API获取用户信息
+      console.log('[App] 本地无有效用户信息，调用API获取')
       const userData = await userStore.getUserInfo()
       
       if (userData) {
-        console.log('[App] Token有效，用户已登录:', userData.username)
+        console.log('[App] 获取用户信息成功:', userData.username)
         // 如果当前在登录页，跳转到首页
         if (router.currentRoute.value.path === '/login') {
           router.push('/')
         }
       } else {
-        console.log('[App] Token无效，清除认证状态')
+        console.log('[App] 获取用户信息失败，清除认证状态')
         // 使用静默登出，避免调用后端API
         userStore.logout({ silent: true })
         // 如果不在登录页，跳转到登录页
@@ -70,8 +97,8 @@ const initializeApp = async () => {
   } finally {
     console.log('[App] 初始化完成，设置isInitializing = false')
     isInitializing.value = false
-  }
-}
+      }
+    }
 
 // 监听认证状态
 onMounted(async () => {

@@ -206,46 +206,46 @@
                   <!-- 内容容器 -->
                   <div class="ultra-notification-content">
                     <!-- 图标容器 -->
-                    <div 
+                  <div
                       class="ultra-notification-icon-wrapper"
-                      :class="{
+                    :class="{
                         'success-icon-wrapper': notification.type === 'success',
                         'error-icon-wrapper': notification.type === 'error'
-                      }"
-                    >
-                      <!-- 成功图标 -->
+                        }"
+                      >
+                        <!-- 成功图标 -->
                       <div v-if="notification.type === 'success'" class="ultra-success-icon">
                         <svg viewBox="0 0 24 24" stroke-width="3">
                           <polyline class="success-check" points="6,12 10,16 18,8" />
                         </svg>
                       </div>
-                      
-                      <!-- 错误图标 -->
+                        
+                        <!-- 错误图标 -->
                       <div v-if="notification.type === 'error'" class="ultra-error-icon">
                         <svg viewBox="0 0 24 24" stroke-width="3">
                           <line class="error-line-1" x1="8" y1="8" x2="16" y2="16" />
                           <line class="error-line-2" x1="16" y1="8" x2="8" y2="16" />
                         </svg>
                       </div>
-                    </div>
-                    
-                    <!-- 文本内容 -->
+                      </div>
+                      
+                      <!-- 文本内容 -->
                     <div class="ultra-notification-text-container">
                       <div v-if="notification.title" class="ultra-notification-title">{{ notification.title }}</div>
                       <div v-if="notification.message" class="ultra-notification-message">{{ notification.message }}</div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <!-- 进度条 -->
+                    
+                    <!-- 进度条 -->
                   <div class="ultra-notification-progress">
-                    <div 
+                      <div
                       class="ultra-notification-progress-bar"
                       :style="{ 
                         animationDuration: `${notification.remainingTime || notification.duration}ms`,
                         animationPlayState: notification.isPaused ? 'paused' : 'running' 
                       }"
-                    ></div>
-                  </div>
+                      ></div>
+                    </div>
                 </div>
               </div>
             </transition>
@@ -411,7 +411,7 @@ const handleLogin = async () => {
   if (!isFormCorrect) return;
   
   errorMsg.value = '';
-  
+    
   try {
     console.log('正在尝试登录:', { username: loginForm.username });
     
@@ -438,7 +438,7 @@ const handleLogin = async () => {
       
       // 登录成功后跳转
       setTimeout(() => {
-        router.push('/');
+      router.push('/');
       }, 800);
     } else {
       // 登录失败，显示来自store的错误

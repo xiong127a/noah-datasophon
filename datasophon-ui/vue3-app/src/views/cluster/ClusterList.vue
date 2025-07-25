@@ -228,7 +228,7 @@
     </Dialog>
     
     <!-- 编辑集群模态框 -->
-    <Dialog :open="editModalVisible" @close="handleEditModalClose" class="relative z-50">
+    <Dialog :open="editModalVisible" @close="confirmEditModalClose" class="relative z-50">
       <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
       <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
         <DialogPanel class="w-full max-w-2xl rounded-xl bg-white shadow-xl overflow-hidden my-8">
@@ -364,9 +364,35 @@ const addColony = (obj) => {
   })
 }
 
+// 确认关闭编辑模态框
+const confirmEditModalClose = () => {
+  // 如果正在编辑已存在的集群，显示确认对话框
+  if (currentEditObj.value && currentEditObj.value.id) {
+    if (confirm('确认关闭？未保存的修改将丢失')) {
+      handleEditModalClose()
+    }
+  } else {
+    // 如果是新建集群，直接关闭
+    handleEditModalClose()
+  }
+}
+
 const handleEditModalClose = () => {
   editModalVisible.value = false
   currentEditObj.value = null
+  
+  // 确保背景覆盖层被清除
+  nextTick(() => {
+    // 重置表单组件
+    if (addColonyForm.value) {
+      try {
+        // 尝试重置表单状态
+        addColonyForm.value.resetForm && addColonyForm.value.resetForm()
+      } catch (error) {
+        console.error('重置表单失败:', error)
+      }
+    }
+  })
 }
 
 const handleEditComplete = () => {
@@ -376,18 +402,19 @@ const handleEditComplete = () => {
 
 // 强制刷新模态框内容
 const forceRefreshModal = () => {
-  setTimeout(() => {
-    if (addColonyForm.value) {
-      const formEl = addColonyForm.value.$el
-      if (formEl) {
-        formEl.style.display = 'block'
-        formEl.style.visibility = 'visible'
-        formEl.style.opacity = '1'
-        formEl.style.height = 'auto'
-        formEl.style.minHeight = '300px'
+  // 使用nextTick确保组件已渲染
+  nextTick(() => {
+    console.log('模态框已打开，组件应该已渲染')
+    // 在这里不再直接操作DOM，避免潜在的问题
+    // 如果需要，可以调用AddColony组件的初始化方法
+    if (addColonyForm.value && typeof addColonyForm.value.initForm === 'function') {
+      try {
+        addColonyForm.value.initForm()
+      } catch (error) {
+        console.error('初始化表单失败:', error)
       }
     }
-  }, 100)
+  })
 }
 
 // 获取集群列表

@@ -35,11 +35,12 @@
               <div class="flex-1 max-w-[50%] sm:max-w-full">
                 <label class="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
                   集群名称
-                  <span class="relative inline-block w-1.5 h-1.5 bg-red-500 rounded-full ml-1" 
-                        :class="{'bg-green-500': formState.clusterName}">
-                    <span class="absolute inset-0 rounded-full animate-ping" 
-                          :class="formState.clusterName ? 'bg-green-500/20' : 'bg-red-500/20'"></span>
-                  </span>
+                  <FormFieldIndicator 
+                    :dirty="v$.clusterName.$dirty"
+                    :error="v$.clusterName.$error"
+                    :value="formState.clusterName"
+                    :required="true"
+                  />
                 </label>
                 
                 <input
@@ -47,10 +48,12 @@
                   type="text"
                   placeholder="请输入集群名称"
                   maxlength="10"
+                  @blur="v$.clusterName.$touch()"
                   class="w-full h-[38px] rounded-lg border border-gray-300 px-3 py-1 text-sm
                          transition duration-300 ease-out
                          focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
                          hover:border-blue-500 hover:shadow-sm hover:shadow-blue-500/5"
+                  :class="{'border-red-500': v$.clusterName.$error, 'border-green-500': v$.clusterName.$dirty && !v$.clusterName.$error && formState.clusterName}"
                 />
                 <div v-if="v$.clusterName.$error" class="text-xs text-red-500 mt-1">
                   {{ v$.clusterName.$errors[0].$message }}
@@ -61,11 +64,12 @@
               <div class="flex-1 max-w-[50%] sm:max-w-full">
                 <label class="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
                   集群编码
-                  <span class="relative inline-block w-1.5 h-1.5 bg-red-500 rounded-full ml-1" 
-                        :class="{'bg-green-500': formState.clusterCode}">
-                    <span class="absolute inset-0 rounded-full animate-ping" 
-                          :class="formState.clusterCode ? 'bg-green-500/20' : 'bg-red-500/20'"></span>
-                  </span>
+                  <FormFieldIndicator 
+                    :dirty="v$.clusterCode.$dirty"
+                    :error="v$.clusterCode.$error"
+                    :value="formState.clusterCode"
+                    :required="true"
+                  />
                 </label>
                 
                 <input
@@ -73,10 +77,12 @@
                   type="text"
                   placeholder="请输入集群编码"
                   maxlength="10"
+                  @blur="v$.clusterCode.$touch()"
                   class="w-full h-[38px] rounded-lg border border-gray-300 px-3 py-1 text-sm
                          transition duration-300 ease-out
                          focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
                          hover:border-blue-500 hover:shadow-sm hover:shadow-blue-500/5"
+                  :class="{'border-red-500': v$.clusterCode.$error, 'border-green-500': v$.clusterCode.$dirty && !v$.clusterCode.$error && formState.clusterCode}"
                 />
                 <div v-if="v$.clusterCode.$error" class="text-xs text-red-500 mt-1">
                   {{ v$.clusterCode.$errors[0].$message }}
@@ -97,12 +103,23 @@
             <p class="text-xs text-gray-500 mb-4 ml-7">选择集群所使用的框架类型</p>
             
             <div class="relative w-full">
-              <Listbox v-model="formState.clusterFrame">
+              <label class="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
+                集群框架
+                <FormFieldIndicator 
+                  :dirty="v$.clusterFrame.$dirty"
+                  :error="v$.clusterFrame.$error"
+                  :value="formState.clusterFrame"
+                  :required="true"
+                />
+              </label>
+              
+              <Listbox v-model="formState.clusterFrame" @change="v$.clusterFrame.$touch()">
                 <div class="relative mt-1">
                   <ListboxButton
                     class="w-full cursor-default rounded-xl bg-white py-2.5 pl-3.5 pr-10 text-left border border-gray-300 
                            focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 
                            hover:border-blue-400 transition duration-200 text-sm"
+                    :class="{'border-red-500': v$.clusterFrame.$error, 'border-green-500': v$.clusterFrame.$dirty && !v$.clusterFrame.$error && formState.clusterFrame}"
                   >
                     <span class="block truncate">{{ formState.clusterFrame || '请选择集群框架' }}</span>
                     <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -147,10 +164,10 @@
                             v-if="selected"
                             :class="[
                               active ? 'text-blue-600' : 'text-blue-500',
-                              'absolute inset-y-0 right-0 flex items-center pr-4'
+                              'absolute inset-y-0 right-0 flex items-center pr-3'
                             ]"
                           >
-                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                               <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                             </svg>
                           </span>
@@ -176,10 +193,22 @@
               <h2 class="text-base font-semibold text-gray-800">部署方式</h2>
             </div>
             
-            <p class="text-xs text-gray-500 mb-4 ml-7">选择部署方式，确定集群运行环境</p>
+            <div class="mb-2">
+              <label class="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
+                部署方式
+                <FormFieldIndicator 
+                  :dirty="v$.depType.$dirty"
+                  :error="v$.depType.$error"
+                  :value="formState.depType"
+                  :required="true"
+                />
+              </label>
+            </div>
             
-            <div class="space-y-3">
-              <!-- PVM选择 -->
+            <p class="text-xs text-gray-500 mb-4">选择集群部署方式（传统部署或Kubernetes容器化部署）</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- 传统部署选择 -->
               <div 
                 @click="selectDepType('PVM')"
                 :class="{ 'border-blue-500 bg-blue-50/50 shadow-md': formState.depType === 'PVM' }"
@@ -189,14 +218,14 @@
                 <div class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full mr-4 flex-shrink-0
                           transition duration-300 ease-out shadow-sm"
                      :class="{ 'bg-blue-100/70 shadow-blue-500/20': formState.depType === 'PVM' }">
-                  <img src="@/assets/img/os-logos/linux-tux.svg" alt="Linux" class="w-6 h-6">
+                  <img src="@/assets/linux-tux.svg" alt="Linux" class="w-6 h-6">
                 </div>
                 
                 <!-- 内容 -->
                 <div class="flex-1">
                   <h3 class="text-[15px] font-semibold text-gray-800 mb-1.5 transition duration-300"
                       :class="{ 'text-blue-600': formState.depType === 'PVM' }">
-                    物理/虚拟机
+                    传统部署
                   </h3>
                   <p class="text-xs text-gray-500 leading-snug">
                     传统部署，适合大规模稳定业务
@@ -222,7 +251,7 @@
                 <div class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full mr-4 flex-shrink-0
                           transition duration-300 ease-out shadow-sm"
                      :class="{ 'bg-blue-100/70 shadow-blue-500/20': formState.depType === 'Kubernetes' }">
-                  <img src="@/assets/images/kubernetes-logo.svg" alt="Kubernetes" class="w-6 h-6">
+                  <img src="@/assets/kubernetes-logo.svg" alt="Kubernetes" class="w-6 h-6">
                 </div>
                 
                 <!-- 内容 -->
@@ -300,6 +329,13 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, maxLength } from '@vuelidate/validators'
 import { axiosPost, axiosJsonPost } from '@/utils/request'
 import * as clusterApi from '@/api/httpApi/cluster'
+import config from '@/config' // 导入配置文件
+import API_PATHS from '@/api/httpApi/apiPaths' // 导入API路径
+import FormFieldIndicator from '@/components/FormFieldIndicator.vue' // 导入字段验证指示器
+import { useUserStore } from '@/stores/user' // 导入用户状态管理
+
+// 获取用户状态
+const userStore = useUserStore()
 
 // Props
 const props = defineProps({
@@ -367,6 +403,11 @@ watch(() => props.detail, (newVal) => {
     formState.clusterCode = newVal.clusterCode || ''
     formState.clusterFrame = newVal.clusterFrame || ''
     formState.depType = newVal.depType || ''
+    
+    // 标记所有字段为已触摸，以便显示正确的验证状态
+    setTimeout(() => {
+      v$.value.$touch()
+    }, 100)
   }
 }, { immediate: true })
 
@@ -376,6 +417,7 @@ const selectDepType = (type) => {
   if (isEdit.value) return
   
   formState.depType = type
+  v$.value.depType.$touch() // 标记为已触摸以更新验证状态
 }
 
 const formCancel = () => {
@@ -385,10 +427,27 @@ const formCancel = () => {
 const handleSubmit = async () => {
   const isFormValid = await v$.value.$validate()
   if (isFormValid) {
-    // 获取当前登录用户信息
-    const userStr = localStorage.getItem(process.env.VUE_APP_USER_KEY)
-    const currentUser = userStr ? JSON.parse(userStr) : null
+    // 仅从userStore和localStorage获取用户信息，不主动调用API
+    let currentUser = userStore.user
     
+    // 如果userStore中没有用户信息，尝试从localStorage获取（作为备选）
+    if (!currentUser || !Object.keys(currentUser).length) {
+      const userStr = localStorage.getItem(config.userKey)
+      currentUser = userStr ? JSON.parse(userStr) : null
+      
+      // 如果从localStorage获取到了用户信息，更新到store中
+      if (currentUser && Object.keys(currentUser).length) {
+        userStore.setUser(currentUser)
+      }
+    }
+    
+    // 如果还是没有找到用户信息，提示用户重新登录
+    if (!currentUser || !currentUser.username) {
+      alert('无法获取用户信息，请重新登录后再试')
+      return
+    }
+    
+    // 构建请求参数
     const params = {
       "clusterName": formState.clusterName,
       "clusterCode": formState.clusterCode,
@@ -397,7 +456,7 @@ const handleSubmit = async () => {
     }
     
     // 添加创建者信息
-    if (currentUser) {
+    if (currentUser && currentUser.username) {
       // 设置createBy为当前用户名
       params.createBy = currentUser.username
       
@@ -414,10 +473,14 @@ const handleSubmit = async () => {
     if (isEdit.value) params.id = props.detail.id
     
     loading.value = true
-    const ajaxApi = isEdit.value ? clusterApi.updateColony : clusterApi.saveColony
     
     try {
-      const res = await axiosJsonPost(ajaxApi + (isEdit.value ? "?clusterId=" + props.detail.id : ""), params)
+      let res;
+      if (isEdit.value) {
+        res = await clusterApi.updateColony(params)
+      } else {
+        res = await clusterApi.saveColony(params)
+      }
       loading.value = false
       
       if (res.code === 200) {
@@ -431,6 +494,7 @@ const handleSubmit = async () => {
     } catch (error) {
       loading.value = false
       alert('保存失败，请检查网络连接')
+      console.error('保存集群失败:', error)
     }
   } else {
     // 表单验证失败
@@ -452,29 +516,68 @@ const getFrameList = async () => {
     alert('获取框架列表失败，请检查网络连接')
   }
 }
+
+// 初始化表单
+const initForm = () => {
+  // 重置表单状态
+  if (!isEdit.value) {
+    formState.clusterName = ''
+    formState.clusterCode = ''
+    formState.clusterFrame = ''
+    formState.depType = ''
+  }
+  
+  // 确保加载框架列表
+  if (frameList.value.length === 0) {
+    getFrameList()
+  }
+  
+  // 重置验证状态
+  v$.value.$reset()
+}
+
+// 重置表单
+const resetForm = () => {
+  formState.clusterName = ''
+  formState.clusterCode = ''
+  formState.clusterFrame = ''
+  formState.depType = ''
+  
+  // 重置验证状态
+  v$.value.$reset()
+}
+
+// 暴露给父组件的方法
+defineExpose({
+  initForm,
+  resetForm
+})
 </script>
 
 <style scoped>
-/* 径向闪光背景 */
+/* 径向渐变背景用于闪光效果 */
 .bg-radial-shine {
-  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
 }
 
-/* 脉冲动画 */
-@keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-.animate-ping {
-  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+/* 集群框架下拉菜单的特定样式 */
+:deep(.listbox-button) {
+  border-radius: 0.75rem !important;
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+  transition: all 0.3s ease;
 }
 
-/* 适配移动端 */
-@media (max-width: 640px) {
-  .sm\:max-w-full {
-    max-width: 100% !important;
-  }
+:deep(.listbox-options) {
+  border-radius: 0.75rem !important;
+  overflow: hidden;
+  transform-origin: top;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  margin-top: 0.375rem;
+}
+
+/* 旋转30度 */
+.rotate-30 {
+  transform: rotate(-30deg);
 }
 </style> 

@@ -9,7 +9,7 @@ const store = createStore({
     setting
   },
   state: {
-    appVersion: process.env.VUE_APP_VERSION || '1.0.0',
+    appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
     appName: 'Datasophon',
     loading: false,
     globalMessage: '',
