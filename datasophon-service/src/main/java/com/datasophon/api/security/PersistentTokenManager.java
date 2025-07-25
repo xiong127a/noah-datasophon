@@ -117,13 +117,12 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
                 // 删除最旧的令牌
                 authTokenMapper.deleteOldestTokens(user.getId(), tokenCount - maxTokensPerUser + 1);
             }
+
             // 创建新令牌记录
             AuthTokenEntity authToken = new AuthTokenEntity();
             // 设置主键id，使用UUID生成唯一标识符
             authToken.setId(UUID.randomUUID().toString());
             authToken.setUserId(user.getId());
-            // 用户名字段在两个实体中不同步，需要从用户实体获取
-            // authToken.setUserName(user.getUsername()); // AuthTokenEntity没有这个字段
             authToken.setToken(token);
             authToken.setRefreshToken(refreshToken);
             authToken.setTokenType("Bearer"); // 设置令牌类型
@@ -143,7 +142,9 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
                 authToken.setUserAgent(request.getHeader("User-Agent"));
             }
 
+            // 使用mapper直接插入实体
             authTokenMapper.insert(authToken);
+
             return authToken;
         } catch (Exception e) {
             logger.error("保存令牌记录失败: {}", e.getMessage(), e);

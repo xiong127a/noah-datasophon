@@ -24,6 +24,7 @@ import java.util.Date;
 import lombok.Data;
 
 import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 
 /**
@@ -40,7 +41,7 @@ public class AuthTokenEntity implements Serializable {
     /**
      * 主键ID
      */
-    @Id
+    @Id(keyType = KeyType.None) // 非自增主键，需要显式设置
     private String id;
 
     /**
