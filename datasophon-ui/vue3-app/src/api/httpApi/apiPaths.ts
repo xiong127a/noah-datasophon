@@ -14,6 +14,7 @@ const API_PATHS = {
   updateColony: '/ddh/api/colony/updateColony',
   deleteColony: '/ddh/api/colony/deleteColony',
   getFrameList: '/ddh/api/frame/list',
+  deleteService: '/ddh/api/frame/service/delete',
   authCluster: '/ddh/api/colony/updateAuth',
   
   // 服务相关

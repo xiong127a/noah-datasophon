@@ -53,6 +53,13 @@ export function getFrameList(params = {}) {
 }
 
 /**
+ * 删除服务
+ */
+export function deleteService(serviceId) {
+  return axiosGet(`${API_PATHS.deleteService}/${serviceId}`)
+}
+
+/**
  * 查询所有用户
  */
 export function queryAllUser(params = {}) {
