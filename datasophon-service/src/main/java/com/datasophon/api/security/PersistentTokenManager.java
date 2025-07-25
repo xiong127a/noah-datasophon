@@ -122,10 +122,16 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
             // authToken.setUserName(user.getUsername()); // AuthTokenEntity没有这个字段
             authToken.setToken(token);
             authToken.setRefreshToken(refreshToken);
+            authToken.setTokenType("Bearer"); // 设置令牌类型
             authToken.setExpiresAt(expiresAt);
             authToken.setIssuedAt(new Date());
             authToken.setLastAccessTime(new Date());
             authToken.setIsRevoked(false);
+
+            // 添加创建和更新时间
+            Date now = new Date();
+            authToken.setCreatedAt(now);
+            authToken.setUpdatedAt(now);
 
             // 记录客户端信息
             if (request != null) {

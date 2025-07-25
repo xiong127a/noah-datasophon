@@ -61,9 +61,20 @@ public class JwtTokenProviderBase implements TokenProvider {
     @PostConstruct
     public void init() {
         try {
-            // 使用安全的密钥生成方式，生成适合HS512算法的密钥
-            this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
-            logger.info("成功初始化JWT密钥，使用安全随机生成的HS512密钥");
+            // 使用配置的密钥字符串，而不是每次都生成新的随机密钥
+            // 如果配置的密钥字符串不够长，使用它作为种子生成一个密钥
+            if (secretKeyString.length() < 32) {
+                logger.warn("配置的JWT密钥太短，使用它作为种子生成新密钥");
+                byte[] keyBytes = secretKeyString.getBytes();
+                // 填充到足够长度
+                byte[] keyData = new byte[64]; // HS512需要至少64字节
+                System.arraycopy(keyBytes, 0, keyData, 0, Math.min(keyBytes.length, keyData.length));
+                this.secretKey = Keys.hmacShaKeyFor(keyData);
+            } else {
+                // 直接使用配置的密钥
+                this.secretKey = Keys.hmacShaKeyFor(secretKeyString.getBytes());
+            }
+            logger.info("成功初始化JWT密钥");
         } catch (Exception e) {
             logger.error("初始化JWT密钥失败", e);
             throw new SecurityException("无法初始化JWT密钥", e);
