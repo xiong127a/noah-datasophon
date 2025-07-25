@@ -25,7 +25,6 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -71,30 +70,28 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @return 是否成功撤销
      */
     default boolean revokeToken(@Param("id") String id, @Param("reason") String reason) {
-        int rows = UpdateChain.of(AuthTokenEntity.class)
+        return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getIsRevoked, true)
                 .set(AuthTokenEntity::getRevokedReason, reason)
                 .set(AuthTokenEntity::getUpdatedAt, new Date())
                 .where(AuthTokenEntity::getId).eq(id)
                 .update();
-        return rows > 0;
     }
 
     /**
      * 清理用户旧令牌，保留最新的N个
-     * 
+     *
      * @param userId           用户ID
      * @param maxTokensPerUser 每个用户保留的最大令牌数
-     * @return 删除的令牌数量
      */
-    default int cleanupOldTokens(@Param("userId") Integer userId, @Param("maxTokens") int maxTokensPerUser) {
+    default void cleanupOldTokens(@Param("userId") Integer userId, @Param("maxTokens") int maxTokensPerUser) {
         List<AuthTokenEntity> allTokens = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .orderBy(AuthTokenEntity::getIssuedAt, false)
                 .list();
 
         if (allTokens.size() <= maxTokensPerUser) {
-            return 0;
+            return;
         }
 
         List<String> tokenIdsToDelete = allTokens.stream()
@@ -103,10 +100,10 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
                 .toList();
 
         if (tokenIdsToDelete.isEmpty()) {
-            return 0;
+            return;
         }
 
-        return this.deleteBatchByIds(tokenIdsToDelete);
+        this.deleteBatchByIds(tokenIdsToDelete);
     }
 
     /**
@@ -117,12 +114,11 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @return 更新是否成功
      */
     default boolean updateLastAccessTime(@Param("id") String id, @Param("lastAccessTime") Date lastAccessTime) {
-        int rows = UpdateChain.of(AuthTokenEntity.class)
+        return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getLastAccessTime, lastAccessTime)
                 .set(AuthTokenEntity::getUpdatedAt, new Date())
                 .where(AuthTokenEntity::getId).eq(id)
                 .update();
-        return rows > 0;
     }
 
     /**
