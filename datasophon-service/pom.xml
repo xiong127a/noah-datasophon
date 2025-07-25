@@ -31,7 +31,7 @@
         </dependency>
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-infrastructure</artifactId>
+            <artifactId>datasophon-dao</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
