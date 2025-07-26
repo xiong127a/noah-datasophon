@@ -180,7 +180,7 @@ onMounted(async () => {
         closeButton 
         expand
         theme="system"
-        :duration="4000"
+        :duration="2000"
         :style="{ zIndex: 9999 }"
         class="global-toast-container"
       />
@@ -554,7 +554,7 @@ html, body {
   background: rgba(255, 255, 255, 0.4) !important;
   border-radius: 0 0 20px 20px !important;
   z-index: 1 !important;
-  animation: progressCountdown 4s linear forwards !important;
+  animation: progressCountdown 2s linear forwards !important;
 }
 
 /* 不同类型通知的进度条颜色 */
