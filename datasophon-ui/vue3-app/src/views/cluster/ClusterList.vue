@@ -76,12 +76,8 @@
                 : 'bg-primary hover:bg-primary-600 text-white'"
             >
               <span>进入集群</span>
-              <!-- 禁用状态特殊标记 -->
-              <div v-if="item.clusterStateCode === 1" class="absolute right-0 top-0">
-                <div class="bg-red-500 text-white text-[10px] font-bold py-1 px-2 transform rotate-45 translate-x-[18px] -translate-y-[10px]">
-                  无法访问
-                </div>
-              </div>
+              <!-- 禁用状态不再显示角标，改为直接在按钮上显示 -->
+              <span v-if="item.clusterStateCode === 1" class="ml-1 opacity-70">(未配置)</span>
             </button>
             
             <!-- 次要按钮组 -->
@@ -105,54 +101,38 @@
                 <span>授权</span>
               </button>
               
-              <!-- 更多按钮 (使用 Headless UI Menu) -->
-              <Menu as="div" class="relative">
-                <MenuButton
+              <!-- 更多按钮 (使用普通下拉菜单替代) -->
+              <div class="relative" @click.stop>
+                <button
+                  @click="toggleMoreMenu(item)"
                   class="w-full py-2 px-3 rounded-lg border border-gray-200 text-sm font-medium hover:border-primary hover:text-primary hover:bg-blue-50 transition-colors duration-200"
-                  @click.stop
                 >
                   更多
-                </MenuButton>
-                <transition
-                  enter-active-class="transition duration-100 ease-out"
-                  enter-from-class="transform scale-95 opacity-0"
-                  enter-to-class="transform scale-100 opacity-100"
-                  leave-active-class="transition duration-75 ease-in"
-                  leave-from-class="transform scale-100 opacity-100"
-                  leave-to-class="transform scale-95 opacity-0"
+                </button>
+                <div 
+                  v-if="activeMenuClusterId === item.id"
+                  class="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                 >
-                  <MenuItems class="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                    <div class="py-1">
-                      <MenuItem v-slot="{ active }">
-                        <button
-                          :class="[
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                            'flex w-full px-4 py-2 text-left text-sm',
-                            item.clusterStateCode === 2 ? 'opacity-50 cursor-not-allowed' : ''
-                          ]"
-                          :disabled="item.clusterStateCode === 2"
-                          @click="configCluster(item)"
-                        >
-                          配置集群
-                        </button>
-                      </MenuItem>
-                      <MenuItem v-slot="{ active }">
-                        <button
-                          :class="[
-                            active ? 'bg-red-50 text-red-700' : 'text-red-600',
-                            'flex w-full px-4 py-2 text-left text-sm',
-                            item.clusterStateCode === 2 ? 'opacity-50 cursor-not-allowed' : ''
-                          ]"
-                          :disabled="item.clusterStateCode === 2"
-                          @click="delectColony(item)"
-                        >
-                          删除集群
-                        </button>
-                      </MenuItem>
-                    </div>
-                  </MenuItems>
-                </transition>
-              </Menu>
+                  <div class="py-1">
+                    <button
+                      class="flex w-full px-4 py-2 text-left text-sm hover:bg-gray-100 hover:text-gray-900 text-gray-700"
+                      :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
+                      :disabled="item.clusterStateCode === 2"
+                      @click="configCluster(item)"
+                    >
+                      配置集群
+                    </button>
+                    <button
+                      class="flex w-full px-4 py-2 text-left text-sm hover:bg-red-50 hover:text-red-700 text-red-600"
+                      :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
+                      :disabled="item.clusterStateCode === 2"
+                      @click="delectColony(item)"
+                    >
+                      删除集群
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -322,6 +302,8 @@ const depType = ref('')
 const stepsComponentLoaded = ref(false)
 const deleteModalVisible = ref(false)
 const clusterToDelete = ref(null)
+// 下拉菜单状态
+const activeMenuClusterId = ref(null)
 
 // 计算属性
 const user = computed(() => userStore.user)
@@ -334,6 +316,11 @@ const filteredDataSource = computed(() => {
 // 生命周期钩子
 onMounted(() => {
   getColonyList()
+  
+  // 添加全局点击事件，关闭打开的菜单
+  document.addEventListener('click', () => {
+    activeMenuClusterId.value = null;
+  });
   
   // 尝试预加载Steps组件
   try {
@@ -348,6 +335,17 @@ onMounted(() => {
 })
 
 // 方法
+// 切换更多菜单
+const toggleMoreMenu = (item) => {
+  // 如果点击的是当前打开的菜单，则关闭
+  if (activeMenuClusterId.value === item.id) {
+    activeMenuClusterId.value = null;
+  } else {
+    // 否则打开该菜单，关闭其他菜单
+    activeMenuClusterId.value = item.id;
+  }
+};
+
 const addColony = (obj) => {
   // 防止参数是函数引用
   if (typeof obj === 'function') {
