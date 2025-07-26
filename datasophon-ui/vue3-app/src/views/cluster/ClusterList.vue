@@ -83,14 +83,14 @@
             <!-- 次要按钮组 -->
             <div class="grid grid-cols-3 gap-2">
               <button
-                @click="addColony(item)"
+                @click="configCluster(item)"
                 :disabled="item.clusterStateCode === 2"
                 class="py-2 px-3 rounded-lg border text-sm font-medium transition-colors duration-200"
                 :class="item.clusterStateCode === 2 
                   ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                   : 'border-gray-200 hover:border-primary hover:text-primary hover:bg-blue-50'"
               >
-                <span>编辑</span>
+                <span>配置集群</span>
               </button>
               
               <button
@@ -102,36 +102,40 @@
               </button>
               
               <!-- 更多按钮 (使用普通下拉菜单替代) -->
-              <div class="relative" @click.stop>
+              <div class="relative inline-block" @click.stop>
                 <button
                   @click="toggleMoreMenu(item)"
                   class="w-full py-2 px-3 rounded-lg border border-gray-200 text-sm font-medium hover:border-primary hover:text-primary hover:bg-blue-50 transition-colors duration-200"
                 >
                   更多
                 </button>
-                <div 
-                  v-if="activeMenuClusterId === item.id"
-                  class="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-                >
-                  <div class="py-1">
-                    <button
-                      class="flex w-full px-4 py-2 text-left text-sm hover:bg-gray-100 hover:text-gray-900 text-gray-700"
-                      :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
-                      :disabled="item.clusterStateCode === 2"
-                      @click="configCluster(item)"
-                    >
-                      配置集群
-                    </button>
-                    <button
-                      class="flex w-full px-4 py-2 text-left text-sm hover:bg-red-50 hover:text-red-700 text-red-600"
-                      :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
-                      :disabled="item.clusterStateCode === 2"
-                      @click="delectColony(item)"
-                    >
-                      删除集群
-                    </button>
+                <!-- 使用Teleport将菜单移动到body，避免被父元素影响 -->
+                <Teleport to="body">
+                  <div 
+                    v-if="activeMenuClusterId === item.id"
+                    :style="getMenuPosition(item.id)"
+                    class="fixed z-[9999] w-40 origin-top-right rounded-md bg-white shadow-xl border border-gray-200"
+                  >
+                    <div class="py-1">
+                      <button
+                        class="flex w-full px-4 py-2 text-left text-sm hover:bg-gray-100 hover:text-gray-900 text-gray-700"
+                        :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
+                        :disabled="item.clusterStateCode === 2"
+                        @click="addColony(item)"
+                      >
+                        编辑集群
+                      </button>
+                      <button
+                        class="flex w-full px-4 py-2 text-left text-sm hover:bg-red-50 hover:text-red-700 text-red-600"
+                        :class="{ 'opacity-50 cursor-not-allowed': item.clusterStateCode === 2 }"
+                        :disabled="item.clusterStateCode === 2"
+                        @click="delectColony(item)"
+                      >
+                        删除集群
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </Teleport>
               </div>
             </div>
           </div>
@@ -256,10 +260,10 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, defineAsyncComponent, h } from 'vue'
+import { ref, computed, nextTick, onMounted, defineAsyncComponent, h, Teleport } from 'vue'
 import { useRouter } from 'vue-router'
 import SvgIcon from '@/components/SvgIcon.vue'
-import { Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 
 // 导入子组件
 import AddColony from './components/AddColony.vue'
@@ -335,15 +339,44 @@ onMounted(() => {
 })
 
 // 方法
+// 菜单位置信息
+const menuPositions = ref({});
+
 // 切换更多菜单
 const toggleMoreMenu = (item) => {
   // 如果点击的是当前打开的菜单，则关闭
   if (activeMenuClusterId.value === item.id) {
     activeMenuClusterId.value = null;
-  } else {
-    // 否则打开该菜单，关闭其他菜单
-    activeMenuClusterId.value = item.id;
+    return;
   }
+  
+  // 否则打开该菜单，关闭其他菜单
+  activeMenuClusterId.value = item.id;
+  
+  // 计算并存储菜单位置
+  nextTick(() => {
+    // 找到当前点击的按钮
+    const buttonElement = event.currentTarget;
+    if (!buttonElement) return;
+    
+    // 获取按钮的位置信息
+    const rect = buttonElement.getBoundingClientRect();
+    
+    // 存储菜单位置
+    menuPositions.value[item.id] = {
+      top: rect.bottom + window.scrollY + 5,
+      left: rect.right - 160 + window.scrollX,
+    };
+  });
+};
+
+// 获取菜单位置样式
+const getMenuPosition = (itemId) => {
+  const position = menuPositions.value[itemId] || {};
+  return {
+    top: `${position.top || 0}px`,
+    left: `${position.left || 0}px`
+  };
 };
 
 const addColony = (obj) => {
