@@ -72,7 +72,7 @@
                         :class="{ 'active': isActive(subItem.path) }"
                         @click.stop="onSubMenuSelect(subItem, $event)"
                       >
-                        <a :href="'#' + subItem.path" class="submenu-link">
+                        <a :href="subItem.path" class="submenu-link">
                           <div class="submenu-icon">
                             <svg-icon :icon-class="subItem.icon || 'default'" />
                           </div>
@@ -520,6 +520,11 @@ export default {
     
     // 处理子菜单点击
     onSubMenuSelect(subItem, event) {
+      // 阻止默认链接行为，我们会使用编程方式导航
+      if (event) {
+        event.preventDefault();
+      }
+      
       // 关闭所有下拉菜单
       this.hoveredMenu = '';
       this.expandedMenu = '';
@@ -543,17 +548,36 @@ export default {
       // 通知父组件路由已经改变
       this.$emit('routeChanged', subItem.path);
       
-      // 处理特殊的路径映射，确保兼容旧路径格式
-      let targetPath = subItem.path;
+      // 记录导航信息用于调试
+      console.log(`[Navigation] 准备导航至: ${subItem.path}`);
       
-      // 导航到子菜单路径
-      this.$router.push(targetPath).catch(err => {
-        console.error('路由导航错误:', err);
+      // 直接导航到路径 - 不要使用 # 符号
+      this.$router.push(subItem.path).catch(err => {
+        console.error('路由导航错误:', err.message);
         
         // 如果导航失败，尝试一些替代方案
-        if (targetPath === '/colony-manage/list') {
-          // 尝试导航到集群列表的替代路径
-          this.$router.push('/cluster/list').catch(e => console.error('替代导航也失败:', e));
+        if (subItem.path === '/colony-manage/storage') {
+          console.log('[Navigation] 尝试替代方案: /cluster/storage');
+          this.$router.push('/cluster/storage').catch(e => {
+            console.error('替代导航也失败:', e.message);
+            
+            // 最后尝试刷新页面
+            if (confirm('导航遇到问题，是否刷新页面到存储库管理？')) {
+              window.location.href = '/colony-manage/storage';
+            }
+          });
+        } else if (subItem.path === '/colony-manage/framework') {
+          console.log('[Navigation] 尝试替代方案: /cluster/framework');
+          this.$router.push('/cluster/framework').catch(e => {
+            console.error('替代导航也失败:', e.message);
+            
+            // 最后尝试刷新页面
+            if (confirm('导航遇到问题，是否刷新页面到集群框架？')) {
+              window.location.href = '/colony-manage/framework';
+            }
+          });
+        } else {
+          alert(`导航到 ${subItem.path} 失败: ${err.message}`);
         }
       });
     },

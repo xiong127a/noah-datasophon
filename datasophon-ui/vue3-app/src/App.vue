@@ -1,18 +1,48 @@
 <script setup lang="ts">
 // App.vue - 根组件
-// 移除旧的Toast组件导入
 import { useUserStore } from './stores/user'
-import { onMounted, watch, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, watch, ref, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 // 引入新的toast系统
-import { toast } from './composables/useVueSonner'
-import { Toaster } from 'vue-sonner'
+import { toast, Toaster } from 'vue-sonner'
 import AuthProvider from './components/AuthProvider.vue'
-import config from './config/index.js' // 修正导入路径
+// 正确导入config
+import config from './config'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const isInitializing = ref(true)
+const isRefreshing = ref(false)
+
+// 在问题路由路径上强制刷新一次，解决首次访问问题
+onMounted(() => {
+  const problematicPaths = ['/colony-manage/storage', '/colony-manage/framework']
+  
+  if (problematicPaths.includes(route.path) && !isRefreshing.value) {
+    console.log(`[App] 检测到可能有问题的路径: ${route.path}，准备修复...`)
+    isRefreshing.value = true
+    
+    // 首先尝试重新导航一次
+    nextTick(() => {
+      router.replace(route.path).catch(err => {
+        console.error(`[App] 重新导航失败: ${err.message}`)
+        
+        // 如果导航失败，打印当前路由配置
+        console.log('[App] 当前路由配置:', router.options.routes)
+        
+        // 尝试使用另一种方式
+        if (route.path === '/colony-manage/storage') {
+          router.replace('/cluster/storage').catch(e => 
+            console.error('[App] 备选导航也失败:', e.message))
+        } else if (route.path === '/colony-manage/framework') {
+          router.replace('/cluster/framework').catch(e => 
+            console.error('[App] 备选导航也失败:', e.message))
+        }
+      })
+    })
+  }
+})
 
 // 初始化应用
 const initializeApp = async () => {
@@ -75,7 +105,10 @@ const initializeApp = async () => {
         userStore.logout({ silent: true })
         // 如果不在登录页，跳转到登录页
         if (router.currentRoute.value.path !== '/login') {
-          toast.toast.warning('登录已过期')
+          toast({
+            title: '登录已过期',
+            style: { background: 'var(--warning-color)', color: 'white' }
+          })
           router.push('/login')
         }
       }
@@ -93,14 +126,17 @@ const initializeApp = async () => {
     // 出现错误时，使用静默登出清除状态并跳转到登录页
     userStore.logout({ silent: true })
     if (router.currentRoute.value.path !== '/login') {
-      toast.toast.error('验证失败')
+      toast({
+        title: '验证失败',
+        style: { background: 'var(--error-color)', color: 'white' }
+      })
       router.push('/login')
     }
   } finally {
     console.log('[App] 初始化完成，设置isInitializing = false')
     isInitializing.value = false
-      }
-    }
+  }
+}
 
 // 监听认证状态
 onMounted(async () => {
@@ -109,11 +145,17 @@ onMounted(async () => {
   
   // 监听路由变化，在用户明确要访问登录页时清除认证
   watch(() => router.currentRoute.value.path, (newPath) => {
+    // 记录所有路由变化，帮助调试
+    console.log(`[App] 路由变化: ${route.path} -> ${newPath}`)
+    
     // 用户主动访问登录页，则清除认证状态
     if (newPath === '/login' && userStore.isLoggedIn) {
       console.log('[Auth] 用户访问登录页，清除现有认证状态')
       userStore.logout()
     }
+    
+    // 记录路由变化到控制台
+    console.log(`[Router Debug] 当前路由: ${newPath}, 参数:`, router.currentRoute.value.params)
   })
 })
 </script>
@@ -131,15 +173,15 @@ onMounted(async () => {
       <!-- 路由视图 -->
       <router-view></router-view>
       
-      <!-- 使用Sonner的Toaster组件替换原Toast组件 -->
+      <!-- 使用Sonner的Toaster组件 -->
       <Toaster 
-        position="top-right" 
+        position="top-center" 
         richColors 
         closeButton 
         expand
         theme="system"
-        style="z-index: 9999;"
-        className="global-toast-container"
+        :style="{ zIndex: 9999 }"
+        class="global-toast-container"
       />
     </AuthProvider>
   </div>
@@ -197,5 +239,357 @@ html, body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 确保全局toast容器在最上层并正确定位 */
+.global-toast-container {
+  z-index: 9999 !important;
+}
+
+/* 强制设置vue-sonner通知的位置和样式 - 符合页面深色科技风格 */
+[data-sonner-toaster] {
+  position: fixed !important;
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  bottom: auto !important;
+  z-index: 9999 !important;
+  width: auto !important;
+  max-width: 400px !important;
+}
+
+[data-sonner-toast] {
+  position: relative !important;
+  margin-bottom: 16px !important;
+  min-width: 340px !important;
+  padding: 20px 28px 20px 60px !important;
+  border-radius: 20px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 12px 20px -8px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 40px rgba(255, 255, 255, 0.03) !important;
+  overflow: hidden !important;
+  transform-style: preserve-3d !important;
+}
+
+/* 通知背景渐变 - 深色科技风格 */
+[data-sonner-toast]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: linear-gradient(135deg, 
+    rgba(15, 23, 42, 0.95), 
+    rgba(30, 41, 59, 0.9),
+    rgba(51, 65, 85, 0.85)) !important;
+  z-index: -1 !important;
+}
+
+/* 成功通知样式 */
+[data-sonner-toast][data-type="success"] {
+  color: #ecfdf5 !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+[data-sonner-toast][data-type="success"]::before {
+  background: linear-gradient(135deg, 
+    rgba(6, 78, 59, 0.95), 
+    rgba(5, 46, 22, 0.9),
+    rgba(20, 83, 45, 0.85)) !important;
+}
+
+/* 成功图标 - 使用伪元素避免冲突 */
+[data-sonner-toast][data-type="success"] {
+  position: relative !important;
+}
+
+[data-sonner-toast][data-type="success"]::after {
+  content: '✓' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 20px !important;
+  transform: translateY(-50%) !important;
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+  animation: successPulse 2s infinite !important;
+  z-index: 10 !important;
+}
+
+/* 隐藏vue-sonner默认图标 */
+[data-sonner-toast] [data-icon] {
+  display: none !important;
+}
+
+/* 错误通知样式 */
+[data-sonner-toast][data-type="error"] {
+  color: #fef2f2 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+[data-sonner-toast][data-type="error"]::before {
+  background: linear-gradient(135deg, 
+    rgba(127, 29, 29, 0.95), 
+    rgba(69, 10, 10, 0.9),
+    rgba(153, 27, 27, 0.85)) !important;
+}
+
+/* 错误图标 */
+[data-sonner-toast][data-type="error"]::after {
+  content: '✕' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 20px !important;
+  transform: translateY(-50%) !important;
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+  animation: errorShake 2s infinite !important;
+  z-index: 5 !important;
+}
+
+/* 警告通知样式 */
+[data-sonner-toast][data-type="warning"] {
+  color: #fffbeb !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+[data-sonner-toast][data-type="warning"]::before {
+  background: linear-gradient(135deg, 
+    rgba(120, 53, 15, 0.95), 
+    rgba(69, 26, 3, 0.9),
+    rgba(146, 64, 14, 0.85)) !important;
+}
+
+/* 警告图标 */
+[data-sonner-toast][data-type="warning"]::after {
+  content: '⚠' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 20px !important;
+  transform: translateY(-50%) !important;
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
+  animation: warningBounce 2s infinite !important;
+  z-index: 5 !important;
+}
+
+/* 信息通知样式 */
+[data-sonner-toast][data-type="info"] {
+  color: #eff6ff !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-sonner-toast][data-type="info"]::before {
+  background: linear-gradient(135deg, 
+    rgba(30, 58, 138, 0.95), 
+    rgba(15, 23, 42, 0.9),
+    rgba(37, 99, 235, 0.85)) !important;
+}
+
+/* 信息图标 */
+[data-sonner-toast][data-type="info"]::after {
+  content: 'ℹ' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 20px !important;
+  transform: translateY(-50%) !important;
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+  animation: infoPulse 2s infinite !important;
+  z-index: 5 !important;
+}
+
+/* 通知动画效果 */
+[data-sonner-toast] {
+  animation: elegantSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes elegantSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+    filter: blur(4px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-5px) scale(0.98);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 动画效果 */
+@keyframes successPulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  25% {
+    transform: translateY(-50%) translateX(-2px);
+  }
+  75% {
+    transform: translateY(-50%) translateX(2px);
+  }
+}
+
+@keyframes warningBounce {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+@keyframes infoPulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50%) scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+/* 进度条倒计时动画 */
+@keyframes progressCountdown {
+  0% {
+    width: 100%;
+    opacity: 1;
+  }
+  90% {
+    width: 10%;
+    opacity: 0.8;
+  }
+  100% {
+    width: 0%;
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 隐藏默认关闭按钮 */
+[data-sonner-toast] button[data-close-button] {
+  display: none !important;
+}
+
+/* 进度条容器 - 使用border实现 */
+[data-sonner-toast] {
+  border-bottom: 3px solid rgba(255, 255, 255, 0.2) !important;
+  position: relative !important;
+}
+
+[data-sonner-toast]::before {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -3px !important;
+  left: 0 !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-radius: 0 0 20px 20px !important;
+  z-index: 1 !important;
+  animation: progressCountdown 4s linear forwards !important;
+}
+
+/* 不同类型通知的进度条颜色 */
+[data-sonner-toast][data-type="success"]::before {
+  background: linear-gradient(90deg, 
+    rgba(16, 185, 129, 0.9), 
+    rgba(34, 197, 94, 0.7)) !important;
+}
+
+[data-sonner-toast][data-type="error"]::before {
+  background: linear-gradient(90deg, 
+    rgba(239, 68, 68, 0.9), 
+    rgba(220, 38, 38, 0.7)) !important;
+}
+
+[data-sonner-toast][data-type="warning"]::before {
+  background: linear-gradient(90deg, 
+    rgba(245, 158, 11, 0.9), 
+    rgba(217, 119, 6, 0.7)) !important;
+}
+
+[data-sonner-toast][data-type="info"]::before {
+  background: linear-gradient(90deg, 
+    rgba(59, 130, 246, 0.9), 
+    rgba(37, 99, 235, 0.7)) !important;
+}
+
+/* 通知文本样式优化 */
+[data-sonner-toast] [data-title] {
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+  margin-bottom: 4px !important;
+}
+
+[data-sonner-toast] [data-description] {
+  opacity: 0.9 !important;
+  line-height: 1.5 !important;
 }
 </style>
