@@ -180,6 +180,7 @@ onMounted(async () => {
         closeButton 
         expand
         theme="system"
+        :duration="4000"
         :style="{ zIndex: 9999 }"
         class="global-toast-container"
       />

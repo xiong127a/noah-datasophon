@@ -327,13 +327,13 @@ const handleLogin = async () => {
       
       // 登录成功，显示成功通知
       console.log('[Toast] 准备显示成功通知');
-      toast.success('登录成功，正在进入系统...', { duration: 3000 });
+      toast.success('登录成功，正在进入系统...', { duration: 600 });
       console.log('[Toast] 成功调用toast.success');
       
       // 登录成功后跳转
       setTimeout(() => {
         router.push('/');
-      }, 800);
+      }, 700);
     } else {
       // 登录失败，显示来自store的错误
       const errorMessage = userStore.loginError || '登录失败，请检查用户名和密码';
