@@ -4,6 +4,18 @@ import { Dialog, DialogPanel } from '@headlessui/vue';
 import { useVueSonner } from '@/composables/useVueSonner';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 import { getFrameList, deleteService } from '@/api/httpApi/cluster';
+import { useRoute } from 'vue-router';
+
+// 添加路由参数处理
+const route = useRoute();
+
+// 添加组件加载时的调试日志
+onMounted(() => {
+  // 记录路由信息，便于调试
+  console.log('[FrameworkManage] 组件已加载, 路径:', route.path);
+  console.log('[FrameworkManage] 完整URL:', window.location.href);
+  console.log('[FrameworkManage] 查询参数:', route.query);
+});
 </script>
 
 <template>

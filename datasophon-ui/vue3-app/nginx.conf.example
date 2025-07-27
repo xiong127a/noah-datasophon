@@ -1,0 +1,52 @@
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/your/app/dist;
+    index index.html;
+    
+    # 启用gzip压缩
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    
+    # 特殊处理已知的问题路径 - 直接使用特殊的404页面
+    location ~ ^/colony-manage/(storage|framework) {
+        try_files $uri $uri/ /404.html;
+    }
+    
+    # 正常的SPA路由处理
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # 添加安全相关头信息
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    
+    # 设置缓存策略
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+    
+    # 不缓存HTML和数据文件
+    location ~* \.(html|json)$ {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+    }
+    
+    # 处理API代理
+    location /api/ {
+        proxy_pass http://your-backend-api-url/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # 禁止访问隐藏文件
+    location ~ /\. {
+        deny all;
+    }
+} 

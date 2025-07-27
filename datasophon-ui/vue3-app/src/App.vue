@@ -15,34 +15,7 @@ const userStore = useUserStore()
 const isInitializing = ref(true)
 const isRefreshing = ref(false)
 
-// 在问题路由路径上强制刷新一次，解决首次访问问题
-onMounted(() => {
-  const problematicPaths = ['/colony-manage/storage', '/colony-manage/framework']
-  
-  if (problematicPaths.includes(route.path) && !isRefreshing.value) {
-    console.log(`[App] 检测到可能有问题的路径: ${route.path}，准备修复...`)
-    isRefreshing.value = true
-    
-    // 首先尝试重新导航一次
-    nextTick(() => {
-      router.replace(route.path).catch(err => {
-        console.error(`[App] 重新导航失败: ${err.message}`)
-        
-        // 如果导航失败，打印当前路由配置
-        console.log('[App] 当前路由配置:', router.options.routes)
-        
-        // 尝试使用另一种方式
-        if (route.path === '/colony-manage/storage') {
-          router.replace('/cluster/storage').catch(e => 
-            console.error('[App] 备选导航也失败:', e.message))
-        } else if (route.path === '/colony-manage/framework') {
-          router.replace('/cluster/framework').catch(e => 
-            console.error('[App] 备选导航也失败:', e.message))
-        }
-      })
-    })
-  }
-})
+// 应用初始化
 
 // 初始化应用
 const initializeApp = async () => {
@@ -138,24 +111,16 @@ const initializeApp = async () => {
   }
 }
 
-// 监听认证状态
 onMounted(async () => {
   // 应用启动时进行初始化
   await initializeApp()
   
   // 监听路由变化，在用户明确要访问登录页时清除认证
   watch(() => router.currentRoute.value.path, (newPath) => {
-    // 记录所有路由变化，帮助调试
-    console.log(`[App] 路由变化: ${route.path} -> ${newPath}`)
-    
     // 用户主动访问登录页，则清除认证状态
     if (newPath === '/login' && userStore.isLoggedIn) {
-      console.log('[Auth] 用户访问登录页，清除现有认证状态')
       userStore.logout()
     }
-    
-    // 记录路由变化到控制台
-    console.log(`[Router Debug] 当前路由: ${newPath}, 参数:`, router.currentRoute.value.params)
   })
 })
 </script>

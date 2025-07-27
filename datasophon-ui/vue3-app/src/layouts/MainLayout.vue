@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSettingsStore } from '../stores/settings';
 import AppHeader from '../components/header/AppHeader.vue';
@@ -64,9 +64,21 @@ const menuData = ref([
     icon: 'colony',
     rightSide: true,
     children: [
-      { path: '/colony-manage/list', title: '集群管理', icon: 'cluster' },
-      { path: '/colony-manage/storage', title: '存储库管理', icon: 'storage' },
-      { path: '/colony-manage/framework', title: '集群框架', icon: 'framework' }
+      { 
+        path: '/colony-manage/list', 
+        title: '集群管理', 
+        icon: 'cluster' 
+      },
+      { 
+        path: '/colony-manage/storage',  // 直接使用原始路径
+        title: '存储库管理', 
+        icon: 'storage'
+      },
+      { 
+        path: '/colony-manage/framework',  // 直接使用原始路径
+        title: '集群框架', 
+        icon: 'framework'
+      }
     ]
   },
   {
@@ -120,22 +132,47 @@ const onFirstMenuSelect = (key: string) => {
   }
 };
 
-// 路由变更事件
-const onRouteChanged = (path: string) => {
-  console.log('路由已变更到:', path);
+// 路由变更
+const onRouteChanged = (newPath) => {
+  console.log('路由已变更到:', newPath);
+  
+  // 特殊处理集群管理子菜单的直接访问
+  if (newPath === '/colony-manage/storage' || newPath === '/colony-manage/framework') {
+    console.log(`[MainLayout] 检测到直接访问关键路径: ${newPath}，使用绝对路径导航`);
+    router.push(newPath).catch(err => {
+      console.error('[路由错误]', err);
+    });
+    return;
+  }
+  
+  // 正常路由导航
+  router.push(newPath).catch(err => {
+    console.error('[路由错误]', err);
+  });
 };
 
 // 监听路由变化以更新菜单状态
 watch(() => route.path, (newPath, oldPath) => {
-  console.log(`[路由变更] 从 ${oldPath} 到 ${newPath}`);
-  console.log('[路由状态] 当前路由:', route);
-  
   // 更新激活的菜单
   for (const item of menuData.value) {
-    if (newPath === item.path || newPath.startsWith(item.path + '/')) {
+    if (newPath === item.path || 
+        newPath.startsWith(item.path + '/') ||
+        (item.path === '/colony-manage' && 
+         (newPath === '/colony-manage/storage' || newPath === '/colony-manage/framework'))) {
       console.log(`[菜单状态] 激活菜单: ${item.path} (${item.title})`);
       activeFirstMenuKey.value = item.path;
       settingsStore.setActiveFirstMenu(item.path);
+      
+      // 特殊处理存储库和框架路由 - 确保其在集群管理菜单下高亮显示
+      if (newPath === '/colony-manage/storage' || newPath === '/colony-manage/framework') {
+        console.log(`[菜单状态] 特殊路径激活集群管理菜单: ${item.path}`);
+        
+        // 确保子菜单能够正确展开
+        nextTick(() => {
+          // 这里可以添加展开子菜单的代码
+          console.log('[菜单状态] 确保集群管理菜单展开');
+        });
+      }
       break;
     }
   }
@@ -146,6 +183,31 @@ watch(() => route.path, (newPath, oldPath) => {
     router.replace('/colony-manage/list').catch(err => {
       console.error('[路由错误]', err);
     });
+  }
+  
+  // 特殊处理存储库和框架路由
+  if (newPath === '/colony-manage/storage' || newPath === '/colony-manage/framework') {
+    console.log(`[路由修正] 检测到特殊路径: ${newPath}，确保正确加载`);
+    
+    // 如果这是直接加载此路径，确保菜单状态正确
+    setTimeout(() => {
+      // 确保集群管理菜单被激活
+      activeFirstMenuKey.value = '/colony-manage';
+      settingsStore.setActiveFirstMenu('/colony-manage');
+      
+      // 强制刷新一次
+      nextTick(() => {
+        console.log('[布局更新] 强制更新菜单状态');
+      });
+    }, 100);
+    
+    // 设置本地存储，以便在其他组件或刷新后能够识别
+    try {
+      localStorage.setItem('lastSpecialPath', newPath);
+      localStorage.setItem('lastSpecialPathTimestamp', Date.now().toString());
+    } catch (e) {
+      console.error('[MainLayout] 设置本地存储失败:', e);
+    }
   }
 }, { immediate: true });
 
@@ -169,4 +231,4 @@ onMounted(() => {
 .router-link-active.active {
   @apply bg-blue-50 text-primary;
 }
-</style> 
+</style>

@@ -1,3 +1,5 @@
+
+
 <template>
   <div class="parcel-management">
     <!-- 页面头部 -->
@@ -224,6 +226,18 @@ import { ref, reactive, onMounted } from 'vue'
 import { useVueSonner } from '@/composables/useVueSonner'
 import { errorHandler } from '@/composables/useErrorHandler'
 import * as parcelApi from '@/api/httpApi/parcel'
+import { useRoute } from 'vue-router'
+
+// 添加路由参数处理
+const route = useRoute()
+
+// 添加组件加载时的调试日志
+onMounted(() => {
+  // 记录路由信息，便于调试
+  console.log('[ParcelList] 组件已加载, 路径:', route.path)
+  console.log('[ParcelList] 完整URL:', window.location.href)
+  console.log('[ParcelList] 查询参数:', route.query)
+})
 
 const { toast } = useVueSonner()
 const ddhParcelPath = ref("file:///opt/datasophon/DDP/packages")
