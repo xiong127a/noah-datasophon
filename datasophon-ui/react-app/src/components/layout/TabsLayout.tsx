@@ -1,37 +1,72 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate } from '@tanstack/react-router';
 import { clearAuthInfo, getUserInfo } from '@/utils/auth';
 
 /**
- * TabsLayout - 应用主框架布局，仅包含顶部导航和内容区域
- * 基于苹果设计风格的现代化界面
+ * TabsLayout - 基于苹果设计风格的主框架，包含顶部导航和内容区域
  */
 const TabsLayout = () => {
   const navigate = useNavigate();
   const userInfo = getUserInfo();
   const [activeMenu, setActiveMenu] = useState('/overview');
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isClusterMenuOpen, setIsClusterMenuOpen] = useState(false);
+  const [alarmCount, setAlarmCount] = useState(3);
+  
+  // 引用DOM元素
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const clusterDropdownRef = useRef<HTMLDivElement>(null);
 
-  // 导航菜单数据
-  const navItems = [
-    {
-      key: '/overview',
-      label: '集群总览',
-      icon: 'i-carbon-dashboard',
-    },
+  // 主菜单数据 (左侧)
+  const mainMenuItems = [
     {
       key: '/',
       label: '主页',
       icon: 'i-carbon-home',
+    },
+    {
+      key: '/host-manage',
+      label: '主机管理',
+      icon: 'i-carbon-bare-metal-server',
+    },
+    {
+      key: '/alarm-manage',
+      label: '告警管理',
+      icon: 'i-carbon-notification',
+      children: [
+        { key: '/alarm-manage/notice', label: '通知组管理', icon: 'i-carbon-notification-new' },
+        { key: '/alarm-manage/group', label: '告警组管理', icon: 'i-carbon-notification-off' },
+        { key: '/alarm-manage/table', label: '告警指标管理', icon: 'i-carbon-table' },
+        { key: '/alarm-manage/help', label: '使用帮助', icon: 'i-carbon-help' }
+      ]
+    },
+    {
+      key: '/system-manage',
+      label: '系统管理',
+      icon: 'i-carbon-settings',
+      children: [
+        { key: '/system-manage/tenant', label: '租户管理', icon: 'i-carbon-group' },
+        { key: '/system-manage/user', label: '用户管理', icon: 'i-carbon-user-profile' },
+        { key: '/system-manage/rack', label: '机架管理', icon: 'i-carbon-rack-server' },
+        { key: '/system-manage/tag', label: '标签管理', icon: 'i-carbon-tag' },
+        { key: '/system-manage/log', label: '日志审计', icon: 'i-carbon-document' }
+      ]
     }
   ];
 
-  // 管理菜单数据
-  const adminItems = [
+  // 管理菜单数据 (右侧)
+  const adminMenuItems = [
     {
       key: '/cluster-manage',
       label: '集群管理',
       icon: 'i-carbon-cloud-services',
+      children: [
+        { key: '/cluster-manage/list', label: '集群列表', icon: 'i-carbon-list' },
+        { key: '/cluster-manage/storage', label: '集群存储库', icon: 'i-carbon-data-base' },
+        { key: '/cluster-manage/framework', label: '集群框架', icon: 'i-carbon-network-4' }
+      ]
     },
     {
       key: '/user-manage',
@@ -40,15 +75,70 @@ const TabsLayout = () => {
     }
   ];
 
+  // 集群数据
+  const clusters = [
+    { id: '1', name: '测试集群1', type: 'K8S', status: 'running' },
+    { id: '2', name: '生产环境', type: 'Linux', status: 'running' },
+    { id: '3', name: '开发环境', type: 'Linux', status: 'warning' }
+  ];
+  const [currentCluster, setCurrentCluster] = useState(clusters[0]);
+
   // 处理菜单项点击
-  const handleMenuClick = (key: string) => {
+  const handleMenuClick = (key: string, hasChildren: boolean) => {
+    if (!hasChildren) {
+      setActiveMenu(key);
+      navigate({ to: key });
+      // 关闭所有展开的菜单
+      setExpandedMenu(null);
+      setHoveredMenu(null);
+    } else {
+      // 切换展开状态
+      setExpandedMenu(expandedMenu === key ? null : key);
+    }
+  };
+
+  // 处理子菜单项点击
+  const handleSubMenuClick = (parentKey: string, key: string) => {
     setActiveMenu(key);
     navigate({ to: key });
+    // 关闭所有展开的菜单
+    setExpandedMenu(null);
+    setHoveredMenu(null);
   };
 
   // 处理菜单项hover
-  const handleMenuHover = (key: string | null) => {
-    setHoveredMenu(key);
+  const handleMenuHover = (key: string | null, hasChildren: boolean) => {
+    if (hasChildren) {
+      setHoveredMenu(key);
+    }
+  };
+
+  // 处理菜单项离开
+  const handleMenuLeave = (key: string | null) => {
+    // 如果没有固定展开的菜单，则清除悬停状态
+    if (expandedMenu !== key) {
+      setHoveredMenu(null);
+    }
+  };
+
+  // 切换用户菜单
+  const toggleUserMenu = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
+    // 关闭其他菜单
+    setIsClusterMenuOpen(false);
+  };
+
+  // 切换集群菜单
+  const toggleClusterMenu = () => {
+    setIsClusterMenuOpen(!isClusterMenuOpen);
+    // 关闭其他菜单
+    setIsUserMenuOpen(false);
+  };
+
+  // 选择集群
+  const selectCluster = (cluster: typeof clusters[0]) => {
+    setCurrentCluster(cluster);
+    setIsClusterMenuOpen(false);
   };
 
   // 处理退出登录
@@ -57,123 +147,375 @@ const TabsLayout = () => {
     navigate({ to: '/login' });
   };
 
+  // 打开历史操作
+  const openHistoryOperations = () => {
+    console.log('打开历史操作');
+  };
+
+  // 打开告警管理
+  const openAlarmManagement = () => {
+    navigate({ to: '/alarm-manage/notice' });
+  };
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+      if (clusterDropdownRef.current && !clusterDropdownRef.current.contains(event.target as Node)) {
+        setIsClusterMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-      {/* 顶部导航栏 - 苹果风格重构 */}
-      <header className="sticky top-0 z-50 w-full glass-morphism shadow-subtle">
-        <div className="h-16 px-6 mx-auto flex items-center justify-between">
+      {/* 顶部导航栏 - 苹果风格实现 */}
+      <header className="sticky top-0 z-50 w-full h-15 shadow-subtle">
+        {/* 毛玻璃背景效果 */}
+        <div className="absolute inset-0 backdrop-blur-apple bg-white/85 border-b border-gray-100/30 -z-10"></div>
+        
+        <div className="h-full mx-auto flex items-center justify-between px-6">
           {/* 左侧：Logo + 导航菜单 */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center h-full">
             {/* Logo区域 */}
             <div 
-              className="flex items-center cursor-pointer group"
-              onClick={() => handleMenuClick('/')}
+              className="flex items-center cursor-pointer mr-10 transition hover:opacity-80 hover:scale-102"
+              onClick={() => handleMenuClick('/', false)}
             >
-              <div className="w-8 h-8 mr-2 flex-center transition group-hover:scale-105">
+              <div className="w-8 h-8 mr-3 flex-center transition">
                 <img src="/company.png" alt="Logo" className="h-full" />
               </div>
-              <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight group-hover:text-primary transition">
-                DataSophon大数据平台
+              <h1 className="text-base font-medium text-gray-900 tracking-tight">
+                Noah大数据基础平台
               </h1>
             </div>
             
-            {/* 主导航菜单 */}
-            <nav className="hidden md:block">
-              <ul className="flex items-center gap-1">
-                {navItems.map((item) => (
+            {/* 左侧主菜单 */}
+            <nav className="h-full">
+              <ul className="flex items-center h-full list-none m-0 p-0 gap-1">
+                {mainMenuItems.map((item) => (
                   <li
                     key={item.key}
-                    className="relative"
-                    onMouseEnter={() => handleMenuHover(item.key)}
-                    onMouseLeave={() => handleMenuHover(null)}
-                    onClick={() => handleMenuClick(item.key)}
+                    className={`
+                      relative h-full flex items-center px-4 cursor-pointer
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-500' : 'text-gray-700'}
+                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/5' : ''}
+                      hover:bg-black/5 rounded-lg transition-colors duration-200
+                    `}
+                    onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
+                    onMouseLeave={() => handleMenuLeave(item.key)}
+                    onClick={() => handleMenuClick(item.key, !!item.children)}
                   >
-                    <div
-                      className={`
-                        flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                        ${activeMenu === item.key 
-                          ? 'bg-primary-50 text-primary-600 shadow-sm'
-                          : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50/50'}
-                      `}
-                    >
+                    <div className="flex items-center gap-2">
                       <div className={`
-                        w-5 h-5 mr-2 flex-center transition
-                        ${activeMenu === item.key ? 'text-primary-600' : 'text-gray-500'}
+                        w-5 h-5 flex-center
+                        ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
+                          ? 'text-primary-500' 
+                          : 'text-gray-500'
+                        }
                       `}>
                         <div className={item.icon}></div>
                       </div>
-                      <span>{item.label}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                      {item.children && (
+                        <div className={`
+                          w-4 h-4 flex-center opacity-60 transition-transform
+                          ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'rotate-180 opacity-100' : ''}
+                        `}>
+                          <div className="i-carbon-chevron-down"></div>
+                        </div>
+                      )}
                     </div>
+
+                    {/* 子菜单下拉面板 */}
+                    {item.children && (hoveredMenu === item.key || expandedMenu === item.key) && (
+                      <div 
+                        className="absolute top-full left-0 min-w-55 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top"
+                        onMouseEnter={() => setHoveredMenu(item.key)}
+                        onMouseLeave={() => handleMenuLeave(item.key)}
+                      >
+                        <div className="p-2">
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100/60 mb-1">
+                            <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                            <div 
+                              className="w-6 h-6 rounded-full hover:bg-gray-100/60 flex-center cursor-pointer transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedMenu(null);
+                                setHoveredMenu(null);
+                              }}
+                            >
+                              <div className="i-carbon-close text-gray-500 w-3 h-3"></div>
+                            </div>
+                          </div>
+                          <ul className="py-1">
+                            {item.children.map((subItem) => (
+                              <li
+                                key={subItem.key}
+                                className={`
+                                  mx-1 rounded-lg transition-colors
+                                  ${activeMenu === subItem.key ? 'bg-primary-50 text-primary-500' : 'text-gray-700 hover:bg-gray-50'}
+                                `}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSubMenuClick(item.key, subItem.key);
+                                }}
+                              >
+                                <div className="flex items-center px-3 py-2">
+                                  <div className={`
+                                    w-5 h-5 mr-2 flex-center
+                                    ${activeMenu === subItem.key ? 'text-primary-500' : 'text-gray-500'}
+                                  `}>
+                                    <div className={subItem.icon}></div>
+                                  </div>
+                                  <span className="text-sm">{subItem.label}</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </nav>
           </div>
 
-          {/* 中间区域：可以放置状态指示器等 */}
-          <div className="hidden lg:flex items-center justify-center absolute left-1/2 transform -translate-x-1/2">
-            {/* 服务状态指示器等组件 */}
-          </div>
-
-          {/* 右侧：管理菜单 + 用户信息 + 退出按钮 */}
-          <div className="flex items-center gap-4">
-            {/* 管理菜单 */}
-            <nav className="hidden md:block">
-              <ul className="flex items-center gap-1">
-                {adminItems.map((item) => (
+          {/* 右侧：管理菜单 + 操作按钮 + 用户信息 */}
+          <div className="flex items-center gap-3">
+            {/* 右侧管理菜单 */}
+            <nav className="h-full mr-4">
+              <ul className="flex items-center h-full list-none m-0 p-0 gap-1">
+                {adminMenuItems.map((item) => (
                   <li
                     key={item.key}
-                    className="relative"
-                    onMouseEnter={() => handleMenuHover(item.key)}
-                    onMouseLeave={() => handleMenuHover(null)}
-                    onClick={() => handleMenuClick(item.key)}
+                    className={`
+                      relative h-full flex items-center px-4 cursor-pointer
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-500' : 'text-gray-700'}
+                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/5' : ''}
+                      hover:bg-black/5 rounded-lg transition-colors duration-200
+                    `}
+                    onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
+                    onMouseLeave={() => handleMenuLeave(item.key)}
+                    onClick={() => handleMenuClick(item.key, !!item.children)}
                   >
-                    <div
-                      className={`
-                        flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                        ${activeMenu === item.key 
-                          ? 'bg-primary-50 text-primary-600 shadow-sm'
-                          : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50/50'}
-                      `}
-                    >
+                    <div className="flex items-center gap-2">
                       <div className={`
-                        w-5 h-5 mr-2 flex-center transition
-                        ${activeMenu === item.key ? 'text-primary-600' : 'text-gray-500'}
+                        w-5 h-5 flex-center
+                        ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
+                          ? 'text-primary-500' 
+                          : 'text-gray-500'
+                        }
                       `}>
                         <div className={item.icon}></div>
                       </div>
-                      <span>{item.label}</span>
+                      <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                      {item.children && (
+                        <div className={`
+                          w-4 h-4 flex-center opacity-60 transition-transform
+                          ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'rotate-180 opacity-100' : ''}
+                        `}>
+                          <div className="i-carbon-chevron-down"></div>
+                        </div>
+                      )}
                     </div>
+
+                    {/* 子菜单下拉面板 */}
+                    {item.children && (hoveredMenu === item.key || expandedMenu === item.key) && (
+                      <div 
+                        className="absolute top-full left-0 min-w-55 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top"
+                        onMouseEnter={() => setHoveredMenu(item.key)}
+                        onMouseLeave={() => handleMenuLeave(item.key)}
+                      >
+                        <div className="p-2">
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100/60 mb-1">
+                            <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                            <div 
+                              className="w-6 h-6 rounded-full hover:bg-gray-100/60 flex-center cursor-pointer transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedMenu(null);
+                                setHoveredMenu(null);
+                              }}
+                            >
+                              <div className="i-carbon-close text-gray-500 w-3 h-3"></div>
+                            </div>
+                          </div>
+                          <ul className="py-1">
+                            {item.children.map((subItem) => (
+                              <li
+                                key={subItem.key}
+                                className={`
+                                  mx-1 rounded-lg transition-colors
+                                  ${activeMenu === subItem.key ? 'bg-primary-50 text-primary-500' : 'text-gray-700 hover:bg-gray-50'}
+                                `}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSubMenuClick(item.key, subItem.key);
+                                }}
+                              >
+                                <div className="flex items-center px-3 py-2">
+                                  <div className={`
+                                    w-5 h-5 mr-2 flex-center
+                                    ${activeMenu === subItem.key ? 'text-primary-500' : 'text-gray-500'}
+                                  `}>
+                                    <div className={subItem.icon}></div>
+                                  </div>
+                                  <span className="text-sm">{subItem.label}</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             </nav>
 
-            {/* 用户信息 */}
-            <div className="user-avatar ml-4">
-              <div className="flex items-center px-4 py-2 rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-100 shadow-sm transition hover:shadow-md hover:border-primary-100 hover:-translate-y-0.5">
-                <div className="i-carbon-user w-5 h-5 mr-2 text-primary-500"></div>
-                <span className="text-sm font-medium text-gray-800">{userInfo?.username || '未登录'}</span>
-              </div>
+            {/* 集群选择器 */}
+            <div className="relative" ref={clusterDropdownRef}>
+              <button 
+                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100 transition"
+                onClick={toggleClusterMenu}
+              >
+                <div className="w-5 h-5 mr-2 text-primary-500">
+                  <div className={currentCluster.type === 'K8S' ? 'i-carbon-cloud' : 'i-carbon-bare-metal-server'}></div>
+                </div>
+                <div className="flex flex-col mr-2">
+                  <span className="text-xs font-medium text-gray-900">{currentCluster.name}</span>
+                  <span className="text-xs text-gray-500">{currentCluster.type}</span>
+                </div>
+                <div className="w-4 h-4 text-gray-500">
+                  <div className="i-carbon-chevron-down"></div>
+                </div>
+              </button>
+              
+              {/* 集群下拉菜单 */}
+              {isClusterMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 w-70 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top">
+                  <div className="p-3 border-b border-gray-100/60">
+                    <span className="text-sm font-medium">选择集群</span>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto p-2">
+                    {clusters.map((cluster) => (
+                      <div
+                        key={cluster.id}
+                        className={`
+                          flex items-center p-2 rounded-lg cursor-pointer transition
+                          ${currentCluster.id === cluster.id ? 'bg-primary-50' : 'hover:bg-gray-50'}
+                        `}
+                        onClick={() => selectCluster(cluster)}
+                      >
+                        <div className="relative">
+                          <div className="w-8 h-8 flex-center bg-black/3 rounded-md">
+                            <div className={cluster.type === 'K8S' ? 'i-carbon-cloud text-primary-500' : 'i-carbon-bare-metal-server text-gray-700'}></div>
+                          </div>
+                          <div className={`
+                            absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
+                            ${cluster.status === 'running' ? 'bg-green-500' : 'bg-amber-500'}
+                          `}></div>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{cluster.name}</p>
+                          <p className="text-xs text-gray-500">{cluster.type}</p>
+                        </div>
+                        {currentCluster.id === cluster.id && (
+                          <div className="ml-auto text-primary-500">
+                            <div className="i-carbon-checkmark"></div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* 退出登录按钮 */}
+            {/* 历史操作按钮 */}
             <button 
-              onClick={handleLogout}
-              className="w-10 h-10 flex-center rounded-xl bg-white border border-gray-100 shadow-sm text-gray-600 hover:text-primary-600 hover:-translate-y-0.5 hover:shadow-md hover:border-primary-100 transition-all"
-              aria-label="退出登录"
+              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition"
+              onClick={openHistoryOperations}
+              title="历史操作"
             >
-              <div className="i-carbon-logout w-5 h-5"></div>
+              <div className="i-carbon-history text-gray-700"></div>
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary-500 rounded-full"></div>
             </button>
+
+            {/* 告警按钮 */}
+            <button 
+              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition"
+              onClick={openAlarmManagement}
+              title="告警管理"
+            >
+              <div className="i-carbon-notification text-gray-700"></div>
+              {alarmCount > 0 && (
+                <div className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-xs flex-center">
+                  {alarmCount}
+                </div>
+              )}
+            </button>
+
+            {/* 用户中心 */}
+            <div className="relative" ref={userDropdownRef}>
+              <button 
+                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100 transition"
+                onClick={toggleUserMenu}
+              >
+                <div className="w-7 h-7 rounded-full bg-gray-200 flex-center mr-2 border border-gray-100">
+                  <div className="i-carbon-user text-gray-500"></div>
+                </div>
+                <span className="text-sm font-medium mr-1">{userInfo?.username || '未登录'}</span>
+                <div className="w-4 h-4 text-gray-500">
+                  <div className="i-carbon-chevron-down"></div>
+                </div>
+              </button>
+
+              {/* 用户下拉菜单 */}
+              {isUserMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 w-60 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top">
+                  <div className="p-4 border-b border-gray-100/60 flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex-center mr-3 border border-gray-100">
+                      <div className="i-carbon-user text-gray-500"></div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{userInfo?.username || '未登录'}</p>
+                      <p className="text-xs text-gray-500">管理员</p>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <a className="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div className="w-5 h-5 mr-3 text-gray-500">
+                        <div className="i-carbon-user-profile"></div>
+                      </div>
+                      <span className="text-sm text-gray-700">个人中心</span>
+                    </a>
+                    <a className="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer" onClick={handleLogout}>
+                      <div className="w-5 h-5 mr-3 text-gray-500">
+                        <div className="i-carbon-logout"></div>
+                      </div>
+                      <span className="text-sm text-gray-700">退出登录</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       {/* 主内容区域 - 全屏显示 */}
       <main className="flex-1 w-full bg-gray-50 overflow-auto">
-        <div className="container mx-auto py-6 px-6">
-          <Outlet /> {/* 子路由内容将在此处渲染 */}
-        </div>
+        <Outlet /> {/* 子路由内容将在此处渲染 */}
       </main>
     </div>
   );
