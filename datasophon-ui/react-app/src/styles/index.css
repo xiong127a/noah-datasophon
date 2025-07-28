@@ -373,3 +373,140 @@ input {
 .btn-hover-effect:hover:after {
   left: 120%;
 } 
+
+/* 基础样式 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 表单元素样式增强 */
+input:focus, 
+textarea:focus, 
+select:focus {
+  outline: none;
+  border-color: rgba(0, 113, 227, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+
+/* 通知样式 */
+.apple-notification {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.05);
+  min-width: 320px;
+  max-width: 420px;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.apple-notification.success {
+  background: rgba(240, 255, 244, 0.95);
+  border-left: 4px solid #32d74b;
+  box-shadow: 0 4px 12px rgba(50, 215, 75, 0.15), 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.apple-notification.error {
+  background: rgba(255, 245, 245, 0.95);
+  border-left: 4px solid #ff3b30;
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.15), 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.apple-notification.warning {
+  background: rgba(255, 250, 240, 0.95);
+  border-left: 4px solid #ff9f0a;
+  box-shadow: 0 4px 12px rgba(255, 159, 10, 0.15), 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.notification-show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notification-hide {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.notification-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success .notification-icon {
+  color: #32d74b;
+}
+
+.error .notification-icon {
+  color: #ff3b30;
+}
+
+.warning .notification-icon {
+  color: #ff9f0a;
+}
+
+.notification-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.notification-message {
+  color: #666;
+  font-size: 14px;
+}
+
+.notification-close {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+} 

@@ -32,6 +32,29 @@ export default defineConfig({
     'menu-item': 'flex items-center px-3 py-2 rounded-lg transition-all duration-150',
     'apple-header': 'backdrop-blur-xl bg-white/90 z-50 shadow-subtle border-b border-gray-100/20',
     'action-button': 'w-9 h-9 flex-center rounded-lg bg-black/3 hover:bg-black/5 transition-apple',
+    // 集群卡片相关
+    'cluster-card': 'bg-white rounded-xl shadow-card overflow-hidden border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative',
+    'cluster-card-linux': 'cluster-card border-l-orange-500',
+    'cluster-card-k8s': 'cluster-card border-l-blue-500',
+    'cluster-card-default': 'cluster-card border-l-gray-400',
+    'cluster-status-badge': 'absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md',
+    'cluster-status-running': 'bg-green-100 text-green-700',
+    'cluster-status-error': 'bg-red-100 text-red-700',
+    'cluster-status-configured': 'bg-orange-100 text-orange-700',
+    'cluster-header': 'p-6 border-b border-gray-100',
+    'cluster-body': 'px-6 py-4',
+    'cluster-footer': 'px-6 py-4 mt-auto',
+    'cluster-button': 'py-2.5 px-4 rounded-lg font-medium transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+    'cluster-button-primary': 'w-full cluster-button bg-primary hover:bg-primary-600 text-white',
+    'cluster-button-disabled': 'w-full cluster-button bg-gray-400 text-gray-100 cursor-not-allowed relative overflow-hidden',
+    'cluster-button-secondary': 'py-2 px-3 rounded-lg border text-sm font-medium transition-colors duration-200',
+    'cluster-button-secondary-active': 'border-gray-200 hover:border-primary hover:text-primary hover:bg-blue-50',
+    'cluster-button-secondary-disabled': 'border-gray-200 text-gray-400 cursor-not-allowed',
+    'cluster-create-card': 'bg-white rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-md hover:-translate-y-1',
+    // 通知提示相关
+    'apple-notification': 'fixed top-4 right-4 z-50 flex items-center gap-3 p-4 rounded-xl shadow-lg min-w-80 max-w-md translate-y-[-100%] opacity-0 transition-all duration-300',
+    'notification-show': 'translate-y-0 opacity-100',
+    'notification-hide': 'translate-y-[-100%] opacity-0',
   },
   // 主题配置
   theme: {
@@ -68,6 +91,8 @@ export default defineConfig({
       'prominent': '0 8px 16px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.06)',
       'apple': '0 2px 10px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.05)',
       'menu': '0 8px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06)',
+      'card': '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+      'notification': '0 4px 12px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.05)',
     },
     extend: {
       animation: {
@@ -82,6 +107,13 @@ export default defineConfig({
         'scale-in': 'scaleIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'scale-out': 'scaleOut 0.12s cubic-bezier(0.34, 0.96, 0.64, 1) forwards',
         'blur-in': 'blurIn 0.15s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+        'shimmer': 'shimmer 2.5s linear infinite',
+        'bounce-once': 'bounceOnce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'error-shake': 'errorShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
+        'scanning-line': 'scanningLine 2s ease-in-out infinite',
+        'light-sweep': 'lightSweep 3s ease-in-out infinite',
+        'gradient-x': 'gradientX 15s ease infinite',
+        'float-apple': 'floatApple 6s ease-in-out infinite',
       },
       keyframes: {
         'fadeInDown': {
@@ -103,6 +135,40 @@ export default defineConfig({
         'blurIn': {
           '0%': { opacity: '0', filter: 'blur(4px)' },
           '100%': { opacity: '1', filter: 'blur(0)' },
+        },
+        'shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'bounceOnce': {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '50%': { transform: 'scale(1.05)' },
+          '70%': { transform: 'scale(0.95)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'errorShake': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%, 60%': { transform: 'translateX(-5px)' },
+          '40%, 80%': { transform: 'translateX(5px)' },
+        },
+        'scanningLine': {
+          '0%': { top: '0%', opacity: '0' },
+          '20%': { opacity: '0.8' },
+          '80%': { opacity: '0.8' },
+          '100%': { top: '100%', opacity: '0' },
+        },
+        'lightSweep': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
+        'gradientX': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        'floatApple': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
         },
       },
       transitionTimingFunction: {
@@ -166,8 +232,65 @@ export default defineConfig({
       'transition-apple-spring',
       { 'transition': 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' },
     ],
+    // 通知样式
+    [
+      'notification-success',
+      {
+        'background': 'rgba(240, 255, 244, 0.95)',
+        'border-left': '4px solid #32d74b',
+        'box-shadow': '0 4px 12px rgba(50, 215, 75, 0.15), 0 0 1px rgba(0, 0, 0, 0.05)'
+      }
+    ],
+    [
+      'notification-error',
+      {
+        'background': 'rgba(255, 245, 245, 0.95)',
+        'border-left': '4px solid #ff3b30',
+        'box-shadow': '0 4px 12px rgba(255, 59, 48, 0.15), 0 0 1px rgba(0, 0, 0, 0.05)'
+      }
+    ],
+    [
+      'notification-warning',
+      {
+        'background': 'rgba(255, 250, 240, 0.95)',
+        'border-left': '4px solid #ff9f0a',
+        'box-shadow': '0 4px 12px rgba(255, 159, 10, 0.15), 0 0 1px rgba(0, 0, 0, 0.05)'
+      }
+    ],
   ],
   safelist: [
+    // 通知提示相关类
+    'apple-notification',
+    'notification-show',
+    'notification-hide',
+    'notification-success',
+    'notification-error',
+    'notification-warning',
+    'notification-icon',
+    'notification-content',
+    'notification-title',
+    'notification-message',
+    'notification-close',
+    // 集群卡片相关类
+    'cluster-card',
+    'cluster-card-linux',
+    'cluster-card-k8s',
+    'cluster-card-default',
+    'cluster-status-badge',
+    'cluster-status-running',
+    'cluster-status-error',
+    'cluster-status-configured',
+    'cluster-header',
+    'cluster-body',
+    'cluster-footer',
+    'cluster-button',
+    'cluster-button-primary',
+    'cluster-button-disabled',
+    'cluster-button-secondary',
+    'cluster-button-secondary-active',
+    'cluster-button-secondary-disabled',
+    'cluster-create-card',
+    
     // 图标类 - Carbon图标
     'i-carbon-dashboard',
     'i-carbon-home',
@@ -208,6 +331,9 @@ export default defineConfig({
     'i-carbon-chevron-down',
     'i-carbon-close',
     'i-carbon-checkmark',
+    'i-carbon-checkmark-filled',
+    'i-carbon-error-filled',
+    'i-carbon-warning-filled',
     'i-carbon-search',
     'i-carbon-filter',
     'i-carbon-add',
@@ -244,5 +370,12 @@ export default defineConfig({
     'animate-scale-in',
     'animate-scale-out',
     'animate-blur-in',
+    'animate-shimmer',
+    'animate-bounce-once',
+    'animate-error-shake',
+    'animate-scanning-line',
+    'animate-light-sweep',
+    'animate-gradient-x',
+    'animate-float-apple',
   ],
 }); 
