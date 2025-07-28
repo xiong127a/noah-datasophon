@@ -62,6 +62,10 @@ const resp401 = {
    * @returns {*}
    */
   onFulfilled(response, options) {
+    // 临时修改：禁用401错误处理，忽略登录失效的情况
+    return response;
+    
+    /* 原代码注释，方便日后恢复
     const {message} = options
     if (response.code === 401) {
       message.error('登录已失效，请重新登录')
@@ -69,6 +73,7 @@ const resp401 = {
       location.reload();
     }
     return response
+    */
   },
   /**
    * 响应出错时执行
@@ -77,6 +82,12 @@ const resp401 = {
    * @returns {Promise<never>}
    */
   onRejected(error, options) {
+    // 临时修改：忽略401错误
+    if (error.response && error.response.status === 401) {
+      return Promise.resolve({ data: { code: 200 } });
+    }
+    
+    /* 原代码注释，方便日后恢复
     const {message} = options
     const {response} = error
     if (response.status === 401) {
@@ -84,6 +95,7 @@ const resp401 = {
       logout();
       location.reload();
     }
+    */
     return Promise.reject(error)
   }
 }

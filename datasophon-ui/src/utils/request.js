@@ -87,6 +87,10 @@ function removeAuthorization(authType = AUTH_TYPE.BEARER) {
  * @returns {boolean}
  */
 function checkAuthorization(authType = AUTH_TYPE.BEARER) {
+  // 临时修改：禁用登录检查，始终返回true
+  return true;
+  
+  /* 原代码注释掉，方便恢复
   switch (authType) {
   case AUTH_TYPE.BEARER:
     if (Cookie.get(xsrfHeaderName)) {
@@ -100,6 +104,7 @@ function checkAuthorization(authType = AUTH_TYPE.BEARER) {
     break
   }
   return false
+  */
 }
 
 

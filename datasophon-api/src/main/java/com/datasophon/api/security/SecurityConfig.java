@@ -134,12 +134,12 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                                                 // 所有其他请求需要认证
-                                                .anyRequest().authenticated())
-
+//                                                .anyRequest().authenticated())
+                                                .anyRequest().permitAll()); // 关键修改：允许所有请求无需认证
                                 // 添加JWT过滤器
-                                .addFilterBefore(
-                                                new JwtAuthenticationFilter(tokenProvider),
-                                                UsernamePasswordAuthenticationFilter.class);
+//                                .addFilterBefore(
+//                                                new JwtAuthenticationFilter(tokenProvider),
+//                                                UsernamePasswordAuthenticationFilter.class);
 
                 // 返回构建的过滤链
                 return http.build();

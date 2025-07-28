@@ -25,6 +25,7 @@ import {initRouter} from './router'
 import './icons/index'
 import './assets/less/index.less'
 import '@/assets/less/globalStyle.less'  // 添加全局样式文件导入
+import { setAuthorization } from '@/utils/request'  // 导入认证函数
 
 // 导入表单验证mixin
 import { formValidationMixin } from './utils/formValidation'
@@ -43,6 +44,10 @@ import '@/assets/fonts/font.css'
 
 // 导入API初始化文件
 import '@/api/index'
+
+// 临时修改：自动设置认证信息，禁用登录需求
+setAuthorization({ sessionId: 'temporary-session-id' });
+localStorage.setItem('satoken', 'temporary-token');
 
 const router = initRouter(store.state.setting.asyncRoutes)
 const i18n = initI18n('CN', 'US')

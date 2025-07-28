@@ -101,6 +101,10 @@ export default {
     ...mapState("setting", ["footerLinks", "copyright"]),
   },
   created () {
+      // 临时修改：自动跳转到主页，禁用登录页面
+      this.$router.push("/colony-manage/colony-list");
+      
+      /* 原登录逻辑注释，方便日后恢复
       if(localStorage.getItem('satoken')){
         this.$router.push("/colony-manage/colony-list");
       }else{
@@ -124,6 +128,7 @@ export default {
               }
           })
       }
+      */
   },
   methods: {
     ...mapMutations("account", ["setUser", "setPermissions", "setRoles"]),
