@@ -14,10 +14,9 @@ export default defineConfig({
     host: '192.168.200.6',
     port: 8082,
     proxy: {
-      '/api': {
+      '/ddh': {
         target: 'http://192.168.200.3:8081',
         changeOrigin: true,
-        rewrite: (path) => path,  // 不修改路径
       },
     },
   },

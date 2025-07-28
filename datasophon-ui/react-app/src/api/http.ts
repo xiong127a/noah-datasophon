@@ -4,7 +4,7 @@ import { router } from '@/routes';
 
 // 创建一个axios实例
 const http: AxiosInstance = axios.create({
-  baseURL: '/api', // 设置API基础URL
+  baseURL: '/ddh/api', // 设置API基础URL，统一使用ddh/api前缀
   timeout: 15000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json',
