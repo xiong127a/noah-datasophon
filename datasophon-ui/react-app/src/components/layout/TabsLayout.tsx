@@ -49,7 +49,7 @@ const TabsLayout = () => {
       children: [
         { key: '/system-manage/tenant', label: '租户管理', icon: 'i-carbon-group' },
         { key: '/system-manage/user', label: '用户管理', icon: 'i-carbon-user-profile' },
-        { key: '/system-manage/rack', label: '机架管理', icon: 'i-carbon-server-rack' },
+        { key: '/system-manage/rack', label: '机架管理', icon: 'i-carbon-data-base' },
         { key: '/system-manage/tag', label: '标签管理', icon: 'i-carbon-tag' },
         { key: '/system-manage/log', label: '日志审计', icon: 'i-carbon-document' }
       ]
@@ -255,7 +255,7 @@ const TabsLayout = () => {
                               <div className="i-carbon-close text-gray-500 w-3 h-3"></div>
                             </div>
                           </div>
-                          <ul className="py-1">
+                          <ul className="list-none m-0 p-0 py-1">
                             {item.children.map((subItem) => (
                               <li
                                 key={subItem.key}
@@ -349,7 +349,7 @@ const TabsLayout = () => {
                               <div className="i-carbon-close text-gray-500 w-3 h-3"></div>
                             </div>
                           </div>
-                          <ul className="py-1">
+                          <ul className="list-none m-0 p-0 py-1">
                             {item.children.map((subItem) => (
                               <li
                                 key={subItem.key}
