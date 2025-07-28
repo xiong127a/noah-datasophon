@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // App.vue - 根组件
 import { useUserStore } from './stores/user'
-import { onMounted, watch, ref, nextTick } from 'vue'
+import { onMounted, watch, ref, nextTick, onErrorCaptured, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 // 引入新的toast系统
 import { toast, Toaster } from 'vue-sonner'
@@ -14,6 +14,54 @@ const route = useRoute()
 const userStore = useUserStore()
 const isInitializing = ref(true)
 const isRefreshing = ref(false)
+
+// 错误处理
+onErrorCaptured((err, instance, info) => {
+  console.error('[App Error]', err)
+  console.error('[Error Info]', info)
+  console.error('[Error Component]', instance)
+  
+  toast({
+    title: '组件错误',
+    description: `${err.message || '未知错误'}`,
+    type: 'error',
+    duration: 5000
+  })
+  
+  return false // 阻止错误继续传播
+})
+
+// 全局错误处理
+const handleGlobalError = (event) => {
+  const error = event.error || event;
+  console.error('[Global Error]', error);
+  
+  // 显示错误toast
+  toast({
+    title: '应用错误',
+    description: error.message || '发生未知错误',
+    type: 'error',
+    duration: 8000
+  });
+  
+  // 阻止默认行为
+  event.preventDefault?.();
+};
+
+// 监听全局错误
+onMounted(() => {
+  window.addEventListener('error', handleGlobalError);
+  window.addEventListener('unhandledrejection', handleGlobalError);
+  
+  // 设置Vue全局错误处理
+  // Vue 3不再支持全局errorHandler，这里使用错误捕获钩子代替
+});
+
+// 在组件卸载时移除事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('error', handleGlobalError);
+  window.removeEventListener('unhandledrejection', handleGlobalError);
+});
 
 // 应用初始化
 
@@ -112,6 +160,9 @@ const initializeApp = async () => {
 }
 
 onMounted(async () => {
+  // 处理哈希模式路径重定向
+  handleHashModeRedirect()
+  
   // 应用启动时进行初始化
   await initializeApp()
   
@@ -123,6 +174,80 @@ onMounted(async () => {
     }
   })
 })
+
+// 处理哈希模式路径重定向
+const handleHashModeRedirect = () => {
+  const hash = window.location.hash
+  
+  console.log('[Router Debug] 页面加载路径:', window.location.pathname)
+  console.log('[Router Debug] 哈希部分:', hash)
+  
+  if (!hash || !hash.startsWith('#/')) return
+  
+  const hashPath = hash.substring(1) // 移除 # 号
+  console.log('[Router Special Handling] 检测到哈希模式特殊路径:', hashPath)
+  
+  // 定义路径映射
+  const pathMappings = {
+    // 集群管理相关映射
+    '/colony-manage/framework': '/cluster/framework',
+    '/colony-manage/storage': '/cluster/storage',
+    '/colony-manage/list': '/cluster/list', // 修改为指向/cluster/list
+    '/colony-manage': '/cluster/list', // 修改为指向/cluster/list
+    
+    // 告警管理相关映射
+    '/alarm-manage/notification': '/alarm/notification',
+    '/alarm-manage/group': '/alarm/group',
+    '/alarm-manage/metric': '/alarm/metric',
+    '/alarm-manage/help': '/alarm/help',
+    '/alarm-manage': '/alarm',
+    
+    // 系统管理相关映射
+    '/system-manage/tenant': '/system/tenant',
+    '/system-manage/user': '/system/user',
+    '/system-manage/rack': '/system/rack',
+    '/system-manage/label': '/system/label',
+    '/system-manage/log': '/system/log',
+    '/system-manage': '/system',
+    
+    // 服务管理相关映射
+    '/service-manage': '/service',
+    
+    // 主机管理相关映射
+    '/host-manage': '/host',
+    
+    // 用户管理相关映射
+    '/user-manage': '/user',
+    
+    // 集群特殊路径处理
+    '/cluster': '/cluster/list' // 确保/cluster也重定向到/cluster/list
+  }
+  
+  // 检查是否需要重定向
+  const newPath = pathMappings[hashPath]
+  
+  // 清除哈希
+  window.history.replaceState(null, '', window.location.pathname)
+  
+  if (newPath) {
+    console.log('[Router Special Handling] 重定向到:', newPath)
+    router.push(newPath)
+  } else if (hashPath.startsWith('/service-manage/')) {
+    // 特殊处理带参数的服务管理路径
+    const clusterId = hashPath.split('/')[2]
+    if (clusterId) {
+      const targetPath = `/service?clusterId=${clusterId}`
+      console.log('[Router Special Handling] 服务管理参数重定向到:', targetPath)
+      router.push(targetPath)
+    } else {
+      router.push('/service')
+    }
+  } else {
+    // 对于其他哈希路径，直接转换为正常路径
+    console.log('[Router Special Handling] 转换哈希路径:', hashPath)
+    router.push(hashPath)
+  }
+}
 </script>
 
 <template>

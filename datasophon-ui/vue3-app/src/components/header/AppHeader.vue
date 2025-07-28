@@ -72,12 +72,12 @@
                         :class="{ 'active': isActive(subItem.path) }"
                         @click.stop="onSubMenuSelect(subItem, $event)"
                       >
-                        <a :href="subItem.path" class="submenu-link">
+                        <div class="submenu-link">
                           <div class="submenu-icon">
                             <svg-icon :icon-class="subItem.icon || 'default'" />
                           </div>
                           <span class="submenu-text">{{subItem.title}}</span>
-                        </a>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -175,12 +175,12 @@
                         :class="{ 'active': isActive(subItem.path) }"
                         @click.stop="onSubMenuSelect(subItem, $event)"
                       >
-                        <a :href="'#' + subItem.path" class="admin-submenu-link">
+                        <div class="admin-submenu-link">
                           <div class="submenu-icon">
                             <svg-icon :icon-class="subItem.icon || 'default'" />
                           </div>
                           <span class="submenu-text">{{subItem.title}}</span>
-                        </a>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -545,39 +545,56 @@ export default {
         this.activeMenuKey = parentMenu.path;
       }
       
-      // 通知父组件路由已经改变
-      this.$emit('routeChanged', subItem.path);
-      
       // 记录导航信息用于调试
       console.log(`[Navigation] 准备导航至: ${subItem.path}`);
       
-      // 直接导航到路径 - 不要使用 # 符号
-      this.$router.push(subItem.path).catch(err => {
-        console.error('路由导航错误:', err.message);
+      // 检查路径是否需要特殊处理
+      let targetPath = subItem.path;
+      
+      // 路径映射对照表 - 确保使用正确的路由路径
+      const pathMappings = {
+        '/colony-manage/list': '/cluster/list',
+        '/colony-manage/storage': '/cluster/storage',
+        '/colony-manage/framework': '/cluster/framework',
+        '/service-manage': '/service',
+        '/host-manage': '/host',
+        '/system-manage': '/system',
+        '/user-manage': '/user'
+      };
+      
+      // 检查是否需要路径转换
+      const mappedPath = pathMappings[targetPath];
+      if (mappedPath) {
+        console.log(`[Navigation] 路径映射: ${targetPath} -> ${mappedPath}`);
+        targetPath = mappedPath;
+      }
+      
+      // 通知父组件路由已经改变
+      this.$emit('routeChanged', targetPath);
+      
+      // 直接导航到路径，添加捕获错误并提供用户反馈
+      this.$router.push(targetPath).catch(err => {
+        if (err.name === 'NavigationDuplicated') {
+          // 重复导航不算错误，静默处理
+          console.log('[Navigation] 重复导航到相同路径:', targetPath);
+          return;
+        }
         
-        // 如果导航失败，尝试一些替代方案
-        if (subItem.path === '/colony-manage/storage') {
-          console.log('[Navigation] 尝试替代方案: /cluster/storage');
-          this.$router.push('/cluster/storage').catch(e => {
-            console.error('替代导航也失败:', e.message);
-            
-            // 最后尝试刷新页面
-            if (confirm('导航遇到问题，是否刷新页面到存储库管理？')) {
-              window.location.href = '/colony-manage/storage';
-            }
-          });
-        } else if (subItem.path === '/colony-manage/framework') {
-          console.log('[Navigation] 尝试替代方案: /cluster/framework');
-          this.$router.push('/cluster/framework').catch(e => {
-            console.error('替代导航也失败:', e.message);
-            
-            // 最后尝试刷新页面
-            if (confirm('导航遇到问题，是否刷新页面到集群框架？')) {
-              window.location.href = '/colony-manage/framework';
-            }
+        console.error('[Navigation Error]', err.message, {
+          targetPath,
+          originalPath: subItem.path,
+          error: err
+        });
+        
+        // 使用toast通知用户
+        if (window.toast) {
+          window.toast({
+            title: '导航错误',
+            description: `无法导航到指定页面: ${err.message}`,
+            type: 'error'
           });
         } else {
-          alert(`导航到 ${subItem.path} 失败: ${err.message}`);
+          alert(`导航到 ${targetPath} 失败: ${err.message}`);
         }
       });
     },
@@ -1640,4 +1657,4 @@ export default {
   opacity: 0;
   transform: translateY(-10px) scale(0.98);
 }
-</style> 
+</style>

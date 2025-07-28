@@ -61,5 +61,6 @@ if (import.meta.env.DEV) {
   window.$toast = toast
 }
 
-console.log('[App] 应用初始化完成，路由系统已加载')
-console.log('[Router] 可用路由:', router.getRoutes().map(r => ({ path: r.path, name: r.name })))
+// 输出路由配置信息
+console.log('[App] 应用初始化完成，路由系统已加载');
+console.log('[Router] 可用路由:', router.getRoutes());
