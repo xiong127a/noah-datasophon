@@ -23,8 +23,8 @@ import paths from '@/api/baseUrl'// 后台服务地址
 let path = paths.path() + '/ddh'
 
 export default {
-  login: path + '/api/login',
-  loginOut: path + '/api/signOut',
+  login: path + '/login',
+  loginOut: path + '/signOut',
   getUserList: path + '/api/user/list', // 用户列表
   addUser: path + '/api/user/save', // 添加用户
   deleteUser: path + '/api/user/delete', // 删除用户
