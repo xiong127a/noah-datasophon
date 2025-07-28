@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { getToken, clearAuthInfo } from '@/utils/auth';
-import { router } from '@/routes';
+import router from '@/routes';
 
 // 创建一个axios实例
 const http: AxiosInstance = axios.create({
