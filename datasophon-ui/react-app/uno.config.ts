@@ -179,7 +179,6 @@ export default defineConfig({
       scale: {
         '98': '0.98',
         '102': '1.02',
-        '101': '1.01',
       },
     },
   },
@@ -339,17 +338,12 @@ export default defineConfig({
     'i-carbon-filter',
     'i-carbon-add',
     'i-carbon-view',
-    'i-carbon-view-off',
-    'i-carbon-password',
     'i-carbon-edit',
     'i-carbon-trash-can',
     'i-carbon-chevron-left',
     'i-carbon-chevron-right',
     'i-carbon-chart-line',
     'i-carbon-application',
-    'i-carbon-cognitive',
-    'i-carbon-chart-line-data',
-    'i-carbon-group',
     
     // 图标类 - Remix图标
     'i-ri-kubernetes-fill',
@@ -383,10 +377,5 @@ export default defineConfig({
     'animate-light-sweep',
     'animate-gradient-x',
     'animate-float-apple',
-    
-    // 比例尺度
-    'scale-98',
-    'scale-101',
-    'scale-102',
   ],
 }); 
