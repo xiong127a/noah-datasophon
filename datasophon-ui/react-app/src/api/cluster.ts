@@ -41,4 +41,11 @@ export const authCluster = (data: any) => {
  */
 export const getServiceListByCluster = (clusterId: string | number) => {
   return post(API_PATHS.getServiceListByCluster, { clusterId });
+};
+
+/**
+ * 获取框架列表
+ */
+export const getFrameList = (params?: any) => {
+  return post(API_PATHS.getFrameList, params);
 }; 
