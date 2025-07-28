@@ -299,7 +299,7 @@ const TabsLayout = () => {
                     key={item.key}
                     className={`
                       relative h-full flex items-center px-4 cursor-pointer rounded-lg
-                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600 bg-black/3' : 'text-gray-800'}
                       ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/3' : ''}
                       hover:bg-black/3 transition-colors duration-150
                     `}
@@ -331,7 +331,7 @@ const TabsLayout = () => {
                     {/* 子菜单下拉面板 */}
                     {item.children && (hoveredMenu === item.key || expandedMenu === item.key) && (
                       <div 
-                        className="absolute top-full left-0 min-w-55 glass-morphism-menu rounded-xl overflow-hidden z-50 animate-scale-in origin-top-left shadow-menu"
+                        className="absolute top-full right-0 min-w-55 glass-morphism-menu rounded-xl overflow-hidden z-50 animate-scale-in origin-top-right shadow-menu"
                         onMouseEnter={() => setHoveredMenu(item.key)}
                         onMouseLeave={() => handleMenuLeave(item.key)}
                       >
@@ -389,7 +389,7 @@ const TabsLayout = () => {
                 onClick={toggleClusterMenu}
               >
                 <div className="w-5 h-5 mr-2 text-primary-600">
-                  <div className={currentCluster.type === 'K8S' ? 'i-carbon-cloud' : 'i-carbon-bare-metal-server'}></div>
+                  <div className={currentCluster.type === 'K8S' ? 'i-ri-kubernetes-fill' : 'i-ri-terminal-box-fill'}></div>
                 </div>
                 <div className="flex flex-col mr-2">
                   <span className="text-xs font-medium text-apple-dark">{currentCluster.name}</span>
@@ -418,7 +418,7 @@ const TabsLayout = () => {
                       >
                         <div className="relative">
                           <div className="w-8 h-8 flex-center bg-black/3 rounded-md">
-                            <div className={cluster.type === 'K8S' ? 'i-carbon-cloud text-primary-600' : 'i-carbon-bare-metal-server text-gray-700'}></div>
+                            <div className={cluster.type === 'K8S' ? 'i-ri-kubernetes-fill text-primary-600' : 'i-ri-terminal-box-fill text-gray-700'}></div>
                           </div>
                           <div className={`
                             absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
@@ -442,27 +442,19 @@ const TabsLayout = () => {
             </div>
 
             {/* 历史操作按钮 */}
-            <button 
-              className="action-button"
-              onClick={openHistoryOperations}
-              title="历史操作"
-            >
-              <div className="i-carbon-history text-gray-700"></div>
-            </button>
+            <div className="flex-center px-2 cursor-pointer" onClick={openHistoryOperations} title="历史操作">
+              <div className="i-carbon-time w-5 h-5 text-gray-700"></div>
+            </div>
 
             {/* 告警按钮 */}
-            <button 
-              className="action-button"
-              onClick={openAlarmManagement}
-              title="告警管理"
-            >
-              <div className="i-carbon-notification text-gray-700"></div>
+            <div className="relative flex-center px-2 cursor-pointer" onClick={openAlarmManagement} title="告警管理">
+              <div className="i-carbon-notification w-5 h-5 text-gray-700"></div>
               {alarmCount > 0 && (
                 <div className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-apple-pink text-white text-xs flex-center">
                   {alarmCount}
                 </div>
               )}
-            </button>
+            </div>
 
             {/* 用户中心 */}
             <div 

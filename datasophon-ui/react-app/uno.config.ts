@@ -168,7 +168,7 @@ export default defineConfig({
     ],
   ],
   safelist: [
-    // 图标类
+    // 图标类 - Carbon图标
     'i-carbon-dashboard',
     'i-carbon-home',
     'i-carbon-cloud-services',
@@ -200,6 +200,11 @@ export default defineConfig({
     'i-carbon-network-4',
     'i-carbon-cloud',
     'i-carbon-history',
+    'i-carbon-time',
+    'i-carbon-timer',
+    'i-carbon-clock',
+    'i-carbon-alarm',
+    'i-carbon-alarm-add',
     'i-carbon-chevron-down',
     'i-carbon-close',
     'i-carbon-checkmark',
@@ -213,6 +218,18 @@ export default defineConfig({
     'i-carbon-chevron-right',
     'i-carbon-chart-line',
     'i-carbon-application',
+    
+    // 图标类 - Remix图标
+    'i-ri-kubernetes-fill',
+    'i-ri-terminal-box-fill',
+    'i-ri-terminal-line',
+    'i-ri-time-line',
+    'i-ri-time-fill',
+    'i-ri-history-line',
+    'i-ri-history-fill',
+    'i-ri-notification-2-line',
+    'i-ri-notification-2-fill',
+    
     // 动画类
     'animate-spin', 
     'animate-pulse', 
