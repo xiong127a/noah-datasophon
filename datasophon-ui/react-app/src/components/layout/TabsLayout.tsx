@@ -199,23 +199,24 @@ const TabsLayout = () => {
             
             {/* 左侧主菜单 */}
             <nav className="h-full">
-              <ul className="flex items-center h-full list-none m-0 p-0 gap-1.5">
+              <ul className="nav-menu flex items-center h-full list-none m-0 p-0 gap-1.5">
                 {mainMenuItems.map((item) => (
                   <li
                     key={item.key}
                     className={`
-                      relative h-full flex items-center px-4 cursor-pointer rounded-lg
-                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
-                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/3' : ''}
-                      hover:bg-black/3 transition-colors duration-150
+                      nav-item relative h-full flex items-center cursor-pointer
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'active' : ''}
                     `}
                     onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
                     onMouseLeave={() => handleMenuLeave(item.key)}
                     onClick={() => handleMenuClick(item.key, !!item.children)}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className={`
+                      nav-link flex items-center gap-2 px-4 py-3 rounded-lg transition-all duration-300
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
+                    `}>
                       <div className={`
-                        w-5 h-5 flex-center
+                        nav-icon w-5 h-5 flex-center
                         ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
                           ? 'text-primary-600' 
                           : 'text-gray-500'
@@ -223,7 +224,7 @@ const TabsLayout = () => {
                       `}>
                         <div className={item.icon}></div>
                       </div>
-                      <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                      <span className="nav-text text-sm font-medium whitespace-nowrap">{item.label}</span>
                       {item.children && (
                         <div className={`
                           w-4 h-4 flex-center opacity-60 transition-transform duration-150
@@ -290,26 +291,27 @@ const TabsLayout = () => {
           </div>
 
           {/* 右侧：管理菜单 + 操作按钮 + 用户信息 */}
-          <div className="flex items-center gap-3">
-            {/* 右侧管理菜单 */}
+          <div className="flex items-center gap-3 mr-1">
+            {/* 右侧管理菜单 - 统一样式与左侧一致 */}
             <nav className="h-full mr-4">
-              <ul className="flex items-center h-full list-none m-0 p-0 gap-1.5">
+              <ul className="admin-menu flex items-center h-full list-none m-0 p-0 gap-1.5">
                 {adminMenuItems.map((item) => (
                   <li
                     key={item.key}
                     className={`
-                      relative h-full flex items-center px-4 cursor-pointer rounded-lg
-                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600 bg-black/3' : 'text-gray-800'}
-                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/3' : ''}
-                      hover:bg-black/3 transition-colors duration-150
+                      admin-item relative h-full flex items-center cursor-pointer
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'active' : ''}
                     `}
                     onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
                     onMouseLeave={() => handleMenuLeave(item.key)}
                     onClick={() => handleMenuClick(item.key, !!item.children)}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className={`
+                      admin-link flex items-center gap-2 px-4 py-3 rounded-lg transition-all duration-300
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
+                    `}>
                       <div className={`
-                        w-5 h-5 flex-center
+                        admin-icon w-5 h-5 flex-center
                         ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
                           ? 'text-primary-600' 
                           : 'text-gray-500'
@@ -317,7 +319,7 @@ const TabsLayout = () => {
                       `}>
                         <div className={item.icon}></div>
                       </div>
-                      <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                      <span className="admin-text text-sm font-medium whitespace-nowrap">{item.label}</span>
                       {item.children && (
                         <div className={`
                           w-4 h-4 flex-center opacity-60 transition-transform duration-150
@@ -383,26 +385,39 @@ const TabsLayout = () => {
             </nav>
 
             {/* 集群选择器 */}
-            <div className="relative" ref={clusterDropdownRef}>
+            <div 
+              className="relative" 
+              ref={clusterDropdownRef}
+              onMouseEnter={() => setIsClusterMenuOpen(true)}
+              onMouseLeave={() => {
+                setTimeout(() => {
+                  setIsClusterMenuOpen(false);
+                }, 200);
+              }}
+            >
               <button 
-                className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
+                className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition-apple"
                 onClick={toggleClusterMenu}
               >
                 <div className="w-5 h-5 mr-2 text-primary-600">
-                  <div className={currentCluster.type === 'K8S' ? 'i-ri-kubernetes-fill' : 'i-ri-terminal-box-fill'}></div>
+                  {currentCluster.type === 'K8S' ? (
+                    <img src="/icons/kubernetes-logo.svg" alt="K8S" className="w-5 h-5" />
+                  ) : (
+                    <img src="/icons/linux-tux.svg" alt="Linux" className="w-5 h-5" />
+                  )}
                 </div>
                 <div className="flex flex-col mr-2">
                   <span className="text-xs font-medium text-apple-dark">{currentCluster.name}</span>
                   <span className="text-xs text-gray-500">{currentCluster.type}</span>
                 </div>
-                <div className="w-4 h-4 text-gray-500">
+                <div className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isClusterMenuOpen ? 'rotate-180' : ''}`}>
                   <div className="i-carbon-chevron-down"></div>
                 </div>
               </button>
               
               {/* 集群下拉菜单 */}
               {isClusterMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-70 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
+                <div className="absolute top-full right-0 mt-1 w-70 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
                   <div className="p-3 border-b border-gray-100/80">
                     <span className="text-sm font-medium text-apple-dark">选择集群</span>
                   </div>
@@ -418,7 +433,11 @@ const TabsLayout = () => {
                       >
                         <div className="relative">
                           <div className="w-8 h-8 flex-center bg-black/3 rounded-md">
-                            <div className={cluster.type === 'K8S' ? 'i-ri-kubernetes-fill text-primary-600' : 'i-ri-terminal-box-fill text-gray-700'}></div>
+                            {cluster.type === 'K8S' ? (
+                              <img src="/icons/kubernetes-logo.svg" alt="K8S" className="w-6 h-6" />
+                            ) : (
+                              <img src="/icons/linux-tux.svg" alt="Linux" className="w-6 h-6" />
+                            )}
                           </div>
                           <div className={`
                             absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
@@ -456,7 +475,7 @@ const TabsLayout = () => {
               )}
             </div>
 
-            {/* 用户中心 */}
+            {/* 用户中心 - 苹果风格简化版 */}
             <div 
               className="relative" 
               ref={userDropdownRef}
@@ -464,42 +483,54 @@ const TabsLayout = () => {
               onMouseLeave={() => setIsUserMenuOpen(false)}
             >
               <button 
-                className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
+                className="flex items-center h-9 px-3 py-1.5 rounded-full bg-gradient-to-b from-white/90 to-gray-50/90 backdrop-blur-sm border border-gray-200/50 shadow-sm hover:shadow-md hover:border-primary-200/50 active:scale-98 transition-apple-spring"
                 onClick={toggleUserMenu}
+                aria-label="用户中心"
               >
-                <div className="w-7 h-7 rounded-full bg-gray-100 flex-center mr-2 border border-gray-200">
-                  <div className="i-carbon-user text-gray-500"></div>
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex-center mr-2 shadow-sm">
+                  <div className="i-carbon-user text-white w-3.5 h-3.5"></div>
                 </div>
-                <span className="text-sm font-medium mr-1 text-apple-dark">{userInfo?.username || '未登录'}</span>
-                <div className="w-4 h-4 text-gray-500">
+                <span className="text-sm font-medium mr-2 text-gray-800">{userInfo?.username || '未登录'}</span>
+                <div className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}>
                   <div className="i-carbon-chevron-down"></div>
                 </div>
               </button>
 
-              {/* 用户下拉菜单 */}
+              {/* 用户下拉菜单 - 简化版 */}
               {isUserMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-60 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
-                  <div className="p-4 border-b border-gray-100/80 flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex-center mr-3 border border-gray-200">
-                      <div className="i-carbon-user text-gray-500"></div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-apple-dark">{userInfo?.username || '未登录'}</p>
-                      <p className="text-xs text-gray-500">管理员</p>
+                <div className="absolute top-full right-0 mt-2 w-48 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
+                  {/* 用户信息头部 - 简化版 */}
+                  <div className="p-4 border-b border-gray-100/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex-center shadow-sm">
+                        <div className="i-carbon-user text-white w-5 h-5"></div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{userInfo?.username || '未登录'}</p>
+                        <p className="text-xs text-gray-500">系统管理员</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="p-1.5">
-                    <a className="menu-item rounded-lg hover:menu-hover cursor-pointer">
-                      <div className="w-5 h-5 mr-3 text-gray-500">
-                        <div className="i-carbon-user-profile"></div>
+                  
+                  {/* 菜单项 - 只保留用户中心和退出登录 */}
+                  <div className="p-2">
+                    <a className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50/80 active:bg-gray-100/80 transition-apple cursor-pointer">
+                      <div className="w-8 h-8 rounded-lg bg-primary-50 flex-center text-primary-600">
+                        <div className="i-carbon-user-profile w-4 h-4"></div>
                       </div>
-                      <span className="text-sm text-gray-700">个人中心</span>
+                      <span className="text-sm font-medium text-gray-800">用户中心</span>
                     </a>
-                    <a className="menu-item rounded-lg hover:menu-hover cursor-pointer" onClick={handleLogout}>
-                      <div className="w-5 h-5 mr-3 text-gray-500">
-                        <div className="i-carbon-logout"></div>
+                    
+                    <div className="h-px bg-gray-100/50 my-1"></div>
+                    
+                    <a 
+                      className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50/80 active:bg-red-100/80 transition-apple cursor-pointer" 
+                      onClick={handleLogout}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-red-50 flex-center text-red-500">
+                        <div className="i-carbon-logout w-4 h-4"></div>
                       </div>
-                      <span className="text-sm text-gray-700">退出登录</span>
+                      <span className="text-sm font-medium text-red-600">退出登录</span>
                     </a>
                   </div>
                 </div>
@@ -517,4 +548,4 @@ const TabsLayout = () => {
   );
 };
 
-export default TabsLayout; 
+export default TabsLayout;
