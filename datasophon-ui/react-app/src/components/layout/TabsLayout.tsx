@@ -18,6 +18,10 @@ const TabsLayout = () => {
   // 引用DOM元素
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const clusterDropdownRef = useRef<HTMLDivElement>(null);
+  const clusterMenuRef = useRef<HTMLDivElement>(null);
+  
+  // 定时器引用
+  const clusterCloseTimerRef = useRef<number | null>(null);
 
   // 主菜单数据 (左侧)
   const mainMenuItems = [
@@ -124,10 +128,33 @@ const TabsLayout = () => {
     }
   };
 
-  // 切换用户菜单
-  const toggleUserMenu = () => {
-    setIsUserMenuOpen(!isUserMenuOpen);
-    // 关闭其他菜单
+  // 集群下拉菜单处理
+  const handleClusterMouseEnter = () => {
+    setIsClusterMenuOpen(true);
+    // 清除可能存在的关闭定时器
+    if (clusterCloseTimerRef.current) {
+      clearTimeout(clusterCloseTimerRef.current);
+      clusterCloseTimerRef.current = null;
+    }
+  };
+  
+  const handleClusterMouseLeave = () => {
+    // 设置一个短暂的延迟以允许用户移动到下拉菜单
+    clusterCloseTimerRef.current = window.setTimeout(() => {
+      setIsClusterMenuOpen(false);
+    }, 100);
+  };
+  
+  const handleClusterMenuMouseEnter = () => {
+    // 鼠标进入菜单时清除关闭定时器
+    if (clusterCloseTimerRef.current) {
+      clearTimeout(clusterCloseTimerRef.current);
+      clusterCloseTimerRef.current = null;
+    }
+  };
+  
+  const handleClusterMenuMouseLeave = () => {
+    // 鼠标离开菜单时关闭
     setIsClusterMenuOpen(false);
   };
 
@@ -136,6 +163,13 @@ const TabsLayout = () => {
     setIsClusterMenuOpen(!isClusterMenuOpen);
     // 关闭其他菜单
     setIsUserMenuOpen(false);
+  };
+
+  // 切换用户菜单
+  const toggleUserMenu = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
+    // 关闭其他菜单
+    setIsClusterMenuOpen(false);
   };
 
   // 选择集群
@@ -166,7 +200,10 @@ const TabsLayout = () => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
-      if (clusterDropdownRef.current && !clusterDropdownRef.current.contains(event.target as Node)) {
+      if (clusterDropdownRef.current && 
+          !clusterDropdownRef.current.contains(event.target as Node) &&
+          clusterMenuRef.current && 
+          !clusterMenuRef.current.contains(event.target as Node)) {
         setIsClusterMenuOpen(false);
       }
     };
@@ -174,6 +211,10 @@ const TabsLayout = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      // 清理可能存在的定时器
+      if (clusterCloseTimerRef.current) {
+        clearTimeout(clusterCloseTimerRef.current);
+      }
     };
   }, []);
 
@@ -388,12 +429,8 @@ const TabsLayout = () => {
             <div 
               className="relative" 
               ref={clusterDropdownRef}
-              onMouseEnter={() => setIsClusterMenuOpen(true)}
-              onMouseLeave={() => {
-                setTimeout(() => {
-                  setIsClusterMenuOpen(false);
-                }, 200);
-              }}
+              onMouseEnter={handleClusterMouseEnter}
+              onMouseLeave={handleClusterMouseLeave}
             >
               <button 
                 className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition-apple"
@@ -417,7 +454,12 @@ const TabsLayout = () => {
               
               {/* 集群下拉菜单 */}
               {isClusterMenuOpen && (
-                <div className="absolute top-full right-0 mt-1 w-70 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
+                <div 
+                  className="absolute top-full right-0 mt-1 w-70 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right"
+                  ref={clusterMenuRef}
+                  onMouseEnter={handleClusterMenuMouseEnter}
+                  onMouseLeave={handleClusterMenuMouseLeave}
+                >
                   <div className="p-3 border-b border-gray-100/80">
                     <span className="text-sm font-medium text-apple-dark">选择集群</span>
                   </div>
@@ -477,7 +519,7 @@ const TabsLayout = () => {
 
             {/* 用户中心 - 苹果风格简化版 */}
             <div 
-              className="relative" 
+              className="relative ml-2" 
               ref={userDropdownRef}
               onMouseEnter={() => setIsUserMenuOpen(true)}
               onMouseLeave={() => setIsUserMenuOpen(false)}
