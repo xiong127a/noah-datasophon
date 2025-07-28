@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useNavigate } from '@tanstack/react-router';
@@ -21,6 +21,8 @@ const LoginPage = () => {
   const [btnHover, setBtnHover] = useState(false);
   const [btnActive, setBtnActive] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -31,6 +33,156 @@ const LoginPage = () => {
 
   const usernameValue = watch('username');
   const passwordValue = watch('password');
+
+  // 线束效果
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // 设置Canvas尺寸
+    const handleResize = () => {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    // 创建粒子
+    const particles: Particle[] = [];
+    const particleCount = 200; // 调整粒子数量
+    const connectionDistance = 160; // 增大连接距离
+    const mousePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let animationFrame: number;
+    
+    class Particle {
+      x: number = 0;
+      y: number = 0;
+      speedX: number = 0;
+      speedY: number = 0;
+      size: number = 1;
+      color: string = 'rgba(255, 255, 255, 0.5)';
+      
+      constructor() {
+        if (!canvas) return; // 安全检查
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.speedX = (Math.random() - 0.5) * 0.5; // 降低速度
+        this.speedY = (Math.random() - 0.5) * 0.5; // 降低速度
+        this.size = Math.random() * 1.2 + 0.5; // 较小的粒子
+        this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.2})`;
+      }
+      
+      update() {
+        if (!canvas) return; // 安全检查
+        // 基本移动
+        this.x += this.speedX;
+        this.y += this.speedY;
+        
+        // 边界检查 - 循环移动
+        if (this.x < 0) this.x = canvas.width;
+        else if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        else if (this.y > canvas.height) this.y = 0;
+      }
+      
+      draw() {
+        if (!ctx) return;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // 创建粒子
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle());
+    }
+    
+    // 绘制连线 - 优化版本
+    const drawConnection = (p1: Particle, p2: Particle, distance: number) => {
+      if (!ctx) return;
+      const opacity = 1 - distance / connectionDistance;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.45})`; // 微调透明度
+      ctx.lineWidth = 0.35; // 调整线宽
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    };
+    
+    // 动画主函数
+    const animate = () => {
+      if (!ctx || !canvas) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 更新粒子
+      particles.forEach((particle, index) => {
+        particle.update();
+        particle.draw();
+        
+        // 只检查后续粒子，避免重复计算
+        // 增加检查数量，确保更多连线
+        const checkLimit = Math.min(particles.length, index + 60);
+        for (let j = index + 1; j < checkLimit; j++) {
+          const otherParticle = particles[j];
+          const dx = particle.x - otherParticle.x;
+          const dy = particle.y - otherParticle.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < connectionDistance) {
+            drawConnection(particle, otherParticle, distance);
+          }
+        }
+        
+        // 与鼠标的交互
+        const dx = particle.x - mousePosition.x;
+        const dy = particle.y - mousePosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < connectionDistance * 1.5) {
+          const opacity = 1 - distance / (connectionDistance * 1.5);
+          ctx.strokeStyle = `rgba(100, 180, 255, ${opacity * 0.6})`;
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(particle.x, particle.y);
+          ctx.lineTo(mousePosition.x, mousePosition.y);
+          ctx.stroke();
+          
+          // 粒子朝鼠标方向轻微移动
+          particle.x += (mousePosition.x - particle.x) * 0.01;
+          particle.y += (mousePosition.y - particle.y) * 0.01;
+        }
+      });
+      
+      animationFrame = requestAnimationFrame(animate);
+    };
+    
+    // 鼠标移动事件
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      mousePosition.x = e.clientX - rect.left;
+      mousePosition.y = e.clientY - rect.top;
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    animate();
+    
+    // 清理函数
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
@@ -65,13 +217,15 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-900 p-4">
-      {/* 动态背景装饰 - 简单版，不使用Canvas */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-500/5 animate-pulse-slow"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-indigo-500/5 animate-pulse-slow animation-delay-500"></div>
-        <div className="absolute top-3/4 left-1/3 w-64 h-64 rounded-full bg-indigo-400/5 animate-pulse-slow animation-delay-1000"></div>
-      </div>
+    <div 
+      ref={containerRef} 
+      className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-900 p-4"
+    >
+      {/* Canvas背景 - 3D线束效果 */}
+      <canvas 
+        ref={canvasRef} 
+        className="absolute inset-0 pointer-events-none z-0"
+      />
 
       {/* Logo区域 */}
       <div className="absolute left-8 top-8 z-10">
