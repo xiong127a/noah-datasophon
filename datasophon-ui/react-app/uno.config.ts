@@ -25,29 +25,48 @@ export default defineConfig({
     'card': 'bg-white rounded-lg shadow-lg p-6',
     'card-glass': 'bg-white/10 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden',
     'text-gradient': 'bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600',
+    'menu-active': 'bg-primary-50/80 text-primary-600 font-medium',
+    'menu-hover': 'bg-black/3 text-gray-800',
+    'apple-button': 'bg-gradient-to-b from-white/70 to-white/50 backdrop-blur-sm rounded-full border border-white/20 shadow-sm hover:shadow-md active:scale-98 transition-all duration-150',
+    'apple-menu': 'animate-fade-in-fast origin-top backdrop-blur-xl bg-white/90 border border-gray-100/20 shadow-apple rounded-xl overflow-hidden',
+    'menu-item': 'flex items-center px-3 py-2 rounded-lg transition-all duration-150',
+    'apple-header': 'backdrop-blur-xl bg-white/90 z-50 shadow-subtle border-b border-gray-100/20',
   },
   // 主题配置
   theme: {
     colors: {
-      // 自定义主题色
+      // 苹果风格的颜色
       primary: {
-        DEFAULT: '#007aff',
-        50: '#e0f0ff',
-        100: '#b8ddff',
-        200: '#8cc9ff',
-        300: '#59b5ff',
-        400: '#29a1ff',
-        500: '#007aff',
-        600: '#0062cc',
-        700: '#004999',
-        800: '#003166',
-        900: '#001933',
+        DEFAULT: '#0071e3',
+        50: '#e9f4ff',
+        100: '#c7e3ff',
+        200: '#95c9ff',
+        300: '#64b0ff',
+        400: '#3498ff',
+        500: '#0071e3',
+        600: '#0058c2',
+        700: '#0040a1',
+        800: '#002d81',
+        900: '#00205d',
       },
+      apple: {
+        blue: '#0071e3',
+        purple: '#5d5cde',
+        pink: '#ff375f',
+        orange: '#ff9f0a',
+        yellow: '#ffd60a',
+        green: '#32d74b',
+        gray: '#86868b',
+        dark: '#1d1d1f',
+        light: '#f5f5f7',
+      }
     },
     boxShadow: {
-      'subtle': '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03)',
-      'elevated': '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
-      'prominent': '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06)',
+      'subtle': '0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02)',
+      'elevated': '0 4px 8px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02)',
+      'prominent': '0 8px 16px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.06)',
+      'apple': '0 2px 10px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.05)',
+      'menu': '0 8px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06)',
     },
     extend: {
       animation: {
@@ -57,6 +76,11 @@ export default defineConfig({
         'float': 'float 4s ease-in-out infinite',
         'fade-in-down': 'fadeInDown 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards',
         'fade-out-up': 'fadeOutUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+        'fade-in-fast': 'fadeInDown 0.15s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+        'fade-out-fast': 'fadeOutUp 0.15s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+        'scale-in': 'scaleIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'scale-out': 'scaleOut 0.12s cubic-bezier(0.34, 0.96, 0.64, 1) forwards',
+        'blur-in': 'blurIn 0.15s cubic-bezier(0.25, 1, 0.5, 1) forwards',
       },
       keyframes: {
         'fadeInDown': {
@@ -67,10 +91,27 @@ export default defineConfig({
           '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
           '100%': { opacity: '0', transform: 'translateY(-10px) scale(0.98)' },
         },
+        'scaleIn': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'scaleOut': {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.95)' },
+        },
+        'blurIn': {
+          '0%': { opacity: '0', filter: 'blur(4px)' },
+          '100%': { opacity: '1', filter: 'blur(0)' },
+        },
       },
       transitionTimingFunction: {
         'apple': 'cubic-bezier(0.25, 1, 0.5, 1)',
         'apple-spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'apple-out': 'cubic-bezier(0.34, 0.96, 0.64, 1)',
+      },
+      scale: {
+        '98': '0.98',
+        '102': '1.02',
       },
     },
   },
@@ -79,6 +120,10 @@ export default defineConfig({
     [
       'backdrop-blur-apple',
       { 'backdrop-filter': 'blur(20px) saturate(180%)', '-webkit-backdrop-filter': 'blur(20px) saturate(180%)' },
+    ],
+    [
+      'backdrop-blur-menu',
+      { 'backdrop-filter': 'blur(10px) saturate(180%)', '-webkit-backdrop-filter': 'blur(10px) saturate(180%)' },
     ],
     [
       'bg-gradient-radial',
@@ -92,6 +137,33 @@ export default defineConfig({
         '-webkit-backdrop-filter': 'blur(16px)',
         'border': '1px solid rgba(255, 255, 255, 0.1)'
       },
+    ],
+    [
+      'glass-morphism-light',
+      { 
+        'background': 'rgba(255, 255, 255, 0.7)',
+        'backdrop-filter': 'blur(10px)',
+        '-webkit-backdrop-filter': 'blur(10px)',
+        'border': '1px solid rgba(255, 255, 255, 0.2)'
+      },
+    ],
+    [
+      'glass-morphism-menu',
+      { 
+        'background': 'rgba(255, 255, 255, 0.8)',
+        'backdrop-filter': 'blur(10px)',
+        '-webkit-backdrop-filter': 'blur(10px)',
+        'border': '1px solid rgba(255, 255, 255, 0.3)',
+        'box-shadow': '0 8px 32px rgba(0, 0, 0, 0.1)'
+      },
+    ],
+    [
+      'transition-apple',
+      { 'transition': 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)' },
+    ],
+    [
+      'transition-apple-spring',
+      { 'transition': 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' },
     ],
   ],
   safelist: [
@@ -141,5 +213,10 @@ export default defineConfig({
     'animate-float',
     'animate-fade-in-down',
     'animate-fade-out-up',
+    'animate-fade-in-fast',
+    'animate-fade-out-fast',
+    'animate-scale-in',
+    'animate-scale-out',
+    'animate-blur-in',
   ],
 }); 

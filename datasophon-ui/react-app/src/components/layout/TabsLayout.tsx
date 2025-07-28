@@ -94,6 +94,9 @@ const TabsLayout = () => {
     } else {
       // 切换展开状态
       setExpandedMenu(expandedMenu === key ? null : key);
+      if (expandedMenu !== key) {
+        setHoveredMenu(key);
+      }
     }
   };
 
@@ -177,37 +180,34 @@ const TabsLayout = () => {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       {/* 顶部导航栏 - 苹果风格实现 */}
-      <header className="sticky top-0 z-50 w-full h-15 shadow-subtle">
-        {/* 毛玻璃背景效果 */}
-        <div className="absolute inset-0 backdrop-blur-apple bg-white/85 border-b border-gray-100/30 -z-10"></div>
-        
+      <header className="sticky top-0 z-50 w-full h-15 apple-header">
         <div className="h-full mx-auto flex items-center justify-between px-6">
           {/* 左侧：Logo + 导航菜单 */}
           <div className="flex items-center h-full">
             {/* Logo区域 */}
             <div 
-              className="flex items-center cursor-pointer mr-10 transition hover:opacity-80 hover:scale-102"
+              className="flex items-center cursor-pointer mr-10 transition-apple-spring hover:opacity-80 hover:scale-102"
               onClick={() => handleMenuClick('/', false)}
             >
-              <div className="w-8 h-8 mr-3 flex-center transition">
+              <div className="w-8 h-8 mr-3 flex-center">
                 <img src="/company.png" alt="Logo" className="h-full" />
               </div>
-              <h1 className="text-base font-medium text-gray-900 tracking-tight">
+              <h1 className="text-base font-medium text-apple-dark tracking-tight">
                 Noah大数据基础平台
               </h1>
             </div>
             
             {/* 左侧主菜单 */}
             <nav className="h-full">
-              <ul className="flex items-center h-full list-none m-0 p-0 gap-1">
+              <ul className="flex items-center h-full list-none m-0 p-0 gap-1.5">
                 {mainMenuItems.map((item) => (
                   <li
                     key={item.key}
                     className={`
-                      relative h-full flex items-center px-4 cursor-pointer
-                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-500' : 'text-gray-700'}
-                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/5' : ''}
-                      hover:bg-black/5 rounded-lg transition-colors duration-200
+                      relative h-full flex items-center px-4 cursor-pointer rounded-lg
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
+                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/3' : ''}
+                      hover:bg-black/3 transition-colors duration-150
                     `}
                     onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
                     onMouseLeave={() => handleMenuLeave(item.key)}
@@ -217,7 +217,7 @@ const TabsLayout = () => {
                       <div className={`
                         w-5 h-5 flex-center
                         ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
-                          ? 'text-primary-500' 
+                          ? 'text-primary-600' 
                           : 'text-gray-500'
                         }
                       `}>
@@ -226,7 +226,7 @@ const TabsLayout = () => {
                       <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
                       {item.children && (
                         <div className={`
-                          w-4 h-4 flex-center opacity-60 transition-transform
+                          w-4 h-4 flex-center opacity-60 transition-transform duration-150
                           ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'rotate-180 opacity-100' : ''}
                         `}>
                           <div className="i-carbon-chevron-down"></div>
@@ -237,15 +237,15 @@ const TabsLayout = () => {
                     {/* 子菜单下拉面板 */}
                     {item.children && (hoveredMenu === item.key || expandedMenu === item.key) && (
                       <div 
-                        className="absolute top-full left-0 min-w-55 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top"
+                        className="absolute top-full left-0 min-w-55 glass-morphism-menu rounded-xl overflow-hidden z-50 animate-scale-in origin-top-left shadow-menu"
                         onMouseEnter={() => setHoveredMenu(item.key)}
                         onMouseLeave={() => handleMenuLeave(item.key)}
                       >
-                        <div className="p-2">
-                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100/60 mb-1">
-                            <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                        <div className="p-1.5">
+                          <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100/80 mb-1">
+                            <span className="text-sm font-medium text-apple-dark">{item.label}</span>
                             <div 
-                              className="w-6 h-6 rounded-full hover:bg-gray-100/60 flex-center cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-full hover:bg-black/5 flex-center cursor-pointer transition-all"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setExpandedMenu(null);
@@ -260,18 +260,18 @@ const TabsLayout = () => {
                               <li
                                 key={subItem.key}
                                 className={`
-                                  mx-1 rounded-lg transition-colors
-                                  ${activeMenu === subItem.key ? 'bg-primary-50 text-primary-500' : 'text-gray-700 hover:bg-gray-50'}
+                                  mx-1 rounded-lg transition-colors duration-150
+                                  ${activeMenu === subItem.key ? 'menu-active' : 'text-gray-700 hover:menu-hover'}
                                 `}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleSubMenuClick(item.key, subItem.key);
                                 }}
                               >
-                                <div className="flex items-center px-3 py-2">
+                                <div className="menu-item">
                                   <div className={`
                                     w-5 h-5 mr-2 flex-center
-                                    ${activeMenu === subItem.key ? 'text-primary-500' : 'text-gray-500'}
+                                    ${activeMenu === subItem.key ? 'text-primary-600' : 'text-gray-500'}
                                   `}>
                                     <div className={subItem.icon}></div>
                                   </div>
@@ -293,15 +293,15 @@ const TabsLayout = () => {
           <div className="flex items-center gap-3">
             {/* 右侧管理菜单 */}
             <nav className="h-full mr-4">
-              <ul className="flex items-center h-full list-none m-0 p-0 gap-1">
+              <ul className="flex items-center h-full list-none m-0 p-0 gap-1.5">
                 {adminMenuItems.map((item) => (
                   <li
                     key={item.key}
                     className={`
-                      relative h-full flex items-center px-4 cursor-pointer
-                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-500' : 'text-gray-700'}
-                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/5' : ''}
-                      hover:bg-black/5 rounded-lg transition-colors duration-200
+                      relative h-full flex items-center px-4 cursor-pointer rounded-lg
+                      ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) ? 'text-primary-600' : 'text-gray-800'}
+                      ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'bg-black/3' : ''}
+                      hover:bg-black/3 transition-colors duration-150
                     `}
                     onMouseEnter={() => handleMenuHover(item.key, !!item.children)}
                     onMouseLeave={() => handleMenuLeave(item.key)}
@@ -311,7 +311,7 @@ const TabsLayout = () => {
                       <div className={`
                         w-5 h-5 flex-center
                         ${activeMenu === item.key || (item.children && item.children.some(child => activeMenu === child.key)) 
-                          ? 'text-primary-500' 
+                          ? 'text-primary-600' 
                           : 'text-gray-500'
                         }
                       `}>
@@ -320,7 +320,7 @@ const TabsLayout = () => {
                       <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
                       {item.children && (
                         <div className={`
-                          w-4 h-4 flex-center opacity-60 transition-transform
+                          w-4 h-4 flex-center opacity-60 transition-transform duration-150
                           ${(hoveredMenu === item.key || expandedMenu === item.key) ? 'rotate-180 opacity-100' : ''}
                         `}>
                           <div className="i-carbon-chevron-down"></div>
@@ -331,15 +331,15 @@ const TabsLayout = () => {
                     {/* 子菜单下拉面板 */}
                     {item.children && (hoveredMenu === item.key || expandedMenu === item.key) && (
                       <div 
-                        className="absolute top-full left-0 min-w-55 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top"
+                        className="absolute top-full left-0 min-w-55 glass-morphism-menu rounded-xl overflow-hidden z-50 animate-scale-in origin-top-left shadow-menu"
                         onMouseEnter={() => setHoveredMenu(item.key)}
                         onMouseLeave={() => handleMenuLeave(item.key)}
                       >
-                        <div className="p-2">
-                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100/60 mb-1">
-                            <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                        <div className="p-1.5">
+                          <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100/80 mb-1">
+                            <span className="text-sm font-medium text-apple-dark">{item.label}</span>
                             <div 
-                              className="w-6 h-6 rounded-full hover:bg-gray-100/60 flex-center cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-full hover:bg-black/5 flex-center cursor-pointer transition-all"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setExpandedMenu(null);
@@ -354,18 +354,18 @@ const TabsLayout = () => {
                               <li
                                 key={subItem.key}
                                 className={`
-                                  mx-1 rounded-lg transition-colors
-                                  ${activeMenu === subItem.key ? 'bg-primary-50 text-primary-500' : 'text-gray-700 hover:bg-gray-50'}
+                                  mx-1 rounded-lg transition-colors duration-150
+                                  ${activeMenu === subItem.key ? 'menu-active' : 'text-gray-700 hover:menu-hover'}
                                 `}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleSubMenuClick(item.key, subItem.key);
                                 }}
                               >
-                                <div className="flex items-center px-3 py-2">
+                                <div className="menu-item">
                                   <div className={`
                                     w-5 h-5 mr-2 flex-center
-                                    ${activeMenu === subItem.key ? 'text-primary-500' : 'text-gray-500'}
+                                    ${activeMenu === subItem.key ? 'text-primary-600' : 'text-gray-500'}
                                   `}>
                                     <div className={subItem.icon}></div>
                                   </div>
@@ -385,14 +385,14 @@ const TabsLayout = () => {
             {/* 集群选择器 */}
             <div className="relative" ref={clusterDropdownRef}>
               <button 
-                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100 transition"
+                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
                 onClick={toggleClusterMenu}
               >
-                <div className="w-5 h-5 mr-2 text-primary-500">
+                <div className="w-5 h-5 mr-2 text-primary-600">
                   <div className={currentCluster.type === 'K8S' ? 'i-carbon-cloud' : 'i-carbon-bare-metal-server'}></div>
                 </div>
                 <div className="flex flex-col mr-2">
-                  <span className="text-xs font-medium text-gray-900">{currentCluster.name}</span>
+                  <span className="text-xs font-medium text-apple-dark">{currentCluster.name}</span>
                   <span className="text-xs text-gray-500">{currentCluster.type}</span>
                 </div>
                 <div className="w-4 h-4 text-gray-500">
@@ -402,35 +402,35 @@ const TabsLayout = () => {
               
               {/* 集群下拉菜单 */}
               {isClusterMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-70 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top">
-                  <div className="p-3 border-b border-gray-100/60">
-                    <span className="text-sm font-medium">选择集群</span>
+                <div className="absolute top-full right-0 mt-2 w-70 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
+                  <div className="p-3 border-b border-gray-100/80">
+                    <span className="text-sm font-medium text-apple-dark">选择集群</span>
                   </div>
                   <div className="max-h-80 overflow-y-auto p-2">
                     {clusters.map((cluster) => (
                       <div
                         key={cluster.id}
                         className={`
-                          flex items-center p-2 rounded-lg cursor-pointer transition
-                          ${currentCluster.id === cluster.id ? 'bg-primary-50' : 'hover:bg-gray-50'}
+                          flex items-center p-2 rounded-lg cursor-pointer transition-apple
+                          ${currentCluster.id === cluster.id ? 'bg-primary-50' : 'hover:bg-black/3'}
                         `}
                         onClick={() => selectCluster(cluster)}
                       >
                         <div className="relative">
                           <div className="w-8 h-8 flex-center bg-black/3 rounded-md">
-                            <div className={cluster.type === 'K8S' ? 'i-carbon-cloud text-primary-500' : 'i-carbon-bare-metal-server text-gray-700'}></div>
+                            <div className={cluster.type === 'K8S' ? 'i-carbon-cloud text-primary-600' : 'i-carbon-bare-metal-server text-gray-700'}></div>
                           </div>
                           <div className={`
                             absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white
-                            ${cluster.status === 'running' ? 'bg-green-500' : 'bg-amber-500'}
+                            ${cluster.status === 'running' ? 'bg-apple-green' : 'bg-apple-orange'}
                           `}></div>
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{cluster.name}</p>
+                          <p className="text-sm font-medium text-apple-dark">{cluster.name}</p>
                           <p className="text-xs text-gray-500">{cluster.type}</p>
                         </div>
                         {currentCluster.id === cluster.id && (
-                          <div className="ml-auto text-primary-500">
+                          <div className="ml-auto text-primary-600">
                             <div className="i-carbon-checkmark"></div>
                           </div>
                         )}
@@ -443,7 +443,7 @@ const TabsLayout = () => {
 
             {/* 历史操作按钮 */}
             <button 
-              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition"
+              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition-apple"
               onClick={openHistoryOperations}
               title="历史操作"
             >
@@ -453,13 +453,13 @@ const TabsLayout = () => {
 
             {/* 告警按钮 */}
             <button 
-              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition"
+              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition-apple"
               onClick={openAlarmManagement}
               title="告警管理"
             >
               <div className="i-carbon-notification text-gray-700"></div>
               {alarmCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-xs flex-center">
+                <div className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-apple-pink text-white text-xs flex-center">
                   {alarmCount}
                 </div>
               )}
@@ -468,13 +468,13 @@ const TabsLayout = () => {
             {/* 用户中心 */}
             <div className="relative" ref={userDropdownRef}>
               <button 
-                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100 transition"
+                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
                 onClick={toggleUserMenu}
               >
-                <div className="w-7 h-7 rounded-full bg-gray-200 flex-center mr-2 border border-gray-100">
+                <div className="w-7 h-7 rounded-full bg-gray-100 flex-center mr-2 border border-gray-200">
                   <div className="i-carbon-user text-gray-500"></div>
                 </div>
-                <span className="text-sm font-medium mr-1">{userInfo?.username || '未登录'}</span>
+                <span className="text-sm font-medium mr-1 text-apple-dark">{userInfo?.username || '未登录'}</span>
                 <div className="w-4 h-4 text-gray-500">
                   <div className="i-carbon-chevron-down"></div>
                 </div>
@@ -482,24 +482,24 @@ const TabsLayout = () => {
 
               {/* 用户下拉菜单 */}
               {isUserMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-60 bg-white/96 backdrop-blur-apple rounded-xl shadow-elevated border border-gray-100/40 overflow-hidden z-50 animate-fade-in-down origin-top">
-                  <div className="p-4 border-b border-gray-100/60 flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex-center mr-3 border border-gray-100">
+                <div className="absolute top-full right-0 mt-2 w-60 glass-morphism-menu rounded-xl shadow-menu overflow-hidden z-50 animate-scale-in origin-top-right">
+                  <div className="p-4 border-b border-gray-100/80 flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex-center mr-3 border border-gray-200">
                       <div className="i-carbon-user text-gray-500"></div>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{userInfo?.username || '未登录'}</p>
+                      <p className="text-sm font-medium text-apple-dark">{userInfo?.username || '未登录'}</p>
                       <p className="text-xs text-gray-500">管理员</p>
                     </div>
                   </div>
-                  <div className="p-2">
-                    <a className="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <div className="p-1.5">
+                    <a className="menu-item rounded-lg hover:menu-hover cursor-pointer">
                       <div className="w-5 h-5 mr-3 text-gray-500">
                         <div className="i-carbon-user-profile"></div>
                       </div>
                       <span className="text-sm text-gray-700">个人中心</span>
                     </a>
-                    <a className="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer" onClick={handleLogout}>
+                    <a className="menu-item rounded-lg hover:menu-hover cursor-pointer" onClick={handleLogout}>
                       <div className="w-5 h-5 mr-3 text-gray-500">
                         <div className="i-carbon-logout"></div>
                       </div>
