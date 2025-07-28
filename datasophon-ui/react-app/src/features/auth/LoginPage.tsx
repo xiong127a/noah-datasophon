@@ -21,8 +21,10 @@ const LoginPage = () => {
   const [btnHover, setBtnHover] = useState(false);
   const [btnActive, setBtnActive] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [logoHover, setLogoHover] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const loginCardRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -184,6 +186,29 @@ const LoginPage = () => {
     };
   }, []);
 
+  // 卡片3D效果
+  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!loginCardRef.current) return;
+    
+    const card = loginCardRef.current;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateY = (x - centerX) / 20;
+    const rotateX = (centerY - y) / 20;
+    
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+  };
+
+  // 鼠标离开时重置卡片效果
+  const handleCardMouseLeave = () => {
+    if (!loginCardRef.current) return;
+    loginCardRef.current.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setError('');
@@ -207,6 +232,16 @@ const LoginPage = () => {
       navigate({ to: '/' });
     } catch (err: any) {
       setError(err.message || '登录失败，请稍后再试');
+      
+      // 添加卡片震动效果
+      if (loginCardRef.current) {
+        loginCardRef.current.classList.add('animate-error-shake');
+        setTimeout(() => {
+          if (loginCardRef.current) {
+            loginCardRef.current.classList.remove('animate-error-shake');
+          }
+        }, 820);
+      }
     } finally {
       setLoading(false);
     }
@@ -219,14 +254,29 @@ const LoginPage = () => {
   return (
     <div 
       ref={containerRef} 
-      className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-900 p-4"
+      className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-950 via-indigo-900 to-blue-900 p-4 overflow-hidden"
     >
+      {/* 动态背景效果 */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* 模糊圆圈 */}
+        <div className="absolute w-500px h-500px bg-blue-500/15 rounded-full -top-100px -right-100px blur-5xl animate-float-apple"></div>
+        <div className="absolute w-600px h-600px bg-indigo-500/10 rounded-full -bottom-200px -left-200px blur-5xl animate-pulse-slow"></div>
+        <div className="absolute w-300px h-300px bg-purple-500/12 rounded-full top-40% left-30% blur-5xl animate-float-apple"></div>
+        
+        {/* 网格背景 */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-50 perspective-500px preserve-3d rotate-x-60deg -translate-z-100px"></div>
+        
+        {/* 光效 */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent animate-shimmer"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent animate-shimmer"></div>
+      </div>
+
       {/* Canvas背景 - 3D线束效果 */}
       <canvas 
         ref={canvasRef} 
         className="absolute inset-0 pointer-events-none z-0"
       />
-
+      
       {/* Logo区域 */}
       <div className="absolute left-8 top-8 z-10">
         <img src="/company.png" alt="中兵数科" className="h-10 opacity-80" />
@@ -237,13 +287,51 @@ const LoginPage = () => {
       </div>
 
       {/* 登录卡片 */}
-      <div className="w-full max-w-md z-50">
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-10 transition-all duration-300 hover:shadow-blue-500/10">
-          {/* 标题 */}
+      <div
+        ref={loginCardRef}
+        className="w-full max-w-md z-50 transition-all duration-300 animate-scale-in"
+        onMouseMove={handleCardMouseMove}
+        onMouseLeave={handleCardMouseLeave}
+      >
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-10 transition-all duration-300 hover:shadow-blue-500/10 relative overflow-hidden">
+          {/* 卡片内部光晕 */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          
+          {/* 品牌区域 */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-indigo-200">
-              系统登录
+            <div 
+              className="relative mx-auto mb-4 w-18 h-18 cursor-pointer transition-all duration-300"
+              onMouseEnter={() => setLogoHover(true)}
+              onMouseLeave={() => setLogoHover(false)}
+              style={{ transform: logoHover ? 'scale(1.1)' : 'scale(1)' }}
+            >
+              {/* 环绕轨道 */}
+              <div className={`absolute -inset-3 border border-blue-500/10 rounded-full transition-all duration-500 ${logoHover ? 'border-blue-500/30 animate-spin-slow' : ''}`}>
+                {[0, 90, 180, 270].map((deg) => (
+                  <div 
+                    key={deg}
+                    className={`absolute w-1.5 h-1.5 bg-blue-400/50 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-300 ${logoHover ? 'opacity-100' : ''}`}
+                    style={{ 
+                      transform: `translate(-50%, -50%) rotate(${deg}deg) translateX(46px)` 
+                    }}
+                  ></div>
+                ))}
+              </div>
+              
+              {/* Logo */}
+              <img 
+                src="/logo.png" 
+                alt="Datasophon Logo" 
+                className={`w-18 h-18 object-contain filter drop-shadow-lg transition-transform duration-300 ${logoHover ? 'scale-105' : ''}`} 
+              />
+            </div>
+            
+            <h2 className="text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 mb-1">
+              Datasophon
             </h2>
+            <p className="text-white/70 text-sm">
+              一站式大数据平台部署与管理系统
+            </p>
             <div className="mt-2 h-0.5 bg-gradient-to-r from-transparent via-blue-400/40 to-transparent"></div>
           </div>
           
@@ -261,16 +349,20 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* 用户名输入框 */}
             <div className="relative">
-              <div className={`
-                relative rounded-xl transition-all duration-300 overflow-hidden
-                ${activeField === 'username' ? 'bg-blue-900/30 shadow-md shadow-blue-900/20' : 'bg-white/5'}
-                ${errors.username ? 'border border-red-400' : ''}
-              `}>
+              <div 
+                className={`
+                  relative rounded-xl transition-all duration-300 overflow-hidden group
+                  ${activeField === 'username' ? 'bg-blue-900/30 shadow-lg shadow-blue-900/30 scale-102' : 'bg-white/5'}
+                  ${errors.username ? 'border border-red-400' : ''}
+                  hover:bg-blue-900/20 hover:scale-101 hover:shadow-md hover:shadow-blue-800/20
+                `}
+              >
                 {/* 图标 */}
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-hover:scale-110">
                   <div className={`
-                    i-carbon-user w-5 h-5 transition-colors duration-300
+                    i-carbon-user w-5 h-5 transition-all duration-300
                     ${activeField === 'username' ? 'text-blue-400' : 'text-white/60'}
+                    group-hover:text-blue-300
                   `}></div>
                 </div>
                 
@@ -280,6 +372,7 @@ const LoginPage = () => {
                   ${usernameValue || activeField === 'username' 
                     ? 'top-2 text-xs text-blue-300' 
                     : 'top-1/2 -translate-y-1/2 text-sm text-white/60'}
+                  group-hover:text-blue-200
                 `}>
                   用户名
                 </div>
@@ -293,17 +386,22 @@ const LoginPage = () => {
                     w-full bg-transparent border-0 outline-none rounded-xl
                     ${usernameValue || activeField === 'username' ? 'pt-7 pb-3' : 'py-5'}
                     px-12 text-white placeholder-white/30
+                    transition-all duration-300 group-hover:placeholder-white/50
                   `}
                   placeholder={activeField === 'username' ? '请输入用户名' : ''}
                   onFocus={() => setActiveField('username')}
                   onBlur={() => setActiveField(null)}
                 />
                 
-                {/* 底部高亮线 - 简化版 */}
+                {/* 底部高亮线 */}
                 <div className={`
-                  absolute bottom-0 left-3 right-3 h-px transition-transform duration-300 origin-left
-                  ${activeField === 'username' ? 'scale-x-100 bg-blue-400' : 'scale-x-0 bg-white/20'}
+                  absolute bottom-0 left-0 right-0 h-0.5 transition-all duration-300 origin-left
+                  ${activeField === 'username' ? 'scale-x-100 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500' : 'scale-x-0 bg-white/20'}
+                  group-hover:bg-blue-500/30
                 `}></div>
+                
+                {/* 光晕效果 */}
+                <div className="absolute -inset-1 bg-blue-500/10 rounded-xl opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-300"></div>
               </div>
               
               {/* 错误信息 */}
@@ -317,16 +415,20 @@ const LoginPage = () => {
             
             {/* 密码输入框 */}
             <div className="relative">
-              <div className={`
-                relative rounded-xl transition-all duration-300 overflow-hidden
-                ${activeField === 'password' ? 'bg-blue-900/30 shadow-md shadow-blue-900/20' : 'bg-white/5'}
-                ${errors.password ? 'border border-red-400' : ''}
-              `}>
+              <div 
+                className={`
+                  relative rounded-xl transition-all duration-300 overflow-hidden group
+                  ${activeField === 'password' ? 'bg-blue-900/30 shadow-lg shadow-blue-900/30 scale-102' : 'bg-white/5'}
+                  ${errors.password ? 'border border-red-400' : ''}
+                  hover:bg-blue-900/20 hover:scale-101 hover:shadow-md hover:shadow-blue-800/20
+                `}
+              >
                 {/* 图标 */}
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-hover:scale-110">
                   <div className={`
-                    i-carbon-password w-5 h-5 transition-colors duration-300
+                    i-carbon-password w-5 h-5 transition-all duration-300
                     ${activeField === 'password' ? 'text-blue-400' : 'text-white/60'}
+                    group-hover:text-blue-300
                   `}></div>
                 </div>
                 
@@ -336,6 +438,7 @@ const LoginPage = () => {
                   ${passwordValue || activeField === 'password' 
                     ? 'top-2 text-xs text-blue-300' 
                     : 'top-1/2 -translate-y-1/2 text-sm text-white/60'}
+                  group-hover:text-blue-200
                 `}>
                   密码
                 </div>
@@ -349,6 +452,7 @@ const LoginPage = () => {
                     w-full bg-transparent border-0 outline-none rounded-xl
                     ${passwordValue || activeField === 'password' ? 'pt-7 pb-3' : 'py-5'}
                     px-12 pr-12 text-white placeholder-white/30
+                    transition-all duration-300 group-hover:placeholder-white/50
                   `}
                   placeholder={activeField === 'password' ? '请输入密码' : ''}
                   onFocus={() => setActiveField('password')}
@@ -357,20 +461,24 @@ const LoginPage = () => {
                 
                 {/* 显示/隐藏密码按钮 */}
                 <div 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer p-2 rounded-full hover:bg-white/10 transition-all duration-300"
                   onClick={togglePasswordVisibility}
                 >
                   <div className={`
                     ${showPassword ? 'i-carbon-view' : 'i-carbon-view-off'} 
-                    w-5 h-5 text-white/60 hover:text-blue-400 transition-colors duration-300
+                    w-5 h-5 text-white/60 hover:text-blue-400 transition-all duration-300 hover:scale-110
                   `}></div>
                 </div>
                 
-                {/* 底部高亮线 - 简化版 */}
+                {/* 底部高亮线 */}
                 <div className={`
-                  absolute bottom-0 left-3 right-3 h-px transition-transform duration-300 origin-left
-                  ${activeField === 'password' ? 'scale-x-100 bg-blue-400' : 'scale-x-0 bg-white/20'}
+                  absolute bottom-0 left-0 right-0 h-0.5 transition-all duration-300 origin-left
+                  ${activeField === 'password' ? 'scale-x-100 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500' : 'scale-x-0 bg-white/20'}
+                  group-hover:bg-blue-500/30
                 `}></div>
+                
+                {/* 光晕效果 */}
+                <div className="absolute -inset-1 bg-blue-500/10 rounded-xl opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-300"></div>
               </div>
               
               {/* 错误信息 */}
@@ -382,18 +490,20 @@ const LoginPage = () => {
               )}
             </div>
             
-            {/* 登录按钮 - 磨砂玻璃风格 */}
-            <div className="pt-6">
+            {/* 登录按钮 */}
+            <div className="pt-4 relative">
+              {/* 按钮阴影 */}
+              <div className="absolute inset-x-0 bottom-0 h-10 bg-blue-500/30 blur-xl opacity-30 rounded-full"></div>
+              
               <button
                 type="submit"
                 disabled={loading}
                 className={`
-                  relative w-full h-14 rounded-xl overflow-hidden
-                  backdrop-blur-lg bg-white/10 border border-white/10
+                  relative w-full h-14 rounded-xl overflow-hidden group
+                  bg-gradient-to-r from-blue-600 to-indigo-600 
                   transition-all duration-300
-                  ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}
-                  ${btnHover && !btnActive && !loading ? 'bg-white/15 shadow-md shadow-blue-500/10' : ''}
-                  ${btnActive && !loading ? 'bg-white/5' : ''}
+                  ${loading ? 'cursor-not-allowed opacity-80' : 'hover:translate-y-[-4px] hover:shadow-lg hover:shadow-blue-500/25'}
+                  border border-blue-500/30
                 `}
                 onMouseEnter={() => setBtnHover(true)}
                 onMouseLeave={() => {
@@ -403,30 +513,36 @@ const LoginPage = () => {
                 onMouseDown={() => setBtnActive(true)}
                 onMouseUp={() => setBtnActive(false)}
               >
+                {/* 内光效 */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
                 {/* 顶部高光线 */}
-                <div className="absolute top-0 inset-x-0 h-px bg-white/20"></div>
+                <div className="absolute top-0 inset-x-0 h-px bg-white/40"></div>
+                
+                {/* 内部动画光效 */}
+                <div className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-all duration-1000 ease-in-out"></div>
                 
                 {/* 内容层 */}
                 <div className={`
                   flex items-center justify-center w-full h-full
-                  ${btnActive ? 'translate-y-px' : ''}
-                  transition-transform duration-200
+                  ${btnActive ? 'translate-y-px scale-98' : ''}
+                  transition-all duration-200 group-hover:scale-102
                 `}>
                   {loading ? (
                     <div className="flex items-center justify-center">
-                      <svg className="animate-spin mr-3 h-5 w-5 text-white/80" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span className="text-white/90 font-medium">登录中...</span>
+                      <div className="flex space-x-2">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center">
-                      <span className="text-white/90 font-medium mr-2">登录系统</span>
+                      <span className="text-white font-medium mr-2">登录</span>
                       <div className={`
-                        i-carbon-arrow-right w-5 h-5 text-white/80
+                        i-carbon-arrow-right w-5 h-5 text-white
                         transition-all duration-300
-                        ${btnHover ? 'translate-x-0.5' : ''}
+                        ${btnHover ? 'translate-x-1.5 scale-110' : ''}
                       `}></div>
                     </div>
                   )}
@@ -434,6 +550,28 @@ const LoginPage = () => {
               </button>
             </div>
           </form>
+          
+          {/* 特性标签 */}
+          <div className="flex justify-center gap-5 mt-8 mb-4">
+            {['智能管理', '高可用性', '多用户支持'].map((tag, index) => (
+              <div 
+                key={tag} 
+                className="group flex items-center gap-1.5 py-1.5 px-3 bg-white/5 backdrop-blur-sm rounded-full 
+                         transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-600/40 hover:to-indigo-600/40
+                         hover:translate-y-[-6px] hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:bg-white group-hover:scale-150 group-hover:animate-pulse-slow transition-all duration-300"></span>
+                <span className="text-xs text-white/70 group-hover:text-white group-hover:font-medium transition-all duration-300">{tag}</span>
+                
+                {/* 悬浮时出现的图标 */}
+                <span className="w-0 overflow-hidden opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300">
+                  {index === 0 && <div className="i-carbon-cognitive text-white ml-1"></div>}
+                  {index === 1 && <div className="i-carbon-chart-line-data text-white ml-1"></div>}
+                  {index === 2 && <div className="i-carbon-group text-white ml-1"></div>}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       
@@ -441,7 +579,7 @@ const LoginPage = () => {
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
         <div className="text-white/60 text-sm mb-2">
           <p>北京中兵数字科技集团有限公司 版权所有</p>
-          <p className="mt-1">Copyright © {new Date().getFullYear()} DataSophon</p>
+          <p className="mt-1">Copyright © {new Date().getFullYear()} Datasophon</p>
         </div>
         <img src="/company.png" alt="中兵数科" className="h-6 opacity-50 mx-auto" />
       </div>

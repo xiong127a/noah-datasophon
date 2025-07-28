@@ -510,3 +510,79 @@ select:focus {
   background: rgba(0, 0, 0, 0.05);
   color: #666;
 } 
+
+/* 新增登录页面的额外动画效果 */
+@keyframes errorShake {
+  0%, 100% { transform: perspective(1000px) translateX(0); }
+  20%, 60% { transform: perspective(1000px) translateX(-5px); }
+  40%, 80% { transform: perspective(1000px) translateX(5px); }
+}
+
+.animate-error-shake {
+  animation: errorShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite linear;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%);
+}
+
+@keyframes floatAnimation {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: floatAnimation 6s ease-in-out infinite;
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-orbit {
+  animation: orbit 8s linear infinite;
+}
+
+/* 3D卡片效果支持 */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* 模糊圆圈支持 */
+.blur-5xl {
+  filter: blur(64px);
+}
+
+/* 记住我选项动画 */
+@keyframes bounceCheck {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-once {
+  animation: bounceCheck 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+} 
