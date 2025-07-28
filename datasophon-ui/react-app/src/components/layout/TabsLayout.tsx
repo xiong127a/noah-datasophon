@@ -49,7 +49,7 @@ const TabsLayout = () => {
       children: [
         { key: '/system-manage/tenant', label: '租户管理', icon: 'i-carbon-group' },
         { key: '/system-manage/user', label: '用户管理', icon: 'i-carbon-user-profile' },
-        { key: '/system-manage/rack', label: '机架管理', icon: 'i-carbon-rack-server' },
+        { key: '/system-manage/rack', label: '机架管理', icon: 'i-carbon-server-rack' },
         { key: '/system-manage/tag', label: '标签管理', icon: 'i-carbon-tag' },
         { key: '/system-manage/log', label: '日志审计', icon: 'i-carbon-document' }
       ]
@@ -190,7 +190,7 @@ const TabsLayout = () => {
               onClick={() => handleMenuClick('/', false)}
             >
               <div className="w-8 h-8 mr-3 flex-center">
-                <img src="/company.png" alt="Logo" className="h-full" />
+                <img src="/logo.png" alt="Logo" className="h-full" />
               </div>
               <h1 className="text-base font-medium text-apple-dark tracking-tight">
                 Noah大数据基础平台
@@ -385,7 +385,7 @@ const TabsLayout = () => {
             {/* 集群选择器 */}
             <div className="relative" ref={clusterDropdownRef}>
               <button 
-                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
+                className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
                 onClick={toggleClusterMenu}
               >
                 <div className="w-5 h-5 mr-2 text-primary-600">
@@ -443,17 +443,16 @@ const TabsLayout = () => {
 
             {/* 历史操作按钮 */}
             <button 
-              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition-apple"
+              className="action-button"
               onClick={openHistoryOperations}
               title="历史操作"
             >
               <div className="i-carbon-history text-gray-700"></div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary-500 rounded-full"></div>
             </button>
 
             {/* 告警按钮 */}
             <button 
-              className="relative w-9 h-9 flex-center rounded-full bg-black/3 hover:bg-black/5 transition-apple"
+              className="action-button"
               onClick={openAlarmManagement}
               title="告警管理"
             >
@@ -466,9 +465,14 @@ const TabsLayout = () => {
             </button>
 
             {/* 用户中心 */}
-            <div className="relative" ref={userDropdownRef}>
+            <div 
+              className="relative" 
+              ref={userDropdownRef}
+              onMouseEnter={() => setIsUserMenuOpen(true)}
+              onMouseLeave={() => setIsUserMenuOpen(false)}
+            >
               <button 
-                className="flex items-center px-3 py-2 rounded-xl bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
+                className="flex items-center h-9 px-3 py-1.5 rounded-lg bg-black/3 hover:bg-black/5 border border-transparent hover:border-gray-100/20 transition"
                 onClick={toggleUserMenu}
               >
                 <div className="w-7 h-7 rounded-full bg-gray-100 flex-center mr-2 border border-gray-200">

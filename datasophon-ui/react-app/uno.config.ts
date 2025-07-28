@@ -31,6 +31,7 @@ export default defineConfig({
     'apple-menu': 'animate-fade-in-fast origin-top backdrop-blur-xl bg-white/90 border border-gray-100/20 shadow-apple rounded-xl overflow-hidden',
     'menu-item': 'flex items-center px-3 py-2 rounded-lg transition-all duration-150',
     'apple-header': 'backdrop-blur-xl bg-white/90 z-50 shadow-subtle border-b border-gray-100/20',
+    'action-button': 'w-9 h-9 flex-center rounded-lg bg-black/3 hover:bg-black/5 transition-apple',
   },
   // 主题配置
   theme: {
@@ -150,7 +151,7 @@ export default defineConfig({
     [
       'glass-morphism-menu',
       { 
-        'background': 'rgba(255, 255, 255, 0.8)',
+        'background': 'rgba(255, 255, 255, 0.95)',
         'backdrop-filter': 'blur(10px)',
         '-webkit-backdrop-filter': 'blur(10px)',
         'border': '1px solid rgba(255, 255, 255, 0.3)',
@@ -179,6 +180,7 @@ export default defineConfig({
     'i-carbon-notification-new',
     'i-carbon-notification-off',
     'i-carbon-bare-metal-server',
+    'i-carbon-server-rack',
     'i-carbon-table',
     'i-carbon-help',
     'i-carbon-group',
