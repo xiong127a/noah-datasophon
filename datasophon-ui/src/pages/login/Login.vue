@@ -104,7 +104,7 @@ export default {
       if(localStorage.getItem('satoken')){
         this.$router.push("/colony-manage/colony-list");
       }else{
-          this.$axiosGet('/ddh/ssoEnable').then((res) => {
+          this.$axiosGet('/ddh/api/ssoEnable').then((res) => {
               this.isSsoLogin = res.data?res.data:false;
               if(this.isSsoLogin){
                 // true  的时候 用户管理模块隐藏（未实现2024-5-8）
@@ -158,7 +158,7 @@ export default {
       let param = {
         clientLoginUrl: location.origin+location.pathname+location.hash
       }
-      this.$axiosGet('/ddh/sso/getSsoAuthUrl', param).then(res => {
+      this.$axiosGet('/ddh/api/sso/getSsoAuthUrl', param).then(res => {
         if (res.code === 200) {
           location.href = res.data;
         }
@@ -170,12 +170,12 @@ export default {
       let param = {
         ticket: ticket
       }
-      let res = await this.$axiosGet('/ddh/sso/doLoginByTicket', param);
+      let res = await this.$axiosGet('/ddh/api/sso/doLoginByTicket', param);
       if (res.code === 200) {
         localStorage.setItem('satoken', null);
         localStorage.setItem('satoken', res.data);
         
-        this.$axiosGet('/ddh/saveSsoUser',"").then((res) => {
+        this.$axiosGet('/ddh/api/saveSsoUser',"").then((res) => {
          
           if (res.code === 200) {
             const username = res.data.username;
@@ -189,7 +189,7 @@ export default {
         this.$message.warning(res.msg);
         localStorage.removeItem("isCluster");
 
-        this.$axiosGet('/ddh/sso/logout', {}).then(res => {})  //sso 退出
+        this.$axiosGet('/ddh/api/sso/logout', {}).then(res => {})  //sso 退出
         logout();  //基础平台 退出
         // this.$router.push('/login')
         location.href = location.origin + location.pathname+'#/login';

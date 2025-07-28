@@ -15,7 +15,7 @@ const routerMap = {
   root: {
     path: '/',
     name: '首页',
-    redirect: '/login',
+    redirect: '/service-manage', // 修改重定向到主页而不是登录页
     component: view.tabs
   },
   colonyManage: {
