@@ -205,4 +205,31 @@
   .particle-float {
     animation: particle-float 3s ease-in-out infinite;
   }
+  
+  /* 登录页面特定样式 */
+  @keyframes pulse-shadow {
+    0%, 100% { 
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3), 0 0 20px rgba(124, 58, 237, 0.2); 
+    }
+    50% { 
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5), 0 0 30px rgba(124, 58, 237, 0.4); 
+    }
+  }
+  
+  .pulse-shadow {
+    animation: pulse-shadow 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .float {
+    animation: float 5s ease-in-out infinite;
+  }
 }

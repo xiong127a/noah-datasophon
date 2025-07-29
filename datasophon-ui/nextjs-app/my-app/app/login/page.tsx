@@ -1,7 +1,7 @@
 "use client"
 
-import LoginPageEnhanced from "../../login-page-enhanced"
+import LoginPageNew from "../../login-page-new"
 
 export default function Login() {
-  return <LoginPageEnhanced />
+  return <LoginPageNew />
 }
