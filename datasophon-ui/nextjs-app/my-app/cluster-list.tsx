@@ -32,30 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
-import axios from "axios"
-
-// API基础URL和路径配置
-const API_BASE_URL = "http://192.168.200.3:8081";
-const API_PREFIX = "/ddh";
-
-// 创建axios实例 - 注意这里不包含/api，因为下面的接口路径中已包含
-const apiClient = axios.create({
-  baseURL: API_BASE_URL + API_PREFIX,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 设置拦截器自动添加token
-apiClient.interceptors.request.use(config => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('jwt_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+import { apiClient, API_PATHS } from "@/lib/api-config" // 导入集中式API配置
 
 // 集群类型定义
 interface ClusterManager {
@@ -331,7 +308,7 @@ export default function ClusterList() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get("/api/cluster/list");
+      const response = await apiClient.get(API_PATHS.CLUSTER_LIST);
       
       if (response.data && response.data.code === 200) {
         // 处理集群管理员名称
@@ -408,7 +385,7 @@ export default function ClusterList() {
   // 处理进入集群
   const handleEnterCluster = async (cluster: ClusterItem) => {
     try {
-      const response = await apiClient.post("/api/cluster/service/list", { clusterId: cluster.id });
+      const response = await apiClient.post(API_PATHS.CLUSTER_SERVICE_LIST, { clusterId: cluster.id });
       if (response.data && response.data.code === 200) {
         // 保存集群信息到localStorage
         localStorage.setItem('current_cluster_id', cluster.id.toString());
@@ -445,7 +422,7 @@ export default function ClusterList() {
     if (!confirmDelete) return;
     
     try {
-      const response = await apiClient.post("/api/cluster/delete", [confirmDelete.id]);
+      const response = await apiClient.post(API_PATHS.CLUSTER_DELETE, [confirmDelete.id]);
       
       if (response.data && response.data.code === 200) {
         alert("删除集群成功");

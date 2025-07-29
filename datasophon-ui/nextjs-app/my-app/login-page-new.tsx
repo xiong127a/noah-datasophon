@@ -4,26 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
-import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ParticleCanvas from "@/components/login/ParticleCanvas";
 import LoginBackground from "@/components/login/LoginBackground";
-
-// API基础URL和路径配置
-const API_BASE_URL = "http://192.168.200.3:8081";
-const API_PREFIX = "/ddh/api";
-const LOGIN_ENDPOINT = "/login";
-const LOGOUT_ENDPOINT = "/logout"; // 添加退出登录端点
-
-// 创建axios实例
-const apiClient = axios.create({
-  baseURL: API_BASE_URL + API_PREFIX,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { apiClient, API_PATHS } from "@/lib/api-config"; // 导入集中式API配置
 
 // 退出登录函数 (全局可用)
 export const logout = async () => {
@@ -34,7 +20,7 @@ export const logout = async () => {
       // 确保调用退出接口时带上token
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // 调用后端的登出接口
-      await apiClient.post(LOGOUT_ENDPOINT);
+      await apiClient.post(API_PATHS.LOGOUT);
     }
   } catch (err) {
     console.error("退出登录时发生错误:", err);
@@ -132,7 +118,7 @@ export default function LoginPageNew() {
       }
 
       // 发送登录请求
-      const response = await apiClient.post(LOGIN_ENDPOINT, {
+      const response = await apiClient.post(API_PATHS.LOGIN, {
         username,
         password
       });
