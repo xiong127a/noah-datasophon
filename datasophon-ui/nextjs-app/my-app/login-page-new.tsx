@@ -4,11 +4,25 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ParticleCanvas from "@/components/login/ParticleCanvas";
 import LoginBackground from "@/components/login/LoginBackground";
+
+// API基础URL和路径配置
+const API_BASE_URL = "http://192.168.200.3:8081";
+const API_PREFIX = "/ddh/api";
+const LOGIN_ENDPOINT = "/login";
+
+// 创建axios实例
+const apiClient = axios.create({
+  baseURL: API_BASE_URL + API_PREFIX,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export default function LoginPageNew() {
   const [username, setUsername] = useState("");
@@ -47,23 +61,85 @@ export default function LoginPageNew() {
     return () => clearInterval(interval);
   }, []);
 
+  // 处理JWT Token的保存
+  const saveToken = (token: string, refreshToken: string) => {
+    if (typeof window !== 'undefined') {
+      // 保存到localStorage
+      localStorage.setItem('jwt_token', token);
+      localStorage.setItem('refresh_token', refreshToken);
+      
+      // 设置axios默认请求头
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  };
+
+  // 处理用户信息的保存
+  const saveUserInfo = (userInfo: any) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_info', JSON.stringify(userInfo));
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
-      // 模拟登录延迟
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 开发阶段：任何用户名密码都可以登录
-      if (username && password) {
-        router.push("/");
-      } else {
+      // 校验用户输入
+      if (!username.trim() || !password.trim()) {
         throw new Error("请输入用户名和密码");
       }
+
+      // 发送登录请求
+      const response = await apiClient.post(LOGIN_ENDPOINT, {
+        username,
+        password
+      });
+
+      // 检查响应
+      if (response.data && response.data.code === 200 && response.data.success) {
+        // 登录成功
+        const { token, refreshToken, user, roles } = response.data.data;
+        
+        // 保存JWT Token、刷新令牌和用户信息
+        saveToken(token, refreshToken);
+        saveUserInfo({
+          ...user,
+          roles
+        });
+        
+        // 登录成功后跳转
+        router.push("/");
+      } else {
+        // 处理业务逻辑错误
+        throw new Error(response.data?.meta?.msg || response.data?.msg || "登录失败，请检查用户名和密码");
+      }
     } catch (err: any) {
-      setError(err.message || "登录失败，请稍后再试");
+      console.error("登录失败:", err);
+      
+      // 处理不同类型的错误
+      let errorMessage = "登录失败，请稍后再试";
+      
+      if (err.response) {
+        // 服务器响应了错误状态码
+        if (err.response.status === 401) {
+          errorMessage = "用户名或密码不正确";
+        } else if (err.response.status === 403) {
+          errorMessage = "账号已被锁定，请联系管理员";
+        } else if (err.response.data) {
+          // 尝试从后端错误响应提取消息
+          errorMessage = err.response.data?.meta?.msg || 
+                         err.response.data?.msg ||
+                         err.response.data?.message || 
+                         "登录验证失败";
+        }
+      } else if (err.message) {
+        // 请求未发送成功或其他客户端错误
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       
       // 添加卡片震动效果
       if (loginCardRef.current) {
