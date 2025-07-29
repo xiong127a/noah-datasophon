@@ -21,72 +21,30 @@ export default function LoginPageNew() {
   const [btnActive, setBtnActive] = useState(false);
   const [logoHover, setLogoHover] = useState(false);
   const [hoverTag, setHoverTag] = useState<string | null>(null);
+  // 移除轮播旋转效果相关代码
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const loginCardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
-  const featuresContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // 3D标题自动动画效果
+  // 3D标题动画效果保留
   useEffect(() => {
     if (!titleRef.current) return;
     
-    // 设置自动动画
+    // 设置自动动画 - 更大幅度、更快速度
     const animateTitle = () => {
       if (!titleRef.current) return;
       
-      const time = Date.now() / 2000;
-      const moveX = Math.sin(time) * 8; // 增大旋转幅度
-      const moveY = Math.cos(time * 0.8) * 5; // 增大旋转幅度
-      const translateZ = Math.sin(time * 0.5) * 5 + 20; // 添加Z轴移动
+      const time = Date.now() / 1200; // 加快动画速度
+      const moveX = Math.sin(time) * 12; // 增大旋转幅度
+      const moveY = Math.cos(time * 1.2) * 8; // 增大旋转幅度
+      const translateZ = Math.sin(time * 0.8) * 10 + 30; // 更大的Z轴移动
       
-      titleRef.current.style.transform = `perspective(800px) rotateX(${moveY}deg) rotateY(${moveX}deg) translateZ(${translateZ}px)`;
+      titleRef.current.style.transform = `perspective(800px) rotateX(${moveY}deg) rotateY(${moveX}deg) translateZ(${translateZ}px) scale(1.05)`;
     };
     
-    const interval = setInterval(animateTitle, 30); // 提高刷新率
+    const interval = setInterval(animateTitle, 16); // 提高刷新率到约60fps
     return () => clearInterval(interval);
-  }, []);
-  
-  // 功能点滚动效果
-  useEffect(() => {
-    if (!featuresContainerRef.current) return;
-    
-    const features = featuresContainerRef.current;
-    let animationFrameId: number;
-    let scrollPosition = 0;
-    let isPaused = false;
-    
-    const scrollFeatures = () => {
-      if (!isPaused && features) {
-        scrollPosition += 0.5;
-        if (scrollPosition >= features.scrollWidth / 2) {
-          scrollPosition = 0;
-        }
-        features.scrollLeft = scrollPosition;
-      }
-      animationFrameId = requestAnimationFrame(scrollFeatures);
-    };
-    
-    // 鼠标进入暂停滚动
-    const handleMouseEnter = () => {
-      isPaused = true;
-    };
-    
-    // 鼠标离开继续滚动
-    const handleMouseLeave = () => {
-      isPaused = false;
-    };
-    
-    features.addEventListener('mouseenter', handleMouseEnter);
-    features.addEventListener('mouseleave', handleMouseLeave);
-    
-    animationFrameId = requestAnimationFrame(scrollFeatures);
-    
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      features.removeEventListener('mouseenter', handleMouseEnter);
-      features.removeEventListener('mouseleave', handleMouseLeave);
-    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -125,7 +83,7 @@ export default function LoginPageNew() {
     setShowPassword(!showPassword);
   };
 
-  // 扩展功能列表
+  // 扩展功能列表 - 删除一键启停功能点
   const features = [
     { id: "manage", name: "智能管理", icon: "🧠", color: "blue" },
     { id: "ha", name: "高可用性", icon: "⚡", color: "purple" },
@@ -133,13 +91,35 @@ export default function LoginPageNew() {
     { id: "cluster", name: "多集群支持", icon: "🌐", color: "cyan" },
     { id: "visual", name: "可视化配置", icon: "📊", color: "teal" },
     { id: "deploy", name: "一键部署", icon: "🚀", color: "orange" },
-    { id: "control", name: "一键启停", icon: "⏯️", color: "rose" },
   ];
 
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden">
       <LoginBackground />
       <ParticleCanvas />
+      
+      {/* 高科技装饰线和扫描效果 */}
+      <div className="fixed inset-0 z-0 overflow-hidden">
+        {/* 水平扫描线 */}
+        <div className="absolute left-0 right-0 h-px bg-blue-400/20 animate-scan-vertical"></div>
+        
+        {/* 垂直扫描线 */}
+        <div className="absolute top-0 bottom-0 w-px bg-blue-400/20 animate-scan-horizontal"></div>
+        
+        {/* 角落装饰 */}
+        <div className="absolute top-0 left-0 w-24 h-24 border-l-2 border-t-2 border-blue-400/30"></div>
+        <div className="absolute top-0 right-0 w-24 h-24 border-r-2 border-t-2 border-purple-400/30"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 border-l-2 border-b-2 border-cyan-400/30"></div>
+        <div className="absolute bottom-0 right-0 w-24 h-24 border-r-2 border-b-2 border-indigo-400/30"></div>
+        
+        {/* 雷达扫描效果 */}
+        <div className="absolute bottom-16 right-16 w-64 h-64 rounded-full border border-blue-400/20">
+          <div className="absolute inset-0 rounded-full border border-blue-400/10"></div>
+          <div className="absolute inset-4 rounded-full border border-blue-400/15"></div>
+          <div className="absolute inset-8 rounded-full border border-blue-400/10"></div>
+          <div className="absolute inset-0 origin-center rounded-full animate-radar-beam"></div>
+        </div>
+      </div>
       
       <div className="absolute left-8 top-8 z-10">
         <Image 
@@ -154,7 +134,7 @@ export default function LoginPageNew() {
       {/* 增强3D标题效果 */}
       <div 
         ref={titleRef}
-        className="absolute top-14 left-1/2 transform -translate-x-1/2 z-10 transition-transform duration-200"
+        className="absolute top-14 left-1/2 transform -translate-x-1/2 z-10 transition-transform duration-100"
       >
         <div className="relative">
           {/* 强化光晕效果 */}
@@ -179,6 +159,14 @@ export default function LoginPageNew() {
           <div className="absolute -left-16 -bottom-6 w-12 h-12 border-b-2 border-l-2 border-indigo-400/40 opacity-70"></div>
           <div className="absolute -right-4 -bottom-8 w-8 h-8 border-b border-r border-blue-400/30 opacity-50"></div>
           <div className="absolute -left-4 -top-8 w-8 h-8 border-t border-l border-indigo-400/30 opacity-50"></div>
+          
+          {/* 数字雨点效果 */}
+          <div className="absolute -right-24 top-0 bottom-0 w-12 text-xs text-blue-400/30 overflow-hidden">
+            <div className="animate-matrix-code">10010110<br/>01101001<br/>11001010<br/>00101101<br/>10110010<br/>01001011</div>
+          </div>
+          <div className="absolute -left-24 top-0 bottom-0 w-12 text-xs text-indigo-400/30 overflow-hidden">
+            <div className="animate-matrix-code-slow">01101001<br/>10010110<br/>00101101<br/>11001010<br/>01001011<br/>10110010</div>
+          </div>
         </div>
       </div>
 
@@ -187,6 +175,12 @@ export default function LoginPageNew() {
         className="w-full max-w-md z-50 transition-all duration-300 animate-scale-in"
       >
         <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-10 transition-all duration-300 hover:shadow-blue-500/10 relative overflow-hidden">
+          {/* 动态边框光效 */}
+          <div className="absolute inset-0 rounded-3xl border-2 border-transparent bg-transparent">
+            <div className="absolute inset-[-2px] rounded-3xl bg-gradient-to-r from-blue-500/30 via-indigo-500/30 to-purple-500/30 animate-border-flow"></div>
+          </div>
+          
+          {/* 卡片内部光晕 */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           
           <div className="text-center mb-8">
@@ -266,7 +260,7 @@ export default function LoginPageNew() {
                   onChange={(e) => setUsername(e.target.value)}
                   className={`
                     w-full bg-transparent border-0 outline-none rounded-xl
-                    ${username || activeField === "username" ? "pt-7 pb-3" : "py-5"}
+                    ${username || activeField === "username" ? "pt-8 pb-4" : "py-6"}
                     px-12 text-white placeholder-white/30
                   `}
                   placeholder={activeField === "username" ? "请输入用户名" : ""}
@@ -309,7 +303,7 @@ export default function LoginPageNew() {
                   onChange={(e) => setPassword(e.target.value)}
                   className={`
                     w-full bg-transparent border-0 outline-none rounded-xl
-                    ${password || activeField === "password" ? "pt-7 pb-3" : "py-5"}
+                    ${password || activeField === "password" ? "pt-8 pb-4" : "py-6"}
                     px-12 pr-12 text-white placeholder-white/30
                   `}
                   placeholder={activeField === "password" ? "请输入密码" : ""}
@@ -344,17 +338,24 @@ export default function LoginPageNew() {
                 onMouseDown={() => setBtnActive(true)}
                 onMouseUp={() => setBtnActive(false)}
                 className={`
-                  relative w-full py-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg border-0
+                  relative w-full py-7 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg border-0
                   transition-all duration-300 overflow-hidden
                   ${btnHover ? "shadow-blue-500/25" : ""}
                   ${btnActive ? "scale-98" : btnHover ? "scale-102" : ""}
                 `}
               >
+                {/* 按钮内部扫描线 */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute top-0 -left-full right-full h-px bg-white/50 animate-scan-btn"></div>
+                </div>
+                
+                {/* 按钮光晕效果 */}
                 <div className={`
                   absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform translate-x-[-100%] transition-transform duration-1000
                   ${btnHover ? "translate-x-[100%]" : ""}
                 `} />
                 
+                {/* 按钮内容 */}
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -375,86 +376,76 @@ export default function LoginPageNew() {
             </div>
           </form>
 
-          {/* 全新优化的功能点展示 */}
-          <div className="mt-6 relative overflow-hidden">
-            {/* 渐变阴影效果 */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-[rgba(15,23,42,0.8)] to-transparent pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-[rgba(15,23,42,0.8)] to-transparent pointer-events-none"></div>
-            
-            {/* 滚动容器 */}
-            <div 
-              ref={featuresContainerRef}
-              className="flex overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {/* 添加重复功能点实现无缝滚动 */}
-              {[...features, ...features].map((feature, index) => (
-                <div
-                  key={`${feature.id}-${index}`}
-                  className="snap-center shrink-0 first:pl-2 last:pr-2"
-                >
-                  <div
-                    className={`
-                      px-3 py-1.5 mx-1 rounded-lg cursor-pointer transition-all duration-300 relative overflow-hidden
-                      ${activeFeature === feature.id ? 'shadow-sm' : ''}
-                      ${activeFeature === feature.id ? `shadow-${feature.color}-500/30` : ''}
-                      group
-                    `}
-                    onMouseEnter={() => setActiveFeature(feature.id)}
-                    onMouseLeave={() => setActiveFeature(null)}
-                  >
-                    <div className={`
-                      absolute inset-0 opacity-0 transition-all duration-300 
-                      ${activeFeature === feature.id ? 'opacity-100' : ''}
-                      ${feature.color === 'blue' ? 'bg-gradient-to-r from-blue-900/30 to-blue-700/10' : ''}
-                      ${feature.color === 'purple' ? 'bg-gradient-to-r from-purple-900/30 to-purple-700/10' : ''}
-                      ${feature.color === 'indigo' ? 'bg-gradient-to-r from-indigo-900/30 to-indigo-700/10' : ''}
-                      ${feature.color === 'cyan' ? 'bg-gradient-to-r from-cyan-900/30 to-cyan-700/10' : ''}
-                      ${feature.color === 'teal' ? 'bg-gradient-to-r from-teal-900/30 to-teal-700/10' : ''}
-                      ${feature.color === 'orange' ? 'bg-gradient-to-r from-orange-900/30 to-orange-700/10' : ''}
-                      ${feature.color === 'rose' ? 'bg-gradient-to-r from-rose-900/30 to-rose-700/10' : ''}
-                    `}></div>
+          {/* 简单网格布局的功能点展示 - 减小尺寸，更紧凑 */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {features.map((feature) => (
+              <div
+                key={feature.id}
+                className={`
+                  p-2 rounded-lg cursor-pointer transition-all duration-300 relative overflow-hidden
+                  bg-white/5 hover:bg-white/10 hover:scale-105
+                  ${activeFeature === feature.id ? 'bg-gradient-to-br shadow-lg scale-105' : ''}
+                  ${activeFeature === feature.id && feature.color === 'blue' ? 'from-blue-800/20 to-blue-900/20 shadow-blue-500/20' : ''}
+                  ${activeFeature === feature.id && feature.color === 'purple' ? 'from-purple-800/20 to-purple-900/20 shadow-purple-500/20' : ''}
+                  ${activeFeature === feature.id && feature.color === 'indigo' ? 'from-indigo-800/20 to-indigo-900/20 shadow-indigo-500/20' : ''}
+                  ${activeFeature === feature.id && feature.color === 'cyan' ? 'from-cyan-800/20 to-cyan-900/20 shadow-cyan-500/20' : ''}
+                  ${activeFeature === feature.id && feature.color === 'teal' ? 'from-teal-800/20 to-teal-900/20 shadow-teal-500/20' : ''}
+                  ${activeFeature === feature.id && feature.color === 'orange' ? 'from-orange-800/20 to-orange-900/20 shadow-orange-500/20' : ''}
+                  group
+                `}
+                onMouseEnter={() => setActiveFeature(feature.id)}
+                onMouseLeave={() => setActiveFeature(null)}
+              >
+                {/* 背景光效 */}
+                <div className={`
+                  absolute inset-0 opacity-0 transition-opacity duration-500 bg-gradient-to-b 
+                  ${activeFeature === feature.id ? 'opacity-100' : 'group-hover:opacity-50'}
+                  ${feature.color === 'blue' ? 'from-blue-500/5 to-transparent' : ''}
+                  ${feature.color === 'purple' ? 'from-purple-500/5 to-transparent' : ''}
+                  ${feature.color === 'indigo' ? 'from-indigo-500/5 to-transparent' : ''}
+                  ${feature.color === 'cyan' ? 'from-cyan-500/5 to-transparent' : ''}
+                  ${feature.color === 'teal' ? 'from-teal-500/5 to-transparent' : ''}
+                  ${feature.color === 'orange' ? 'from-orange-500/5 to-transparent' : ''}
+                `}></div>
+                
+                <div className="flex items-center space-x-2 z-10 relative">
+                  <div className={`
+                    w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-300
+                    bg-white/5 group-hover:bg-white/10
+                    ${activeFeature === feature.id ? 'scale-110 bg-white/10' : ''}
+                    ${feature.color === 'blue' && activeFeature === feature.id ? 'text-blue-300' : ''}
+                    ${feature.color === 'purple' && activeFeature === feature.id ? 'text-purple-300' : ''}
+                    ${feature.color === 'indigo' && activeFeature === feature.id ? 'text-indigo-300' : ''}
+                    ${feature.color === 'cyan' && activeFeature === feature.id ? 'text-cyan-300' : ''}
+                    ${feature.color === 'teal' && activeFeature === feature.id ? 'text-teal-300' : ''}
+                    ${feature.color === 'orange' && activeFeature === feature.id ? 'text-orange-300' : ''}
+                    ${!activeFeature ? 'text-white/60' : ''}
+                  `}>
+                    <span className="text-sm">{feature.icon}</span>
+                  </div>
+                  <div>
+                    <p className={`
+                      text-xs font-medium transition-all duration-300
+                      ${activeFeature === feature.id ? 'text-white' : 'text-white/70 group-hover:text-white/90'}
+                    `}>
+                      {feature.name}
+                    </p>
                     
-                    <div className="flex items-center relative z-10">
-                      <span className={`
-                        flex items-center justify-center w-4 h-4 rounded transition-all duration-300
-                        ${activeFeature === feature.id ? 'scale-110 mr-2' : 'mr-1.5 opacity-80'}
-                        ${feature.color === 'blue' && activeFeature === feature.id ? 'text-blue-300' : ''}
-                        ${feature.color === 'purple' && activeFeature === feature.id ? 'text-purple-300' : ''}
-                        ${feature.color === 'indigo' && activeFeature === feature.id ? 'text-indigo-300' : ''}
-                        ${feature.color === 'cyan' && activeFeature === feature.id ? 'text-cyan-300' : ''}
-                        ${feature.color === 'teal' && activeFeature === feature.id ? 'text-teal-300' : ''}
-                        ${feature.color === 'orange' && activeFeature === feature.id ? 'text-orange-300' : ''}
-                        ${feature.color === 'rose' && activeFeature === feature.id ? 'text-rose-300' : ''}
-                      `}
-                      style={{ fontSize: '10px' }}
-                      >
-                        {feature.icon}
-                      </span>
-                      <span className={`
-                        text-xs font-medium whitespace-nowrap transition-colors duration-300
-                        ${activeFeature === feature.id ? 'text-white' : 'text-white/70'}
-                      `}>
-                        {feature.name}
-                      </span>
-                    </div>
-                    
-                    {/* 底部动画线条 */}
+                    {/* 底部装饰线 */}
                     <div className={`
-                      absolute bottom-0 left-0 h-[2px] transition-all duration-300
-                      ${activeFeature === feature.id ? 'w-full' : 'w-0'}
-                      ${feature.color === 'blue' ? 'bg-gradient-to-r from-blue-400 to-blue-500/50' : ''}
-                      ${feature.color === 'purple' ? 'bg-gradient-to-r from-purple-400 to-purple-500/50' : ''}
-                      ${feature.color === 'indigo' ? 'bg-gradient-to-r from-indigo-400 to-indigo-500/50' : ''}
-                      ${feature.color === 'cyan' ? 'bg-gradient-to-r from-cyan-400 to-cyan-500/50' : ''}
-                      ${feature.color === 'teal' ? 'bg-gradient-to-r from-teal-400 to-teal-500/50' : ''}
-                      ${feature.color === 'orange' ? 'bg-gradient-to-r from-orange-400 to-orange-500/50' : ''}
-                      ${feature.color === 'rose' ? 'bg-gradient-to-r from-rose-400 to-rose-500/50' : ''}
+                      h-0.5 transition-all duration-300 mt-0.5
+                      ${activeFeature === feature.id ? 'w-full' : 'w-0 group-hover:w-4/5'}
+                      ${feature.color === 'blue' ? 'bg-blue-400/70' : ''}
+                      ${feature.color === 'purple' ? 'bg-purple-400/70' : ''}
+                      ${feature.color === 'indigo' ? 'bg-indigo-400/70' : ''}
+                      ${feature.color === 'cyan' ? 'bg-cyan-400/70' : ''}
+                      ${feature.color === 'teal' ? 'bg-teal-400/70' : ''}
+                      ${feature.color === 'orange' ? 'bg-orange-400/70' : ''}
                     `}></div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

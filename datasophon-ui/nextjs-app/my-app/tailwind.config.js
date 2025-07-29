@@ -12,6 +12,13 @@ module.exports = {
         'spin-slow': 'spin 8s linear infinite',
         'scale-in': 'scale-in 0.5s ease-out',
         'shake': 'shake 0.82s cubic-bezier(.36,.07,.19,.97) both',
+        'scan-vertical': 'scan-vertical 15s linear infinite',
+        'scan-horizontal': 'scan-horizontal 20s linear infinite',
+        'radar-beam': 'radar-beam 8s linear infinite',
+        'matrix-code': 'matrix-code 10s linear infinite',
+        'matrix-code-slow': 'matrix-code 15s linear infinite',
+        'border-flow': 'border-flow 5s linear infinite',
+        'scan-btn': 'scan-btn 2s linear infinite',
       },
       keyframes: {
         'gradient-x': {
@@ -42,8 +49,57 @@ module.exports = {
           '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
           '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
         },
+        'scan-vertical': {
+          '0%': { top: '0%', opacity: '0' },
+          '5%': { opacity: '0.8' },
+          '95%': { opacity: '0.8' },
+          '100%': { top: '100%', opacity: '0' },
+        },
+        'scan-horizontal': {
+          '0%': { left: '0%', opacity: '0' },
+          '5%': { opacity: '0.8' },
+          '95%': { opacity: '0.8' },
+          '100%': { left: '100%', opacity: '0' },
+        },
+        'radar-beam': {
+          '0%': { transform: 'rotate(0deg)', background: 'linear-gradient(90deg, rgba(56,189,248,0) 0%, rgba(56,189,248,0.3) 50%, rgba(56,189,248,0) 100%)' },
+          '100%': { transform: 'rotate(360deg)', background: 'linear-gradient(90deg, rgba(56,189,248,0) 0%, rgba(56,189,248,0.3) 50%, rgba(56,189,248,0) 100%)' },
+        },
+        'matrix-code': {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        'border-flow': {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '50%': { transform: 'rotate(180deg)' },
+        },
+        'scan-btn': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(200%)' },
+        },
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.perspective-1000': {
+          perspective: '1000px',
+        },
+        '.preserve-3d': {
+          transformStyle: 'preserve-3d',
+        },
+        '.backface-hidden': {
+          backfaceVisibility: 'hidden',
+        },
+        '.scale-98': {
+          transform: 'scale(0.98)',
+        },
+        '.scale-102': {
+          transform: 'scale(1.02)',
+        },
+      }
+      addUtilities(newUtilities)
+    },
+  ],
 } 
