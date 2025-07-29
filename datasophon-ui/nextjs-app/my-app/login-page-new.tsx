@@ -15,6 +15,7 @@ import LoginBackground from "@/components/login/LoginBackground";
 const API_BASE_URL = "http://192.168.200.3:8081";
 const API_PREFIX = "/ddh/api";
 const LOGIN_ENDPOINT = "/login";
+const LOGOUT_ENDPOINT = "/logout"; // 添加退出登录端点
 
 // 创建axios实例
 const apiClient = axios.create({
@@ -24,9 +25,39 @@ const apiClient = axios.create({
   },
 });
 
+// 退出登录函数 (全局可用)
+export const logout = async () => {
+  try {
+    // 获取token用于调用退出接口
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      // 确保调用退出接口时带上token
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // 调用后端的登出接口
+      await apiClient.post(LOGOUT_ENDPOINT);
+    }
+  } catch (err) {
+    console.error("退出登录时发生错误:", err);
+  } finally {
+    // 清除存储的令牌和用户信息
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_info');
+      
+      // 清除axios请求头
+      delete apiClient.defaults.headers.common['Authorization'];
+      
+      // 重定向到登录页
+      window.location.href = '/login';
+    }
+  }
+};
+
 export default function LoginPageNew() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  // 设置默认登录凭据
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +71,15 @@ export default function LoginPageNew() {
   const loginCardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // 检查是否已经登录
+  useEffect(() => {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      // 用户已登录，可以重定向到首页
+      // router.push('/');
+    }
+  }, [router]);
 
   // 3D标题动画效果保留
   useEffect(() => {

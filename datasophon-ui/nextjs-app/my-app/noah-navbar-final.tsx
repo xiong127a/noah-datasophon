@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { logout } from "./login-page-new" // 导入退出登录函数
 
 import { Button } from "@/components/ui/button"
 import {
@@ -198,7 +199,10 @@ export default function FinalNavbar() {
   const router = useRouter()
 
   const handleLogout = () => {
-    router.push("/login")
+    // 调用退出登录函数
+    logout()
+    // 不需要在这里手动跳转，logout函数会处理跳转
+    // router.push("/login")
   }
 
   const handleProfile = () => {
