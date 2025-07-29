@@ -4,12 +4,13 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { User, Lock, Eye, EyeOff } from "lucide-react"
+import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 
-// 动态背景组件
+// 增强的动态背景组件 - 更清晰的粒子效果和连线
 const DynamicBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const mouseRef = useRef({ x: 0, y: 0 })
@@ -41,19 +42,19 @@ const DynamicBackground = () => {
       connections: number[]
     }> = []
 
-    // 创建粒子
+    // 创建粒子 - 增加粒子数量
     const createParticles = () => {
-      const particleCount = Math.min(150, Math.floor((canvas.width * canvas.height) / 15000))
+      const particleCount = Math.min(200, Math.floor((canvas.width * canvas.height) / 10000))
       particles.length = 0
 
       for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          size: Math.random() * 2 + 1,
-          opacity: Math.random() * 0.5 + 0.2,
+          vx: (Math.random() - 0.5) * 0.6, // 增加速度
+          vy: (Math.random() - 0.5) * 0.6, // 增加速度
+          size: Math.random() * 2.5 + 1.5, // 增大粒子
+          opacity: Math.random() * 0.7 + 0.3, // 提高不透明度
           connections: [],
         })
       }
@@ -61,13 +62,13 @@ const DynamicBackground = () => {
 
     createParticles()
 
-    // 鼠标交互
+    // 鼠标交互 - 增强效果
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY }
     }
     window.addEventListener("mousemove", handleMouseMove)
 
-    // 动画循环
+    // 动画循环 - 增强粒子连线和交互效果
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -81,79 +82,75 @@ const DynamicBackground = () => {
         if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1
         if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1
 
-        // 鼠标吸引效果
+        // 增强鼠标吸引效果
         const mouseDistance = Math.sqrt(
           Math.pow(mouseRef.current.x - particle.x, 2) + Math.pow(mouseRef.current.y - particle.y, 2),
         )
 
-        if (mouseDistance < 150) {
-          const force = (150 - mouseDistance) / 150
+        if (mouseDistance < 200) { // 增加影响范围
+          const force = (200 - mouseDistance) / 200
           const angle = Math.atan2(mouseRef.current.y - particle.y, mouseRef.current.x - particle.x)
-          particle.vx += Math.cos(angle) * force * 0.02
-          particle.vy += Math.sin(angle) * force * 0.02
+          particle.vx += Math.cos(angle) * force * 0.05 // 增加影响力
+          particle.vy += Math.sin(angle) * force * 0.05 // 增加影响力
         }
 
-        // 绘制粒子
+        // 绘制粒子 - 使用渐变颜色
+        const gradient = ctx.createRadialGradient(
+          particle.x, particle.y, 0, 
+          particle.x, particle.y, particle.size * 2
+        )
+        gradient.addColorStop(0, `rgba(59, 130, 246, ${particle.opacity})`)
+        gradient.addColorStop(1, `rgba(147, 51, 234, ${particle.opacity * 0.5})`)
+        
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(59, 130, 246, ${particle.opacity})`
+        ctx.fillStyle = gradient
         ctx.fill()
 
-        // 粒子发光效果
-        if (mouseDistance < 100) {
-          ctx.beginPath()
-          ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(59, 130, 246, ${(0.1 * (100 - mouseDistance)) / 100})`
-          ctx.fill()
-        }
-      })
+        // 清除之前的连接
+        particle.connections = []
 
-      // 绘制连接线
-      particles.forEach((particle, i) => {
-        particles.slice(i + 1).forEach((otherParticle, j) => {
-          const distance = Math.sqrt(
-            Math.pow(particle.x - otherParticle.x, 2) + Math.pow(particle.y - otherParticle.y, 2),
-          )
+        // 寻找邻近粒子并连线 - 增强连线效果
+        for (let j = i + 1; j < particles.length; j++) {
+          const otherParticle = particles[j]
+          const dx = particle.x - otherParticle.x
+          const dy = particle.y - otherParticle.y
+          const distance = Math.sqrt(dx * dx + dy * dy)
 
-          if (distance < 120) {
-            const opacity = ((120 - distance) / 120) * 0.3
-
-            // 鼠标附近的连线加强
-            const mouseToLine = Math.min(
-              Math.sqrt(Math.pow(mouseRef.current.x - particle.x, 2) + Math.pow(mouseRef.current.y - particle.y, 2)),
-              Math.sqrt(
-                Math.pow(mouseRef.current.x - otherParticle.x, 2) + Math.pow(mouseRef.current.y - otherParticle.y, 2),
-              ),
-            )
-
-            const enhancedOpacity = mouseToLine < 100 ? opacity * (2 + (100 - mouseToLine) / 50) : opacity
-
+          if (distance < 150) { // 增加连线距离
+            particle.connections.push(j)
+            
+            // 绘制连线 - 更清晰的渐变线条
             ctx.beginPath()
             ctx.moveTo(particle.x, particle.y)
             ctx.lineTo(otherParticle.x, otherParticle.y)
-            ctx.strokeStyle = `rgba(59, 130, 246, ${enhancedOpacity})`
-            ctx.lineWidth = mouseToLine < 100 ? 2 : 1
+            
+            // 距离越近，线条越粗越亮
+            const lineOpacity = 1 - distance / 150
+            const lineWidth = 1.5 - distance / 150
+            
+            ctx.strokeStyle = `rgba(147, 197, 253, ${lineOpacity * 0.8})`
+            ctx.lineWidth = lineWidth
             ctx.stroke()
           }
-        })
+        }
       })
 
-      // 鼠标光晕效果
-      const gradient = ctx.createRadialGradient(
-        mouseRef.current.x,
-        mouseRef.current.y,
-        0,
-        mouseRef.current.x,
-        mouseRef.current.y,
-        100,
-      )
-      gradient.addColorStop(0, "rgba(59, 130, 246, 0.1)")
-      gradient.addColorStop(1, "rgba(59, 130, 246, 0)")
-
-      ctx.beginPath()
-      ctx.arc(mouseRef.current.x, mouseRef.current.y, 100, 0, Math.PI * 2)
-      ctx.fillStyle = gradient
-      ctx.fill()
+      // 鼠标周围绘制光环效果
+      if (mouseRef.current.x > 0) {
+        const mouseGlow = ctx.createRadialGradient(
+          mouseRef.current.x, mouseRef.current.y, 0,
+          mouseRef.current.x, mouseRef.current.y, 150
+        )
+        mouseGlow.addColorStop(0, "rgba(59, 130, 246, 0.1)")
+        mouseGlow.addColorStop(0.5, "rgba(147, 51, 234, 0.05)")
+        mouseGlow.addColorStop(1, "rgba(0, 0, 0, 0)")
+        
+        ctx.beginPath()
+        ctx.arc(mouseRef.current.x, mouseRef.current.y, 150, 0, Math.PI * 2)
+        ctx.fillStyle = mouseGlow
+        ctx.fill()
+      }
 
       animationRef.current = requestAnimationFrame(animate)
     }
@@ -161,21 +158,15 @@ const DynamicBackground = () => {
     animate()
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
-      window.removeEventListener("mousemove", handleMouseMove)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
+      window.removeEventListener("resize", resizeCanvas)
+      window.removeEventListener("mousemove", handleMouseMove)
     }
   }, [])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
-      style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)" }}
-    />
-  )
+  return <canvas ref={canvasRef} className="absolute inset-0 z-0" />
 }
 
 export default function LoginPageEnhanced() {
@@ -209,27 +200,33 @@ export default function LoginPageEnhanced() {
       {/* 渐变遮罩 */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-blue-900/30 to-indigo-900/50" />
 
+      {/* 左上角Logo */}
+      <div className="absolute left-12 top-8 z-20">
+        <Image 
+          src="/images/login/company.png" 
+          alt="中兵数科" 
+          width={150} 
+          height={50} 
+          className="opacity-90 hover:opacity-100 transition-opacity"
+        />
+      </div>
+
       {/* 主要内容 */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-8">
         <div className="w-full max-w-md">
           {/* 顶部标题 */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center mb-8">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-3xl flex items-center justify-center border border-white/20 shadow-2xl">
-                  <span className="text-2xl font-bold text-white">中兵</span>
-                </div>
-              </div>
+              <Image 
+                src="/images/login/product.png" 
+                alt="Noah大数据基础平台" 
+                width={350} 
+                height={80} 
+                className="opacity-90 hover:opacity-100 transition-opacity"
+              />
             </div>
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-wide">
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-                Noah
-              </span>
-              <span className="text-white/90"> 大数据基础平台</span>
-            </h1>
             <div className="w-32 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4" />
-            <p className="text-white/70 text-lg">智能化数据处理 • 企业级安全保障</p>
+            <p className="text-white/70 text-lg">一站式大数据平台部署与管理系统</p>
           </div>
 
           {/* 登录卡片 */}
@@ -293,26 +290,25 @@ export default function LoginPageEnhanced() {
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField("")}
-                    className={`pl-14 pr-14 h-16 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl backdrop-blur-xl transition-all duration-300 text-lg ${
+                    className={`pl-14 h-16 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-2xl backdrop-blur-xl transition-all duration-300 text-lg ${
                       focusedField === "password" || password
                         ? "bg-white/20 border-blue-400/50 ring-2 ring-blue-400/30 shadow-lg shadow-blue-500/20"
                         : "hover:bg-white/15 hover:border-white/30"
                     }`}
                     required
                   />
-                  <button
-                    type="button"
+                  <div
+                    className="absolute inset-y-0 right-0 pr-5 flex items-center cursor-pointer"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-5 flex items-center group/eye"
                   >
                     {showPassword ? (
-                      <EyeOff className="h-6 w-6 text-white/50 group-hover/eye:text-white/70 transition-colors duration-200" />
+                      <EyeOff className="h-6 w-6 text-white/50 hover:text-blue-400 transition-colors duration-300" />
                     ) : (
-                      <Eye className="h-6 w-6 text-white/50 group-hover/eye:text-white/70 transition-colors duration-200" />
+                      <Eye className="h-6 w-6 text-white/50 hover:text-blue-400 transition-colors duration-300" />
                     )}
-                  </button>
+                  </div>
                   {password && (
-                    <div className="absolute right-16 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
+                    <div className="absolute right-14 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
                   )}
                 </div>
 
@@ -320,52 +316,43 @@ export default function LoginPageEnhanced() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-16 bg-gradient-to-r from-blue-500 via-purple-600 to-indigo-700 hover:from-blue-600 hover:via-purple-700 hover:to-indigo-800 text-white font-bold rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-500 border-0 text-xl relative overflow-hidden group/btn"
+                  className="w-full h-14 text-lg font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-2xl transform transition-all duration-500 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
                   {isLoading ? (
-                    <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>登录中...</span>
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>正在登录...</span>
                     </div>
                   ) : (
-                    <span className="relative z-10">登录 →</span>
+                    "登 录 →"
                   )}
                 </Button>
-              </form>
 
-              {/* 底部链接 */}
-              <div className="flex justify-center space-x-8 mt-10 text-sm">
-                <button className="text-white/70 hover:text-white transition-colors duration-200 flex items-center space-x-2 group/link">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full group-hover/link:animate-pulse" />
-                  <span>智能管理</span>
-                </button>
-                <button className="text-white/70 hover:text-white transition-colors duration-200 flex items-center space-x-2 group/link">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full group-hover/link:animate-pulse" />
-                  <span>高可用性</span>
-                </button>
-                <button className="text-white/70 hover:text-white transition-colors duration-200 flex items-center space-x-2 group/link">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full group-hover/link:animate-pulse" />
-                  <span>多租户支持</span>
-                </button>
-              </div>
+                {/* 功能介绍 */}
+                <div className="flex justify-center space-x-8 pt-4">
+                  <div className="flex items-center space-x-2 text-white/70 text-sm">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                    <span>智能管理</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-white/70 text-sm">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                    <span>高可用性</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-white/70 text-sm">
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full"></span>
+                    <span>多用户支持</span>
+                  </div>
+                </div>
+              </form>
             </CardContent>
           </Card>
-
-          {/* 底部版权信息 */}
-          <div className="text-center mt-12 space-y-4">
-            <p className="text-white/60 text-sm">北京中兵数科技集团有限公司 版权所有</p>
-            <p className="text-white/60 text-sm">Copyright © 2025 Datasophon</p>
-            <div className="flex items-center justify-center mt-6">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative w-12 h-12 bg-white/10 backdrop-blur-xl rounded-xl flex items-center justify-center border border-white/20">
-                  <span className="text-xs font-bold text-white">中兵数科</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
+      </div>
+      
+      {/* 底部版权信息 */}
+      <div className="absolute bottom-5 left-0 right-0 text-center text-white/70 z-20">
+        北京中兵数字科技集团有限公司 版权所有 <br />
+        Copyright © 2025 Datasophon
       </div>
     </div>
   )
