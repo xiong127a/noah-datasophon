@@ -29,6 +29,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { logout } from "./login-page-new" // 导入退出登录函数
+import Image from "next/image"; // 添加Image导入
 
 import { Button } from "@/components/ui/button"
 import {
@@ -222,18 +223,16 @@ export default function FinalNavbar() {
           <div className="flex items-center space-x-10">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-sm opacity-75 group-hover:opacity-100 transition-opacity" />
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
-                  <Database className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                  Noah
-                </span>
-                <span className="text-sm text-slate-500 -mt-1">大数据基础平台</span>
-              </div>
+              <Image 
+                src="/login-img/logo.svg" 
+                alt="Datasophon Logo" 
+                width={36} 
+                height={36} 
+                className="h-9 w-9"
+              />
+              <span className="text-xl font-medium text-slate-800">
+                Noah<span className="text-slate-500">大数据基础平台</span>
+              </span>
             </Link>
 
             {/* 主要导航菜单 */}
