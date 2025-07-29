@@ -120,3 +120,89 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 全局必填字段样式 */
+@layer components {
+  .required-field {
+    @apply relative;
+  }
+
+  .required-field::after {
+    content: "";
+    @apply absolute -right-2 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-red-400 to-pink-400 shadow-lg animate-pulse;
+  }
+
+  /* 输入框焦点和填充状态样式 */
+  .enhanced-input {
+    @apply transition-all duration-300 rounded-2xl border-slate-200 bg-white/80 backdrop-blur-sm;
+  }
+
+  .enhanced-input:focus {
+    @apply border-blue-300 bg-blue-50/50 ring-2 ring-blue-100 shadow-lg shadow-blue-500/10;
+  }
+
+  .enhanced-input.filled {
+    @apply border-green-300 bg-green-50/30;
+  }
+
+  .enhanced-input.filled::after {
+    content: "";
+    @apply absolute right-3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50;
+  }
+
+  /* 自定义滚动条样式 */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-slate-300 {
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  .scrollbar-track-slate-100 {
+    scrollbar-color: rgb(203 213 225) rgb(241 245 249);
+  }
+
+  /* Webkit 滚动条样式 */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-slate-100 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  }
+
+  /* 科技感动画效果 */
+  @keyframes tech-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  .tech-glow {
+    animation: tech-glow 2s ease-in-out infinite;
+  }
+
+  /* 粒子连线效果 */
+  @keyframes particle-float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .particle-float {
+    animation: particle-float 3s ease-in-out infinite;
+  }
+}
