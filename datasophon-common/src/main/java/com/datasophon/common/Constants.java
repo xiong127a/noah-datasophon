@@ -64,7 +64,6 @@ public final class Constants {
         public static final String QUERY = "query";
         public static final String SUCCESS = "success";
         public static final String LOCALE_LANGUAGE = "language";
-        public static final String CODE = "code";
         public static final String START_DISTRIBUTE_AGENT = "start_distribute_agent";
         public static final String CHECK_WORKER_MD5_CMD = "md5sum " + INSTALL_PATH
                         + "/datasophon-worker.tar.gz | awk '{print $1}'";
