@@ -4,7 +4,7 @@
 
 -- 添加个人简介字段
 ALTER TABLE `t_ddh_user_info` 
-ADD COLUMN `bio` TEXT COMMENT '个人简介' AFTER `userType`;
+ADD COLUMN `bio` TEXT COMMENT '个人简介' AFTER `user_type`;
 
 -- 添加最后登录时间字段
 ALTER TABLE `t_ddh_user_info` 
@@ -16,12 +16,12 @@ ADD COLUMN `avatar` LONGTEXT COMMENT '用户头像（Base64编码）' AFTER `las
 
 -- 更新用户类型字段注释（规范化）
 ALTER TABLE `t_ddh_user_info` 
-MODIFY COLUMN `userType` INT COMMENT '用户类型: 1-管理员, 2-普通用户';
+MODIFY COLUMN `user_type` INT COMMENT '用户类型: 1-管理员, 2-普通用户';
 
 -- 为性能优化添加索引
-CREATE INDEX `idx_user_type` ON `t_ddh_user_info`(`userType`);
+CREATE INDEX `idx_user_type` ON `t_ddh_user_info`(`user_type`);
 CREATE INDEX `idx_last_login_time` ON `t_ddh_user_info`(`last_login_time`);
 
 -- 为已有用户设置默认值（可选）
 -- UPDATE `t_ddh_user_info` SET `bio` = '暂无简介' WHERE `bio` IS NULL;
--- UPDATE `t_ddh_user_info` SET `userType` = 2 WHERE `userType` IS NULL;
+-- UPDATE `t_ddh_user_info` SET `user_type` = 2 WHERE `user_type` IS NULL;
