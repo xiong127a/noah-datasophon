@@ -50,7 +50,7 @@ public class UserInfoController {
     /**
      * 获取当前登录用户信息
      */
-    @PostMapping("/getUserInfo")
+    @PostMapping("/user-info")
     public Result getCurrentUserInfo() {
         // 从Spring Security上下文中获取当前认证用户
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
