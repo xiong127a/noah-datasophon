@@ -202,6 +202,9 @@ export default function FinalNavbar() {
   // 添加用户信息状态
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userLoading, setUserLoading] = useState(true)
+  // 用户下拉菜单状态
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false)
+  const userDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
 
   // 获取当前用户信息
@@ -258,6 +261,30 @@ export default function FinalNavbar() {
   const isAdmin = () => {
     return currentUser?.userType === 1
   }
+
+  // 处理用户下拉菜单鼠标悬停
+  const handleUserDropdownEnter = () => {
+    if (userDropdownTimeoutRef.current) {
+      clearTimeout(userDropdownTimeoutRef.current)
+      userDropdownTimeoutRef.current = null
+    }
+    setUserDropdownOpen(true)
+  }
+
+  const handleUserDropdownLeave = () => {
+    userDropdownTimeoutRef.current = setTimeout(() => {
+      setUserDropdownOpen(false)
+    }, 500) // 增加到500ms延迟，减少闪烁
+  }
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (userDropdownTimeoutRef.current) {
+        clearTimeout(userDropdownTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -421,35 +448,42 @@ export default function FinalNavbar() {
             </div>
 
             {/* 用户中心 */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-12 rounded-2xl px-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-gray-50 hover:shadow-lg hover:shadow-slate-100/50 group"
+            <div
+              onMouseEnter={handleUserDropdownEnter}
+              onMouseLeave={handleUserDropdownLeave}
+              className="relative"
+            >
+              <DropdownMenu open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-12 rounded-2xl px-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-gray-50 hover:shadow-lg hover:shadow-slate-100/50 group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8 ring-2 ring-slate-200 ring-offset-2 group-hover:ring-blue-300 transition-colors">
+                        <AvatarImage src={currentUser?.avatar || ""} alt="用户头像" />
+                        <AvatarFallback className={`text-sm text-white font-medium ${
+                          isAdmin() 
+                            ? "bg-gradient-to-br from-amber-500 to-orange-600" 
+                            : "bg-gradient-to-br from-blue-500 to-purple-600"
+                        }`}>
+                          {userLoading ? "..." : getUserAvatarText()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium text-slate-700">
+                        {userLoading ? "加载中..." : getUserDisplayName()}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
+                        userDropdownOpen ? "rotate-180" : ""
+                      }`} />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-64 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 p-2"
+                  align="end"
+                  forceMount
                 >
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8 ring-2 ring-slate-200 ring-offset-2 group-hover:ring-blue-300 transition-colors">
-                      <AvatarImage src={currentUser?.avatar || ""} alt="用户头像" />
-                      <AvatarFallback className={`text-sm text-white font-medium ${
-                        isAdmin() 
-                          ? "bg-gradient-to-br from-amber-500 to-orange-600" 
-                          : "bg-gradient-to-br from-blue-500 to-purple-600"
-                      }`}>
-                        {userLoading ? "..." : getUserAvatarText()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium text-slate-700">
-                      {userLoading ? "加载中..." : getUserDisplayName()}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-64 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 p-2"
-                align="end"
-                forceMount
-              >
                 <div className="flex items-center justify-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-gray-50">
                   <Avatar className="h-12 w-12 ring-2 ring-white ring-offset-2">
                     <AvatarImage src={currentUser?.avatar || ""} alt="用户头像" />
@@ -495,7 +529,8 @@ export default function FinalNavbar() {
                   <span className="font-medium">退出登录</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>
