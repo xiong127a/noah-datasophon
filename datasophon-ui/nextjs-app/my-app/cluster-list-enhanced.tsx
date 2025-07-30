@@ -92,7 +92,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
-import ClusterAuthorizationDialogEnhanced from "./cluster-authorization-dialog-enhanced"
+import ClusterAuthorizationDialogSuper from "./cluster-authorization-dialog-super"
 import CreateClusterDialogEnhanced from "./create-cluster-dialog-enhanced"
 import { apiClient, API_PATHS } from "@/lib/api-config"
 import { useRouter } from "next/navigation"
@@ -358,7 +358,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
       </Card>
 
       {/* 授权弹窗 */}
-      <ClusterAuthorizationDialogEnhanced open={authDialogOpen} onOpenChange={setAuthDialogOpen} clusterName={cluster.clusterName} />
+      <ClusterAuthorizationDialogSuper open={authDialogOpen} onOpenChange={setAuthDialogOpen} clusterName={cluster.clusterName} />
     </>
   )
 }
