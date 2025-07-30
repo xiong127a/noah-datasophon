@@ -40,6 +40,12 @@ export const API_PATHS = {
   PARCEL_PROCESS: `${API_PREFIX}/api/cluster/parcel/process`,     // 获取组件安装进度
   PARCEL_DOWNLOAD: `${API_PREFIX}/api/cluster/parcel/download`,   // 下载组件
   PARCEL_INSTALL: `${API_PREFIX}/api/cluster/parcel/install`,     // 安装组件
+
+  // 标签管理相关
+  TAG_LIST: `${API_PREFIX}/cluster/node/label/list`,              // 获取标签列表
+  TAG_SAVE: `${API_PREFIX}/cluster/node/label/save`,              // 保存标签
+  TAG_DELETE: `${API_PREFIX}/cluster/node/label/delete`,          // 删除标签
+  TAG_ASSIGN: `${API_PREFIX}/cluster/node/label/assign`,          // 分配标签
 };
 
 // 创建axios实例
