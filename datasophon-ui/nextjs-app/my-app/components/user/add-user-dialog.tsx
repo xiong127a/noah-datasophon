@@ -243,13 +243,13 @@ function AddUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden">
+      <DialogContent className="w-[95vw] sm:max-w-[800px] lg:max-w-[900px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 flex flex-col">
         {/* 装饰性背景 */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white/90 to-purple-50/80 pointer-events-none" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-2xl transform translate-x-16 -translate-y-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
         
-        <div className="relative z-10">
+        <div className="relative z-10 p-2 sm:p-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">{/* 使用flex-1确保占满可用空间 */}
           <DialogHeader className="pb-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg">
@@ -291,7 +291,7 @@ function AddUserDialog({
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-5">{/* 增加字段间距 */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{/* 优化布局：大屏幕两列，小屏幕单列 */}
                 {/* 用户名字段 */}
                 <FormField
                   control={form.control}
@@ -513,7 +513,7 @@ function AddUserDialog({
                   control={form.control}
                   name="avatar"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
+                    <FormItem className="lg:col-span-2 space-y-3">{/* 跨越两列 */}
                       <FormLabel className="flex items-center gap-3 text-sm font-semibold text-slate-700">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30" />
@@ -549,9 +549,50 @@ function AddUserDialog({
 
                           {/* 头像选择器 */}
                           {showAvatarSelector && (
-                            <div className="rounded-2xl border border-slate-200/50 bg-white/80 backdrop-blur-sm p-4">
-                              <p className="text-sm font-medium text-slate-700 mb-3">选择内置头像</p>
-                              <div className="grid grid-cols-4 gap-3">
+                            <div className="rounded-2xl border border-slate-200/50 bg-white/80 backdrop-blur-sm p-4 space-y-4">
+                              {/* 自定义上传区域 */}
+                              <div>
+                                <p className="text-sm font-medium text-slate-700 mb-3">自定义上传头像</p>
+                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors duration-200">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        // 检查文件大小 (限制2MB)
+                                        if (file.size > 2 * 1024 * 1024) {
+                                          toast.error("图片大小不能超过2MB");
+                                          return;
+                                        }
+                                        
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => {
+                                          const base64 = event.target?.result as string;
+                                          field.onChange(base64);
+                                          toast.success("头像上传成功");
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
+                                    className="hidden"
+                                    id="avatar-upload"
+                                  />
+                                  <label 
+                                    htmlFor="avatar-upload" 
+                                    className="cursor-pointer flex flex-col items-center space-y-2"
+                                  >
+                                    <Upload className="h-8 w-8 text-slate-400" />
+                                    <p className="text-sm text-slate-600">点击上传图片</p>
+                                    <p className="text-xs text-slate-400">支持 JPG、PNG、GIF，最大2MB</p>
+                                  </label>
+                                </div>
+                              </div>
+                              
+                              {/* 内置头像选择 */}
+                              <div>
+                                <p className="text-sm font-medium text-slate-700 mb-3">选择内置头像</p>
+                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">{/* 响应式网格：小屏4列，中屏6列，大屏8列 */}
                                 {BUILT_IN_AVATARS.map((avatar, index) => (
                                   <Button
                                     key={index}
@@ -570,6 +611,7 @@ function AddUserDialog({
                                     </Avatar>
                                   </Button>
                                 ))}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -585,7 +627,7 @@ function AddUserDialog({
                   control={form.control}
                   name="bio"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
+                    <FormItem className="lg:col-span-2 space-y-3">{/* 跨越两列 */}
                       <FormLabel className="flex items-center gap-3 text-sm font-semibold text-slate-700">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30" />
@@ -616,39 +658,40 @@ function AddUserDialog({
                   )}
                 />
               </div>
-
-              <DialogFooter className="pt-6 border-t border-slate-200/50 mt-8">
-                <div className="flex items-center justify-end space-x-4 w-full">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    disabled={loading}
-                    className="h-12 px-8 rounded-2xl border-slate-200/50 bg-white/80 hover:bg-slate-50 transition-all duration-300 font-medium"
-                  >
-                    取消
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={loading || !Object.values(validationStatus).every(Boolean)}
-                    className={`h-12 px-8 rounded-2xl text-white border-0 shadow-lg transition-all duration-300 font-medium flex items-center space-x-2 ${
-                      Object.values(validationStatus).every(Boolean)
-                        ? "bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 hover:shadow-xl hover:scale-105"
-                        : "bg-gradient-to-r from-slate-400 to-slate-500 cursor-not-allowed opacity-60"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {loading && (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    )}
-                    <span>{loading ? "处理中..." : isEditMode ? "保存修改" : "创建用户"}</span>
-                    {!loading && (
-                      <ShieldCheck className="h-4 w-4 ml-1" />
-                    )}
-                  </Button>
-                </div>
-              </DialogFooter>
             </form>
           </Form>
+        </div>
+        
+        {/* 固定底部按钮区域 */}
+        <div className="relative z-10 p-4 border-t border-slate-200/50 bg-white/95 backdrop-blur-sm">
+          <div className="flex items-center justify-end space-x-4 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
+              className="h-12 px-8 rounded-2xl border-slate-200/50 bg-white/80 hover:bg-slate-50 transition-all duration-300 font-medium"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={loading || !Object.values(validationStatus).every(Boolean)}
+              className={`h-12 px-8 rounded-2xl text-white border-0 shadow-lg transition-all duration-300 font-medium flex items-center space-x-2 ${
+                Object.values(validationStatus).every(Boolean)
+                  ? "bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 hover:shadow-xl hover:scale-105"
+                  : "bg-gradient-to-r from-slate-400 to-slate-500 cursor-not-allowed opacity-60"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>{loading ? "处理中..." : isEditMode ? "保存修改" : "创建用户"}</span>
+              {!loading && (
+                <ShieldCheck className="h-4 w-4 ml-1" />
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

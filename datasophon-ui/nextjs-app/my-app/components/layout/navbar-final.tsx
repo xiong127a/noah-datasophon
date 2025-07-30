@@ -429,7 +429,7 @@ export default function FinalNavbar() {
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8 ring-2 ring-slate-200 ring-offset-2 group-hover:ring-blue-300 transition-colors">
-                      <AvatarImage src="/placeholder.svg?height=32&width=32" alt="用户头像" />
+                      <AvatarImage src={currentUser?.avatar || ""} alt="用户头像" />
                       <AvatarFallback className={`text-sm text-white font-medium ${
                         isAdmin() 
                           ? "bg-gradient-to-br from-amber-500 to-orange-600" 
@@ -452,7 +452,7 @@ export default function FinalNavbar() {
               >
                 <div className="flex items-center justify-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-gray-50">
                   <Avatar className="h-12 w-12 ring-2 ring-white ring-offset-2">
-                    <AvatarImage src="/placeholder.svg?height=48&width=48" alt="用户头像" />
+                    <AvatarImage src={currentUser?.avatar || ""} alt="用户头像" />
                     <AvatarFallback className={`text-white font-medium ${
                       isAdmin() 
                         ? "bg-gradient-to-br from-amber-500 to-orange-600" 
@@ -471,6 +471,11 @@ export default function FinalNavbar() {
                     <p className="text-sm text-slate-500">
                       {userLoading ? "..." : getUserEmail()}
                     </p>
+                    {!userLoading && currentUser?.bio && (
+                      <p className="text-xs text-slate-400 truncate max-w-[150px]" title={currentUser.bio}>
+                        {currentUser.bio}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DropdownMenuSeparator className="my-2" />

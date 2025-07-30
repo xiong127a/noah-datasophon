@@ -279,14 +279,13 @@ export default function UserManagement() {
               <>
                 <div className="rounded-2xl border border-slate-200/50 bg-white/50 backdrop-blur-sm overflow-hidden">
                   <div className="overflow-x-auto">
-                    <Table className="min-w-[1400px]">
+                    <Table className="min-w-[1200px]">
                       <TableHeader className="bg-gradient-to-r from-slate-50 to-slate-100/80">
                         <TableRow className="border-slate-200/50 hover:bg-slate-50/80">
                           <TableHead className="font-semibold text-slate-700 w-[180px]">用户信息</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[250px]">邮箱</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[140px]">手机号</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[120px]">用户类型</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[200px]">个人简介</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[180px]">最后登录</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[160px]">创建时间</TableHead>
                           <TableHead className="text-right font-semibold text-slate-700 w-[120px]">操作</TableHead>
@@ -295,7 +294,7 @@ export default function UserManagement() {
                       <TableBody>
                         {users.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                            <TableCell colSpan={7} className="text-center py-12 text-slate-500">
                               <div className="flex flex-col items-center space-y-3">
                                 <Users className="h-12 w-12 text-slate-300" />
                                 <p className="text-lg">暂无用户数据</p>
@@ -362,19 +361,6 @@ export default function UserManagement() {
                                 </Badge>
                               </TableCell>
                               
-                              {/* 个人简介 */}
-                              <TableCell className="text-slate-700">
-                                <div className="max-w-[180px] truncate" title={user.bio || "暂无简介"}>
-                                  {user.bio ? (
-                                    <div className="flex items-center space-x-1">
-                                      <FileText className="h-3 w-3 text-slate-400" />
-                                      <span className="text-sm">{user.bio}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 text-sm">暂无简介</span>
-                                  )}
-                                </div>
-                              </TableCell>
                               
                               {/* 最后登录时间 */}
                               <TableCell className="text-slate-700">

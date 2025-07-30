@@ -141,6 +141,14 @@ module.exports = {
             backgroundColor: 'transparent',
           },
         },
+        '.scrollbar-hide': {
+          /* 隐藏滚动条但保持滚动功能 */
+          '-ms-overflow-style': 'none',  /* IE and Edge */
+          'scrollbar-width': 'none',     /* Firefox */
+          '&::-webkit-scrollbar': {
+            display: 'none',             /* Chrome, Safari, Opera */
+          },
+        },
       }
       addUtilities(newUtilities)
     },
