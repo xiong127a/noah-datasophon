@@ -266,7 +266,13 @@ function AddUserDialog({
           </Button>
         </div>
 
-        <div className="relative z-10 p-2 sm:p-4 flex-1 overflow-y-auto scrollbar-hide">{/* 使用flex-1确保占满可用空间，隐藏滚动条 */}
+        <div 
+          className="relative z-10 p-2 sm:p-4 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
+          style={{
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* IE and Edge */
+          }}
+        >{/* 使用flex-1确保占满可用空间，隐藏滚动条 */}
           <DialogHeader className="pb-6">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg">
