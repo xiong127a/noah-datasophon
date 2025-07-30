@@ -121,13 +121,17 @@ export default function UserManagement() {
         const response = await api.get(`${API_PATHS.USER_LIST}?${params.toString()}`)
         
         if (response.data.code === 200) {
-          setUsers(response.data.data || [])
+          // 数据应该在根级别的data和total字段中
+          const userData = response.data.data || []
+          const userTotal = response.data.total || 0
+          
+          setUsers(userData)
           setPagination(prev => ({
             ...prev,
-            total: response.data.total || 0,
+            total: userTotal,
           }))
         } else {
-          toast.error(response.data.message || "获取用户列表失败")
+          toast.error(response.data.msg || "获取用户列表失败")
         }
       } catch (error) {
         console.error("获取用户列表失败:", error)

@@ -93,7 +93,8 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         List<UserInfoEntity> list = query.limit(offset, pageSize).list();
         long total = query.count();
 
-        return Result.success().put(Constants.DATA, list).put(Constants.TOTAL, total);
+        // 直接使用Result构造方法，将数据和总数设置到正确的字段中
+        return Result.success(list, total);
     }
 
     @Override
