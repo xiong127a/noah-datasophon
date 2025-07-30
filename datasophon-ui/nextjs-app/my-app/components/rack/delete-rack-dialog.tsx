@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { Rack } from '../../types/rack'
-import { API_PATHS, api } from '@/lib/api-config'
+import { clusterApi } from '@/lib/api-utils'
 
 interface DeleteRackDialogProps {
   open: boolean
@@ -31,10 +31,7 @@ const DeleteRackDialog = ({ open, onCancel, onSuccess, rack }: DeleteRackDialogP
     try {
       setLoading(true)
 
-      const response = await api.post(API_PATHS.RACK_DELETE, {
-        rackId: rack.id,
-        clusterId: rack.clusterId
-      })
+      const response = await clusterApi.rack.delete(rack.id)
 
       if (response.data.code === 200) {
         toast.success('删除成功')

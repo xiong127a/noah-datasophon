@@ -43,6 +43,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import RestrictedMenuLink from "./RestrictedMenuLink"
+import RestrictedNavLink from "./RestrictedNavLink"
+import ClusterSelector from "../cluster/cluster-selector"
+import { useCluster } from "@/hooks/useCluster"
 
 // 全局状态管理 - 确保同一时间只有一个下拉菜单打开
 let activeDropdown: string | null = null
@@ -206,6 +210,8 @@ export default function FinalNavbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
   const userDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
+  // 集群状态管理
+  const { hasCluster } = useCluster()
 
   // 获取当前用户信息
   const fetchCurrentUser = async () => {
@@ -322,41 +328,56 @@ export default function FinalNavbar() {
                 <span className="text-slate-700 group-hover:text-slate-900">主页</span>
               </Link>
 
-              {/* 主机管理 */}
-              <Link
+              {/* 主机管理 - 需要集群权限 */}
+              <RestrictedNavLink
                 href="/hosts"
-                className="group inline-flex h-12 items-center justify-center rounded-2xl px-6 py-2 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:shadow-lg hover:shadow-green-100/50 focus:bg-gradient-to-r focus:from-green-50 focus:to-emerald-50 focus:outline-none"
+                icon={Server}
+                colorClass="green"
               >
-                <Server className="mr-2 h-4 w-4 text-slate-600 group-hover:text-green-600 transition-colors" />
-                <span className="text-slate-700 group-hover:text-slate-900">主机管理</span>
-              </Link>
+                主机管理
+              </RestrictedNavLink>
 
-              {/* 告警管理 */}
+              {/* 告警管理 - 需要集群权限 */}
               <FinalDropdown
                 id="alerts"
                 trigger={
-                  <div className="group inline-flex h-12 items-center justify-center rounded-2xl px-6 py-2 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:shadow-lg hover:shadow-orange-100/50">
-                    <AlertTriangle className="mr-2 h-4 w-4 text-slate-600 group-hover:text-orange-600 transition-colors" />
-                    <span className="text-slate-700 group-hover:text-slate-900">告警管理</span>
-                    <ChevronDown className="ml-1 h-3 w-3 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
+                  <div className={`group inline-flex h-12 items-center justify-center rounded-2xl px-6 py-2 text-sm font-medium transition-all duration-200 ${
+                    hasCluster 
+                      ? 'hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:shadow-lg hover:shadow-orange-100/50' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}>
+                    <AlertTriangle className={`mr-2 h-4 w-4 transition-colors ${
+                      hasCluster 
+                        ? 'text-slate-600 group-hover:text-orange-600' 
+                        : 'text-gray-400'
+                    }`} />
+                    <span className={hasCluster ? 'text-slate-700 group-hover:text-slate-900' : 'text-gray-400'}>
+                      告警管理
+                    </span>
+                    <ChevronDown className={`ml-1 h-3 w-3 transition-transform duration-200 ${
+                      hasCluster 
+                        ? 'text-slate-400 group-hover:rotate-180' 
+                        : 'text-gray-400'
+                    }`} />
                   </div>
                 }
+
               >
-                <MenuLink href="/alerts/notification-groups" icon={MessageSquare} colorClass="blue">
+                <RestrictedMenuLink href="/alerts/notification-groups" icon={MessageSquare} colorClass="blue" requiresCluster>
                   通知组管理
-                </MenuLink>
-                <MenuLink href="/alerts/alert-groups" icon={Shield} colorClass="orange">
+                </RestrictedMenuLink>
+                <RestrictedMenuLink href="/alerts/alert-groups" icon={Shield} colorClass="orange" requiresCluster>
                   告警组管理
-                </MenuLink>
-                <MenuLink href="/alerts/metrics" icon={BarChart3} colorClass="purple">
+                </RestrictedMenuLink>
+                <RestrictedMenuLink href="/alerts/metrics" icon={BarChart3} colorClass="purple" requiresCluster>
                   告警指标管理
-                </MenuLink>
+                </RestrictedMenuLink>
                 <MenuLink href="/alerts/help" icon={HelpCircle} colorClass="green">
                   使用帮助
                 </MenuLink>
               </FinalDropdown>
 
-              {/* 系统管理 */}
+              {/* 系统管理 - 部分需要集群权限 */}
               <FinalDropdown
                 id="system"
                 trigger={
@@ -367,18 +388,18 @@ export default function FinalNavbar() {
                   </div>
                 }
               >
-                <MenuLink href="/system/tenants" icon={Building} colorClass="blue">
+                <RestrictedMenuLink href="/system/tenants" icon={Building} colorClass="blue" requiresCluster>
                   租户管理
-                </MenuLink>
-                <MenuLink href="/system/racks" icon={Server} colorClass="purple">
+                </RestrictedMenuLink>
+                <RestrictedMenuLink href="/system/racks" icon={Server} colorClass="purple" requiresCluster>
                   机架管理
-                </MenuLink>
-                <MenuLink href="/system/tags" icon={Tag} colorClass="orange">
+                </RestrictedMenuLink>
+                <RestrictedMenuLink href="/system/tags" icon={Tag} colorClass="orange" requiresCluster>
                   标签管理
-                </MenuLink>
-                <MenuLink href="/system/audit" icon={FileText} colorClass="slate">
+                </RestrictedMenuLink>
+                <RestrictedMenuLink href="/system/audit" icon={FileText} colorClass="slate" requiresCluster>
                   日志审计
-                </MenuLink>
+                </RestrictedMenuLink>
               </FinalDropdown>
             </div>
           </div>
@@ -418,6 +439,9 @@ export default function FinalNavbar() {
                 <span className="text-slate-700 group-hover:text-slate-900">用户管理</span>
               </Link>
             </div>
+
+            {/* 集群选择器 */}
+            <ClusterSelector />
 
             {/* 功能图标区域 */}
             <div className="flex items-center space-x-3">

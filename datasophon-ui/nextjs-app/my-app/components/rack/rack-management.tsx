@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Rack } from '../../types/rack'
-import { API_PATHS, api } from '@/lib/api-config'
+import { clusterApi } from '@/lib/api-utils'
 import AddRackDialog from '@/components/rack/add-rack-dialog'
 import DeleteRackDialog from '@/components/rack/delete-rack-dialog'
 import FinalNavbar from '../layout/navbar-final'
@@ -42,9 +42,7 @@ const RackManagement = () => {
   const getRackList = async () => {
     setLoading(true)
     try {
-      const response = await api.post(API_PATHS.RACK_LIST, {
-        clusterId: clusterId
-      })
+      const response = await clusterApi.rack.list()
       
       if (response.data.code === 200) {
         const rackData = response.data.data || []

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { AddRackRequest } from '../../types/rack'
-import { API_PATHS, api } from '@/lib/api-config'
+import { clusterApi } from '@/lib/api-utils'
 
 interface AddRackDialogProps {
   open: boolean
@@ -60,10 +60,7 @@ const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogPr
     setLoading(true)
 
     try {
-      const response = await api.post(API_PATHS.RACK_SAVE, {
-        rack: rackName,
-        clusterId: clusterId
-      })
+      const response = await clusterApi.rack.save(rackName)
 
       if (response.data.code === 200) {
         toast.success('保存成功')

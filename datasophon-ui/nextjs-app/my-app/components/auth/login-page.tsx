@@ -135,8 +135,8 @@ export default function LoginPageNew() {
           roles
         });
         
-        // 登录成功后跳转
-        router.push("/");
+        // 登录成功后跳转到集群列表页面
+        router.push("/clusters/list");
       } else {
         // 处理业务逻辑错误
         throw new Error(response.data?.meta?.msg || response.data?.msg || "登录失败，请检查用户名和密码");

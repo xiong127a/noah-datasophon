@@ -64,12 +64,19 @@ export const apiClient = axios.create({
   timeout: 30000, // 30秒超时
 });
 
-// 请求拦截器 - 添加认证token
+// 请求拦截器 - 添加认证token和集群ID
 apiClient.interceptors.request.use(config => {
   if (typeof window !== 'undefined') {
+    // 添加认证token
     const token = localStorage.getItem('jwt_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // 添加集群ID到请求头（如果存在）
+    const clusterId = localStorage.getItem('clusterId');
+    if (clusterId && clusterId !== '-1') {
+      config.headers['X-Cluster-Id'] = clusterId;
     }
   }
   return config;
