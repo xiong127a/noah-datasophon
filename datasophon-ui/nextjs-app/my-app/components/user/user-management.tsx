@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
-import type { User, UserListParams, UserListResponse } from "@/types/user"
+import type { User, UserListResponse } from "@/types/user"
 import AddUserDialog from "@/components/user/add-user-dialog"
 import DeleteUserDialog from "@/components/user/delete-user-dialog"
 import FinalNavbar from "../layout/navbar-final"
@@ -107,13 +107,18 @@ export default function UserManagement() {
     const fetchUsers = async () => {
       setLoading(true)
       try {
-        const params: UserListParams = {
-          page: pagination.current,
-          pageSize: pagination.pageSize,
-          username: searchTerm || undefined,
+        // 构建查询参数
+        const params = new URLSearchParams({
+          page: pagination.current.toString(),
+          pageSize: pagination.pageSize.toString(),
+        })
+        
+        // 如果有搜索词，添加username参数
+        if (searchTerm) {
+          params.append('username', searchTerm)
         }
 
-        const response = await api.post(API_PATHS.USER_LIST, params)
+        const response = await api.get(`${API_PATHS.USER_LIST}?${params.toString()}`)
         
         if (response.data.code === 200) {
           setUsers(response.data.data || [])
