@@ -9,20 +9,17 @@ import {
   Check, 
   Users, 
   Shield, 
-  Crown, 
-  Code, 
-  Settings,
   Star,
   Sparkles,
   UserCheck,
-  Filter,
-  ChevronDown
+  LoaderIcon
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { apiClient, API_PATHS } from "@/lib/api-config"
 
 // 用户数据类型定义
 interface User {
@@ -35,69 +32,59 @@ interface User {
   avatarColor: string
 }
 
-// 根据角色获取图标和颜色的工具函数
-const getRoleConfig = (role: string) => {
-  switch (role) {
-    case "管理员":
-      return {
-        roleIcon: Crown,
-        roleColor: "from-amber-500 to-orange-500",
-        avatarColor: "from-amber-500 to-orange-600"
-      }
-    case "开发者":
-      return {
-        roleIcon: Code,
-        roleColor: "from-green-500 to-emerald-600",
-        avatarColor: "from-green-500 to-emerald-600"
-      }
-    case "运维":
-      return {
-        roleIcon: Settings,
-        roleColor: "from-indigo-500 to-purple-600",
-        avatarColor: "from-indigo-500 to-purple-600"
-      }
-    default:
-      return {
-        roleIcon: Users,
-        roleColor: "from-blue-500 to-blue-600",
-        avatarColor: "from-blue-500 to-blue-600"
-      }
-  }
+// 生成用户头像颜色的工具函数
+const getUserAvatarColor = (index: number) => {
+  const colors = [
+    "from-blue-500 to-blue-600",
+    "from-green-500 to-green-600", 
+    "from-purple-500 to-purple-600",
+    "from-pink-500 to-pink-600",
+    "from-indigo-500 to-indigo-600",
+    "from-amber-500 to-amber-600",
+    "from-teal-500 to-teal-600",
+    "from-orange-500 to-orange-600"
+  ]
+  return colors[index % colors.length]
 }
 
 interface ClusterAuthorizationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   clusterName?: string
+  clusterId?: string | number
 }
 
 export default function ClusterAuthorizationDialogSuper({
   open,
   onOpenChange,
   clusterName = "生产环境集群",
+  clusterId,
 }: ClusterAuthorizationDialogProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [filterRole, setFilterRole] = useState<string>("all")
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const roles = ["all", "管理员", "开发者", "运维", "普通用户"]
-
-  // 获取用户列表 - 需要实际的API调用
+  // 获取用户列表
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      // TODO: 替换为实际的API调用
-      // const response = await apiClient.get('/api/users')
-      // const userData = response.data.data.map(user => ({
-      //   ...user,
-      //   ...getRoleConfig(user.role)
-      // }))
-      // setUsers(userData)
+      // 使用 queryAllUser API，就像Vue2项目中一样
+      const response = await apiClient.post(API_PATHS.USER_ALL, {})
       
-      // 临时返回空数组，等待API集成
-      setUsers([])
+      if (response.data && response.data.code === 200) {
+        const userData = response.data.data.map((user: any, index: number) => ({
+          id: user.id,
+          username: user.username,
+          email: user.email || '',
+          role: user.role || '普通用户',
+          avatarColor: getUserAvatarColor(index)
+        }))
+        setUsers(userData)
+      } else {
+        console.error('获取用户列表失败:', response.data?.msg)
+      }
     } catch (error) {
       console.error('获取用户列表失败:', error)
     } finally {
@@ -109,32 +96,52 @@ export default function ClusterAuthorizationDialogSuper({
   useEffect(() => {
     if (open) {
       fetchUsers()
+      setSelectedUsers([])
+      setSearchTerm("")
     }
-  }, [open])
+  }, [open, clusterId])
 
   const filteredUsers = users.filter((user: User) => {
     const matchesSearch = 
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = filterRole === "all" || user.role === filterRole
-    return matchesSearch && matchesRole
+    return matchesSearch
   })
 
-  const handleUserToggle = (username: string) => {
+  const handleUserToggle = (userId: number) => {
     setSelectedUsers((prev) => 
-      prev.includes(username) 
-        ? prev.filter((u) => u !== username) 
-        : [...prev, username]
+      prev.includes(userId) 
+        ? prev.filter((u) => u !== userId) 
+        : [...prev, userId]
     )
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedUsers.length > 0) {
-      console.log(`授权集群 ${clusterName} 给用户: ${selectedUsers.join(", ")}`)
-      onOpenChange(false)
-      setSelectedUsers([])
-      setSearchTerm("")
-      setFilterRole("all")
+      setSaving(true)
+      try {
+        // 使用GET请求，就像Vue2项目中一样，通过URL参数传递数据
+        const clusterIdValue = Number(clusterId || localStorage.getItem("clusterId") || -1)
+        const userIdsString = selectedUsers.join(',')
+        const url = `${API_PATHS.CLUSTER_AUTH}?clusterId=${clusterIdValue}&userIds=${userIdsString}`
+        
+        const response = await apiClient.get(url)
+        
+        if (response.data && response.data.code === 200) {
+          console.log(`授权集群 ${clusterName} 给用户成功`)
+          onOpenChange(false)
+          setSelectedUsers([])
+          setSearchTerm("")
+        } else {
+          console.error('集群授权失败:', response.data?.msg)
+          alert(response.data?.msg || '集群授权失败')
+        }
+      } catch (error) {
+        console.error('集群授权失败:', error)
+        alert('集群授权失败，请稍后重试')
+      } finally {
+        setSaving(false)
+      }
     }
   }
 
@@ -142,7 +149,6 @@ export default function ClusterAuthorizationDialogSuper({
     onOpenChange(false)
     setSelectedUsers([])
     setSearchTerm("")
-    setFilterRole("all")
   }
 
   return (
@@ -197,26 +203,7 @@ export default function ClusterAuthorizationDialogSuper({
               </div>
             </div>
 
-            {/* 角色筛选 */}
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-600">筛选角色:</span>
-              <div className="flex flex-wrap gap-2">
-                {roles.map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setFilterRole(role)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
-                      filterRole === role
-                        ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg scale-105"
-                        : "bg-white/80 text-slate-600 hover:bg-white hover:shadow-md"
-                    }`}
-                  >
-                    {role === "all" ? "全部" : role}
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </div>
 
           {/* 已选择用户展示 */}
@@ -229,34 +216,41 @@ export default function ClusterAuthorizationDialogSuper({
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {selectedUsers.map((username) => (
-                  <Badge
-                    key={username}
-                    className="bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                  >
-                    {username}
-                    <button
-                      onClick={() => handleUserToggle(username)}
-                      className="ml-1 hover:bg-blue-600 rounded-full p-0.5"
+                {selectedUsers.map((userId) => {
+                  const user = users.find(u => u.id === userId)
+                  return (
+                    <Badge
+                      key={userId}
+                      className="bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
+                      {user?.username || `用户${userId}`}
+                      <button
+                        onClick={() => handleUserToggle(userId)}
+                        className="ml-1 hover:bg-blue-600 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )
+                })}
               </div>
             </div>
           )}
 
           {/* 用户列表 */}
           <div className="max-h-64 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-            {filteredUsers.map((user, index) => {
-              const isSelected = selectedUsers.includes(user.username)
-              const RoleIcon = user.roleIcon
+            {loading ? (
+              <div className="text-center py-8">
+                <LoaderIcon className="h-8 w-8 mx-auto mb-3 text-blue-500 animate-spin" />
+                <p className="text-slate-500">正在加载用户列表...</p>
+              </div>
+            ) : filteredUsers.map((user, index) => {
+              const isSelected = selectedUsers.includes(user.id)
               
               return (
                 <div
                   key={user.id}
-                  onClick={() => handleUserToggle(user.username)}
+                  onClick={() => handleUserToggle(user.id)}
                   style={{ animationDelay: `${index * 50}ms` }}
                   className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all duration-300 animate-fade-in group relative overflow-hidden ${
                     isSelected
@@ -275,9 +269,9 @@ export default function ClusterAuthorizationDialogSuper({
                       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${user.avatarColor} flex items-center justify-center text-white text-lg font-bold shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                         {user.username.charAt(0).toUpperCase()}
                       </div>
-                      {/* 角色标识 */}
-                      <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br ${user.roleColor} flex items-center justify-center shadow-lg`}>
-                        <RoleIcon className="h-3 w-3 text-white" />
+                      {/* 用户图标 */}
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-lg">
+                        <Users className="h-3 w-3 text-white" />
                       </div>
                     </div>
                     
@@ -287,12 +281,14 @@ export default function ClusterAuthorizationDialogSuper({
                         <p className="font-semibold text-slate-800 group-hover:text-slate-900 transition-colors">
                           {user.username}
                         </p>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs bg-gradient-to-r ${user.roleColor} text-white border-0 shadow-sm`}
-                        >
-                          {user.role}
-                        </Badge>
+                        {user.role && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs bg-gradient-to-r from-slate-500 to-slate-600 text-white border-0 shadow-sm"
+                          >
+                            {user.role}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-slate-500">{user.email}</p>
                     </div>
@@ -324,24 +320,33 @@ export default function ClusterAuthorizationDialogSuper({
         </div>
 
         <DialogFooter className="relative z-10">
-          <Button
-            onClick={handleConfirm}
-            disabled={selectedUsers.length === 0}
-            className={`w-full h-12 rounded-2xl text-white border-0 font-semibold transition-all duration-300 relative overflow-hidden ${
-              selectedUsers.length > 0
-                ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl hover:scale-105"
-                : "bg-slate-300 cursor-not-allowed"
-            }`}
-          >
-            {/* 按钮光效 */}
-            {selectedUsers.length > 0 && (
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
-            )}
-            <span className="relative z-10 flex items-center justify-center">
-              <Shield className="mr-2 h-4 w-4" />
-              确认授权 {selectedUsers.length > 0 && `(${selectedUsers.length})`}
-            </span>
-          </Button>
+                      <Button
+              onClick={handleConfirm}
+              disabled={selectedUsers.length === 0 || saving}
+              className={`w-full h-12 rounded-2xl text-white border-0 font-semibold transition-all duration-300 relative overflow-hidden ${
+                selectedUsers.length > 0 && !saving
+                  ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl hover:scale-105"
+                  : "bg-slate-300 cursor-not-allowed"
+              }`}
+            >
+              {/* 按钮光效 */}
+              {selectedUsers.length > 0 && !saving && (
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
+              )}
+              <span className="relative z-10 flex items-center justify-center">
+                {saving ? (
+                  <>
+                    <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                    授权中...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="mr-2 h-4 w-4" />
+                    确认授权 {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+                  </>
+                )}
+              </span>
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
