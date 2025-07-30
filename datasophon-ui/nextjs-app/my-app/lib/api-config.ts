@@ -31,6 +31,7 @@ export const API_PATHS = {
 
   // 框架相关
   FRAME_LIST: `${API_PREFIX}/api/frame/list`,
+  FRAME_SERVICE_DELETE: `${API_PREFIX}/api/frame/service/delete`,  // 删除框架服务
   
   // 存储库相关（集群存储库管理）
   PARCEL_LIST: `${API_PREFIX}/api/cluster/parcel/list`,           // 获取存储库列表
