@@ -20,13 +20,14 @@ package com.datasophon.api.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.common.utils.PasswordEncryptionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.UserInfoMapper;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -35,9 +36,12 @@ import java.util.List;
 @Service("userInfoService")
 public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEntity> implements UserInfoService {
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public UserInfoEntity queryUser(String username, String password) {
-        String md5 = PasswordEncryptionUtils.encrypt(password);
+        String md5 = passwordEncoder.encode(password);
         return QueryChain.of(UserInfoEntity.class)
                 .where(UserInfoEntity::getUsername).eq(username)
                 .and(UserInfoEntity::getPassword).eq(md5)
@@ -55,7 +59,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
             return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
         }
         userInfo.setCreateTime(new Date());
-        userInfo.setPassword(PasswordEncryptionUtils.encrypt(userInfo.getPassword()));
+        userInfo.setPassword(passwordEncoder.encode(userInfo.getPassword()));
         this.save(userInfo);
         return Result.success();
     }
@@ -74,7 +78,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
             }
         }
         String password = userInfo.getPassword();
-        userInfo.setPassword(PasswordEncryptionUtils.encrypt(password));
+        userInfo.setPassword(passwordEncoder.encode(password));
         this.updateById(userInfo);
 
         return Result.success();
