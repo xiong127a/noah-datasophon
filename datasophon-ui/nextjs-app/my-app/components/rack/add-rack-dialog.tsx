@@ -1,7 +1,19 @@
 "use client"
 
 import { useState } from 'react'
-import { Modal, Form, Input, Button, message } from 'antd'
+import { Server } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { toast } from 'sonner'
 import { AddRackRequest } from '../../types/rack'
 
 interface AddRackDialogProps {
@@ -12,16 +24,43 @@ interface AddRackDialogProps {
 }
 
 const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogProps) => {
-  const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  const [rackName, setRackName] = useState('')
+  const [errors, setErrors] = useState<{ rackName?: string }>({})
+
+  const validateRackName = (value: string): string | null => {
+    if (!value) {
+      return '机架名称不能为空!'
+    }
+
+    // 检查是否包含中文
+    const chineseRegex = /[\u4E00-\u9FA5]|[\uFE30-\uFFA0]/g
+    if (chineseRegex.test(value)) {
+      return '名称中不能包含中文'
+    }
+
+    // 检查是否包含空格
+    if (/\s/g.test(value)) {
+      return '名称中不能包含空格'
+    }
+
+    return null
+  }
 
   const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields()
-      setLoading(true)
+    // 验证输入
+    const rackNameError = validateRackName(rackName)
+    if (rackNameError) {
+      setErrors({ rackName: rackNameError })
+      return
+    }
 
+    setErrors({})
+    setLoading(true)
+
+    try {
       const params: AddRackRequest = {
-        rack: values.rack,
+        rack: rackName,
         clusterId: clusterId
       }
 
@@ -33,84 +72,80 @@ const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogPr
       // })
       // const res = await response.json()
 
-      // 暂时使用模拟响应
+      // 暂时使用模拟响应，后续需要使用实际API
+      console.log('添加机架参数:', params)
       const res = { code: 200, message: '保存成功' }
 
       if (res.code === 200) {
-        message.success('保存成功')
-        form.resetFields()
+        toast.success('保存成功')
+        handleCancel()
         onSuccess()
       } else {
-        message.error(res.message || '保存失败')
+        toast.error(res.message || '保存失败')
       }
-    } catch (error) {
-      message.error('保存失败')
+    } catch {
+      toast.error('保存失败')
     } finally {
       setLoading(false)
     }
   }
 
   const handleCancel = () => {
-    form.resetFields()
+    setRackName('')
+    setErrors({})
     onCancel()
   }
 
-  const validateRackName = (rule: any, value: string, callback: any) => {
-    if (!value) {
-      callback()
-      return
+  const handleInputChange = (value: string) => {
+    setRackName(value)
+    // 清除错误信息
+    if (errors.rackName) {
+      const error = validateRackName(value)
+      setErrors({ rackName: error || undefined })
     }
-
-    // 检查是否包含中文
-    const chineseRegex = /[\u4E00-\u9FA5]|[\uFE30-\uFFA0]/g
-    if (chineseRegex.test(value)) {
-      callback(new Error('名称中不能包含中文'))
-      return
-    }
-
-    // 检查是否包含空格
-    if (/\s/g.test(value)) {
-      callback(new Error('名称中不能包含空格'))
-      return
-    }
-
-    callback()
   }
 
   return (
-    <Modal
-      title="添加机架"
-      open={open}
-      onCancel={handleCancel}
-      width={520}
-      footer={[
-        <Button key="cancel" onClick={handleCancel}>
-          取消
-        </Button>,
-        <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
-          确认
-        </Button>
-      ]}
-    >
-      <div style={{ paddingTop: 10 }}>
-        <Form
-          form={form}
-          labelCol={{ xs: { span: 24 }, sm: { span: 6 } }}
-          wrapperCol={{ xs: { span: 24 }, sm: { span: 18 } }}
-        >
-          <Form.Item
-            label="机架名称"
-            name="rack"
-            rules={[
-              { required: true, message: '机架名称不能为空!' },
-              { validator: validateRackName }
-            ]}
-          >
-            <Input placeholder="请输入机架名称" />
-          </Form.Item>
-        </Form>
-      </div>
-    </Modal>
+    <Dialog open={open} onOpenChange={(open) => !open && handleCancel()}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Server className="h-4 w-4 text-blue-600" />
+            </div>
+            <span>添加机架</span>
+          </DialogTitle>
+          <DialogDescription>
+            在当前集群中添加新的机架配置
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="rackName">机架名称</Label>
+            <Input
+              id="rackName"
+              placeholder="请输入机架名称"
+              value={rackName}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className={errors.rackName ? 'border-red-500' : ''}
+            />
+            {errors.rackName && (
+              <p className="text-sm text-red-500">{errors.rackName}</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? '保存中...' : '确认'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
