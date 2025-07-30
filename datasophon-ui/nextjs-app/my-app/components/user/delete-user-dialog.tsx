@@ -62,7 +62,7 @@ function DeleteUserDialog({
   if (!user) return null
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent 
         className="w-[95vw] sm:max-w-[500px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 [&>button]:hidden"
         aria-describedby={undefined}

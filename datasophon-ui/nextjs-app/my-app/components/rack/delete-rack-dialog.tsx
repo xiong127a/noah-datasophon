@@ -48,7 +48,7 @@ const DeleteRackDialog = ({ open, onCancel, onSuccess, rack }: DeleteRackDialogP
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={(open) => !open && onCancel()}>
+    <AlertDialog open={open} onOpenChange={() => {}}>
       <AlertDialogContent className="sm:max-w-[400px]">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center space-x-2">

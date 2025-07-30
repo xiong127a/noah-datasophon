@@ -672,7 +672,7 @@ const ClusterSetupDialog: React.FC<ClusterSetupDialogProps> = ({
   if (!cluster) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex flex-col h-full">
           {/* 头部 */}

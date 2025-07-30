@@ -27,7 +27,7 @@ const AvatarSelector = ({ currentAvatar, onSelect, username }: { currentAvatar: 
   const [open, setOpen] = useState(false)
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={() => {}}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -93,6 +93,11 @@ const AvatarSelector = ({ currentAvatar, onSelect, username }: { currentAvatar: 
                 }
               }}
             />
+          </div>
+          <div className="flex justify-end pt-4 border-t mt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              关闭
+            </Button>
           </div>
         </div>
       </DialogContent>

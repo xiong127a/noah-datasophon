@@ -64,7 +64,7 @@ export default function DeleteTagDialog({ open, onClose, onSuccess, tag }: Delet
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center text-lg font-semibold text-orange-700">

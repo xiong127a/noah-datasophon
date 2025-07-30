@@ -242,7 +242,7 @@ function AddUserDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent 
         className="w-[95vw] sm:max-w-[800px] lg:max-w-[900px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 flex flex-col [&>button]:hidden"
         aria-describedby={undefined}

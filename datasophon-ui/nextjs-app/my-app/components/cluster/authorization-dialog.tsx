@@ -152,7 +152,7 @@ export default function ClusterAuthorizationDialogSuper({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleCancel}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
         className="rounded-3xl border-0 shadow-2xl max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}

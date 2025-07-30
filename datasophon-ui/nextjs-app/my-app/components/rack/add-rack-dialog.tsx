@@ -93,7 +93,7 @@ const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogPr
   }
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && handleCancel()}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
