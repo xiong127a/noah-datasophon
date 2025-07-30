@@ -232,7 +232,7 @@ export default function FinalNavbar() {
               />
               <span className="text-xl font-medium text-slate-800">
                 Noah<span className="text-slate-500">大数据基础平台</span>
-              </span>
+                </span>
             </Link>
 
             {/* 主要导航菜单 */}
