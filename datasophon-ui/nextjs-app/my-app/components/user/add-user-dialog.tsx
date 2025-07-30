@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, Sparkles, ShieldCheck, FileText, Crown, Users as UsersIcon, Upload, Camera } from "lucide-react"
+import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, Sparkles, ShieldCheck, FileText, Crown, Users as UsersIcon, Upload, Camera, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -243,12 +243,29 @@ function AddUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[800px] lg:max-w-[900px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 flex flex-col">
+      <DialogContent 
+        className="w-[95vw] sm:max-w-[800px] lg:max-w-[900px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 flex flex-col [&>button]:hidden"
+        aria-describedby={undefined}
+      >
         {/* 装饰性背景 */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white/90 to-purple-50/80 pointer-events-none" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-2xl transform translate-x-16 -translate-y-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
         
+        {/* 自定义关闭按钮 */}
+        <div className="absolute top-4 right-4 z-20">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            disabled={loading}
+            className="group h-10 w-10 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200/50 hover:bg-red-50 hover:border-red-200 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            <X className="h-4 w-4 text-slate-600 group-hover:text-red-500 group-hover:rotate-90 transition-all duration-300" />
+          </Button>
+        </div>
+
         <div className="relative z-10 p-2 sm:p-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">{/* 使用flex-1确保占满可用空间 */}
           <DialogHeader className="pb-6">
             <div className="flex items-center space-x-3 mb-2">
@@ -259,7 +276,7 @@ function AddUserDialog({
                   <UserPlus className="h-5 w-5 text-white" />
                 )}
               </div>
-              <div>
+              <div className="flex-1">
                 <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
                   {title}
                 </DialogTitle>
@@ -670,26 +687,44 @@ function AddUserDialog({
               variant="outline"
               onClick={handleCancel}
               disabled={loading}
-              className="h-12 px-8 rounded-2xl border-slate-200/50 bg-white/80 hover:bg-slate-50 transition-all duration-300 font-medium"
+              className="group relative h-12 px-8 rounded-2xl border-0 bg-gradient-to-r from-slate-100 via-gray-100 to-slate-100 hover:from-slate-200 hover:via-gray-200 hover:to-slate-200 shadow-md hover:shadow-lg transition-all duration-300 font-medium overflow-hidden"
             >
-              取消
+              {/* 装饰性背景 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-400/10 via-gray-400/5 to-slate-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              {/* 按钮内容 */}
+              <div className="relative flex items-center space-x-2 text-slate-700 group-hover:text-slate-800 transition-colors duration-300">
+                <X className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
+                <span>取消</span>
+              </div>
+              
+              {/* 悬停边框效果 */}
+              <div className="absolute inset-0 rounded-2xl border-2 border-slate-300/0 group-hover:border-slate-300/50 transition-all duration-300" />
             </Button>
             <Button 
               onClick={form.handleSubmit(onSubmit)}
               disabled={loading || !Object.values(validationStatus).every(Boolean)}
-              className={`h-12 px-8 rounded-2xl text-white border-0 shadow-lg transition-all duration-300 font-medium flex items-center space-x-2 ${
+              className={`group relative h-12 px-8 rounded-2xl text-white border-0 shadow-lg transition-all duration-300 font-medium flex items-center space-x-2 overflow-hidden ${
                 Object.values(validationStatus).every(Boolean)
                   ? "bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 hover:shadow-xl hover:scale-105"
                   : "bg-gradient-to-r from-slate-400 to-slate-500 cursor-not-allowed opacity-60"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              {/* 装饰性光效 */}
+              {Object.values(validationStatus).every(Boolean) && !loading && (
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-white/10 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
               )}
-              <span>{loading ? "处理中..." : isEditMode ? "保存修改" : "创建用户"}</span>
-              {!loading && (
-                <ShieldCheck className="h-4 w-4 ml-1" />
-              )}
+              
+              {/* 按钮内容 */}
+              <div className="relative flex items-center space-x-2">
+                {loading && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                <span>{loading ? "处理中..." : isEditMode ? "保存修改" : "创建用户"}</span>
+                {!loading && (
+                  <ShieldCheck className="h-4 w-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300" />
+                )}
+              </div>
             </Button>
           </div>
         </div>
