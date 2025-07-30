@@ -32,10 +32,12 @@ export const API_PATHS = {
   // 框架相关
   FRAME_LIST: `${API_PREFIX}/api/frame/list`,
   
-  // 集群操作相关
-  CLUSTER_SAVE: `${API_PREFIX}/api/cluster/save`,
-  CLUSTER_UPDATE: `${API_PREFIX}/api/cluster/update`,
-  CLUSTER_DELETE: `${API_PREFIX}/api/cluster/delete`,
+  // 存储库相关（集群存储库管理）
+  PARCEL_LIST: `${API_PREFIX}/api/cluster/parcel/list`,           // 获取存储库列表
+  PARCEL_PARSE: `${API_PREFIX}/api/cluster/parcel/parse`,         // 解析存储库URL获取组件列表
+  PARCEL_PROCESS: `${API_PREFIX}/api/cluster/parcel/process`,     // 获取组件安装进度
+  PARCEL_DOWNLOAD: `${API_PREFIX}/api/cluster/parcel/download`,   // 下载组件
+  PARCEL_INSTALL: `${API_PREFIX}/api/cluster/parcel/install`,     // 安装组件
 };
 
 // 创建axios实例
