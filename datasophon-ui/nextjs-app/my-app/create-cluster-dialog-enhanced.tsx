@@ -123,17 +123,18 @@ export default function CreateClusterDialogEnhanced({
     if (formData.clusterName && formData.clusterCode && formData.clusterFrame && formData.depType) {
       setLoading(true)
       try {
-        // 获取当前用户信息
-        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null
+        // 获取当前用户信息（修复localStorage key）
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user_info') : null
         const currentUser = userStr ? JSON.parse(userStr) : null
 
         // 检查用户登录状态
         if (!currentUser || !currentUser.id) {
           alert('用户登录信息异常，请重新登录')
+          console.error('用户信息异常:', { userStr, currentUser })
           return
         }
 
-        const params = {
+        const params: any = {
           clusterName: formData.clusterName.trim(),
           clusterCode: formData.clusterCode.trim(),
           clusterFrame: formData.clusterFrame,
