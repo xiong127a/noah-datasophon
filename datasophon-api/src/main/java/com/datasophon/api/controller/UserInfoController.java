@@ -77,7 +77,7 @@ public class UserInfoController {
      * 列表带分页
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("username") String username, @RequestParam("page") Integer page,
+    public Result list(@RequestParam(name = "username",required = false) String username, @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         return userInfoService.getUserListByPage(username, page, pageSize);
     }
