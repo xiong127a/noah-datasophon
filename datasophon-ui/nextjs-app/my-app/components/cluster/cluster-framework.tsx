@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import EnhancedNavbar from "../layout/navbar-enhanced"
+import FinalNavbar from "../layout/navbar-final"
 import { SvgIcon } from "@/components/ui/svg-icon"
 import { API_PATHS, apiClient } from "@/lib/api-config"
 
@@ -161,7 +161,7 @@ export default function ClusterFramework() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <EnhancedNavbar />
+      <FinalNavbar />
 
       {/* 页面头部 - 紧凑布局 */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200/50">

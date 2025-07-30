@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import EnhancedNavbar from "../layout/navbar-enhanced"
+import FinalNavbar from "../layout/navbar-final"
 import { API_PATHS, apiClient } from "@/lib/api-config"
 
 // 定义数据类型
@@ -177,7 +177,7 @@ export default function ClusterStorage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <EnhancedNavbar />
+      <FinalNavbar />
 
       {/* 页面头部 - 减少垂直空间 */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200/50">

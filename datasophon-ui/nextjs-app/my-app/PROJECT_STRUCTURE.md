@@ -24,8 +24,7 @@ app/
 ```
 components/
 ├── layout/                    # 布局组件
-│   ├── navbar-enhanced.tsx   # 增强导航栏 (集群框架、存储页面使用)
-│   ├── navbar-final.tsx      # 标准导航栏 (主页、列表等页面使用)
+│   ├── navbar-final.tsx      # 统一导航栏 (所有页面使用)
 │   └── index.ts              # 导出索引
 ├── auth/                      # 认证相关组件
 │   └── login-page.tsx         # 登录页面组件
@@ -98,7 +97,7 @@ import { ClusterList } from "../../../components/cluster"
 import AuthorizationDialog from "./authorization-dialog"
 
 // ✅ 跨模块组件导入  
-import NavbarEnhanced from "../layout/navbar-enhanced"
+import FinalNavbar from "../layout/navbar-final"
 ```
 
 ## 🎯 设计原则
@@ -115,7 +114,7 @@ import NavbarEnhanced from "../layout/navbar-enhanced"
 - **profile/** - 用户资料功能
 
 ### 🔄 组件复用
-- 导航栏组件被多个页面复用
+- 统一导航栏组件被所有页面复用
 - 对话框组件被集群列表页面调用
 - UI组件库统一管理
 
