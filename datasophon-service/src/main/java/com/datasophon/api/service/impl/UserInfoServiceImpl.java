@@ -22,6 +22,7 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.EncryptionUtils;
+import com.datasophon.common.utils.PasswordEncryptionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.UserInfoMapper;
@@ -38,7 +39,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
 
     @Override
     public UserInfoEntity queryUser(String username, String password) {
-        String md5 = EncryptionUtils.getMd5(password);
+        String md5 = PasswordEncryptionUtils.encrypt(password);
         return QueryChain.of(UserInfoEntity.class)
                 .where(UserInfoEntity::getUsername).eq(username)
                 .and(UserInfoEntity::getPassword).eq(md5)
@@ -56,7 +57,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
             return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
         }
         userInfo.setCreateTime(new Date());
-        userInfo.setPassword(EncryptionUtils.getMd5(userInfo.getPassword()));
+        userInfo.setPassword(PasswordEncryptionUtils.encrypt(userInfo.getPassword()));
         this.save(userInfo);
         return Result.success();
     }
@@ -75,7 +76,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
             }
         }
         String password = userInfo.getPassword();
-        userInfo.setPassword(EncryptionUtils.getMd5(password));
+        userInfo.setPassword(PasswordEncryptionUtils.encrypt(password));
         this.updateById(userInfo);
 
         return Result.success();
