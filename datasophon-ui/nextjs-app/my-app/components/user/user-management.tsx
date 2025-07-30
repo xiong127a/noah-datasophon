@@ -378,18 +378,32 @@ export default function UserManagement() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleEditUser(user)}
-                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+                                    className="group relative h-8 w-8 p-0 rounded-xl border-blue-200/60 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-200/50 hover:scale-110 active:scale-95 transition-all duration-300"
                                   >
-                                    <Edit className="h-4 w-4 text-slate-600 hover:text-blue-600" />
+                                    <Edit className="h-4 w-4 text-blue-500 group-hover:text-blue-600 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-300" />
+                                    {/* 悬停时的装饰效果 */}
+                                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
                                   </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleDeleteUser(user)}
-                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                                    className={`group relative h-8 w-8 p-0 rounded-xl transition-all duration-300 ${
+                                      isAdmin(user.userType)
+                                        ? "border-slate-200/50 bg-slate-100/50 cursor-not-allowed opacity-50"
+                                        : "border-red-200/60 bg-gradient-to-br from-red-50 to-pink-50 hover:from-red-100 hover:to-pink-100 hover:border-red-300 hover:shadow-lg hover:shadow-red-200/50 hover:scale-110 active:scale-95"
+                                    }`}
                                     disabled={isAdmin(user.userType)}
                                   >
-                                    <Trash2 className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                                    <Trash2 className={`h-4 w-4 transition-all duration-300 ${
+                                      isAdmin(user.userType)
+                                        ? "text-slate-400"
+                                        : "text-red-500 group-hover:text-red-600 group-hover:scale-110 group-hover:rotate-12"
+                                    }`} />
+                                    {/* 悬停时的装饰效果 */}
+                                    {!isAdmin(user.userType) && (
+                                      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-red-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+                                    )}
                                   </Button>
                                 </div>
                               </TableCell>
