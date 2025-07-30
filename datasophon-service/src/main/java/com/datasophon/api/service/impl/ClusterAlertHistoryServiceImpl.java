@@ -69,11 +69,13 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
     @Override
     public Result<List<ClusterAlertHistory>> getAlertList(Integer serviceInstanceId) {
-        QueryWrapper query = QueryWrapper.create();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertHistory::getIsEnabled).eq(1);
+        
         if (serviceInstanceId != null) {
-            query.where(Constants.SERVICE_INSTANCE_ID + " = " + serviceInstanceId);
+            query.and(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId);
         }
-        query.and(Constants.IS_ENABLED + " = 1");
+        
         List<ClusterAlertHistory> list = this.list(query);
         return Result.success(list);
     }
@@ -81,29 +83,36 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
     @Override
     public Result<List<ClusterAlertHistory>> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
+        
+        // 构建查询条件
         QueryWrapper query = QueryWrapper.create()
-                .where(Constants.CLUSTER_ID + " = " + clusterId)
-                .and(Constants.IS_ENABLED + " = 1")
-                .orderBy(Constants.CREATE_TIME + " desc")
+                .where(ClusterAlertHistory::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistory::getIsEnabled).eq(1)
+                .orderBy(ClusterAlertHistory::getCreateTime, false)
                 .limit(offset, pageSize);
         List<ClusterAlertHistory> list = this.list(query);
 
+        // 查询总数
         QueryWrapper countQuery = QueryWrapper.create()
-                .where(Constants.CLUSTER_ID + " = " + clusterId)
-                .and(Constants.IS_ENABLED + " = 1");
+                .where(ClusterAlertHistory::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistory::getIsEnabled).eq(1);
         long count = this.count(countQuery);
-        return Result.success(list).put(Constants.TOTAL, count);
+        
+        // 使用正确的方式返回分页结果
+        return Result.success(list, count);
     }
 
     @Override
     public void removeAlertByRoleInstanceIds(List<Integer> ids) {
         ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService.getById(ids.getFirst());
         ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+        
+        // 使用lambda表达式构建查询条件
         QueryWrapper query = QueryWrapper.create()
-                .where(Constants.IS_ENABLED + " = 1")
-                .and(Constants.SERVICE_ROLE_INSTANCE_ID + " in ("
-                        + String.join(",", ids.stream().map(String::valueOf).toList()) + ")");
+                .where(ClusterAlertHistory::getIsEnabled).eq(1)
+                .and(ClusterAlertHistory::getServiceRoleInstanceId).in(ids);
         this.remove(query);
+        
         // 重新配置prometheus
         ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
                 ActorUtils.getActorRefName(PrometheusActor.class));
