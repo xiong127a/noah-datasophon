@@ -28,7 +28,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { logout } from "./login-page-new" // 导入退出登录函数
+import { logout } from "../auth/login-page" // 导入退出登录函数
 import Image from "next/image"; // 添加Image导入
 
 import { Button } from "@/components/ui/button"

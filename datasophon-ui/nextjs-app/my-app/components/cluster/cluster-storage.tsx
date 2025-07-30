@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import EnhancedNavbar from "./noah-navbar-enhanced"
+import EnhancedNavbar from "../layout/navbar-enhanced"
 
 const storageRepositories = [
   {

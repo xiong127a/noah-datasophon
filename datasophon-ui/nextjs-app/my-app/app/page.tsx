@@ -1,6 +1,6 @@
 "use client"
 
-import FinalNavbar from "../noah-navbar-final"
+import FinalNavbar from "../components/layout/navbar-final"
 import Image from "next/image";
 
 export default function Home() {

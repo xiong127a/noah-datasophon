@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import EnhancedNavbar from "./noah-navbar-enhanced"
+import EnhancedNavbar from "../layout/navbar-enhanced"
 
 // 组件数据
 const frameworkComponents = {

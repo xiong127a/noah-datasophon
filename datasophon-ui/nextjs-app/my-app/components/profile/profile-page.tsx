@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import FinalNavbar from "./noah-navbar-final"
+import FinalNavbar from "../layout/navbar-final"
 
 // 内置头像选项
 const builtInAvatars = [

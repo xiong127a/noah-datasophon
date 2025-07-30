@@ -92,8 +92,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent } from "@/components/ui/card"
-import ClusterAuthorizationDialogSuper from "./cluster-authorization-dialog-super"
-import CreateClusterDialogEnhanced from "./create-cluster-dialog-enhanced"
+import ClusterAuthorizationDialogSuper from "./authorization-dialog"
+import CreateClusterDialogEnhanced from "./create-dialog"
 import { apiClient, API_PATHS } from "@/lib/api-config"
 import { useRouter } from "next/navigation"
 import Image from "next/image"

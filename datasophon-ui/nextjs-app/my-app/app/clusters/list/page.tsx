@@ -1,7 +1,7 @@
 "use client"
 
-import FinalNavbar from "../../../noah-navbar-final"
-import ClusterListEnhanced from "../../../cluster-list-enhanced"
+import FinalNavbar from "../../../components/layout/navbar-final"
+import ClusterListEnhanced from "../../../components/cluster/cluster-list"
 
 export default function ClustersListPage() {
   return (
