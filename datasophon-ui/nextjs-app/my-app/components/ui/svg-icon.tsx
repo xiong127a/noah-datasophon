@@ -6,55 +6,13 @@ interface SvgIconProps {
   size?: number
 }
 
-// 服务名称映射表 - 将服务名称映射到对应的SVG文件名
-const SERVICE_ICON_MAP: { [key: string]: string } = {
-  'SPARK': 'spark3',           // SPARK服务使用spark3.svg
-  'SPARK3': 'spark3',
-  'REDISSENTINEL': 'redissentinel',
-  'NOAHJOB': 'noahjob',
-  'NOAHSYNC': 'noahsync',
-  'NEBULAGRAPH': 'nebulagraph',
-  'OPENLDAP': 'openldap',
-  'PUSHGATEWAY': 'pushgateway',
-  'STREAMPARK': 'streampark',
-  'STARROCKS': 'starrocks',
-  'SEATUNNEL': 'seatunnel',
-  'JUICEFS': 'juicefs',
-  'ICEBERG': 'iceberg',
-  'POSTGRESQL': 'postgresql',
-  'PROMETHEUS': 'prometheus',
-  'KYUUBI': 'kyuubi',
-  'LOGSTASH': 'logstash',
-  'MINIO': 'minio',
-  'NEO4J': 'neo4j',
-  'PAIMON': 'paimon',
-  'RANGER': 'ranger',
-  'REDIS': 'redis',
-  'TRINO': 'trino',
-  'ZEPPELIN': 'zeppelin',
-  'KERBEROS': 'kerberos',
-}
-
 export const SvgIcon: React.FC<SvgIconProps> = ({ 
   name, 
   className,
   size = 24 
 }) => {
-  // 服务名称标准化处理
-  const normalizedName = name.toUpperCase().trim()
-  
-  // 获取图标文件名
-  const getIconFileName = (serviceName: string): string => {
-    // 首先检查映射表
-    if (SERVICE_ICON_MAP[serviceName]) {
-      return SERVICE_ICON_MAP[serviceName]
-    }
-    
-    // 如果没有映射，使用小写的服务名称
-    return serviceName.toLowerCase()
-  }
-  
-  const iconFileName = getIconFileName(normalizedName)
+  // 服务名称标准化处理：转为小写
+  const iconFileName = name.toUpperCase().trim().toLowerCase()
   const iconPath = `/icons/${iconFileName}.svg`
   
   return (
