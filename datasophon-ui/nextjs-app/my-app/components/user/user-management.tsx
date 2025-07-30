@@ -157,28 +157,28 @@ export default function UserManagement() {
       {/* 页面头部 - 仿照集群管理的设计 */}
       <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white/90 to-purple-50/80" />
-        <div className="relative w-full px-8 py-12">
-          <div className="flex items-center justify-between">
+        <div className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
                 用户管理中心
               </h1>
-              <p className="text-lg text-slate-600">统一管理系统用户账户和权限设置</p>
+              <p className="text-base lg:text-lg text-slate-600">统一管理系统用户账户和权限设置</p>
               <div className="flex items-center space-x-2 pt-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                 <span className="text-sm text-slate-500">实时管理 • 权限控制 • 安全保障</span>
               </div>
             </div>
             
-            <div className="flex items-center space-x-6">
-              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-                <div className="flex items-center space-x-4">
-                  <Badge className="px-6 py-3 rounded-2xl border-blue-200 text-blue-700 bg-blue-50/80 text-lg font-semibold">
-                    <Users className="h-5 w-5 mr-3 text-blue-600" />
+            <div className="flex items-center justify-center lg:justify-end">
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-4 lg:p-6 shadow-xl border border-white/50">
+                <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  <Badge className="px-4 sm:px-6 py-2 sm:py-3 rounded-2xl border-blue-200 text-blue-700 bg-blue-50/80 text-base lg:text-lg font-semibold w-full sm:w-auto text-center">
+                    <Users className="h-4 lg:h-5 w-4 lg:w-5 mr-2 lg:mr-3 text-blue-600" />
                     总用户: {pagination.total}
                   </Badge>
-                  <Badge className="px-6 py-3 rounded-2xl border-amber-200 text-amber-700 bg-amber-50/80 text-lg font-semibold">
-                    <Crown className="h-5 w-5 mr-3 text-amber-600" />
+                  <Badge className="px-4 sm:px-6 py-2 sm:py-3 rounded-2xl border-amber-200 text-amber-700 bg-amber-50/80 text-base lg:text-lg font-semibold w-full sm:w-auto text-center">
+                    <Crown className="h-4 lg:h-5 w-4 lg:w-5 mr-2 lg:mr-3 text-amber-600" />
                     管理员: {users.filter(u => isAdmin(u.userType)).length}
                   </Badge>
                 </div>
@@ -189,8 +189,8 @@ export default function UserManagement() {
       </div>
 
       {/* 搜索栏 */}
-      <div className="w-full px-8 py-6">
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl max-w-4xl mx-auto">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl w-full max-w-none">
           <CardHeader>
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
               搜索用户
@@ -200,7 +200,7 @@ export default function UserManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <Input
                   placeholder="请输入用户名..."
@@ -210,28 +210,30 @@ export default function UserManagement() {
                   className="h-12 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-              <Button 
-                onClick={handleSearch} 
-                className="h-12 px-6 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                搜索
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleReset}
-                className="h-12 px-6 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm hover:bg-white"
-              >
-                重置
-              </Button>
+              <div className="flex gap-4">
+                <Button 
+                  onClick={handleSearch} 
+                  className="h-12 px-6 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 flex-1 sm:flex-none"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  搜索
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleReset}
+                  className="h-12 px-6 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm hover:bg-white flex-1 sm:flex-none"
+                >
+                  重置
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* 用户列表 */}
-      <div className="w-full px-8 pb-8">
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl max-w-7xl mx-auto">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-8">
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl w-full max-w-none">
           <CardHeader className="pb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -262,95 +264,97 @@ export default function UserManagement() {
             ) : (
               <>
                 <div className="rounded-2xl border border-slate-200/50 bg-white/50 backdrop-blur-sm overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-gradient-to-r from-slate-50 to-slate-100/80">
-                      <TableRow className="border-slate-200/50 hover:bg-slate-50/80">
-                        <TableHead className="font-semibold text-slate-700">用户名</TableHead>
-                        <TableHead className="font-semibold text-slate-700">邮箱</TableHead>
-                        <TableHead className="font-semibold text-slate-700">手机号</TableHead>
-                        <TableHead className="font-semibold text-slate-700">用户类型</TableHead>
-                        <TableHead className="font-semibold text-slate-700">创建时间</TableHead>
-                        <TableHead className="text-right font-semibold text-slate-700">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                            <div className="flex flex-col items-center space-y-3">
-                              <Users className="h-12 w-12 text-slate-300" />
-                              <p className="text-lg">暂无用户数据</p>
-                              <Button 
-                                onClick={handleAddUser}
-                                variant="outline"
-                                className="rounded-2xl border-slate-200/50 bg-white/80"
-                              >
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                添加第一个用户
-                              </Button>
-                            </div>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[1100px]">
+                      <TableHeader className="bg-gradient-to-r from-slate-50 to-slate-100/80">
+                        <TableRow className="border-slate-200/50 hover:bg-slate-50/80">
+                          <TableHead className="font-semibold text-slate-700 w-[200px]">用户名</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[280px]">邮箱</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[160px]">手机号</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[140px]">用户类型</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[200px]">创建时间</TableHead>
+                          <TableHead className="text-right font-semibold text-slate-700 w-[120px]">操作</TableHead>
                         </TableRow>
-                      ) : (
-                        users.map((user, index) => (
-                          <TableRow 
-                            key={user.id} 
-                            className="border-slate-200/50 hover:bg-slate-50/50 transition-colors duration-200"
-                          >
-                            <TableCell className="font-medium">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                                  {isAdmin(user.userType) ? (
-                                    <Crown className="h-4 w-4 text-amber-600" />
-                                  ) : (
-                                    <span className="text-sm font-semibold text-slate-600">
-                                      {user.username.charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-slate-900">{user.username}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-slate-700">{user.email || "-"}</TableCell>
-                            <TableCell className="text-slate-700">{user.phone || "-"}</TableCell>
-                            <TableCell>
-                              <Badge 
-                                className={
-                                  isAdmin(user.userType) 
-                                    ? "bg-amber-100 text-amber-700 border-amber-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm" 
-                                    : "bg-blue-100 text-blue-700 border-blue-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm"
-                                }
-                              >
-                                {isAdmin(user.userType) ? "系统管理员" : "普通用户"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-slate-700">{formatDate(user.createTime)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end space-x-2">
-                                <Button
+                      </TableHeader>
+                      <TableBody>
+                        {users.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                              <div className="flex flex-col items-center space-y-3">
+                                <Users className="h-12 w-12 text-slate-300" />
+                                <p className="text-lg">暂无用户数据</p>
+                                <Button 
+                                  onClick={handleAddUser}
                                   variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditUser(user)}
-                                  className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+                                  className="rounded-2xl border-slate-200/50 bg-white/80"
                                 >
-                                  <Edit className="h-4 w-4 text-slate-600 hover:text-blue-600" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteUser(user)}
-                                  className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
-                                  disabled={isAdmin(user.userType)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  添加第一个用户
                                 </Button>
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : (
+                          users.map((user, index) => (
+                            <TableRow 
+                              key={user.id} 
+                              className="border-slate-200/50 hover:bg-slate-50/50 transition-colors duration-200"
+                            >
+                              <TableCell className="font-medium">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                                    {isAdmin(user.userType) ? (
+                                      <Crown className="h-4 w-4 text-amber-600" />
+                                    ) : (
+                                      <span className="text-sm font-semibold text-slate-600">
+                                        {user.username.charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-slate-900">{user.username}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-slate-700">{user.email || "-"}</TableCell>
+                              <TableCell className="text-slate-700">{user.phone || "-"}</TableCell>
+                              <TableCell>
+                                <Badge 
+                                  className={
+                                    isAdmin(user.userType) 
+                                      ? "bg-amber-100 text-amber-700 border-amber-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm" 
+                                      : "bg-blue-100 text-blue-700 border-blue-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm"
+                                  }
+                                >
+                                  {isAdmin(user.userType) ? "系统管理员" : "普通用户"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-slate-700">{formatDate(user.createTime)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditUser(user)}
+                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+                                  >
+                                    <Edit className="h-4 w-4 text-slate-600 hover:text-blue-600" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                                    disabled={isAdmin(user.userType)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </>
             )}
@@ -360,7 +364,7 @@ export default function UserManagement() {
 
       {/* 分页组件 - 现代化设计 */}
       {!loading && pagination.total > pagination.pageSize && (
-        <div className="w-full px-8 pb-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-8">
           <div className="flex justify-center">
             <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl">
               <CardContent className="p-6">
