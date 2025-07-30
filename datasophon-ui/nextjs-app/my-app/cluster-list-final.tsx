@@ -353,9 +353,23 @@ export default function ClusterListFinal() {
     }
   };
 
-  // 组件挂载时获取数据
+  // 组件挂载时获取数据 - 添加参数防止StrictMode下重复调用
   useEffect(() => {
-    fetchClusters();
+    // 使用标记防止重复请求
+    const controller = new AbortController();
+    const fetchData = async () => {
+      // 检查是否已经在请求中
+      if (!controller.signal.aborted) {
+        await fetchClusters();
+      }
+    };
+    
+    fetchData();
+    
+    // 清理函数
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   // 处理进入集群
