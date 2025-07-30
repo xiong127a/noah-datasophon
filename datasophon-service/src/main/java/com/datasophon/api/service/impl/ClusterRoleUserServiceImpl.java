@@ -69,7 +69,7 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
                     ClusterRoleUserEntity entity = new ClusterRoleUserEntity();
                     entity.setClusterId(clusterId);
                     entity.setUserId(Integer.parseInt(id));
-                    entity.setUserType(UserType.CLUSTER_MANAGER);
+                    entity.setUserType(UserType.ADMIN);
                     return entity;
                 })
                 .collect(Collectors.toList());
