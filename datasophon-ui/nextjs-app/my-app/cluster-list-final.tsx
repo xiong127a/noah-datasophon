@@ -64,19 +64,19 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
 }) => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   
-  // 根据集群类型获取图标
-  const getIcon = () => {
+  // 根据集群类型获取图标路径
+  const getIconPath = () => {
     switch (cluster.depType) {
       case "Kubernetes":
-        return Cloud;
+        return "/images/cluster/kubernetes-logo.svg";
       case "PVM":
-        return Server;
+        return "/images/cluster/linux-tux.svg";
       default:
-        return Database;
+        return "/images/cluster/kubernetes-logo.svg";
     }
   }
 
-  const Icon = getIcon();
+  const iconPath = getIconPath();
   const isConfigured = cluster.clusterStateCode === 2; // 2: 运行中
 
   // 根据集群类型获取颜色
@@ -126,10 +126,16 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
           {/* 头部信息 */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center space-x-4">
-              <div className={`relative p-4 rounded-2xl bg-gradient-to-br ${color} shadow-lg`}>
-                <Icon className="h-8 w-8 text-white" />
-                <div className="absolute inset-0 rounded-2xl bg-white/20 backdrop-blur-sm" />
-              </div>
+                              <div className={`relative p-3 rounded-2xl bg-gradient-to-br ${color} shadow-lg flex items-center justify-center`}>
+                  <Image 
+                    src={iconPath}
+                    alt={cluster.depType || "集群类型"}
+                    width={36}
+                    height={36}
+                    className="relative z-10"
+                  />
+                  <div className="absolute inset-0 rounded-2xl bg-white/20 backdrop-blur-sm" />
+                </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-800 mb-1">{cluster.clusterName}</h3>
                 <Badge variant="secondary" className="bg-white/80 text-slate-600 border-0 rounded-full px-3 py-1">
