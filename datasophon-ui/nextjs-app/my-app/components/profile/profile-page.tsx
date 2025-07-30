@@ -20,10 +20,10 @@ import {
 import { toast } from "sonner"
 import FinalNavbar from "../layout/navbar-final"
 import { API_PATHS, api } from "@/lib/api-config"
-import { BUILT_IN_AVATARS } from "@/types/user"
+import { BUILT_IN_AVATARS, DEFAULT_INITIALS_AVATAR } from "@/types/user"
 import type { User as UserType } from "@/types/user"
 
-const AvatarSelector = ({ currentAvatar, onSelect }: { currentAvatar: string; onSelect: (avatar: string) => void }) => {
+const AvatarSelector = ({ currentAvatar, onSelect, username }: { currentAvatar: string; onSelect: (avatar: string) => void; username?: string }) => {
   const [open, setOpen] = useState(false)
 
   return (
@@ -55,9 +55,18 @@ const AvatarSelector = ({ currentAvatar, onSelect }: { currentAvatar: string; on
                   currentAvatar === avatar ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"
                 }`}
               >
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
-                  <AvatarFallback>{index + 1}</AvatarFallback>
+                <Avatar key={`${avatar}-${username}`} className="w-full h-full">
+                  {avatar === DEFAULT_INITIALS_AVATAR ? (
+                    // 显示首字符头像预览
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                      {username && username.length > 0 ? username.charAt(0).toUpperCase() : "字"}
+                    </AvatarFallback>
+                  ) : (
+                    <>
+                      <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
+                      <AvatarFallback>{index + 1}</AvatarFallback>
+                    </>
+                  )}
                 </Avatar>
               </button>
             ))}
@@ -280,7 +289,7 @@ export default function ProfilePage() {
             <Card className="rounded-3xl border-0 shadow-lg bg-white overflow-hidden">
               <CardContent className="p-8 text-center">
                 <div className="relative inline-block mb-6">
-                  <Avatar className="w-32 h-32 ring-4 ring-slate-100 ring-offset-4">
+                  <Avatar key={isEditing ? editForm?.avatar : userInfo.avatar} className="w-32 h-32 ring-4 ring-slate-100 ring-offset-4">
                     <AvatarImage src={isEditing ? editForm?.avatar : userInfo.avatar} alt="用户头像" />
                     <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
                       {userInfo.username?.charAt(0).toUpperCase()}
@@ -290,6 +299,7 @@ export default function ProfilePage() {
                     <AvatarSelector
                       currentAvatar={editForm.avatar || ""}
                       onSelect={(avatar) => setEditForm({ ...editForm, avatar })}
+                      username={userInfo.username}
                     />
                   )}
                 </div>

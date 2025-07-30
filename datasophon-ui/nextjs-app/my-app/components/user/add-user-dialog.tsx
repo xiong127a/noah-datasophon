@@ -29,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
 import type { User as UserType, CreateUserRequest, UpdateUserRequest } from "@/types/user"
-import { UserType as UserTypeEnum, USER_TYPE_OPTIONS, BUILT_IN_AVATARS } from "@/types/user"
+import { UserType as UserTypeEnum, USER_TYPE_OPTIONS, BUILT_IN_AVATARS, DEFAULT_INITIALS_AVATAR } from "@/types/user"
 
 // 表单验证模式
 const userFormSchema = z.object({
@@ -550,10 +550,12 @@ function AddUserDialog({
                         <div className="space-y-4">
                           {/* 当前头像预览 */}
                           <div className="flex items-center space-x-4">
-                            <Avatar className="h-16 w-16 ring-2 ring-slate-200">
-                              <AvatarImage src={field.value || BUILT_IN_AVATARS[0]} alt="当前头像" />
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                                <Camera className="h-6 w-6" />
+                            <Avatar key={field.value} className="h-16 w-16 ring-2 ring-slate-200">
+                              {field.value && field.value !== DEFAULT_INITIALS_AVATAR && (
+                                <AvatarImage src={field.value} alt="当前头像" />
+                              )}
+                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                                {watchUsername && watchUsername.length > 0 ? watchUsername.charAt(0).toUpperCase() : "用"}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
@@ -628,9 +630,17 @@ function AddUserDialog({
                                     }`}
                                     onClick={() => field.onChange(avatar)}
                                   >
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
-                                      <AvatarFallback>{index + 1}</AvatarFallback>
+                                    <Avatar key={`${avatar}-${watchUsername}`} className="h-8 w-8">
+                                      {avatar === DEFAULT_INITIALS_AVATAR ? (
+                                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs">
+                                          {watchUsername && watchUsername.length > 0 ? watchUsername.charAt(0).toUpperCase() : "字"}
+                                        </AvatarFallback>
+                                      ) : (
+                                        <>
+                                          <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
+                                          <AvatarFallback>{index + 1}</AvatarFallback>
+                                        </>
+                                      )}
                                     </Avatar>
                                   </Button>
                                 ))}

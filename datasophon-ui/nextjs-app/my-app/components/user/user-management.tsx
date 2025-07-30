@@ -320,7 +320,7 @@ export default function UserManagement() {
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-10 w-10 ring-2 ring-slate-200">
                                     <AvatarImage 
-                                      src={user.avatar || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9InVybCgjZ3JhZGllbnQxKSIvPgo8Y2lyY2xlIGN4PSIzMiIgY3k9IjI2IiByPSIxMCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9IjMyIiBjeT0iNTAiIHJ4PSIxNiIgcnk9IjEyIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDEiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzM5OGVmNCIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K"} 
+                                      src={user.avatar} 
                                       alt={user.username}
                                     />
                                     <AvatarFallback className={`text-sm font-semibold text-white ${
@@ -328,11 +328,7 @@ export default function UserManagement() {
                                         ? "bg-gradient-to-br from-amber-500 to-orange-600" 
                                         : "bg-gradient-to-br from-blue-500 to-purple-600"
                                     }`}>
-                                      {isAdmin(user.userType) ? (
-                                        <Crown className="h-4 w-4" />
-                                      ) : (
-                                        user.username.charAt(0).toUpperCase()
-                                      )}
+                                      {user.username.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
