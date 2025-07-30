@@ -1,8 +1,14 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Plus, Server } from 'lucide-react'
+import { 
+  Plus, 
+  Server, 
+  Trash2, 
+  Search
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -14,6 +20,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Rack } from '../../types/rack'
+import { API_PATHS, api } from '@/lib/api-config'
 import AddRackDialog from '@/components/rack/add-rack-dialog'
 import DeleteRackDialog from '@/components/rack/delete-rack-dialog'
 import FinalNavbar from '../layout/navbar-final'
@@ -21,14 +28,12 @@ import FinalNavbar from '../layout/navbar-final'
 const RackManagement = () => {
   const [loading, setLoading] = useState(false)
   const [racks, setRacks] = useState<Rack[]>([])
+  const [filteredRacks, setFilteredRacks] = useState<Rack[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedRack, setSelectedRack] = useState<Rack | null>(null)
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  })
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const clusterId = typeof window !== 'undefined' 
     ? Number(localStorage.getItem('clusterId') || -1) 
@@ -37,40 +42,40 @@ const RackManagement = () => {
   const getRackList = async () => {
     setLoading(true)
     try {
-      const params = {
+      const response = await api.post(API_PATHS.RACK_LIST, {
         clusterId: clusterId
-      }
-      // 这里需要替换为实际的API调用
-      // const response = await fetch('/api/racks', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(params)
-      // })
-      // const res = await response.json()
+      })
       
-      // 暂时使用模拟数据，后续需要使用实际API
-      console.log('获取机架列表参数:', params)
-      const res = {
-        data: [
-          { id: 1, rack: 'rack-001', clusterId: clusterId },
-          { id: 2, rack: 'rack-002', clusterId: clusterId },
-          { id: 3, rack: 'rack-003', clusterId: clusterId }
-        ]
+      if (response.data.code === 200) {
+        const rackData = response.data.data || []
+        setRacks(rackData)
+        setFilteredRacks(rackData)
+      } else {
+        toast.error(response.data.msg || '获取机架列表失败')
       }
-      
-      setRacks(res.data)
-      setPagination(prev => ({
-        ...prev,
-        total: res.data.length
-      }))
-    } catch {
-      toast.error('获取机架列表失败')
+    } catch (error) {
+      console.error('获取机架列表失败:', error)
+      toast.error('获取机架列表失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
   }
 
+  // 搜索功能
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    if (!value.trim()) {
+      setFilteredRacks(racks)
+    } else {
+      const filtered = racks.filter(rack => 
+        rack.rack.toLowerCase().includes(value.toLowerCase())
+      )
+      setFilteredRacks(filtered)
+    }
+  }
+
   const handleAdd = () => {
+    setSelectedRack(null)
     setAddDialogOpen(true)
   }
 
@@ -79,24 +84,20 @@ const RackManagement = () => {
     setDeleteDialogOpen(true)
   }
 
-  const handleAddSuccess = () => {
+  const handleSuccess = () => {
     setAddDialogOpen(false)
-    getRackList()
-  }
-
-  const handleDeleteSuccess = () => {
     setDeleteDialogOpen(false)
     setSelectedRack(null)
-    getRackList()
+    setRefreshTrigger(prev => prev + 1)
   }
-
-  // 计算当前页显示的数据
-  const startIndex = (pagination.current - 1) * pagination.pageSize
-  const currentPageData = racks.slice(startIndex, startIndex + pagination.pageSize)
 
   useEffect(() => {
     getRackList()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refreshTrigger])
+
+  useEffect(() => {
+    handleSearch(searchTerm)
+  }, [racks, searchTerm])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -119,6 +120,25 @@ const RackManagement = () => {
             <span>添加机架</span>
           </Button>
         </div>
+
+        {/* 搜索栏 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>搜索机架</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="请输入机架名称..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -157,17 +177,17 @@ const RackManagement = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentPageData.length === 0 ? (
+                    {filteredRacks.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-8 text-gray-500">
                           暂无机架数据
                         </TableCell>
                       </TableRow>
                     ) : (
-                      currentPageData.map((rack, index) => (
+                      filteredRacks.map((rack, index) => (
                         <TableRow key={rack.id}>
                           <TableCell className="font-medium">
-                            {startIndex + index + 1}
+                            {index + 1}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
@@ -189,18 +209,6 @@ const RackManagement = () => {
                     )}
                   </TableBody>
                 </Table>
-
-                {/* 分页信息 */}
-                {racks.length > pagination.pageSize && (
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div>
-                      共 {racks.length} 条记录
-                    </div>
-                    <div>
-                      第 {pagination.current} 页
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
@@ -210,14 +218,14 @@ const RackManagement = () => {
         <AddRackDialog
           open={addDialogOpen}
           onCancel={() => setAddDialogOpen(false)}
-          onSuccess={handleAddSuccess}
+          onSuccess={handleSuccess}
           clusterId={clusterId}
         />
 
         <DeleteRackDialog
           open={deleteDialogOpen}
           onCancel={() => setDeleteDialogOpen(false)}
-          onSuccess={handleDeleteSuccess}
+          onSuccess={handleSuccess}
           rack={selectedRack}
         />
       </div>

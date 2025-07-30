@@ -47,6 +47,12 @@ export const API_PATHS = {
   TAG_SAVE: `${API_PREFIX}/cluster/node/label/save`,              // 保存标签
   TAG_DELETE: `${API_PREFIX}/cluster/node/label/delete`,          // 删除标签
   TAG_ASSIGN: `${API_PREFIX}/cluster/node/label/assign`,          // 分配标签
+
+  // 机架管理相关
+  RACK_LIST: `${API_PREFIX}/cluster/rack/list`,                   // 获取机架列表  
+  RACK_SAVE: `${API_PREFIX}/cluster/rack/save`,                   // 保存机架
+  RACK_DELETE: `${API_PREFIX}/cluster/rack/delete`,               // 删除机架
+  RACK_ASSIGN: `${API_PREFIX}/assignRack`,                        // 分配机架给主机（在ClusterHostController中）
 };
 
 // 创建axios实例

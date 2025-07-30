@@ -12,7 +12,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Rack, DeleteRackRequest } from '../../types/rack'
+import { Rack } from '../../types/rack'
+import { API_PATHS, api } from '@/lib/api-config'
 
 interface DeleteRackDialogProps {
   open: boolean
@@ -30,30 +31,20 @@ const DeleteRackDialog = ({ open, onCancel, onSuccess, rack }: DeleteRackDialogP
     try {
       setLoading(true)
 
-      const params: DeleteRackRequest = {
-        rackId: rack.id
-      }
+      const response = await api.post(API_PATHS.RACK_DELETE, {
+        rackId: rack.id,
+        clusterId: rack.clusterId
+      })
 
-      // 这里需要替换为实际的API调用
-      // const response = await fetch('/api/racks/delete', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(params)
-      // })
-      // const res = await response.json()
-
-      // 暂时使用模拟响应，后续需要使用实际API
-      console.log('删除机架参数:', params)
-      const res = { code: 200, message: '删除成功' }
-
-      if (res.code === 200) {
+      if (response.data.code === 200) {
         toast.success('删除成功')
         onSuccess()
       } else {
-        toast.error(res.message || '删除失败')
+        toast.error(response.data.msg || '删除失败')
       }
-    } catch {
-      toast.error('删除失败')
+    } catch (error) {
+      console.error('删除机架失败:', error)
+      toast.error('删除失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
