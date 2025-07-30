@@ -29,7 +29,6 @@ public final class Constants {
 
         public static final String INSTALL_PATH = PropertyUtils.getString("install.path");
         public static final String YAML_PATH = PropertyUtils.getString("yaml.path");
-        public static final String TOTAL = "total";
 
         public static final String TASK_LOG_LOGGER_NAME = "TaskLogLogger";
 
