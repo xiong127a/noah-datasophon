@@ -22,8 +22,20 @@ export const API_PATHS = {
   CLUSTER_SERVICE_LIST: `${API_PREFIX}/api/cluster/service/list`,
   CLUSTER_RUNNING_LIST: `${API_PREFIX}/api/cluster/runningClusterList`,
 
+  // 用户相关
+  USER_LIST: `${API_PREFIX}/api/user/list`,
+  USER_ALL: `${API_PREFIX}/api/user/all`, // 获取所有用户（集群授权使用）
+  USER_SAVE: `${API_PREFIX}/api/user/save`,
+  USER_DELETE: `${API_PREFIX}/api/user/delete`,
+  USER_UPDATE: `${API_PREFIX}/api/user/update`,
+
   // 框架相关
   FRAME_LIST: `${API_PREFIX}/api/frame/list`,
+  
+  // 集群操作相关
+  CLUSTER_SAVE: `${API_PREFIX}/api/cluster/save`,
+  CLUSTER_UPDATE: `${API_PREFIX}/api/cluster/update`,
+  CLUSTER_DELETE: `${API_PREFIX}/api/cluster/delete`,
 };
 
 // 创建axios实例

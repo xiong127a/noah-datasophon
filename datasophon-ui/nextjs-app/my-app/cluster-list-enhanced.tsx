@@ -358,23 +358,22 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
       </Card>
 
       {/* 授权弹窗 */}
-      <ClusterAuthorizationDialogSuper open={authDialogOpen} onOpenChange={setAuthDialogOpen} clusterName={cluster.clusterName} />
+      <ClusterAuthorizationDialogSuper 
+        open={authDialogOpen} 
+        onOpenChange={setAuthDialogOpen} 
+        clusterName={cluster.clusterName}
+        clusterId={cluster.id}
+      />
     </>
   )
 }
 
 const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-
   return (
-    <>
-      <Card
-        className="group relative overflow-hidden rounded-3xl border-0 bg-white shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[560px]"
-        onClick={() => {
-          setCreateDialogOpen(true);
-          onClick();
-        }}
-      >
+    <Card
+      className="group relative overflow-hidden rounded-3xl border-0 bg-white shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[560px]"
+      onClick={onClick}
+    >
         {/* 动态背景渐变 */}
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-purple-50/80 to-pink-50/80" />
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
@@ -450,17 +449,16 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* 创建集群弹窗 */}
-      <CreateClusterDialogEnhanced open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
-    </>
-  )
+    )
 }
 
 export default function ClusterListEnhanced() {
   const [clusters, setClusters] = useState<ClusterItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -513,7 +511,8 @@ export default function ClusterListEnhanced() {
   };
 
   const handleEditCluster = (cluster: ClusterItem) => {
-    router.push(`/clusters/edit/${cluster.id}`);
+    setEditingCluster(cluster);
+    setEditDialogOpen(true);
   };
 
   const handleAuthCluster = (cluster: ClusterItem) => {
@@ -543,7 +542,12 @@ export default function ClusterListEnhanced() {
   };
 
   const handleCreateCluster = () => {
-    // 创建对话框会通过组件内部状态打开
+    setCreateDialogOpen(true);
+  };
+
+  const handleClusterSuccess = () => {
+    // 集群创建/编辑成功后刷新列表
+    fetchClusters();
   };
 
   return (
@@ -642,6 +646,27 @@ export default function ClusterListEnhanced() {
           </div>
         </div>
       )}
+
+      {/* 创建集群弹窗 */}
+      <CreateClusterDialogEnhanced 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={handleClusterSuccess}
+      />
+
+      {/* 编辑集群弹窗 */}
+      <CreateClusterDialogEnhanced 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen}
+        onSuccess={handleClusterSuccess}
+        editData={editingCluster ? {
+          id: Number(editingCluster.id),
+          clusterName: editingCluster.clusterName,
+          clusterCode: editingCluster.clusterCode || '',
+          clusterFrame: editingCluster.clusterFrame || '',
+          depType: editingCluster.depType || ''
+        } : null}
+      />
     </div>
   )
 } 
