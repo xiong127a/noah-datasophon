@@ -233,9 +233,6 @@ export default function EnhancedNavbar() {
                 <MenuLink href="/system/tenants" icon={Building} colorClass="blue">
                   租户管理
                 </MenuLink>
-                <MenuLink href="/system/users" icon={Users} colorClass="green">
-                  用户管理
-                </MenuLink>
                 <MenuLink href="/system/racks" icon={Server} colorClass="purple">
                   机架管理
                 </MenuLink>
