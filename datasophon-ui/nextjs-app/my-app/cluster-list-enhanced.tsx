@@ -191,7 +191,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
 
   return (
     <>
-      <Card className={`group relative overflow-hidden rounded-3xl border-0 bg-white ${colors.shadowColor} shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 animate-scale-in h-[520px]`}>
+      <Card className={`group relative overflow-hidden rounded-3xl border-0 bg-white ${colors.shadowColor} shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 animate-scale-in h-[560px]`}>
         {/* 主背景渐变 */}
         <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient}`} />
         
@@ -251,7 +251,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
 
 
           {/* 详细信息 - 重新设计 */}
-          <div className="space-y-4 mb-auto">
+          <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/30 group-hover:bg-white/90 transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
@@ -369,7 +369,7 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
   return (
     <>
       <Card
-        className="group relative overflow-hidden rounded-3xl border-0 bg-white shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[520px]"
+        className="group relative overflow-hidden rounded-3xl border-0 bg-white shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[560px]"
         onClick={() => {
           setCreateDialogOpen(true);
           onClick();

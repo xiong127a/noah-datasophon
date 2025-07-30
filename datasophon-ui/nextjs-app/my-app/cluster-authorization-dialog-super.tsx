@@ -148,7 +148,7 @@ export default function ClusterAuthorizationDialogSuper({
   return (
     <Dialog open={open} onOpenChange={handleCancel}>
       <DialogContent
-        className="rounded-3xl border-0 shadow-2xl max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden"
+        className="rounded-3xl border-0 shadow-2xl max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -158,7 +158,14 @@ export default function ClusterAuthorizationDialogSuper({
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-pink-400/20 to-orange-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
 
         <DialogHeader className="relative z-10">
-          <div className="flex items-center space-x-3">
+          <button
+            onClick={handleCancel}
+            className="absolute right-0 top-0 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl border border-white/50 flex items-center justify-center transition-all duration-300 hover:scale-110 z-20 group"
+          >
+            <X className="h-4 w-4 text-slate-600 group-hover:text-slate-700 transition-colors" />
+          </button>
+          
+          <div className="flex items-center space-x-3 pr-12">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
               <Shield className="h-6 w-6 text-white" />
             </div>
@@ -316,18 +323,11 @@ export default function ClusterAuthorizationDialogSuper({
           </div>
         </div>
 
-        <DialogFooter className="flex space-x-4 relative z-10">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="flex-1 h-12 rounded-2xl border-slate-200 bg-white/80 hover:bg-white hover:shadow-lg transition-all duration-300 backdrop-blur-sm"
-          >
-            取消
-          </Button>
+        <DialogFooter className="relative z-10">
           <Button
             onClick={handleConfirm}
             disabled={selectedUsers.length === 0}
-            className={`flex-1 h-12 rounded-2xl text-white border-0 font-semibold transition-all duration-300 relative overflow-hidden ${
+            className={`w-full h-12 rounded-2xl text-white border-0 font-semibold transition-all duration-300 relative overflow-hidden ${
               selectedUsers.length > 0
                 ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl hover:scale-105"
                 : "bg-slate-300 cursor-not-allowed"
@@ -337,7 +337,7 @@ export default function ClusterAuthorizationDialogSuper({
             {selectedUsers.length > 0 && (
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
             )}
-            <span className="relative z-10 flex items-center">
+            <span className="relative z-10 flex items-center justify-center">
               <Shield className="mr-2 h-4 w-4" />
               确认授权 {selectedUsers.length > 0 && `(${selectedUsers.length})`}
             </span>
