@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
 import type { User } from "@/types/user"
@@ -63,6 +64,16 @@ function DeleteUserDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4">
+        {/* 可访问性标题 - 对屏幕阅读器可见，视觉上隐藏 */}
+        <DialogHeader>
+          <VisuallyHidden>
+            <DialogTitle>删除用户确认</DialogTitle>
+            <DialogDescription>
+              此操作将永久删除用户账户和相关数据，此操作不可撤销。
+            </DialogDescription>
+          </VisuallyHidden>
+        </DialogHeader>
+
         {/* 装饰性背景 */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-red-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" />
