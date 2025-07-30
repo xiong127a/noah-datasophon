@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Search, Plus, Edit, Trash2, UserPlus } from "lucide-react"
+import { Search, Plus, Edit, Trash2, UserPlus, Users, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -144,173 +144,259 @@ export default function UserManagement() {
     fetchUsers()
   }, [pagination.current, pagination.pageSize, searchTerm, refreshTrigger])
 
+
+
   return (
-    <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
       <FinalNavbar />
-      <div className="space-y-6 p-6">
-        {/* 页面头部 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">用户管理</h1>
-          <p className="text-muted-foreground">
-            管理系统用户账户，包括添加、编辑和删除用户
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button onClick={handleAddUser} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            添加用户
-          </Button>
+      
+      {/* 背景装饰 */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl transform -translate-x-48 -translate-y-48" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl transform translate-x-40 translate-y-40" />
+
+      {/* 页面头部 - 仿照集群管理的设计 */}
+      <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white/90 to-purple-50/80" />
+        <div className="relative w-full px-8 py-12">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
+                用户管理中心
+              </h1>
+              <p className="text-lg text-slate-600">统一管理系统用户账户和权限设置</p>
+              <div className="flex items-center space-x-2 pt-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-sm text-slate-500">实时管理 • 权限控制 • 安全保障</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-6">
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
+                <div className="flex items-center space-x-4">
+                  <Badge className="px-6 py-3 rounded-2xl border-blue-200 text-blue-700 bg-blue-50/80 text-lg font-semibold">
+                    <Users className="h-5 w-5 mr-3 text-blue-600" />
+                    总用户: {pagination.total}
+                  </Badge>
+                  <Badge className="px-6 py-3 rounded-2xl border-amber-200 text-amber-700 bg-amber-50/80 text-lg font-semibold">
+                    <Crown className="h-5 w-5 mr-3 text-amber-600" />
+                    管理员: {users.filter(u => isAdmin(u.userType)).length}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 搜索区域 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">搜索用户</CardTitle>
-          <CardDescription>
-            输入用户名进行搜索
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <div className="flex-1">
-              <Input
-                placeholder="请输入用户名..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                className="max-w-sm"
-              />
+      {/* 搜索栏 */}
+      <div className="w-full px-8 py-6">
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+              搜索用户
+            </CardTitle>
+            <CardDescription>
+              根据用户名快速查找系统用户
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="请输入用户名..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                  className="h-12 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <Button 
+                onClick={handleSearch} 
+                className="h-12 px-6 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                搜索
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleReset}
+                className="h-12 px-6 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm hover:bg-white"
+              >
+                重置
+              </Button>
             </div>
-            <Button onClick={handleSearch} variant="default" className="gap-2">
-              <Search className="h-4 w-4" />
-              搜索
-            </Button>
-            <Button onClick={handleReset} variant="outline">
-              重置
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 用户列表 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">用户列表</CardTitle>
-          <CardDescription>
-            共 {pagination.total} 个用户
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">序号</TableHead>
-                <TableHead>用户名</TableHead>
-                <TableHead>邮箱</TableHead>
-                <TableHead>电话</TableHead>
-                <TableHead>用户类型</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    加载中...
-                  </TableCell>
-                </TableRow>
-              ) : users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    暂无用户数据
-                  </TableCell>
-                </TableRow>
-              ) : (
-                users.map((user, index) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      {(pagination.current - 1) * pagination.pageSize + index + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>
-                      <Badge variant={isAdmin(user.userType) ? "default" : "secondary"}>
-                        {isAdmin(user.userType) ? "管理员" : "普通用户"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(user.createTime)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          disabled={isAdmin(user.userType)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-
-          {/* 分页控件 */}
-          {pagination.total > 0 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                显示第 {(pagination.current - 1) * pagination.pageSize + 1} 到{" "}
-                {Math.min(pagination.current * pagination.pageSize, pagination.total)} 条，
-                共 {pagination.total} 条记录
+      <div className="w-full px-8 pb-8">
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl max-w-7xl mx-auto">
+          <CardHeader className="pb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                  用户列表
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  共 {pagination.total} 个用户，其中管理员 {users.filter(u => isAdmin(u.userType)).length} 个
+                </CardDescription>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.current - 1)}
-                  disabled={pagination.current === 1}
-                >
-                  上一页
-                </Button>
-                <div className="flex items-center space-x-1">
-                  <span className="text-sm">第</span>
-                  <span className="text-sm font-medium">{pagination.current}</span>
-                  <span className="text-sm">页，共</span>
-                  <span className="text-sm font-medium">
-                    {Math.ceil(pagination.total / pagination.pageSize)}
-                  </span>
-                  <span className="text-sm">页</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.current + 1)}
-                  disabled={
-                    pagination.current >= Math.ceil(pagination.total / pagination.pageSize)
-                  }
-                >
-                  下一页
-                </Button>
-              </div>
+              <Button 
+                onClick={handleAddUser} 
+                className="h-12 px-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
+              >
+                <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-300" />
+                添加用户
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="animate-spin h-10 w-10 border-4 rounded-full border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-lg text-slate-600 font-medium">正在加载用户数据...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-slate-200/50 bg-white/50 backdrop-blur-sm overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-gradient-to-r from-slate-50 to-slate-100/80">
+                      <TableRow className="border-slate-200/50 hover:bg-slate-50/80">
+                        <TableHead className="font-semibold text-slate-700">用户名</TableHead>
+                        <TableHead className="font-semibold text-slate-700">邮箱</TableHead>
+                        <TableHead className="font-semibold text-slate-700">手机号</TableHead>
+                        <TableHead className="font-semibold text-slate-700">用户类型</TableHead>
+                        <TableHead className="font-semibold text-slate-700">创建时间</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-700">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                            <div className="flex flex-col items-center space-y-3">
+                              <Users className="h-12 w-12 text-slate-300" />
+                              <p className="text-lg">暂无用户数据</p>
+                              <Button 
+                                onClick={handleAddUser}
+                                variant="outline"
+                                className="rounded-2xl border-slate-200/50 bg-white/80"
+                              >
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                添加第一个用户
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        users.map((user, index) => (
+                          <TableRow 
+                            key={user.id} 
+                            className="border-slate-200/50 hover:bg-slate-50/50 transition-colors duration-200"
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                                  {isAdmin(user.userType) ? (
+                                    <Crown className="h-4 w-4 text-amber-600" />
+                                  ) : (
+                                    <span className="text-sm font-semibold text-slate-600">
+                                      {user.username.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-slate-900">{user.username}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-slate-700">{user.email || "-"}</TableCell>
+                            <TableCell className="text-slate-700">{user.phone || "-"}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                className={
+                                  isAdmin(user.userType) 
+                                    ? "bg-amber-100 text-amber-700 border-amber-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm" 
+                                    : "bg-blue-100 text-blue-700 border-blue-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm"
+                                }
+                              >
+                                {isAdmin(user.userType) ? "系统管理员" : "普通用户"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-700">{formatDate(user.createTime)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditUser(user)}
+                                  className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+                                >
+                                  <Edit className="h-4 w-4 text-slate-600 hover:text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteUser(user)}
+                                  className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                                  disabled={isAdmin(user.userType)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 分页组件 - 现代化设计 */}
+      {!loading && pagination.total > pagination.pageSize && (
+        <div className="w-full px-8 pb-8">
+          <div className="flex justify-center">
+            <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-xl rounded-3xl">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-6">
+                  <div className="text-sm text-slate-600">
+                    显示第 {(pagination.current - 1) * pagination.pageSize + 1} 到{" "}
+                    {Math.min(pagination.current * pagination.pageSize, pagination.total)} 条，
+                    共 {pagination.total} 条记录
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(pagination.current - 1)}
+                      disabled={pagination.current <= 1}
+                      className="h-10 px-4 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm hover:bg-white disabled:opacity-50"
+                    >
+                      上一页
+                    </Button>
+                    <span className="px-4 py-2 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium min-w-[120px] text-center">
+                      第 {pagination.current} / {Math.ceil(pagination.total / pagination.pageSize)} 页
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(pagination.current + 1)}
+                      disabled={pagination.current >= Math.ceil(pagination.total / pagination.pageSize)}
+                      className="h-10 px-4 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm hover:bg-white disabled:opacity-50"
+                    >
+                      下一页
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* 添加用户对话框 */}
       <AddUserDialog
@@ -336,7 +422,6 @@ export default function UserManagement() {
         onSuccess={handleUserOperationSuccess}
         user={selectedUser}
       />
-      </div>
     </div>
   )
 } 
