@@ -423,9 +423,13 @@ export default function ClusterListFinal() {
               <p className="text-slate-600 text-lg">管理和监控您的大数据集群环境</p>
             </div>
             <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="px-4 py-2 rounded-full border-blue-200 text-blue-700 bg-blue-50">
+                <Server className="h-4 w-4 mr-2 text-blue-600" />
+                总集群数: {clusters.length}
+              </Badge>
               <Badge variant="outline" className="px-4 py-2 rounded-full border-green-200 text-green-700 bg-green-50">
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-2" />
-                {clusters.filter((c) => c.clusterStateCode === 2).length} 个集群运行中
+                {clusters.filter((c) => c.clusterStateCode === 2).length} 个运行中
               </Badge>
             </div>
           </div>
@@ -477,59 +481,7 @@ export default function ClusterListFinal() {
         </div>
       )}
 
-      {/* 底部统计信息 */}
-      <div className="max-w-7xl mx-auto px-8 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm">总集群数</p>
-                <p className="text-2xl font-bold text-slate-800">{clusters.length}</p>
-              </div>
-              <Server className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm">运行中</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {clusters.filter((c) => c.clusterStateCode === 2).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm">配置中</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {clusters.filter((c) => c.clusterStateCode === 1).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm">异常集群</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {clusters.filter((c) => c.clusterStateCode === 3).length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 底部空间保留 */}
     </div>
   )
 }
