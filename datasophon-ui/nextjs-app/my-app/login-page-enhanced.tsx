@@ -227,7 +227,7 @@ export default function LoginPageEnhanced() {
       {/* 左上角公司Logo - 使用图片，放大 */}
       <div className="absolute left-6 top-6 z-20">
         <Image 
-          src="/login-img/company.png" 
+          src="/images/login/company.png" 
           alt="中兵数科" 
           width={160} 
           height={40}
@@ -254,7 +254,7 @@ export default function LoginPageEnhanced() {
               <div className="text-center mb-8">
                 <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
                   <Image 
-                    src="/login-img/logo.svg" 
+                    src="/images/login/logo.svg" 
                     alt="Datasophon Logo" 
                     width={65} 
                     height={65}
@@ -368,7 +368,7 @@ export default function LoginPageEnhanced() {
           <p className="text-white/70 text-xs mb-2">北京中兵数科技集团有限公司 版权所有</p>
           <p className="text-white/70 text-xs mb-3">Copyright © {new Date().getFullYear()} Datasophon</p>
           <Image 
-            src="/login-img/company.png" 
+            src="/images/login/company.png" 
             alt="中兵数科" 
             width={80} 
             height={20}

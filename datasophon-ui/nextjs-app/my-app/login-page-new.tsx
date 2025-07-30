@@ -225,7 +225,7 @@ export default function LoginPageNew() {
       
       <div className="absolute left-8 top-8 z-10">
         <Image 
-          src="/login-img/company.png" 
+          src="/images/login/company.png" 
           alt="中兵数科" 
           width={120} 
           height={40} 
@@ -306,7 +306,7 @@ export default function LoginPageNew() {
               <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-600/30 rounded-2xl blur-lg"></div>
                 <Image 
-                  src="/login-img/logo.svg" 
+                  src="/images/login/logo.svg" 
                   alt="Datasophon Logo" 
                   width={70} 
                   height={70}
@@ -559,7 +559,7 @@ export default function LoginPageNew() {
         </div>
         <div className="w-20 h-6 relative mx-auto">
           <Image 
-            src="/login-img/company.png" 
+            src="/images/login/company.png" 
             alt="中兵数科" 
             fill
             className="object-contain opacity-60"

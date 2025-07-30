@@ -224,7 +224,7 @@ export default function FinalNavbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
               <Image 
-                src="/login-img/logo.svg" 
+                src="/images/login/logo.svg" 
                 alt="Datasophon Logo" 
                 width={36} 
                 height={36} 

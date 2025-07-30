@@ -6,9 +6,9 @@ export const metadata = {
   title: "Datasophon - 大数据平台部署与管理系统",
   description: "一站式大数据平台部署与管理系统",
   icons: {
-    icon: "/login-img/logo.svg",
-    shortcut: "/login-img/logo.svg",
-    apple: "/login-img/logo.svg",
+    icon: "/images/login/logo.svg",
+    shortcut: "/images/login/logo.svg",
+    apple: "/images/login/logo.svg",
   },
 }
 
