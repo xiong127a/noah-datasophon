@@ -123,10 +123,17 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         clusterInfo.setCreateBy(SecurityUtils.getAuthUser().getUsername());
         clusterInfo.setClusterState(ClusterState.NEED_CONFIG);
         this.save(clusterInfo);
-        // 修改这行，从 UserInfoEntity 对象列表中提取用户 ID
+        // 检查集群管理员列表是否为空
+        if (clusterInfo.getClusterManagerList() == null || clusterInfo.getClusterManagerList().isEmpty()) {
+            return Result.error("集群管理员不能为空，请指定至少一个管理员");
+        }
+        
+        // 从 UserInfoEntity 对象列表中提取用户 ID
         String managerIds = clusterInfo.getClusterManagerList().stream()
                 .map(user -> user.getId().toString())
                 .collect(Collectors.joining(","));
+        
+        // 保存集群管理员关系
         clusterUserService.saveClusterManager(clusterInfo.getId(), managerIds);
         List<AlertGroupEntity> alertGroupList = alertGroupService.list();
         for (AlertGroupEntity alertGroupEntity : alertGroupList) {
