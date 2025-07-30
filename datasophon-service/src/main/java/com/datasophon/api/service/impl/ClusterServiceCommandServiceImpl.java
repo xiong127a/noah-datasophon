@@ -210,7 +210,7 @@ public class ClusterServiceCommandServiceImpl
             String durationTime = DateUtil.formatBetween(between, BetweenFormatter.Level.SECOND);
             commandEntity.setDurationTime(durationTime);
         }
-        return Result.success(list).put(Constants.TOTAL, total);
+        return Result.success(list,total);
     }
 
     /**

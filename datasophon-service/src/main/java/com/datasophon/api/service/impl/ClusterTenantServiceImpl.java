@@ -76,7 +76,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                 .where(ClusterTenant::getClusterId).eq(clusterId)
                 .count();
 
-        return Result.success(list).put(Constants.TOTAL, total);
+        return Result.success(list,total);
     }
 
     @Override

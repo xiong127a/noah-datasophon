@@ -294,7 +294,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
 
         long total = query.count();
-        return Result.success(list).put(Constants.TOTAL, total);
+        return Result.success(list,total);
     }
 
     @Override

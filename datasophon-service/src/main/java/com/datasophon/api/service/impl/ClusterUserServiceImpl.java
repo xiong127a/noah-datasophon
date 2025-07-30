@@ -358,7 +358,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         long total = query.count();
-        return Result.success(list).put(Constants.TOTAL, total);
+        return Result.success(list,total);
     }
 
     @Override

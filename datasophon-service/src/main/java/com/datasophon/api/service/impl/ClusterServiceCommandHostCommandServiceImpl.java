@@ -99,7 +99,7 @@ public class ClusterServiceCommandHostCommandServiceImpl
             // 确保已完成/失败命令有正确的进度显示
             updateCommandProgress(hostCommandEntity);
         }
-        return Result.success(list).put(Constants.TOTAL, total);
+        return Result.success(list,total);
     }
 
     /**

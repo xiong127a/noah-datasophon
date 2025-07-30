@@ -227,7 +227,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
         }
 
-        return Result.success(cluServiceRoleInstList).put(Constants.TOTAL, count);
+        return Result.success(cluServiceRoleInstList,count);
     }
 
     @Override

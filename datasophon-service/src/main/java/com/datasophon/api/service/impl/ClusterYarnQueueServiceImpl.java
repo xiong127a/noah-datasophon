@@ -83,7 +83,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             clusterYarnQueue.setMinResources(minResources);
             clusterYarnQueue.setMaxResources(maxResources);
         }
-        return Result.success(list).put(Constants.TOTAL, count);
+        return Result.success(list,count);
     }
 
     @Override

@@ -136,7 +136,7 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
             });
         }
 
-        return Result.success(alertQuotaList).put(Constants.TOTAL, resultPage.getTotalRow());
+        return Result.success(alertQuotaList).setTotal(resultPage.getTotalRow());
     }
 
     /**

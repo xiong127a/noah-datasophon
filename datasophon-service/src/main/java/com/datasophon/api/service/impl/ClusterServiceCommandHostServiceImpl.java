@@ -77,7 +77,7 @@ public class ClusterServiceCommandHostServiceImpl
             commandHostEntity.setCommandStateCode(commandHostEntity.getCommandState().getValue());
         }
 
-        return Result.success(list).put(Constants.TOTAL, resultPage.getTotalRow());
+        return Result.success(list,resultPage.getTotalRow());
     }
 
     /**

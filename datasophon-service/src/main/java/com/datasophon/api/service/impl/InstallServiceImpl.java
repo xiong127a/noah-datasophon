@@ -166,10 +166,7 @@ public class InstallServiceImpl implements InstallService {
 
         } catch (Exception e) {
             logger.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
-            Result<Object> success = Result.success();
-            success.put("data", Collections.emptyList());
-            success.put(Constants.TOTAL, 0L);
-            return success;
+            return Result.successEmptyCount();
         }
     }
 
@@ -228,20 +225,11 @@ public class InstallServiceImpl implements InstallService {
                 queueStatus.put("runningTasks", statusMap.getOrDefault("runningTasks", 0));
                 queueStatus.put("processorThreadAlive", statusMap.getOrDefault("processorThreadAlive", true));
             }
-
-            // 直接返回主机列表和队列状态
-            Result<Object> success = Result.success();
-            success.put("data", pagedHosts);
-            success.put(Constants.TOTAL, (long) hostList.size());
-            success.put("queueStatus", queueStatus);
-            return success;
+            return Result.success(pagedHosts,hostList.size()).put("queueStatus", queueStatus);
 
         } catch (Exception e) {
             logger.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
-            Result<Object> success = Result.success();
-            success.put("data", Collections.emptyList());
-            success.put(Constants.TOTAL, 0L);
-            return success;
+            return Result.successEmptyCount();
         }
     }
 
@@ -1131,7 +1119,7 @@ public class InstallServiceImpl implements InstallService {
         // list分页
         Integer offset = (page - 1) * pageSize;
         List<HostInfo> result = getListPage(list, offset, pageSize);
-        return Result.success(result).put(Constants.TOTAL, list.size());
+        return Result.success(result,list.size());
     }
 
     @Override
@@ -1578,10 +1566,7 @@ public class InstallServiceImpl implements InstallService {
             int end = Math.min(offset + pageSize, sortedHostList.size());
             List<HostInfo> pagedResult = sortedHostList.subList(offset, end);
 
-            Result<Object> success = Result.success();
-            success.put("data", pagedResult);
-            success.put(Constants.TOTAL, (long) sortedHostList.size());
-            return success;
+            return Result.success(pagedResult,sortedHostList.size());
 
         } catch (Exception e) {
             logger.error("获取Kubernetes节点列表失败", e);
