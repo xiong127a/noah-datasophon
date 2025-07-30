@@ -421,23 +421,9 @@ export default function ClusterListFinal() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* 页面头部 */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-white to-purple-50/50" />
-        <div className="relative max-w-7xl mx-auto px-8 py-12">
-          {/* 左上角logo */}
-          <div className="absolute left-8 top-8 flex items-center space-x-3">
-            <Image 
-              src="/login-img/logo.svg" 
-              alt="Datasophon Logo" 
-              width={36} 
-              height={36}
-              className="h-9 w-9"
-            />
-            <span className="text-xl font-medium text-slate-800">
-              Noah<span className="text-slate-500">大数据基础平台</span>
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-white to-purple-50/50" />
+          <div className="relative max-w-7xl mx-auto px-8 py-12">
+            <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
                 集群管理
