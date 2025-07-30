@@ -122,93 +122,96 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
         {/* 装饰性光效 */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-2xl transform translate-x-16 -translate-y-16 group-hover:scale-150 transition-transform duration-700" />
 
-        <CardContent className="relative p-8">
+                <CardContent className="relative p-8">
           {/* 头部信息 */}
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between mb-5">
             <div className="flex items-center space-x-4">
-                              <div className={`relative p-3 rounded-2xl bg-gradient-to-br ${color} shadow-lg flex items-center justify-center`}>
-                  <Image 
-                    src={iconPath}
-                    alt={cluster.depType || "集群类型"}
-                    width={36}
-                    height={36}
-                    className="relative z-10"
-                  />
-                  <div className="absolute inset-0 rounded-2xl bg-white/20 backdrop-blur-sm" />
-                </div>
+              <div className={`relative p-3 rounded-2xl bg-gradient-to-br ${color} shadow-lg flex items-center justify-center`}>
+                <Image 
+                  src={iconPath}
+                  alt={cluster.depType || "集群类型"}
+                  width={42}
+                  height={42}
+                  className="relative z-10"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-white/20 backdrop-blur-sm" />
+              </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-800 mb-1">{cluster.clusterName}</h3>
-                <Badge variant="secondary" className="bg-white/80 text-slate-600 border-0 rounded-full px-3 py-1">
+                <Badge variant="secondary" className="bg-white/80 text-slate-600 border-0 rounded-full px-3 py-0.5">
                   {cluster.depType === "PVM" ? "裸金属/虚拟机" : cluster.depType}
                 </Badge>
               </div>
             </div>
 
             {/* 状态指示器 */}
-            <div className={`w-3 h-3 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} shadow-lg`}>
-              <div className={`w-3 h-3 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} animate-ping`} />
+            <div className={`w-3.5 h-3.5 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} shadow-lg`}>
+              <div className={`w-3.5 h-3.5 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} animate-ping`} />
             </div>
           </div>
 
-          {/* 详细信息 */}
-          <div className="space-y-3 mb-8">
-            <div className="flex items-center text-slate-600">
-              <Users className="h-4 w-4 mr-3 text-slate-400" />
-              <span className="text-sm">管理员: {cluster.userManageName || '未分配'}</span>
+          {/* 详细信息 - 管理员和创建时间分行显示 */}
+          <div className="flex flex-col space-y-3 mb-6">
+            <div className="flex items-start text-slate-600 bg-slate-50/70 rounded-xl p-3">
+              <Users className="h-5 w-5 mr-3 mt-0.5 text-blue-500/70" />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 font-medium">管理员</p>
+                <p className="text-sm">{cluster.userManageName || '未分配'}</p>
+              </div>
             </div>
-            <div className="flex items-center text-slate-600">
-              <Calendar className="h-4 w-4 mr-3 text-slate-400" />
-              <span className="text-sm">创建时间: {formatDate(cluster.createTime)}</span>
+            <div className="flex items-center text-slate-600 bg-slate-50/70 rounded-xl p-3">
+              <Calendar className="h-5 w-5 mr-3 text-blue-500/70" />
+              <div>
+                <p className="text-xs text-slate-500 font-medium">创建时间</p>
+                <p className="text-sm">{formatDate(cluster.createTime)}</p>
+              </div>
             </div>
           </div>
 
-          {/* 按钮组 */}
+          {/* 按钮组 - 更时尚的样式 */}
           <div className="space-y-3">
             {/* 进入集群按钮 - 占一行 */}
             <Button
               disabled={!isConfigured}
               onClick={() => onEnter(cluster)}
-              className={`w-full h-12 rounded-2xl font-medium transition-all duration-300 ${
+              className={`w-full h-11 rounded-xl font-medium transition-all duration-300 ${
                 isConfigured
                   ? `bg-gradient-to-r ${color} hover:shadow-lg hover:shadow-blue-200 text-white border-0`
                   : "bg-slate-100 text-slate-400 cursor-not-allowed border-0"
               }`}
             >
-              <Play className="mr-2 h-4 w-4" />
+              <Play className="mr-2 h-5 w-5" />
               {isConfigured ? "进入集群" : "配置中..."}
             </Button>
 
             {/* 其他按钮 - 第二行 */}
             <div className="flex space-x-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="secondary"
                 onClick={() => onEdit(cluster)}
-                className="flex-1 h-10 rounded-xl border-slate-200 hover:bg-slate-50 transition-all duration-200 bg-transparent"
+                className="flex-1 h-10 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 transition-all duration-200 text-slate-700"
               >
-                <Settings className="mr-1 h-3 w-3" />
+                <Settings className="mr-1.5 h-4 w-4" />
                 配置
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                variant="secondary"
                 onClick={() => {
                   setAuthDialogOpen(true);
                   onAuth(cluster);
                 }}
-                className="flex-1 h-10 rounded-xl border-slate-200 hover:bg-slate-50 transition-all duration-200 bg-transparent"
+                className="flex-1 h-10 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 transition-all duration-200 text-slate-700"
               >
-                <Shield className="mr-1 h-3 w-3" />
+                <Shield className="mr-1.5 h-4 w-4" />
                 授权
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50 transition-all duration-200 p-0 bg-transparent"
+                    variant="secondary"
+                    className="h-10 w-10 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 transition-all duration-200 p-0"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="h-4 w-4 text-slate-700" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 rounded-2xl border-0 shadow-2xl bg-white/95 backdrop-blur-xl">
@@ -285,12 +288,12 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
             </div>
             <div className="flex items-center justify-center text-slate-600 group-hover:text-slate-800 transition-colors">
               <Sparkles className="h-4 w-4 mr-2 text-pink-500" />
-              <span className="text-sm font-medium">企业级安全保障</span>
+              <span className="text-sm font-medium">稳定可靠的运行环境</span>
             </div>
           </div>
 
           {/* 创建按钮 */}
-          <Button className="w-full h-12 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+          <Button className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105">
             <Plus className="mr-2 h-4 w-4" />
             立即创建
             <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -414,13 +417,13 @@ export default function ClusterListFinal() {
       {/* 页面头部 */}
       <div className="relative overflow-hidden bg-white border-b border-slate-200/50">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-white to-purple-50/50" />
-          <div className="relative max-w-7xl mx-auto px-8 py-12">
+          <div className="relative w-full px-8 py-8">
             <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-1">
                 集群管理
               </h1>
-              <p className="text-slate-600 text-lg">管理和监控您的大数据集群环境</p>
+              <p className="text-slate-600">管理和监控您的大数据集群环境</p>
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="px-4 py-2 rounded-full border-blue-200 text-blue-700 bg-blue-50">
@@ -461,8 +464,8 @@ export default function ClusterListFinal() {
 
       {/* 集群列表 */}
       {!loading && !error && (
-        <div className="max-w-7xl mx-auto px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="w-full px-8 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {/* 现有集群卡片 */}
             {clusters.map((cluster) => (
               <ClusterCard 
