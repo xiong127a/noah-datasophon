@@ -25,7 +25,8 @@ import lombok.Setter;
 @Getter
 public enum UserType {
 
-    CLUSTER_MANAGER();
+    ADMIN(1, "管理员"),
+    NORMAL(2, "普通用户");
 
     @Getter
     @EnumValue
@@ -33,9 +34,9 @@ public enum UserType {
 
     private final String desc;
 
-    UserType() {
-        this.value = 1;
-        this.desc = "集群管理员";
+    UserType(int value, String desc) {
+        this.value = value;
+        this.desc = desc;
     }
 
     @JsonValue

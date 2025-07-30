@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Search, Plus, Edit, Trash2, UserPlus, Users, Crown } from "lucide-react"
+import { Search, Plus, Edit, Trash2, UserPlus, Users, Crown, Clock, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,9 +14,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
 import type { User, UserListResponse } from "@/types/user"
+import { UserType } from "@/types/user"
 import AddUserDialog from "@/components/user/add-user-dialog"
 import DeleteUserDialog from "@/components/user/delete-user-dialog"
 import FinalNavbar from "../layout/navbar-final"
@@ -100,7 +102,19 @@ export default function UserManagement() {
   }
 
   // 判断用户权限
-  const isAdmin = (userType?: number) => userType === 1
+  const isAdmin = (userType?: number) => userType === UserType.ADMIN
+  
+  // 格式化最后登录时间
+  const formatLastLoginTime = (time?: string) => {
+    if (!time) return "从未登录"
+    return new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(time))
+  }
 
   // 获取用户列表
   useEffect(() => {
@@ -265,21 +279,23 @@ export default function UserManagement() {
               <>
                 <div className="rounded-2xl border border-slate-200/50 bg-white/50 backdrop-blur-sm overflow-hidden">
                   <div className="overflow-x-auto">
-                    <Table className="min-w-[1100px]">
+                    <Table className="min-w-[1400px]">
                       <TableHeader className="bg-gradient-to-r from-slate-50 to-slate-100/80">
                         <TableRow className="border-slate-200/50 hover:bg-slate-50/80">
-                          <TableHead className="font-semibold text-slate-700 w-[200px]">用户名</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[280px]">邮箱</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[160px]">手机号</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[140px]">用户类型</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[200px]">创建时间</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[180px]">用户信息</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[250px]">邮箱</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[140px]">手机号</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[120px]">用户类型</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[200px]">个人简介</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[180px]">最后登录</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[160px]">创建时间</TableHead>
                           <TableHead className="text-right font-semibold text-slate-700 w-[120px]">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {users.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                            <TableCell colSpan={8} className="text-center py-12 text-slate-500">
                               <div className="flex flex-col items-center space-y-3">
                                 <Users className="h-12 w-12 text-slate-300" />
                                 <p className="text-lg">暂无用户数据</p>
@@ -300,22 +316,40 @@ export default function UserManagement() {
                               key={user.id} 
                               className="border-slate-200/50 hover:bg-slate-50/50 transition-colors duration-200"
                             >
+                              {/* 用户信息（头像+用户名） */}
                               <TableCell className="font-medium">
                                 <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                                    {isAdmin(user.userType) ? (
-                                      <Crown className="h-4 w-4 text-amber-600" />
-                                    ) : (
-                                      <span className="text-sm font-semibold text-slate-600">
-                                        {user.username.charAt(0).toUpperCase()}
-                                      </span>
-                                    )}
+                                  <Avatar className="h-10 w-10 ring-2 ring-slate-200">
+                                    <AvatarImage 
+                                      src={user.avatar || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9InVybCgjZ3JhZGllbnQxKSIvPgo8Y2lyY2xlIGN4PSIzMiIgY3k9IjI2IiByPSIxMCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9IjMyIiBjeT0iNTAiIHJ4PSIxNiIgcnk9IjEyIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDEiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzM5OGVmNCIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K"} 
+                                      alt={user.username}
+                                    />
+                                    <AvatarFallback className={`text-sm font-semibold text-white ${
+                                      isAdmin(user.userType) 
+                                        ? "bg-gradient-to-br from-amber-500 to-orange-600" 
+                                        : "bg-gradient-to-br from-blue-500 to-purple-600"
+                                    }`}>
+                                      {isAdmin(user.userType) ? (
+                                        <Crown className="h-4 w-4" />
+                                      ) : (
+                                        user.username.charAt(0).toUpperCase()
+                                      )}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="text-slate-900 font-medium">{user.username}</div>
+                                    <div className="text-xs text-slate-500">ID: {user.id}</div>
                                   </div>
-                                  <span className="text-slate-900">{user.username}</span>
                                 </div>
                               </TableCell>
+                              
+                              {/* 邮箱 */}
                               <TableCell className="text-slate-700">{user.email || "-"}</TableCell>
+                              
+                              {/* 手机号 */}
                               <TableCell className="text-slate-700">{user.phone || "-"}</TableCell>
+                              
+                              {/* 用户类型 */}
                               <TableCell>
                                 <Badge 
                                   className={
@@ -324,10 +358,34 @@ export default function UserManagement() {
                                       : "bg-blue-100 text-blue-700 border-blue-200 border-0 rounded-full px-3 py-1 font-medium shadow-sm"
                                   }
                                 >
-                                  {isAdmin(user.userType) ? "系统管理员" : "普通用户"}
+                                  {isAdmin(user.userType) ? "管理员" : "普通用户"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-slate-700">{formatDate(user.createTime)}</TableCell>
+                              
+                              {/* 个人简介 */}
+                              <TableCell className="text-slate-700">
+                                <div className="max-w-[180px] truncate" title={user.bio || "暂无简介"}>
+                                  {user.bio ? (
+                                    <div className="flex items-center space-x-1">
+                                      <FileText className="h-3 w-3 text-slate-400" />
+                                      <span className="text-sm">{user.bio}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400 text-sm">暂无简介</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              
+                              {/* 最后登录时间 */}
+                              <TableCell className="text-slate-700">
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-3 w-3 text-slate-400" />
+                                  <span className="text-sm">{formatLastLoginTime(user.lastLoginTime)}</span>
+                                </div>
+                              </TableCell>
+                              
+                              {/* 创建时间 */}
+                              <TableCell className="text-slate-700 text-sm">{formatDate(user.createTime)}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end space-x-2">
                                   <Button

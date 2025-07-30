@@ -102,6 +102,39 @@ public class UserInfoController {
     }
 
     /**
+     * 检查用户名是否存在
+     */
+    @PostMapping("/checkName")
+    public Result checkUsername(@RequestBody CheckUsernameRequest request) {
+        boolean exists = userInfoService.checkUsernameExists(request.getUsername(), request.getExcludeId());
+        return Result.success(exists);
+    }
+
+    /**
+     * 检查用户名请求类
+     */
+    public static class CheckUsernameRequest {
+        private String username;
+        private Integer excludeId;
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public Integer getExcludeId() {
+            return excludeId;
+        }
+
+        public void setExcludeId(Integer excludeId) {
+            this.excludeId = excludeId;
+        }
+    }
+
+    /**
      * 保存
      */
     @RequestMapping("/save")

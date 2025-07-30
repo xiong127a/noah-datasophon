@@ -58,8 +58,18 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         if (CollUtil.isNotEmpty(list)) {
             return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
         }
+        
+        // 设置基本信息
         userInfo.setCreateTime(new Date());
         userInfo.setPassword(passwordEncoder.encode(userInfo.getPassword()));
+        
+        // 设置新字段的默认值
+        if (userInfo.getUserType() == null) {
+            userInfo.setUserType(2); // 默认为普通用户
+        }
+        
+        // bio和avatar字段如果为空，保持为null（数据库默认值）
+        
         this.save(userInfo);
         return Result.success();
     }
@@ -77,8 +87,19 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
                 return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
             }
         }
+        
+        // 只有当密码不为空时才更新密码
         String password = userInfo.getPassword();
-        userInfo.setPassword(passwordEncoder.encode(password));
+        if (StringUtils.isNotBlank(password)) {
+            userInfo.setPassword(passwordEncoder.encode(password));
+        } else {
+            // 如果密码为空，保持原密码不变
+            UserInfoEntity existingUser = this.getById(userInfo.getId());
+            if (existingUser != null) {
+                userInfo.setPassword(existingUser.getPassword());
+            }
+        }
+        
         this.updateById(userInfo);
 
         return Result.success();
@@ -105,5 +126,18 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         return QueryChain.of(UserInfoEntity.class)
                 .where(UserInfoEntity::getUsername).eq(username)
                 .one();
+    }
+
+    @Override
+    public boolean checkUsernameExists(String username, Integer excludeId) {
+        QueryChain<UserInfoEntity> query = QueryChain.of(UserInfoEntity.class)
+                .where(UserInfoEntity::getUsername).eq(username);
+        
+        // 如果提供了excludeId，则排除该用户
+        if (excludeId != null) {
+            query.and(UserInfoEntity::getId).ne(excludeId);
+        }
+        
+        return query.exists();
     }
 }

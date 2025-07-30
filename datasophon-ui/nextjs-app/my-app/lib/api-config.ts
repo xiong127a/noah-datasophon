@@ -25,10 +25,11 @@ export const API_PATHS = {
   // 用户相关
   USER_LIST: `${API_PREFIX}/api/user/list`,
   USER_ALL: `${API_PREFIX}/api/user/all`, // 获取所有用户（集群授权使用）
+  USER_INFO: `${API_PREFIX}/api/user-info`, // 获取当前登录用户信息
   USER_SAVE: `${API_PREFIX}/api/user/save`,
   USER_DELETE: `${API_PREFIX}/api/user/delete`,
   USER_UPDATE: `${API_PREFIX}/api/user/update`,
-  USER_CHECK_NAME: `${API_PREFIX}/api/user/checkUserName`, // 检查用户名是否存在
+  USER_CHECK_NAME: `${API_PREFIX}/api/user/checkName`, // 检查用户名是否存在
 
   // 框架相关
   FRAME_LIST: `${API_PREFIX}/api/frame/list`,

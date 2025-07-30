@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, Sparkles, ShieldCheck } from "lucide-react"
+import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, Sparkles, ShieldCheck, FileText, Crown, Users as UsersIcon, Upload, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -23,9 +23,13 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
 import type { User as UserType, CreateUserRequest, UpdateUserRequest } from "@/types/user"
+import { UserType as UserTypeEnum, USER_TYPE_OPTIONS, BUILT_IN_AVATARS } from "@/types/user"
 
 // 表单验证模式
 const userFormSchema = z.object({
@@ -45,6 +49,17 @@ const userFormSchema = z.object({
   phone: z
     .string()
     .regex(/^1[3-9]\d{9}$/, "请输入有效的手机号码"),
+  userType: z
+    .number()
+    .min(1, "请选择用户类型")
+    .max(2, "用户类型无效"),
+  bio: z
+    .string()
+    .max(200, "个人简介最多200个字符")
+    .optional(),
+  avatar: z
+    .string()
+    .optional(),
 })
 
 type UserFormData = z.infer<typeof userFormSchema>
@@ -66,11 +81,13 @@ function AddUserDialog({
 }: AddUserDialogProps) {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false)
   const [validationStatus, setValidationStatus] = useState({
     username: false,
     password: false,
     email: false,
     phone: false,
+    userType: false,
   })
 
   const isEditMode = mode === "edit"
@@ -93,6 +110,9 @@ function AddUserDialog({
       password: "",
       email: "",
       phone: "",
+      userType: UserTypeEnum.NORMAL,
+      bio: "",
+      avatar: BUILT_IN_AVATARS[0],
     },
   })
 
@@ -101,6 +121,8 @@ function AddUserDialog({
   const watchPassword = form.watch("password")
   const watchEmail = form.watch("email")
   const watchPhone = form.watch("phone")
+  const watchUserType = form.watch("userType")
+  const watchAvatar = form.watch("avatar")
 
   useEffect(() => {
     setValidationStatus({
@@ -108,8 +130,9 @@ function AddUserDialog({
       password: isEditMode ? true : !!watchPassword && watchPassword.length >= 1,
       email: !!watchEmail && /^\S+@\S+\.\S+$/.test(watchEmail),
       phone: !!watchPhone && /^1[3-9]\d{9}$/.test(watchPhone),
+      userType: !!watchUserType && [UserTypeEnum.ADMIN, UserTypeEnum.NORMAL].includes(watchUserType),
     })
-  }, [watchUsername, watchPassword, watchEmail, watchPhone, isEditMode])
+  }, [watchUsername, watchPassword, watchEmail, watchPhone, watchUserType, isEditMode])
 
   // 初始化表单数据（编辑模式）
   useEffect(() => {
@@ -119,6 +142,9 @@ function AddUserDialog({
         password: "",
         email: user.email,
         phone: user.phone,
+        userType: user.userType || UserTypeEnum.NORMAL,
+        bio: user.bio || "",
+        avatar: user.avatar || BUILT_IN_AVATARS[0],
       })
     } else if (open && !isEditMode) {
       form.reset({
@@ -126,6 +152,9 @@ function AddUserDialog({
         password: "",
         email: "",
         phone: "",
+        userType: UserTypeEnum.NORMAL,
+        bio: "",
+        avatar: BUILT_IN_AVATARS[0],
       })
     }
   }, [open, isEditMode, user, form])
@@ -169,6 +198,9 @@ function AddUserDialog({
           username: data.username,
           email: data.email,
           phone: data.phone,
+          userType: data.userType,
+          bio: data.bio,
+          avatar: data.avatar,
         }
         // 只有密码不为空时才包含密码字段
         if (data.password && data.password.trim()) {
@@ -182,6 +214,9 @@ function AddUserDialog({
           password: data.password!,
           email: data.email,
           phone: data.phone,
+          userType: data.userType,
+          bio: data.bio,
+          avatar: data.avatar,
         }
         response = await api.post(API_PATHS.USER_SAVE, createData)
       }
@@ -422,7 +457,165 @@ function AddUserDialog({
                     </FormItem>
                   )}
                 />
-            </div>
+
+                {/* 用户类型字段 */}
+                <FormField
+                  control={form.control}
+                  name="userType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                              validationStatus.userType
+                                ? "bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30"
+                                : "bg-gradient-to-r from-red-400 to-rose-500 shadow-lg shadow-red-500/30 animate-pulse"
+                            }`}
+                          />
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-200 flex items-center justify-center">
+                            <Crown className="h-4 w-4 text-amber-600" />
+                          </div>
+                        </div>
+                        用户类型
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative group">
+                          <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                            <SelectTrigger className="h-12 rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all duration-300 group-hover:shadow-lg">
+                              <SelectValue placeholder="请选择用户类型" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-slate-200/50 bg-white/95 backdrop-blur-xl">
+                              {USER_TYPE_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value.toString()} className="rounded-xl">
+                                  <div className="flex items-center space-x-2">
+                                    {option.value === UserTypeEnum.ADMIN ? (
+                                      <Crown className="h-4 w-4 text-amber-600" />
+                                    ) : (
+                                      <UsersIcon className="h-4 w-4 text-blue-600" />
+                                    )}
+                                    <span>{option.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 头像选择字段 */}
+                <FormField
+                  control={form.control}
+                  name="avatar"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30" />
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center">
+                            <Camera className="h-4 w-4 text-pink-600" />
+                          </div>
+                        </div>
+                        用户头像
+                      </FormLabel>
+                      <FormControl>
+                        <div className="space-y-4">
+                          {/* 当前头像预览 */}
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="h-16 w-16 ring-2 ring-slate-200">
+                              <AvatarImage src={field.value || BUILT_IN_AVATARS[0]} alt="当前头像" />
+                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                                <Camera className="h-6 w-6" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="text-sm text-slate-600">当前选择的头像</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                                className="mt-2 h-8 rounded-xl border-slate-200/50 bg-white/80 hover:bg-pink-50 hover:border-pink-200"
+                              >
+                                {showAvatarSelector ? "收起选择器" : "选择头像"}
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* 头像选择器 */}
+                          {showAvatarSelector && (
+                            <div className="rounded-2xl border border-slate-200/50 bg-white/80 backdrop-blur-sm p-4">
+                              <p className="text-sm font-medium text-slate-700 mb-3">选择内置头像</p>
+                              <div className="grid grid-cols-4 gap-3">
+                                {BUILT_IN_AVATARS.map((avatar, index) => (
+                                  <Button
+                                    key={index}
+                                    type="button"
+                                    variant="outline"
+                                    className={`h-12 w-12 p-0 rounded-xl transition-all duration-200 ${
+                                      field.value === avatar 
+                                        ? "ring-2 ring-blue-500 ring-offset-2 bg-blue-50 border-blue-200" 
+                                        : "border-slate-200/50 hover:border-blue-200 hover:bg-blue-50"
+                                    }`}
+                                    onClick={() => field.onChange(avatar)}
+                                  >
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
+                                      <AvatarFallback>{index + 1}</AvatarFallback>
+                                    </Avatar>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 个人简介字段 */}
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30" />
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-100 to-gray-200 flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-slate-600" />
+                          </div>
+                        </div>
+                        个人简介（可选）
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative group">
+                          <Textarea
+                            placeholder="请输入个人简介..."
+                            {...field}
+                            disabled={loading}
+                            maxLength={200}
+                            rows={3}
+                            className="rounded-2xl border-slate-200/50 bg-white/80 backdrop-blur-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all duration-300 group-hover:shadow-lg resize-none"
+                          />
+                          <div className="absolute bottom-2 right-3 text-xs text-slate-400">
+                            {field.value?.length || 0}/200
+                          </div>
+                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-slate-500/5 to-gray-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter className="pt-6 border-t border-slate-200/50 mt-8">
                 <div className="flex items-center justify-end space-x-4 w-full">

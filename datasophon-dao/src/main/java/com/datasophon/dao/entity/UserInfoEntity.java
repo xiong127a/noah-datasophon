@@ -63,7 +63,25 @@ public class UserInfoEntity implements Serializable {
      * 创建时间
      */
     private Date createTime;
-
+    
+    /**
+     * 用户类型: 1-管理员, 2-普通用户
+     */
     private Integer userType;
+    
+    /**
+     * 个人简介
+     */
+    private String bio;
+    
+    /**
+     * 最后登录时间
+     */
+    private Date lastLoginTime;
+    
+    /**
+     * 用户头像（Base64编码）
+     */
+    private String avatar;
 
 }

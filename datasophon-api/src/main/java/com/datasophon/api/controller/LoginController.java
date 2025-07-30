@@ -125,6 +125,22 @@ public class LoginController {
                 return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
             }
 
+            // 更新最后登录时间
+            try {
+                UserInfoEntity updateUser = new UserInfoEntity();
+                updateUser.setId(user.getId());
+                updateUser.setLastLoginTime(new java.util.Date());
+                userInfoService.updateById(updateUser);
+                
+                // 更新当前用户对象中的最后登录时间以返回给前端
+                user.setLastLoginTime(updateUser.getLastLoginTime());
+                
+                logger.debug("已更新用户 {} 的最后登录时间", username);
+            } catch (Exception e) {
+                logger.warn("更新用户最后登录时间失败: {}", e.getMessage());
+                // 不影响登录流程，只记录警告
+            }
+
             // 先撤销用户之前的令牌（可选，如果需要单点登录）
             // authTokenService.revokeAllUserTokens(user.getId(), "用户重新登录");
 

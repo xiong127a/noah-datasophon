@@ -45,4 +45,13 @@ public interface UserInfoService extends IService<UserInfoEntity> {
      * @return 用户信息
      */
     UserInfoEntity getUserByUsername(String username);
+
+    /**
+     * 检查用户名是否存在
+     *
+     * @param username 用户名
+     * @param excludeId 排除的用户ID（编辑时排除当前用户）
+     * @return true表示用户名已存在，false表示可用
+     */
+    boolean checkUsernameExists(String username, Integer excludeId);
 }

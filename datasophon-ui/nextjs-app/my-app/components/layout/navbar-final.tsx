@@ -30,6 +30,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { logout } from "../auth/login-page" // 导入退出登录函数
 import Image from "next/image"; // 添加Image导入
+import { API_PATHS, api } from "@/lib/api-config"
+import type { User } from "@/types/user"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -59,7 +61,7 @@ const FinalDropdown = ({
   id: string
 }) => {
   const [isOpen, setIsOpen] = useState(false)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 注册回调函数
@@ -197,7 +199,31 @@ const MenuLink = ({
 
 export default function FinalNavbar() {
   const [notifications] = useState(3)
+  // 添加用户信息状态
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [userLoading, setUserLoading] = useState(true)
   const router = useRouter()
+
+  // 获取当前用户信息
+  const fetchCurrentUser = async () => {
+    try {
+      setUserLoading(true)
+      const response = await api.get(API_PATHS.USER_INFO)
+      if (response.data.success && response.data.data) {
+        setCurrentUser(response.data.data)
+      }
+    } catch (error) {
+      console.error("获取用户信息失败:", error)
+      // 如果获取用户信息失败，可能是token过期，可以考虑跳转登录页
+    } finally {
+      setUserLoading(false)
+    }
+  }
+
+  // 组件挂载时获取用户信息
+  useEffect(() => {
+    fetchCurrentUser()
+  }, [])
 
   const handleLogout = () => {
     // 调用退出登录函数
@@ -208,6 +234,29 @@ export default function FinalNavbar() {
 
   const handleProfile = () => {
     router.push("/profile")
+  }
+
+  // 获取用户头像显示文本（首字母或默认值）
+  const getUserAvatarText = () => {
+    if (currentUser?.username) {
+      return currentUser.username.charAt(0).toUpperCase()
+    }
+    return "U"
+  }
+
+  // 获取用户显示名称
+  const getUserDisplayName = () => {
+    return currentUser?.username || "未知用户"
+  }
+
+  // 获取用户邮箱
+  const getUserEmail = () => {
+    return currentUser?.email || "暂无邮箱"
+  }
+
+  // 判断是否为管理员
+  const isAdmin = () => {
+    return currentUser?.userType === 1
   }
 
   return (
@@ -381,11 +430,17 @@ export default function FinalNavbar() {
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8 ring-2 ring-slate-200 ring-offset-2 group-hover:ring-blue-300 transition-colors">
                       <AvatarImage src="/placeholder.svg?height=32&width=32" alt="用户头像" />
-                      <AvatarFallback className="text-sm bg-gradient-to-br from-blue-500 to-purple-600 text-white font-medium">
-                        Admin
+                      <AvatarFallback className={`text-sm text-white font-medium ${
+                        isAdmin() 
+                          ? "bg-gradient-to-br from-amber-500 to-orange-600" 
+                          : "bg-gradient-to-br from-blue-500 to-purple-600"
+                      }`}>
+                        {userLoading ? "..." : getUserAvatarText()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium text-slate-700">Admin</span>
+                    <span className="text-sm font-medium text-slate-700">
+                      {userLoading ? "加载中..." : getUserDisplayName()}
+                    </span>
                     <ChevronDown className="h-4 w-4 text-slate-400 group-hover:rotate-180 transition-transform duration-200" />
                   </div>
                 </Button>
@@ -398,13 +453,24 @@ export default function FinalNavbar() {
                 <div className="flex items-center justify-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-gray-50">
                   <Avatar className="h-12 w-12 ring-2 ring-white ring-offset-2">
                     <AvatarImage src="/placeholder.svg?height=48&width=48" alt="用户头像" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-medium">
-                      Admin
+                    <AvatarFallback className={`text-white font-medium ${
+                      isAdmin() 
+                        ? "bg-gradient-to-br from-amber-500 to-orange-600" 
+                        : "bg-gradient-to-br from-blue-500 to-purple-600"
+                    }`}>
+                      {userLoading ? "..." : getUserAvatarText()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col space-y-1">
-                    <p className="font-semibold text-slate-900">Admin</p>
-                    <p className="text-sm text-slate-500">admin@noah.com</p>
+                    <p className="font-semibold text-slate-900 flex items-center gap-2">
+                      {userLoading ? "加载中..." : getUserDisplayName()}
+                      {!userLoading && isAdmin() && (
+                        <span className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-full">管理员</span>
+                      )}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {userLoading ? "..." : getUserEmail()}
+                    </p>
                   </div>
                 </div>
                 <DropdownMenuSeparator className="my-2" />
