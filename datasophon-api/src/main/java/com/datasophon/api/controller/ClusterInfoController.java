@@ -63,7 +63,7 @@ public class ClusterInfoController {
     public Result info(@PathVariable("id") Integer id) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(id);
 
-        return Result.success().put(Constants.DATA, clusterInfo);
+        return Result.success(clusterInfo);
     }
 
     /**

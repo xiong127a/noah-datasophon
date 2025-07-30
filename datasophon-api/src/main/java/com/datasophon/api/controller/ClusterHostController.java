@@ -103,7 +103,7 @@ public class ClusterHostController {
     public Result info(@PathVariable("id") Integer id) {
         ClusterHostDO clusterHost = clusterHostService.getById(id);
 
-        return Result.success().put(Constants.DATA, clusterHost);
+        return Result.success(clusterHost);
     }
 
     /**

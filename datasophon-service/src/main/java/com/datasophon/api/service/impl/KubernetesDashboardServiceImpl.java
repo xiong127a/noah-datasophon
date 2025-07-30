@@ -122,7 +122,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("defaultNamespace", "datasophon"); // 默认命名空间
             result.put("showNamespaceSelector", true); // 是否显示命名空间选择器
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取命名空间列表出错", e);
             return Result.error("获取命名空间列表出错: " + e.getMessage());
@@ -195,7 +195,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 总数
             result.put("totalPages", paginationResult.totalPages()); // 总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取Deployments列表出错", e);
             return Result.error("获取Deployments列表出错: " + e.getMessage());
@@ -325,7 +325,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取Services列表出错", e);
             return Result.error("获取Services列表出错: " + e.getMessage());
@@ -398,7 +398,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("total", paginationResult.total()); // 添加总记录数
                     result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 } catch (Exception e) {
                     log.error("分页获取ConfigMaps列表出错", e);
                     // 发生错误时返回空列表和错误信息
@@ -406,7 +406,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", Collections.singletonList(e.getMessage()));
                     result.put("total", 0);
                     result.put("totalPages", 0);
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 }
             }
 
@@ -463,7 +463,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", items.size());
             result.put("totalPages", 1);
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取ConfigMaps列表出错", e);
             return Result.error("获取ConfigMaps列表出错: " + e.getMessage());
@@ -531,7 +531,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("total", paginationResult.total()); // 添加总记录数
                     result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 } catch (Exception e) {
                     log.error("分页获取Secrets列表出错", e);
                     // 发生错误时返回空列表和错误信息
@@ -539,7 +539,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", Collections.singletonList(e.getMessage()));
                     result.put("total", 0);
                     result.put("totalPages", 0);
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 }
             }
 
@@ -592,7 +592,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", secrets.size());
             result.put("totalPages", 1);
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取Secrets列表出错", e);
             return Result.error("获取Secrets列表出错: " + e.getMessage());
@@ -697,7 +697,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             log.info("获取PersistentVolumes列表（分页）成功，共{}个PV，总页数：{}", paginationResult.total(),
                     paginationResult.totalPages());
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取PersistentVolumes列表（分页）出错", e);
             return Result.error("获取PersistentVolumes列表（分页）出错: " + e.getMessage());
@@ -796,7 +796,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             log.info("获取PersistentVolumeClaims列表（分页）成功，共{}个PVC，总页数：{}", paginationResult.total(),
                     paginationResult.totalPages());
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取PersistentVolumeClaims列表（分页）出错", e);
             return Result.error("获取PersistentVolumeClaims列表（分页）出错: " + e.getMessage());
@@ -877,7 +877,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             log.info("获取StorageClasses列表（分页）成功，共{}个StorageClass，总页数：{}", paginationResult.total(),
                     paginationResult.totalPages());
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取StorageClasses列表（分页）出错", e);
             return Result.error("获取StorageClasses列表（分页）出错: " + e.getMessage());
@@ -994,7 +994,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取Ingresses列表出错", e);
             return Result.error("获取Ingresses列表出错: " + e.getMessage());
@@ -1066,7 +1066,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("total", paginationResult.total()); // 添加总记录数
                     result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 } catch (Exception e) {
                     log.error("分页获取IngressClasses列表出错", e);
                     // 发生错误时返回空列表和错误信息
@@ -1074,7 +1074,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     result.put("errors", Collections.singletonList(e.getMessage()));
                     result.put("total", 0);
                     result.put("totalPages", 0);
-                    return Result.success().put(Constants.DATA, result);
+                    return Result.success(result);
                 }
             }
 
@@ -1123,7 +1123,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", items.size());
             result.put("totalPages", 1);
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取IngressClasses列表出错", e);
             return Result.error("获取IngressClasses列表出错: " + e.getMessage());
@@ -1254,7 +1254,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取DaemonSets列表出错", e);
             return Result.error("获取DaemonSets列表出错: " + e.getMessage());
@@ -1386,7 +1386,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取StatefulSets列表出错", e);
             return Result.error("获取StatefulSets列表出错: " + e.getMessage());
@@ -1510,7 +1510,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取ReplicaSets列表出错", e);
             return Result.error("获取ReplicaSets列表出错: " + e.getMessage());
@@ -1740,7 +1740,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("total", paginationResult.total()); // 添加总记录数
             result.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取ReplicationControllers列表出错", e);
             return Result.error("获取ReplicationControllers列表出错: " + e.getMessage());
@@ -1978,7 +1978,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("total", paginationResult.total()); // 添加总记录数
             responseData.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, responseData);
+            return Result.success(responseData);
         } catch (Exception e) {
             log.error("获取Jobs列表出错", e);
             return Result.error("获取Jobs列表出错: " + e.getMessage());
@@ -2148,7 +2148,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("total", paginationResult.total()); // 添加总记录数
             responseData.put("totalPages", paginationResult.totalPages()); // 添加总页数
 
-            return Result.success().put(Constants.DATA, responseData);
+            return Result.success(responseData);
         } catch (Exception e) {
             log.error("获取CronJobs列表出错", e);
             return Result.error("获取CronJobs列表出错: " + e.getMessage());
@@ -2270,7 +2270,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 }
             }
 
-            return Result.success().put(Constants.DATA, info);
+            return Result.success(info);
         } catch (Exception e) {
             log.error("获取Deployment详情出错", e);
             return Result.error("获取Deployment详情出错: " + e.getMessage());
@@ -2295,7 +2295,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     })
                     .collect(Collectors.toList());
 
-            return Result.success().put(Constants.DATA, events);
+            return Result.success(events);
         } catch (Exception e) {
             log.error("获取资源事件出错", e);
             return Result.error("获取资源事件出错: " + e.getMessage());
@@ -2371,7 +2371,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 关闭客户端连接
             client.close();
 
-            return Result.success().put(Constants.DATA, statsMap);
+            return Result.success(statsMap);
         } catch (Exception e) {
             log.error("获取Kubernetes资源统计出错", e);
             return Result.error("获取Kubernetes资源统计出错: " + e.getMessage());
@@ -2557,7 +2557,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 9. 关闭客户端
             client.close();
 
-            return Result.success().put(Constants.DATA, result);
+            return Result.success(result);
         } catch (Exception e) {
             log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());

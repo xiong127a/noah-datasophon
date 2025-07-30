@@ -29,7 +29,6 @@ public final class Constants {
 
         public static final String INSTALL_PATH = PropertyUtils.getString("install.path");
         public static final String YAML_PATH = PropertyUtils.getString("yaml.path");
-        public static final String DATA = "data";
         public static final String TOTAL = "total";
 
         public static final String TASK_LOG_LOGGER_NAME = "TaskLogLogger";
@@ -52,8 +51,6 @@ public final class Constants {
         public static final String WORKER_PACKAGE_NAME = "datasophon-worker.tar.gz";
         public static final String WORKER_SCRIPT_PATH = INSTALL_PATH + "/datasophon-worker/script/";
 
-
-        public static final String CLUSTER_ID = "cluster_id";
         public static final String JSON_EXTENSION = "json";
         public static final String CONFIG = "_config";
         public static final String SERVICE_ROLE_HOST_MAPPING = "service_role_host_mapping";

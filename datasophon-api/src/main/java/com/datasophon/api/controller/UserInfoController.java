@@ -70,7 +70,7 @@ public class UserInfoController {
         // 出于安全考虑，清除敏感字段
         userInfo.setPassword(null);
 
-        return Result.success().put(Constants.DATA, userInfo);
+        return Result.success(userInfo);
     }
 
     /**
@@ -98,7 +98,7 @@ public class UserInfoController {
     public Result info(@PathVariable("id") Integer id) {
         UserInfoEntity userInfo = userInfoService.getById(id);
 
-        return Result.success().put(Constants.DATA, userInfo);
+        return Result.success(userInfo);
     }
 
     /**
