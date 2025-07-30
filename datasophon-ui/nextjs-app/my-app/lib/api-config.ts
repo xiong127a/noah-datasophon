@@ -28,6 +28,7 @@ export const API_PATHS = {
   USER_SAVE: `${API_PREFIX}/api/user/save`,
   USER_DELETE: `${API_PREFIX}/api/user/delete`,
   USER_UPDATE: `${API_PREFIX}/api/user/update`,
+  USER_CHECK_NAME: `${API_PREFIX}/api/user/checkUserName`, // 检查用户名是否存在
 
   // 框架相关
   FRAME_LIST: `${API_PREFIX}/api/frame/list`,

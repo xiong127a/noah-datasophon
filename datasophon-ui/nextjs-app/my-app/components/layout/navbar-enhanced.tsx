@@ -276,7 +276,7 @@ export default function EnhancedNavbar() {
 
               {/* 用户管理 */}
               <Link
-                href="/user-management"
+                href="/system/users"
                 className="group inline-flex h-12 items-center justify-center rounded-2xl px-6 py-2 text-sm font-medium transition-all duration-200 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:shadow-lg hover:shadow-indigo-100/50 focus:bg-gradient-to-r focus:from-indigo-50 focus:to-purple-50 focus:outline-none"
               >
                 <Users className="mr-2 h-4 w-4 text-slate-600 group-hover:text-indigo-600 transition-colors" />
