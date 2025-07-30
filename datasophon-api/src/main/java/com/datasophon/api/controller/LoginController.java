@@ -184,9 +184,7 @@ public class LoginController {
             responseData.put("token", newAccessToken);
             responseData.put("refreshToken", refreshToken); // 保持相同的刷新令牌
 
-            return Result.success(responseData)
-                    .put(Constants.CODE, Status.SUCCESS.getCode())
-                    .put(Constants.MSG, "令牌已刷新");
+            return Result.success(responseData).setCode(Status.SUCCESS.getCode()).setMsg("令牌已刷新");
 
         } catch (Exception e) {
             logger.error("刷新令牌失败: {}", e.getMessage(), e);
@@ -217,7 +215,7 @@ public class LoginController {
 
         // 清除Spring Security上下文
         SecurityContextHolder.clearContext();
-        return Result.success().put(Constants.MSG, "登出成功");
+        return Result.success().setMsg("登出成功");
     }
 
     /**

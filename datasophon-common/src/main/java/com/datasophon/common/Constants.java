@@ -127,10 +127,6 @@ public final class Constants {
          * SPACE " "
          */
         public static final String SPACE = " ";
-        /**
-         * message
-         */
-        public static final String MSG = "msg";
 
         public static final String REGEX_VARIABLE = "\\$\\{(.*?)\\}";
         /**
