@@ -47,7 +47,7 @@ interface ClusterItem {
   clusterName: string;
   clusterCode?: string;
   clusterFrame?: string;
-  depType?: string;  // 实际值: 'Hadoop', 'Spark', 'Kubernetes', 'TensorFlow' 
+  depType?: string;  // 实际值: 'Kubernetes', 'PVM' (裸金属/虚拟机)
   clusterState: string;
   clusterStateCode: number; // 1: 未配置, 2: 运行中, 3: 异常
   createTime: string;
@@ -67,14 +67,10 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
   // 根据集群类型获取图标
   const getIcon = () => {
     switch (cluster.depType) {
-      case "Hadoop":
-        return Database;
-      case "Spark":
-        return Zap;
       case "Kubernetes":
         return Cloud;
-      case "TensorFlow":
-        return Brain;
+      case "PVM":
+        return Server;
       default:
         return Database;
     }
@@ -86,30 +82,20 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
   // 根据集群类型获取颜色
   const getClusterTypeColors = () => {
     switch (cluster.depType) {
-      case "Hadoop":
+      case "Kubernetes":
         return {
           color: "from-blue-500 to-cyan-500",
           bgColor: "from-blue-50 to-cyan-50",
         };
-      case "Spark":
-        return {
-          color: "from-orange-500 to-red-500",
-          bgColor: "from-orange-50 to-red-50",
-        };
-      case "Kubernetes":
-        return {
-          color: "from-purple-500 to-pink-500",
-          bgColor: "from-purple-50 to-pink-50",
-        };
-      case "TensorFlow":
+      case "PVM":
         return {
           color: "from-green-500 to-emerald-500",
           bgColor: "from-green-50 to-emerald-50",
         };
       default:
         return {
-          color: "from-blue-500 to-cyan-500",
-          bgColor: "from-blue-50 to-cyan-50",
+          color: "from-purple-500 to-pink-500",
+          bgColor: "from-purple-50 to-pink-50",
         };
     }
   }
@@ -147,7 +133,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
               <div>
                 <h3 className="text-xl font-bold text-slate-800 mb-1">{cluster.clusterName}</h3>
                 <Badge variant="secondary" className="bg-white/80 text-slate-600 border-0 rounded-full px-3 py-1">
-                  {cluster.depType}
+                  {cluster.depType === "PVM" ? "裸金属/虚拟机" : cluster.depType}
                 </Badge>
               </div>
             </div>
@@ -306,7 +292,7 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
 
           {/* 底部提示 */}
           <p className="text-xs text-slate-400 mt-4 group-hover:text-slate-500 transition-colors">
-            支持 Hadoop • Spark • Kubernetes • TensorFlow
+            支持 Kubernetes • 裸金属/虚拟机
           </p>
         </CardContent>
       </Card>
