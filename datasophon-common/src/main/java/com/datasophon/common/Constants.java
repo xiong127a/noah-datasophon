@@ -54,18 +54,15 @@ public final class Constants {
 
 
         public static final String CLUSTER_ID = "cluster_id";
-        public static final String MANAGED = "managed";
         public static final String JSON_EXTENSION = "json";
         public static final String CONFIG = "_config";
         public static final String SERVICE_ROLE_HOST_MAPPING = "service_role_host_mapping";
         public static final String UNDERLINE = "_";
         public static final String HOST_SERVICE_ROLE_MAPPING = "host_service_role_mapping";
-        public static final String DETAILS_USER_ID = "user_id";
         public static final String MASTER = "master";
         public static final String CONFIG_FILE = "_config_file";
         public static final String QUERY = "query";
         public static final String SUCCESS = "success";
-        public static final String SERVICE_NAME = "service_name";
         public static final String LOCALE_LANGUAGE = "language";
         public static final String CODE = "code";
         public static final String START_DISTRIBUTE_AGENT = "start_distribute_agent";
@@ -77,7 +74,6 @@ public final class Constants {
         public static final String MASTER_HOST = "masterHost";
         public static final String MASTER_WEB_PORT = "masterWebPort";
         public static final String HAS_EN = ".*[a-zA-z].*";
-        public static final String USER_INFO = "userInfo";
         public static final String CUSTOM = "custom";
         public static final String INPUT = "input";
         public static final String MULTIPLE = "multiple";
@@ -87,14 +83,10 @@ public final class Constants {
         public static final String SERVICE_INSTANCE_ID = "service_instance_id";
         public static final String IS_ENABLED = "is_enabled";
         public static final String CN = "chinese";
-        public static final String QUEUE_NAME = "queue_name";
-        public static final String VARIABLE_NAME = "variable_name";
         public static final String SERVICE_ROLE_INSTANCE_ID = "service_role_instance_id";
         public static final String X86JDK = "jdk-8u333-linux-x64.tar.gz";
         public static final String ARMJDK = "jdk-8u333-linux-aarch64.tar.gz";
-        public static final String ROLE_GROUP_TYPE = "role_group_type";
         public static final String FAILED = "failed";
-        public static final String NODE_LABEL = "node_label";
 
         public static final String KUBERNETES_CONFIG_SERVICES = "kubernetes.config.services";
         public static final String KUBERNETES_CLUSTER_IP = "ClusterIP";
@@ -114,34 +106,8 @@ public final class Constants {
                 throw new IllegalStateException("Constants Exception");
         }
 
-        public static final String USERNAME = "username";
 
         public static final String PASSWORD = "password";
-        /**
-         * session user
-         */
-        public static final String SESSION_USER = "session.user";
-
-        public static final String SESSION_ID = "sessionId";
-        /**
-         * session timeout
-         */
-        public static final int SESSION_TIME_OUT = 7200;
-
-        /**
-         * http header
-         */
-        public static final String HTTP_HEADER_UNKNOWN = "unKnown";
-
-        /**
-         * http X-Forwarded-For
-         */
-        public static final String HTTP_X_FORWARDED_FOR = "X-Forwarded-For";
-
-        /**
-         * http X-Real-IP
-         */
-        public static final String HTTP_X_REAL_IP = "X-Real-IP";
 
         /**
          * UTF-8
@@ -162,11 +128,6 @@ public final class Constants {
          */
         public static final String SPACE = " ";
         /**
-         * status
-         */
-        public static final String STATUS = "status";
-
-        /**
          * message
          */
         public static final String MSG = "msg";
@@ -176,11 +137,6 @@ public final class Constants {
          * 常量-数值100
          */
         public static final int ONE_HUNDRRD = 100;
-
-        /**
-         * 常量-数值200
-         */
-        public static final int TWO_HUNDRRD = 200;
 
         /**
          * 常量-zkserver

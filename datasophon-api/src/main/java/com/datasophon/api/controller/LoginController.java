@@ -149,9 +149,7 @@ public class LoginController {
                 responseData.put("roles", authorities);
             }
 
-            return Result.success(responseData)
-                    .put(Constants.CODE, Status.SUCCESS.getCode())
-                    .put(Constants.MSG, Status.LOGIN_SUCCESS.getMsg());
+            return Result.success(responseData).setMsg(Status.LOGIN_SUCCESS.getMsg()).setCode(Status.SUCCESS.getCode());
 
         } catch (BadCredentialsException e) {
             logger.error("登录失败: 用户名或密码错误: {}", username);
