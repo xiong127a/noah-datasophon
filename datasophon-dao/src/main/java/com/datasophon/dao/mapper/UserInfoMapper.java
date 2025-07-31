@@ -23,9 +23,8 @@ import org.apache.ibatis.annotations.Param;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.update.UpdateChain;
 import org.apache.commons.lang3.StringUtils;
-
-import java.util.List;
 
 /**
  * 用户信息表数据访问层
@@ -115,17 +114,20 @@ public interface UserInfoMapper extends BaseMapper<UserInfoEntity> {
      * 
      * @param userId    用户ID
      * @param loginTime 登录时间
-     * @return 更新行数
+     * @return 是否更新成功
      */
-    default int updateLoginTime(@Param("userId") Integer userId,
+    default boolean updateLoginTime(@Param("userId") Integer userId,
             @Param("loginTime") java.util.Date loginTime) {
-        UserInfoEntity updateEntity = new UserInfoEntity();
-        updateEntity.setId(userId);
-        updateEntity.setLastLoginTime(loginTime);
-        updateEntity.setPreviousLoginTime(updateEntity.getLastLoginTime()); // 保存上次登录时间
-
-        return QueryChain.of(UserInfoEntity.class)
+        // 先查询当前用户的最后登录时间
+        UserInfoEntity currentUser = QueryChain.of(UserInfoEntity.class)
                 .where(UserInfoEntity::getId).eq(userId)
-                .update(updateEntity);
+                .one();
+
+        // 使用UpdateChain进行更新
+        return UpdateChain.of(UserInfoEntity.class)
+                .set(UserInfoEntity::getLastLoginTime, loginTime)
+                .set(UserInfoEntity::getPreviousLoginTime, currentUser != null ? currentUser.getLastLoginTime() : null)
+                .where(UserInfoEntity::getId).eq(userId)
+                .update();
     }
 }
