@@ -18,10 +18,15 @@
     </properties>
 
     <dependencies>
-        <!-- 依赖公共模块（不直接依赖dao和domain） -->
+        <!-- 依赖公共模块和dao模块 -->
         <dependency>
             <groupId>com.datasophon</groupId>
             <artifactId>datasophon-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-dao</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

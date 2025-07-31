@@ -1,8 +1,6 @@
 package com.datasophon.kubernetes.util;
 
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.enums.HostState;
-import com.datasophon.dao.enums.MANAGED;
+import com.datasophon.kubernetes.model.K8sNodeInfo;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
@@ -66,7 +64,7 @@ public class KubeUtil {
     /**
      * 获取Kubernetes节点列表
      */
-    public static List<ClusterHostDO> getHostListByConfig(String kubeConfig) {
+    public static List<K8sNodeInfo> getHostListByConfig(String kubeConfig) {
         KubernetesClient client = getKubeClientByConfig(kubeConfig);
         NodeList list = client.nodes().list();
         List<Node> items = list.getItems();
@@ -74,12 +72,12 @@ public class KubeUtil {
     }
 
     /**
-     * 从Kubernetes Node对象中提取节点信息并转换为ClusterHostDO对象
+     * 从Kubernetes Node对象中提取节点信息并转换为K8sNodeInfo对象
      * 
      * @param node Kubernetes Node对象
-     * @return 转换后的ClusterHostDO对象
+     * @return 转换后的K8sNodeInfo对象
      */
-    public static ClusterHostDO getNodeInfo(Node node) {
+    public static K8sNodeInfo getNodeInfo(Node node) {
         if (node == null) {
             log.warn("传入的Node对象为null，无法提取节点信息");
             return null;
@@ -102,23 +100,28 @@ public class KubeUtil {
                     ? node.getStatus().getNodeInfo().getArchitecture()
                     : "unknown";
 
+            // 提取节点状态
+            String status = getNodeStatus(node);
+
             // 计算已使用的内存和磁盘
             long usedMem = totalMemory > allowMemory ? totalMemory - allowMemory : 0L;
             long usedDisk = totalDisk > allowDisk ? totalDisk - allowDisk : 0L;
 
-            // 构建并返回ClusterHostDO对象
-            return ClusterHostDO.builder()
+            // 构建并返回K8sNodeInfo对象
+            return K8sNodeInfo.builder()
                     .ip(ip)
-                    .createTime(new Date())
                     .hostname(hostname)
                     .coreNum(coreNum)
                     .totalMem(ByteConverter.convertKBToGB(totalMemory))
                     .totalDisk(ByteConverter.convertKBToGB(totalDisk))
                     .usedMem(ByteConverter.convertKBToGB(usedMem))
                     .usedDisk(ByteConverter.convertKBToGB(usedDisk))
-                    .hostState(HostState.RUNNING)
-                    .managed(MANAGED.YES)
                     .cpuArchitecture(architecture)
+                    .status(status)
+                    .createTime(new Date())
+                    .allocatableCpu(String.valueOf(coreNum))
+                    .allocatableMemory(ByteConverter.convertKBToGB(allowMemory) + "GB")
+                    .allocatableStorage(ByteConverter.convertKBToGB(allowDisk) + "GB")
                     .build();
         } catch (Exception e) {
             log.error("提取节点信息时发生异常", e);
@@ -143,6 +146,24 @@ public class KubeUtil {
                 .findFirst()
                 .map(NodeAddress::getAddress)
                 .orElse("unknown");
+    }
+
+    /**
+     * 从Node对象中获取节点状态
+     * 
+     * @param node Node对象
+     * @return 节点状态字符串（Ready, NotReady等）
+     */
+    private static String getNodeStatus(Node node) {
+        if (node == null || node.getStatus() == null || node.getStatus().getConditions() == null) {
+            return "Unknown";
+        }
+
+        return node.getStatus().getConditions().stream()
+                .filter(condition -> "Ready".equals(condition.getType()))
+                .findFirst()
+                .map(condition -> "True".equals(condition.getStatus()) ? "Ready" : "NotReady")
+                .orElse("Unknown");
     }
 
     /**
