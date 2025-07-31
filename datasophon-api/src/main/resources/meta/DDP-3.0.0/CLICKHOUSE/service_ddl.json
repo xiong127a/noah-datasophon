@@ -1,0 +1,139 @@
+{
+  "name": "CLICKHOUSE",
+  "label": "ClickHouse",
+  "description": "联机分析(OLAP)列式数据库",
+  "version": "23.9.1.1854",
+  "sortNum": 29,
+  "dependencies":[
+    "ZOOKEEPER"
+  ],
+  "packageName": "clickhouse-23.9.1.1854.tar.gz",
+  "decompressPackageName": "clickhouse-23.9.1.1854",
+  "roles": [
+    {
+      "name": "ClickHouse",
+      "label": "ClickHouse",
+      "roleType": "master",
+      "cardinality": "1+",
+      "logFile": "/var/log/clickhouse-server/clickhouse-server.log",
+      "jmxPort": "9363",
+      "startRunner": {
+        "timeout": "60",
+        "program": "/etc/init.d/clickhouse-server",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "/etc/init.d/clickhouse-server",
+        "args": [
+          "stop"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "/etc/init.d/clickhouse-server",
+        "args": [
+          "restart"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/status.sh",
+        "args": []
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "ClickHouse",
+        "fileDescription": "CLICKHOUSE配置文件，定义CLICKHOUSE服务的XML格式参数",
+        "configFormat": "custom",
+        "configTargetRoles": "ClickHouse",
+        "outputDirectory": "etc",
+        "templateName": "clickhouse-server-config.ftl",
+        "includeParams": [
+          "ckTcpPort",
+          "ckShardAddress",
+          "ckZkAddress"
+        ]
+      },
+      {
+        "filename": "users.xml",
+        "fileDescription": "CLICKHOUSE配置文件，定义CLICKHOUSE服务的XML格式参数",
+        "configFormat": "custom",
+        "configTargetRoles": "ClickHouse",
+        "outputDirectory": "etc",
+        "templateName": "clickhouse-user.ftl",
+        "includeParams": [
+          "ckUsername",
+          "ckPassword"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "ckTcpPort",
+      "label": "tcp连接端口",
+      "description": "tcp连接端口，如命令行连接，配置后不可更改",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "9001",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9001"
+    },
+    {
+      "name": "ckShardAddress",
+      "label": "clickhouse所有分片地址",
+      "description": "clickhouse所有分片地址",
+      "required": true,
+      "type": "multiple",
+      "separator": ",",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "ckZkAddress",
+      "label": "zookeeper地址",
+      "description": "zookeeper地址",
+      "required": true,
+      "type": "multiple",
+      "separator": ",",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "ckUsername",
+      "label": "用户名",
+      "description": "用户名",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "default",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "default"
+    },
+    {
+      "name": "ckPassword",
+      "label": "密码",
+      "description": "密码",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "123456",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "123456"
+    }
+  ]
+}

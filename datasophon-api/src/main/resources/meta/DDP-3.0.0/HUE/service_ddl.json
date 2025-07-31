@@ -1,0 +1,403 @@
+{
+  "name": "HUE",
+  "label": "HUE",
+  "description": "开源的Apache Hadoop UI系统",
+  "version": "4.11.0",
+  "sortNum": 38,
+  "dependencies": [],
+  "packageName": "hue-4.11.0.tar.gz",
+  "decompressPackageName": "hue-4.11.0",
+  "roles": [
+    {
+      "name": "HueMaster",
+      "label": "HueMaster",
+      "roleType": "master",
+      "cardinality": "1",
+      "runAs": {
+        "user": "hue",
+        "group": "hue"
+      },
+      "logFile": "logs/runcpserver.log",
+      "jmxPort": 8777,
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_hue.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_hue.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_hue.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "externalLink": {
+        "name": "hue UI",
+        "label": "hue UI",
+        "url": "http://${hostname}:8777"
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "pseudo-distributed.ini",
+        "configFormat": "custom",
+        "fileDescription": "HUE配置文件，用于定义HUE的配置信息",
+        "outputDirectory": "desktop/conf",
+        "templateName": "pseudo-distributed.ftl",
+        "includeParams": [
+          "dbEngine",
+          "dbHost",
+          "dbPort",
+          "dbUser",
+          "dbPass",
+          "dbName",
+          "defaultHdfsSuperuser",
+          "fsDefaultfs",
+          "webhdfsUrl",
+          "hadoopConfDir",
+          "resourcemanagerHost",
+          "resourcemanagerApiUrl",
+          "proxyApiUrl",
+          "historyServerApiUrl",
+          "sparkHistoryServerUrl",
+          "hiveServerHost",
+          "hiveServerPort",
+          "hiveConfDir",
+          "enableHueKerberos",
+          "hueKeyTab",
+          "huePrincipal",
+          "hueKbCachePath",
+          "hueKbKinitPath",
+          "hueHdfsSecurityEnable",
+          "hueYarnSecurityEnable",
+          "hueHiveSecurityEnable"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "dbEngine",
+      "label": "数据库类型",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "mysql",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "mysql"
+    },
+    {
+      "name": "dbHost",
+      "label": "数据库ip",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${apiHost}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${apiHost}"
+    },
+    {
+      "name": "dbPort",
+      "label": "数据库端口",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "3306",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "3306"
+    },
+    {
+      "name": "dbUser",
+      "label": "数据库用户",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "hue",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hue"
+    },
+    {
+      "name": "dbPass",
+      "label": "数据库密码",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "123456",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "123456"
+    },
+    {
+      "name": "dbName",
+      "label": "数据库名称",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "hue",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hue"
+    },
+    {
+      "name": "defaultHdfsSuperuser",
+      "label": "hdfs超级用户名",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "hdfs",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hdfs"
+    },
+    {
+      "name": "fsDefaultfs",
+      "label": "namenode rpc通信地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${fs.defaultFS}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${fs.defaultFS}"
+    },
+    {
+      "name": "webhdfsUrl",
+      "label": "webhdfsUrl",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "http://${httpFs}:14000/webhdfs/v1/",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${httpFs}:14000/webhdfs/v1/"
+    },
+    {
+      "name": "hadoopConfDir",
+      "label": "hadoop配置文件路径",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${hadoopHome}/etc/hadoop",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${hadoopHome}/etc/hadoop"
+    },
+    {
+      "name": "resourcemanagerHost",
+      "label": "resourcemanager地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${rm1}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${rm1}"
+    },
+    {
+      "name": "resourcemanagerApiUrl",
+      "label": "resourcemanager web地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "http://${yarn.resourcemanager.webapp.address.rm1}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${yarn.resourcemanager.webapp.address.rm1}"
+    },
+    {
+      "name": "proxyApiUrl",
+      "label": "proxyApiUrl",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "http://${yarn.resourcemanager.webapp.address.rm1}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${yarn.resourcemanager.webapp.address.rm1}"
+    },
+    {
+      "name": "historyServerApiUrl",
+      "label": "historyServer api地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "http://${historyserverHost}:19888",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${historyserverHost}:19888"
+    },
+    {
+      "name": "sparkHistoryServerUrl",
+      "label": "sparkHistoryServerUrl",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "http://${historyserverHost}:19888",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${historyserverHost}:19888"
+    },
+    {
+      "name": "hiveServerHost",
+      "label": "hiveServer2地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${masterHiveServer2}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${masterHiveServer2}"
+    },
+    {
+      "name": "hiveServerPort",
+      "label": "hiveServer2端口",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${hive.server2.thrift.port}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${hive.server2.thrift.port}"
+    },
+    {
+      "name": "hiveConfDir",
+      "label": "hive配置文件路径",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${hiveHome}/conf",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${hiveHome}/conf"
+    },
+    {
+      "name": "enableHueKerberos",
+      "label": "是否开启kerberos",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "hueKeyTab",
+      "label": "hueKeyTab",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/opt/datasophon/hue/hue.service.keytab",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/hue/hue.service.keytab"
+    },
+    {
+      "name": "huePrincipal",
+      "label": "huePrincipal",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "hue/${hostname}@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hue/${hostname}@HADOOP.COM"
+    },
+    {
+      "name": "hueKbCachePath",
+      "label": "hueKbCachePath",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/tmp/hue_krb5_ccache",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/tmp/hue_krb5_ccache"
+    },
+    {
+      "name": "hueKbKinitPath",
+      "label": "hueKbKinitPath",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/bin/kinit",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/bin/kinit"
+    },
+    {
+      "name": "hueHdfsSecurityEnable",
+      "label": "hueHdfsSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableHDFSKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableHDFSKerberos}"
+    },
+    {
+      "name": "hueYarnSecurityEnable",
+      "label": "hueYarnSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableYARNKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableYARNKerberos}"
+    },
+    {
+      "name": "hueHiveSecurityEnable",
+      "label": "hueHiveSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableHIVEKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableHIVEKerberos}"
+    }
+  ]
+}

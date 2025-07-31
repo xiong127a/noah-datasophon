@@ -1,0 +1,353 @@
+{
+  "name": "PROMETHEUS",
+  "label": "Prometheus",
+  "description": "高性能监控指标采集与告警系统",
+  "version": "2.17.2",
+  "sortNum": 16,
+  "dependencies": [],
+  "packageName": "prometheus-2.17.2.tar.gz",
+  "decompressPackageName": "prometheus-2.17.2",
+  "roles": [
+    {
+      "name": "Prometheus",
+      "label": "Prometheus",
+      "roleType": "master",
+      "runAs": {
+        "user": "root",
+        "group": "root"
+      },
+      "cardinality": 1,
+      "logFile": "logs/prometheus-${hostname}.out",
+      "jmxPort": 9090,
+      "startRunner": {
+        "timeout": "60",
+        "program": "control.sh",
+        "args": [
+          "start",
+          "prometheus"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control.sh",
+        "args": [
+          "stop",
+          "prometheus"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control.sh",
+        "args": [
+          "status",
+          "prometheus"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "control.sh",
+        "args": [
+          "restart",
+          "prometheus"
+        ]
+      },
+      "externalLink": {
+        "name": "Prometheus Ui",
+        "label": "Prometheus Ui",
+        "url": "http://${hostname}:9090"
+      }
+    },
+    {
+      "name": "NodeExporter",
+      "label": "NodeExporter",
+      "roleType": "worker",
+      "runAs": {
+        "user": "root",
+        "group": "root"
+      },
+      "cardinality": -1,
+      "logFile": "node_exporter/logs/node_exporter-${hostname}.out",
+      "jmxPort": 9100,
+      "startRunner": {
+        "timeout": "60",
+        "program": "node_exporter/control.sh",
+        "args": [
+          "start",
+          "node_exporter"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "node_exporter/control.sh",
+        "args": [
+          "stop",
+          "node_exporter"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "node_exporter/control.sh",
+        "args": [
+          "status",
+          "node_exporter"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "node_exporter/control.sh",
+        "args": [
+          "restart",
+          "node_exporter"
+        ]
+      },
+      "externalLink": {
+        "name": "NodeExporter Metrics",
+        "label": "NodeExporter Metrics",
+        "url": "http://${hostname}:9100/metrics"
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "prometheus.yml",
+        "configFormat": "custom",
+        "fileDescription": "Prometheus配置文件，用于定义Prometheus的配置信息",
+        "outputDirectory": "",
+        "templateName": "prometheus.ftl",
+        "includeParams": [
+          "scrape_interval",
+          "evaluation_interval",
+          "custom.prometheus.properties"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "Prometheus Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "Prometheus,NodeExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Prometheus Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "Prometheus,NodeExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "Prometheus,NodeExporter",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "scrape_interval",
+      "label": "Prometheus指标采集时间间隔",
+      "description": "Prometheus指标采集时间间隔，单位秒",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "15",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "15",
+      "configCategory": "file",
+      "configGroup": "prometheus",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "evaluation_interval",
+      "label": "Prometheus指标计算时间间隔",
+      "description": "Prometheus指标计算时间间隔，单位秒",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "15",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "15",
+      "configCategory": "file",
+      "configGroup": "prometheus",
+      "configLevel": "advanced",
+      "bindRole": "Prometheus",
+      "serviceType": "NodePort",
+      "portNumber": "9090",
+      "nodePort": "30909"
+    },
+    {
+      "name": "custom.prometheus.properties",
+      "label": "自定义Prometheus配置",
+      "description": "用于添加自定义的Prometheus参数，这些参数将被添加到prometheus.yml配置文件中",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "prometheus",
+      "configLevel": "custom"
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为Prometheus的数据存储位置的父目录",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/opt/datasophon/prometheus/configs",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/prometheus/configs",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [
+      ],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    }
+  ]
+}

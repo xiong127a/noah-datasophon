@@ -1,0 +1,87 @@
+{
+  "name": "HUDI",
+  "label": "Hudi",
+  "description": "数据湖",
+  "version": "0.13.0",
+  "sortNum": 23,
+  "dependencies":[],
+  "packageName": "hudi-0.13.0.tar.gz",
+  "decompressPackageName": "hudi-0.13.0",
+  "roles": [
+    {
+      "name": "HudiServer",
+      "label": "HudiServer",
+      "roleType": "master",
+      "runAs": {},
+      "cardinality": "1",
+      "logFile": "hudi.log",
+      "jmxPort": "",
+      "sortNum": 1,
+      "startRunner": {
+        "timeout": "60",
+        "program": "start.sh",
+        "args": []
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "stop.sh",
+        "args": []
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "status.sh",
+        "args": []
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "install.properties",
+        "configFormat": "properties",
+        "fileDescription": "Hudi安装配置文件，用于定义Hudi的安装配置信息",
+        "outputDirectory": "/etc",
+        "includeParams": [
+          "enableSpark",
+          "enableFlink",
+          "enableHive"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "enableSpark",
+      "label": "Spark集成Hudi",
+      "description": "Spark集成Hudi",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "enableFlink",
+      "label": "Flink集成Hudi",
+      "description": "Flink集成Hudi",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "enableHive",
+      "label": "Hive集成Hudi",
+      "description": "Hive集成Hudi",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    }
+  ]
+}

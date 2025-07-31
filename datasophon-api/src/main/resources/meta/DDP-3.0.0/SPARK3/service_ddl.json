@@ -1,0 +1,106 @@
+{
+  "name": "SPARK3",
+  "label": "Spark3",
+  "description": "分布式计算系统",
+  "version": "3.2.2",
+  "sortNum": 7,
+  "dependencies":[],
+  "packageName": "spark-3.2.2.tar.gz",
+  "decompressPackageName": "spark-3.2.2",
+  "roles": [
+    {
+      "name": "SparkClient3",
+      "label": "SparkClient3",
+      "roleType": "client",
+      "cardinality": "1+",
+      "logFile": "logs/hadoop-${user}-datanode-${hostname}.log"
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "spark-env.sh",
+        "fileDescription": "Spark环境变量配置文件，设置Java路径、堆大小等运行环境参数",
+        "configFormat": "custom",
+        "templateName": "spark-env.ftl",
+        "outputDirectory": "conf",
+        "includeParams": [
+          "SPARK_DIST_CLASSPATH",
+          "HADOOP_CONF_DIR",
+          "YARN_CONF_DIR",
+          "custom.spark.env.sh"
+        ]
+      },
+      {
+        "filename": "spark-defaults.conf",
+        "fileDescription": "Spark默认配置文件，设置Spark应用程序的资源分配和执行参数",
+        "configFormat": "properties2",
+        "outputDirectory": "conf",
+        "includeParams": [
+          "custom.spark.defaults.conf"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "SPARK_DIST_CLASSPATH",
+      "label": "spark加载Classpath路径",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "$(${HADOOP_HOME}/bin/hadoop classpath)"
+    },
+    {
+      "name": "HADOOP_CONF_DIR",
+      "label": "Hadoop配置文件目录",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${HADOOP_HOME}/etc/hadoop"
+    },{
+      "name": "YARN_CONF_DIR",
+      "label": "Yarn配置文件目录",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${HADOOP_HOME}/etc/hadoop"
+    },
+    {
+      "name": "custom.spark.env.sh",
+      "label": "自定义配置spark-env.sh",
+      "description": "自定义配置spark-env.sh",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.spark.defaults.conf",
+      "label": "自定义配置spark-defaults.conf",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

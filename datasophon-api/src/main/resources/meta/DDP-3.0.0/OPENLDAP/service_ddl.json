@@ -1,0 +1,46 @@
+{
+  "name": "OPENLDAP",
+  "label": "Openldap",
+  "description": "开放式轻量级目录访问协议",
+  "version": "2.4.44",
+  "sortNum": 33,
+  "dependencies": [],
+  "packageName": "openldap-2.4.44.tar.gz",
+  "decompressPackageName": "openldap-2.4.44",
+  "roles": [
+    {
+      "name": "OpenldapServer",
+      "label": "OpenldapServer",
+      "roleType": "master",
+      "cardinality": "1",
+      "sortNum": 1,
+      "logFile": "/var/log/slapd/slapd.log",
+      "jmxPort": "",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "status"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": []
+  },
+  "parameters": []
+}

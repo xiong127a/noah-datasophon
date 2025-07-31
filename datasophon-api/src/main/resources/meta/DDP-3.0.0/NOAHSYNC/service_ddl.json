@@ -1,0 +1,159 @@
+{
+  "name": "NOAHSYNC",
+  "label": "NoahSync",
+  "description": "数据同步工具",
+  "version": "2.3.5",
+  "sortNum": 43,
+  "dependencies": [],
+  "packageName": "noah-sync-2.3.5.tar.gz",
+  "decompressPackageName": "noah-sync-2.3.5",
+  "roles": [
+    {
+      "name": "NoahSyncServer",
+      "label": "NoahSyncServer",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "logFile": "logs/seatunnel-engine-server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/seatunnel-cluster.sh",
+        "args": [
+          "-d"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "bin/stop-seatunnel-cluster.sh",
+        "args": []
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/seatunnel-status.sh",
+        "args": []
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "seatunnel.yaml",
+        "fileDescription": "NoahSync主配置文件，定义集群核心参数和备份设置",
+        "configFormat": "custom",
+        "templateName": "seatunnel-yml.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "backupCount"
+        ]
+      },
+      {
+        "filename": "hazelcast.yaml",
+        "fileDescription": "NoahSync集群配置文件，设置集群节点通信和分布式缓存",
+        "configFormat": "custom",
+        "templateName": "hazelcast.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "hosts",
+          "port"
+        ]
+      },
+      {
+        "filename": "hazelcast-client.yaml",
+        "fileDescription": "NoahSync客户端配置文件，定义连接至集群的客户端行为参数",
+        "configFormat": "custom",
+        "templateName": "hazelcast-client.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "hosts",
+          "port"
+        ]
+      },
+      {
+        "filename": "seatunnel.sh",
+        "fileDescription": "NoahSync启动脚本，配置服务依赖、连接参数和环境变量",
+        "configFormat": "custom",
+        "templateName": "seatunnel.ftl",
+        "outputDirectory": "bin",
+        "includeParams": [
+          "schedulerUrl",
+          "kafkaBootstrapserver",
+          "diUrl"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "backupCount",
+      "label": "同步备份的数量",
+      "description": "同步备份的数量",
+      "required": true,
+      "type": "input",
+      "configType": "map",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "hosts",
+      "label": "集群节点ip",
+      "description": "集群节点ip",
+      "configType": "",
+      "required": false,
+      "type": "multiple",
+      "separator": ",",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": []
+    },
+    {
+      "name": "schedulerUrl",
+      "label": "schedulerUrl",
+      "description": "noahJobUrl",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "127.0.0.1/scheduler",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "127.0.0.1/scheduler"
+    },
+    {
+      "name": "kafkaBootstrapserver",
+      "label": "kafkaBootstrapserver",
+      "description": "kafkaServer",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "127.0.0.1:9092",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "127.0.0.1:9092"
+    },
+    {
+      "name": "diUrl",
+      "label": "diUrl",
+      "description": "noah数据集成Url",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "127.0.0.1/noah-di-api",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "127.0.0.1/noah-di-api"
+    },
+    {
+      "name": "port",
+      "label": "集群节点port",
+      "description": "集群节点port",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "1805",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1805"
+    }
+  ]
+}

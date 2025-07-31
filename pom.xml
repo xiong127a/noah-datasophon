@@ -42,7 +42,7 @@
     </modules>
 
     <properties>
-        <revision>1.2.1</revision>
+        <revision>3.0.0</revision>
         <pekko.version>1.1.5</pekko.version>
         <commons.httpclient>5.5</commons.httpclient>
         <commons.lang>3.18.0</commons.lang>

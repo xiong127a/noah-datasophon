@@ -1,0 +1,111 @@
+{
+  "name": "ZEPPELIN",
+  "label": "ZEPPELIN",
+  "description": "交互式数据分析notebook",
+  "version": "0.10.1",
+  "sortNum": 36,
+  "dependencies": [],
+  "packageName": "zeppelin-0.10.1.tar.gz",
+  "decompressPackageName": "zeppelin-0.10.1",
+  "roles": [
+    {
+      "name": "ZeppelinServer",
+      "label": "ZeppelinServer",
+      "roleType": "master",
+      "cardinality": "1",
+      "logFile": "logs/zeppelin-root-${hostname}.log",
+      "jmxPort": 8889,
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_zeppelin.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_zeppelin.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_zeppelin.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "externalLink": {
+        "name": "ZeppelinServer UI",
+        "label": "ZeppelinServer UI",
+        "url": "http://${hostname}:8889"
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "zeppelin-env.sh",
+        "fileDescription": "Zeppelin环境变量脚本，设置运行环境和资源参数",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
+        "templateName": "zeppelin-env.ftl",
+        "includeParams": [
+          "custom.zeppelin.env"
+        ]
+      },
+      {
+        "filename": "zeppelin-site.xml",
+        "fileDescription": "Zeppelin核心配置文件，定义服务端口、解释器设置和安全参数",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
+        "templateName": "zeppelin-site.ftl",
+        "includeParams": [
+          "jobmanagerEnable",
+          "custom.zeppelin.site.xml"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "jobmanagerEnable",
+      "label": "jobmanagerEnable",
+      "description": "The Job tab in zeppelin page seems not so useful instead it cost lots of memory and affect the performance.Disable it can save lots of memory",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "custom.zeppelin.env",
+      "label": "自定义配置 zeppelin-env.sh",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"HADOOP_CONF_DIR":"${HADOOP_CONF_DIR}"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"HADOOP_CONF_DIR":"${HADOOP_CONF_DIR}"}]
+    },
+    {
+      "name": "custom.zeppelin.site.xml",
+      "label": "自定义配置 zeppelin-site.xml",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

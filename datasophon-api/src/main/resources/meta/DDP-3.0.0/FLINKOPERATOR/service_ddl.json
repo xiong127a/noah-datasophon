@@ -1,0 +1,27 @@
+{
+  "name": "FlinkOperator",
+  "label": "FlinkOperator",
+  "description": "Flink Kubernetes Operator",
+  "version": "1.12.0",
+  "sortNum": 47,
+  "dependencies":[],
+  "packageName": "flink-operator-1.12.0.tar.gz",
+  "decompressPackageName": "flink-operator",
+  "runAs":"root",
+  "roles": [
+    {
+      "name": "FlinkOperator",
+      "label": "FlinkOperator",
+      "roleType": "master",
+      "sortNum": 1,
+      "cardinality": "1",
+      "logFile": "logs/flink.log"
+    }
+  ],
+  "configWriter": {
+    "generators": [
+    ]
+  },
+  "parameters": [
+  ]
+}

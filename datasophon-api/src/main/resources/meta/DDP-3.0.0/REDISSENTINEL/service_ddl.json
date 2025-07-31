@@ -1,0 +1,238 @@
+{
+  "name": "RedisSentinel",
+  "label": "RedisSentinel",
+  "description": "内存存储的数据结构服务器哨兵模式",
+  "version": "7.4.0",
+  "sortNum": 45,
+  "dependencies": [],
+  "packageName": "redis-sentinel-7.4.0.tar.gz",
+  "decompressPackageName": "redis-sentinel-7.4.0",
+  "roles": [
+    {
+      "name": "RedisSentinelMaster",
+      "label": "RedisSentinelMaster",
+      "roleType": "master",
+      "cardinality": "1",
+      "sortNum": 1,
+      "logFile": "logs/redis-master.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "start",
+          "master"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_redis.sh",
+        "args": [
+          "stop",
+          "master"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "status",
+          "master"
+        ]
+      }
+    },
+    {
+      "name": "RedisSentinelSlave",
+      "label": "RedisSentinelSlave",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "sortNum": 1,
+      "logFile": "logs/redis-slave.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "start",
+          "slave"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_redis.sh",
+        "args": [
+          "stop",
+          "slave"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "status",
+          "slave"
+        ]
+      }
+    },
+    {
+      "name": "RedisSentinel",
+      "label": "RedisSentinel",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "sortNum": 2,
+      "logFile": "logs/redis-sentinel.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "start",
+          "sentinel"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_redis.sh",
+        "args": [
+          "stop",
+          "sentinel"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_redis.sh",
+        "args": [
+          "status",
+          "sentinel"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "control_redis.sh",
+        "fileDescription": "Redis Sentinel控制脚本，用于启动、停止和检查各节点状态",
+        "configFormat": "custom",
+        "outputDirectory": "",
+        "templateName": "redis-sentinel-control.ftl",
+        "includeParams": [
+          "redisSentinelMasterPort",
+          "redisSentinelSlavePort",
+          "sentinelServerPort"
+        ]
+      },
+      {
+        "filename": "redis-master.conf",
+        "fileDescription": "Redis主节点配置文件，定义Sentinel架构中的主实例参数",
+        "configFormat": "custom",
+        "configTargetRoles": "RedisSentinelMaster",
+        "outputDirectory": "conf",
+        "templateName": "redis-sentinel-master.ftl",
+        "includeParams": [
+          "redisSentinelMasterHost",
+          "redisSentinelMasterPort",
+          "custom.master.conf"
+        ]
+      },
+      {
+        "filename": "redis-slave.conf",
+        "fileDescription": "Redis从节点配置文件，定义Sentinel架构中的复制实例参数",
+        "configFormat": "custom",
+        "configTargetRoles": "RedisSentinelSlave",
+        "outputDirectory": "conf",
+        "templateName": "redis-sentinel-slave.ftl",
+        "includeParams": [
+          "redisSentinelMasterHost",
+          "redisSentinelMasterPort",
+          "redisSentinelSlavePort",
+          "custom.slave.conf"
+        ]
+      },
+      {
+        "filename": "sentinel.conf",
+        "fileDescription": "Redis Sentinel配置文件，定义高可用监控和故障转移参数",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "templateName": "redis-sentinel.ftl",
+        "includeParams": [
+          "redisSentinelMasterHost",
+          "redisSentinelMasterPort",
+          "sentinelServerPort",
+          "custom.slave.conf"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "redisSentinelMasterHost",
+      "label": "master节点host",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "redisSentinelMasterPort",
+      "label": "master节点端口号",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "26379",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "26379"
+    },
+    {
+      "name": "redisSentinelSlavePort",
+      "label": "slave节点端口号",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "26379",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "26379"
+    },
+    {
+      "name": "sentinelServerPort",
+      "label": "Sentinel节点端口号",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "16379",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16379"
+    },
+    {
+      "name": "custom.master.conf",
+      "label": "自定义master配置",
+      "description": "自定义master配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.slave.conf",
+      "label": "自定义worker配置",
+      "description": "自定义worker配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

@@ -1,0 +1,403 @@
+{
+  "name": "TRINO",
+  "label": "Trino",
+  "description": "分布式SQL交互式查询引擎",
+  "version": "367",
+  "sortNum": 9,
+  "dependencies": [],
+  "packageName": "trino-367.tar.gz",
+  "decompressPackageName": "trino-367",
+  "roles": [
+    {
+      "name": "TrinoCoordinator",
+      "label": "TrinoCoordinator",
+      "roleType": "master",
+      "cardinality": "1",
+      "jmxPort": 8087,
+      "logFile": "data/var/log/server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/launcher",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "restart"
+        ]
+      },
+      "externalLink": {
+        "name": "Trino UI",
+        "label": "Trino UI",
+        "url": "http://${hostname}:8086"
+      }
+    },
+    {
+      "name": "TrinoWorker",
+      "label": "TrinoWorker",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "jmxPort": 8089,
+      "logFile": "data/var/log/server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/launcher",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "restart"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "config.properties",
+        "fileDescription": "Trino主要配置文件，设置协调器模式、内存限制和服务发现参数",
+        "configFormat": "properties",
+        "outputDirectory": "etc",
+        "includeParams": [
+          "coordinator",
+          "http-server.http.port",
+          "query.max-memory-per-node",
+          "query.max-memory",
+          "discovery.uri",
+          "custom.config.properties"
+        ]
+      },
+      {
+        "filename": "jvm.config",
+        "fileDescription": "Trino JVM配置文件，设置Java虚拟机的堆内存和GC参数",
+        "configFormat": "custom",
+        "outputDirectory": "etc",
+        "templateName": "jvm.config.ftl",
+        "includeParams": [
+          "trinoHeapSize"
+        ]
+      },
+      {
+        "filename": "node.properties",
+        "fileDescription": "Trino节点配置文件，定义节点标识和数据存储路径",
+        "configFormat": "properties",
+        "outputDirectory": "etc",
+        "includeParams": [
+          "node.data-dir",
+          "node.environment"
+        ]
+      },
+      {
+        "filename": "carbondata.properties",
+        "fileDescription": "Trino Carbondata连接器配置，用于访问Carbondata数据源",
+        "configFormat": "properties",
+        "outputDirectory": "etc/catalog",
+        "includeParams": [
+          "custom.carbondata.properties"
+        ]
+      },
+      {
+        "filename": "hive.properties",
+        "fileDescription": "Trino Hive连接器配置，用于访问Hive元数据和HDFS数据",
+        "configFormat": "properties",
+        "outputDirectory": "etc/catalog",
+        "includeParams": [
+          "custom.hive.properties"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "Trino Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "TrinoCoordinator,TrinoWorker",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "TrinoCoordinator,TrinoWorker",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "coordinator",
+      "label": "coordinator",
+      "description": "coordinator",
+      "required": true,
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "trinoHeapSize",
+      "label": "Trino最大堆内存",
+      "description": "Trino最大堆内存",
+      "configType": "map",
+      "required": true,
+      "minValue": 0,
+      "maxValue": 64,
+      "type": "slider",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "32"
+    },
+    {
+      "name": "http-server.http.port",
+      "label": "Trino Http端口",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "8086",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8086",
+      "configCategory": "file",
+      "configLevel": "advanced",
+      "bindRole": "TrinoCoordinator",
+      "serviceType": "NodePort",
+      "portNumber": "8086",
+      "nodePort": "30886"
+    },
+    {
+      "name": "discovery.uri",
+      "label": "服务发现地址",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "http://${coordinatorHost}:8086",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${coordinatorHost}:8086"
+    },
+    {
+      "name": "query.max-memory-per-node",
+      "label": "每个查询在单个节点可使用最大内存",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "minValue": 0,
+      "maxValue": "30",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "5GB"
+    },
+    {
+      "name": "query.max-memory",
+      "label": "总共可使用最大内存",
+      "description": "若query.max-memory-per-node = 30GB则query.max-memory = <30GB *节点数>",
+      "required": true,
+      "type": "input",
+      "minValue": 0,
+      "maxValue": "30",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "30GB"
+    },
+    {
+      "name": "node.data-dir",
+      "label": "日志存储地址",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${INSTALL_PATH}/trino-367/data"
+    },
+    {
+      "name": "node.environment",
+      "label": "集群环境名称",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "production"
+    },
+    {
+      "name": "custom.config.properties",
+      "label": "自定义配置config.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.carbondata.properties",
+      "label": "自定义配置carbondata.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"connector.name":"carbondata"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"connector.name":"carbondata"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+    },
+    {
+      "name": "custom.hive.properties",
+      "label": "自定义配置hive.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"connector.name":"hive"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"connector.name":"hive"},{"hive.metastore.uri":"${hive.metastore.uris}"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：8086:30806表示将容器的8086端口映射到集群节点的30806端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    }
+  ]
+}
