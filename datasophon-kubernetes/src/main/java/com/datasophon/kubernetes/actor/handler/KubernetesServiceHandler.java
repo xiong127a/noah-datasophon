@@ -16,8 +16,8 @@ import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.TypeReference;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
@@ -36,7 +36,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Type;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -271,7 +271,7 @@ public class KubernetesServiceHandler {
             boolean isNodePort) {
 
         // 定义有效端口范围
-        final Range<Integer> VALID_PORT_RANGE =  Range.of(1, 65535);
+        final Range<Integer> VALID_PORT_RANGE = Range.of(1, 65535);
         final Range<Integer> VALID_NODEPORT_RANGE = Range.of(30000, 32767);
 
         // 用于ClusterIP的重复端口检查
@@ -420,10 +420,9 @@ public class KubernetesServiceHandler {
         }
 
         try {
-            Gson gson = new Gson();
-            Type listType = new TypeToken<List<Map<String, String>>>() {
-            }.getType();
-            List<Map<String, String>> result = gson.fromJson(config.getValue().toString(), listType);
+            List<Map<String, String>> result = JSON.parseObject(config.getValue().toString(),
+                    new TypeReference<>() {
+                    });
 
             if (result == null || result.isEmpty()) {
                 logger.warn("配置项{}中没有有效的端口映射", config.getName());
