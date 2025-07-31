@@ -24,7 +24,7 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;

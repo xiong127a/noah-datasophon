@@ -19,7 +19,7 @@ package com.datasophon.api.controller.v1.service;
 
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import org.springframework.beans.factory.annotation.Autowired;

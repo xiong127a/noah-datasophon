@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterServiceDashboardService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -10,7 +10,7 @@ import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.model.ScheduleConfigResult;
 import com.datasophon.common.model.ScheduledTasksStatus;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

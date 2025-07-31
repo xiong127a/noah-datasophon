@@ -20,7 +20,7 @@ package com.datasophon.api.service;
 import com.mybatisflex.core.service.IService;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.RollingRestartInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 
 import java.util.List;

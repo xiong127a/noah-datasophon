@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceWebuisMapper;
 import org.springframework.stereotype.Service;

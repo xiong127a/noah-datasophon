@@ -19,7 +19,7 @@ package com.datasophon.api.service.checker.queue;
 
 import com.datasophon.common.model.QueueSystemStatus;
 import com.datasophon.common.model.QueueTaskInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 
 import java.util.List;
 

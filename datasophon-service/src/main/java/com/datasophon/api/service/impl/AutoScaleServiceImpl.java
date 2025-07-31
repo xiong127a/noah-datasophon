@@ -7,7 +7,7 @@ import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;

@@ -1,7 +1,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterUserTenantService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;

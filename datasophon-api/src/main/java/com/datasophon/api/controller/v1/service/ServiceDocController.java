@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.service;
 
 import com.datasophon.api.service.DocService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;

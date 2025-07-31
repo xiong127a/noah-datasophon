@@ -23,7 +23,7 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.string.validator.GeneralValidator;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.mapper.ClusterRackMapper;

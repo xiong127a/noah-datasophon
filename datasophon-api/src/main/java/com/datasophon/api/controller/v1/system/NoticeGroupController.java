@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.system;
 
 import com.datasophon.api.service.impl.NoticeGroupServiceImpl;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.model.MPage;
 import org.springframework.beans.factory.annotation.Autowired;

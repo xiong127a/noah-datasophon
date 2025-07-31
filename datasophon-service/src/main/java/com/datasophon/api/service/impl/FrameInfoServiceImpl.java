@@ -19,7 +19,7 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;

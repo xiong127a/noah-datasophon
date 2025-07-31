@@ -10,7 +10,7 @@ import com.datasophon.api.service.ClusterYarnSchedulerService;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.model.tenant.resource.TenantYarnResource;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
 import org.slf4j.Logger;

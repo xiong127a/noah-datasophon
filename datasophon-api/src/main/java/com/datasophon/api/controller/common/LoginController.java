@@ -21,7 +21,7 @@ import com.datasophon.common.enums.Status;
 import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import jakarta.servlet.http.HttpServletRequest;

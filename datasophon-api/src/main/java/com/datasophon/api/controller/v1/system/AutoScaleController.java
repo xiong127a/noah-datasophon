@@ -1,7 +1,7 @@
 package com.datasophon.api.controller.v1.system;
 
 import com.datasophon.api.service.AutoScaleService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

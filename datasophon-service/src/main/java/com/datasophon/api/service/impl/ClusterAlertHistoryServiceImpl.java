@@ -25,7 +25,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;

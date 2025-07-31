@@ -14,7 +14,7 @@
 //import com.datasophon.common.model.CheckItem;
 //import com.datasophon.common.model.HostInfo;
 //import com.datasophon.common.model.ScheduledTasksStatus;
-//import com.datasophon.common.utils.Result;
+//import com.datasophon.api.vo.Result;
 //import jakarta.annotation.PostConstruct;
 //import jakarta.annotation.PreDestroy;
 //import org.apache.sshd.client.session.ClientSession;

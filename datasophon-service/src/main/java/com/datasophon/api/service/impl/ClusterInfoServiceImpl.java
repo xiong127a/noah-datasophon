@@ -32,7 +32,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ClusterCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import com.datasophon.dao.entity.ClusterInfoEntity;

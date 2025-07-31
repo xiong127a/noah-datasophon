@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.ClusterRoleUserService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.UserType;

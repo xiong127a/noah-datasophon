@@ -18,7 +18,7 @@
 package com.datasophon.api.exception;
 
 import com.datasophon.common.exception.BusinessException;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;

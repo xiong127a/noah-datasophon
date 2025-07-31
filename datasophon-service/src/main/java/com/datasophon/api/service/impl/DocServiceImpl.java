@@ -21,7 +21,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.DocService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

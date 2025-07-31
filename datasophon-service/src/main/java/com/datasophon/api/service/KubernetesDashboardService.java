@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 
 /**
  * Kubernetes仪表盘服务接口

@@ -27,7 +27,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;

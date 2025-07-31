@@ -20,7 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.model.HostServiceRoleMapping;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

@@ -37,7 +37,7 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;

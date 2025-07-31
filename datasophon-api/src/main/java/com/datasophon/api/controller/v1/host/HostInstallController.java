@@ -24,7 +24,7 @@ import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.dto.InstallStepDto;
 import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;

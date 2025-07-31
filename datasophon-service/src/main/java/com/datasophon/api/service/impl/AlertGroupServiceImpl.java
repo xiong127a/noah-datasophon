@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import com.datasophon.dao.entity.ClusterAlertQuota;

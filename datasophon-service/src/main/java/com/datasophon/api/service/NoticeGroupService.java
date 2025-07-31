@@ -19,7 +19,7 @@ package com.datasophon.api.service;
 
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.model.MPage;
 

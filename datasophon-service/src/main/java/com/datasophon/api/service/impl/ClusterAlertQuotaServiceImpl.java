@@ -29,7 +29,7 @@ import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.entity.NoticeGroupEntity;

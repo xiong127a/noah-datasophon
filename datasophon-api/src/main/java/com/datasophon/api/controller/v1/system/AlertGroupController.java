@@ -18,9 +18,9 @@
 package com.datasophon.api.controller.v1.system;
 
 import cn.hutool.core.collection.CollUtil;
+import com.datasophon.api.vo.Result;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.AlertGroupService;
-import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.mybatisflex.core.query.QueryChain;

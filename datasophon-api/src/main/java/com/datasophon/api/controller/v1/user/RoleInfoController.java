@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.user;
 
 import com.datasophon.api.service.RoleInfoService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.RoleInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;

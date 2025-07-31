@@ -17,7 +17,7 @@
 package com.datasophon.api.exceptions;
 
 import com.datasophon.common.enums.Status;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ControllerAdvice;

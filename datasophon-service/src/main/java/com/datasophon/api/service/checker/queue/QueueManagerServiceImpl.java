@@ -9,7 +9,7 @@ import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueSystemStatus;
 import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.model.QueueTaskInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;

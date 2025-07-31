@@ -6,7 +6,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.common.model.OperationLogProp;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;

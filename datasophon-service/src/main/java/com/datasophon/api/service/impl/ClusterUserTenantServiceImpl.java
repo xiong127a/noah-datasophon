@@ -29,7 +29,7 @@ import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterTenant;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserTenant;
