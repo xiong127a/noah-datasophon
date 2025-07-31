@@ -1,10 +1,10 @@
 import axios from "axios";
 
 // API版本化配置
-export const API_BASE_URL = "http://192.168.200.3:8081";
-export const API_PREFIX = "/ddh";
+export const API_BASE_URL = "http://192.168.200.3:8081/ddh"; // 包含context-path
+export const API_PREFIX = "/api"; // 移除重复的/ddh，因为baseURL已包含
 export const API_VERSION = "v1"; // 统一版本管理
-export const API_BASE = `${API_PREFIX}/api/${API_VERSION}`; // /ddh/api/v1
+export const API_BASE = `${API_PREFIX}/${API_VERSION}`; // /api/v1
 
 // 版本化API路径配置
 export const API_PATHS_V1 = {
@@ -178,12 +178,12 @@ export const ApiVersionManager = {
   
   // 获取API基础路径
   getApiBase: (version: string = API_VERSION) => {
-    return `${API_PREFIX}/api/${version}`;
+    return `${API_PREFIX}/${version}`;
   },
   
   // 构建版本化API路径
   buildApiPath: (path: string, version: string = API_VERSION) => {
-    return `${API_PREFIX}/api/${version}/${path}`;
+    return `${API_PREFIX}/${version}/${path}`;
   }
 };
 
