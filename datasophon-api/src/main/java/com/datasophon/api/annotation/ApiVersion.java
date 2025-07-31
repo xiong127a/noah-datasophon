@@ -49,13 +49,6 @@ public @interface ApiVersion {
     String path() default "";
     
     /**
-     * Bean名称
-     * @return Spring Bean的名称
-     */
-    @AliasFor(annotation = RestController.class, attribute = "value")
-    String name() default "";
-    
-    /**
      * HTTP请求方法（继承自@RequestMapping）
      * @return 支持的HTTP方法
      */
