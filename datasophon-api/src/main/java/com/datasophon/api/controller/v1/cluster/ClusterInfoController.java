@@ -25,6 +25,7 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -75,7 +76,7 @@ public class ClusterInfoController {
     }
 
     @RequestMapping("/updateClusterState")
-    public Result updateClusterState(@RequestParam("clusterId") Integer clusterId,
+    public Result updateClusterState(@ClusterId Integer clusterId,
             @RequestParam("clusterState") Integer clusterState) {
 
         return clusterInfoService.updateClusterState(clusterId, clusterState);
@@ -110,8 +111,8 @@ public class ClusterInfoController {
     /**
      * 获取集群详细信息
      */
-    @RequestMapping("/detail/{clusterId}")
-    public Result getClusterDetail(@PathVariable("clusterId") Integer clusterId) {
+    @RequestMapping("/detail")
+    public Result getClusterDetail(@ClusterId Integer clusterId) {
         return clusterInfoService.getClusterById(clusterId);
     }
 
@@ -128,9 +129,10 @@ public class ClusterInfoController {
      * 更新集群Kubernetes配置
      */
     @PostMapping("/kube-config")
-    public Result updateClusterKubeConfig(@RequestBody KubeConfigUpdateRequest request) {
+    public Result updateClusterKubeConfig(@ClusterId Integer clusterId, 
+                                        @RequestBody KubeConfigUpdateRequest request) {
         return clusterInfoService.updateClusterKubeConfig(
-                request.getClusterId(),
+                clusterId,
                 request.getKubeConfig(),
                 request.getNamespace(),
                 request.getCustomNamespace());

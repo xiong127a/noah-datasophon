@@ -21,14 +21,10 @@ import lombok.Data;
 
 /**
  * 更新集群Kubernetes配置请求DTO
+ * 注意：集群ID现在通过请求头 x-cluster-id 传递，不再包含在请求体中
  */
 @Data
 public class KubeConfigUpdateRequest {
-
-    /**
-     * 集群ID
-     */
-    private Integer clusterId;
 
     /**
      * Kubernetes配置内容
