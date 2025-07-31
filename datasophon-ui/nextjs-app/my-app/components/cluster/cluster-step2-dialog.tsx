@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
 import type { 
   ClusterStep2DialogProps, 
   Host, 
@@ -31,6 +32,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   step1Data,
   onSuccess
 }) => {
+  const depType = cluster?.depType?.toLowerCase() === 'kubernetes' ? DepType.KUBERNETES : DepType.PVM
+  
+  // 使用标准化的步骤配置
+  const steps = getStepsByType(StepsType.NORMAL, depType)
+  
   // 基础状态
   const [loading, setLoading] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
@@ -392,14 +398,12 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         <div className="flex h-full">
           {/* 左侧导航 */}
           <ClusterWizardSidebar 
+            steps={steps}
             currentStep={2}
-            steps={[
-              { id: 1, title: '集群配置', status: 'completed' },
-              { id: 2, title: '主机校验', status: 'current' },
-              { id: 3, title: '服务选择', status: 'pending' },
-              { id: 4, title: '配置部署', status: 'pending' },
-              { id: 5, title: '部署进度', status: 'pending' }
-            ]}
+            title="主机环境校验"
+            clusterName={cluster?.clusterName || ''}
+            isK8s={depType === DepType.KUBERNETES}
+            onClose={() => onOpenChange(false)}
           />
 
           {/* 右侧内容 */}

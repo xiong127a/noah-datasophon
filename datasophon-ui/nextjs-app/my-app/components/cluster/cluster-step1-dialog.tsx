@@ -19,6 +19,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import Image from "next/image"
+import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
 
 interface ClusterSetupDialogProps {
   open: boolean
@@ -73,14 +74,13 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     clusterVersion: ''
   })
 
-  const steps = [
-    { number: 1, title: '安装主机', description: '配置集群主机和连接信息' },
-    { number: 2, title: '选择服务', description: '选择要安装的大数据服务' },
-    { number: 3, title: '配置服务', description: '配置服务参数和资源分配' },
-    { number: 4, title: '完成安装', description: '确认配置并开始安装' }
-  ]
-
   const isK8s = cluster?.depType?.toLowerCase() === 'kubernetes'
+
+  // 使用标准化的步骤配置
+  const steps = getStepsByType(
+    StepsType.NORMAL,
+    isK8s ? DepType.KUBERNETES : DepType.PVM
+  )
 
   // 根据集群类型获取图标路径 (与集群列表保持一致)
   const getIconPath = () => {
