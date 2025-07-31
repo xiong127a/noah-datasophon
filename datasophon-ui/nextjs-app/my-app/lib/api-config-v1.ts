@@ -125,11 +125,11 @@ apiClientV1.interceptors.request.use(config => {
     // 添加集群ID到请求头
     const clusterId = localStorage.getItem('clusterId');
     if (clusterId && clusterId !== '-1') {
-      config.headers['X-Cluster-Id'] = clusterId;
+      config.headers['x-cluster-id'] = clusterId;
     }
     
     // 添加API版本头（可选）
-    config.headers['X-API-Version'] = API_VERSION;
+    config.headers['x-api-version'] = API_VERSION;
   }
   return config;
 }, error => {
