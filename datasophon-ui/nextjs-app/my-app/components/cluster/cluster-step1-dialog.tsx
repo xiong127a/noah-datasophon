@@ -31,6 +31,7 @@ interface ClusterSetupDialogProps {
     clusterCode: string
   } | null
   onSuccess?: () => void
+  onStep1Complete?: (step1Data: Step1Data) => void
 }
 
 interface Step1Data {
@@ -52,7 +53,8 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
   open,
   onOpenChange,
   cluster,
-  onSuccess
+  onSuccess,
+  onStep1Complete
 }) => {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -291,36 +293,22 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     return true
   }
 
-  // 下一步 (按照老项目的逻辑)
+  // 下一步 (按照原Vue2项目的逻辑: step1完成后打开step2对话框)
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!validateStep1()) {
         return
       }
       
-      // 如果是K8S集群，保存kubeconfig配置 (按照老项目的逻辑)
-      if (isK8s) {
-        setLoading(true)
-        try {
-          const response = await clusterApi.config.saveKubeConfig(
-            cluster?.id || 0,
-            step1Data.kubeConfigContent || '',
-            step1Data.namespace || ''
-          )
-          if (response.data?.code === 200) {
-            toast.success('Kubernetes配置保存成功')
-          } else {
-            throw new Error(response.data?.msg || '保存Kubernetes配置失败')
-          }
-        } catch (error) {
-          console.error('保存Kubernetes配置失败:', error)
-          toast.error('保存Kubernetes配置失败')
-          return
-        } finally {
-          setLoading(false)
-        }
-      }
-      // 传统集群不需要在这里保存，只是数据收集
+      // 按照原项目逻辑，step1验证通过后打开step2对话框
+      console.log('Step1 验证通过，打开Step2主机环境校验')
+      
+      // 调用回调函数，传递step1数据给父组件
+      onStep1Complete?.(step1Data)
+      
+      // 关闭step1对话框
+      onOpenChange(false)
+      return
     }
     
     if (currentStep < steps.length) {
