@@ -19,23 +19,19 @@ package com.datasophon.dao.mapper;
 
 import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.MANAGED;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.update.UpdateChain;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.util.Date;
 import java.util.List;
 
 /**
  * 集群主机表
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-14 20:32:39
+ *
  */
 @Mapper
 public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
@@ -150,8 +146,8 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
     /**
      * 根据集群ID删除主机
      */
-    default int deleteByClusterId(@Param("clusterId") Integer clusterId) {
-        return QueryChain.of(ClusterHostDO.class)
+    default void deleteByClusterId(@Param("clusterId") Integer clusterId) {
+        UpdateChain.of(ClusterHostDO.class)
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
                 .remove();
     }
