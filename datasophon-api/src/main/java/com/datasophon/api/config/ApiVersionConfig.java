@@ -3,9 +3,12 @@ package com.datasophon.api.config;
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -20,6 +23,7 @@ import java.util.List;
  * @author DataSophon Team
  */
 @Configuration
+@AutoConfigureBefore(WebMvcAutoConfiguration.class)
 public class ApiVersionConfig implements WebMvcConfigurer {
     
     // 构造函数 - 确保配置类被正确加载
@@ -31,17 +35,16 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
-     * 使用@Primary注解覆盖默认的RequestMappingHandlerMapping
-     * 已在application.yml中启用allow-bean-definition-overriding
+     * 使用@ConditionalOnMissingBean和@AutoConfigureBefore确保在Spring Boot自动配置之前创建
      */
     @Bean(name = "requestMappingHandlerMapping")
-    @Primary
+    @ConditionalOnMissingBean(name = "requestMappingHandlerMapping")
     public RequestMappingHandlerMapping requestMappingHandlerMapping() {
         System.out.println("=== ApiVersionConfig: 开始创建VersionedRequestMappingHandlerMapping Bean ===");
         VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
         
         // 设置映射优先级 - 确保在其他HandlerMapping之前被使用
-        mapping.setOrder(0);
+        mapping.setOrder(Ordered.HIGHEST_PRECEDENCE);
         
         // 立即测试这个Bean
         System.out.println("=== Bean类型验证: " + mapping.getClass().getName() + " ===");
@@ -62,6 +65,7 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     
     /**
      * BeanPostProcessor - 监视所有RequestMappingHandlerMapping Bean的创建
+     * 现在主要用于调试目的
      */
     @Bean
     public BeanPostProcessor requestMappingHandlerMappingMonitor() {
