@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("cluster/node/label")
+@RequestMapping("api/cluster/node/label")
 public class ClusterNodeLabelController {
 
     @Autowired

@@ -51,16 +51,16 @@ export const API_PATHS = {
   PARCEL_INSTALL: `${API_PREFIX}/api/cluster/parcel/install`,     // 安装组件
 
   // 标签管理相关
-  TAG_LIST: `${API_PREFIX}/cluster/node/label/list`,              // 获取标签列表
-  TAG_SAVE: `${API_PREFIX}/cluster/node/label/save`,              // 保存标签
-  TAG_DELETE: `${API_PREFIX}/cluster/node/label/delete`,          // 删除标签
-  TAG_ASSIGN: `${API_PREFIX}/cluster/node/label/assign`,          // 分配标签
+  TAG_LIST: `${API_PREFIX}/api/cluster/node/label/list`,              // 获取标签列表
+  TAG_SAVE: `${API_PREFIX}/api/cluster/node/label/save`,              // 保存标签
+  TAG_DELETE: `${API_PREFIX}/api/cluster/node/label/delete`,          // 删除标签
+  TAG_ASSIGN: `${API_PREFIX}/api/cluster/node/label/assign`,          // 分配标签
 
   // 机架管理相关
-  RACK_LIST: `${API_PREFIX}/cluster/rack/list`,                   // 获取机架列表  
-  RACK_SAVE: `${API_PREFIX}/cluster/rack/save`,                   // 保存机架
-  RACK_DELETE: `${API_PREFIX}/cluster/rack/delete`,               // 删除机架
-  RACK_ASSIGN: `${API_PREFIX}/assignRack`,                        // 分配机架给主机（在ClusterHostController中）
+  RACK_LIST: `${API_PREFIX}/api/cluster/rack/list`,                   // 获取机架列表  
+  RACK_SAVE: `${API_PREFIX}/api/cluster/rack/save`,                   // 保存机架
+  RACK_DELETE: `${API_PREFIX}/api/cluster/rack/delete`,               // 删除机架
+  RACK_ASSIGN: `${API_PREFIX}/api/cluster/host/assignRack`,           // 分配机架给主机（在ClusterHostController中）
 
   // 日志审计相关
   LOG_LIST: `${API_PREFIX}/api/log/list`,                         // 获取日志列表
@@ -68,7 +68,7 @@ export const API_PATHS = {
   LOG_MODULE_LIST: `${API_PREFIX}/api/log/moduleList`,            // 获取模块列表
 
   // 告警相关
-  ALERT_GROUP_LIST: `${API_PREFIX}/alert/group/list`,             // 获取告警组列表
+  ALERT_GROUP_LIST: `${API_PREFIX}/api/alert/group/list`,             // 获取告警组列表
 };
 
 // 创建axios实例

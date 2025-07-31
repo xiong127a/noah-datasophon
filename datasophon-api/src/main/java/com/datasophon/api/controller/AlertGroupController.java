@@ -39,7 +39,7 @@ import java.util.List;
  * @author 63588
  */
 @RestController
-@RequestMapping("alert/group")
+@RequestMapping("api/alert/group")
 public class AlertGroupController {
 
     @Autowired
