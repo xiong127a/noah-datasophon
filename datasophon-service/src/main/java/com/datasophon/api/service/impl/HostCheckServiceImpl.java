@@ -22,6 +22,7 @@ import com.datasophon.common.model.LogStats;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.utils.HostUtils;
+import com.datasophon.common.utils.Result;
 import com.datasophon.common.exception.ServiceException;
 import lombok.Data;
 import org.apache.sshd.client.session.ClientSession;
