@@ -131,12 +131,16 @@
             <groupId>org.apache.pekko</groupId>
             <artifactId>pekko-persistence_3</artifactId>
         </dependency>
+        <!-- 依赖核心模块和领域模型（最小依赖原则） -->
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common</artifactId>
+            <artifactId>datasophon-common-core</artifactId>
             <version>${project.version}</version>
-           <!-- <scope>system</scope>
-            <systemPath>D:\WorkSpaceForWork\datasophon\datasophon-common\target\datasophon-common-1.2.1.jar</systemPath> -->
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-domain</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>

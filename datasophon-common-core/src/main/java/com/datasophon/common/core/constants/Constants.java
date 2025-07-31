@@ -1,0 +1,163 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package com.datasophon.common.core.constants;
+
+import com.datasophon.common.core.utils.PropertyUtils;
+
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * 系统常量定义
+ */
+public final class Constants {
+
+        public static final String INSTALL_PATH = PropertyUtils.getString("install.path");
+        public static final String YAML_PATH = PropertyUtils.getString("yaml.path");
+
+        public static final String TASK_LOG_LOGGER_NAME = "TaskLogLogger";
+
+        public static final String ROLE_NODE_CNT = "roleNodeCnt";
+
+        public static final String CURRENT_NODE_CNT = "currentNodeCnt";
+        public static final String POD_NAME = "podName";
+
+
+        public static final String DEPLOYMENT = "Deployment";
+        public static final String STATEFULSET = "StatefulSet";
+
+        public static final String HOST_MAP = "_host_map";
+        public static final String ID_RSA = PropertyUtils.getString("id_rsa", "/.ssh/id_rsa");
+        public static final String HOSTNAME = "hostname";
+        public static final String MASTER_MANAGE_PACKAGE_PATH = INSTALL_PATH + "/DDP/packages";
+        public static final String UNZIP_DDH_WORKER_CMD = "tar -zxvf " + INSTALL_PATH + "/datasophon-worker.tar.gz -C "
+                        + INSTALL_PATH;
+        public static final String WORKER_PACKAGE_NAME = "datasophon-worker.tar.gz";
+        public static final String WORKER_SCRIPT_PATH = INSTALL_PATH + "/datasophon-worker/script/";
+
+        public static final String JSON_EXTENSION = "json";
+        public static final String CONFIG = "_config";
+        public static final String SERVICE_ROLE_HOST_MAPPING = "service_role_host_mapping";
+        public static final String UNDERLINE = "_";
+        public static final String HOST_SERVICE_ROLE_MAPPING = "host_service_role_mapping";
+        public static final String MASTER = "master";
+        public static final String CONFIG_FILE = "_config_file";
+        public static final String QUERY = "query";
+        public static final String SUCCESS = "success";
+        public static final String LOCALE_LANGUAGE = "language";
+        public static final String START_DISTRIBUTE_AGENT = "start_distribute_agent";
+        public static final String CHECK_WORKER_MD5_CMD = "md5sum " + INSTALL_PATH
+                        + "/datasophon-worker.tar.gz | awk '{print $1}'";
+        public static final String CREATE_TIME = "create_time";
+        public static final String UPDATE_COMMON_CMD = "sh " + INSTALL_PATH
+                        + "/datasophon-worker/script/sed_common.sh ";
+        public static final String MASTER_HOST = "masterHost";
+        public static final String MASTER_WEB_PORT = "masterWebPort";
+        public static final String HAS_EN = ".*[a-zA-z].*";
+        public static final String CUSTOM = "custom";
+        public static final String INPUT = "input";
+        public static final String MULTIPLE = "multiple";
+        public static final String PATH = "path";
+
+        public static final String MV_PATH = "mv_path";
+        public static final String SERVICE_INSTANCE_ID = "service_instance_id";
+        public static final String IS_ENABLED = "is_enabled";
+        public static final String CN = "chinese";
+        public static final String SERVICE_ROLE_INSTANCE_ID = "service_role_instance_id";
+        public static final String X86JDK = "jdk-8u333-linux-x64.tar.gz";
+        public static final String ARMJDK = "jdk-8u333-linux-aarch64.tar.gz";
+        public static final String FAILED = "failed";
+
+        public static final String KUBERNETES_CONFIG_SERVICES = "kubernetes.config.services";
+        public static final String KUBERNETES_CLUSTER_IP = "ClusterIP";
+        public static final String KUBERNETES_NODE_PORT = "NodePort";
+        public static final String KUBERNETES_LOAD_BALANCER = "LoadBalancer";
+
+        public static final String KUBERNETES_CONFIG_PREFIX = "kubernetes.config.";
+
+        public static final String KUBERNETES_NODEPORT_MAPPING = "node_port_mappings";
+        public static final String KUBERNETES_CLUSTERIP_MAPPING = "cluster_port_mappings";
+        public static final String KUBERNETES_LOADBALANCER_MAPPING = "load_balancer_port_mappings";
+
+
+        public static final String GENERAL = "General";
+
+        public static final String PASSWORD = "password";
+
+        /**
+         * UTF-8
+         */
+        public static final String UTF_8 = "UTF-8";
+        /**
+         * comma ,
+         */
+        public static final String COMMA = ",";
+
+        /**
+         * slash /
+         */
+        public static final String SLASH = "/";
+
+        /**
+         * SPACE " "
+         */
+        public static final String SPACE = " ";
+
+        public static final String REGEX_VARIABLE = "\\$\\{(.*?)\\}";
+        /**
+         * 常量-数值100
+         */
+        public static final int ONE_HUNDRRD = 100;
+
+        /**
+         * 常量-zkserver
+         */
+        public static final String ZKSERVER = "zkserver";
+
+        public static final String TASK_MANAGER = "taskmanager";
+        public static final String JOB_MANAGER = "jobmanager";
+        public static final String x86_64 = "x86_64";
+        public static final String PROMETHEUS = "prometheus";
+        public static final String PROMETHEUS_CONFIG = "prometheus-config";
+
+        public static final String XML = "xml";
+        public static final String PROPERTIES = "properties";
+        public static final String PROPERTIES2 = "properties2";
+        public static final String PROPERTIES3 = "properties3";
+
+        /**
+         * root user
+         */
+        public static final String ROOT = "root";
+
+        public static final String PVM_MODE = "PVM";
+
+        public static final String KUBERNETES_MODE = "Kubernetes";
+
+        public static final String SERVICE_CHECK_NAMES = "Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
+
+        public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));
+        // HiveServer2高可用模式常量
+        public static final String HA_MODE_STANDALONE = "standalone";
+        public static final String HA_MODE_ZOOKEEPER = "zookeeper";
+        public static final String HA_MODE_ZOOKEEPER_HA = "zooKeeperHA";
+        
+        private Constants() {
+                throw new IllegalStateException("Constants Exception");
+        }
+}

@@ -33,20 +33,32 @@
         <skip.frontend.copy>false</skip.frontend.copy>
     </properties>
     <dependencies>
+        <!-- 依赖业务服务层 -->
         <dependency>
             <groupId>com.datasophon</groupId>
             <artifactId>datasophon-service</artifactId>
             <version>${revision}</version>
         </dependency>
+        <!-- 依赖公共DTO模块用于接口参数传递 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-dto</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- 依赖核心工具模块 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-core</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
+        <!-- Spring Boot Web相关 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-kubernetes</artifactId>
-            <version>${revision}</version>
-        </dependency>
+        
+        <!-- 移除对K8s模块的直接依赖，K8s由service层调用 -->
         <!-- ui 工程打包是一个空包，这里依赖主要是让 ui 先编译，这样前端就能自动打包到 tar 介质 -->
         <dependency>
             <groupId>com.datasophon</groupId>

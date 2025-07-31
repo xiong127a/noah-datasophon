@@ -16,7 +16,29 @@
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
     <dependencies>
+        <!-- 依赖数据访问层和公共模块 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-dao</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common-dto</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
+        <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -31,29 +53,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jetty</artifactId> <!-- 引入Jetty -->
         </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
+        
+        <!-- HTTP客户端 -->
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-dao</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>slf4j-reload4j</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.pekko</groupId>
@@ -79,6 +83,7 @@
             <groupId>net.i2p.crypto</groupId>
             <artifactId>eddsa</artifactId>
         </dependency>
+        <!-- K8s业务模块：被service层调用，处理K8s相关业务 -->
         <dependency>
             <groupId>com.datasophon</groupId>
             <artifactId>datasophon-kubernetes</artifactId>
@@ -87,13 +92,11 @@
         <dependency>
             <groupId>org.tukaani</groupId>
             <artifactId>xz</artifactId>
-            <version>1.9</version>
         </dependency>
         <!-- ZIP加密支持 -->
         <dependency>
             <groupId>net.lingala.zip4j</groupId>
             <artifactId>zip4j</artifactId>
-            <version>2.11.5</version>
         </dependency>
 
         <!-- 7z压缩支持 -->
