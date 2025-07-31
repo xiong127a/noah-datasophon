@@ -2,8 +2,6 @@ package com.datasophon.api.config;
 
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -25,7 +23,7 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
         
         if (info != null) {
             ApiVersion apiVersion = AnnotationUtils.findAnnotation(handlerType, ApiVersion.class);
-            if (apiVersion != null && apiVersion.enabled()) {
+            if (apiVersion != null) {
                 // 创建版本化的路径前缀
                 String versionPrefix = buildVersionPrefix(apiVersion);
                 info = createVersionedRequestMappingInfo(info, versionPrefix);
@@ -57,15 +55,8 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
      * 创建版本化的RequestMappingInfo
      */
     private RequestMappingInfo createVersionedRequestMappingInfo(RequestMappingInfo info, String prefix) {
-        return RequestMappingInfo.paths(prefix)
-                .methods(info.getMethodsCondition().getMethods().toArray(new org.springframework.web.bind.annotation.RequestMethod[0]))
-                .params(info.getParamsCondition())
-                .headers(info.getHeadersCondition())
-                .consumes(info.getConsumesCondition())
-                .produces(info.getProducesCondition())
-                .mappingName(info.getName())
-                .customCondition(info.getCustomCondition())
-                .build()
-                .combine(info);
+        // 为JDK21和现代Spring Boot版本适配
+        RequestMappingInfo prefixInfo = RequestMappingInfo.paths(prefix).build();
+        return prefixInfo.combine(info);
     }
 }
