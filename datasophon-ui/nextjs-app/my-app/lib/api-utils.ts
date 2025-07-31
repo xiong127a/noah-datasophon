@@ -60,6 +60,16 @@ export const clusterApi = {
   info: {
     runningList: () => api.post('/ddh/api/cluster/runningClusterList', {}),
     detail: (clusterId: number) => api.get(`/ddh/api/cluster/info/${clusterId}`),
+  },
+
+  // 集群配置 (按照老项目的API设计)
+  config: {
+    // 获取Kubernetes命名空间列表 (老项目的API)
+    getNamespaces: (kubeConfigContent: string) => 
+      api.post('/ddh/api/cluster/namespaces', { kubeConfigContent }),
+    // 保存Kubernetes配置 (老项目的API)
+    saveKubeConfig: (clusterId: number, kubeConfigContent: string, namespace: string) =>
+      api.post('/ddh/api/cluster/kube-config', { clusterId, kubeConfigContent, namespace }),
   }
 }
 
