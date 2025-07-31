@@ -106,9 +106,8 @@ public class SecurityConfig {
 
                         // 公开API端点
                         .requestMatchers(
-                                "/api/login",
-                                "/api/register",
-                                "/api/refresh-token")
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/refresh-token")
                         .permitAll()
 
                         // Swagger文档
