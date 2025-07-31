@@ -1,4 +1,4 @@
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.common;
 
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
