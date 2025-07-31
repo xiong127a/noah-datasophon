@@ -188,12 +188,12 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     @Override
-    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId) {
+    public boolean fixCheckItem(Integer clusterId, String hostname, Integer itemId) {
         return fixCheckItem(clusterId, hostname, itemId, false);
     }
 
     @Override
-    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
+    public boolean fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
         try {
             logger.info("收到修复检查项请求: clusterId={}, hostname={}, itemId={}, skipConfirm={}",
                     clusterId, hostname, itemId, skipConfirm);
@@ -201,18 +201,18 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 获取主机信息
             HostInfo hostInfo = getHostInfo(clusterId, hostname);
             if (hostInfo == null) {
-                return Result.error("主机信息不存在");
+                throw new ServiceException("主机信息不存在");
             }
 
             // 查找指定ID的检查项
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
-                return Result.error("检查项不存在");
+                throw new ServiceException("检查项不存在");
             }
 
             // 如果检查项当前正在修复中，则返回错误
             if (checkItem.getStatus() == CheckItem.Status.FIXING) {
-                return Result.error("检查项正在修复中，请稍后重试");
+                throw new ServiceException("检查项正在修复中，请稍后重试");
             }
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
             cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
@@ -232,14 +232,16 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 cacheLog.info("修复任务已提交到队列，任务ID: " + taskId);
 
-                return Result.success("修复任务已提交");
+                return true;
             } else {
                 cacheLog.error("修复任务提交失败，可能已在队列中");
-                return Result.error("修复任务已存在或提交失败");
+                throw new ServiceException("修复任务已存在或提交失败");
             }
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("提交修复任务失败", e);
-            return Result.error("提交修复任务失败: " + e.getMessage());
+            throw new ServiceException("提交修复任务失败: " + e.getMessage());
         }
     }
 
@@ -307,10 +309,11 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 一键修复所有失败项
      */
     @Override
-    public Result fixAllFailedItems(Integer clusterId) {
-        Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+    public boolean fixAllFailedItems(Integer clusterId) {
+        try {
+            Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
         if (hostMap.isEmpty()) {
-            return Result.error("集群未找到或无主机信息");
+            throw new ServiceException("集群未找到或无主机信息");
         }
 
         // 统计每个主机的失败检查项，同时更新状态为等待修复
@@ -346,7 +349,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.success("没有需要修复的检查项");
         }
         if (hostMap.isEmpty()) {
-            return Result.error("集群未找到或无主机信息");
+            throw new ServiceException("集群未找到或无主机信息");
         }
 
         for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
@@ -464,7 +467,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             if (allSuccess) {
                 retriggerHostCheck(hostInfo, clusterId);
-                return Result.success();
+                return true;
             } else {
                 return Result.error("部分检查项修复失败");
             }
@@ -829,7 +832,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 查找检查项
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
-                return Result.error("检查项不存在");
+                throw new ServiceException("检查项不存在");
             }
 
             // 如果检查项正在检查中，取消任务
@@ -2661,7 +2664,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     public Result skipAllFailedItems(Integer clusterId) {
         Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
         if (hostMap.isEmpty()) {
-            return Result.error("集群未找到或无主机信息");
+            throw new ServiceException("集群未找到或无主机信息");
         }
 
         StringBuilder resultMessage = new StringBuilder();
