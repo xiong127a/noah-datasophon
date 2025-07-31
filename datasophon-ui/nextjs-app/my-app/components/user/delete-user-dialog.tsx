@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { toast } from "sonner"
 import { API_PATHS, api } from "@/lib/api-config"
 import type { User } from "@/types/user"
@@ -61,8 +62,35 @@ function DeleteUserDialog({
   if (!user) return null
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4">
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent 
+        className="w-[95vw] sm:max-w-[500px] max-h-[85vh] border-0 shadow-2xl bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden mx-auto my-4 [&>button]:hidden"
+        aria-describedby={undefined}
+      >
+        {/* 可访问性标题 - 对屏幕阅读器可见，视觉上隐藏 */}
+        <DialogHeader>
+          <VisuallyHidden>
+            <DialogTitle>删除用户确认</DialogTitle>
+            <DialogDescription>
+              此操作将永久删除用户账户和相关数据，此操作不可撤销。
+            </DialogDescription>
+          </VisuallyHidden>
+        </DialogHeader>
+
+        {/* 自定义关闭按钮 */}
+        <div className="absolute top-4 right-4 z-20">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            disabled={loading}
+            className="group h-10 w-10 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200/50 hover:bg-red-50 hover:border-red-200 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            <X className="h-4 w-4 text-slate-600 group-hover:text-red-500 group-hover:rotate-90 transition-all duration-300" />
+          </Button>
+        </div>
+
         {/* 装饰性背景 */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-red-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" />
@@ -178,10 +206,19 @@ function DeleteUserDialog({
               variant="outline"
               onClick={handleCancel}
               disabled={loading}
-              className="h-12 px-6 rounded-2xl border-slate-200/50 bg-white/80 hover:bg-slate-50 transition-all duration-300 font-medium"
+              className="group relative h-12 px-6 rounded-2xl border-0 bg-gradient-to-r from-slate-100 via-gray-100 to-slate-100 hover:from-slate-200 hover:via-gray-200 hover:to-slate-200 shadow-md hover:shadow-lg transition-all duration-300 font-medium overflow-hidden"
             >
-              <X className="h-4 w-4 mr-2" />
-              取消
+              {/* 装饰性背景 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-400/10 via-gray-400/5 to-slate-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              {/* 按钮内容 */}
+              <div className="relative flex items-center space-x-2 text-slate-700 group-hover:text-slate-800 transition-colors duration-300">
+                <X className="h-4 w-4 group-hover:rotate-90 group-hover:scale-110 transition-transform duration-300" />
+                <span>取消</span>
+              </div>
+              
+              {/* 悬停边框效果 */}
+              <div className="absolute inset-0 rounded-2xl border-2 border-slate-300/0 group-hover:border-slate-300/50 transition-all duration-300" />
             </Button>
             <Button
               type="button"

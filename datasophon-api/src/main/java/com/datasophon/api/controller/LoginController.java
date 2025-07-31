@@ -125,19 +125,25 @@ public class LoginController {
                 return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
             }
 
-            // 更新最后登录时间
+            // 更新登录时间记录（线程安全的数据库操作）
             try {
+                Date currentTime = new java.util.Date();
                 UserInfoEntity updateUser = new UserInfoEntity();
                 updateUser.setId(user.getId());
-                updateUser.setLastLoginTime(new java.util.Date());
+                // 将当前的lastLoginTime移动到previousLoginTime
+                updateUser.setPreviousLoginTime(user.getLastLoginTime());
+                // 设置新的lastLoginTime为当前时间
+                updateUser.setLastLoginTime(currentTime);
+                
                 userInfoService.updateById(updateUser);
                 
-                // 更新当前用户对象中的最后登录时间以返回给前端
-                user.setLastLoginTime(updateUser.getLastLoginTime());
+                // 更新返回给前端的用户信息
+                user.setPreviousLoginTime(user.getLastLoginTime()); // 上次登录时间
+                user.setLastLoginTime(currentTime); // 最后登录时间
                 
-                logger.debug("已更新用户 {} 的最后登录时间", username);
+                logger.debug("已更新用户 {} 的登录时间记录", username);
             } catch (Exception e) {
-                logger.warn("更新用户最后登录时间失败: {}", e.getMessage());
+                logger.warn("更新用户登录时间失败: {}", e.getMessage());
                 // 不影响登录流程，只记录警告
             }
 

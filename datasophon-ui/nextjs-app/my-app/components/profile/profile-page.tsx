@@ -20,14 +20,14 @@ import {
 import { toast } from "sonner"
 import FinalNavbar from "../layout/navbar-final"
 import { API_PATHS, api } from "@/lib/api-config"
-import { BUILT_IN_AVATARS } from "@/types/user"
+import { BUILT_IN_AVATARS, DEFAULT_INITIALS_AVATAR } from "@/types/user"
 import type { User as UserType } from "@/types/user"
 
-const AvatarSelector = ({ currentAvatar, onSelect }: { currentAvatar: string; onSelect: (avatar: string) => void }) => {
+const AvatarSelector = ({ currentAvatar, onSelect, username }: { currentAvatar: string; onSelect: (avatar: string) => void; username?: string }) => {
   const [open, setOpen] = useState(false)
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={() => {}}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -55,9 +55,18 @@ const AvatarSelector = ({ currentAvatar, onSelect }: { currentAvatar: string; on
                   currentAvatar === avatar ? "border-blue-500 ring-2 ring-blue-200" : "border-slate-200"
                 }`}
               >
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
-                  <AvatarFallback>{index + 1}</AvatarFallback>
+                <Avatar key={`${avatar}-${username}`} className="w-full h-full">
+                  {avatar === DEFAULT_INITIALS_AVATAR ? (
+                    // 显示首字符头像预览
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                      {username && username.length > 0 ? username.charAt(0).toUpperCase() : "字"}
+                    </AvatarFallback>
+                  ) : (
+                    <>
+                      <AvatarImage src={avatar} alt={`头像 ${index + 1}`} />
+                      <AvatarFallback>{index + 1}</AvatarFallback>
+                    </>
+                  )}
                 </Avatar>
               </button>
             ))}
@@ -84,6 +93,11 @@ const AvatarSelector = ({ currentAvatar, onSelect }: { currentAvatar: string; on
                 }
               }}
             />
+          </div>
+          <div className="flex justify-end pt-4 border-t mt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              关闭
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -159,7 +173,7 @@ export default function ProfilePage() {
     }
   }
 
-  // 格式化最后登录时间
+  // 格式化上次登录时间
   const formatLastLoginTime = (time?: string) => {
     if (!time) return "从未登录"
     try {
@@ -280,7 +294,7 @@ export default function ProfilePage() {
             <Card className="rounded-3xl border-0 shadow-lg bg-white overflow-hidden">
               <CardContent className="p-8 text-center">
                 <div className="relative inline-block mb-6">
-                  <Avatar className="w-32 h-32 ring-4 ring-slate-100 ring-offset-4">
+                  <Avatar key={isEditing ? editForm?.avatar : userInfo.avatar} className="w-32 h-32 ring-4 ring-slate-100 ring-offset-4">
                     <AvatarImage src={isEditing ? editForm?.avatar : userInfo.avatar} alt="用户头像" />
                     <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
                       {userInfo.username?.charAt(0).toUpperCase()}
@@ -290,6 +304,7 @@ export default function ProfilePage() {
                     <AvatarSelector
                       currentAvatar={editForm.avatar || ""}
                       onSelect={(avatar) => setEditForm({ ...editForm, avatar })}
+                      username={userInfo.username}
                     />
                   )}
                 </div>
@@ -310,8 +325,8 @@ export default function ProfilePage() {
                       <Clock className="h-4 w-4 text-slate-600" />
                     </div>
                     <div className="flex-1 text-center">
-                      <div className="text-xs text-slate-400 mb-1">最后登录</div>
-                      <div className="font-medium text-slate-700">{formatLastLoginTime(userInfo.lastLoginTime)}</div>
+                      <div className="text-xs text-slate-400 mb-1">上次登录</div>
+                      <div className="font-medium text-slate-700">{formatLastLoginTime(userInfo.previousLoginTime)}</div>
                     </div>
                   </div>
                 </div>

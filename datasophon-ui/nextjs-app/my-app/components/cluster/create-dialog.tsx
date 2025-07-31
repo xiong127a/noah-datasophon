@@ -196,7 +196,7 @@ export default function CreateClusterDialogEnhanced({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-3xl bg-white rounded-3xl border-0 shadow-2xl overflow-hidden [&>button]:hidden">
         {/* 头部设计 - 仿照集群列表风格 */}
         <div className="relative -m-6 mb-6 overflow-hidden rounded-t-3xl">

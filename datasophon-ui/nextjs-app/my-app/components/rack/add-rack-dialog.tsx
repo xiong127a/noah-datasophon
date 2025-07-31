@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { AddRackRequest } from '../../types/rack'
+import { clusterApi } from '@/lib/api-utils'
 
 interface AddRackDialogProps {
   open: boolean
@@ -59,32 +60,18 @@ const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogPr
     setLoading(true)
 
     try {
-      const params: AddRackRequest = {
-        rack: rackName,
-        clusterId: clusterId
-      }
+      const response = await clusterApi.rack.save(rackName)
 
-      // 这里需要替换为实际的API调用
-      // const response = await fetch('/api/racks/save', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(params)
-      // })
-      // const res = await response.json()
-
-      // 暂时使用模拟响应，后续需要使用实际API
-      console.log('添加机架参数:', params)
-      const res = { code: 200, message: '保存成功' }
-
-      if (res.code === 200) {
+      if (response.data.code === 200) {
         toast.success('保存成功')
         handleCancel()
         onSuccess()
       } else {
-        toast.error(res.message || '保存失败')
+        toast.error(response.data.msg || '保存失败')
       }
-    } catch {
-      toast.error('保存失败')
+    } catch (error) {
+      console.error('保存机架失败:', error)
+      toast.error('保存失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
@@ -106,7 +93,7 @@ const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogPr
   }
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && handleCancel()}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">

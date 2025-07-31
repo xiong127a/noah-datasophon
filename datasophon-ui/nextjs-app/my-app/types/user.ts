@@ -9,6 +9,7 @@ export interface User {
   userType?: number; // 1-管理员，2-普通用户
   bio?: string; // 个人简介
   lastLoginTime?: string; // 最后登录时间
+  previousLoginTime?: string; // 上次登录时间
   avatar?: string; // 用户头像（Base64编码）
 }
 
@@ -79,8 +80,14 @@ export const USER_TYPE_OPTIONS = [
   { value: UserType.NORMAL, label: '普通用户', color: 'blue' }
 ]
 
+// 默认头像类型：使用用户名首字符
+export const DEFAULT_INITIALS_AVATAR = 'DEFAULT_INITIALS';
+
 // 内置头像选项（Base64编码的SVG图像）
 export const BUILT_IN_AVATARS = [
+  // 默认头像：用户名首字符（放在第一位作为默认选项）
+  DEFAULT_INITIALS_AVATAR,
+  
   // 蓝色圆形头像
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9InVybCgjZ3JhZGllbnQxKSIvPgo8Y2lyY2xlIGN4PSIzMiIgY3k9IjI2IiByPSIxMCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9IjMyIiBjeT0iNTAiIHJ4PSIxNiIgcnk9IjEyIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDEiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzM5OGVmNCIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K',
   

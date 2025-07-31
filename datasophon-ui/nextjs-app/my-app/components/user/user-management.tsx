@@ -104,7 +104,7 @@ export default function UserManagement() {
   // 判断用户权限
   const isAdmin = (userType?: number) => userType === UserType.ADMIN
   
-  // 格式化最后登录时间
+  // 格式化上次登录时间
   const formatLastLoginTime = (time?: string) => {
     if (!time) return "从未登录"
     return new Intl.DateTimeFormat("zh-CN", {
@@ -286,7 +286,7 @@ export default function UserManagement() {
                           <TableHead className="font-semibold text-slate-700 w-[250px]">邮箱</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[140px]">手机号</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[120px]">用户类型</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[180px]">最后登录</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[180px]">上次登录</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[160px]">创建时间</TableHead>
                           <TableHead className="text-right font-semibold text-slate-700 w-[120px]">操作</TableHead>
                         </TableRow>
@@ -320,7 +320,7 @@ export default function UserManagement() {
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-10 w-10 ring-2 ring-slate-200">
                                     <AvatarImage 
-                                      src={user.avatar || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9InVybCgjZ3JhZGllbnQxKSIvPgo8Y2lyY2xlIGN4PSIzMiIgY3k9IjI2IiByPSIxMCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9IjMyIiBjeT0iNTAiIHJ4PSIxNiIgcnk9IjEyIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDEiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzM5OGVmNCIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K"} 
+                                      src={user.avatar} 
                                       alt={user.username}
                                     />
                                     <AvatarFallback className={`text-sm font-semibold text-white ${
@@ -328,11 +328,7 @@ export default function UserManagement() {
                                         ? "bg-gradient-to-br from-amber-500 to-orange-600" 
                                         : "bg-gradient-to-br from-blue-500 to-purple-600"
                                     }`}>
-                                      {isAdmin(user.userType) ? (
-                                        <Crown className="h-4 w-4" />
-                                      ) : (
-                                        user.username.charAt(0).toUpperCase()
-                                      )}
+                                      {user.username.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
@@ -362,11 +358,11 @@ export default function UserManagement() {
                               </TableCell>
                               
                               
-                              {/* 最后登录时间 */}
+                              {/* 上次登录时间 */}
                               <TableCell className="text-slate-700">
                                 <div className="flex items-center space-x-1">
                                   <Clock className="h-3 w-3 text-slate-400" />
-                                  <span className="text-sm">{formatLastLoginTime(user.lastLoginTime)}</span>
+                                  <span className="text-sm">{formatLastLoginTime(user.previousLoginTime)}</span>
                                 </div>
                               </TableCell>
                               
@@ -378,18 +374,32 @@ export default function UserManagement() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleEditUser(user)}
-                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+                                    className="group relative h-8 w-8 p-0 rounded-xl border-blue-200/60 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-200/50 hover:scale-110 active:scale-95 transition-all duration-300"
                                   >
-                                    <Edit className="h-4 w-4 text-slate-600 hover:text-blue-600" />
+                                    <Edit className="h-4 w-4 text-blue-500 group-hover:text-blue-600 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-300" />
+                                    {/* 悬停时的装饰效果 */}
+                                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
                                   </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleDeleteUser(user)}
-                                    className="h-8 w-8 p-0 rounded-xl border-slate-200/50 bg-white/80 hover:bg-red-50 hover:border-red-200 transition-all duration-200"
+                                    className={`group relative h-8 w-8 p-0 rounded-xl transition-all duration-300 ${
+                                      isAdmin(user.userType)
+                                        ? "border-slate-200/50 bg-slate-100/50 cursor-not-allowed opacity-50"
+                                        : "border-red-200/60 bg-gradient-to-br from-red-50 to-pink-50 hover:from-red-100 hover:to-pink-100 hover:border-red-300 hover:shadow-lg hover:shadow-red-200/50 hover:scale-110 active:scale-95"
+                                    }`}
                                     disabled={isAdmin(user.userType)}
                                   >
-                                    <Trash2 className="h-4 w-4 text-slate-600 hover:text-red-600" />
+                                    <Trash2 className={`h-4 w-4 transition-all duration-300 ${
+                                      isAdmin(user.userType)
+                                        ? "text-slate-400"
+                                        : "text-red-500 group-hover:text-red-600 group-hover:scale-110 group-hover:rotate-12"
+                                    }`} />
+                                    {/* 悬停时的装饰效果 */}
+                                    {!isAdmin(user.userType) && (
+                                      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-red-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+                                    )}
                                   </Button>
                                 </div>
                               </TableCell>

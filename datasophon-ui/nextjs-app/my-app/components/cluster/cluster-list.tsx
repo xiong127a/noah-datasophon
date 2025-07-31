@@ -94,6 +94,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
+import ClusterSetupDialog from "./cluster-setup-dialog"
 import { apiClient, API_PATHS } from "@/lib/api-config"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -117,10 +118,11 @@ interface ClusterItem {
   userManageName?: string;
 }
 
-const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: { 
+const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: { 
   cluster: ClusterItem; 
   onEnter: (cluster: ClusterItem) => void;
   onEdit: (cluster: ClusterItem) => void;
+  onSetup: (cluster: ClusterItem) => void;
   onAuth: (cluster: ClusterItem) => void;
   onDelete: (cluster: ClusterItem) => void;
 }) => {
@@ -303,7 +305,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onAuth, onDelete }: {
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"
-                onClick={() => onEdit(cluster)}
+                onClick={() => onSetup(cluster)}
                 className="h-11 rounded-2xl bg-white/80 hover:bg-white border border-white/50 hover:shadow-lg transition-all duration-300 text-slate-700 hover:scale-105 backdrop-blur-sm"
               >
                 <Settings className="mr-2 h-4 w-4" />
@@ -458,7 +460,9 @@ export default function ClusterListEnhanced() {
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
+  const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -630,6 +634,10 @@ export default function ClusterListEnhanced() {
                   cluster={cluster} 
                   onEnter={handleEnterCluster}
                   onEdit={handleEditCluster}
+                  onSetup={(cluster) => {
+                    setSetupCluster(cluster);
+                    setSetupDialogOpen(true);
+                  }}
                   onAuth={handleAuthCluster}
                   onDelete={handleDeleteCluster}
                 />
@@ -666,6 +674,14 @@ export default function ClusterListEnhanced() {
           clusterFrame: editingCluster.clusterFrame || '',
           depType: editingCluster.depType || ''
         } : null}
+      />
+
+      {/* 配置集群弹窗 */}
+      <ClusterSetupDialog
+        open={setupDialogOpen}
+        onOpenChange={setSetupDialogOpen}
+        cluster={setupCluster}
+        onSuccess={handleClusterSuccess}
       />
     </div>
   )

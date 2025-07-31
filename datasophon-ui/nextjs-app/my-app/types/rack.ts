@@ -15,7 +15,3 @@ export interface AddRackRequest {
   rack: string
   clusterId: number
 }
-
-export interface DeleteRackRequest {
-  rackId: number
-}

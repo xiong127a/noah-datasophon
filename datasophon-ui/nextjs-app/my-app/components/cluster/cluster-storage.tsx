@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import EnhancedNavbar from "../layout/navbar-enhanced"
+import FinalNavbar from "../layout/navbar-final"
 import { API_PATHS, apiClient } from "@/lib/api-config"
 
 // 定义数据类型
@@ -176,30 +176,40 @@ export default function ClusterStorage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <EnhancedNavbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
+      {/* 背景装饰 */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-green-400/10 to-blue-400/10 rounded-full blur-3xl transform -translate-x-48 -translate-y-48" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl transform translate-x-40 translate-y-40" />
+      
+      <FinalNavbar />
 
-      {/* 页面头部 - 减少垂直空间 */}
-      <div className="relative overflow-hidden bg-white border-b border-slate-200/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-green-50/50 via-white to-blue-50/50" />
-        <div className="relative max-w-7xl mx-auto px-6 py-6">
+      {/* 页面头部 - 全宽布局 */}
+      <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-50/80 via-white/90 to-blue-50/80" />
+        <div className="relative w-full px-8 py-12">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-1">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
                 集群存储库
               </h1>
-              <p className="text-slate-600">管理和配置存储库，查看可用的组件包</p>
+              <p className="text-lg text-slate-600">管理和配置存储库，查看可用的组件包</p>
+              <div className="flex items-center space-x-2 pt-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-sm text-slate-500">实时监控 • 组件管理 • 版本控制</span>
+              </div>
             </div>
-            <Badge variant="outline" className="px-3 py-1.5 rounded-full border-green-200 text-green-700 bg-green-50">
-              <HardDrive className="w-4 h-4 mr-1.5" />
-              {parcelList.length + 1} 个存储库
-            </Badge>
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
+              <Badge className="px-6 py-3 rounded-2xl border-green-200 text-green-700 bg-green-50/80 text-lg font-semibold">
+                <HardDrive className="h-5 w-5 mr-3 text-green-600" />
+                {parcelList.length + 1} 个存储库
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 主要内容 - 减少垂直间距 */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      {/* 主要内容 - 全宽布局 */}
+      <div className="w-full px-8 py-8">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <LoaderIcon className="w-8 h-8 animate-spin text-blue-500" />

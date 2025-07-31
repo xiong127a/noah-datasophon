@@ -114,7 +114,7 @@ export default function AddTagDialog({ open, onClose, onSuccess, clusterId }: Ad
   }, [open])
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">添加标签</DialogTitle>
