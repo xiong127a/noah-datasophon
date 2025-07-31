@@ -46,6 +46,7 @@ public @interface ApiVersion {
      * 最终路径为：/ddh/api/{version}/{path}
      * @return API路径
      */
+    @AliasFor(annotation = RequestMapping.class, attribute = "path")
     String path() default "";
     
     /**
