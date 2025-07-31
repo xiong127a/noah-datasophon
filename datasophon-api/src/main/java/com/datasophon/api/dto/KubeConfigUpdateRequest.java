@@ -33,7 +33,7 @@ public class KubeConfigUpdateRequest {
     /**
      * Kubernetes配置内容
      */
-    private String kubeConfigContent;
+    private String kubeConfig;
 
     /**
      * 选择的命名空间
