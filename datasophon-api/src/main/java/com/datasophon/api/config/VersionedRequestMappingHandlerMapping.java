@@ -2,6 +2,7 @@ package com.datasophon.api.config;
 
 import com.datasophon.api.annotation.ApiVersion;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
