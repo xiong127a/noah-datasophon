@@ -9,9 +9,9 @@ export const API_BASE = `${API_PREFIX}/api/${API_VERSION}`; // /ddh/api/v1
 // 版本化API路径配置
 export const API_PATHS_V1 = {
   // 认证相关
-  LOGIN: `${API_PREFIX}/api/login`, // 登录接口保持原有路径（特殊处理）
-  LOGOUT: `${API_PREFIX}/api/logout`,
-  REFRESH_TOKEN: `${API_PREFIX}/api/refreshToken`,
+  LOGIN: `${API_BASE}/auth/login`, // 登录接口保持原有路径（特殊处理）
+  LOGOUT: `${API_BASE}/auth/logout`,
+  REFRESH_TOKEN: `${API_BASE}/auth/refreshToken`,
 
   // 集群相关 - v1
   CLUSTER_LIST: `${API_BASE}/cluster/list`,
