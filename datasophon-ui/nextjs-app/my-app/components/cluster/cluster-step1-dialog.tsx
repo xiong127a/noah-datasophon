@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 // import { clusterApi } from '@/lib/api-utils'  // 暂时注释掉，后续会用到
 import { toast } from 'sonner'
+import ClusterWizardSidebar from './cluster-wizard-sidebar'
 
 interface ClusterSetupDialogProps {
   open: boolean
@@ -717,89 +718,14 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden">
         <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
-          {/* 左侧步骤导航 */}
-          <div className="w-48 sm:w-56 lg:w-64 bg-gradient-to-b from-slate-50/80 via-white/90 to-slate-100/80 backdrop-blur-sm border-r border-slate-200/50 flex flex-col min-h-0 relative">
-            {/* 装饰性渐变边框 */}
-            <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-indigo-200/0 via-indigo-300/60 to-purple-200/0"></div>
-            {/* 头部信息 */}
-            <div className="p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white/80 to-indigo-50/50 relative">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-100/20 to-transparent"></div>
-              <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 mb-2 relative z-10">配置集群</DialogTitle>
-              <div className="flex items-center text-sm text-gray-600 relative z-10">
-                <span className="font-medium">{cluster.clusterName}</span>
-                <Badge className="ml-2" variant={isK8s ? "default" : "secondary"}>
-                  {isK8s ? 'Kubernetes' : '传统部署'}
-                </Badge>
-              </div>
-            </div>
-            
-            {/* 步骤列表 */}
-            <div className="flex-1 p-6 sm:p-8 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-slate-400/70 [&::-webkit-scrollbar]:transition-all">
-              <div className="space-y-3">
-                {steps.map((step, index) => (
-                  <div
-                    key={step.number}
-                    className={`relative flex items-center p-3 rounded-lg transition-all duration-200 ${
-                      currentStep === step.number
-                        ? 'bg-blue-100 border border-blue-200 shadow-sm'
-                        : currentStep > step.number
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-white border border-slate-200'
-                    }`}
-                  >
-                    {/* 步骤图标 */}
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold mr-3 ${
-                      currentStep === step.number
-                        ? 'bg-blue-600 text-white'
-                        : currentStep > step.number
-                        ? 'bg-green-600 text-white'
-                        : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {currentStep > step.number ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        step.number
-                      )}
-                    </div>
-                    
-                    {/* 步骤信息 */}
-                    <div className="flex-1">
-                      <div className={`font-medium text-sm ${
-                        currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
-                        {step.title}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {step.description}
-                      </div>
-                    </div>
-                    
-                    {/* 连接线 */}
-                    {index < steps.length - 1 && (
-                      <div className={`absolute left-[28px] top-[56px] w-px h-6 ${
-                        currentStep > step.number ? 'bg-green-300' : 'bg-slate-300'
-                      }`} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* 关闭按钮 */}
-            <div className="p-6 sm:p-8 border-t border-slate-200/70 bg-gradient-to-r from-slate-50/80 to-white/90 relative">
-              {/* 装饰性分割线光效 */}
-              <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
-              <Button 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                className="w-full py-3 rounded-2xl bg-white/80 hover:bg-white border border-white/50 hover:shadow-lg transition-all duration-300 text-slate-700 hover:scale-105 backdrop-blur-sm"
-              >
-                <X className="w-4 h-4 mr-2" />
-                关闭
-              </Button>
-            </div>
-          </div>
+          <ClusterWizardSidebar
+            steps={steps}
+            currentStep={currentStep}
+            title="配置集群"
+            clusterName={cluster.clusterName}
+            isK8s={isK8s}
+            onClose={() => onOpenChange(false)}
+          />
 
           {/* 右侧内容区域 */}
           <div className="flex-1 flex flex-col min-h-0">
@@ -832,9 +758,9 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
             </div>
 
             {/* 底部操作按钮 */}
-            <div className="p-6 sm:p-8 border-t border-slate-200/70 bg-gradient-to-r from-white via-slate-50/50 to-indigo-50/30 relative">
+            <div className="p-6 sm:p-8 border-t border-slate-200/50 bg-white/90 backdrop-blur-sm relative">
               {/* 装饰性分割线光效 */}
-              <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"></div>
+              <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-slate-300/60 to-transparent"></div>
               <div className="flex items-center justify-between gap-4 relative z-10">
                 <div>
                   {currentStep > 1 && (
