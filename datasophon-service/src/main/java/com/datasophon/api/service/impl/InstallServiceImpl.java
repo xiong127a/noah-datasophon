@@ -39,9 +39,13 @@ import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
+import com.datasophon.common.dto.HostCheckStatusDto;
+import com.datasophon.common.dto.InstallStepDto;
+import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
+import com.datasophon.common.exception.ServiceException;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
@@ -51,7 +55,6 @@ import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
@@ -116,11 +119,34 @@ public class InstallServiceImpl implements InstallService {
 
 
     @Override
-    public Result getInstallStep(Integer type) {
-        List<InstallStepEntity> list = QueryChain.of(InstallStepEntity.class)
-                .where(InstallStepEntity::getInstallType).eq(type)
-                .list();
-        return Result.success(list);
+    public InstallStepDto getInstallStep(Integer type) {
+        try {
+            List<InstallStepEntity> list = QueryChain.of(InstallStepEntity.class)
+                    .where(InstallStepEntity::getInstallType).eq(type)
+                    .list();
+            
+            // 转换为Map格式以保持兼容性
+            List<Map<String, Object>> steps = list.stream()
+                    .map(step -> {
+                        Map<String, Object> stepMap = new HashMap<>();
+                        stepMap.put("id", step.getId());
+                        stepMap.put("stepName", step.getStepName());
+                        stepMap.put("stepDesc", step.getStepDesc());
+                        stepMap.put("stepOrder", step.getStepOrder());
+                        stepMap.put("installType", step.getInstallType());
+                        return stepMap;
+                    })
+                    .collect(Collectors.toList());
+            
+            return InstallStepDto.builder()
+                    .steps(steps)
+                    .type(type)
+                    .currentStep(0)
+                    .build();
+        } catch (Exception e) {
+            logger.error("获取安装步骤失败", e);
+            throw new ServiceException("获取安装步骤失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -142,14 +168,13 @@ public class InstallServiceImpl implements InstallService {
      * @return 分页后的主机列表结果
      */
     @Override
-    public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
-            String kubeConfigContent,
-            Integer page, Integer pageSize) {
+    public PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, 
+            String sshPassword, String kubeConfigContent, Integer page, Integer pageSize) {
         try {
             // 获取集群信息以判断集群类型
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             if (clusterInfo == null) {
-                return Result.error("集群不存在");
+                throw new ServiceException("集群不存在");
             }
 
             String depType = clusterInfo.getDepType();
@@ -164,21 +189,23 @@ public class InstallServiceImpl implements InstallService {
                 return analysisHostListForTraditional(clusterId, ips, sshUser, sshPort, sshPassword, page, pageSize);
             }
 
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
-            return Result.successEmptyCount();
+            throw new ServiceException("解析主机列表失败: " + e.getMessage());
         }
     }
 
     /**
      * 传统集群模式的主机列表解析
      */
-    private Result analysisHostListForTraditional(Integer clusterId, String ips, String sshUser, Integer sshPort,
+    private PageResult<HostInfo> analysisHostListForTraditional(Integer clusterId, String ips, String sshUser, Integer sshPort,
             String sshPassword,
             Integer page, Integer pageSize) {
         try {
             if (StringUtils.isBlank(ips)) {
-                return Result.error("主机列表不能为空");
+                throw new ServiceException("主机列表不能为空");
             }
 
             // 修改：每次调用都应该触发saveHostInfo，但用标记控制是否重新收集
@@ -216,20 +243,13 @@ public class InstallServiceImpl implements InstallService {
             int end = Math.min(offset + pageSize, hostList.size());
             List<HostInfo> pagedHosts = hostList.subList(offset, end);
 
-            // 添加队列状态信息
-            Map<String, Object> queueStatus = new HashMap<>();
-            if (hostCheckQueueManager != null) {
-                Map<String, Object> statusMap = hostCheckQueueManager.getQueueStatus();
-                // 获取必要的队列状态信息
-                queueStatus.put("queueSize", statusMap.getOrDefault("queueSize", 0));
-                queueStatus.put("runningTasks", statusMap.getOrDefault("runningTasks", 0));
-                queueStatus.put("processorThreadAlive", statusMap.getOrDefault("processorThreadAlive", true));
-            }
-            return Result.success(pagedHosts,hostList.size()).put("queueStatus", queueStatus);
+            return PageResult.of(pagedHosts, hostList.size(), page, pageSize);
 
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
-            return Result.successEmptyCount();
+            throw new ServiceException("传统集群主机列表解析失败: " + e.getMessage());
         }
     }
 
@@ -1057,69 +1077,106 @@ public class InstallServiceImpl implements InstallService {
     }
 
     @Override
-    public Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
-        // 获取检查结果列表
-        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue)
-                .collect(Collectors.toList());
-        return Result.success(list);
+    public HostCheckStatusDto getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
+        try {
+            // 获取检查结果列表
+            Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            List<HostInfo> list = map.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(Map.Entry::getValue)
+                    .collect(Collectors.toList());
+            
+            // 统计检查状态
+            int totalHosts = list.size();
+            int completedHosts = 0;
+            int failedHosts = 0;
+            int successHosts = 0;
+            boolean allCompleted = true;
+            
+            for (HostInfo hostInfo : list) {
+                CheckItem.Status status = hostInfo.getStatus();
+                if (status == CheckItem.Status.SUCCESS) {
+                    completedHosts++;
+                    successHosts++;
+                } else if (status == CheckItem.Status.FAILED) {
+                    completedHosts++;
+                    failedHosts++;
+                } else if (status == CheckItem.Status.CHECKING || status == CheckItem.Status.WAITING) {
+                    allCompleted = false;
+                }
+            }
+            
+            return HostCheckStatusDto.builder()
+                    .hosts(list)
+                    .completed(allCompleted)
+                    .totalHosts(totalHosts)
+                    .completedHosts(completedHosts)
+                    .failedHosts(failedHosts)
+                    .successHosts(successHosts)
+                    .build();
+        } catch (Exception e) {
+            logger.error("获取主机检查状态失败", e);
+            throw new ServiceException("获取主机检查状态失败: " + e.getMessage());
+        }
     }
 
     @Override
-    public Result dispatcherHostAgentList(
+    public PageResult<HostInfo> dispatcherHostAgentList(
             Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
+        try {
+            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+            String clusterCode = clusterInfo.getClusterCode();
+            String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+            List<HostInfo> list = map.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(Map.Entry::getValue)
+                    .filter(e -> e.getCheckResult().getCode() == 10001)
+                    .collect(Collectors.toList());
 
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue)
-                .filter(e -> e.getCheckResult().getCode() == 10001)
-                .collect(Collectors.toList());
-
-        for (HostInfo hostInfo : list) {
-            if (hostInfo.isManaged()) {
-                hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
-                hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.success"));
-                hostInfo.setInstallState(InstallState.SUCCESS);
-            } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
-                logger.info("start to dispatcher host agent to {}", hostInfo.getIp());
-                ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
-                        "dispatcherWorkerActor-" + hostInfo.getIp());
-                hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                hostInfo.setCreateTime(new Date());
-                hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
-                        ActorRef.noSender());
-                // 保存主机agent分发历史
-                CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp(), true);
-
-            } else {
-                long timeout = DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE);
-                long timeOutPeriodOne = PropertyUtils.getLong("timeOutPeriodOne");
-                long timeOutPeriodTwo = PropertyUtils.getLong("timeOutPeriodTwo");
-                Integer progress = hostInfo.getProgress();
-                if ("75".equals(String.valueOf(progress)) && timeout > timeOutPeriodOne) {
-                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+            for (HostInfo hostInfo : list) {
+                if (hostInfo.isManaged()) {
+                    hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                    hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.fail.tips.one"));
-                    hostInfo.setInstallState(InstallState.FAILED);
-                }
-                if (timeout > timeOutPeriodTwo) {
-                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                    hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                    hostInfo.setInstallState(InstallState.FAILED);
+                    hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.success"));
+                    hostInfo.setInstallState(InstallState.SUCCESS);
+                } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
+                    logger.info("start to dispatcher host agent to {}", hostInfo.getIp());
+                    ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
+                            "dispatcherWorkerActor-" + hostInfo.getIp());
+                    hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                    hostInfo.setCreateTime(new Date());
+                    hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
+                            ActorRef.noSender());
+                    // 保存主机agent分发历史
+                    CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp(), true);
+
+                } else {
+                    long timeout = DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE);
+                    long timeOutPeriodOne = PropertyUtils.getLong("timeOutPeriodOne");
+                    long timeOutPeriodTwo = PropertyUtils.getLong("timeOutPeriodTwo");
+                    Integer progress = hostInfo.getProgress();
+                    if ("75".equals(String.valueOf(progress)) && timeout > timeOutPeriodOne) {
+                        hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                        hostInfo.setProgress(Constants.ONE_HUNDRRD);
+                        hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.fail.tips.one"));
+                        hostInfo.setInstallState(InstallState.FAILED);
+                    }
+                    if (timeout > timeOutPeriodTwo) {
+                        hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                        hostInfo.setProgress(Constants.ONE_HUNDRRD);
+                        hostInfo.setInstallState(InstallState.FAILED);
+                    }
                 }
             }
+            // list分页
+            Integer offset = (page - 1) * pageSize;
+            List<HostInfo> result = getListPage(list, offset, pageSize);
+            return PageResult.of(result, list.size(), page, pageSize);
+        } catch (Exception e) {
+            logger.error("获取主机代理分发列表失败", e);
+            throw new ServiceException("获取主机代理分发列表失败: " + e.getMessage());
         }
-        // list分页
-        Integer offset = (page - 1) * pageSize;
-        List<HostInfo> result = getListPage(list, offset, pageSize);
-        return Result.success(result,list.size());
     }
 
     @Override
@@ -1422,12 +1479,12 @@ public class InstallServiceImpl implements InstallService {
      * Kubernetes集群模式的主机列表解析
      * 从K8S API获取节点信息，包括CPU架构
      */
-    private Result analysisHostListForKubernetes(Integer clusterId, String kubeConfig, Integer page, Integer pageSize) {
+    private PageResult<HostInfo> analysisHostListForKubernetes(Integer clusterId, String kubeConfig, Integer page, Integer pageSize) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
             if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
-                return Result.error("Kubernetes配置不能为空，请先完成集群配置");
+                throw new ServiceException("Kubernetes配置不能为空，请先完成集群配置");
             }
 
             logger.info("开始从Kubernetes API获取节点列表，集群ID: {}", clusterId);
@@ -1437,7 +1494,7 @@ public class InstallServiceImpl implements InstallService {
 
             if (kubernetesHosts.isEmpty()) {
                 logger.warn("未从Kubernetes集群获取到任何节点");
-                return Result.error("未找到任何Kubernetes节点，请检查集群配置");
+                throw new ServiceException("未找到任何Kubernetes节点，请检查集群配置");
             }
 
             logger.info("从Kubernetes API获取到 {} 个节点", kubernetesHosts.size());
@@ -1566,11 +1623,13 @@ public class InstallServiceImpl implements InstallService {
             int end = Math.min(offset + pageSize, sortedHostList.size());
             List<HostInfo> pagedResult = sortedHostList.subList(offset, end);
 
-            return Result.success(pagedResult,sortedHostList.size());
+            return PageResult.of(pagedResult, sortedHostList.size(), page, pageSize);
 
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("获取Kubernetes节点列表失败", e);
-            return Result.error("获取Kubernetes节点列表失败: " + e.getMessage());
+            throw new ServiceException("获取Kubernetes节点列表失败: " + e.getMessage());
         }
     }
 
@@ -1587,16 +1646,15 @@ public class InstallServiceImpl implements InstallService {
     }
 
     @Override
-    public Result clearHostEnvCheckCache() {
+    public boolean clearHostEnvCheckCache() {
         try {
-
             logger.debug("删除主机检查项缓存");
             CacheUtils.clear();
             logger.info("主机环境校验缓存清理完成");
-            return Result.success();
+            return true;
         } catch (Exception e) {
             logger.error("清理主机环境校验缓存失败", e);
-            return Result.error("清理主机环境校验缓存失败: " + e.getMessage());
+            throw new ServiceException("清理主机环境校验缓存失败: " + e.getMessage());
         }
     }
 

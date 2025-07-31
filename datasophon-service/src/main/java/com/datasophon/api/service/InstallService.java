@@ -17,23 +17,77 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.dto.HostCheckStatusDto;
+import com.datasophon.common.dto.InstallStepDto;
+import com.datasophon.common.dto.PageResult;
+import com.datasophon.common.model.HostInfo;
+
+import java.util.List;
+import java.util.Map;
 
 public interface InstallService {
 
-    Result getInstallStep(Integer type);
+    /**
+     * 获取安装步骤
+     * 
+     * @param type 安装类型
+     * @return 安装步骤信息
+     */
+    InstallStepDto getInstallStep(Integer type);
 
-    Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,String kubeConfigContent,
-            Integer page,
-            Integer pageSize);
+    /**
+     * 解析主机列表
+     * 
+     * @param clusterId        集群ID
+     * @param ips             主机IP列表
+     * @param sshUser         SSH用户
+     * @param sshPort         SSH端口
+     * @param sshPassword     SSH密码
+     * @param kubeConfigContent K8s配置内容
+     * @param page            页码
+     * @param pageSize        每页大小
+     * @return 解析后的主机列表分页结果
+     */
+    PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, 
+            String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
 
-    Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);
+    /**
+     * 获取主机检查状态
+     * 
+     * @param clusterId 集群ID
+     * @param sshUser   SSH用户
+     * @param sshPort   SSH端口
+     * @return 主机检查状态
+     */
+    HostCheckStatusDto getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);
 
-    Result dispatcherHostAgentList(Integer id, Integer installStateCode, Integer page, Integer clusterId);
+    /**
+     * 获取主机代理分发列表
+     * 
+     * @param clusterId        集群ID
+     * @param installStateCode 安装状态码
+     * @param page            页码
+     * @param pageSize        每页大小
+     * @return 主机代理分发列表分页结果
+     */
+    PageResult<HostInfo> dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page, Integer pageSize);
 
-    Result reStartDispatcherHostAgent(Integer clusterId, String ips);
+    /**
+     * 重启主机代理分发
+     * 
+     * @param clusterId 集群ID
+     * @param ips      主机IP列表
+     * @return 操作是否成功
+     */
+    boolean reStartDispatcherHostAgent(Integer clusterId, String ips);
 
-    Result hostCheckCompleted(Integer clusterId);
+    /**
+     * 检查主机检查是否完成
+     * 
+     * @param clusterId 集群ID
+     * @return 是否完成
+     */
+    boolean hostCheckCompleted(Integer clusterId);
 
     /**
      * 清理主机检查资源
@@ -41,28 +95,53 @@ public interface InstallService {
      * 用于释放与检查任务和修复任务相关的资源
      * 
      * @param clusterId 集群ID
-     * @return 清理结果
+     * @return 清理是否成功
      */
-    Result cleanupHostCheckResources(Integer clusterId);
+    boolean cleanupHostCheckResources(Integer clusterId);
 
     /**
      * 清理主机环境校验缓存
      * 
-     * @return 清理结果
+     * @return 清理是否成功
      */
-    Result clearHostEnvCheckCache();
-
-    Result cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode);
-
-    Result dispatcherHostAgentCompleted(Integer clusterId);
-
-    Result generateHostAgentCommand(String clusterHostIds, String commandType) throws Exception;
+    boolean clearHostEnvCheckCache();
 
     /**
-     * 启动/停止 主机上安装的服务启动
-     *
+     * 取消主机代理分发
+     * 
+     * @param clusterId        集群ID
+     * @param ip              主机IP
+     * @param installStateCode 安装状态码
+     * @return 操作是否成功
      */
-    Result generateHostServiceCommand(String clusterHostIds, String commandType);
+    boolean cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode);
+
+    /**
+     * 检查主机代理分发是否完成
+     * 
+     * @param clusterId 集群ID
+     * @return 是否完成
+     */
+    boolean dispatcherHostAgentCompleted(Integer clusterId);
+
+    /**
+     * 生成主机代理命令
+     * 
+     * @param clusterHostIds 集群主机ID列表
+     * @param commandType    命令类型
+     * @return 生成的命令列表
+     * @throws Exception 操作异常
+     */
+    List<Map<String, Object>> generateHostAgentCommand(String clusterHostIds, String commandType) throws Exception;
+
+    /**
+     * 生成主机服务命令
+     * 
+     * @param clusterHostIds 集群主机ID列表
+     * @param commandType    命令类型
+     * @return 生成的命令列表
+     */
+    List<Map<String, Object>> generateHostServiceCommand(String clusterHostIds, String commandType);
 
     /**
      * 获取主机最近日志
@@ -71,6 +150,6 @@ public interface InstallService {
      * @param clusterId 集群ID
      * @return 主机最近日志内容
      */
-    Result getWorkerLog(String ip, Integer clusterId);
+    String getWorkerLog(String ip, Integer clusterId);
 
 }

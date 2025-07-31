@@ -1,9 +1,10 @@
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.FixCheckItemDto;
+import com.datasophon.common.dto.TaskProgressDto;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
-import com.datasophon.common.utils.Result;
 
 import java.util.List;
 import java.util.Map;
@@ -35,9 +36,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemId    检查项ID
-         * @return 修复结果
+         * @return 修复是否成功
          */
-        Result fixCheckItem(Integer clusterId, String ip, Integer itemId);
+        boolean fixCheckItem(Integer clusterId, String ip, Integer itemId);
 
         /**
          * 修复指定检查项（支持跳过确认）
@@ -46,9 +47,9 @@ public interface HostCheckService {
          * @param ip          主机IP
          * @param itemId      检查项ID
          * @param skipConfirm 是否跳过确认
-         * @return 修复结果
+         * @return 修复是否成功
          */
-        Result fixCheckItem(Integer clusterId, String ip, Integer itemId, Boolean skipConfirm);
+        boolean fixCheckItem(Integer clusterId, String ip, Integer itemId, Boolean skipConfirm);
 
         /**
          * 获取检查项的确认信息
@@ -56,9 +57,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemId    检查项ID
-         * @return 确认信息
+         * @return 检查项确认信息
          */
-        Result getCheckItemConfirmInfo(Integer clusterId, String ip, Integer itemId);
+        FixCheckItemDto getCheckItemConfirmInfo(Integer clusterId, String ip, Integer itemId);
 
         /**
          * 修复选中的检查项
@@ -66,27 +67,27 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemIds   检查项ID列表，逗号分隔
-         * @return 修复结果
+         * @return 修复是否成功
          */
-        Result fixSelectedCheckItems(Integer clusterId, String ip, String itemIds);
+        boolean fixSelectedCheckItems(Integer clusterId, String ip, String itemIds);
 
         /**
          * 修复所有检查项
          * 
          * @param clusterId 集群ID
          * @param ip        主机IP
-         * @return 修复结果
+         * @return 修复是否成功
          */
-        Result fixAllCheckItems(Integer clusterId, String ip);
+        boolean fixAllCheckItems(Integer clusterId, String ip);
 
         /**
          * 终止指定主机的检查任务
          * 
          * @param clusterId 集群ID
          * @param ip        主机IP
-         * @return 终止结果
+         * @return 终止是否成功
          */
-        Result stopHostCheck(Integer clusterId, String ip);
+        boolean stopHostCheck(Integer clusterId, String ip);
 
         /**
          * 终止指定主机的指定检查项
@@ -94,9 +95,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemId    检查项ID
-         * @return 终止结果
+         * @return 终止是否成功
          */
-        Result stopItemCheck(Integer clusterId, String ip, Integer itemId);
+        boolean stopItemCheck(Integer clusterId, String ip, Integer itemId);
 
         /**
          * 检查单个主机
@@ -111,9 +112,9 @@ public interface HostCheckService {
          *
          * @param clusterId 集群ID
          * @param ips       主机IP列表
-         * @return 操作结果
+         * @return 批量检查是否成功
          */
-        Result batchCheckHosts(Integer clusterId, List<String> ips);
+        boolean batchCheckHosts(Integer clusterId, List<String> ips);
 
         /**
          * 获取检查项的实时日志
@@ -121,9 +122,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemId    检查项ID
-         * @return 检查项日志
+         * @return 检查项日志列表
          */
-        Result getCheckItemLog(Integer clusterId, String ip, Integer itemId);
+        List<LogEntry> getCheckItemLog(Integer clusterId, String ip, Integer itemId);
 
         /**
          * 获取检查项日志（统一接口）
@@ -143,9 +144,9 @@ public interface HostCheckService {
         /**
          * 取消所有当前运行的检查任务
          * 
-         * @return 操作结果
+         * @return 取消是否成功
          */
-        Result cancelAllCheckTasks();
+        boolean cancelAllCheckTasks();
 
         /**
          * 重试指定的检查项
@@ -153,9 +154,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemNames 检查项名称列表
-         * @return 操作结果
+         * @return 重试是否成功
          */
-        Result retryCheckItems(Integer clusterId, String ip, List<String> itemNames);
+        boolean retryCheckItems(Integer clusterId, String ip, List<String> itemNames);
 
         /**
          * 获取格式化后的HTML日志
@@ -166,9 +167,9 @@ public interface HostCheckService {
          * @param logType    日志类型，支持 "all", "check", "fix"
          * @param logLevel   日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
          * @param filterMode 筛选模式，"all"=全部日志, "exact"=精确级别, "min"=指定级别及以上
-         * @return Result 包含格式化后的HTML日志
+         * @return 格式化后的HTML日志内容
          */
-        Result getFormattedLog(Integer clusterId, String ip, Integer itemId, String logType, String logLevel,
+        String getFormattedLog(Integer clusterId, String ip, Integer itemId, String logType, String logLevel,
                         String filterMode);
 
         /**
@@ -184,9 +185,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param itemId    检查项ID
-         * @return 跳过结果
+         * @return 跳过是否成功
          */
-        Result skipCheckItem(Integer clusterId, String ip, Integer itemId);
+        boolean skipCheckItem(Integer clusterId, String ip, Integer itemId);
 
         /**
          * 获取可用的日志级别
@@ -202,16 +203,16 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @return 检查项列表
          */
-        Result getHostCheckItems(String ip, Integer clusterId);
+        List<CheckItem> getHostCheckItems(String ip, Integer clusterId);
 
         /**
          * 开始检查主机
          * 从缓存中获取主机列表并开始检查
          *
          * @param clusterId 集群ID
-         * @return 操作结果
+         * @return 检查是否成功启动
          */
-        Result startHostCheck(Integer clusterId);
+        boolean startHostCheck(Integer clusterId);
 
         /**
          * 更新主机名
@@ -219,9 +220,9 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param ip        主机IP
          * @param hostname  新主机名
-         * @return 操作结果
+         * @return 更新是否成功
          */
-        Result updateHostname(Integer clusterId, String ip, String hostname);
+        boolean updateHostname(Integer clusterId, String ip, String hostname);
 
         /**
          * 更新主机名（可选是否同步hosts文件）
@@ -230,9 +231,9 @@ public interface HostCheckService {
          * @param ip        主机IP
          * @param hostname  新主机名
          * @param syncHosts 是否同步更新hosts文件
-         * @return 操作结果
+         * @return 更新是否成功
          */
-        Result updateHostname(Integer clusterId, String ip, String hostname, boolean syncHosts);
+        boolean updateHostname(Integer clusterId, String ip, String hostname, boolean syncHosts);
 
         /**
          * 更新hosts文件内容
@@ -240,17 +241,17 @@ public interface HostCheckService {
          * @param clusterId        集群ID
          * @param ip               主机IP
          * @param hostsFileContent hosts文件新内容
-         * @return 操作结果
+         * @return 更新是否成功
          */
-        Result updateHostsFile(Integer clusterId, String ip, String hostsFileContent);
+        boolean updateHostsFile(Integer clusterId, String ip, String hostsFileContent);
 
         /**
          * 生成hosts文件预览
          *
          * @param clusterId 集群ID
-         * @return 包含所有主机名和IP的预览内容
+         * @return hosts文件预览内容
          */
-        Result generateHostsFilePreview(Integer clusterId);
+        String generateHostsFilePreview(Integer clusterId);
 
         /**
          * 生成hosts文件预览（带分页）
@@ -258,17 +259,17 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          * @param page      当前页码，从1开始
          * @param pageSize  每页显示数量
-         * @return 包含当前页主机名和IP的预览内容
+         * @return hosts文件预览内容
          */
-        Result generateHostsFilePreview(Integer clusterId, Integer page, Integer pageSize);
+        String generateHostsFilePreview(Integer clusterId, Integer page, Integer pageSize);
 
         /**
          * 同步hosts文件到所有主机
          * 
          * @param clusterId 集群ID
-         * @return 操作结果
+         * @return 同步是否成功
          */
-        Result syncHostsFile(Integer clusterId);
+        boolean syncHostsFile(Integer clusterId);
 
         /**
          * 批量设置主机名
@@ -278,9 +279,9 @@ public interface HostCheckService {
          * @param zeroCount 中间0的位数
          * @param separator 分隔符
          * @param suffix    后缀
-         * @return 操作结果
+         * @return 设置是否成功
          */
-        Result batchSetHostname(Integer clusterId, String prefix, Integer zeroCount, String separator, String suffix);
+        boolean batchSetHostname(Integer clusterId, String prefix, Integer zeroCount, String separator, String suffix);
 
         /**
          * 获取任务进度
@@ -288,21 +289,21 @@ public interface HostCheckService {
          * @param taskId 任务ID
          * @return 任务进度信息
          */
-        Result getTaskProgress(String taskId);
+        TaskProgressDto getTaskProgress(String taskId);
 
         /**
          * 修复集群中所有主机的所有失败项
          * 
          * @param clusterId 集群ID
-         * @return 操作结果
+         * @return 修复是否成功
          */
-        Result fixAllFailedItems(Integer clusterId);
+        boolean fixAllFailedItems(Integer clusterId);
 
         /**
          * 跳过集群中所有主机的所有失败项
          * 
          * @param clusterId 集群ID
-         * @return 操作结果
+         * @return 跳过是否成功
          */
-        Result skipAllFailedItems(Integer clusterId);
+        boolean skipAllFailedItems(Integer clusterId);
 }

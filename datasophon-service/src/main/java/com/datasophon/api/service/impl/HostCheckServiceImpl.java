@@ -22,7 +22,7 @@ import com.datasophon.common.model.LogStats;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.utils.HostUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.exception.ServiceException;
 import lombok.Data;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -1861,36 +1861,43 @@ public class HostCheckServiceImpl implements HostCheckService {
      * @return 操作结果
      */
     @Override
-    public Result startHostCheck(Integer clusterId) {
-        if (clusterId == null) {
-            return Result.error("集群ID不能为空");
+    public boolean startHostCheck(Integer clusterId) {
+        try {
+            if (clusterId == null) {
+                throw new ServiceException("集群ID不能为空");
+            }
+
+            // 从缓存中获取主机列表
+            Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            if (map.isEmpty()) {
+                throw new ServiceException("找不到集群的主机信息，请先解析主机列表");
+            }
+
+            // 筛选出需要检查的主机（未受管主机）
+            List<String> ipsToCheck = map.values().stream()
+                    .map(HostInfo::getIp)
+                    .collect(Collectors.toList());
+
+            if (ipsToCheck.isEmpty()) {
+                throw new ServiceException("没有需要检查的主机");
+            }
+
+            // 使用HostUtils中的统一排序方法对IP地址进行排序
+            ipsToCheck = HostUtils.sortIpAddresses(ipsToCheck);
+
+            logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
+                    ipsToCheck.size(),
+                    ipsToCheck.isEmpty() ? "无" : ipsToCheck.getFirst(),
+                    ipsToCheck.isEmpty() ? "无" : ipsToCheck.getLast());
+
+            // 调用批量检查方法执行检查
+            return batchCheckHosts(clusterId, ipsToCheck);
+        } catch (ServiceException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("启动主机检查失败", e);
+            throw new ServiceException("启动主机检查失败: " + e.getMessage());
         }
-
-        // 从缓存中获取主机列表
-        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-        if (map.isEmpty()) {
-            return Result.error("找不到集群的主机信息，请先解析主机列表");
-        }
-
-        // 筛选出需要检查的主机（未受管主机）
-        List<String> ipsToCheck = map.values().stream()
-                .map(HostInfo::getIp)
-                .collect(Collectors.toList());
-
-        if (ipsToCheck.isEmpty()) {
-            return Result.error("没有需要检查的主机");
-        }
-
-        // 使用HostUtils中的统一排序方法对IP地址进行排序
-        ipsToCheck = HostUtils.sortIpAddresses(ipsToCheck);
-
-        logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
-                ipsToCheck.size(),
-                ipsToCheck.isEmpty() ? "无" : ipsToCheck.getFirst(),
-                ipsToCheck.isEmpty() ? "无" : ipsToCheck.getLast());
-
-        // 调用批量检查方法执行检查
-        return batchCheckHosts(clusterId, ipsToCheck);
     }
 
     /**
