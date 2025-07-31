@@ -32,7 +32,7 @@ interface ClusterSetupDialogProps {
 }
 
 interface Step1Data {
-  // Traditional cluster
+  // Traditional cluster (PVM)
   hosts: string
   sshUser: string
   sshPort: string
@@ -77,7 +77,7 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     { number: 4, title: '完成安装', description: '确认配置并开始安装' }
   ]
 
-  const isK8s = cluster?.depType === 'kubernetes'
+  const isK8s = cluster?.depType?.toLowerCase() === 'kubernetes'
 
   // 重置表单数据
   const resetForm = () => {
@@ -213,6 +213,10 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
       }
       if (!step1Data.sshUser?.trim()) {
         toast.error('请输入SSH用户名')
+        return false
+      }
+      if (!step1Data.sshPort?.trim()) {
+        toast.error('请输入SSH端口')
         return false
       }
       if (!step1Data.sshPassword?.trim()) {
