@@ -21,6 +21,14 @@ export const API_PATHS = {
   CLUSTER_AUTH: `${API_PREFIX}/api/cluster/user/saveClusterManager`,
   CLUSTER_SERVICE_LIST: `${API_PREFIX}/api/cluster/service/list`,
   CLUSTER_RUNNING_LIST: `${API_PREFIX}/api/cluster/runningClusterList`,
+  // Kubernetes相关
+  CLUSTER_NAMESPACES: `${API_PREFIX}/api/cluster/namespaces`,        // 获取K8S命名空间
+  CLUSTER_KUBE_CONFIG: `${API_PREFIX}/api/cluster/kube-config`,      // 保存K8S配置
+  // 主机管理相关
+  CLUSTER_HOST_LIST: `${API_PREFIX}/api/cluster/host/list`,          // 获取主机列表
+  CLUSTER_HOST_ALL: `${API_PREFIX}/api/cluster/host/all`,            // 获取所有主机
+  CLUSTER_HOST_GET_RACK: `${API_PREFIX}/api/cluster/host/getRack`,   // 获取主机机架信息
+  CLUSTER_HOST_ASSIGN_RACK: `${API_PREFIX}/api/cluster/host/assignRack`, // 分配主机机架
 
   // 用户相关
   USER_LIST: `${API_PREFIX}/api/user/list`,
@@ -53,6 +61,14 @@ export const API_PATHS = {
   RACK_SAVE: `${API_PREFIX}/cluster/rack/save`,                   // 保存机架
   RACK_DELETE: `${API_PREFIX}/cluster/rack/delete`,               // 删除机架
   RACK_ASSIGN: `${API_PREFIX}/assignRack`,                        // 分配机架给主机（在ClusterHostController中）
+
+  // 日志审计相关
+  LOG_LIST: `${API_PREFIX}/api/log/list`,                         // 获取日志列表
+  LOG_SERVICE_NAME_LIST: `${API_PREFIX}/api/log/serviceNameList`, // 获取服务名称列表
+  LOG_MODULE_LIST: `${API_PREFIX}/api/log/moduleList`,            // 获取模块列表
+
+  // 告警相关
+  ALERT_GROUP_LIST: `${API_PREFIX}/alert/group/list`,             // 获取告警组列表
 };
 
 // 创建axios实例
@@ -102,7 +118,14 @@ apiClient.interceptors.response.use(
 // 导出一个默认的API请求函数封装
 export const api = {
   get: (url: string, params?: any) => apiClient.get(url, { params }),
-  post: (url: string, data: any) => apiClient.post(url, data),
+  post: (url: string, data: any) => {
+    console.log('API POST请求:', url, '数据:', data)
+    return apiClient.post(url, data, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+  },
   put: (url: string, data: any) => apiClient.put(url, data),
   delete: (url: string, params?: any) => apiClient.delete(url, { params }),
 };

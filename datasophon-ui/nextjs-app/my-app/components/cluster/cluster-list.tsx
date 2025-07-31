@@ -94,7 +94,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
-import ClusterSetupDialog from "./cluster-setup-dialog"
+import ClusterStep1Dialog from "./cluster-step1-dialog"
 import { apiClient, API_PATHS } from "@/lib/api-config"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -676,13 +676,13 @@ export default function ClusterListEnhanced() {
         } : null}
       />
 
-      {/* 配置集群弹窗 */}
-      <ClusterSetupDialog
-        open={setupDialogOpen}
-        onOpenChange={setSetupDialogOpen}
-        cluster={setupCluster}
-        onSuccess={handleClusterSuccess}
-      />
+                {/* 配置集群Step1弹窗 */}
+          <ClusterStep1Dialog
+            open={setupDialogOpen}
+            onOpenChange={setSetupDialogOpen}
+            cluster={setupCluster}
+            onSuccess={handleClusterSuccess}
+          />
     </div>
   )
 } 
