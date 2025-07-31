@@ -1,6 +1,8 @@
 package com.datasophon.api.config;
 
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -51,6 +53,23 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     public String testConfigBean() {
         System.out.println("=== ApiVersionConfig: testConfigBean 被创建 - 配置类正常工作 ===");
         return "test-config-working";
+    }
+    
+    /**
+     * BeanPostProcessor - 监视所有RequestMappingHandlerMapping Bean的创建
+     */
+    @Bean
+    public BeanPostProcessor requestMappingHandlerMappingMonitor() {
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+                if (bean instanceof RequestMappingHandlerMapping) {
+                    System.out.println("=== BeanPostProcessor: 发现 RequestMappingHandlerMapping Bean: " + 
+                                     beanName + " -> " + bean.getClass().getName() + " ===");
+                }
+                return bean;
+            }
+        };
     }
     
     /**
