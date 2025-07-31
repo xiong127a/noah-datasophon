@@ -21,15 +21,14 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
-import com.datasophon.common.utils.Result;
+import com.datasophon.api.converter.UserInfoConverter;
+import com.datasophon.api.vo.Result;
+import com.datasophon.api.vo.UserInfoVO;
+import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.mybatisflex.core.query.QueryChain;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @ApiVersion(path = "user")
 public class UserInfoController {
@@ -45,44 +46,71 @@ public class UserInfoController {
     @Autowired
     private UserInfoService userInfoService;
 
+    @Autowired
+    private UserInfoConverter userInfoConverter;
+
     /**
      * 列表带分页
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam(name = "username",required = false) String username, @RequestParam("page") Integer page,
+    public Result<List<UserInfoVO>> list(@RequestParam(name = "username", required = false) String username,
+            @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
-        return userInfoService.getUserListByPage(username, page, pageSize);
+        // Service层返回PageResult<DTO>
+        com.datasophon.common.model.PageResult<UserInfoDTO> servicePageResult = userInfoService
+                .getUserListByPage(username, page, pageSize);
+
+        // 转换DTO列表为VO列表
+        List<UserInfoVO> voList = servicePageResult.getRecords().stream()
+                .map(userInfoConverter::dtoToVo)
+                .collect(Collectors.toList());
+
+        // API层包装成Result返回
+        return Result.success(voList, servicePageResult.getTotal());
     }
 
     /**
      * 查询所有用户
      */
     @RequestMapping("/all")
-    public Result all() {
-        List<UserInfoEntity> list = QueryChain.of(UserInfoEntity.class).list();
-        return Result.success(list);
+    public Result<List<UserInfoVO>> all() {
+        // 使用Service提供的分页方法，获取所有数据
+        com.datasophon.common.model.PageResult<UserInfoDTO> servicePageResult = userInfoService.getUserListByPage(null,
+                1, Integer.MAX_VALUE);
+
+        // 转换为VO列表
+        List<UserInfoVO> voList = servicePageResult.getRecords().stream()
+                .map(userInfoConverter::dtoToVo)
+                .collect(Collectors.toList());
+
+        return Result.success(voList);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<UserInfoVO> info(@PathVariable("id") Integer id) {
+        // 通过Entity方法获取用户（保持兼容性）
         UserInfoEntity userInfo = userInfoService.getById(id);
 
-        return Result.success(userInfo);
+        if (userInfo == null) {
+            return Result.success(null);
+        }
+
+        // 转换为VO返回
+        UserInfoVO userVO = userInfoConverter.entityToVo(userInfo);
+        return Result.success(userVO);
     }
 
     /**
      * 检查用户名是否存在
      */
     @PostMapping("/checkName")
-    public Result checkUsername(@RequestBody CheckUsernameRequest request) {
+    public Result<Boolean> checkUsername(@RequestBody CheckUsernameRequest request) {
         boolean exists = userInfoService.checkUsernameExists(request.getUsername(), request.getExcludeId());
         return Result.success(exists);
     }
-
-
 
     /**
      * 检查用户名请求类
@@ -92,7 +120,6 @@ public class UserInfoController {
         private String username;
         private Integer excludeId;
 
-
     }
 
     /**
@@ -100,9 +127,13 @@ public class UserInfoController {
      */
     @RequestMapping("/save")
     @UserPermission
-    public Result save(@RequestBody UserInfoEntity userInfo) {
+    public Result<UserInfoVO> save(@RequestBody UserInfoDTO userInfoDTO) {
+        // Service层处理业务逻辑，返回DTO（可能抛出异常）
+        UserInfoDTO createdUser = userInfoService.createUser(userInfoDTO);
 
-        return userInfoService.createUser(userInfo);
+        // API层将DTO转换为VO并包装Result
+        UserInfoVO userVO = userInfoConverter.dtoToVo(createdUser);
+        return Result.success(userVO);
     }
 
     /**
@@ -110,8 +141,13 @@ public class UserInfoController {
      */
     @RequestMapping("/update")
     @UserPermission
-    public Result update(@RequestBody UserInfoEntity userInfo) {
-        return userInfoService.updateUser(userInfo);
+    public Result<UserInfoVO> update(@RequestBody UserInfoDTO userInfoDTO) {
+        // Service层处理业务逻辑，返回DTO（可能抛出异常）
+        UserInfoDTO updatedUser = userInfoService.updateUser(userInfoDTO);
+
+        // API层将DTO转换为VO并包装Result
+        UserInfoVO userVO = userInfoConverter.dtoToVo(updatedUser);
+        return Result.success(userVO);
     }
 
     /**
@@ -119,8 +155,8 @@ public class UserInfoController {
      */
     @RequestMapping("/delete")
     @UserPermission
-    public Result delete(@RequestBody Integer[] ids) {
-        if (SecurityUtils.getAuthUser().getId() != 1) {
+    public Result<Void> delete(@RequestBody Integer[] ids) {
+        if (Objects.requireNonNull(SecurityUtils.getAuthUser()).getId() != 1) {
             return Result.error(Status.USER_NO_OPERATION_PERM.getMsg());
         }
         userInfoService.removeByIds(Arrays.asList(ids));

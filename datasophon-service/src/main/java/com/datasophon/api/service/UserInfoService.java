@@ -18,11 +18,13 @@
 package com.datasophon.api.service;
 
 import com.mybatisflex.core.service.IService;
-import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
+import com.datasophon.common.dto.UserInfoDTO;
+import com.datasophon.common.model.PageResult;
 
 /**
- * 用户信息表
+ * 用户信息服务接口
+ * 对外提供DTO接口，内部保持Entity支持以兼容MyBatis-Flex
  *
  * @author gaodayu
  * @email gaodayu2022@163.com
@@ -30,28 +32,67 @@ import com.datasophon.dao.entity.UserInfoEntity;
  */
 public interface UserInfoService extends IService<UserInfoEntity> {
 
-    UserInfoEntity queryUser(String username, String password);
+    /**
+     * 用户登录验证
+     * 
+     * @param username 用户名
+     * @param password 密码
+     * @return 用户信息DTO
+     */
+    UserInfoDTO queryUser(String username, String password);
 
-    Result createUser(UserInfoEntity userInfo);
+    /**
+     * 创建用户
+     * 
+     * @param userInfoDTO 用户信息DTO
+     * @return 创建的用户信息
+     * @throws com.datasophon.common.exception.UserBusinessException 用户名已存在等业务异常
+     */
+    UserInfoDTO createUser(UserInfoDTO userInfoDTO);
 
-    Result updateUser(UserInfoEntity userInfo);
+    /**
+     * 更新用户信息
+     * 
+     * @param userInfoDTO 用户信息DTO
+     * @return 更新后的用户信息
+     * @throws com.datasophon.common.exception.UserBusinessException 用户名已存在等业务异常
+     */
+    UserInfoDTO updateUser(UserInfoDTO userInfoDTO);
 
-    Result getUserListByPage(String username, Integer page, Integer pageSize);
+    /**
+     * 分页查询用户列表
+     * 
+     * @param username 用户名（模糊查询）
+     * @param page     页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    PageResult<UserInfoDTO> getUserListByPage(String username, Integer page, Integer pageSize);
 
     /**
      * 根据用户名查询用户
-     *
+     * 
      * @param username 用户名
-     * @return 用户信息
+     * @return 用户信息DTO
      */
-    UserInfoEntity getUserByUsername(String username);
+    UserInfoDTO getUserByUsername(String username);
 
     /**
      * 检查用户名是否存在
-     *
-     * @param username 用户名
+     * 
+     * @param username  用户名
      * @param excludeId 排除的用户ID（编辑时排除当前用户）
      * @return true表示用户名已存在，false表示可用
      */
     boolean checkUsernameExists(String username, Integer excludeId);
+
+    // ============ 内部使用的Entity方法（兼容现有代码） ============
+
+    /**
+     * 根据用户名查询用户Entity（内部使用）
+     * 
+     * @param username 用户名
+     * @return 用户Entity
+     */
+    UserInfoEntity getUserEntityByUsername(String username);
 }

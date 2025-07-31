@@ -92,6 +92,7 @@
         <xz.version>1.9</xz.version>
         <commons-pool2.version>2.11.1</commons-pool2.version>
         <jsch-old.version>0.1.55</jsch-old.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -144,6 +145,18 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons.lang}</version>
+            </dependency>
+            <!-- MapStruct 对象转换框架 -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>

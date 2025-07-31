@@ -17,13 +17,14 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.enums.Status;
+import cn.hutool.core.bean.BeanUtil;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.dto.UserInfoDTO;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.exception.UserBusinessException;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.UserInfoMapper;
-import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service("userInfoService")
 public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEntity> implements UserInfoService {
@@ -39,55 +41,75 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private UserInfoMapper userInfoMapper;
+
     @Override
-    public UserInfoEntity queryUser(String username, String password) {
-        String md5 = passwordEncoder.encode(password);
-        return QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(username)
-                .and(UserInfoEntity::getPassword).eq(md5)
-                .one();
+    public UserInfoDTO queryUser(String username, String password) {
+        if (StringUtils.isBlank(username)) {
+            throw UserBusinessException.usernameIsNull();
+        }
+
+        String encodedPassword = passwordEncoder.encode(password);
+        UserInfoEntity entity = userInfoMapper.selectByUsernameAndPassword(username, encodedPassword);
+
+        if (entity == null) {
+            throw UserBusinessException.usernameOrPasswordError();
+        }
+
+        return entityToDto(entity);
     }
 
     @Override
-    public Result createUser(UserInfoEntity userInfo) {
-        // 用户名判重
-        List<UserInfoEntity> list = QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(userInfo.getUsername())
-                .list();
-
-        if (CollUtil.isNotEmpty(list)) {
-            return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
+    public UserInfoDTO createUser(UserInfoDTO userInfoDTO) {
+        if (StringUtils.isBlank(userInfoDTO.getUsername())) {
+            throw UserBusinessException.usernameIsNull();
         }
-        
+
+        // 用户名判重
+        if (userInfoMapper.existsByUsername(userInfoDTO.getUsername())) {
+            throw UserBusinessException.usernameExists(userInfoDTO.getUsername());
+        }
+
+        // DTO转Entity
+        UserInfoEntity userInfo = dtoToEntity(userInfoDTO);
+
         // 设置基本信息
         userInfo.setCreateTime(new Date());
         userInfo.setPassword(passwordEncoder.encode(userInfo.getPassword()));
-        
+
         // 设置新字段的默认值
         if (userInfo.getUserType() == null) {
             userInfo.setUserType(2); // 默认为普通用户
         }
-        
-        // bio和avatar字段如果为空，保持为null（数据库默认值）
-        
-        this.save(userInfo);
-        return Result.success();
+
+        // 保存用户
+        try {
+            this.save(userInfo);
+            return entityToDto(userInfo);
+        } catch (Exception e) {
+            throw UserBusinessException.createUserFailed(e.getMessage());
+        }
     }
 
     @Override
-    public Result updateUser(UserInfoEntity userInfo) {
-        // 用户名判重
-        List<UserInfoEntity> list = QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(userInfo.getUsername())
-                .list();
-
-        if (CollUtil.isNotEmpty(list)) {
-            UserInfoEntity userInfoEntity = list.getFirst();
-            if (!userInfoEntity.getId().equals(userInfo.getId())) {
-                return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
-            }
+    public UserInfoDTO updateUser(UserInfoDTO userInfoDTO) {
+        if (userInfoDTO.getId() == null) {
+            throw UserBusinessException.updateUserFailed("用户ID不能为空");
         }
-        
+
+        if (StringUtils.isBlank(userInfoDTO.getUsername())) {
+            throw UserBusinessException.usernameIsNull();
+        }
+
+        // 用户名判重（排除自己）
+        if (userInfoMapper.existsByUsernameExcludeId(userInfoDTO.getUsername(), userInfoDTO.getId())) {
+            throw UserBusinessException.usernameExists(userInfoDTO.getUsername());
+        }
+
+        // DTO转Entity
+        UserInfoEntity userInfo = dtoToEntity(userInfoDTO);
+
         // 只有当密码不为空时才更新密码
         String password = userInfo.getPassword();
         if (StringUtils.isNotBlank(password)) {
@@ -99,45 +121,71 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
                 userInfo.setPassword(existingUser.getPassword());
             }
         }
-        
-        this.updateById(userInfo);
 
-        return Result.success();
-    }
-
-    @Override
-    public Result getUserListByPage(String username, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
-
-        QueryChain<UserInfoEntity> query = QueryChain.of(UserInfoEntity.class);
-        if (StringUtils.isNotBlank(username)) {
-            query.where(UserInfoEntity::getUsername).like("%" + username + "%");
+        try {
+            this.updateById(userInfo);
+            return entityToDto(userInfo);
+        } catch (Exception e) {
+            throw UserBusinessException.updateUserFailed(e.getMessage());
         }
-
-        List<UserInfoEntity> list = query.limit(offset, pageSize).list();
-        long total = query.count();
-
-        // 直接使用Result构造方法，将数据和总数设置到正确的字段中
-        return Result.success(list, total);
     }
 
     @Override
-    public UserInfoEntity getUserByUsername(String username) {
-        return QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(username)
-                .one();
+    public PageResult<UserInfoDTO> getUserListByPage(String username, Integer page, Integer pageSize) {
+        // 创建分页参数
+        Page<UserInfoEntity> pageParam = Page.of(page, pageSize);
+
+        // 调用DAO层分页查询
+        Page<UserInfoEntity> pageResult = userInfoMapper.selectPageByUsername(pageParam, username);
+
+        // Entity列表转DTO列表
+        List<UserInfoDTO> dtoList = pageResult.getRecords().stream()
+                .map(this::entityToDto)
+                .collect(Collectors.toList());
+
+        // 返回分页结果
+        return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
+    }
+
+    @Override
+    public UserInfoDTO getUserByUsername(String username) {
+        UserInfoEntity entity = userInfoMapper.selectByUsername(username);
+        return entity != null ? entityToDto(entity) : null;
+    }
+
+    @Override
+    public UserInfoEntity getUserEntityByUsername(String username) {
+        return userInfoMapper.selectByUsername(username);
     }
 
     @Override
     public boolean checkUsernameExists(String username, Integer excludeId) {
-        QueryChain<UserInfoEntity> query = QueryChain.of(UserInfoEntity.class)
-                .where(UserInfoEntity::getUsername).eq(username);
-        
-        // 如果提供了excludeId，则排除该用户
         if (excludeId != null) {
-            query.and(UserInfoEntity::getId).ne(excludeId);
+            return userInfoMapper.existsByUsernameExcludeId(username, excludeId);
+        } else {
+            return userInfoMapper.existsByUsername(username);
         }
-        
-        return query.exists();
+    }
+
+    // ============ 私有转换方法 ============
+
+    /**
+     * Entity转DTO
+     */
+    private UserInfoDTO entityToDto(UserInfoEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return BeanUtil.copyProperties(entity, UserInfoDTO.class);
+    }
+
+    /**
+     * DTO转Entity
+     */
+    private UserInfoEntity dtoToEntity(UserInfoDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        return BeanUtil.copyProperties(dto, UserInfoEntity.class);
     }
 }
