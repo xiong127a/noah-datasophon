@@ -482,12 +482,12 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden flex flex-col p-0 gap-0">
         <DialogTitle className="sr-only">
           主机环境校验 - {cluster?.clusterName}
         </DialogTitle>
         
-        <div className="flex h-full">
+        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
           {/* 左侧导航 */}
           <ClusterWizardSidebar 
             steps={steps}
