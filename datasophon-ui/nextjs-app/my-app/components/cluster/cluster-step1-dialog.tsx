@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { clusterApi } from '@/lib/api-utils'
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import Image from "next/image"
 
 interface ClusterSetupDialogProps {
   open: boolean
@@ -80,6 +81,18 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
   ]
 
   const isK8s = cluster?.depType?.toLowerCase() === 'kubernetes'
+
+  // 根据集群类型获取图标路径 (与集群列表保持一致)
+  const getIconPath = () => {
+    switch (cluster?.depType) {
+      case "Kubernetes":
+        return "/images/cluster/kubernetes-logo.svg";
+      case "PVM":
+        return "/images/cluster/linux-tux.svg";
+      default:
+        return "/images/cluster/kubernetes-logo.svg";
+    }
+  }
 
   // 重置表单数据
   const resetForm = () => {
@@ -348,10 +361,18 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
         <div className="space-y-8">
           {/* Header */}
           <div className="text-center pb-4">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
-              <Cloud className="w-10 h-10 text-white" />
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
+              <div className="w-12 h-12 relative">
+                <Image
+                  src={getIconPath()}
+                  alt="Kubernetes"
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                />
+              </div>
             </div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">Kubernetes 集群配置</h3>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">Kubernetes 集群配置</h3>
             <p className="text-slate-600 max-w-md mx-auto">
               上传或输入 Kubernetes 配置文件，系统将自动识别可用的命名空间
             </p>
@@ -679,10 +700,18 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
       <div className="space-y-8">
         {/* Header */}
         <div className="text-center pb-4">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
-            <Server className="w-10 h-10 text-white" />
+          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
+            <div className="w-12 h-12 relative">
+              <Image
+                src={getIconPath()}
+                alt="Linux"
+                width={48}
+                height={48}
+                className="object-contain"
+              />
+            </div>
           </div>
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">传统集群配置</h3>
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">传统集群配置</h3>
           <p className="text-slate-600 max-w-md mx-auto">
             配置集群主机列表和 SSH 连接信息，支持批量主机管理
           </p>
