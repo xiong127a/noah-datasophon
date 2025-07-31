@@ -12,7 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * @author DataSophon Team
  */
 @Configuration
-public class WebMvcConfig implements WebMvcConfigurer {
+public class ApiVersionConfig implements WebMvcConfigurer {
     
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
