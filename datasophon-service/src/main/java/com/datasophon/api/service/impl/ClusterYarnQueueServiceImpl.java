@@ -31,7 +31,8 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
@@ -67,7 +68,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
-    public Result listByPage(Integer clusterId, Integer page, Integer pageSize) {
+    public PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
 
         QueryChain<ClusterYarnQueue> query = QueryChain.of(ClusterYarnQueue.class)
@@ -83,26 +84,25 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             clusterYarnQueue.setMinResources(minResources);
             clusterYarnQueue.setMaxResources(maxResources);
         }
-        return Result.success(list,count);
+        return PageResult.of(list, count, page, pageSize);
     }
 
     @Override
-    public Result saveQueue(ClusterYarnQueue clusterYarnQueue) {
+    public void saveQueue(ClusterYarnQueue clusterYarnQueue) throws BusinessException {
         List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
                 .where(ClusterYarnQueue::getQueueName).eq(clusterYarnQueue.getQueueName())
                 .list();
 
         if (Objects.nonNull(list) && list.size() == 1) {
-            return Result.error(Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
+            throw new BusinessException(Status.QUEUE_NAME_ALREADY_EXISTS.getCode(),
+                    Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
         }
         clusterYarnQueue.setCreateTime(new Date());
         this.save(clusterYarnQueue);
-
-        return Result.success();
     }
 
     @Override
-    public Result refreshQueues(Integer clusterId) throws Exception {
+    public void refreshQueues(Integer clusterId) throws BusinessException {
         List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
                 .where(ClusterYarnQueue::getClusterId).eq(clusterId)
                 .list();
@@ -149,7 +149,8 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
             ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
             if (!execResult.getExecResult()) {
-                return Result.error(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
+                throw new BusinessException(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getCode(),
+                        Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
             }
             if (StringUtils.isBlank(hostname)) {
                 hostname = roleInstanceEntity.getHostname();
@@ -164,15 +165,21 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
         commands.add("rmadmin");
         commands.add("-refreshQueues");
         command.setCommands(commands);
-        Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
-        ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-        if (execResult.getExecResult()) {
-            logger.info("yarn dfsadmin -refreshQueues success at {}", hostname);
-        } else {
-            logger.info(execResult.getExecOut());
-            return Result.error(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
+        try {
+            Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
+            ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+            if (execResult.getExecResult()) {
+                logger.info("yarn dfsadmin -refreshQueues success at {}", hostname);
+            } else {
+                logger.info(execResult.getExecOut());
+                throw new BusinessException(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getCode(),
+                        Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to refresh yarn queues", e);
+            throw new BusinessException(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getCode(),
+                    "刷新队列失败: " + e.getMessage());
         }
-        return Result.success();
     }
 
     @Override
@@ -182,7 +189,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
                 .and(ClusterYarnQueue::getClusterId).eq(clusterId)
                 .list();
         if (CollUtil.isNotEmpty(list)) {
-            return list.getFirst();
+            return list.get(0);
         }
         return null;
     }

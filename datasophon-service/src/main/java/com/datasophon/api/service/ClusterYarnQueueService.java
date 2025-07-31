@@ -18,23 +18,21 @@
 package com.datasophon.api.service;
 
 import com.mybatisflex.core.service.IService;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 
 /**
  * 
  *
- * @author dygao2
- * @email gaodayu2022@163.com
- * @date 2022-07-13 19:34:14
  */
 public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
 
-    Result listByPage(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize);
 
-    Result saveQueue(ClusterYarnQueue clusterYarnQueue);
+    void saveQueue(ClusterYarnQueue clusterYarnQueue) throws BusinessException;
 
-    Result refreshQueues(Integer clusterId) throws Exception;
+    void refreshQueues(Integer clusterId) throws BusinessException;
 
     ClusterYarnQueue getQueueByName(Integer clusterId, String queueName);
 }
