@@ -40,8 +40,8 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
         StringBuilder prefix = new StringBuilder();
         prefix.append("/").append(API_PREFIX);
         
-        if (apiVersion.versionEnabled() && !apiVersion.value().isEmpty()) {
-            prefix.append("/").append(apiVersion.value());
+        if (apiVersion.versionEnabled() && !apiVersion.version().isEmpty()) {
+            prefix.append("/").append(apiVersion.version());
         }
         
         if (!apiVersion.path().isEmpty()) {

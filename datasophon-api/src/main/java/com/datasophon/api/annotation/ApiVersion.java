@@ -38,7 +38,7 @@ public @interface ApiVersion {
      * API版本号
      * @return 版本号，如 "v1", "v2"
      */
-    String value() default "v1";
+    String version() default "v1";
     
     /**
      * API完整路径（推荐使用）
