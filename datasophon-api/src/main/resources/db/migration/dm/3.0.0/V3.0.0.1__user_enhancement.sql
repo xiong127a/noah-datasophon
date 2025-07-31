@@ -1,6 +1,6 @@
--- 用户表增强 - 添加个人简介、最后登录时间、头像字段 (达梦数据库版本)
+-- 用户表增强 - 添加个人简介、上次登录时间、头像字段 (达梦数据库版本)
 -- Version: 3.0.1
--- Description: 增强用户管理功能，添加个人简介、最后登录时间和头像字段
+-- Description: 增强用户管理功能，添加个人简介、上次登录时间和头像字段
 
 -- 添加个人简介字段
 ALTER TABLE "DATASOPHON"."t_ddh_user_info" 
@@ -16,6 +16,13 @@ ADD "last_login_time" DATETIME NULL;
 -- 添加字段注释
 COMMENT ON COLUMN "DATASOPHON"."t_ddh_user_info"."last_login_time" IS '最后登录时间';
 
+-- 添加上次登录时间字段
+ALTER TABLE "DATASOPHON"."t_ddh_user_info" 
+ADD "previous_login_time" DATETIME NULL;
+
+-- 添加字段注释
+COMMENT ON COLUMN "DATASOPHON"."t_ddh_user_info"."previous_login_time" IS '上次登录时间';
+
 -- 添加用户头像字段（存储Base64编码的图片数据）
 ALTER TABLE "DATASOPHON"."t_ddh_user_info" 
 ADD "avatar" CLOB NULL;
@@ -29,6 +36,7 @@ COMMENT ON COLUMN "DATASOPHON"."t_ddh_user_info"."user_type" IS '用户类型: 1
 -- 为性能优化添加索引
 CREATE INDEX "idx_user_type" ON "DATASOPHON"."t_ddh_user_info"("user_type");
 CREATE INDEX "idx_last_login_time" ON "DATASOPHON"."t_ddh_user_info"("last_login_time");
+CREATE INDEX "idx_previous_login_time" ON "DATASOPHON"."t_ddh_user_info"("previous_login_time");
 
 -- 为admin用户设置个人简介和头像
 UPDATE "DATASOPHON"."t_ddh_user_info" 
@@ -38,4 +46,5 @@ SET
 WHERE "username" = 'admin' AND "id" = 1;
 
 -- 提交事务
+COMMIT;
 COMMIT;

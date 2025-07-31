@@ -80,6 +80,11 @@ public class UserInfoEntity implements Serializable {
     private Date lastLoginTime;
     
     /**
+     * 上次登录时间
+     */
+    private Date previousLoginTime;
+    
+    /**
      * 用户头像（Base64编码）
      */
     private String avatar;

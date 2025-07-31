@@ -104,7 +104,7 @@ export default function UserManagement() {
   // 判断用户权限
   const isAdmin = (userType?: number) => userType === UserType.ADMIN
   
-  // 格式化最后登录时间
+  // 格式化上次登录时间
   const formatLastLoginTime = (time?: string) => {
     if (!time) return "从未登录"
     return new Intl.DateTimeFormat("zh-CN", {
@@ -286,7 +286,7 @@ export default function UserManagement() {
                           <TableHead className="font-semibold text-slate-700 w-[250px]">邮箱</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[140px]">手机号</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[120px]">用户类型</TableHead>
-                          <TableHead className="font-semibold text-slate-700 w-[180px]">最后登录</TableHead>
+                          <TableHead className="font-semibold text-slate-700 w-[180px]">上次登录</TableHead>
                           <TableHead className="font-semibold text-slate-700 w-[160px]">创建时间</TableHead>
                           <TableHead className="text-right font-semibold text-slate-700 w-[120px]">操作</TableHead>
                         </TableRow>
@@ -358,11 +358,11 @@ export default function UserManagement() {
                               </TableCell>
                               
                               
-                              {/* 最后登录时间 */}
+                              {/* 上次登录时间 */}
                               <TableCell className="text-slate-700">
                                 <div className="flex items-center space-x-1">
                                   <Clock className="h-3 w-3 text-slate-400" />
-                                  <span className="text-sm">{formatLastLoginTime(user.lastLoginTime)}</span>
+                                  <span className="text-sm">{formatLastLoginTime(user.previousLoginTime)}</span>
                                 </div>
                               </TableCell>
                               

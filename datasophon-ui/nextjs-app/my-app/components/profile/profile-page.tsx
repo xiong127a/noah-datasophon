@@ -173,7 +173,7 @@ export default function ProfilePage() {
     }
   }
 
-  // 格式化最后登录时间
+  // 格式化上次登录时间
   const formatLastLoginTime = (time?: string) => {
     if (!time) return "从未登录"
     try {
@@ -325,8 +325,8 @@ export default function ProfilePage() {
                       <Clock className="h-4 w-4 text-slate-600" />
                     </div>
                     <div className="flex-1 text-center">
-                      <div className="text-xs text-slate-400 mb-1">最后登录</div>
-                      <div className="font-medium text-slate-700">{formatLastLoginTime(userInfo.lastLoginTime)}</div>
+                      <div className="text-xs text-slate-400 mb-1">上次登录</div>
+                      <div className="font-medium text-slate-700">{formatLastLoginTime(userInfo.previousLoginTime)}</div>
                     </div>
                   </div>
                 </div>

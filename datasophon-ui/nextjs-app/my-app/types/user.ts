@@ -9,6 +9,7 @@ export interface User {
   userType?: number; // 1-管理员，2-普通用户
   bio?: string; // 个人简介
   lastLoginTime?: string; // 最后登录时间
+  previousLoginTime?: string; // 上次登录时间
   avatar?: string; // 用户头像（Base64编码）
 }
 
