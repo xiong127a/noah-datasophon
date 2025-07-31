@@ -46,32 +46,6 @@ public class UserInfoController {
     private UserInfoService userInfoService;
 
     /**
-     * 获取当前登录用户信息
-     */
-    @PostMapping("/user-info")
-    public Result getCurrentUserInfo() {
-        // 从Spring Security上下文中获取当前认证用户
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
-            return Result.error("未登录或会话已过期");
-        }
-
-        // 获取用户名
-        String username = authentication.getName();
-
-        // 根据用户名获取用户信息
-        UserInfoEntity userInfo = userInfoService.getUserByUsername(username);
-        if (userInfo == null) {
-            return Result.error("用户信息不存在");
-        }
-
-        // 出于安全考虑，清除敏感字段
-        userInfo.setPassword(null);
-
-        return Result.success(userInfo);
-    }
-
-    /**
      * 列表带分页
      */
     @RequestMapping("/list")
