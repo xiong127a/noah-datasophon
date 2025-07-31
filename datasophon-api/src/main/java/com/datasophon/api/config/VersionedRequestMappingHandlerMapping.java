@@ -69,9 +69,8 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
             prefix.append("/").append(apiVersion.version());
         }
         
-        if (!apiVersion.path().isEmpty()) {
-            prefix.append("/").append(apiVersion.path());
-        }
+        // 注意：不在这里添加apiVersion.path()，因为@ApiVersion继承了@RequestMapping
+        // path信息已经通过@RequestMapping机制包含在原始的RequestMappingInfo中了
         
         return prefix.toString();
     }
