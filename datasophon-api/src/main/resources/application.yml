@@ -10,6 +10,8 @@ arthas:
   http-port: -1
 # mysql
 spring:
+  main:
+    allow-bean-definition-overriding: true
   security:
     enabled: true
   config:

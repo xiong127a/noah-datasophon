@@ -18,6 +18,7 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
      * 使用@Primary注解覆盖默认的RequestMappingHandlerMapping
+     * 已在application.yml中启用allow-bean-definition-overriding
      */
     @Bean
     @Primary
