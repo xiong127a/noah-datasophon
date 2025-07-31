@@ -216,13 +216,13 @@ public class LoadServiceMeta implements ApplicationRunner {
                     + serviceInfo.getName()
                     + Constants.UNDERLINE
                     + serviceRole.getName();
-            logger.info(
+            logger.debug(
                     "put {} {} {} service role info into cache",
                     frameCode,
                     serviceName,
                     serviceRole.getName());
             if (StringUtils.isNotBlank(serviceRole.getJmxPort())) {
-                logger.info(
+                logger.debug(
                         "{} jmx port is :{} and the jmx key is: {}",
                         serviceRole.getName(),
                         serviceRole.getJmxPort(),
