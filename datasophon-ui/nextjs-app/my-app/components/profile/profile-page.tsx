@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import FinalNavbar from "../layout/navbar-final"
-import { API_PATHS, api } from "@/lib/api-config"
+import { API_PATHS, api } from "@/lib/api"
 import { BUILT_IN_AVATARS, DEFAULT_INITIALS_AVATAR } from "@/types/user"
 import type { User as UserType } from "@/types/user"
 

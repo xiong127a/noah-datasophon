@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { API_PATHS, api } from "@/lib/api-config"
+import { API_PATHS, api } from "@/lib/api"
 import type { User, UserListResponse } from "@/types/user"
 import { UserType } from "@/types/user"
 import AddUserDialog from "@/components/user/add-user-dialog"

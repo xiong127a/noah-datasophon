@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Rack } from '../../types/rack'
-import { clusterApi } from '@/lib/api-utils'
+import { clusterApi } from "@/lib/api"
 import AddRackDialog from '@/components/rack/add-rack-dialog'
 import DeleteRackDialog from '@/components/rack/delete-rack-dialog'
 import FinalNavbar from '../layout/navbar-final'

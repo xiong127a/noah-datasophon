@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { API_PATHS, api } from "@/lib/api-config"
+import { API_PATHS, api } from "@/lib/api"
 import type { User as UserType, CreateUserRequest, UpdateUserRequest } from "@/types/user"
 import { UserType as UserTypeEnum, USER_TYPE_OPTIONS, BUILT_IN_AVATARS, DEFAULT_INITIALS_AVATAR } from "@/types/user"
 

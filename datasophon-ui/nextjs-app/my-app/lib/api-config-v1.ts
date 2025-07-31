@@ -12,6 +12,7 @@ export const API_PATHS_V1 = {
   LOGIN: `${API_BASE}/auth/login`, // 登录接口保持原有路径（特殊处理）
   LOGOUT: `${API_BASE}/auth/logout`,
   REFRESH_TOKEN: `${API_BASE}/auth/refreshToken`,
+  USER_INFO: `${API_BASE}/auth/user-info`,
 
   // 集群相关 - v1
   CLUSTER_LIST: `${API_BASE}/cluster/list`,
@@ -36,7 +37,6 @@ export const API_PATHS_V1 = {
   // 用户相关 - v1
   USER_LIST: `${API_BASE}/user/list`,
   USER_ALL: `${API_BASE}/user/all`,
-  USER_INFO: `${API_BASE}/user-info`,
   USER_SAVE: `${API_BASE}/user/save`,
   USER_DELETE: `${API_BASE}/user/delete`,
   USER_UPDATE: `${API_BASE}/user/update`,

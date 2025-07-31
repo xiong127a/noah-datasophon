@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { clusterApi } from '@/lib/api-utils'
+import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import type { 

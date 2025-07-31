@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { AddRackRequest } from '../../types/rack'
-import { clusterApi } from '@/lib/api-utils'
+import { clusterApi } from "@/lib/api"
 
 interface AddRackDialogProps {
   open: boolean

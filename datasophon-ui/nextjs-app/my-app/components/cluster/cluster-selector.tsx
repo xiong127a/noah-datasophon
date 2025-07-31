@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { useCluster, ClusterInfo } from '@/hooks/useCluster'
-import { clusterApi } from '@/lib/api-utils'
+import { clusterApi } from "@/lib/api"
 
 const ClusterSelector: React.FC = () => {
   const { currentCluster, hasCluster, setCluster } = useCluster()

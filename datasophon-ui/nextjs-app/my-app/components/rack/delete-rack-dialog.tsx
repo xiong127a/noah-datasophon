@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { Rack } from '../../types/rack'
-import { clusterApi } from '@/lib/api-utils'
+import { clusterApi } from "@/lib/api"
 
 interface DeleteRackDialogProps {
   open: boolean

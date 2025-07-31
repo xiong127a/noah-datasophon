@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { toast } from "sonner"
-import { API_PATHS, api } from "@/lib/api-config"
+import { API_PATHS, api } from "@/lib/api"
 import type { User } from "@/types/user"
 
 interface DeleteUserDialogProps {

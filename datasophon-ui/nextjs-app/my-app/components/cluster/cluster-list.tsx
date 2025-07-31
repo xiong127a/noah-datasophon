@@ -95,7 +95,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
 import ClusterStep1Dialog from "./cluster-step1-dialog"
-import { apiClient, API_PATHS } from "@/lib/api-config"
+import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import FinalNavbar from "../layout/navbar-final"
-import { API_PATHS, apiClient } from "@/lib/api-config"
+import { API_PATHS, apiClient } from "@/lib/api"
 
 // 定义数据类型
 interface Component {

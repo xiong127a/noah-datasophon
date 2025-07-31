@@ -30,7 +30,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { logout } from "../auth/login-page" // 导入退出登录函数
 import Image from "next/image"; // 添加Image导入
-import { API_PATHS, api } from "@/lib/api-config"
+import { API_PATHS, api } from "@/lib/api"
 import type { User } from "@/types/user"
 
 import { Button } from "@/components/ui/button"

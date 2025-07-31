@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import FinalNavbar from "../layout/navbar-final"
 import { SvgIcon } from "@/components/ui/svg-icon"
-import { API_PATHS, apiClient } from "@/lib/api-config"
+import { API_PATHS, apiClient } from "@/lib/api"
 
 // 定义数据类型
 interface FrameworkService {

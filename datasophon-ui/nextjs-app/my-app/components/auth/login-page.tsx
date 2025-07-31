@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ParticleCanvas from "@/components/login/ParticleCanvas";
 import LoginBackground from "@/components/login/LoginBackground";
-import { apiClient, API_PATHS } from "@/lib/api-config"; // 导入集中式API配置
+import { apiClient, API_PATHS } from "@/lib/api"
 
 // 退出登录函数 (全局可用)
 export const logout = async () => {

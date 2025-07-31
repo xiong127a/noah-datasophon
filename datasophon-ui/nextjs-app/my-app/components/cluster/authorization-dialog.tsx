@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { apiClient, API_PATHS } from "@/lib/api-config"
+import { apiClient, API_PATHS } from "@/lib/api"
 
 // 用户数据类型定义
 interface User {

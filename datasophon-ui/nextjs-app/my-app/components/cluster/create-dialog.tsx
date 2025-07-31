@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { apiClient, API_PATHS } from "@/lib/api-config"
+import { apiClient, API_PATHS } from "@/lib/api"
 
 interface CreateClusterDialogProps {
   open: boolean
