@@ -256,7 +256,7 @@ public class LoadServiceMeta implements ApplicationRunner {
                 roleService.updateById(role);
             }
         }
-        logger.info("put {} {} service info into cache", frameCode, serviceName);
+        logger.debug("put {} {} service info into cache", frameCode, serviceName);
         ServiceInfoMap.put(frameCode + Constants.UNDERLINE + serviceName, serviceInfo);
     }
 
