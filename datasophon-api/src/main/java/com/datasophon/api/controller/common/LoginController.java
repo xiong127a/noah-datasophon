@@ -17,12 +17,10 @@
 
 package com.datasophon.api.controller.common;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.common.Constants;
-import com.datasophon.common.security.TokenProvider;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -44,9 +42,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import com.datasophon.api.annotation.ApiVersion;
 
 import java.util.Date;

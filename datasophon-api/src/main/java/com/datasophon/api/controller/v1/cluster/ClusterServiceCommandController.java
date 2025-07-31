@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import cn.hutool.core.util.EnumUtil;
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.common.enums.CommandType;

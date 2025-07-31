@@ -17,7 +17,8 @@
 
 package com.datasophon.common.exception;
 
-import com.datasophon.api.enums.Status;
+
+import com.datasophon.common.enums.Status;
 
 /**
  * 用户业务异常类

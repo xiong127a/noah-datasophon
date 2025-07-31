@@ -17,7 +17,7 @@
 
 package com.datasophon.api.controller.v1.user;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;

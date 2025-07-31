@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.dao.entity.OperationLog;
 import com.datasophon.dao.mapper.OperationLogMapper;

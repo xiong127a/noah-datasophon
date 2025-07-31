@@ -17,7 +17,7 @@
 
 package com.datasophon.api.interceptor;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;

@@ -21,7 +21,7 @@ package com.datasophon.api.master;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.string.validator.GeneralValidator;

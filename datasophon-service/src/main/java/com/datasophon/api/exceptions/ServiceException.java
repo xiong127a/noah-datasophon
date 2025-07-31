@@ -16,7 +16,7 @@
  */
 package com.datasophon.api.exceptions;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import lombok.Getter;
 import lombok.Setter;
 

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.api.enums.Status;
+import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.api.service.RoleGroupEntityService;
