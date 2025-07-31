@@ -20,7 +20,7 @@ package com.datasophon.api.service.host.impl;
 import cn.hutool.core.convert.Convert;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
-import com.alibaba.fastjson2.JSONObject;
+
 import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
@@ -30,14 +30,15 @@ import com.datasophon.api.master.RackActor;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
+
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
 import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -49,7 +50,7 @@ import com.datasophon.dao.enums.MANAGED;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Service("clusterHostService")
 @Transactional
@@ -91,10 +91,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result<List<QueryHostListPageDTO>> listByPage(Integer clusterId, String hostname, String ip,
+    public PageResult<ClusterHostDO> listByPage(Integer clusterId, String hostname, String ip,
             String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
-        List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
 
         QueryChain<ClusterHostDO> queryChain = QueryChain.of(ClusterHostDO.class)
@@ -125,45 +124,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
         List<ClusterHostDO> list = queryChain.limit(offset, pageSize).list();
 
-        // 回显rack的名称 而不是ID
-        Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
-                .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
-
-        Map<String, HostInfo> hostInfoMap = Convert.toMap(String.class, HostInfo.class,
-                CacheUtils.get(clusterId + Constants.HOST_MAP));
-
-        for (ClusterHostDO clusterHostDO : list) {
-            QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
-            BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
-            // 查询主机上服务角色数
-            long serviceRoleNum = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getHostname).eq(clusterHostDO.getHostname())
-                    .count();
-            queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
-            queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
-            queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
-
-            // 从缓存中获取hosts文件内容和操作系统类型
-            if (hostInfoMap != null) {
-                HostInfo hostInfo = hostInfoMap.get(clusterHostDO.getHostname());
-                if (hostInfo != null) {
-                    // 设置hosts文件内容
-                    if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDnsInfo() != null) {
-                        queryHostListPageDTO.setHostsFile(hostInfo.getOsInfo().getDnsInfo().getHostsFileContent());
-                    } else {
-                        queryHostListPageDTO.setHostsFile(null);
-                    }
-
-                    // 设置操作系统类型
-                    if (hostInfo.getOsInfo() != null) {
-                        queryHostListPageDTO.setOsType(hostInfo.getOsInfo().getDistribution());
-                    }
-                }
-            }
-
-            hostListPageDTOS.add(queryHostListPageDTO);
-        }
-
         QueryChain<ClusterHostDO> countQuery = QueryChain.of(ClusterHostDO.class)
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
                 .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
@@ -176,13 +136,17 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             countQuery.and(ClusterHostDO::getHostState).eq(hostState);
         }
 
+        if (StringUtils.isNotBlank(ip)) {
+            countQuery.and(ClusterHostDO::getIp).like("%" + ip + "%");
+        }
+
         if (StringUtils.isNotBlank(hostname)) {
             countQuery.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
         }
 
         long count = countQuery.count();
 
-        return Result.success(hostListPageDTOS, count);
+        return PageResult.of(list, count, page, pageSize);
     }
 
     @Override
@@ -194,13 +158,22 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result<List<ClusterServiceRoleInstanceEntity>> getRoleListByHostname(Integer clusterId, String hostname) {
+    public List<ClusterHostDO> getAllManagedHostsByClusterId(Integer clusterId) {
+        return QueryChain.of(ClusterHostDO.class)
+                .where(ClusterHostDO::getClusterId).eq(clusterId)
+                .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
+                .orderBy(ClusterHostDO::getHostname).asc()
+                .list();
+    }
+
+    @Override
+    public List<ClusterServiceRoleInstanceEntity> getRoleListByHostname(Integer clusterId, String hostname) {
         List<ClusterServiceRoleInstanceEntity> list = roleInstanceQueryService
                 .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
             roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
         }
-        return Result.success(list);
+        return list;
     }
 
     /**
@@ -212,7 +185,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
      */
     @Override
     @Transactional
-    public Result<String> deleteHosts(String hostIds) {
+    public void deleteHosts(String hostIds) throws BusinessException {
         // 批量移除
         String[] ids = hostIds.split(Constants.COMMA);
         for (String hostId : ids) {
@@ -229,7 +202,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName)
                     .toList();
             if (!list.isEmpty()) {
-                return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
+                throw new BusinessException(Status.HOST_EXIT_ONE_RUNNING_ROLE.getCode(),
+                        host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
 
             String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
@@ -272,16 +246,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 map.remove(host.getHostname());
             }
         }
-        return Result.success();
     }
 
     @Override
-    public Result<ArrayList<JSONObject>> getRack(Integer clusterId) {
-        ArrayList<JSONObject> list = new ArrayList<>();
-        JSONObject rack = new JSONObject();
-        rack.put("rack", "/default-rack");
-        list.add(rack);
-        return Result.success(list);
+    public List<ClusterRack> getRack(Integer clusterId) {
+        return clusterRackService.queryClusterRack(clusterId);
     }
 
     @Override
@@ -333,7 +302,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result<String> assignRack(Integer clusterId, String rack, String hostIds) {
+    public void assignRack(Integer clusterId, String rack, String hostIds) throws BusinessException {
         List<String> ids = Arrays.asList(hostIds.split(","));
         List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
                 .where(ClusterHostDO::getId).in(ids)
@@ -347,7 +316,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         command.setClusterId(clusterId);
         ActorRef rackActor = ActorUtils.getLocalActor(RackActor.class, "rackActor");
         rackActor.tell(command, ActorRef.noSender());
-        return Result.success();
     }
 
     @Override
@@ -359,7 +327,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public Result<String> saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
+    public void saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) throws BusinessException {
         for (HostInfo hostInfo : hostInfoList) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
@@ -397,14 +365,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                         hostInfo.getHostname(), hostInfo.getHostname(), hostInfo.getIp(), arch);
             }
         }
-        return Result.success();
     }
 
     /**
      * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
      */
     @Override
-    public Result<String> saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) {
+    public void saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId)
+            throws BusinessException {
         for (ClusterHostDO kubernetesHost : kubernetesHosts) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(kubernetesHost.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
@@ -418,7 +386,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                         kubernetesHost.getTotalMem(), kubernetesHost.getTotalDisk());
             }
         }
-        return Result.success();
     }
 
     private static ClusterHostDO getClusterHostDO(Integer clusterId, ClusterHostDO kubernetesHost) {
@@ -449,7 +416,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
      * 获取K8S模式下的完整硬件信息
      */
     @Override
-    public Result<List<ClusterHostDO>> getK8sHostsWithHardwareInfo(Integer clusterId) {
+    public List<ClusterHostDO> getK8sHostsWithHardwareInfo(Integer clusterId) {
         try {
             // 从缓存中获取K8S完整硬件信息
             Object cachedData = CacheUtils.get(clusterId + "_K8S_HOSTS_FOR_SAVE");
@@ -457,14 +424,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 @SuppressWarnings("unchecked")
                 List<ClusterHostDO> kubernetesHosts = (List<ClusterHostDO>) cachedData;
                 logger.info("获取到K8S完整硬件信息，共{}台主机", kubernetesHosts.size());
-                return Result.success(kubernetesHosts);
+                return kubernetesHosts;
             } else {
                 logger.warn("未找到K8S完整硬件信息缓存");
-                return Result.success(new ArrayList<>());
+                return new ArrayList<>();
             }
         } catch (Exception e) {
             logger.error("获取K8S完整硬件信息失败", e);
-            return Result.error("获取K8S完整硬件信息失败: " + e.getMessage());
+            throw new BusinessException(500, "获取K8S完整硬件信息失败: " + e.getMessage());
         }
     }
 }

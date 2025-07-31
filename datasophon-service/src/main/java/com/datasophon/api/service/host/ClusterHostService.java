@@ -19,8 +19,11 @@ package com.datasophon.api.service.host;
 
 import com.mybatisflex.core.service.IService;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.entity.ClusterRack;
+import com.datasophon.common.exception.BusinessException;
 
 import java.util.List;
 
@@ -30,12 +33,18 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
 
     ClusterHostDO getClusterHostByIp(String ip);
 
-    Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-                      String orderField, String orderType, Integer page, Integer pageSize);
+    PageResult<ClusterHostDO> listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture,
+            Integer hostState,
+            String orderField, String orderType, Integer page, Integer pageSize);
 
     List<ClusterHostDO> getHostListByClusterId(Integer id);
 
-    Result getRoleListByHostname(Integer clusterId, String hostname);
+    /**
+     * 获取集群所有受管理的主机，按主机名排序
+     */
+    List<ClusterHostDO> getAllManagedHostsByClusterId(Integer clusterId);
+
+    List<ClusterServiceRoleInstanceEntity> getRoleListByHostname(Integer clusterId, String hostname);
 
     /**
      * 批量删除主机。
@@ -43,10 +52,11 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
      * 其次删除主机 worker，同时移除 Prometheus hosts
      * 然后删除主机运行的实例
      *
+     * @throws BusinessException 删除失败时抛出异常
      */
-    Result deleteHosts(String hostIds);
+    void deleteHosts(String hostIds) throws BusinessException;
 
-    Result getRack(Integer clusterId);
+    List<ClusterRack> getRack(Integer clusterId);
 
     void removeHostByClusterId(Integer id);
 
@@ -54,19 +64,21 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
 
     List<ClusterHostDO> getHostListByIds(List<String> ids);
 
-    Result assignRack(Integer clusterId, String rack, String hostIds);
+    void assignRack(Integer clusterId, String rack, String hostIds) throws BusinessException;
 
     List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack);
 
-    Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId);
+    void saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) throws BusinessException;
 
     /**
      * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
+     *
+     * @throws BusinessException 保存失败时抛出异常
      */
-    Result saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId);
+    void saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) throws BusinessException;
 
     /**
      * 获取K8S模式下的完整硬件信息
      */
-    Result getK8sHostsWithHardwareInfo(Integer clusterId);
+    List<ClusterHostDO> getK8sHostsWithHardwareInfo(Integer clusterId);
 }
