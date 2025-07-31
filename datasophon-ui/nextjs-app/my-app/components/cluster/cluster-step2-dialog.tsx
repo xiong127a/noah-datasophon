@@ -93,7 +93,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         ...step1Data
       }
 
-      const response = await clusterApi.hostCheck.analysisList(params)
+      const response = await clusterApi.hostInstall.analysisList(params)
       const res = response.data as HostListResponse
 
       if (res.code === 200) {
@@ -307,7 +307,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       }
       
       try {
-        const response = await clusterApi.hostCheck.checkCompleted(clusterId)
+        const response = await clusterApi.hostInstall.checkCompleted(clusterId)
         const res = response.data as HostCheckCompletedResponse
         return {
           hostCheckCompleted: res.hostCheckCompleted,

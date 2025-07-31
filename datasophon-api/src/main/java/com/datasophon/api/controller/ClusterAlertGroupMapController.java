@@ -32,7 +32,7 @@ import java.util.Arrays;
  * @author 63588
  */
 @RestController
-@RequestMapping("cluster/alert/group/map")
+@RequestMapping("api/cluster/alert/group/map")
 public class ClusterAlertGroupMapController {
 
     @Autowired

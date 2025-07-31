@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("cluster/yarn/queue")
+@RequestMapping("api/cluster/yarn/queue")
 public class ClusterYarnQueueController {
 
     @Autowired

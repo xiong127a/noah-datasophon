@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("cluster/group")
+@RequestMapping("api/cluster/group")
 public class ClusterGroupController {
 
     @Autowired

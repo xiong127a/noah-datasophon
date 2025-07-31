@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("cluster/service/instance/config")
+@RequestMapping("api/cluster/service/instance/config")
 public class ClusterServiceInstanceConfigController {
 
     @Autowired

@@ -34,7 +34,7 @@ import java.util.List;
  * 通知组
  */
 @RestController
-@RequestMapping("/notice/group")
+@RequestMapping("api/notice/group")
 public class NoticeGroupController {
 
     @Autowired

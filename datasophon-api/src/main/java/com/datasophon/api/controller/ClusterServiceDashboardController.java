@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 集群服务 dashboard inti
  */
 @RestController
-@RequestMapping("/cluster/service/dashboard")
+@RequestMapping("api/cluster/service/dashboard")
 public class ClusterServiceDashboardController {
 
     @Autowired

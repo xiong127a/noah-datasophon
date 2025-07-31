@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("cluster/yarn/scheduler")
+@RequestMapping("api/cluster/yarn/scheduler")
 public class ClusterYarnSchedulerController {
 
     @Autowired

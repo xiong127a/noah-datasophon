@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 
 @RestController
-@RequestMapping("cluster/user")
+@RequestMapping("api/cluster/users")
 public class ClusterUserController {
 
     @Autowired

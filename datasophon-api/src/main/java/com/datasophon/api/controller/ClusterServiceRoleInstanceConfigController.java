@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/clusterserviceroleinstanceconfig")
+@RequestMapping("api/cluster/service/role/instance/config")
 public class ClusterServiceRoleInstanceConfigController {
 
     @Autowired

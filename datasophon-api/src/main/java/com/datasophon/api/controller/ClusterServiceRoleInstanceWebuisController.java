@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("cluster/webuis")
+@RequestMapping("api/cluster/webuis")
 public class ClusterServiceRoleInstanceWebuisController {
 
     @Autowired

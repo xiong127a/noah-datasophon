@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("cluster/service/instance/role/group")
+@RequestMapping("api/cluster/service/instance/role/group")
 public class ClusterServiceInstanceRoleGroupController {
 
     @Autowired

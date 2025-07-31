@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("cluster/queue/capacity")
+@RequestMapping("api/cluster/queue/capacity")
 public class ClusterQueueCapacityController {
 
     @Autowired

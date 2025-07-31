@@ -76,7 +76,11 @@ export const clusterApi = {
   },
 
   // 主机环境校验 (Step2)
-  hostCheck: {
+  hostInstall: {
+    // 获取安装步骤
+    getInstallStep: (type: number) => 
+      api.get(API_PATHS.GET_INSTALL_STEP, { type }),
+    
     // 解析主机列表
     analysisList: (params: {
       pageSize: number
@@ -89,10 +93,70 @@ export const clusterApi = {
       kubeConfigContent?: string
     }) => api.post(API_PATHS.ANALYSIS_HOST_LIST, params),
     
+    // 查询主机校验状态
+    getHostCheckStatus: (params: {
+      clusterId: number
+      sshUser: string
+      sshPort: number
+    }) => api.post(API_PATHS.GET_HOST_CHECK_STATUS, params),
+    
     // 查询主机环境校验是否完成
     checkCompleted: (clusterId: number) => 
       api.post(API_PATHS.HOST_CHECK_COMPLETED, { clusterId }),
     
+    // 清理主机检查资源
+    cleanupResources: (clusterId: number) =>
+      api.post(API_PATHS.CLEANUP_HOST_CHECK_RESOURCES, { clusterId }),
+    
+    // 清理主机环境校验缓存
+    clearCache: () => api.get(API_PATHS.CLEAR_HOST_ENV_CHECK_CACHE),
+    
+    // 主机agent分发进度列表
+    getAgentList: (params: {
+      clusterId: number
+      installStateCode: number
+      page: number
+      pageSize: number
+    }) => api.post(API_PATHS.DISPATCHER_HOST_AGENT_LIST, params),
+    
+    // 查询主机agent分发是否完成
+    agentCompleted: (clusterId: number) =>
+      api.post(API_PATHS.DISPATCHER_HOST_AGENT_COMPLETED, { clusterId }),
+    
+    // 主机agent分发取消
+    cancelAgent: (params: {
+      clusterId: number
+      ip: string
+      installStateCode: number
+    }) => api.post(API_PATHS.CANCEL_DISPATCHER_HOST_AGENT, params),
+    
+    // 主机agent分发重试
+    restartAgent: (clusterId: number, ips: string) =>
+      api.post(API_PATHS.RESTART_DISPATCHER_HOST_AGENT, { clusterId, ips }),
+    
+    // 生成主机agent操作命令
+    generateAgentCommand: (params: {
+      clusterHostIds: string
+      commandType: string
+    }) => api.post(API_PATHS.GENERATE_HOST_AGENT_COMMAND, params),
+    
+    // 生成主机服务操作命令
+    generateServiceCommand: (params: {
+      clusterHostIds: string
+      commandType: string
+    }) => api.post(API_PATHS.GENERATE_HOST_SERVICE_COMMAND, params),
+    
+    // 开始主机检查
+    startCheck: (clusterId: number) =>
+      api.post(API_PATHS.START_HOST_CHECK, { clusterId }),
+    
+    // 获取主机最近日志
+    getWorkerLog: (ip: string, clusterId: number) =>
+      api.get(API_PATHS.GET_WORKER_LOG, { ip, clusterId }),
+  },
+
+  // 主机检查相关
+  hostCheck: {
     // 重试主机环境校验
     retry: (params: {
       hostnames: string
@@ -101,7 +165,11 @@ export const clusterApi = {
       sshPort: string
     }) => api.post(API_PATHS.REHOST_CHECK, params),
     
-    // K8S模式：直接保存Kubernetes主机
+    // K8S模式：保存Kubernetes主机
+    saveK8sHosts: (clusterId: number, hostInfoList: any[]) =>
+      api.post(`${API_PATHS.SAVE_KUBERNETES_HOST}?clusterId=${clusterId}`, hostInfoList),
+    
+    // K8S模式：直接保存Kubernetes主机（完整硬件信息）
     saveK8sHostsDirect: (clusterId: number, kubernetesHosts: any[]) =>
       api.post(`${API_PATHS.SAVE_KUBERNETES_HOST_DIRECT}?clusterId=${clusterId}`, kubernetesHosts),
     

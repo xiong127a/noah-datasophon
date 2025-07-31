@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("cluster/tenant")
+@RequestMapping("api/cluster/tenant")
 public class ClusterTenantController {
 
     @Autowired

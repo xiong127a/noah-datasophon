@@ -32,7 +32,7 @@ import java.util.List;
  */
 @Validated
 @RestController
-@RequestMapping("/host/check")
+@RequestMapping("api/host/check")
 @Slf4j
 public class HostCheckController {
 

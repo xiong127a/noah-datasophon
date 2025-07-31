@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/cluster/parcel")
+@RequestMapping("api/cluster/parcel")
 public class ParcelController implements DisposableBean {
 
     /**

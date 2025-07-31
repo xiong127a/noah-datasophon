@@ -38,7 +38,7 @@ import java.util.Map;
  * 文档管理控制器
  */
 @RestController
-@RequestMapping("/doc")
+@RequestMapping("api/doc")
 @Slf4j
 public class DocController {
 

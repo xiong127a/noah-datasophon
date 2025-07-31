@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("api/clusterusergroup")
+@RequestMapping("api/cluster/user/group")
 public class ClusterUserGroupController {
 
     @Autowired

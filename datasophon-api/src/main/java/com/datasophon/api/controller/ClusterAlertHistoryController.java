@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Arrays;
 
 @RestController
-@RequestMapping("cluster/alert/history")
+@RequestMapping("api/cluster/alert/history")
 public class ClusterAlertHistoryController {
 
     @Autowired

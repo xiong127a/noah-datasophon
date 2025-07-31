@@ -70,12 +70,35 @@ export const API_PATHS = {
   // 告警相关
   ALERT_GROUP_LIST: `${API_PREFIX}/api/alert/group/list`,             // 获取告警组列表
 
-  // 主机环境校验相关（Step2）
-  ANALYSIS_HOST_LIST: `${API_PREFIX}/host/install/analysisHostList`,        // 解析主机列表
-  HOST_CHECK_COMPLETED: `${API_PREFIX}/host/install/hostCheckCompleted`,    // 查询主机环境校验是否完成
+  // 主机环境校验相关（Step2 - HostInstallController）
+  GET_INSTALL_STEP: `${API_PREFIX}/api/host/install/getInstallStep`,            // 获取安装步骤
+  ANALYSIS_HOST_LIST: `${API_PREFIX}/api/host/install/analysisHostList`,        // 解析主机列表
+  GET_HOST_CHECK_STATUS: `${API_PREFIX}/api/host/install/getHostCheckStatus`,   // 查询主机校验状态
+  HOST_CHECK_COMPLETED: `${API_PREFIX}/api/host/install/hostCheckCompleted`,    // 查询主机环境校验是否完成
+  CLEANUP_HOST_CHECK_RESOURCES: `${API_PREFIX}/api/host/install/cleanupHostCheckResources`, // 清理主机检查资源
+  CLEAR_HOST_ENV_CHECK_CACHE: `${API_PREFIX}/api/host/install/clearHostEnvCheckCache`, // 清理主机环境校验缓存
+  DISPATCHER_HOST_AGENT_LIST: `${API_PREFIX}/api/host/install/dispatcherHostAgentList`, // 主机agent分发进度列表
+  DISPATCHER_HOST_AGENT_COMPLETED: `${API_PREFIX}/api/host/install/dispatcherHostAgentCompleted`, // 查询主机agent分发是否完成
+  CANCEL_DISPATCHER_HOST_AGENT: `${API_PREFIX}/api/host/install/cancelDispatcherHostAgent`, // 主机agent分发取消
+  RESTART_DISPATCHER_HOST_AGENT: `${API_PREFIX}/api/host/install/reStartDispatcherHostAgent`, // 主机agent分发重试
+  GENERATE_HOST_AGENT_COMMAND: `${API_PREFIX}/api/host/install/generateHostAgentCommand`, // 主机agent操作命令
+  GENERATE_HOST_SERVICE_COMMAND: `${API_PREFIX}/api/host/install/generateHostServiceCommand`, // 主机服务操作命令
+  START_HOST_CHECK: `${API_PREFIX}/api/host/install/startHostCheck`,            // 开始主机检查
+  GET_WORKER_LOG: `${API_PREFIX}/api/host/install/getWorkerLog`,                // 获取主机最近日志
+  
+  // Kubernetes主机相关（ClusterHostController）
+  SAVE_KUBERNETES_HOST: `${API_PREFIX}/api/cluster/host/saveKubernetesHost`, // 保存Kubernetes主机
   SAVE_KUBERNETES_HOST_DIRECT: `${API_PREFIX}/api/cluster/host/saveKubernetesHostDirect`, // 直接保存Kubernetes主机
   GET_K8S_HOSTS_WITH_HARDWARE_INFO: `${API_PREFIX}/api/cluster/host/getK8sHostsWithHardwareInfo`, // 获取K8S完整硬件信息
-  REHOST_CHECK: `${API_PREFIX}/host/check/rehostCheck`,                     // 重试主机环境校验
+  
+  // 主机检查相关（HostCheckController）
+  REHOST_CHECK: `${API_PREFIX}/api/host/check/rehostCheck`,                     // 重试主机环境校验
+  
+  // 服务安装相关（ServiceInstallController）  
+  GET_SERVICE_CONFIG_OPTION: `${API_PREFIX}/api/service/install/getServiceConfigOption`, // 查询服务配置
+  SAVE_SERVICE_CONFIG: `${API_PREFIX}/api/service/install/saveServiceConfig`,   // 保存服务配置
+  SAVE_SERVICE_ROLE_HOST_MAPPING: `${API_PREFIX}/api/service/install/saveServiceRoleHostMapping`, // 保存服务角色与主机对应关系
+  LIST_SERVICE_TAB: `${API_PREFIX}/api/service/install/listServiceTab`,         // 获取安装服务选项卡列表
 };
 
 // 创建axios实例

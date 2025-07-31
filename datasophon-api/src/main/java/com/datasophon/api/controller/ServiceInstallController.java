@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("service/install")
+@RequestMapping("api/service/install")
 public class ServiceInstallController {
 
     @Autowired

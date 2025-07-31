@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author 63588
  */
 @RestController
-@RequestMapping("/autoScale")
+@RequestMapping("api/autoScale")
 public class AutoScaleController {
 
     @Autowired
