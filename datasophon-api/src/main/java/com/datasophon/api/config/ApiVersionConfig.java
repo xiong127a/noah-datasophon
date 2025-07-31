@@ -3,13 +3,11 @@ package com.datasophon.api.config;
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -23,7 +21,7 @@ import java.util.List;
  * @author DataSophon Team
  */
 @Configuration
-@AutoConfigureBefore(WebMvcAutoConfiguration.class)
+@EnableWebMvc
 public class ApiVersionConfig implements WebMvcConfigurer {
     
     // 构造函数 - 确保配置类被正确加载
@@ -35,10 +33,9 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
-     * 使用@ConditionalOnMissingBean和@AutoConfigureBefore确保在Spring Boot自动配置之前创建
+     * 使用@EnableWebMvc禁用Spring Boot自动配置，确保我们的自定义映射器被使用
      */
-    @Bean(name = "requestMappingHandlerMapping")
-    @ConditionalOnMissingBean(name = "requestMappingHandlerMapping")
+    @Bean
     public RequestMappingHandlerMapping requestMappingHandlerMapping() {
         System.out.println("=== ApiVersionConfig: 开始创建VersionedRequestMappingHandlerMapping Bean ===");
         VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
