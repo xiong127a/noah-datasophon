@@ -131,7 +131,7 @@ public class ClusterInfoController {
     public Result updateClusterKubeConfig(@RequestBody KubeConfigUpdateRequest request) {
         return clusterInfoService.updateClusterKubeConfig(
                 request.getClusterId(),
-                request.getKubeConfig(),
+                request.getKubeConfigContent(),
                 request.getNamespace(),
                 request.getCustomNamespace());
     }
