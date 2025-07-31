@@ -73,6 +73,41 @@ export const clusterApi = {
     // 保存Kubernetes配置 (老项目的API)
     saveKubeConfig: (clusterId: number, kubeConfigContent: string, namespace: string) =>
       api.post(API_PATHS.CLUSTER_KUBE_CONFIG, { clusterId, kubeConfigContent, namespace }),
+  },
+
+  // 主机环境校验 (Step2)
+  hostCheck: {
+    // 解析主机列表
+    analysisList: (params: {
+      pageSize: number
+      page: number
+      clusterId: number
+      hosts?: string
+      sshUser?: string
+      sshPort?: string
+      sshPassword?: string
+      kubeConfigContent?: string
+    }) => api.post(API_PATHS.ANALYSIS_HOST_LIST, params),
+    
+    // 查询主机环境校验是否完成
+    checkCompleted: (clusterId: number) => 
+      api.post(API_PATHS.HOST_CHECK_COMPLETED, { clusterId }),
+    
+    // 重试主机环境校验
+    retry: (params: {
+      hostnames: string
+      clusterId: number
+      sshUser: string
+      sshPort: string
+    }) => api.post(API_PATHS.REHOST_CHECK, params),
+    
+    // K8S模式：直接保存Kubernetes主机
+    saveK8sHostsDirect: (clusterId: number, kubernetesHosts: any[]) =>
+      api.post(`${API_PATHS.SAVE_KUBERNETES_HOST_DIRECT}?clusterId=${clusterId}`, kubernetesHosts),
+    
+    // K8S模式：获取完整硬件信息
+    getK8sHostsWithHardwareInfo: (clusterId: number) =>
+      api.get(`${API_PATHS.GET_K8S_HOSTS_WITH_HARDWARE_INFO}?clusterId=${clusterId}`),
   }
 }
 

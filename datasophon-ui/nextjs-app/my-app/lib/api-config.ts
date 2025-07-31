@@ -69,6 +69,13 @@ export const API_PATHS = {
 
   // 告警相关
   ALERT_GROUP_LIST: `${API_PREFIX}/api/alert/group/list`,             // 获取告警组列表
+
+  // 主机环境校验相关（Step2）
+  ANALYSIS_HOST_LIST: `${API_PREFIX}/host/install/analysisHostList`,        // 解析主机列表
+  HOST_CHECK_COMPLETED: `${API_PREFIX}/host/install/hostCheckCompleted`,    // 查询主机环境校验是否完成
+  SAVE_KUBERNETES_HOST_DIRECT: `${API_PREFIX}/api/cluster/host/saveKubernetesHostDirect`, // 直接保存Kubernetes主机
+  GET_K8S_HOSTS_WITH_HARDWARE_INFO: `${API_PREFIX}/api/cluster/host/getK8sHostsWithHardwareInfo`, // 获取K8S完整硬件信息
+  REHOST_CHECK: `${API_PREFIX}/host/check/rehostCheck`,                     // 重试主机环境校验
 };
 
 // 创建axios实例

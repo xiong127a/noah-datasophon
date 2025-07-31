@@ -34,6 +34,9 @@ components/
 │   ├── cluster-storage.tsx    # 集群存储组件
 │   ├── authorization-dialog.tsx # 集群授权对话框
 │   ├── create-dialog.tsx      # 创建集群对话框
+│   ├── cluster-step1-dialog.tsx # 集群创建第一步（集群配置）
+│   ├── cluster-step2-dialog.tsx # 集群创建第二步（主机环境校验）
+│   ├── cluster-wizard-sidebar.tsx # 集群创建向导侧边栏
 │   └── index.ts              # 导出索引
 ├── host/                      # 主机相关组件
 │   └── host-management.tsx    # 主机管理组件
@@ -140,18 +143,41 @@ import FinalNavbar from "../layout/navbar-final"
 - 新工具：添加到 `lib/`
 - 新类型：添加到 `types/`
 
-## 📝 日志审计功能迁移
+## 📝 功能迁移记录
+
+### 日志审计功能迁移
 
 从Vue2项目成功迁移到Next.js框架：
 
-### 功能特性
+#### 功能特性
 - **多维度筛选**：支持按操作模块、服务名称、操作用户筛选
 - **分页展示**：完整的分页功能和数据展示
 - **实时状态**：操作结果状态实时显示
 - **响应式设计**：适配不同屏幕尺寸
 
-### 实现架构
+#### 实现架构
 - **路由**：`/system/audit` - 统一的系统管理路由结构
 - **组件**：`AuditLogManagement` - 可复用的日志审计组件
 - **类型**：完整的TypeScript类型定义
-- **API**：保持与后端API接口的兼容性 
+- **API**：保持与后端API接口的兼容性
+
+### 集群创建向导迁移
+
+从Vue2项目成功迁移集群创建的Step1和Step2：
+
+#### Step1 - 集群配置
+- **双模式支持**：传统模式（PVM）和Kubernetes模式
+- **配置验证**：SSH连接测试和Kubernetes配置验证
+- **界面优化**：使用现代UI组件库重新设计
+
+#### Step2 - 主机环境校验
+- **智能校验**：根据部署模式自动调整校验策略
+- **实时监控**：队列状态和任务进度实时显示
+- **批量操作**：支持批量重试和主机选择
+- **状态管理**：完整的校验状态跟踪和错误处理
+
+#### 技术架构
+- **组件**：`ClusterStep1Dialog`、`ClusterStep2Dialog` - 模块化向导组件
+- **类型安全**：完整的TypeScript类型定义 (`types/step2.ts`)
+- **API集成**：保持与后端100%兼容的API调用
+- **测试页面**：`/test-step2` - 组件功能测试页面 
