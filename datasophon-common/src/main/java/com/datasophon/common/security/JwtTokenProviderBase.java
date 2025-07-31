@@ -32,7 +32,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -56,7 +56,7 @@ public class JwtTokenProviderBase implements TokenProvider {
     @Value("${jwt.refresh-expiration:2592000000}") // 默认30天
     protected long refreshTokenValidityInMilliseconds;
 
-    protected Key secretKey;
+    protected SecretKey secretKey;
 
     @PostConstruct
     public void init() {
@@ -98,12 +98,12 @@ public class JwtTokenProviderBase implements TokenProvider {
         }
 
         return Jwts.builder()
-                .setSubject(authentication.getName())
+                .subject(authentication.getName())
                 .claim(AUTHORITIES_KEY, authorities)
                 .claim(USER_ID_KEY, userId)
-                .setIssuedAt(now)
-                .setExpiration(validity)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .issuedAt(now)
+                .expiration(validity)
+                .signWith(secretKey)
                 .compact();
     }
 
@@ -113,21 +113,21 @@ public class JwtTokenProviderBase implements TokenProvider {
         Date validity = new Date(now.getTime() + refreshTokenValidityInMilliseconds);
 
         return Jwts.builder()
-                .setSubject(userId)
+                .subject(userId)
                 .claim("type", "refresh")
-                .setIssuedAt(now)
-                .setExpiration(validity)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .issuedAt(now)
+                .expiration(validity)
+                .signWith(secretKey)
                 .compact();
     }
 
     @Override
     public Authentication getAuthentication(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         Collection<? extends GrantedAuthority> authorities = Arrays
                 .stream(claims.get(AUTHORITIES_KEY).toString().split(","))
@@ -143,7 +143,7 @@ public class JwtTokenProviderBase implements TokenProvider {
     @Override
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             logger.error("JWT令牌已过期: {}", e.getMessage());
@@ -151,7 +151,7 @@ public class JwtTokenProviderBase implements TokenProvider {
             logger.error("不支持的JWT令牌: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             logger.error("JWT格式错误: {}", e.getMessage());
-        } catch (SignatureException e) {
+        } catch (io.jsonwebtoken.security.SignatureException e) {
             logger.error("无效的JWT签名: {}", e.getMessage());
         } catch (JwtException | IllegalArgumentException e) {
             logger.error("无效的JWT令牌: {}", e.getMessage());
@@ -182,10 +182,10 @@ public class JwtTokenProviderBase implements TokenProvider {
 
     @Override
     public Claims getClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+        return Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

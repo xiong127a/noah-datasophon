@@ -268,19 +268,23 @@ public class LoginController {
     }
 
     /**
-     * 登录请求DTO
+     * 登录请求DTO - SpringBoot3规范
      */
     @Data
     public static class LoginRequest {
+        @jakarta.validation.constraints.NotBlank(message = "用户名不能为空")
         private String username;
+        
+        @jakarta.validation.constraints.NotBlank(message = "密码不能为空")
         private String password;
     }
 
     /**
-     * 刷新令牌请求DTO
+     * 刷新令牌请求DTO - SpringBoot3规范
      */
     @Data
     public static class RefreshTokenRequest {
+        @jakarta.validation.constraints.NotBlank(message = "刷新令牌不能为空")
         private String refreshToken;
     }
 }

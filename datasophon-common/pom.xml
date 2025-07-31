@@ -288,11 +288,11 @@
             <artifactId>spring-security-core</artifactId>
         </dependency>
         
-        <!-- JWT支持 -->
+        <!-- JWT支持 - 升级到最新版本支持JDK21 -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.5</version>
         </dependency>
 
         <!-- Jakarta Servlet API -->
