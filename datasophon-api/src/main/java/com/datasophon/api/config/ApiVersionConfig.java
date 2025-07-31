@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -39,8 +40,12 @@ public class ApiVersionConfig implements WebMvcConfigurer {
         System.out.println("=== ApiVersionConfig: 开始创建VersionedRequestMappingHandlerMapping Bean ===");
         VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
         
+        // 设置映射优先级 - 确保在其他HandlerMapping之前被使用
+        mapping.setOrder(0);
+        
         // 立即测试这个Bean
         System.out.println("=== Bean类型验证: " + mapping.getClass().getName() + " ===");
+        System.out.println("=== Bean优先级设置: " + mapping.getOrder() + " ===");
         
         System.out.println("=== ApiVersionConfig: VersionedRequestMappingHandlerMapping 创建完成 ===");
         return mapping;
@@ -79,5 +84,24 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new ClusterIdArgumentResolver());
+    }
+    
+    /**
+     * 配置资源处理器
+     * 确保API路径不被静态资源处理器拦截
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        System.out.println("=== ApiVersionConfig: 配置资源处理器，确保API路径优先 ===");
+        
+        // 确保/api/**路径不被当作静态资源处理
+        // 这样可以避免API请求被ResourceHttpRequestHandler拦截
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/");
+        
+        registry.addResourceHandler("/public/**")
+                .addResourceLocations("classpath:/public/");
+        
+        System.out.println("=== ApiVersionConfig: 静态资源处理配置完成，API路径将优先匹配Controller ===");
     }
 }

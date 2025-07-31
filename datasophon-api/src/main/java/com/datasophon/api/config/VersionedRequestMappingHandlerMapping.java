@@ -33,7 +33,12 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
     protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
         RequestMappingInfo info = super.getMappingForMethod(method, handlerType);
         
+        System.out.println("=== VersionedRequestMappingHandlerMapping: 处理方法 " + 
+                         handlerType.getSimpleName() + "." + method.getName() + " ===");
+        
         if (info != null) {
+            System.out.println("=== 原始路径信息: " + info.getPatternsCondition() + " ===");
+            
             ApiVersion apiVersion = AnnotationUtils.findAnnotation(handlerType, ApiVersion.class);
             if (apiVersion != null) {
                 // 创建版本化的路径前缀
@@ -42,7 +47,12 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
                                  " 的方法 " + method.getName() + " 生成前缀: " + versionPrefix + " ===");
                 info = createVersionedRequestMappingInfo(info, versionPrefix);
                 System.out.println("=== VersionedRequestMappingHandlerMapping: 最终映射信息: " + info + " ===");
+                System.out.println("=== 最终路径模式: " + info.getPatternsCondition() + " ===");
+            } else {
+                System.out.println("=== 类 " + handlerType.getSimpleName() + " 没有@ApiVersion注解 ===");
             }
+        } else {
+            System.out.println("=== 方法 " + method.getName() + " 没有RequestMapping信息 ===");
         }
         
         return info;
