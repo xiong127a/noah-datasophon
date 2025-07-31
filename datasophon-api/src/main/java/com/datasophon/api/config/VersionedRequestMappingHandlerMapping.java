@@ -3,6 +3,7 @@ package com.datasophon.api.config;
 import com.datasophon.api.annotation.ApiVersion;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -32,6 +33,11 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
     @Override
     public void afterPropertiesSet() {
         System.out.println("=== VersionedRequestMappingHandlerMapping: 开始afterPropertiesSet初始化 ===");
+        
+        // 设置最高优先级，确保在ResourceHttpRequestHandler之前被处理
+        setOrder(Ordered.HIGHEST_PRECEDENCE);
+        System.out.println("=== VersionedRequestMappingHandlerMapping: 设置优先级为: " + getOrder() + " ===");
+        
         super.afterPropertiesSet();
         System.out.println("=== VersionedRequestMappingHandlerMapping: afterPropertiesSet完成，已注册映射数量: " + getHandlerMethods().size() + " ===");
         

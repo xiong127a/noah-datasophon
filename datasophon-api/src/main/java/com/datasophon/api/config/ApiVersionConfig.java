@@ -10,6 +10,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -59,6 +60,9 @@ public class ApiVersionConfig implements WebMvcConfigurer {
                             customDefinition.setBeanClass(VersionedRequestMappingHandlerMapping.class);
                             customDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
                             customDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+                            
+                            // 设置最高优先级，确保在ResourceHttpRequestHandler之前被处理
+                            customDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
                             
                             // 移除原有定义并注册新定义
                             registry.removeBeanDefinition(beanName);
