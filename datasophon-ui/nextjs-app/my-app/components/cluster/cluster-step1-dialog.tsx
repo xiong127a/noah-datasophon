@@ -127,10 +127,18 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
 
   // 解析kubeconfig中的命名空间 (按照老项目的逻辑)
   const parseKubeConfigNamespaces = async (content: string) => {
+    if (!content?.trim()) {
+      console.log('kubeConfigContent为空，跳过命名空间获取')
+      return
+    }
+    
+    console.log('开始获取命名空间，kubeConfigContent长度:', content.length)
     setNamespacesLoading(true)
     try {
       // 按照老项目的API调用方式
       const response = await clusterApi.config.getNamespaces(content)
+      console.log('获取命名空间API响应:', response.data)
+      
       if (response.data?.code === 200) {
         // 按照老项目的响应格式处理
         const namespaces = response.data.namespaces || []
@@ -145,19 +153,12 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
         
         toast.success(`成功获取到 ${namespaces.length} 个命名空间`)
       } else {
-        throw new Error(response.data?.msg || '获取命名空间失败')
+        toast.error(response.data?.msg || '获取命名空间失败')
       }
-    } catch (error) {
-      console.warn('API调用失败，使用模拟数据:', error)
-      // Fallback: 使用模拟数据
-      await new Promise(resolve => setTimeout(resolve, 800))
-      const mockNamespaces = ['default', 'kube-system', 'kube-public', 'datasophon', 'monitoring']
-      setStep1Data(prev => ({ 
-        ...prev, 
-        namespaces: mockNamespaces,
-        namespace: prev.namespace || 'default' // 设置默认命名空间
-      }))
-      toast.success(`模拟模式：获取到 ${mockNamespaces.length} 个命名空间`)
+    } catch (error: any) {
+      console.error('获取命名空间失败:', error)
+      console.error('错误详情:', error.response?.data)
+      toast.error(`获取命名空间失败: ${error.response?.data?.msg || error.message}`)
     } finally {
       setNamespacesLoading(false)
     }
@@ -272,8 +273,9 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
             throw new Error(response.data?.msg || '保存Kubernetes配置失败')
           }
         } catch (error) {
-          console.warn('保存Kubernetes配置失败，使用模拟模式:', error)
-          toast.success('配置已缓存（模拟模式）')
+          console.error('保存Kubernetes配置失败:', error)
+          toast.error('保存Kubernetes配置失败')
+          return
         } finally {
           setLoading(false)
         }
@@ -384,14 +386,30 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                         className="font-mono text-sm resize-none border-gray-200 focus:border-indigo-400 focus:ring-indigo-400 rounded-2xl"
                       />
                       {step1Data.kubeConfigContent && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-red-100"
-                          onClick={() => setStep1Data(prev => ({ ...prev, kubeConfigContent: '', namespace: '', namespaces: [] }))}
-                        >
-                          <X className="w-4 h-4 text-gray-400 hover:text-red-600" />
-                        </Button>
+                        <div className="absolute top-2 right-2 flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-blue-100"
+                            onClick={() => parseKubeConfigNamespaces(step1Data.kubeConfigContent || '')}
+                            disabled={namespacesLoading}
+                            title="测试获取命名空间"
+                          >
+                            {namespacesLoading ? (
+                              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 text-blue-600" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-red-100"
+                            onClick={() => setStep1Data(prev => ({ ...prev, kubeConfigContent: '', namespace: '', namespaces: [] }))}
+                          >
+                            <X className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
