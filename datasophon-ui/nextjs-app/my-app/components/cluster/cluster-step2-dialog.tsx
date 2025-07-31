@@ -64,8 +64,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const firstDataLoadedRef = useRef(false)
 
-  // 部署类型
-  const depType = cluster?.depType || 'PVM'
+  // 集群ID
   const clusterId = cluster?.id
 
   // 计算统计信息
@@ -296,6 +295,99 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         host.CheckResult && 
         host.CheckResult.code === '10001'
       )
+    }
+  }
+
+  // 保存K8S配置和主机列表 (按照原Vue2项目的逻辑)
+  const saveK8sConfigAndHosts = async () => {
+    try {
+      if (!clusterId) {
+        throw new Error('集群ID不能为空')
+      }
+
+      // 1. 保存K8S配置和命名空间
+      if (depType === 'Kubernetes' && step1Data) {
+        const kubeConfigParams = {
+          kubeConfig: step1Data.kubeConfigContent,
+          namespace: step1Data.namespace,
+          customNamespace: step1Data.customNamespace
+        }
+        
+        console.log('保存K8S配置:', kubeConfigParams)
+        const configRes = await clusterApi.config.saveKubeConfig(
+          clusterId,
+          kubeConfigParams.kubeConfig || '',
+          kubeConfigParams.namespace || ''
+        )
+        
+        if (configRes.data?.code !== 200) {
+          throw new Error('保存K8S配置失败: ' + (configRes.data?.msg || '未知错误'))
+        }
+      }
+      
+      // 2. 获取选中的主机列表并保存
+      const successfulHosts = getSuccessfulHosts()
+      
+      if (successfulHosts && successfulHosts.length > 0) {
+        console.log('保存主机列表:', successfulHosts)
+        
+        if (depType === 'Kubernetes') {
+          // K8S模式：保存K8S主机
+          const hostRes = await clusterApi.host.saveKubernetesHost(clusterId, successfulHosts)
+          
+          if (hostRes.data?.code !== 200) {
+            console.warn('保存K8S主机列表失败:', hostRes.data?.msg)
+          }
+        } else {
+          // PVM模式：分析主机列表
+          const analysisRes = await clusterApi.host.analysisHostList({
+            clusterId,
+            ips: step1Data?.hosts || '',
+            sshUser: step1Data?.sshUser || '',
+            sshPort: step1Data?.sshPort || '',
+            sshPassword: step1Data?.sshPassword || '',
+            page: 1,
+            pageSize: 10
+          })
+          
+          if (analysisRes.data?.code !== 200) {
+            console.warn('分析主机列表失败:', analysisRes.data?.msg)
+          }
+        }
+      }
+      
+      toast.success('配置保存成功')
+      return Promise.resolve()
+      
+    } catch (error) {
+      console.error('保存K8S配置和主机列表失败:', error)
+      throw error
+    }
+  }
+
+  // 下一步处理 (按照原Vue2项目的逻辑)
+  const handleNext = async () => {
+    setLoading(true)
+    try {
+      // 检查主机校验是否完成
+      const checkResult = await hostCheckCompleted()
+      
+      if (!checkResult.hostCheckCompleted) {
+        toast.warning(checkResult.data || '存在未校验成功的主机')
+        return
+      }
+      
+      // 保存K8S配置和主机列表
+      await saveK8sConfigAndHosts()
+      
+      // 调用成功回调
+      onSuccess?.()
+      
+    } catch (error) {
+      console.error('下一步处理失败:', error)
+      toast.error('保存配置失败，请重试')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -672,16 +764,21 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                     取消
                   </Button>
                   <Button
-                    onClick={() => {
-                      // 这里应该调用父组件的下一步方法
-                      console.log('下一步', { selectedHosts: getSuccessfulHosts() })
-                      onSuccess?.()
-                    }}
-                    disabled={selectedRowKeys.length === 0}
+                    onClick={handleNext}
+                    disabled={selectedRowKeys.length === 0 || loading}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
-                    下一步
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        下一步
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

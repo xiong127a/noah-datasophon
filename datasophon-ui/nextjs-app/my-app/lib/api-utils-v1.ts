@@ -29,6 +29,21 @@ export const clusterApiV1 = {
     getRack: () => apiV1.post(API_PATHS_V1.CLUSTER_HOST_GET_RACK, {}),
     assignRack: (rack: string, hostIds: string) => 
       apiV1.post(API_PATHS_V1.CLUSTER_HOST_ASSIGN_RACK, { rack, hostIds }),
+    
+    // 保存Kubernetes主机
+    saveKubernetesHost: (clusterId: number, hosts: any[]) =>
+      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST + `?clusterId=${clusterId}`, hosts),
+    
+    // 分析主机列表
+    analysisHostList: (params: {
+      clusterId: number
+      ips: string
+      sshUser: string
+      sshPort: string
+      sshPassword: string
+      page: number
+      pageSize: number
+    }) => apiV1.post(API_PATHS_V1.ANALYSIS_HOST_LIST, params),
   },
 
   // 标签管理

@@ -34,7 +34,7 @@ interface ClusterSetupDialogProps {
   onStep1Complete?: (step1Data: Step1Data) => void
 }
 
-interface Step1Data {
+export interface Step1Data {
   // Traditional cluster (PVM)
   hosts: string
   sshUser: string

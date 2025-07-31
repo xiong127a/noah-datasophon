@@ -94,7 +94,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
-import ClusterStep1Dialog from "./cluster-step1-dialog"
+import ClusterStep1Dialog, { Step1Data } from "./cluster-step1-dialog"
+import ClusterStep2Dialog from "./cluster-step2-dialog"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -461,8 +462,10 @@ export default function ClusterListEnhanced() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [step2DialogOpen, setStep2DialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
+  const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -552,6 +555,22 @@ export default function ClusterListEnhanced() {
   const handleClusterSuccess = () => {
     // 集群创建/编辑成功后刷新列表
     fetchClusters();
+  };
+
+  // 处理Step1完成，打开Step2
+  const handleStep1Complete = (data: Step1Data) => {
+    console.log('Step1完成，准备打开Step2:', data);
+    setStep1Data(data);
+    setSetupDialogOpen(false);
+    setStep2DialogOpen(true);
+  };
+
+  // 处理Step2完成
+  const handleStep2Complete = () => {
+    console.log('Step2完成');
+    setStep2DialogOpen(false);
+    setStep1Data(null);
+    handleClusterSuccess();
   };
 
   return (
@@ -680,9 +699,31 @@ export default function ClusterListEnhanced() {
           <ClusterStep1Dialog
             open={setupDialogOpen}
             onOpenChange={setSetupDialogOpen}
-            cluster={setupCluster}
+            cluster={setupCluster ? {
+              id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+              clusterName: setupCluster.clusterName,
+              depType: setupCluster.depType || '',
+              clusterCode: setupCluster.clusterCode || ''
+            } : null}
             onSuccess={handleClusterSuccess}
+            onStep1Complete={handleStep1Complete}
           />
+
+          {/* 配置集群Step2弹窗 */}
+          {step1Data && (
+            <ClusterStep2Dialog
+              open={step2DialogOpen}
+              onOpenChange={setStep2DialogOpen}
+              cluster={setupCluster ? {
+                id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+                clusterName: setupCluster.clusterName,
+                depType: setupCluster.depType || '',
+                clusterCode: setupCluster.clusterCode || ''
+              } : null}
+              step1Data={step1Data}
+              onSuccess={handleStep2Complete}
+            />
+          )}
     </div>
   )
 } 
