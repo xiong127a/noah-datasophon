@@ -2,12 +2,15 @@ package com.datasophon.api.config;
 
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -21,7 +24,6 @@ import java.util.List;
  * @author DataSophon Team
  */
 @Configuration
-@EnableWebMvc
 public class ApiVersionConfig implements WebMvcConfigurer {
     
     // 构造函数 - 确保配置类被正确加载
@@ -32,23 +34,43 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     // 移除循环依赖 - 不再注入RequestMappingHandlerMapping
     
     /**
-     * 注册支持API版本的RequestMappingHandlerMapping
-     * 使用@EnableWebMvc禁用Spring Boot自动配置，确保我们的自定义映射器被使用
+     * 使用BeanFactoryPostProcessor在Bean定义阶段替换RequestMappingHandlerMapping
+     * 这比@EnableWebMvc更安全，不会禁用Spring Boot的其他自动配置
      */
     @Bean
-    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-        System.out.println("=== ApiVersionConfig: 开始创建VersionedRequestMappingHandlerMapping Bean ===");
-        VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
-        
-        // 设置映射优先级 - 确保在其他HandlerMapping之前被使用
-        mapping.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        
-        // 立即测试这个Bean
-        System.out.println("=== Bean类型验证: " + mapping.getClass().getName() + " ===");
-        System.out.println("=== Bean优先级设置: " + mapping.getOrder() + " ===");
-        
-        System.out.println("=== ApiVersionConfig: VersionedRequestMappingHandlerMapping 创建完成 ===");
-        return mapping;
+    public static BeanFactoryPostProcessor requestMappingHandlerMappingReplacer() {
+        return new BeanFactoryPostProcessor() {
+            @Override
+            public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+                System.out.println("=== BeanFactoryPostProcessor: 开始替换RequestMappingHandlerMapping ===");
+                
+                // 查找所有RequestMappingHandlerMapping的Bean定义
+                String[] handlerMappingNames = beanFactory.getBeanNamesForType(RequestMappingHandlerMapping.class, false, false);
+                for (String beanName : handlerMappingNames) {
+                    if ("requestMappingHandlerMapping".equals(beanName)) {
+                        System.out.println("=== 找到目标Bean: " + beanName + " ===");
+                        
+                        // 如果beanFactory是BeanDefinitionRegistry，替换Bean定义
+                        if (beanFactory instanceof BeanDefinitionRegistry) {
+                            BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+                            
+                            // 创建我们自定义的Bean定义
+                            RootBeanDefinition customDefinition = new RootBeanDefinition();
+                            customDefinition.setBeanClass(VersionedRequestMappingHandlerMapping.class);
+                            customDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
+                            customDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+                            
+                            // 移除原有定义并注册新定义
+                            registry.removeBeanDefinition(beanName);
+                            registry.registerBeanDefinition(beanName, customDefinition);
+                            
+                            System.out.println("=== 成功替换RequestMappingHandlerMapping为VersionedRequestMappingHandlerMapping ===");
+                        }
+                        break;
+                    }
+                }
+            }
+        };
     }
     
     /**
