@@ -26,14 +26,10 @@ import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.AuthTokenMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -42,9 +38,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.Key;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * JWT认证令牌服务实现类
@@ -58,11 +52,6 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      * 每个用户最多可同时拥有的有效令牌数量
      */
     private static final int MAX_TOKENS_PER_USER = 5;
-
-    /**
-     * 刷新令牌有效期（天）
-     */
-    private static final int REFRESH_TOKEN_VALIDITY_DAYS = 30;
 
     @Autowired
     private AuthTokenMapper authTokenMapper;
@@ -228,14 +217,14 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
                 return null;
             }
 
-            UserInfoEntity user = null;
+            UserInfoEntity user;
             try {
                 // 尝试将标识符解析为整数ID
                 Integer userId = Integer.parseInt(userIdentifier);
                 user = userInfoService.getById(userId);
             } catch (NumberFormatException e) {
                 // 如果不是整数，则尝试作为用户名处理
-                user = userInfoService.getUserByUsername(userIdentifier);
+                user = userInfoService.getUserEntityByUsername(userIdentifier);
             }
 
             if (user == null) {
