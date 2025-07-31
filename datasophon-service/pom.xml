@@ -24,17 +24,7 @@
         </dependency>
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common-domain</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common-dto</artifactId>
+            <artifactId>datasophon-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 

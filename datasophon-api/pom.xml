@@ -39,16 +39,10 @@
             <artifactId>datasophon-service</artifactId>
             <version>${revision}</version>
         </dependency>
-        <!-- 依赖公共DTO模块用于接口参数传递 -->
+        <!-- 依赖公共模块 -->
         <dependency>
             <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common-dto</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <!-- 依赖核心工具模块 -->
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-common-core</artifactId>
+            <artifactId>datasophon-common</artifactId>
             <version>${revision}</version>
         </dependency>
         
