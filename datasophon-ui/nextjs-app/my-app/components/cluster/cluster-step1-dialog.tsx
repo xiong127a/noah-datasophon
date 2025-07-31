@@ -302,7 +302,7 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".yaml,.yml,.config"
+                        accept="*"
                         onChange={handleFileUpload}
                         className="hidden"
                       />
@@ -318,13 +318,16 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                         ) : (
                           <Upload className="w-4 h-4 mr-2" />
                         )}
-                        从文件上传 kubeconfig
+                        选择 kubeconfig 文件
                       </Button>
+                      <p className="text-xs text-slate-500 mt-2">
+                        支持 ~/.kube/config 文件（无扩展名）或 .yaml/.yml 格式
+                      </p>
                     </div>
                     
                     <div className="relative">
                       <Textarea
-                        placeholder="或者直接粘贴 kubeconfig 内容...&#10;&#10;支持标准的 ~/.kube/config 格式"
+                        placeholder="或者直接粘贴 kubeconfig 内容...&#10;&#10;支持标准的 ~/.kube/config 文件（无扩展名）&#10;也支持 .yaml、.yml 等格式的配置文件"
                         value={step1Data.kubeConfigContent || ''}
                         onChange={(e) => {
                           setStep1Data(prev => ({ ...prev, kubeConfigContent: e.target.value }))
