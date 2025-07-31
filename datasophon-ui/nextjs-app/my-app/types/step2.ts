@@ -57,6 +57,10 @@ export interface Step1Data {
   sshPassword?: string
   kubeConfigContent?: string
   namespace?: string
+  namespaces?: string[]
+  isCreatingNewNamespace?: boolean
+  customNamespace?: string
+  clusterVersion?: string
 }
 
 // 分页接口

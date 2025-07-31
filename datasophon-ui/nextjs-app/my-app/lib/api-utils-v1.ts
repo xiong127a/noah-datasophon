@@ -31,12 +31,11 @@ export const clusterApiV1 = {
       apiV1.post(API_PATHS_V1.CLUSTER_HOST_ASSIGN_RACK, { rack, hostIds }),
     
     // 保存Kubernetes主机
-    saveKubernetesHost: (clusterId: number, hosts: any[]) =>
-      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST + `?clusterId=${clusterId}`, hosts),
+    saveKubernetesHost: (hosts: any[]) =>
+      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST, hosts),
     
     // 分析主机列表
     analysisHostList: (params: {
-      clusterId: number
       ips: string
       sshUser: string
       sshPort: string
@@ -96,58 +95,44 @@ export const clusterApiV1 = {
     getInstallStep: (type: number) => 
       apiV1.get(API_PATHS_V1.GET_INSTALL_STEP, { type }),
     
-    // 解析主机列表
-    analysisList: (params: {
-      pageSize: number
-      page: number
-      clusterId: number
-      hosts?: string
-      sshUser?: string
-      sshPort?: string
-      sshPassword?: string
-      kubeConfigContent?: string
-    }) => apiV1.post(API_PATHS_V1.ANALYSIS_HOST_LIST, params),
     
     // 查询主机校验状态
     getHostCheckStatus: (params: {
-      clusterId: number
       sshUser: string
       sshPort: number
     }) => apiV1.post(API_PATHS_V1.GET_HOST_CHECK_STATUS, params),
     
     // 查询主机环境校验是否完成
-    checkCompleted: (clusterId: number) => 
-      apiV1.post(API_PATHS_V1.HOST_CHECK_COMPLETED, { clusterId }),
+    checkCompleted: () => 
+      apiV1.post(API_PATHS_V1.HOST_CHECK_COMPLETED, {}),
     
     // 清理主机检查资源
-    cleanupResources: (clusterId: number) =>
-      apiV1.post(API_PATHS_V1.CLEANUP_HOST_CHECK_RESOURCES, { clusterId }),
+    cleanupResources: () =>
+      apiV1.post(API_PATHS_V1.CLEANUP_HOST_CHECK_RESOURCES, {}),
     
     // 清理主机环境校验缓存
     clearCache: () => apiV1.get(API_PATHS_V1.CLEAR_HOST_ENV_CHECK_CACHE),
     
     // 主机agent分发进度列表
     getAgentList: (params: {
-      clusterId: number
       installStateCode: number
       page: number
       pageSize: number
     }) => apiV1.post(API_PATHS_V1.DISPATCHER_HOST_AGENT_LIST, params),
     
     // 查询主机agent分发是否完成
-    agentCompleted: (clusterId: number) =>
-      apiV1.post(API_PATHS_V1.DISPATCHER_HOST_AGENT_COMPLETED, { clusterId }),
+    agentCompleted: () =>
+      apiV1.post(API_PATHS_V1.DISPATCHER_HOST_AGENT_COMPLETED, {}),
     
     // 主机agent分发取消
     cancelAgent: (params: {
-      clusterId: number
       ip: string
       installStateCode: number
     }) => apiV1.post(API_PATHS_V1.CANCEL_DISPATCHER_HOST_AGENT, params),
     
     // 主机agent分发重试
-    restartAgent: (clusterId: number, ips: string) =>
-      apiV1.post(API_PATHS_V1.RESTART_DISPATCHER_HOST_AGENT, { clusterId, ips }),
+    restartAgent: (ips: string) =>
+      apiV1.post(API_PATHS_V1.RESTART_DISPATCHER_HOST_AGENT, { ips }),
     
     // 生成主机agent操作命令
     generateAgentCommand: (params: {
@@ -162,12 +147,12 @@ export const clusterApiV1 = {
     }) => apiV1.post(API_PATHS_V1.GENERATE_HOST_SERVICE_COMMAND, params),
     
     // 开始主机检查
-    startCheck: (clusterId: number) =>
-      apiV1.post(API_PATHS_V1.START_HOST_CHECK, { clusterId }),
+    startCheck: () =>
+      apiV1.post(API_PATHS_V1.START_HOST_CHECK, {}),
     
     // 获取主机最近日志
-    getWorkerLog: (ip: string, clusterId: number) =>
-      apiV1.get(API_PATHS_V1.GET_WORKER_LOG, { ip, clusterId }),
+    getWorkerLog: (ip: string) =>
+      apiV1.get(API_PATHS_V1.GET_WORKER_LOG + `?ip=${ip}`),
   },
 
   // 主机检查相关

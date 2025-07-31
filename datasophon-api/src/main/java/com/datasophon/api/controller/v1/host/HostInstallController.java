@@ -23,6 +23,7 @@ import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,7 +53,7 @@ public class HostInstallController {
      */
     @PostMapping("/analysisHostList")
     @UserPermission
-    public Result analysisHostList(@RequestParam(name = "clusterId") Integer clusterId,
+    public Result analysisHostList(@ClusterId Integer clusterId,
             @RequestParam(name = "kubeConfigContent", required = false) String kubeConfigContent,
             @RequestParam(name = "hosts", required = false) String hosts,
             @RequestParam(name = "sshUser", required = false) String sshUser,
@@ -69,7 +70,7 @@ public class HostInstallController {
      */
     @PostMapping("/getHostCheckStatus")
     @UserPermission
-    public Result getHostCheckStatus(@RequestParam("clusterId") Integer clusterId, @RequestParam("sshUser") String sshUser, @RequestParam("sshPort") Integer sshPort) {
+    public Result getHostCheckStatus(@ClusterId Integer clusterId, @RequestParam("sshUser") String sshUser, @RequestParam("sshPort") Integer sshPort) {
         return installService.getHostCheckStatus(clusterId, sshUser, sshPort);
     }
 
@@ -78,7 +79,7 @@ public class HostInstallController {
      */
     @PostMapping("/hostCheckCompleted")
     @UserPermission
-    public Result hostCheckCompleted(@RequestParam("clusterId") Integer clusterId) {
+    public Result hostCheckCompleted(@ClusterId Integer clusterId) {
         return installService.hostCheckCompleted(clusterId);
     }
 
@@ -92,7 +93,7 @@ public class HostInstallController {
      */
     @PostMapping("/cleanupHostCheckResources")
     @UserPermission
-    public Result cleanupHostCheckResources(@RequestParam("clusterId") Integer clusterId) {
+    public Result cleanupHostCheckResources(@ClusterId Integer clusterId) {
         return installService.cleanupHostCheckResources(clusterId);
     }
 
@@ -112,12 +113,12 @@ public class HostInstallController {
      */
     @PostMapping("/dispatcherHostAgentList")
     @UserPermission
-    public Result dispatcherHostAgentList(@RequestParam("clusterId") Integer clusterId, @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+    public Result dispatcherHostAgentList(@ClusterId Integer clusterId, @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         return installService.dispatcherHostAgentList(clusterId, installStateCode, page, pageSize);
     }
 
     @PostMapping("/dispatcherHostAgentCompleted")
-    public Result dispatcherHostAgentCompleted(@RequestParam("clusterId") Integer clusterId) {
+    public Result dispatcherHostAgentCompleted(@ClusterId Integer clusterId) {
         return installService.dispatcherHostAgentCompleted(clusterId);
     }
 
@@ -125,7 +126,7 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result cancelDispatcherHostAgent(@RequestParam("clusterId") Integer clusterId, @RequestParam("ip") String ip, @RequestParam("installStateCode") Integer installStateCode) {
+    public Result cancelDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ip") String ip, @RequestParam("installStateCode") Integer installStateCode) {
         return installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
     }
 
@@ -134,7 +135,7 @@ public class HostInstallController {
      *
      */
     @PostMapping("/reStartDispatcherHostAgent")
-    public Result reStartDispatcherHostAgent(@RequestParam("clusterId") Integer clusterId, @RequestParam("ips") String ips) {
+    public Result reStartDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ips") String ips) {
         return installService.reStartDispatcherHostAgent(clusterId, ips);
     }
 
@@ -168,7 +169,7 @@ public class HostInstallController {
      */
     @PostMapping("/startHostCheck")
     @UserPermission
-    public Result startHostCheck(@RequestParam Integer clusterId) {
+    public Result startHostCheck(@ClusterId Integer clusterId) {
         return hostCheckService.startHostCheck(clusterId);
     }
 
@@ -183,7 +184,7 @@ public class HostInstallController {
     @GetMapping("/getWorkerLog")
     @UserPermission
     public Result getWorkerLog(@RequestParam("ip") String ip,
-            @RequestParam("clusterId") Integer clusterId) {
+            @ClusterId Integer clusterId) {
         return installService.getWorkerLog(ip, clusterId);
     }
 

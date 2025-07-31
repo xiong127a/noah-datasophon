@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,7 +47,7 @@ public class ClusterHostController {
      * 查询集群所有主机
      */
     @RequestMapping("/all")
-    public Result all(@RequestParam("clusterId") Integer clusterId) {
+    public Result all(@ClusterId Integer clusterId) {
         List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
                 .and(ClusterHostDO::getManaged).eq(1)
@@ -59,7 +60,7 @@ public class ClusterHostController {
      * 查询集群所有主机
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("clusterId") Integer clusterId,
+    public Result list(@ClusterId Integer clusterId,
             @RequestParam("hostname") String hostname,
             @RequestParam("ip") String ip,
             @RequestParam("cpuArchitecture") String cpuArchitecture,
@@ -74,20 +75,20 @@ public class ClusterHostController {
     }
 
     @RequestMapping("/getRoleListByHostname")
-    public Result getRoleListByHostname(@RequestParam("clusterId") Integer clusterId,
+    public Result getRoleListByHostname(@ClusterId Integer clusterId,
             @RequestParam("hostname") String hostname) {
         return clusterHostService.getRoleListByHostname(clusterId, hostname);
 
     }
 
     @RequestMapping("/getRack")
-    public Result getRack(@RequestParam("clusterId") Integer clusterId) {
+    public Result getRack(@ClusterId Integer clusterId) {
         return clusterHostService.getRack(clusterId);
 
     }
 
     @RequestMapping("/assignRack")
-    public Result assignRack(@RequestParam("clusterId") Integer clusterId,
+    public Result assignRack(@ClusterId Integer clusterId,
             @RequestParam("rack") String rack,
             @RequestParam("hostIds") String hostIds) {
         return clusterHostService.assignRack(clusterId, rack, hostIds);
@@ -145,7 +146,7 @@ public class ClusterHostController {
      */
     @RequestMapping(value = "/saveKubernetesHost", method = RequestMethod.POST)
     public Result saveKubernetesHost(@RequestBody List<HostInfo> hostInfoList,
-            @RequestParam("clusterId") Integer clusterId) {
+            @ClusterId Integer clusterId) {
         return clusterHostService.saveKubernetesHost(hostInfoList, clusterId);
     }
 
@@ -154,7 +155,7 @@ public class ClusterHostController {
      */
     @RequestMapping(value = "/saveKubernetesHostDirect", method = RequestMethod.POST)
     public Result saveKubernetesHostDirect(@RequestBody List<ClusterHostDO> kubernetesHosts,
-            @RequestParam("clusterId") Integer clusterId) {
+            @ClusterId Integer clusterId) {
         return clusterHostService.saveKubernetesHostDirect(kubernetesHosts, clusterId);
     }
 
@@ -162,7 +163,7 @@ public class ClusterHostController {
      * 获取K8S模式下的完整硬件信息
      */
     @RequestMapping(value = "/getK8sHostsWithHardwareInfo", method = RequestMethod.GET)
-    public Result getK8sHostsWithHardwareInfo(@RequestParam("clusterId") Integer clusterId) {
+    public Result getK8sHostsWithHardwareInfo(@ClusterId Integer clusterId) {
         return clusterHostService.getK8sHostsWithHardwareInfo(clusterId);
     }
 

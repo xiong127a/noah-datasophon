@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   X, ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
-  AlertCircle, Info, Clock, Minus, ExclamationCircle, Server, 
+  AlertCircle, Info, Clock, Minus, AlertTriangle, Server, 
   Monitor, Eye, RotateCcw, FileText
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -93,12 +93,10 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
       const params = {
         pageSize: pagination.pageSize,
-        page: pagination.current,
-        clusterId,
-        ...step1Data
+        page: pagination.current
       }
 
-      const response = await clusterApi.hostInstall.analysisList(params)
+      const response = await clusterApi.host.list(params)
       const res = response.data as HostListResponse
 
       if (res.code === 200) {
@@ -234,7 +232,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
           text: '部分通过',
           color: 'text-orange-600',
           bgColor: 'bg-orange-50',
-          icon: <ExclamationCircle className="w-4 h-4 text-orange-600" />
+          icon: <AlertTriangle className="w-4 h-4 text-orange-600" />
         }
       default:
         return {
@@ -333,7 +331,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         
         if (depType === 'Kubernetes') {
           // K8S模式：保存K8S主机
-          const hostRes = await clusterApi.host.saveKubernetesHost(clusterId, successfulHosts)
+          const hostRes = await clusterApi.host.saveKubernetesHost(successfulHosts)
           
           if (hostRes.data?.code !== 200) {
             console.warn('保存K8S主机列表失败:', hostRes.data?.msg)
@@ -341,7 +339,6 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         } else {
           // PVM模式：分析主机列表
           const analysisRes = await clusterApi.host.analysisHostList({
-            clusterId,
             ips: step1Data?.hosts || '',
             sshUser: step1Data?.sshUser || '',
             sshPort: step1Data?.sshPort || '',
@@ -405,7 +402,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       }
       
       try {
-        const response = await clusterApi.hostInstall.checkCompleted(clusterId)
+        const response = await clusterApi.hostInstall.checkCompleted()
         const res = response.data as HostCheckCompletedResponse
         return {
           hostCheckCompleted: res.hostCheckCompleted,
