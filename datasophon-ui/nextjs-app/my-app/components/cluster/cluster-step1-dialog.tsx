@@ -43,6 +43,7 @@ interface Step1Data {
   namespaces?: string[]
   isCreatingNewNamespace?: boolean
   customNamespace?: string
+  clusterVersion?: string // K8S集群版本信息
 }
 
 const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
@@ -67,7 +68,8 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     namespace: '',
     namespaces: [],
     isCreatingNewNamespace: false,
-    customNamespace: ''
+    customNamespace: '',
+    clusterVersion: ''
   })
 
   const steps = [
@@ -93,8 +95,13 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
       namespace: '',
       namespaces: [],
       isCreatingNewNamespace: false,
-      customNamespace: ''
+      customNamespace: '',
+      clusterVersion: ''
     })
+    // 清除文件输入框的值
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   // 当对话框打开时重置表单
@@ -113,13 +120,21 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
       reader.onload = (e) => {
         const content = e.target?.result as string
         setStep1Data(prev => ({ ...prev, kubeConfigContent: content }))
-        // 自动解析命名空间（模拟）
+        // 自动解析命名空间
         parseKubeConfigNamespaces(content)
         setLoading(false)
+        // 清除文件输入框的值，确保下次选择同一文件也能触发onChange
+        if (event.target) {
+          event.target.value = ''
+        }
       }
       reader.onerror = () => {
         toast.error('文件读取失败')
         setLoading(false)
+        // 清除文件输入框的值
+        if (event.target) {
+          event.target.value = ''
+        }
       }
       reader.readAsText(file)
     }
@@ -140,18 +155,30 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
       console.log('获取命名空间API响应:', response.data)
       
       if (response.data?.code === 200) {
-        // 按照老项目的响应格式处理
-        const namespaces = response.data.namespaces || []
-        const defaultNamespace = response.data.defaultNamespace
+        // 按照实际的响应格式处理 - 数据在嵌套的data对象中
+        const responseData = response.data.data || {}
+        const namespaces = responseData.namespaces || []
+        const defaultNamespace = responseData.defaultNamespace
+        const clusterVersion = responseData.clusterVersion
+        const showNamespaceSelector = responseData.showNamespaceSelector
+        
+        console.log('解析到的数据:', { 
+          namespaces: namespaces.length, 
+          defaultNamespace, 
+          clusterVersion,
+          showNamespaceSelector 
+        })
         
         setStep1Data(prev => ({ 
           ...prev, 
           namespaces,
           // 如果有默认命名空间，自动设置
-          namespace: defaultNamespace || prev.namespace
+          namespace: defaultNamespace || prev.namespace,
+          // 存储集群版本信息
+          clusterVersion: clusterVersion || prev.clusterVersion
         }))
         
-        toast.success(`成功获取到 ${namespaces.length} 个命名空间`)
+        toast.success(`成功获取到 ${namespaces.length} 个命名空间${clusterVersion ? ` (Kubernetes ${clusterVersion})` : ''}`)
       } else {
         toast.error(response.data?.msg || '获取命名空间失败')
       }
@@ -405,7 +432,20 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 hover:bg-red-100"
-                            onClick={() => setStep1Data(prev => ({ ...prev, kubeConfigContent: '', namespace: '', namespaces: [] }))}
+                            onClick={() => {
+                              // 清除状态
+                              setStep1Data(prev => ({ 
+                                ...prev, 
+                                kubeConfigContent: '', 
+                                namespace: '', 
+                                namespaces: [],
+                                clusterVersion: ''
+                              }))
+                              // 清除文件输入框的值
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = ''
+                              }
+                            }}
                           >
                             <X className="w-4 h-4 text-gray-400 hover:text-red-600" />
                           </Button>
@@ -428,12 +468,19 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium flex items-center">
+                    <Label className="text-sm font-medium flex items-center flex-wrap gap-2">
                       命名空间
                       {step1Data.kubeConfigContent && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {namespacesLoading ? '加载中...' : `${step1Data.namespaces?.length || 0} 个可用`}
-                        </Badge>
+                        <>
+                          <Badge variant="secondary" className="text-xs">
+                            {namespacesLoading ? '加载中...' : `${step1Data.namespaces?.length || 0} 个可用`}
+                          </Badge>
+                          {step1Data.clusterVersion && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              Kubernetes {step1Data.clusterVersion}
+                            </Badge>
+                          )}
+                        </>
                       )}
                     </Label>
                     
@@ -559,6 +606,12 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                               {step1Data.isCreatingNewNamespace ? '新建' : '已存在'}
                             </span>
                           </div>
+                          {step1Data.clusterVersion && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">集群版本:</span>
+                              <span className="font-medium text-blue-600">Kubernetes {step1Data.clusterVersion}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
