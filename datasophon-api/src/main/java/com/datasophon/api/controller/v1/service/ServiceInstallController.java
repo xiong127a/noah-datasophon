@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.service;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.datasophon.api.security.UserPermission;

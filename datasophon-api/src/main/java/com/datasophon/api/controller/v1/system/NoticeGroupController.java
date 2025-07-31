@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.system;
 
 import com.datasophon.api.service.impl.NoticeGroupServiceImpl;
 import com.datasophon.common.utils.Result;

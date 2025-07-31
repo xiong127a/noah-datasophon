@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterKerberosService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,7 +24,6 @@ import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 

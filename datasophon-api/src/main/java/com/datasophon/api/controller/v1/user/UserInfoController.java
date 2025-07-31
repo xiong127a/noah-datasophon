@@ -15,22 +15,21 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.user;
 
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.mybatisflex.core.query.QueryChain;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -109,28 +108,17 @@ public class UserInfoController {
         return Result.success(exists);
     }
 
+
+
     /**
      * 检查用户名请求类
      */
+    @Data
     public static class CheckUsernameRequest {
         private String username;
         private Integer excludeId;
 
-        public String getUsername() {
-            return username;
-        }
 
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public Integer getExcludeId() {
-            return excludeId;
-        }
-
-        public void setExcludeId(Integer excludeId) {
-            this.excludeId = excludeId;
-        }
     }
 
     /**

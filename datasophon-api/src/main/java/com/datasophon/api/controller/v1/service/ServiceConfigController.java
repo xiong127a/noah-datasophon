@@ -17,7 +17,7 @@
  *
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.service;
 
 import com.datasophon.api.service.ServiceConfigFileService;
 import com.datasophon.api.utils.CompressUtils;
@@ -32,9 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import com.datasophon.api.annotation.ApiVersion;
 
 import java.io.ByteArrayInputStream;

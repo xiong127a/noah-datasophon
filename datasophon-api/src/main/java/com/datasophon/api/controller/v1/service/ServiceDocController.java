@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.service;
 
 import com.datasophon.api.service.DocService;
 import com.datasophon.common.utils.Result;
@@ -36,9 +36,9 @@ import java.util.Map;
 /**
  * 文档管理控制器
  */
-@ApiVersion(path = "doc")
+@ApiVersion(path = "service/doc")
 @Slf4j
-public class DocController {
+public class ServiceDocController {
 
         @Autowired
         private DocService docService;

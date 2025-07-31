@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.cluster;
 
 import cn.hutool.core.util.EnumUtil;
 import com.datasophon.api.enums.Status;

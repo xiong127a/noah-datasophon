@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.system;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.enums.Status;
@@ -41,8 +41,11 @@ import java.util.List;
 @ApiVersion(path = "alert/group")
 public class AlertGroupController {
 
-    @Autowired
-    private AlertGroupService alertGroupService;
+    private final AlertGroupService alertGroupService;
+
+    public AlertGroupController(AlertGroupService alertGroupService) {
+        this.alertGroupService = alertGroupService;
+    }
 
     /**
      * 列表

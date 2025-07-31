@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
