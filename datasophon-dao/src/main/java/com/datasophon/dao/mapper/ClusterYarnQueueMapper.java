@@ -20,8 +20,13 @@ package com.datasophon.dao.mapper;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
+
+import java.util.List;
 
 /**
  * 
@@ -33,4 +38,43 @@ import com.mybatisflex.core.BaseMapper;
 @Mapper
 public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueue> {
 
+    /**
+     * 分页查询集群Yarn队列
+     */
+    default Page<ClusterYarnQueue> selectPageByClusterId(Page<ClusterYarnQueue> page,
+            @Param("clusterId") Integer clusterId) {
+        QueryChain<ClusterYarnQueue> query = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .orderBy(ClusterYarnQueue::getCreateTime).desc();
+        return query.page(page);
+    }
+
+    /**
+     * 根据队列名称查询是否存在
+     */
+    default boolean existsByQueueName(@Param("queueName") String queueName) {
+        return QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getQueueName).eq(queueName)
+                .exists();
+    }
+
+    /**
+     * 根据集群ID查询所有队列
+     */
+    default List<ClusterYarnQueue> selectByClusterId(@Param("clusterId") Integer clusterId) {
+        return QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .list();
+    }
+
+    /**
+     * 根据集群ID和队列名称查询队列
+     */
+    default ClusterYarnQueue selectByClusterIdAndQueueName(@Param("clusterId") Integer clusterId,
+            @Param("queueName") String queueName) {
+        return QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getQueueName).eq(queueName)
+                .and(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .one();
+    }
 }

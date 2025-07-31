@@ -19,10 +19,15 @@ package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.dao.enums.RoleType;
+import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.core.update.UpdateChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * 集群服务角色实例表
@@ -71,5 +76,23 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
                 .set(ClusterServiceRoleInstanceEntity::getNeedRestart, NeedRestart.YES)
                 .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostName)
                 .update();
+    }
+
+    /**
+     * 查询指定集群和主机上正在运行的非客户端服务角色实例
+     *
+     * @param clusterId 集群ID
+     * @param hostname  主机名
+     * @return 正在运行的服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectRunningNonClientRolesByClusterIdAndHostname(
+            @Param("clusterId") Integer clusterId,
+            @Param("hostname") String hostname) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.RUNNING)
+                .and(ClusterServiceRoleInstanceEntity::getRoleType).ne(RoleType.CLIENT)
+                .list();
     }
 }

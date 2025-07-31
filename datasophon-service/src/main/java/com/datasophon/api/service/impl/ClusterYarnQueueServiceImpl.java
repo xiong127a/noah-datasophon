@@ -18,7 +18,6 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
@@ -33,10 +32,10 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.exception.BusinessException;
+import com.mybatisflex.core.paginate.Page;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorSelection;
@@ -54,7 +53,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Service("clusterYarnQueueService")
@@ -67,33 +65,26 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
 
+    @Autowired
+    private ClusterYarnQueueMapper clusterYarnQueueMapper;
+
     @Override
     public PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
+        Page<ClusterYarnQueue> pageParam = Page.of(page, pageSize);
+        Page<ClusterYarnQueue> pageResult = clusterYarnQueueMapper.selectPageByClusterId(pageParam, clusterId);
 
-        QueryChain<ClusterYarnQueue> query = QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .orderBy(ClusterYarnQueue::getCreateTime).desc();
-
-        List<ClusterYarnQueue> list = query.limit(offset, pageSize).list();
-        long count = query.count();
-
-        for (ClusterYarnQueue clusterYarnQueue : list) {
+        for (ClusterYarnQueue clusterYarnQueue : pageResult.getRecords()) {
             String minResources = clusterYarnQueue.getMinCore() + "Core," + clusterYarnQueue.getMinMem() + "GB";
             String maxResources = clusterYarnQueue.getMaxCore() + "Core," + clusterYarnQueue.getMaxMem() + "GB";
             clusterYarnQueue.setMinResources(minResources);
             clusterYarnQueue.setMaxResources(maxResources);
         }
-        return PageResult.of(list, count, page, pageSize);
+        return PageResult.of(pageResult.getRecords(), pageResult.getTotalRow(), page, pageSize);
     }
 
     @Override
     public void saveQueue(ClusterYarnQueue clusterYarnQueue) throws BusinessException {
-        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getQueueName).eq(clusterYarnQueue.getQueueName())
-                .list();
-
-        if (Objects.nonNull(list) && list.size() == 1) {
+        if (clusterYarnQueueMapper.existsByQueueName(clusterYarnQueue.getQueueName())) {
             throw new BusinessException(Status.QUEUE_NAME_ALREADY_EXISTS.getCode(),
                     Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
         }
@@ -103,9 +94,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public void refreshQueues(Integer clusterId) throws BusinessException {
-        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .list();
+        List<ClusterYarnQueue> list = clusterYarnQueueMapper.selectByClusterId(clusterId);
         // 查询resourcemanager节点
         List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
@@ -184,13 +173,6 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public ClusterYarnQueue getQueueByName(Integer clusterId, String queueName) {
-        List<ClusterYarnQueue> list = QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getQueueName).eq(queueName)
-                .and(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .list();
-        if (CollUtil.isNotEmpty(list)) {
-            return list.get(0);
-        }
-        return null;
+        return clusterYarnQueueMapper.selectByClusterIdAndQueueName(clusterId, queueName);
     }
 }

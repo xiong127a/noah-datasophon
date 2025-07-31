@@ -21,7 +21,6 @@ import cn.hutool.core.convert.Convert;
 import org.apache.pekko.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
 
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
@@ -39,12 +38,12 @@ import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.exception.BusinessException;
+import com.mybatisflex.core.paginate.Page;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.RoleType;
-import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterHostMapper;
+import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.dao.enums.HostState;
 import com.datasophon.dao.enums.MANAGED;
 import org.apache.commons.lang3.StringUtils;
@@ -62,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service("clusterHostService")
 @Transactional
@@ -75,95 +75,41 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     private RoleInstanceQueryService roleInstanceQueryService;
     @Autowired
     private ClusterRackService clusterRackService;
+    @Autowired
+    private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
+    @Autowired
+    private ClusterHostMapper clusterHostMapper;
 
     @Override
     public ClusterHostDO getClusterHostByHostname(String hostname) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getHostname).eq(hostname)
-                .one();
+        return clusterHostMapper.selectByHostname(hostname);
     }
 
     @Override
     public ClusterHostDO getClusterHostByIp(String ip) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getIp).eq(ip)
-                .one();
+        return clusterHostMapper.selectByIp(ip);
     }
 
     @Override
     public PageResult<ClusterHostDO> listByPage(Integer clusterId, String hostname, String ip,
             String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
+        Page<ClusterHostDO> pageParam = Page.of(page, pageSize);
+        Page<ClusterHostDO> pageResult = clusterHostMapper
+                .selectPageByClusterIdAndFilters(pageParam, clusterId, hostname, ip, cpuArchitecture, hostState,
+                        orderType);
 
-        QueryChain<ClusterHostDO> queryChain = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
-
-        if (StringUtils.isNotBlank(cpuArchitecture)) {
-            queryChain.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);
-        }
-
-        if (hostState != null) {
-            queryChain.and(ClusterHostDO::getHostState).eq(hostState);
-        }
-
-        if (StringUtils.isNotBlank(ip)) {
-            queryChain.and(ClusterHostDO::getIp).like("%" + ip + "%");
-        }
-
-        if (StringUtils.isNotBlank(hostname)) {
-            queryChain.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
-        }
-
-        if ("asc".equals(orderType)) {
-            queryChain.orderBy(ClusterHostDO::getHostname).asc();
-        } else {
-            queryChain.orderBy(ClusterHostDO::getHostname).desc();
-        }
-
-        List<ClusterHostDO> list = queryChain.limit(offset, pageSize).list();
-
-        QueryChain<ClusterHostDO> countQuery = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
-
-        if (StringUtils.isNotBlank(cpuArchitecture)) {
-            countQuery.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);
-        }
-
-        if (hostState != null) {
-            countQuery.and(ClusterHostDO::getHostState).eq(hostState);
-        }
-
-        if (StringUtils.isNotBlank(ip)) {
-            countQuery.and(ClusterHostDO::getIp).like("%" + ip + "%");
-        }
-
-        if (StringUtils.isNotBlank(hostname)) {
-            countQuery.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
-        }
-
-        long count = countQuery.count();
-
-        return PageResult.of(list, count, page, pageSize);
+        return PageResult.of(pageResult.getRecords(), pageResult.getTotalRow(), page, pageSize);
     }
 
     @Override
     public List<ClusterHostDO> getHostListByClusterId(Integer clusterId) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
-                .list();
+        return clusterHostMapper.selectByClusterId(clusterId);
     }
 
     @Override
     public List<ClusterHostDO> getAllManagedHostsByClusterId(Integer clusterId) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
-                .orderBy(ClusterHostDO::getHostname).asc()
-                .list();
+        return clusterHostMapper.selectManagedHostsByClusterIdOrderByHostname(clusterId);
     }
 
     @Override
@@ -192,12 +138,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             ClusterHostDO host = this.getById(hostId);
 
             Integer clusterId = host.getClusterId();
-            List<ClusterServiceRoleInstanceEntity> list = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
-                    .and(ClusterServiceRoleInstanceEntity::getHostname).eq(host.getHostname())
-                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.RUNNING)
-                    .and(ClusterServiceRoleInstanceEntity::getRoleType).ne(RoleType.CLIENT)
-                    .list();
+            List<ClusterServiceRoleInstanceEntity> list = clusterServiceRoleInstanceMapper
+                    .selectRunningNonClientRolesByClusterIdAndHostname(clusterId, host.getHostname());
 
             List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName)
                     .toList();
@@ -255,15 +197,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public void removeHostByClusterId(Integer clusterId) {
-        this.remove(QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId));
+        clusterHostMapper.deleteByClusterId(clusterId);
     }
 
     @Override
     public void updateBatchNodeLabel(List<String> hostIds, String nodeLabel) {
-        List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getId).in(hostIds)
-                .list();
+        List<ClusterHostDO> list = clusterHostMapper.selectByIds(hostIds);
         for (ClusterHostDO clusterHostDO : list) {
             clusterHostDO.setNodeLabel(nodeLabel);
         }
@@ -274,15 +213,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     public List<ClusterHostDO> getHostListByIds(List<String> ids) {
 
         // 查询ID匹配的主机
-        List<ClusterHostDO> hostsByIds = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getId).in(ids)
-                .list();
+        List<ClusterHostDO> hostsByIds = clusterHostMapper.selectByIds(ids);
         List<ClusterHostDO> result = new ArrayList<>(hostsByIds);
 
         // 查询主机名匹配的主机
-        List<ClusterHostDO> hostsByNames = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getHostname).in(ids)
-                .list();
+        List<ClusterHostDO> hostsByNames = clusterHostMapper.selectByHostnames(ids);
 
         // 合并去重
         for (ClusterHostDO host : hostsByNames) {
@@ -304,9 +239,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     @Override
     public void assignRack(Integer clusterId, String rack, String hostIds) throws BusinessException {
         List<String> ids = Arrays.asList(hostIds.split(","));
-        List<ClusterHostDO> list = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getId).in(ids)
-                .list();
+        List<ClusterHostDO> list = clusterHostMapper.selectByIds(ids);
         for (ClusterHostDO clusterHostDO : list) {
             clusterHostDO.setRack(rack);
         }
@@ -320,10 +253,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getRack).eq(rack)
-                .list();
+        return clusterHostMapper.selectByClusterIdAndRack(clusterId, rack);
     }
 
     @Override
