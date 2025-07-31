@@ -479,16 +479,16 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
             </div>
 
             {/* Namespace Selection */}
-            <div className="xl:col-span-1">
-              <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm rounded-3xl">
+            <div className="xl:col-span-1 w-full">
+              <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm rounded-3xl w-full">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center">
                     <Cloud className="w-5 h-5 mr-2 text-purple-600" />
                     命名空间配置
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-3">
+                <CardContent className="space-y-6 w-full">
+                  <div className="space-y-3 w-full">
                     <Label className="text-sm font-medium flex items-center flex-wrap gap-2">
                       命名空间
                       {step1Data.kubeConfigContent && (
@@ -506,49 +506,78 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                     </Label>
                     
                     {!step1Data.kubeConfigContent ? (
-                      <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                      <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 w-full">
                         <div className="flex items-center text-gray-500">
                           <Info className="w-4 h-4 mr-2" />
                           <span className="text-sm">请先输入 Kubernetes 配置文件</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-3 w-full">
                         {step1Data.isCreatingNewNamespace ? (
                           /* Create New Namespace Mode */
-                          <div className="space-y-3">
-                            <div className="relative">
+                          <div className="space-y-4 w-full">
+                            {/* 新建模式标题 */}
+                            <div className="flex items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                              <Plus className="w-4 h-4 mr-2 text-green-600" />
+                              <span className="text-sm font-medium text-green-800">创建新命名空间</span>
+                            </div>
+                            
+                            <div className="relative w-full">
                               <Input
-                                placeholder="输入新的命名空间名称"
+                                placeholder="输入新的命名空间名称 (例如: my-project)"
                                 value={step1Data.customNamespace || ''}
                                 onChange={(e) => setStep1Data(prev => ({ 
                                   ...prev, 
                                   customNamespace: e.target.value,
                                   namespace: e.target.value 
                                 }))}
-                                className="pr-20 rounded-2xl"
+                                className="w-full h-12 pr-20 rounded-xl border-green-200 focus:border-green-400 focus:ring-green-200"
                               />
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-1 top-1 h-8 px-3 text-xs"
+                                className="absolute right-1 top-1 h-8 px-3 text-xs hover:bg-gray-100"
                                 onClick={handleCancelCreateNamespace}
                               >
+                                <X className="w-3 h-3 mr-1" />
                                 取消
                               </Button>
                             </div>
+                            
                             {step1Data.customNamespace && (
-                              <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <AlertCircle className="w-4 h-4 mr-2 text-blue-600" />
-                                <span className="text-sm text-blue-800">
-                                  将创建新命名空间: <strong>{step1Data.customNamespace}</strong>
-                                </span>
+                              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                                <div className="flex items-start space-x-3">
+                                  <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <Plus className="w-4 h-4 text-green-600" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="text-sm font-medium text-green-900 mb-1">将创建新命名空间</h4>
+                                    <p className="text-sm text-green-700">
+                                      命名空间名称: <code className="bg-green-100 px-2 py-1 rounded text-green-800 font-mono">{step1Data.customNamespace}</code>
+                                    </p>
+                                    <p className="text-xs text-green-600 mt-2">
+                                      ✓ 将在 Kubernetes 集群中自动创建此命名空间
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
                         ) : (
                           /* Select Existing Namespace Mode */
-                          <div className="space-y-3">
+                          <div className="space-y-4 w-full">
+                            {/* 选择模式标题 */}
+                            <div className="flex items-center p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
+                              <Cloud className="w-4 h-4 mr-2 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">选择现有命名空间</span>
+                              {step1Data.namespaces && step1Data.namespaces.length > 0 && (
+                                <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700">
+                                  {step1Data.namespaces.length} 个可用
+                                </Badge>
+                              )}
+                            </div>
+                            
                             <Select
                               value={step1Data.namespace}
                               onValueChange={(value) => {
@@ -558,13 +587,14 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                                   handleSelectNamespace(value)
                                 }
                               }}
+                              disabled={namespacesLoading}
                             >
-                                                        <SelectTrigger className="h-12 rounded-2xl">
-                            <SelectValue placeholder={
-                              namespacesLoading ? "加载命名空间中..." : "选择或搜索命名空间"
-                            } />
-                          </SelectTrigger>
-                              <SelectContent>
+                              <SelectTrigger className="w-full h-12 rounded-xl border-blue-200 focus:border-blue-400 focus:ring-blue-200">
+                                <SelectValue placeholder={
+                                  namespacesLoading ? "🔄 加载命名空间中..." : "🔍 选择或搜索命名空间"
+                                } />
+                              </SelectTrigger>
+                              <SelectContent className="w-full min-w-[400px]">
                                 <div className="p-2">
                                   <div className="relative">
                                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -572,35 +602,69 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
                                       placeholder="搜索命名空间..."
                                       value={namespaceSearch}
                                       onChange={(e) => setNamespaceSearch(e.target.value)}
-                                      className="pl-8 h-9"
+                                      className="pl-8 h-9 rounded-lg"
                                     />
                                   </div>
                                 </div>
                                 <Separator className="my-1" />
-                                <SelectItem value="__create_new__" className="font-medium text-blue-600">
+                                
+                                {/* 创建新命名空间选项 */}
+                                <SelectItem value="__create_new__" className="font-medium text-green-600 hover:bg-green-50">
                                   <div className="flex items-center">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    创建新的命名空间
+                                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                      <Plus className="w-3 h-3 text-green-600" />
+                                    </div>
+                                    <span>创建新的命名空间</span>
                                   </div>
                                 </SelectItem>
+                                
+                                {/* 现有命名空间列表 */}
                                 {filteredNamespaces.length > 0 && (
                                   <>
                                     <Separator className="my-1" />
+                                    <div className="px-2 py-1">
+                                      <span className="text-xs text-gray-500 font-medium">现有命名空间</span>
+                                    </div>
                                     {filteredNamespaces.map((ns) => (
-                                      <SelectItem key={ns} value={ns}>
+                                      <SelectItem key={ns} value={ns} className="hover:bg-blue-50">
                                         <div className="flex items-center justify-between w-full">
-                                          <span>{ns}</span>
+                                          <div className="flex items-center">
+                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                              <Cloud className="w-3 h-3 text-blue-600" />
+                                            </div>
+                                            <span className="font-mono text-sm">{ns}</span>
+                                          </div>
                                           {step1Data.namespace === ns && (
-                                            <Check className="w-4 h-4 text-green-600" />
+                                            <div className="flex items-center">
+                                              <Check className="w-4 h-4 text-green-600" />
+                                              <span className="text-xs text-green-600 ml-1">已选择</span>
+                                            </div>
                                           )}
                                         </div>
                                       </SelectItem>
                                     ))}
                                   </>
                                 )}
+                                
+                                {/* 无匹配结果 */}
                                 {filteredNamespaces.length === 0 && namespaceSearch && (
-                                  <div className="p-2 text-sm text-gray-500 text-center">
-                                    没有找到匹配的命名空间
+                                  <div className="p-4 text-center">
+                                    <div className="text-gray-400 mb-2">
+                                      <Search className="w-8 h-8 mx-auto" />
+                                    </div>
+                                    <p className="text-sm text-gray-500">没有找到匹配的命名空间</p>
+                                    <p className="text-xs text-gray-400 mt-1">尝试创建新的命名空间</p>
+                                  </div>
+                                )}
+                                
+                                {/* 暂无命名空间 */}
+                                {!namespacesLoading && step1Data.namespaces?.length === 0 && (
+                                  <div className="p-4 text-center">
+                                    <div className="text-yellow-400 mb-2">
+                                      <AlertCircle className="w-8 h-8 mx-auto" />
+                                    </div>
+                                    <p className="text-sm text-gray-600">暂无可用的命名空间</p>
+                                    <p className="text-xs text-gray-400 mt-1">请创建一个新的命名空间</p>
                                   </div>
                                 )}
                               </SelectContent>
@@ -613,26 +677,78 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
 
                   {/* 命名空间信息预览 */}
                   {step1Data.namespace && (
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium text-gray-900">命名空间信息</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">当前选择:</span>
-                            <span className="font-medium">{step1Data.namespace}</span>
+                    <div className="mt-6 w-full">
+                      <div className={`p-4 rounded-xl border-2 ${
+                        step1Data.isCreatingNewNamespace 
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+                          : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200'
+                      }`}>
+                        <div className="flex items-start space-x-3">
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                            step1Data.isCreatingNewNamespace 
+                              ? 'bg-green-100' 
+                              : 'bg-blue-100'
+                          }`}>
+                            {step1Data.isCreatingNewNamespace ? (
+                              <Plus className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <Cloud className="w-5 h-5 text-blue-600" />
+                            )}
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">类型:</span>
-                            <span className="font-medium">
-                              {step1Data.isCreatingNewNamespace ? '新建' : '已存在'}
-                            </span>
-                          </div>
-                          {step1Data.clusterVersion && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">集群版本:</span>
-                              <span className="font-medium text-blue-600">Kubernetes {step1Data.clusterVersion}</span>
+                          <div className="flex-1">
+                            <h4 className={`text-sm font-semibold mb-2 ${
+                              step1Data.isCreatingNewNamespace ? 'text-green-900' : 'text-blue-900'
+                            }`}>
+                              命名空间配置确认
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600 font-medium">名称:</span>
+                                <code className={`text-sm font-mono px-2 py-1 rounded ${
+                                  step1Data.isCreatingNewNamespace 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {step1Data.namespace}
+                                </code>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600 font-medium">状态:</span>
+                                <div className="flex items-center">
+                                  {step1Data.isCreatingNewNamespace ? (
+                                    <>
+                                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                      <span className="text-xs font-medium text-green-700">将创建</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                      <span className="text-xs font-medium text-blue-700">已存在</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {step1Data.clusterVersion && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-600 font-medium">集群版本:</span>
+                                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                    Kubernetes {step1Data.clusterVersion}
+                                  </Badge>
+                                </div>
+                              )}
                             </div>
-                          )}
+                            <div className={`mt-3 p-2 rounded-lg text-xs ${
+                              step1Data.isCreatingNewNamespace 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {step1Data.isCreatingNewNamespace ? (
+                                <>✨ 系统将在部署时自动创建此命名空间</>
+                              ) : (
+                                <>🎯 将使用现有的命名空间进行部署</>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
