@@ -21,17 +21,16 @@ import com.datasophon.api.service.NoticeGroupUserService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.Map;
 
-@RestController
-@RequestMapping("api/notice/group/user")
+@ApiVersion(path = "notice/group/user")
 public class NoticeGroupUserController {
 
     @Autowired

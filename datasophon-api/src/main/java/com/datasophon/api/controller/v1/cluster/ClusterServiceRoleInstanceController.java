@@ -21,16 +21,15 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
 
-@RestController
-@RequestMapping("api/cluster/service/role/instance")
+@ApiVersion(path = "cluster/service/role/instance")
 public class ClusterServiceRoleInstanceController {
 
     @Autowired

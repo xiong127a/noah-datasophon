@@ -21,14 +21,13 @@ import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 
-@RestController
-@RequestMapping("api/cluster/user/group")
+@ApiVersion(path = "cluster/user/group")
 public class ClusterUserGroupController {
 
     @Autowired

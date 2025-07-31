@@ -22,16 +22,15 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterUser;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 
-@RestController
-@RequestMapping("api/cluster/users")
+@ApiVersion(path = "cluster/users")
 public class ClusterUserController {
 
     @Autowired

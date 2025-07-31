@@ -4,16 +4,15 @@ import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * @author 63588
  */
-@RestController
-@RequestMapping("api/autoScale")
+@ApiVersion(path = "autoScale")
 public class AutoScaleController {
 
     @Autowired

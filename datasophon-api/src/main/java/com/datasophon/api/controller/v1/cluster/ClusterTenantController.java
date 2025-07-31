@@ -4,14 +4,13 @@ import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterTenant;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
-@RequestMapping("api/cluster/tenant")
+@ApiVersion(path = "cluster/tenant")
 public class ClusterTenantController {
 
     @Autowired

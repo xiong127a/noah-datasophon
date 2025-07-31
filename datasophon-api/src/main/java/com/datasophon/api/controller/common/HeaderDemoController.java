@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.datasophon.api.annotation.ApiVersion;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,8 +31,7 @@ import java.util.Map;
  * 请求头示例控制器
  * 用于演示如何使用HeaderContextHolder获取请求头信息
  */
-@RestController
-@RequestMapping("/api/header-demo")
+@ApiVersion(path = "header-demo")
 public class HeaderDemoController {
 
     /**

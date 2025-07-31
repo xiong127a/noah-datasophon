@@ -15,12 +15,12 @@ import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.model.MPage;
 import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -28,8 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RestController
-@RequestMapping("api/log")
+@ApiVersion(path = "log")
 public class OperationLogController {
 
     @Autowired

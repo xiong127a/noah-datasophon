@@ -47,6 +47,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.datasophon.api.annotation.ApiVersion;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -56,8 +57,7 @@ import java.util.stream.Collectors;
 /**
  * 认证控制器 - 处理用户登录、登出和用户信息
  */
-@RestController
-@RequestMapping("/api")
+@ApiVersion(path = "auth")
 public class LoginController {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);

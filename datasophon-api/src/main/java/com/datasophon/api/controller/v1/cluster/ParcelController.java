@@ -39,12 +39,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.DisposableBean;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.net.URI;
@@ -65,8 +65,7 @@ import java.util.stream.Collectors;
  * @author zhenqin
  */
 @Slf4j
-@RestController
-@RequestMapping("api/cluster/parcel")
+@ApiVersion(path = "cluster/parcel")
 public class ParcelController implements DisposableBean {
 
     /**

@@ -25,11 +25,11 @@ import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -38,8 +38,7 @@ import java.util.List;
 /**
  * @author 63588
  */
-@RestController
-@RequestMapping("api/alert/group")
+@ApiVersion(path = "alert/group")
 public class AlertGroupController {
 
     @Autowired

@@ -21,15 +21,14 @@ import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 
-@RestController
-@RequestMapping("api/frame")
+@ApiVersion(path = "frame")
 public class FrameInfoController {
 
     @Autowired

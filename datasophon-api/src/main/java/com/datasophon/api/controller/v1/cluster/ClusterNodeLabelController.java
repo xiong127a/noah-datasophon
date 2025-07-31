@@ -21,14 +21,13 @@ import com.datasophon.api.service.ClusterNodeLabelService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("api/cluster/node/label")
+@ApiVersion(path = "cluster/node/label")
 public class ClusterNodeLabelController {
 
     @Autowired

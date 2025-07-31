@@ -21,15 +21,14 @@ import com.datasophon.api.service.ClusterYarnSchedulerService;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 
-@RestController
-@RequestMapping("api/cluster/yarn/scheduler")
+@ApiVersion(path = "cluster/yarn/scheduler")
 public class ClusterYarnSchedulerController {
 
     @Autowired

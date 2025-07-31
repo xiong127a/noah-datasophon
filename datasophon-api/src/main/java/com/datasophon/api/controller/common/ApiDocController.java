@@ -6,8 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -25,8 +24,7 @@ import java.util.stream.Collectors;
 /**
  * API文档控制器，用于查看所有注册的API端点
  */
-@RestController
-@RequestMapping("api/doc")
+@ApiVersion(path = "doc")
 public class ApiDocController {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiDocController.class);

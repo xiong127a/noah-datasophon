@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.datasophon.api.annotation.ApiVersion;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -48,8 +49,7 @@ import java.util.stream.Collectors;
 /**
  * 服务配置文件控制器
  */
-@RestController
-@RequestMapping("/api/service/config")
+@ApiVersion(path = "service/config")
 @Slf4j
 public class ServiceConfigController {
 

@@ -20,15 +20,14 @@ package com.datasophon.api.controller;
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 集群服务 dashboard inti
  */
-@RestController
-@RequestMapping("api/cluster/service/dashboard")
+@ApiVersion(path = "cluster/service/dashboard")
 public class ClusterServiceDashboardController {
 
     @Autowired

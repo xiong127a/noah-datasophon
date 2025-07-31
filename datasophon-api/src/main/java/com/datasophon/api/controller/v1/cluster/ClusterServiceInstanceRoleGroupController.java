@@ -24,13 +24,12 @@ import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("api/cluster/service/instance/role/group")
+@ApiVersion(path = "cluster/service/instance/role/group")
 public class ClusterServiceInstanceRoleGroupController {
 
     @Autowired
