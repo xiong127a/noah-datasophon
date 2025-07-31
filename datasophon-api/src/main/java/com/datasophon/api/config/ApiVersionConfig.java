@@ -1,6 +1,7 @@
 package com.datasophon.api.config;
 
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -19,6 +20,18 @@ import java.util.List;
 @Configuration
 public class ApiVersionConfig implements WebMvcConfigurer {
     
+    @Autowired
+    private RequestMappingHandlerMapping requestMappingHandlerMapping;
+    
+    /**
+     * 检查RequestMappingHandlerMapping类型
+     */
+    @PostConstruct
+    public void init() {
+        System.out.println("ApiVersionConfig: 当前RequestMappingHandlerMapping类型: " + 
+                         requestMappingHandlerMapping.getClass().getName());
+    }
+    
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
      * 使用@Primary注解覆盖默认的RequestMappingHandlerMapping
@@ -27,7 +40,9 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     @Bean
     @Primary
     public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-        return new VersionedRequestMappingHandlerMapping();
+        VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
+        System.out.println("ApiVersionConfig: 创建VersionedRequestMappingHandlerMapping Bean");
+        return mapping;
     }
     
     /**

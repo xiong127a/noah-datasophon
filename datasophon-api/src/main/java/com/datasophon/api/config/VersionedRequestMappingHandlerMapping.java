@@ -1,6 +1,9 @@
 package com.datasophon.api.config;
 
 import com.datasophon.api.annotation.ApiVersion;
+
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -17,6 +20,11 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
     
     private static final String API_PREFIX = "api";
     
+    @PostConstruct
+    public void init() {
+        System.out.println("VersionedRequestMappingHandlerMapping: Bean初始化完成，API前缀: " + API_PREFIX);
+    }
+    
     @Override
     protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
         RequestMappingInfo info = super.getMappingForMethod(method, handlerType);
@@ -26,7 +34,10 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
             if (apiVersion != null) {
                 // 创建版本化的路径前缀
                 String versionPrefix = buildVersionPrefix(apiVersion);
+                System.out.println("VersionedRequestMappingHandlerMapping: 为类 " + handlerType.getSimpleName() + 
+                                 " 的方法 " + method.getName() + " 生成前缀: " + versionPrefix);
                 info = createVersionedRequestMappingInfo(info, versionPrefix);
+                System.out.println("VersionedRequestMappingHandlerMapping: 最终映射信息: " + info);
             }
         }
         
