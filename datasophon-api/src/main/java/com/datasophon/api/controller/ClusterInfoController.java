@@ -23,6 +23,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -120,7 +121,8 @@ public class ClusterInfoController {
      * 获取Kubernetes命名空间列表
      */
     @PostMapping("/namespaces")
-    public Result getKubernetesNamespaces(@RequestParam(name = "kubeConfigContent") String kubeConfigContent) {
+    public Result getKubernetesNamespaces(@RequestBody JsonNode jsonNode) {
+        String kubeConfigContent = jsonNode.get("kubeConfigContent").asText();
         return clusterInfoService.getKubernetesNamespaces(kubeConfigContent);
     }
 
