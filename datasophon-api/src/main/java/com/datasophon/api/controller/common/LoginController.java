@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.common;
 
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.PersistentTokenManager;
