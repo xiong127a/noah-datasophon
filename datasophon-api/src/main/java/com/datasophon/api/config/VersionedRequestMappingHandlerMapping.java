@@ -30,6 +30,18 @@ public class VersionedRequestMappingHandlerMapping extends RequestMappingHandler
     }
     
     @Override
+    public void afterPropertiesSet() {
+        System.out.println("=== VersionedRequestMappingHandlerMapping: 开始afterPropertiesSet初始化 ===");
+        super.afterPropertiesSet();
+        System.out.println("=== VersionedRequestMappingHandlerMapping: afterPropertiesSet完成，已注册映射数量: " + getHandlerMethods().size() + " ===");
+        
+        // 打印所有已注册的映射
+        getHandlerMethods().forEach((mappingInfo, handlerMethod) -> {
+            System.out.println("=== 已注册映射: " + mappingInfo + " -> " + handlerMethod + " ===");
+        });
+    }
+    
+    @Override
     protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
         RequestMappingInfo info = super.getMappingForMethod(method, handlerType);
         
