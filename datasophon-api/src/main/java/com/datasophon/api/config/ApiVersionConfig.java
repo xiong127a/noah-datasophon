@@ -1,7 +1,6 @@
 package com.datasophon.api.config;
 
 import com.datasophon.api.resolver.ClusterIdArgumentResolver;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -20,29 +19,38 @@ import java.util.List;
 @Configuration
 public class ApiVersionConfig implements WebMvcConfigurer {
     
-    @Autowired
-    private RequestMappingHandlerMapping requestMappingHandlerMapping;
-    
-    /**
-     * 检查RequestMappingHandlerMapping类型
-     */
-    @PostConstruct
-    public void init() {
-        System.out.println("ApiVersionConfig: 当前RequestMappingHandlerMapping类型: " + 
-                         requestMappingHandlerMapping.getClass().getName());
+    // 构造函数 - 确保配置类被正确加载
+    public ApiVersionConfig() {
+        System.out.println("=== ApiVersionConfig: 配置类构造函数被调用 ===");
     }
+    
+    // 移除循环依赖 - 不再注入RequestMappingHandlerMapping
     
     /**
      * 注册支持API版本的RequestMappingHandlerMapping
      * 使用@Primary注解覆盖默认的RequestMappingHandlerMapping
      * 已在application.yml中启用allow-bean-definition-overriding
      */
-    @Bean
+    @Bean(name = "requestMappingHandlerMapping")
     @Primary
     public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+        System.out.println("=== ApiVersionConfig: 开始创建VersionedRequestMappingHandlerMapping Bean ===");
         VersionedRequestMappingHandlerMapping mapping = new VersionedRequestMappingHandlerMapping();
-        System.out.println("ApiVersionConfig: 创建VersionedRequestMappingHandlerMapping Bean");
+        
+        // 立即测试这个Bean
+        System.out.println("=== Bean类型验证: " + mapping.getClass().getName() + " ===");
+        
+        System.out.println("=== ApiVersionConfig: VersionedRequestMappingHandlerMapping 创建完成 ===");
         return mapping;
+    }
+    
+    /**
+     * 简单的测试Bean - 验证配置类是否被加载
+     */
+    @Bean
+    public String testConfigBean() {
+        System.out.println("=== ApiVersionConfig: testConfigBean 被创建 - 配置类正常工作 ===");
+        return "test-config-working";
     }
     
     /**
