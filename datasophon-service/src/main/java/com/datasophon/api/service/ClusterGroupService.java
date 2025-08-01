@@ -17,27 +17,44 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterGroup;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
 
+/**
+ * 集群组服务
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 public interface ClusterGroupService {
 
-    Result saveClusterGroup(Integer clusterId, String groupName);
+    ClusterGroup saveClusterGroup(Integer clusterId, String groupName);
 
     void refreshUserGroupToHost(Integer clusterId);
 
-    Result deleteUserGroup(Integer id);
+    boolean deleteUserGroup(Integer id);
 
-    Result deleteUserGroupOnKubernetes(Integer id);
+    boolean deleteUserGroupOnKubernetes(Integer id);
 
-    Result listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
 
     List<ClusterGroup> listAllUserGroup(Integer clusterId);
 
     void createUnixGroupOnHost(String hostname, String groupName);
 
-    Result saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
+    ClusterGroup saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
+
+    // 标准CRUD方法
+    ClusterGroup getById(Integer id);
+
+    ClusterGroup save(ClusterGroup entity);
+
+    ClusterGroup updateById(ClusterGroup entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterGroup> getAllClusterGroups();
 }

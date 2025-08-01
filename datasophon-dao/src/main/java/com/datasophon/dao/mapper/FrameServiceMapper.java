@@ -127,4 +127,16 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
         }
         return this.deleteBatchByIds(ids);
     }
+
+    /**
+     * 根据框架ID集合查询服务列表
+     */
+    default List<FrameServiceEntity> selectByFrameIds(java.util.Set<Integer> frameIds) {
+        if (frameIds == null || frameIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(FrameServiceEntity::getFrameId).in(frameIds);
+        return this.selectListByQuery(query);
+    }
 }

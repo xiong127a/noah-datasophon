@@ -37,8 +37,7 @@ import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
@@ -47,11 +46,10 @@ import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceRoleState;
+
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -66,22 +64,27 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * 集群服务实例实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterServiceInstanceService")
 @Transactional
 @Slf4j
-public class ClusterServiceInstanceServiceImpl
-        extends
-        ServiceImpl<ClusterServiceInstanceMapper, ClusterServiceInstanceEntity>
-        implements
-        ClusterServiceInstanceService {
+public class ClusterServiceInstanceServiceImpl implements ClusterServiceInstanceService {
 
     @Autowired
     private ClusterServiceInstanceMapper serviceInstanceMapper;
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
+
     @Autowired
     private ClusterInfoService clusterInfoService;
+
     @Autowired
     private FrameServiceRoleService frameServiceRoleService;
 
@@ -93,6 +96,13 @@ public class ClusterServiceInstanceServiceImpl
 
     @Autowired
     private ClusterServiceRoleInstanceWebuisService webuisService;
+
+    // TODO: 待其他Service改造完成后启用
+    // @Autowired
+    // private ClusterServiceDashboardService clusterServiceDashboardService;
+
+    // @Autowired
+    // private ClusterAlertHistoryService clusterAlertHistoryService;
 
     // 创建一个定时缓存，缓存时间为10秒
     private static final TimedCache<String, ConnectionInfo> CONNECTION_INFO_CACHE = CacheUtil.newTimedCache(5000);
@@ -106,10 +116,7 @@ public class ClusterServiceInstanceServiceImpl
     @Override
     public ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId,
             String serviceName) {
-        return QueryChain.of(ClusterServiceInstanceEntity.class)
-                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
-                .and(ClusterServiceInstanceEntity::getServiceName).eq(serviceName)
-                .one();
+        return serviceInstanceMapper.selectByClusterIdAndServiceName(clusterId, serviceName);
     }
 
     @Override
@@ -122,20 +129,16 @@ public class ClusterServiceInstanceServiceImpl
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
         // 查询集群下所有服务实例并按排序号升序排列
-        List<ClusterServiceInstanceEntity> serviceInstances = QueryChain.of(ClusterServiceInstanceEntity.class)
-                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
-                .orderBy(ClusterServiceInstanceEntity::getSortNum).asc()
-                .list();
+        List<ClusterServiceInstanceEntity> serviceInstances = serviceInstanceMapper
+                .selectByClusterIdOrderBySortNum(clusterId);
 
         // 处理每个服务实例
         for (ClusterServiceInstanceEntity serviceInstance : serviceInstances) {
             serviceInstance.setServiceStateCode(serviceInstance.getServiceState().getValue());
             boolean needUpdate = false;
 
-            // 查询仪表盘
-            ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
-                    .where(ClusterServiceDashboard::getServiceName).eq(serviceInstance.getServiceName())
-                    .one();
+            // 查询仪表盘 - TODO: 待ClusterServiceDashboardService改造完成后实现
+            ClusterServiceDashboard dashboard = null; // clusterServiceDashboardService.getByServiceName(serviceInstance.getServiceName());
 
             if (Objects.nonNull(dashboard)) {
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
@@ -143,29 +146,22 @@ public class ClusterServiceInstanceServiceImpl
                 serviceInstance.setDashboardUrl(dashboardUrl);
             }
 
-            // 查询启用的告警数量
-            long alertNum = QueryChain.of(ClusterAlertHistory.class)
-                    .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstance.getId())
-                    .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                    .count();
+            // 查询启用的告警数量 - TODO: 待ClusterAlertHistoryService改造完成后实现
+            long alertNum = 0; // clusterAlertHistoryService.countEnabledByServiceInstanceId(serviceInstance.getId());
 
             serviceInstance.setAlertNum(alertNum);
 
             // 查询该服务的所有角色实例
-            List<ClusterServiceRoleInstanceEntity> totalRoleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
-                    .list();
+            List<ClusterServiceRoleInstanceEntity> totalRoleList = roleInstanceService
+                    .getServiceRoleInstanceListByServiceId(serviceInstance.getId());
 
             if (Objects.nonNull(totalRoleList) && totalRoleList.isEmpty()) {
                 serviceInstance.setServiceState(ServiceState.WAIT_INSTALL);
                 needUpdate = true;
             }
 
-            // 查询停止状态角色
-            List<ClusterServiceRoleInstanceEntity> roleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
-                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.STOP)
-                    .list();
+            // 查询停止状态角色 - TODO: 待ClusterServiceRoleInstanceService改造完成后实现
+            List<ClusterServiceRoleInstanceEntity> roleList = java.util.Collections.emptyList(); // roleInstanceService.getStoppedRolesByServiceId(serviceInstance.getId());
 
             if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
                 if (!ServiceState.EXISTS_EXCEPTION.equals(serviceInstance.getServiceState())) {
@@ -181,11 +177,8 @@ public class ClusterServiceInstanceServiceImpl
                 }
             }
 
-            // 查询告警状态角色
-            List<ClusterServiceRoleInstanceEntity> alarmRoleList = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
-                    .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.EXISTS_ALARM)
-                    .list();
+            // 查询告警状态角色 - TODO: 待ClusterServiceRoleInstanceService改造完成后实现
+            List<ClusterServiceRoleInstanceEntity> alarmRoleList = java.util.Collections.emptyList(); // roleInstanceService.getAlarmRolesByServiceId(serviceInstance.getId());
 
             if (Objects.nonNull(alarmRoleList) && !alarmRoleList.isEmpty()) {
                 if (!ServiceState.EXISTS_ALARM.equals(serviceInstance.getServiceState())
@@ -211,24 +204,26 @@ public class ClusterServiceInstanceServiceImpl
             }
 
             if (needUpdate) {
-                this.updateById(serviceInstance);
+                serviceInstanceMapper.updateById(serviceInstance);
             }
         }
         return serviceInstances;
     }
 
     @Override
-    public Result downloadClientConfig(Integer clusterId, String serviceName) {
-
+    public String downloadClientConfig(Integer clusterId, String serviceName) {
+        // TODO: 实现下载客户端配置逻辑
         return null;
     }
 
     @Override
-    public Result getServiceRoleType(Integer serviceInstanceId) {
-        ClusterServiceInstanceEntity serviceInstanceEntity = this.getById(serviceInstanceId);
+    public List<FrameServiceRoleEntity> getServiceRoleType(Integer serviceInstanceId) {
+        ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceMapper.selectById(serviceInstanceId);
+        if (serviceInstanceEntity == null) {
+            throw new RuntimeException("Service instance not found with id: " + serviceInstanceId);
+        }
         Integer frameServiceId = serviceInstanceEntity.getFrameServiceId();
-        List<FrameServiceRoleEntity> list = frameServiceRoleService.getAllServiceRoleList(frameServiceId);
-        return Result.success(list);
+        return frameServiceRoleService.getAllServiceRoleList(frameServiceId);
     }
 
     /**
@@ -287,16 +282,14 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences) {
-        List<ClusterServiceRoleGroupConfig> list = QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
-                .limit(2)
-                .list();
+    public Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
+            Boolean showOnlyDifferences) {
+        // TODO: 待ClusterServiceRoleGroupConfigService改造完成后实现
+        List<ClusterServiceRoleGroupConfig> list = java.util.Collections.emptyList(); // roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
 
         // 如果没有足够的版本进行比较，返回空结果
         if (list == null || list.size() < 2) {
-            return Result.success(new HashMap<>());
+            return new HashMap<>();
         }
 
         // 获取配置版本
@@ -435,28 +428,30 @@ public class ClusterServiceInstanceServiceImpl
             result.computeIfAbsent(groupName, k -> new ArrayList<>()).add(compareItem);
         }
 
-        return Result.success(result);
+        return result;
     }
 
     @Override
-    public Result delServiceInstance(Integer serviceInstanceId) {
+    public boolean delServiceInstance(Integer serviceInstanceId) {
         if (hasRunningRoleInstance(serviceInstanceId)) {
-            return Result.error(Status.EXIT_RUNNING_ROLE_INSTANCE.getMsg());
+            throw new RuntimeException(Status.EXIT_RUNNING_ROLE_INSTANCE.getMsg());
         }
         List<ClusterServiceInstanceRoleGroup> roleGroups = roleGroupService
                 .listRoleGroupByServiceInstanceId(serviceInstanceId);
         List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroup::getId)
                 .collect(Collectors.toList());
-        List<ClusterServiceRoleGroupConfig> roleGroupConfigList = roleGroupConfigService
-                .listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
+        // List<ClusterServiceRoleGroupConfig> roleGroupConfigList =
+        // roleGroupConfigService
+        // .listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
         List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
                 .getServiceRoleInstanceListByServiceId(serviceInstanceId);
-        ClusterServiceInstanceEntity clusterServiceInstance = this.getById(serviceInstanceId);
+        ClusterServiceInstanceEntity clusterServiceInstance = serviceInstanceMapper.selectById(serviceInstanceId);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
 
         if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             List<String> serviceRoleList = roleInstanceList.stream()
-                    .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().toList();
+                    .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct()
+                    .collect(java.util.stream.Collectors.toList());
             for (String serviceRoleName : serviceRoleList) {
                 KubernetesServiceStopHandler kubernetesServiceStopHandler = new KubernetesServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
@@ -468,17 +463,15 @@ public class ClusterServiceInstanceServiceImpl
                     log.info("remove {} deployment success", serviceRoleName);
                 } catch (Exception e) {
                     log.error("remove {} deployment failed", serviceRoleName);
-                    return Result.error(e.getMessage());
+                    throw new RuntimeException(e.getMessage());
                 }
             }
         }
 
         // del role group
         roleGroupService.removeByIds(roleGroupIds);
-        // del role group config
-        roleGroupConfigService
-                .removeByIds(roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId)
-                        .collect(Collectors.toList()));
+        // del role group config - TODO: 待ClusterServiceRoleGroupConfigService改造完成后实现
+        // roleGroupConfigService.removeByIds(roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId).collect(Collectors.toList()));
         // del service role instance
         if (!roleInstanceList.isEmpty()) {
             List<String> roleInsIds = roleInstanceList.stream().map(e -> e.getId().toString())
@@ -489,23 +482,22 @@ public class ClusterServiceInstanceServiceImpl
         webuisService.removeByServiceInsId(serviceInstanceId);
 
         // del service instance
-        this.removeById(serviceInstanceId);
-        return Result.success();
+        serviceInstanceMapper.deleteById(serviceInstanceId);
+        return true;
     }
 
     @Override
     public List<ClusterServiceInstanceEntity> listRunningServiceInstance(Integer clusterId) {
-        return QueryChain.of(ClusterServiceInstanceEntity.class)
-                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
-                .and(ClusterServiceInstanceEntity::getServiceState).eq(ServiceState.RUNNING)
-                .list();
+        return serviceInstanceMapper.selectRunningServicesByClusterId(clusterId);
     }
 
     @Override
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId)
-                .count() > 0;
+        // TODO: 待ClusterServiceRoleInstanceService改造完成后实现
+        // return roleInstanceService.countByServiceId(serviceInstanceId) > 0;
+        List<ClusterServiceRoleInstanceEntity> roleInstances = roleInstanceService
+                .getServiceRoleInstanceListByServiceId(serviceInstanceId);
+        return roleInstances != null && !roleInstances.isEmpty();
     }
 
     @Override
@@ -518,15 +510,15 @@ public class ClusterServiceInstanceServiceImpl
         }
 
         // 查询该服务实例下是否有角色实例
-        long count = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstance.getId())
-                .count();
-
-        return count > 0;
+        // TODO: 待ClusterServiceRoleInstanceService改造完成后实现
+        // long count = roleInstanceService.countByServiceId(serviceInstance.getId());
+        List<ClusterServiceRoleInstanceEntity> roleInstances = roleInstanceService
+                .getServiceRoleInstanceListByServiceId(serviceInstance.getId());
+        return roleInstances != null && !roleInstances.isEmpty();
     }
 
     @Override
-    public Result getConnectionInfo(Integer serviceInstanceId) {
+    public ConnectionInfo getConnectionInfo(Integer serviceInstanceId) {
         // 构建缓存键，使用serviceInstanceId作为唯一标识
         String cacheKey = "connectionInfo:" + serviceInstanceId;
 
@@ -534,16 +526,16 @@ public class ClusterServiceInstanceServiceImpl
         ConnectionInfo connectionInfo = CONNECTION_INFO_CACHE.get(cacheKey);
         if (connectionInfo != null) {
             log.info("从缓存获取服务[{}]的连接信息", serviceInstanceId);
-            return Result.success(connectionInfo);
+            return connectionInfo;
         }
 
         // 缓存中没有，执行原逻辑获取连接信息
         log.info("缓存中无数据，开始获取服务[{}]的连接信息", serviceInstanceId);
 
         // 获取服务实例信息
-        ClusterServiceInstanceEntity serviceInstance = this.getById(serviceInstanceId);
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceMapper.selectById(serviceInstanceId);
         if (serviceInstance == null) {
-            return Result.error(Status.SERVICE_NOT_FOUND.getMsg());
+            throw new RuntimeException(Status.SERVICE_NOT_FOUND.getMsg());
         }
 
         // 获取集群ID
@@ -556,7 +548,7 @@ public class ClusterServiceInstanceServiceImpl
         ServiceRoleStrategy strategy = ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
         if (strategy == null) {
             log.warn("没有找到服务{}的连接信息处理策略", serviceName);
-            return Result.error("暂不支持该服务的连接信息");
+            throw new RuntimeException("暂不支持该服务的连接信息");
         }
 
         // 获取连接信息
@@ -569,7 +561,7 @@ public class ClusterServiceInstanceServiceImpl
         if (connectionInfo == null
                 || (connectionInfo.getBasicInfoItems() == null || connectionInfo.getBasicInfoItems().isEmpty())) {
             log.warn("服务{}未提供连接信息", serviceName);
-            return Result.error("该服务未提供连接信息");
+            throw new RuntimeException("该服务未提供连接信息");
         }
 
         String camelServiceName = toCamelCase(serviceName);
@@ -600,7 +592,7 @@ public class ClusterServiceInstanceServiceImpl
         CONNECTION_INFO_CACHE.put(cacheKey, connectionInfo);
         log.info("将服务[{}]的连接信息存入缓存，缓存时间5秒", serviceInstanceId);
 
-        return Result.success(connectionInfo);
+        return connectionInfo;
     }
 
     /**
@@ -620,4 +612,31 @@ public class ClusterServiceInstanceServiceImpl
         return Character.toUpperCase(lowercase.charAt(0)) + lowercase.substring(1);
     }
 
+    // 标准CRUD方法实现
+    @Override
+    public ClusterServiceInstanceEntity getById(Integer id) {
+        return serviceInstanceMapper.selectById(id);
+    }
+
+    @Override
+    public ClusterServiceInstanceEntity save(ClusterServiceInstanceEntity entity) {
+        serviceInstanceMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public ClusterServiceInstanceEntity updateById(ClusterServiceInstanceEntity entity) {
+        serviceInstanceMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return serviceInstanceMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<ClusterServiceInstanceEntity> getAllServiceInstances() {
+        return serviceInstanceMapper.selectAll();
+    }
 }

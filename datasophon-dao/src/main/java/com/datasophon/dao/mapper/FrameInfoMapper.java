@@ -18,18 +18,21 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.FrameInfoEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
 
 import static com.datasophon.dao.entity.table.FrameInfoEntityTableDef.FRAME_INFO_ENTITY;
 
 /**
  * 集群框架表
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface FrameInfoMapper extends BaseMapper<FrameInfoEntity> {
@@ -47,5 +50,44 @@ public interface FrameInfoMapper extends BaseMapper<FrameInfoEntity> {
                 .where(FRAME_INFO_ENTITY.FRAME_CODE.eq(frameCode));
 
         return this.selectOneByQuery(queryWrapper);
+    }
+
+    /**
+     * 根据ID查询单个实体
+     */
+    default FrameInfoEntity selectById(Integer id) {
+        return this.selectOneById(id);
+    }
+
+    /**
+     * 插入实体
+     */
+    default int insert(FrameInfoEntity entity) {
+        return this.insertSelective(entity);
+    }
+
+    /**
+     * 根据ID更新实体
+     */
+    default int updateById(FrameInfoEntity entity) {
+        return this.update(entity);
+    }
+
+    /**
+     * 根据ID列表删除
+     */
+    default int deleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return this.deleteBatchByIds(ids);
+    }
+
+    /**
+     * 查询所有框架信息
+     */
+    default List<FrameInfoEntity> selectAll() {
+        QueryWrapper query = QueryWrapper.create();
+        return this.selectListByQuery(query);
     }
 }

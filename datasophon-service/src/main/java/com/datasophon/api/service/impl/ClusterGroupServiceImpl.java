@@ -33,15 +33,13 @@ import com.datasophon.common.command.remote.CreateUnixGroupCommand;
 import com.datasophon.common.command.remote.DelUnixGroupCommand;
 import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.apache.commons.lang3.StringUtils;
+
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
@@ -61,22 +59,30 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * 集群组服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterGroupService")
 @Transactional
-public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, ClusterGroup>
-        implements
-        ClusterGroupService {
+public class ClusterGroupServiceImpl implements ClusterGroupService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterGroupServiceImpl.class);
 
     @Autowired
+    private ClusterGroupMapper clusterGroupMapper;
+
+    @Autowired
     private ClusterHostService hostService;
+
     @Autowired
     private ClusterUserGroupService userGroupService;
 
-
     @Override
-    public Result saveClusterGroup(Integer clusterId, String groupName) {
+    public ClusterGroup saveClusterGroup(Integer clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -86,16 +92,16 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         try {
             notEmptyValidator.validate(groupName);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         if (hasRepeatGroupName(clusterId, groupName)) {
-            return Result.error(Status.GROUP_NAME_DUPLICATION.getMsg());
+            throw new RuntimeException(Status.GROUP_NAME_DUPLICATION.getMsg());
         }
         ClusterGroup clusterGroup = new ClusterGroup();
         clusterGroup.setClusterId(clusterId);
         clusterGroup.setGroupName(groupName);
-        this.save(clusterGroup);
+        clusterGroupMapper.insert(clusterGroup);
 
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
         for (ClusterHostDO clusterHost : hostList) {
@@ -120,11 +126,11 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
         }
 
-        return Result.success();
+        return clusterGroup;
     }
 
     @Override
-    public Result saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
+    public ClusterGroup saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -134,17 +140,18 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         try {
             notEmptyValidator.validate(groupName);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         if (hasRepeatGroupName(clusterId, groupName)) {
-            return Result.error(Status.GROUP_NAME_DUPLICATION.getMsg());
+            throw new RuntimeException(Status.GROUP_NAME_DUPLICATION.getMsg());
         }
         ClusterGroup clusterGroup = new ClusterGroup();
         clusterGroup.setClusterId(clusterId);
         clusterGroup.setGroupName(groupName);
-        this.save(clusterGroup);
+        clusterGroupMapper.insert(clusterGroup);
 
+        @SuppressWarnings("unchecked")
         Map<String, UserEnum> groupNameMap = UserEnum.getGroupNameMap();
         Integer systemInitMaxGid = groupNameMap.values().stream()
                 .map(UserEnum::getGroupId)
@@ -182,13 +189,12 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
                     "create unix user " + groupName + " failed at Gid{" + createUnixUserGid + "} > 65535");
         }
         for (ClusterHostDO clusterHost : hostList) {
-            ExecResult execResult = null;
             try {
-                if (!createUnixGroup(groupName, clusterHost.getHostname(), createUnixUserGid)
-                        .equals(Constants.FAILED)) {
+                String result = createUnixGroup(groupName, clusterHost.getHostname(), createUnixUserGid);
+                if (!result.equals(Constants.FAILED)) {
                     logger.info("create unix group {} success at {}", groupName, clusterHost.getHostname());
                 } else {
-                    logger.info(execResult.getExecOut());
+                    logger.info("create unix group {} failed at {}", groupName, clusterHost.getHostname());
                     throw new ServiceException(500,
                             "create unix group " + groupName + " failed at " + clusterHost.getHostname());
                 }
@@ -198,34 +204,34 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
         }
 
-        return Result.success();
+        return clusterGroup;
     }
 
     private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
-        List<ClusterGroup> list = QueryChain.of(ClusterGroup.class)
-                .where(ClusterGroup::getClusterId).eq(clusterId)
-                .and(ClusterGroup::getGroupName).eq(groupName)
-                .list();
+        List<ClusterGroup> list = clusterGroupMapper.selectByClusterIdAndGroupName(clusterId, groupName);
         return CollUtil.isNotEmpty(list);
     }
 
     @Override
     public void refreshUserGroupToHost(Integer clusterId) {
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
-        List<ClusterGroup> groupList = this.list();
+        List<ClusterGroup> groupList = clusterGroupMapper.selectAll();
         for (ClusterGroup clusterGroup : groupList) {
             ProcessUtils.syncUserGroupToHosts(hostList, clusterGroup.getGroupName(), "groupadd");
         }
     }
 
     @Override
-    public Result deleteUserGroup(Integer id) {
-        ClusterGroup clusterGroup = this.getById(id);
+    public boolean deleteUserGroup(Integer id) {
+        ClusterGroup clusterGroup = clusterGroupMapper.selectById(id);
+        if (clusterGroup == null) {
+            throw new RuntimeException("Group not found with id: " + id);
+        }
         long num = userGroupService.countGroupUserNum(id);
         if (num > 0) {
-            return Result.error(Status.USER_GROUP_TIPS_ONE.getMsg());
+            throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
-        this.removeById(id);
+        clusterGroupMapper.removeById(id);
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
         for (ClusterHostDO clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
@@ -245,17 +251,20 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
                 logger.info("del unix group failed at {}", clusterHost.getHostname());
             }
         }
-        return Result.success();
+        return true;
     }
 
     @Override
-    public Result deleteUserGroupOnKubernetes(Integer id) {
-        ClusterGroup clusterGroup = this.getById(id);
+    public boolean deleteUserGroupOnKubernetes(Integer id) {
+        ClusterGroup clusterGroup = clusterGroupMapper.selectById(id);
+        if (clusterGroup == null) {
+            throw new RuntimeException("Group not found with id: " + id);
+        }
         long num = userGroupService.countGroupUserNum(id);
         if (num > 0) {
-            return Result.error(Status.USER_GROUP_TIPS_ONE.getMsg());
+            throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
-        this.removeById(id);
+        clusterGroupMapper.removeById(id);
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
         for (ClusterHostDO clusterHost : hostList) {
             try {
@@ -268,21 +277,16 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
                 logger.info("del unix group failed at {}", clusterHost.getHostname());
             }
         }
-        return Result.success();
+        return true;
     }
 
     @Override
-    public Result listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
+    public PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
+        // 使用mapper的分页查询方法
+        PageResult<ClusterGroup> pageResult = clusterGroupMapper.selectPageByClusterIdAndGroupName(
+                clusterId, groupName, page, pageSize);
 
-        QueryChain<ClusterGroup> query = QueryChain.of(ClusterGroup.class)
-                .where(ClusterGroup::getClusterId).eq(clusterId);
-
-        if (StringUtils.isNotBlank(groupName)) {
-            query.and(ClusterGroup::getGroupName).like("%" + groupName + "%");
-        }
-
-        List<ClusterGroup> list = query.limit(offset, pageSize).list();
+        List<ClusterGroup> list = pageResult.getRecords();
 
         for (ClusterGroup clusterGroup : list) {
             List<ClusterUser> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
@@ -293,15 +297,12 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
         }
 
-        long total = query.count();
-        return Result.success(list,total);
+        return pageResult;
     }
 
     @Override
     public List<ClusterGroup> listAllUserGroup(Integer clusterId) {
-        return QueryChain.of(ClusterGroup.class)
-                .where(ClusterGroup::getClusterId).eq(clusterId)
-                .list();
+        return clusterGroupMapper.selectByClusterId(clusterId);
     }
 
     @Override
@@ -354,5 +355,33 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         String result = KubernetesMinaUtils.execCmdWithResult(hostname,
                 "egrep \"" + groupName + "\" /etc/group >& /dev/null");
         return !Objects.requireNonNull(result).equals(Constants.FAILED);
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public ClusterGroup getById(Integer id) {
+        return clusterGroupMapper.selectById(id);
+    }
+
+    @Override
+    public ClusterGroup save(ClusterGroup entity) {
+        clusterGroupMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public ClusterGroup updateById(ClusterGroup entity) {
+        clusterGroupMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return clusterGroupMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<ClusterGroup> getAllClusterGroups() {
+        return clusterGroupMapper.selectAll();
     }
 }

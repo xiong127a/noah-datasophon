@@ -1,3 +1,20 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.BooleanUtil;
@@ -7,7 +24,6 @@ import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AutoScaleTaskVO;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;
@@ -16,9 +32,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
-
-
-
+/**
+ * 自动伸缩服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service
 public class AutoScaleServiceImpl implements AutoScaleService {
 
@@ -48,8 +68,7 @@ public class AutoScaleServiceImpl implements AutoScaleService {
                 namespace,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_UP_REPLICAS,
-                "工作日早9点扩容"
-        );
+                "工作日早9点扩容");
 
     }
 
@@ -66,23 +85,30 @@ public class AutoScaleServiceImpl implements AutoScaleService {
                 namespace,
                 SEATUNNEL_SERVER_NAME,
                 DEFAULT_SCALE_DOWN_REPLICAS,
-                "工作日晚6点缩容"
-        );
+                "工作日晚6点缩容");
 
     }
 
     @Override
-    public Result<String> createAutoScaleTask(AutoScaleTaskVO taskVO) {
-        //saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
-        saveAutoScaleConfig(taskVO.getClusterId(), "true");
-        return Result.success();
+    public boolean createAutoScaleTask(AutoScaleTaskVO taskVO) {
+        try {
+            // saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
+            saveAutoScaleConfig(taskVO.getClusterId(), "true");
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create auto scale task", e);
+        }
     }
 
     @Override
-    public Result<String> updateAutoScaleTask(AutoScaleTaskVO taskVO) {
-        //saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
-        saveAutoScaleConfig(taskVO.getClusterId(), "false");
-        return Result.success();
+    public boolean updateAutoScaleTask(AutoScaleTaskVO taskVO) {
+        try {
+            // saveAutoScaleConfig(taskVO.getClusterId(), taskVO.getScaleType());
+            saveAutoScaleConfig(taskVO.getClusterId(), "false");
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update auto scale task", e);
+        }
     }
 
     private void saveAutoScaleConfig(Integer clusterId, String scaleType) {
@@ -91,13 +117,14 @@ public class AutoScaleServiceImpl implements AutoScaleService {
     }
 
     @Override
-    public Result<String> getAutoScaleTasks(AutoScaleTaskVO taskVO) {
+    public String getAutoScaleTasks(AutoScaleTaskVO taskVO) {
         Map<String, String> globalVariables = GlobalVariables.get(taskVO.getClusterId());
-        return  Result.success(globalVariables.get("${enableAutoScale}") != null ? globalVariables.get("${enableAutoScale}") : "false");
+        return globalVariables.get("${enableAutoScale}") != null ? globalVariables.get("${enableAutoScale}") : "false";
     }
 
     @Override
-    public Result<String> deleteAutoScaleTask(AutoScaleTaskVO taskVO) {
-        return null;
+    public boolean deleteAutoScaleTask(AutoScaleTaskVO taskVO) {
+        // TODO: 实现删除自动伸缩任务逻辑
+        return false;
     }
 }

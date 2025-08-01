@@ -18,10 +18,15 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.enums.QuotaState;
+import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.core.paginate.Page;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -44,6 +49,148 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
         }
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertQuota::getAlertGroupId).in(alertGroupIds);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 分页查询告警指标列表
+     */
+    default PageResult<ClusterAlertQuota> selectAlertQuotaListWithPage(Integer clusterId, Integer alertGroupId,
+            Integer noticeGroupId, String quotaName, Integer page, Integer pageSize) {
+
+        QueryWrapper query = QueryWrapper.create();
+
+        // 按条件筛选
+        if (alertGroupId != null) {
+            query.where(ClusterAlertQuota::getAlertGroupId).eq(alertGroupId);
+        }
+
+        if (noticeGroupId != null) {
+            query.and(ClusterAlertQuota::getNoticeGroupId).eq(noticeGroupId);
+        }
+
+        if (StringUtils.isNotBlank(quotaName)) {
+            query.and(ClusterAlertQuota::getAlertQuotaName).like(quotaName);
+        }
+
+        // 获取总数
+        long count = this.selectCountByQuery(query);
+
+        if (count == 0) {
+            return PageResult.empty(page, pageSize);
+        }
+
+        // 分页查询
+        Page<ClusterAlertQuota> flexPage = new Page<>(page, pageSize);
+        Page<ClusterAlertQuota> resultPage = this.paginate(flexPage, query);
+
+        return PageResult.of(resultPage.getRecords(), count, page, pageSize);
+    }
+
+    /**
+     * 根据服务类别查询运行中的告警指标
+     */
+    default List<ClusterAlertQuota> selectRunningByServiceCategory(String category) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getServiceCategory).eq(category)
+                .and(ClusterAlertQuota::getQuotaState).eq(QuotaState.RUNNING);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务类别集合查询运行中的告警指标
+     */
+    default List<ClusterAlertQuota> selectRunningByServiceCategories(Collection<String> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getQuotaState).eq(QuotaState.RUNNING)
+                .and(ClusterAlertQuota::getServiceCategory).in(categories);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务类别查询告警指标
+     */
+    default List<ClusterAlertQuota> selectByServiceCategory(String serviceName) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getServiceCategory).eq(serviceName);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据通知组ID列表查询告警指标
+     */
+    default List<ClusterAlertQuota> selectByNoticeGroupIds(List<Integer> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getNoticeGroupId).in(groupIds);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据ID集合查询告警指标
+     */
+    default List<ClusterAlertQuota> selectByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return this.selectListByIds(ids);
+    }
+
+    /**
+     * 批量更新告警指标
+     */
+    default int updateBatch(Collection<ClusterAlertQuota> entityList) {
+        if (entityList == null || entityList.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (ClusterAlertQuota entity : entityList) {
+            count += this.update(entity);
+        }
+        return count;
+    }
+
+    /**
+     * 根据ID查询单个实体
+     */
+    default ClusterAlertQuota selectById(Integer id) {
+        return this.selectOneById(id);
+    }
+
+    /**
+     * 插入实体
+     */
+    default int insert(ClusterAlertQuota entity) {
+        return this.insertSelective(entity);
+    }
+
+    /**
+     * 根据ID更新实体
+     */
+    default int updateById(ClusterAlertQuota entity) {
+        return this.update(entity);
+    }
+
+    /**
+     * 根据ID列表删除
+     */
+    default int deleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return this.deleteBatchByIds(ids);
+    }
+
+    /**
+     * 查询所有告警指标
+     */
+    default List<ClusterAlertQuota> selectAll() {
+        QueryWrapper query = QueryWrapper.create();
         return this.selectListByQuery(query);
     }
 }

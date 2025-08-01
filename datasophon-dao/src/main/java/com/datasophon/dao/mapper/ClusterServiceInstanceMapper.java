@@ -18,16 +18,20 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-
+import com.datasophon.dao.enums.ServiceState;
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.mybatisflex.core.BaseMapper;
-import com.mybatisflex.core.query.QueryWrapper;
+import java.util.List;
 
 /**
  * 集群服务表
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceInstanceEntity> {
@@ -53,5 +57,74 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
 
                 Object result = this.selectObjectByQuery(query);
                 return result != null ? (String) result : null;
+        }
+
+        /**
+         * 根据集群ID和服务名称查询服务实例
+         */
+        default ClusterServiceInstanceEntity selectByClusterIdAndServiceName(Integer clusterId, String serviceName) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                                .and(ClusterServiceInstanceEntity::getServiceName).eq(serviceName);
+                return this.selectOneByQuery(query);
+        }
+
+        /**
+         * 根据集群ID查询所有服务实例，按排序号升序
+         */
+        default List<ClusterServiceInstanceEntity> selectByClusterIdOrderBySortNum(Integer clusterId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                                .orderBy(ClusterServiceInstanceEntity::getSortNum).asc();
+                return this.selectListByQuery(query);
+        }
+
+        /**
+         * 根据集群ID查询运行中的服务实例
+         */
+        default List<ClusterServiceInstanceEntity> selectRunningServicesByClusterId(Integer clusterId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
+                                .and(ClusterServiceInstanceEntity::getServiceState).eq(ServiceState.RUNNING);
+                return this.selectListByQuery(query);
+        }
+
+        /**
+         * 根据ID查询单个实体
+         */
+        default ClusterServiceInstanceEntity selectById(Integer id) {
+                return this.selectOneById(id);
+        }
+
+        /**
+         * 插入实体
+         */
+        default int insert(ClusterServiceInstanceEntity entity) {
+                return this.insertSelective(entity);
+        }
+
+        /**
+         * 根据ID更新实体
+         */
+        default int updateById(ClusterServiceInstanceEntity entity) {
+                return this.update(entity);
+        }
+
+        /**
+         * 根据ID列表删除
+         */
+        default int deleteByIds(List<Integer> ids) {
+                if (ids == null || ids.isEmpty()) {
+                        return 0;
+                }
+                return this.deleteBatchByIds(ids);
+        }
+
+        /**
+         * 查询所有服务实例
+         */
+        default List<ClusterServiceInstanceEntity> selectAll() {
+                QueryWrapper query = QueryWrapper.create();
+                return this.selectListByQuery(query);
         }
 }

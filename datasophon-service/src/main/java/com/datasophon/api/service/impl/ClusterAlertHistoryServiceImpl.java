@@ -23,15 +23,13 @@ import com.datasophon.api.master.alert.AlertActor;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.RoleInstanceQueryService;
-import com.datasophon.common.Constants;
+
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,83 +41,97 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 集群告警历史表实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterAlertHistoryService")
 @Transactional
-public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistory>
-        implements ClusterAlertHistoryService {
+public class ClusterAlertHistoryServiceImpl implements ClusterAlertHistoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
+        private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
 
-    @Autowired
-    private RoleInstanceQueryService roleInstanceQueryService;
+        @Autowired
+        private ClusterAlertHistoryMapper clusterAlertHistoryMapper;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+        @Autowired
+        private RoleInstanceQueryService roleInstanceQueryService;
 
-    @Override
-    public void saveAlertHistory(String alertMessage) {
-        logger.warn("Receive Alert Message : {}", alertMessage);
-        ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
-        ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                2L, TimeUnit.SECONDS),
-                alertActor, alertMessage,
-                ActorUtils.actorSystem.dispatcher(),
-                ActorRef.noSender());
-    }
+        @Autowired
+        private ClusterInfoService clusterInfoService;
 
-    @Override
-    public Result<List<ClusterAlertHistory>> getAlertList(Integer serviceInstanceId) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getIsEnabled).eq(1);
-        
-        if (serviceInstanceId != null) {
-            query.and(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId);
+        @Override
+        public void saveAlertHistory(String alertMessage) {
+                logger.warn("Receive Alert Message : {}", alertMessage);
+                ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
+                ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
+                                2L, TimeUnit.SECONDS),
+                                alertActor, alertMessage,
+                                ActorUtils.actorSystem.dispatcher(),
+                                ActorRef.noSender());
         }
-        
-        List<ClusterAlertHistory> list = this.list(query);
-        return Result.success(list);
-    }
 
-    @Override
-    public Result<List<ClusterAlertHistory>> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
-        int offset = (page - 1) * pageSize;
-        
-        // 构建查询条件
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .orderBy(ClusterAlertHistory::getCreateTime, false)
-                .limit(offset, pageSize);
-        List<ClusterAlertHistory> list = this.list(query);
+        @Override
+        public List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId) {
+                return clusterAlertHistoryMapper.selectEnabledByServiceInstanceId(serviceInstanceId);
+        }
 
-        // 查询总数
-        QueryWrapper countQuery = QueryWrapper.create()
-                .where(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1);
-        long count = this.count(countQuery);
-        
-        // 使用正确的方式返回分页结果
-        return Result.success(list, count);
-    }
+        @Override
+        public PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
+                return clusterAlertHistoryMapper.selectEnabledByClusterIdWithPage(clusterId, page, pageSize);
+        }
 
-    @Override
-    public void removeAlertByRoleInstanceIds(List<Integer> ids) {
-        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService.getById(ids.getFirst());
-        ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
-        
-        // 使用lambda表达式构建查询条件
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getIsEnabled).eq(1)
-                .and(ClusterAlertHistory::getServiceRoleInstanceId).in(ids);
-        this.remove(query);
-        
-        // 重新配置prometheus
-        ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
-                ActorUtils.getActorRefName(PrometheusActor.class));
-        GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
-        prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
-        prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
-        prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
-        prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
-    }
+        @Override
+        public void removeAlertByRoleInstanceIds(List<Integer> ids) {
+                ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService.getById(ids.get(0));
+                ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+
+                // 删除告警历史记录
+                clusterAlertHistoryMapper.removeEnabledByRoleInstanceIds(ids);
+
+                // 重新配置prometheus
+                ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                                ActorUtils.getActorRefName(PrometheusActor.class));
+                GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
+                prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
+                prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
+                prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
+                prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
+        }
+
+        @Override
+        public long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
+                return clusterAlertHistoryMapper.countEnabledByServiceInstanceId(serviceInstanceId);
+        }
+
+        // 标准CRUD方法实现
+        @Override
+        public ClusterAlertHistory getById(Integer id) {
+                return clusterAlertHistoryMapper.selectById(id);
+        }
+
+        @Override
+        public ClusterAlertHistory save(ClusterAlertHistory entity) {
+                clusterAlertHistoryMapper.insert(entity);
+                return entity;
+        }
+
+        @Override
+        public ClusterAlertHistory updateById(ClusterAlertHistory entity) {
+                clusterAlertHistoryMapper.updateById(entity);
+                return entity;
+        }
+
+        @Override
+        public boolean removeByIds(List<Integer> ids) {
+                return clusterAlertHistoryMapper.deleteByIds(ids) > 0;
+        }
+
+        @Override
+        public List<ClusterAlertHistory> getAllAlertHistories() {
+                return clusterAlertHistoryMapper.selectAll();
+        }
 }

@@ -17,18 +17,19 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.datasophon.common.model.ConnectionInfo;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 集群服务表
  *
- * @author dygao2
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterServiceInstanceService {
 
@@ -38,13 +39,14 @@ public interface ClusterServiceInstanceService {
 
     List<ClusterServiceInstanceEntity> listAll(Integer clusterId);
 
-    Result downloadClientConfig(Integer clusterId, String serviceName);
+    String downloadClientConfig(Integer clusterId, String serviceName);
 
-    Result getServiceRoleType(Integer serviceInstanceId);
+    List<FrameServiceRoleEntity> getServiceRoleType(Integer serviceInstanceId);
 
-    Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences);
+    Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
+            Boolean showOnlyDifferences);
 
-    Result delServiceInstance(Integer serviceInstanceId);
+    boolean delServiceInstance(Integer serviceInstanceId);
 
     List<ClusterServiceInstanceEntity> listRunningServiceInstance(Integer clusterId);
 
@@ -58,5 +60,16 @@ public interface ClusterServiceInstanceService {
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息
      */
-    Result getConnectionInfo(Integer serviceInstanceId);
+    ConnectionInfo getConnectionInfo(Integer serviceInstanceId);
+
+    // 标准CRUD方法
+    ClusterServiceInstanceEntity getById(Integer id);
+
+    ClusterServiceInstanceEntity save(ClusterServiceInstanceEntity entity);
+
+    ClusterServiceInstanceEntity updateById(ClusterServiceInstanceEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterServiceInstanceEntity> getAllServiceInstances();
 }

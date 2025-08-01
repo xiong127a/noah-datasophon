@@ -17,22 +17,39 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
 
 /**
- * 集群告警历史表 
+ * 集群告警历史表
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterAlertHistoryService {
 
     void saveAlertHistory(String alertMessage);
 
-    Result getAlertList(Integer serviceInstanceId);
+    List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId);
 
-    Result getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
 
     void removeAlertByRoleInstanceIds(List<Integer> ids);
+
+    // 新增方法：根据服务实例ID统计启用的告警数量
+    long countEnabledByServiceInstanceId(Integer serviceInstanceId);
+
+    // 标准CRUD方法
+    ClusterAlertHistory getById(Integer id);
+
+    ClusterAlertHistory save(ClusterAlertHistory entity);
+
+    ClusterAlertHistory updateById(ClusterAlertHistory entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterAlertHistory> getAllAlertHistories();
 }

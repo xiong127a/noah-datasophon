@@ -17,18 +17,29 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
+
+import java.util.List;
 
 /**
  * 集群框架表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface FrameInfoService {
 
-    Result getAllClusterFrame();
+    List<FrameInfoEntity> getAllClusterFrame();
+
+    // 标准CRUD方法
+    FrameInfoEntity getById(Integer id);
+
+    FrameInfoEntity save(FrameInfoEntity entity);
+
+    FrameInfoEntity updateById(FrameInfoEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<FrameInfoEntity> getAllFrameInfos();
 }

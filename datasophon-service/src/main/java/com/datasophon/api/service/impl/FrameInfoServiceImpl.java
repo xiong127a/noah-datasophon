@@ -19,41 +19,78 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.api.vo.Result;
+
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.dao.mapper.FrameServiceMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
+/**
+ * 集群框架表实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("frameInfoService")
-public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfoEntity> implements FrameInfoService {
+public class FrameInfoServiceImpl implements FrameInfoService {
 
+    @Autowired
+    private FrameInfoMapper frameInfoMapper;
+
+    @Autowired
+    private FrameServiceMapper frameServiceMapper;
 
     @Override
-    public Result getAllClusterFrame() {
-        List<FrameInfoEntity> frameInfoEntities = this.list();
+    public List<FrameInfoEntity> getAllClusterFrame() {
+        List<FrameInfoEntity> frameInfoEntities = frameInfoMapper.selectAll();
         if (CollectionUtils.isEmpty(frameInfoEntities)) {
-            return Result.success();
+            return java.util.Collections.emptyList();
         }
 
-        Set<Integer> frameInfoIds = frameInfoEntities.stream().map(FrameInfoEntity::getId).collect(Collectors.toSet());
-        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = QueryChain.of(FrameServiceEntity.class)
-                .select(FrameServiceEntity::getId, FrameServiceEntity::getFrameId, FrameServiceEntity::getFrameCode,
-                        FrameServiceEntity::getServiceName, FrameServiceEntity::getServiceVersion,
-                        FrameServiceEntity::getServiceDesc)
-                .where(FrameServiceEntity::getFrameId).in(frameInfoIds)
-                .list()
+        java.util.Set<Integer> frameInfoIds = frameInfoEntities.stream()
+                .map(FrameInfoEntity::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper.selectByFrameIds(frameInfoIds)
                 .stream()
-                .collect(Collectors.groupingBy(FrameServiceEntity::getFrameId));
+                .collect(java.util.stream.Collectors.groupingBy(FrameServiceEntity::getFrameId));
+
         frameInfoEntities.forEach(f -> f.setFrameServiceList(frameServiceGroupBys.get(f.getId())));
 
-        return Result.success(frameInfoEntities);
+        return frameInfoEntities;
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public FrameInfoEntity getById(Integer id) {
+        return frameInfoMapper.selectById(id);
+    }
+
+    @Override
+    public FrameInfoEntity save(FrameInfoEntity entity) {
+        frameInfoMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public FrameInfoEntity updateById(FrameInfoEntity entity) {
+        frameInfoMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return frameInfoMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<FrameInfoEntity> getAllFrameInfos() {
+        return frameInfoMapper.selectAll();
     }
 }

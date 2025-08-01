@@ -17,30 +17,45 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 集群告警指标表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-24 15:10:41
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterAlertQuotaService {
 
-    Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page, Integer pageSize);
+    PageResult<ClusterAlertQuota> getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId,
+            String quotaName, Integer page, Integer pageSize);
 
     void start(Integer clusterId, String alertQuotaIds);
 
     void stop(Integer clusterId, String alertQuotaIds);
 
-    void saveAlertQuota(ClusterAlertQuota clusterAlertQuota);
+    ClusterAlertQuota saveAlertQuota(ClusterAlertQuota clusterAlertQuota);
 
     List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName);
 
     List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> list);
+
+    // 根据告警组ID集合查询告警配额
+    List<ClusterAlertQuota> selectByAlertGroupIds(Set<Integer> alertGroupIds);
+
+    // 标准CRUD方法
+    ClusterAlertQuota getById(Integer id);
+
+    ClusterAlertQuota save(ClusterAlertQuota entity);
+
+    ClusterAlertQuota updateById(ClusterAlertQuota entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterAlertQuota> getAllAlertQuotas();
 }
