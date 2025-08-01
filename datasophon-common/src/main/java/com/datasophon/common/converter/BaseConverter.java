@@ -23,12 +23,15 @@ import java.util.List;
 
 /**
  * 基础转换器接口
- * 定义通用的对象转换方法
+ * 简化的核心转换方法定义，格式化方法移至 FormatterUtils 工具类
  * 
  * @param <E> Entity 数据库实体类型
  * @param <D> DTO 数据传输对象类型
  * @param <V> VO 视图对象类型
- * @author DataSophon
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
 public interface BaseConverter<E, D, V> {
 

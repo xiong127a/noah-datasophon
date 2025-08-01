@@ -22,6 +22,7 @@ import com.datasophon.api.vo.NoticeGroupVO;
 import com.datasophon.api.vo.UserInfoVO;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.utils.FormatterUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -35,7 +36,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, NoticeGroupDTO, NoticeGroupVO> {
 
     @Override

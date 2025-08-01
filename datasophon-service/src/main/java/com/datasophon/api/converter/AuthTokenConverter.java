@@ -21,6 +21,7 @@ import com.datasophon.common.dto.AuthTokenDTO;
 import com.datasophon.api.vo.AuthTokenVO;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.utils.FormatterUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -34,7 +35,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthTokenDTO, AuthTokenVO> {
 
     @Override

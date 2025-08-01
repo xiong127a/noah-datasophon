@@ -21,6 +21,7 @@ import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.api.vo.AlertGroupVO;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.utils.FormatterUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -34,7 +35,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-14
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, AlertGroupDTO, AlertGroupVO> {
 
     /**
