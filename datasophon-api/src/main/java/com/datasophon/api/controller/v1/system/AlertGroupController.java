@@ -17,8 +17,8 @@
 
 package com.datasophon.api.controller.v1.system;
 
-import com.datasophon.api.vo.Result;
-import com.datasophon.api.vo.AlertGroupVO;
+import com.datasophon.common.vo.Result;
+import com.datasophon.common.vo.AlertGroupVO;
 import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.api.service.AlertGroupService;

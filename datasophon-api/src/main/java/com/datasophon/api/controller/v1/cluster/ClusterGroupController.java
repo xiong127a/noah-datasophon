@@ -20,7 +20,7 @@ package com.datasophon.api.controller.v1.cluster;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

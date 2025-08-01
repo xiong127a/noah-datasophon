@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.dao.entity.ClusterHostDO;
 import lombok.extern.slf4j.Slf4j;

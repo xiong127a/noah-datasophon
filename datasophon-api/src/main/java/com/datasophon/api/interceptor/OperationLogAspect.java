@@ -13,7 +13,7 @@ import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.model.OperationLogProp;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.OperationLog;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.ServletRequest;

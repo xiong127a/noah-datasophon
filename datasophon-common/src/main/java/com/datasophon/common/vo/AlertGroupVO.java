@@ -15,26 +15,43 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.vo;
+package com.datasophon.common.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.util.Date;
-import java.util.List;
 
 /**
- * 通知组视图对象
+ * 告警组视图对象
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-01-14
  */
-public record NoticeGroupVO(
+public record AlertGroupVO(
         Integer id,
+        String alertGroupName,
+        String alertGroupCategory,
         Integer clusterId,
-        String noticeGroupName,
+        String clusterName,
+        Integer alertQuotaNum,
+        String alertQuotaNumFormatted,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createTime,
-        String createTimeFormatted,
-        List<UserInfoVO> users,
-        Integer userCount,
-        String userCountFormatted) {
+        String createTimeFormatted) {
+
+    /**
+     * 创建简单的AlertGroupVO
+     */
+    public static AlertGroupVO simple(Integer id, String alertGroupName) {
+        return new AlertGroupVO(
+                id,
+                alertGroupName,
+                null,
+                null,
+                null,
+                0,
+                "0个指标",
+                null,
+                null);
+    }
 }

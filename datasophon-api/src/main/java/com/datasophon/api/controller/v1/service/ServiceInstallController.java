@@ -23,7 +23,7 @@ import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.common.model.HostServiceRoleMapping;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

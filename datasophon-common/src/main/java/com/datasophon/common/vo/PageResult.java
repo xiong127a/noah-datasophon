@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.vo;
+package com.datasophon.common.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.vo;
+package com.datasophon.common.vo;
 
 import cn.hutool.core.collection.ListUtil;
 import lombok.AllArgsConstructor;

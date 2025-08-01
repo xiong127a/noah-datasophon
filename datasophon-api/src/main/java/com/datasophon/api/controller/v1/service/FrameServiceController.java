@@ -21,7 +21,7 @@ import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;

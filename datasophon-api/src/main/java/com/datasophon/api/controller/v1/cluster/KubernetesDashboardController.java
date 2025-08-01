@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.KubernetesDashboardService;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

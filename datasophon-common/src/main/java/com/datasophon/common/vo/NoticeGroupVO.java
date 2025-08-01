@@ -15,36 +15,26 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.vo;
+package com.datasophon.common.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
- * 认证令牌视图对象
+ * 通知组视图对象
  *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-public record AuthTokenVO(
-        Long id,
-        Integer userId,
-        String username,
-        String tokenType,
-        String clientIp,
-        String userAgent,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date issuedAt,
-        String issuedAtFormatted,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date expiresAt,
-        String expiresAtFormatted,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date lastAccessTime,
-        String lastAccessTimeFormatted,
-        Boolean isRevoked,
-        String status,
-        String revokedReason,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createdAt,
-        String createdAtFormatted,
-        Long remainingTimeSeconds,
-        String remainingTimeFormatted) {
+public record NoticeGroupVO(
+        Integer id,
+        Integer clusterId,
+        String noticeGroupName,
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createTime,
+        String createTimeFormatted,
+        List<UserInfoVO> users,
+        Integer userCount,
+        String userCountFormatted) {
 }

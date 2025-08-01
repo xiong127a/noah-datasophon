@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterAlertQuotaService;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.enums.QuotaState;
 import org.springframework.beans.factory.annotation.Autowired;

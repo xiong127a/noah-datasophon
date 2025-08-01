@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterYarnQueueService;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import org.springframework.beans.factory.annotation.Autowired;
