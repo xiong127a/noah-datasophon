@@ -77,7 +77,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
 
     @Autowired
     private ClusterHostService hostService;
-
+    
     @Autowired
     private ClusterUserGroupService userGroupService;
 
@@ -151,7 +151,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
         clusterGroup.setGroupName(groupName);
         clusterGroupMapper.insert(clusterGroup);
 
-        @SuppressWarnings("unchecked")
+
         Map<String, UserEnum> groupNameMap = UserEnum.getGroupNameMap();
         Integer systemInitMaxGid = groupNameMap.values().stream()
                 .map(UserEnum::getGroupId)
@@ -287,7 +287,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
                 clusterId, groupName, page, pageSize);
 
         List<ClusterGroup> list = pageResult.getRecords();
-
+        
         for (ClusterGroup clusterGroup : list) {
             List<ClusterUser> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
             if (Objects.nonNull(clusterUserList) && !clusterUserList.isEmpty()) {

@@ -18,21 +18,34 @@
 package com.datasophon.api.service;
 
 
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
+import com.datasophon.dao.model.ClusterQueueCapacityList;
+
+import java.util.List;
 
 /**
- * 
+ * 集群队列容量服务
  *
- * @author dygao2
- * @email dygao2@datasophon.com
- * @date 2022-11-25 14:30:11
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterQueueCapacityService {
 
-    Result refreshToYarn(Integer clusterId) throws Exception;
+    boolean refreshToYarn(Integer clusterId) throws Exception;
 
-    void createDefaultQueue(Integer id);
+    void createDefaultQueue(Integer clusterId);
 
-    Result listCapacityQueue(Integer clusterId);
+    ClusterQueueCapacityList listCapacityQueue(Integer clusterId);
+
+    // 标准CRUD方法
+    ClusterQueueCapacity getById(Integer id);
+
+    ClusterQueueCapacity save(ClusterQueueCapacity entity);
+
+    ClusterQueueCapacity updateById(ClusterQueueCapacity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterQueueCapacity> getAllQueueCapacities();
 }

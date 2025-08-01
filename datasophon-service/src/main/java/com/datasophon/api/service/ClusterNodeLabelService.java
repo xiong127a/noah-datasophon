@@ -18,20 +18,37 @@
 package com.datasophon.api.service;
 
 
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 
 import java.util.List;
 
+/**
+ * 集群节点标签服务
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 public interface ClusterNodeLabelService {
 
-    Result saveNodeLabel(Integer clusterId, String nodeLabel);
+    ClusterNodeLabelEntity saveNodeLabel(Integer clusterId, String nodeLabel);
 
-    Result deleteNodeLabel(Integer nodeLabelId);
+    boolean deleteNodeLabel(Integer nodeLabelId);
 
-    Result assignNodeLabel(Integer nodeLabelId, String hostIds);
+    boolean assignNodeLabel(Integer nodeLabelId, String hostIds);
 
     List<ClusterNodeLabelEntity> queryClusterNodeLabel(Integer clusterId);
 
-    void createDefaultNodeLabel(Integer id);
+    void createDefaultNodeLabel(Integer clusterId);
+
+    // 标准CRUD方法
+    ClusterNodeLabelEntity getById(Integer id);
+
+    ClusterNodeLabelEntity save(ClusterNodeLabelEntity entity);
+
+    ClusterNodeLabelEntity updateById(ClusterNodeLabelEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterNodeLabelEntity> getAllNodeLabels();
 }

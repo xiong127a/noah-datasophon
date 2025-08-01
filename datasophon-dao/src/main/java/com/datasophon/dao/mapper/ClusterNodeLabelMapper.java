@@ -18,11 +18,84 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
 
+/**
+ * 集群节点标签映射器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Mapper
 public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntity> {
+
+    /**
+     * 根据集群ID查询节点标签
+     */
+    default List<ClusterNodeLabelEntity> selectByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID和节点标签查询
+     */
+    default List<ClusterNodeLabelEntity> selectByClusterIdAndNodeLabel(Integer clusterId, String nodeLabel) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId)
+                .and(ClusterNodeLabelEntity::getNodeLabel).eq(nodeLabel);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据ID查询单个实体
+     */
+    default ClusterNodeLabelEntity selectById(Integer id) {
+        return this.selectOneById(id);
+    }
+
+    /**
+     * 插入实体
+     */
+    default int insert(ClusterNodeLabelEntity entity) {
+        return this.insertSelective(entity);
+    }
+
+    /**
+     * 根据ID更新实体
+     */
+    default int updateById(ClusterNodeLabelEntity entity) {
+        return this.update(entity);
+    }
+
+    /**
+     * 根据ID删除
+     */
+    default int removeById(Integer id) {
+        return this.deleteById(id);
+    }
+
+    /**
+     * 根据ID列表删除
+     */
+    default int deleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return this.deleteBatchByIds(ids);
+    }
+
+    /**
+     * 查询所有节点标签
+     */
+    default List<ClusterNodeLabelEntity> selectAll() {
+        QueryWrapper query = QueryWrapper.create();
+        return this.selectListByQuery(query);
+    }
 }

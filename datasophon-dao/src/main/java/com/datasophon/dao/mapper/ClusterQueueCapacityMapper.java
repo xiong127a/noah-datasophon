@@ -18,19 +18,67 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterQueueCapacity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
 
 /**
+ * 集群队列容量映射器
  * 
- * 
- * @author dygao2
- * @email dygao2@datasophon.com
- * @date 2022-11-25 14:30:11
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapacity> {
 
+    /**
+     * 根据集群ID查询队列容量
+     */
+    default List<ClusterQueueCapacity> selectByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据ID查询单个实体
+     */
+    default ClusterQueueCapacity selectById(Integer id) {
+        return this.selectOneById(id);
+    }
+
+    /**
+     * 插入实体
+     */
+    default int insert(ClusterQueueCapacity entity) {
+        return this.insertSelective(entity);
+    }
+
+    /**
+     * 根据ID更新实体
+     */
+    default int updateById(ClusterQueueCapacity entity) {
+        return this.update(entity);
+    }
+
+    /**
+     * 根据ID列表删除
+     */
+    default int deleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return this.deleteBatchByIds(ids);
+    }
+
+    /**
+     * 查询所有队列容量
+     */
+    default List<ClusterQueueCapacity> selectAll() {
+        QueryWrapper query = QueryWrapper.create();
+        return this.selectListByQuery(query);
+    }
 }
