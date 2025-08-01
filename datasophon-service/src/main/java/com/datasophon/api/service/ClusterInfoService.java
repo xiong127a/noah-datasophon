@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 
@@ -54,7 +54,7 @@ import java.util.List;
  * @see IService
  * @see ClusterInfoEntity
  */
-public interface ClusterInfoService extends IService<ClusterInfoEntity> {
+public interface ClusterInfoService {
 
     ClusterInfoEntity getClusterByClusterCode(String clusterCode);
 

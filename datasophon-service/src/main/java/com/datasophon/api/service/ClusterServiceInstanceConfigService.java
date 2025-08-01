@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 
@@ -28,7 +28,7 @@ import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
  * @email gaodayu2022@163.com
  * @date 2022-04-24 16:25:17
  */
-public interface ClusterServiceInstanceConfigService extends IService<ClusterServiceInstanceConfigEntity> {
+public interface ClusterServiceInstanceConfigService {
 
     Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId, Integer page,
                                     Integer pageSize);

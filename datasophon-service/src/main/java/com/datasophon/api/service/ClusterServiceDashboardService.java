@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
 
@@ -28,7 +28,7 @@ import com.datasophon.dao.entity.ClusterServiceDashboard;
  * @email gaodayu2022@163.com
  * @date 2022-06-23 17:01:58
  */
-public interface ClusterServiceDashboardService extends IService<ClusterServiceDashboard> {
+public interface ClusterServiceDashboardService {
 
     Result getDashboardUrl(Integer clusterId);
 

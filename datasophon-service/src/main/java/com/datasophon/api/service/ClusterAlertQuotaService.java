@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-06-24 15:10:41
  */
-public interface ClusterAlertQuotaService extends IService<ClusterAlertQuota> {
+public interface ClusterAlertQuotaService {
 
     Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page, Integer pageSize);
 

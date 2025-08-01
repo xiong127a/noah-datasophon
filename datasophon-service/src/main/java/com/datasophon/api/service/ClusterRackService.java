@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRack;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * @email dygao2@datasophon.com
  * @date 2022-11-25 11:31:59
  */
-public interface ClusterRackService extends IService<ClusterRack> {
+public interface ClusterRackService {
 
     List<ClusterRack> queryClusterRack(Integer clusterId);
 

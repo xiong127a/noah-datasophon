@@ -17,13 +17,13 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 
 import java.util.List;
 
-public interface ClusterNodeLabelService extends IService<ClusterNodeLabelEntity> {
+public interface ClusterNodeLabelService {
 
     Result saveNodeLabel(Integer clusterId, String nodeLabel);
 

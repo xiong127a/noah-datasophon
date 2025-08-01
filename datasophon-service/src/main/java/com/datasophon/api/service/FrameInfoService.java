@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.FrameInfoEntity;
 
@@ -28,7 +28,7 @@ import com.datasophon.dao.entity.FrameInfoEntity;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface FrameInfoService extends IService<FrameInfoEntity> {
+public interface FrameInfoService {
 
     Result getAllClusterFrame();
 }

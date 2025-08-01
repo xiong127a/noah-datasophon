@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-04-12 11:28:06
  */
-public interface ClusterServiceCommandHostService extends IService<ClusterServiceCommandHostEntity> {
+public interface ClusterServiceCommandHostService {
 
     Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize);
 

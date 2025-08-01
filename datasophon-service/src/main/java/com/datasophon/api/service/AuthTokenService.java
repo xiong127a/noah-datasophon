@@ -19,7 +19,6 @@ package com.datasophon.api.service;
 
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Date;
@@ -27,7 +26,7 @@ import java.util.Date;
 /**
  * JWT认证令牌服务接口
  */
-public interface AuthTokenService extends IService<AuthTokenEntity> {
+public interface AuthTokenService {
 
     /**
      * 创建新的认证令牌

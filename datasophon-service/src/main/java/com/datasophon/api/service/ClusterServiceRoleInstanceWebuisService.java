@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 
@@ -31,7 +31,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-04-24 16:25:17
  */
-public interface ClusterServiceRoleInstanceWebuisService extends IService<ClusterServiceRoleInstanceWebuis> {
+public interface ClusterServiceRoleInstanceWebuisService {
 
     Result getWebUis(Integer serviceInstanceId);
 

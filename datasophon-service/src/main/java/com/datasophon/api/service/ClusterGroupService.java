@@ -17,13 +17,13 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 
 import java.util.List;
 
-public interface ClusterGroupService extends IService<ClusterGroup> {
+public interface ClusterGroupService {
 
     Result saveClusterGroup(Integer clusterId, String groupName);
 

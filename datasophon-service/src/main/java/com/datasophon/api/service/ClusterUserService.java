@@ -17,13 +17,13 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterUser;
 
 import java.util.List;
 
-public interface ClusterUserService extends IService<ClusterUser> {
+public interface ClusterUserService {
 
     Result create(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
 

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 
@@ -28,7 +28,7 @@ import com.datasophon.dao.entity.AlertGroupEntity;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface AlertGroupService extends IService<AlertGroupEntity> {
+public interface AlertGroupService {
 
     Result getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize);
 

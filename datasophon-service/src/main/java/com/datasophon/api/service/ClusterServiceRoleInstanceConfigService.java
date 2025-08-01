@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
 
 /**
@@ -27,6 +27,6 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface ClusterServiceRoleInstanceConfigService extends IService<ClusterServiceRoleInstanceConfigEntity> {
+public interface ClusterServiceRoleInstanceConfigService {
 
 }

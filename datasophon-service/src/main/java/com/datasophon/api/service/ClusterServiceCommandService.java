@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.api.vo.Result;
@@ -33,7 +33,7 @@ import java.util.Map;
  * @email gaodayu2022@163.com
  * @date 2022-04-12 11:28:06
  */
-public interface ClusterServiceCommandService extends IService<ClusterServiceCommandEntity> {
+public interface ClusterServiceCommandService {
 
     Result generateCommand(Integer clusterId, CommandType commandType, List<String> serviceNames);
 

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterYarnScheduler;
 
 /**
@@ -27,7 +27,7 @@ import com.datasophon.dao.entity.ClusterYarnScheduler;
  * @email dygao2@datasophon.com
  * @date 2022-11-25 15:02:11
  */
-public interface ClusterYarnSchedulerService extends IService<ClusterYarnScheduler> {
+public interface ClusterYarnSchedulerService {
 
     ClusterYarnScheduler getScheduler(Integer clusterId);
 

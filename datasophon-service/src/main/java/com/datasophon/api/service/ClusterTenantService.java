@@ -1,10 +1,10 @@
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterTenant;
 
-public interface ClusterTenantService extends IService<ClusterTenant> {
+public interface ClusterTenantService {
 
     Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName);
 

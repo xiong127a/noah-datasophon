@@ -17,12 +17,12 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterZk;
 
 import java.util.List;
 
-public interface ClusterZkService extends IService<ClusterZk> {
+public interface ClusterZkService {
 
     Integer getMaxMyId(Integer clusterId);
 

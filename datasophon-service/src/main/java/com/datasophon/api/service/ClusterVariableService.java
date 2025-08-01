@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterVariable;
 
 /**
@@ -27,7 +27,7 @@ import com.datasophon.dao.entity.ClusterVariable;
  * @email gaodayu2022@163.com
  * @date 2022-06-14 15:50:36
  */
-public interface ClusterVariableService extends IService<ClusterVariable> {
+public interface ClusterVariableService {
 
     ClusterVariable getVariableByVariableName(String variableName, Integer clusterId);
 }

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -31,7 +31,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> {
+public interface ClusterRoleUserService {
 
     boolean isClusterManager(Integer id, String clusterId);
 

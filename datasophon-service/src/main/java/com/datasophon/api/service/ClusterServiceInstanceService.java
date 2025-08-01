@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 
@@ -30,7 +30,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-04-24 16:25:17
  */
-public interface ClusterServiceInstanceService extends IService<ClusterServiceInstanceEntity> {
+public interface ClusterServiceInstanceService {
 
     ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId, String parentName);
 

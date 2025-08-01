@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-08-16 16:56:01
  */
-public interface ClusterServiceRoleGroupConfigService extends IService<ClusterServiceRoleGroupConfig> {
+public interface ClusterServiceRoleGroupConfigService {
 
     ClusterServiceRoleGroupConfig getConfigByRoleGroupId(Integer roleGroupId);
 

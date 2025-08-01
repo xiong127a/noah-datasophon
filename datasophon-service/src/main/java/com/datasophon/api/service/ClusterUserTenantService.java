@@ -1,10 +1,10 @@
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterUserTenant;
 
-public interface ClusterUserTenantService extends IService<ClusterUserTenant> {
+public interface ClusterUserTenantService {
 
     /**
      * 租户策略授权给当前用户

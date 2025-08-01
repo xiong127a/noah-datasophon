@@ -17,14 +17,14 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 
 import java.util.List;
 
-public interface ClusterUserGroupService extends IService<ClusterUserGroup> {
+public interface ClusterUserGroupService {
 
     Long countGroupUserNum(Integer id);
 

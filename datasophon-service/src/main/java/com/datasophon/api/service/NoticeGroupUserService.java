@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.List;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
+public interface NoticeGroupUserService {
 
     void removeByGroupIds(List<Integer> list);
 

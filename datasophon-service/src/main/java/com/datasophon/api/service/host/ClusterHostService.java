@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.host;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -27,7 +27,7 @@ import com.datasophon.common.exception.BusinessException;
 
 import java.util.List;
 
-public interface ClusterHostService extends IService<ClusterHostDO> {
+public interface ClusterHostService {
 
     ClusterHostDO getClusterHostByHostname(String hostname);
 

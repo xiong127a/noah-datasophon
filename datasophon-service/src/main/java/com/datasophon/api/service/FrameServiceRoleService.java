@@ -17,9 +17,8 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
@@ -32,15 +31,57 @@ import java.util.List;
  */
 public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity> {
 
-    Result getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType);
+    /**
+     * 获取服务角色列表
+     *
+     * @param clusterId 集群ID
+     * @param serviceIds 服务ID列表，逗号分隔
+     * @param serviceRoleType 服务角色类型
+     * @return 服务角色列表
+     */
+    List<FrameServiceRoleEntity> getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType);
 
-    FrameServiceRoleEntity getServiceRoleByServiceIdAndServiceRoleName(Integer id, String name);
+    /**
+     * 根据服务ID和角色名获取服务角色
+     *
+     * @param serviceId 服务ID
+     * @param roleName 角色名
+     * @return 服务角色实体
+     */
+    FrameServiceRoleEntity getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
 
+    /**
+     * 根据框架代码和角色名获取服务角色
+     *
+     * @param clusterFrame 集群框架代码
+     * @param serviceRoleName 服务角色名
+     * @return 服务角色实体
+     */
     FrameServiceRoleEntity getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame, String serviceRoleName);
 
-    Result getNonMasterRoleList(Integer clusterId, String serviceIds);
+    /**
+     * 获取非Master角色列表
+     *
+     * @param clusterId 集群ID
+     * @param serviceIds 服务ID列表，逗号分隔
+     * @return 非Master角色列表
+     */
+    List<FrameServiceRoleEntity> getNonMasterRoleList(Integer clusterId, String serviceIds);
 
-    Result getServiceRoleByServiceName(Integer clusterId, String serviceName);
+    /**
+     * 根据服务名获取服务角色列表
+     *
+     * @param clusterId 集群ID
+     * @param serviceName 服务名
+     * @return 服务角色列表
+     */
+    List<FrameServiceRoleEntity> getServiceRoleByServiceName(Integer clusterId, String serviceName);
 
+    /**
+     * 获取所有服务角色列表
+     *
+     * @param frameServiceId 框架服务ID
+     * @return 服务角色列表
+     */
     List<FrameServiceRoleEntity> getAllServiceRoleList(Integer frameServiceId);
 }

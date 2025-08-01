@@ -17,20 +17,16 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.ClusterAlertHistory;
 
 import java.util.List;
 
 /**
  * 集群告警历史表 
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-07 12:04:38
  */
-public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory> {
+public interface ClusterAlertHistoryService {
 
     void saveAlertHistory(String alertMessage);
 

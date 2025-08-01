@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.dao.entity.ClusterYarnQueue;
@@ -26,7 +26,7 @@ import com.datasophon.dao.entity.ClusterYarnQueue;
  * 
  *
  */
-public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
+public interface ClusterYarnQueueService {
 
     PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize);
 
