@@ -420,7 +420,8 @@ public class PrometheusActor extends AbstractActor {
 
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
-        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig, CONFIG_UPDATE_REASON, clusterId);
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
+        KubernetesFreeMakerUtils.flushPrometheusConfigsToPVC(kubeConfig, CONFIG_UPDATE_REASON, namespace);
         if (execResult != null && execResult.getExecResult()) {
             String reloadUrl = buildReloadUrl(prometheusInstance.getHostname(), isKubernetes);
             HttpUtil.post(reloadUrl, "", HTTP_TIMEOUT_MS);

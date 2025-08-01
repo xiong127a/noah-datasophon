@@ -3,13 +3,11 @@ package com.datasophon.kubernetes.util;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.spring.SpringUtil;
+
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.mapper.ClusterInfoMapper;
+import com.datasophon.kubernetes.model.K8sServiceRoleInfo;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.HostPathVolumeSource;
@@ -154,13 +152,13 @@ public class KubernetesUtil {
         return executeCommand(namespace, client, serviceRoleFullName, hostname, commands);
     }
 
-    public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig,
+    public static ExecResult exec(K8sServiceRoleInfo serviceRoleInfo, String kubeConfig,
             ExecuteCmdCommand cmdCommand) {
         KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(kubeConfig);
-        return runCmd(getKubernetesNamespace(roleInstanceEntity.getClusterId()),
+        return runCmd(serviceRoleInfo.getNamespace(),
                 kubeClient,
-                (roleInstanceEntity.getServiceName() + "-" + roleInstanceEntity.getServiceRoleName()).toLowerCase(),
-                roleInstanceEntity.getHostname(),
+                serviceRoleInfo.getFullServiceRoleName(),
+                serviceRoleInfo.getHostname(),
                 cmdCommand);
     }
 
@@ -600,12 +598,6 @@ public class KubernetesUtil {
     public static ExecResult runCmdInPod(String namespace, KubernetesClient client, String podName, String cmd) {
         List<String> commands = handlerCommand(cmd);
         return executeCommandInPod(namespace, client, podName, commands);
-    }
-
-    public static String getKubernetesNamespace(Integer clusterId) {
-        ClusterInfoMapper clusterInfoMapper = SpringUtil.getBean(ClusterInfoMapper.class);
-        ClusterInfoEntity clusterInfoEntity = clusterInfoMapper.selectOneById(clusterId);
-        return clusterInfoEntity.getNamespace();
     }
 
 }

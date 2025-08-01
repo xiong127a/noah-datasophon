@@ -457,8 +457,9 @@ public class KubernetesFreeMakerUtils {
      * 
      * @param kubeConfig          Kubernetes配置
      * @param serviceRoleFullName 服务角色全名
+     * @param namespace           Kubernetes命名空间
      */
-    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName, Integer clusterId) {
+    public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName, String namespace) {
         // 获取该服务角色的配置缓存
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
         if (StrUtil.equals("prometheus-update", serviceRoleFullName)) {
@@ -476,7 +477,6 @@ public class KubernetesFreeMakerUtils {
 
             // 创建临时Job来更新Prometheus配置文件
             String jobName = "prometheus-configs-updater-" + System.currentTimeMillis();
-            String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
             // 确定PVC名称
 
             // 确定Pod名称 - 使用索引为0的Pod

@@ -153,9 +153,48 @@ List<ClusterHostDO> hosts = k8sToClusterHostConverter
 - Mock容易实现
 - 单元测试更精确
 
+## 🔄 KubernetesUtil重构完成
+
+### ✅ 已解决的架构问题
+
+#### **移除DAO依赖**
+```java
+// ❌ 重构前 - 直接依赖DAO层
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.mapper.ClusterInfoMapper;
+
+public static ExecResult exec(ClusterServiceRoleInstanceEntity entity, ...) {
+    // 直接使用DAO实体
+}
+
+// ✅ 重构后 - 使用K8S专用模型
+import com.datasophon.kubernetes.model.K8sServiceRoleInfo;
+
+public static ExecResult exec(K8sServiceRoleInfo serviceRoleInfo, ...) {
+    // 使用K8S领域模型
+}
+```
+
+#### **创建了专用数据模型**
+- `K8sServiceRoleInfo` - 服务角色信息模型
+- `ServiceRoleToK8sConverter` - Service层转换器
+
+#### **修改了调用方式**
+```java
+// Service层使用转换器
+ServiceRoleToK8sConverter converter = SpringUtil.getBean(ServiceRoleToK8sConverter.class);
+K8sServiceRoleInfo k8sInfo = converter.convertToK8sServiceRoleInfo(entity, clusterInfo);
+ExecResult result = KubernetesUtil.exec(k8sInfo, kubeConfig, cmdCommand);
+```
+
+### ⚠️ 待迁移的使用点
+
+项目中仍有多处使用已删除的`KubernetesUtil.getKubernetesNamespace()`方法，建议后续迁移到`ClusterInfoUtils.getKubernetesNamespace()`。
+
 ## 🔧 后续优化建议
 
-1. **缓存优化**: 考虑在service层添加K8S节点信息缓存
-2. **异常处理**: 完善K8S连接异常的处理机制  
-3. **监控指标**: 添加K8S模块的监控和指标收集
-4. **配置管理**: 支持多K8S集群配置管理
+1. **完成namespace方法迁移**: 将所有`KubernetesUtil.getKubernetesNamespace()`替换为`ClusterInfoUtils.getKubernetesNamespace()`
+2. **缓存优化**: 考虑在service层添加K8S节点信息缓存
+3. **异常处理**: 完善K8S连接异常的处理机制  
+4. **监控指标**: 添加K8S模块的监控和指标收集
+5. **配置管理**: 支持多K8S集群配置管理

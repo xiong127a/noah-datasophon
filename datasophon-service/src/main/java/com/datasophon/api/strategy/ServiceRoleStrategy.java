@@ -17,10 +17,11 @@
 
 package com.datasophon.api.strategy;
 
-
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.converter.ServiceRoleToK8sConverter;
+import com.datasophon.kubernetes.model.K8sServiceRoleInfo;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
@@ -113,13 +114,8 @@ public interface ServiceRoleStrategy {
      * 定期检查角色处理（Kubernetes）
      */
     default void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                   Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
-    }
-
-    default String getKubeConfig(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
-        return clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
     }
 
     default ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
@@ -189,7 +185,15 @@ public interface ServiceRoleStrategy {
         try {
             if (StrUtil.isBlank(actorName)) {
                 // 对于 Kubernetes 服务，使用 KubernetesUtil 执行命令
-                execResult = KubernetesUtil.exec(roleInstanceEntity, getKubeConfig(roleInstanceEntity), cmdCommand);
+                ServiceRoleToK8sConverter converter = SpringUtil.getBean(ServiceRoleToK8sConverter.class);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                ClusterInfoEntity clusterInfo = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+
+                K8sServiceRoleInfo k8sServiceRoleInfo = converter.convertToK8sServiceRoleInfo(roleInstanceEntity,
+                        clusterInfo);
+                String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
+
+                execResult = KubernetesUtil.exec(k8sServiceRoleInfo, kubeConfig, cmdCommand);
             } else {
                 // 对于非 Kubernetes 服务，使用 Actor 系统执行命令
                 Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
