@@ -17,12 +17,12 @@
 
 package com.datasophon.api.converter;
 
-import com.datasophon.common.dto.NoticeGroupDTO;
-import com.datasophon.api.vo.NoticeGroupVO;
-import com.datasophon.api.vo.UserInfoVO;
-import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.dto.NoticeGroupDTO;
 import com.datasophon.common.utils.FormatterUtils;
+import com.datasophon.common.vo.NoticeGroupVO;
+import com.datasophon.common.vo.UserInfoVO;
+import com.datasophon.dao.entity.NoticeGroupEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

@@ -17,11 +17,11 @@
 
 package com.datasophon.api.converter;
 
-import com.datasophon.common.dto.AuthTokenDTO;
-import com.datasophon.api.vo.AuthTokenVO;
-import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.dto.AuthTokenDTO;
 import com.datasophon.common.utils.FormatterUtils;
+import com.datasophon.common.vo.AuthTokenVO;
+import com.datasophon.dao.entity.AuthTokenEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

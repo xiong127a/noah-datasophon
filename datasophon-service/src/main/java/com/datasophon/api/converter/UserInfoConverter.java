@@ -17,11 +17,16 @@
 
 package com.datasophon.api.converter;
 
-import com.datasophon.api.vo.UserInfoVO;
-import com.datasophon.common.dto.UserInfoDTO;
-import com.datasophon.dao.entity.UserInfoEntity;
+
 import com.datasophon.common.converter.BaseConverter;
-import org.mapstruct.*;
+import com.datasophon.common.dto.UserInfoDTO;
+import com.datasophon.common.vo.UserInfoVO;
+import com.datasophon.dao.entity.UserInfoEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;

@@ -17,11 +17,11 @@
 
 package com.datasophon.api.converter;
 
-import com.datasophon.common.dto.AlertGroupDTO;
-import com.datasophon.api.vo.AlertGroupVO;
-import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.common.converter.BaseConverter;
+import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.utils.FormatterUtils;
+import com.datasophon.common.vo.AlertGroupVO;
+import com.datasophon.dao.entity.AlertGroupEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
