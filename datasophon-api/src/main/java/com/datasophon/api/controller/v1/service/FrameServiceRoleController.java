@@ -17,10 +17,8 @@
 
 package com.datasophon.api.controller.v1.service;
 
-import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
@@ -30,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Arrays;
+import java.util.List;
 
 @ApiVersion(path = "frame/service/role")
 public class FrameServiceRoleController {
@@ -37,68 +36,79 @@ public class FrameServiceRoleController {
     @Autowired
     private FrameServiceRoleService frameServiceRoleService;
 
-    @Autowired
-    private AlertGroupService alertGroupService;
-
-
-
     /**
      * 查询服务对应的角色列表
      */
     @RequestMapping("/getServiceRoleList")
-    public Result getServiceRoleOfMaster(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceIds") String serviceIds,@RequestParam("serviceRoleType") Integer serviceRoleType) {
-        return frameServiceRoleService.getServiceRoleList(clusterId, serviceIds, serviceRoleType);
+    public Result<List<FrameServiceRoleEntity>> getServiceRoleOfMaster(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("serviceIds") String serviceIds, @RequestParam("serviceRoleType") Integer serviceRoleType) {
+        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getServiceRoleList(clusterId, serviceIds,
+                serviceRoleType);
+        return Result.success(roleList);
     }
 
     @RequestMapping("/getNonMasterRoleList")
-    public Result getNonMasterRoleList(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceIds") String serviceIds) {
-        return frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
+    public Result<List<FrameServiceRoleEntity>> getNonMasterRoleList(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("serviceIds") String serviceIds) {
+        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
+        return Result.success(roleList);
     }
 
     @RequestMapping("/getServiceRoleByServiceName")
-    public Result getServiceRoleByServiceName(@RequestParam("clusterId") Integer clusterId,@RequestParam("serviceName") Integer alertGroupId) {
-        AlertGroupEntity alertGroupEntity = alertGroupService.getById(alertGroupId);
-        return frameServiceRoleService.getServiceRoleByServiceName(clusterId, alertGroupEntity.getAlertGroupCategory());
+    public Result<List<FrameServiceRoleEntity>> getServiceRoleByServiceName(
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("serviceName") String serviceName) {
+        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId,
+                serviceName);
+        return Result.success(roleList);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<FrameServiceRoleEntity> info(@PathVariable("id") Integer id) {
         FrameServiceRoleEntity frameServiceRole = frameServiceRoleService.getById(id);
-
-        return Result.success().put("frameServiceRole", frameServiceRole);
+        return Result.success(frameServiceRole);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody FrameServiceRoleEntity frameServiceRole) {
-        frameServiceRoleService.save(frameServiceRole);
-
-        return Result.success();
+    public Result<Void> save(@RequestBody FrameServiceRoleEntity frameServiceRole) {
+        boolean saved = frameServiceRoleService.save(frameServiceRole);
+        if (saved) {
+            return Result.success();
+        } else {
+            return Result.error("保存失败");
+        }
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody FrameServiceRoleEntity frameServiceRole) {
-        frameServiceRoleService.updateById(frameServiceRole);
-
-        return Result.success();
+    public Result<Void> update(@RequestBody FrameServiceRoleEntity frameServiceRole) {
+        boolean updated = frameServiceRoleService.updateById(frameServiceRole);
+        if (updated) {
+            return Result.success();
+        } else {
+            return Result.error("更新失败");
+        }
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        frameServiceRoleService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<Void> delete(@RequestBody Integer[] ids) {
+        boolean deleted = frameServiceRoleService.removeByIds(Arrays.asList(ids));
+        if (deleted) {
+            return Result.success();
+        } else {
+            return Result.error("删除失败");
+        }
     }
 
 }

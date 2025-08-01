@@ -23,6 +23,7 @@ import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -32,12 +33,47 @@ import java.util.List;
 /**
  * 集群服务角色实例表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
  */
 @Mapper
 public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServiceRoleInstanceEntity> {
+
+    /**
+     * 根据集群ID、服务名和服务角色名查询服务角色实例
+     *
+     * @param clusterId       集群ID
+     * @param serviceName     服务名
+     * @param serviceRoleName 服务角色名
+     * @return 服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceNameAndServiceRoleName(
+            @Param("clusterId") Integer clusterId,
+            @Param("serviceName") String serviceName,
+            @Param("serviceRoleName") String serviceRoleName) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+
+        if (serviceName != null && !serviceName.isEmpty()) {
+            query.and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName);
+        }
+
+        if (serviceRoleName != null && !serviceRoleName.isEmpty()) {
+            query.and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+        }
+
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 统计指定角色组的服务角色实例数量
+     *
+     * @param roleGroupId 角色组ID
+     * @return 实例数量
+     */
+    default long countByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
+        return this.selectCountByQuery(query);
+    }
 
     /**
      * 将指定角色组的所有服务角色实例更新为需要重启状态

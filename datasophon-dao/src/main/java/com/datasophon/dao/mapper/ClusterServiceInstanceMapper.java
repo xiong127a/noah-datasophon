@@ -17,24 +17,17 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-
-import java.util.Map;
 
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 
 /**
  * 集群服务表
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ *
  */
 @Mapper
 public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceInstanceEntity> {
@@ -46,10 +39,19 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
          * @param serviceName 服务名称
          * @return 服务配置文件JSON字符串
          */
-        @Select("SELECT c.config_file_json FROM t_ddh_cluster_service_instance s " +
-                        "LEFT JOIN t_ddh_cluster_service_instance_config c ON c.service_id = s.id " +
-                        "WHERE s.cluster_id = #{clusterId} AND s.service_name = #{serviceName} " +
-                        "ORDER BY c.config_version DESC LIMIT 1")
-        String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
-                        @Param("serviceName") String serviceName);
+        default String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
+                        @Param("serviceName") String serviceName) {
+                // 对于复杂的JOIN查询，使用原生查询方式保持数据库兼容性
+                QueryWrapper query = QueryWrapper.create()
+                                .select("c.config_file_json")
+                                .from("t_ddh_cluster_service_instance s")
+                                .leftJoin("t_ddh_cluster_service_instance_config c").on("c.service_id = s.id")
+                                .where("s.cluster_id = ?", clusterId)
+                                .and("s.service_name = ?", serviceName)
+                                .orderBy("c.config_version DESC")
+                                .limit(1);
+
+                Object result = this.selectObjectByQuery(query);
+                return result != null ? (String) result : null;
+        }
 }

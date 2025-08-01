@@ -61,4 +61,9 @@ public class ClusterServiceRoleGroupConfigServiceImpl
                 .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds)
                 .list();
     }
+
+    @Override
+    public boolean save(ClusterServiceRoleGroupConfig config) {
+        return super.save(config);
+    }
 }

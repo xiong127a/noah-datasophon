@@ -19,37 +19,37 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.api.service.RoleGroupEntityService;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
 @Service("clusterServiceInstanceRoleGroupService")
-public class ClusterServiceInstanceRoleGroupServiceImpl
-        extends
-        ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroup>
-        implements
-        ClusterServiceInstanceRoleGroupService {
+public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServiceInstanceRoleGroupService {
 
     @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
+    private ClusterServiceInstanceRoleGroupMapper clusterServiceInstanceRoleGroupMapper;
+
+    @Autowired
+    private ClusterServiceInstanceMapper clusterServiceInstanceMapper;
+
+    @Autowired
+    private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
 
     @Autowired
     private RoleEntityService roleEntityService;
@@ -63,25 +63,27 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
     private static final String DEFAULT = "default";
 
     @Autowired
-    public ClusterServiceInstanceRoleGroupServiceImpl(ClusterServiceInstanceService serviceInstanceService,
+    public ClusterServiceInstanceRoleGroupServiceImpl(
             RoleEntityService roleEntityService,
             ClusterServiceRoleGroupConfigService roleGroupConfigService) {
-        this.serviceInstanceService = serviceInstanceService;
         this.roleEntityService = roleEntityService;
         this.roleGroupConfigService = roleGroupConfigService;
     }
 
     @Override
     public ClusterServiceInstanceRoleGroup getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        return QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq(DEFAULT)
-                .one();
+        return clusterServiceInstanceRoleGroupMapper.selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
+                DEFAULT);
     }
 
     @Override
     public void saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName) {
-        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
+        // 通过Mapper直接查询服务实例信息
+        ClusterServiceInstanceEntity serviceInstance = clusterServiceInstanceMapper.selectOneById(serviceInstanceId);
+        if (serviceInstance == null) {
+            return;
+        }
+
         // is repeat name
         if (isRepeatRoleGroupName(serviceInstanceId, roleGroupName)) {
             return;
@@ -94,27 +96,32 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
         roleGroup.setClusterId(serviceInstance.getClusterId());
         roleGroup.setNeedRestart(NeedRestart.NO);
         this.save(roleGroup);
+
         ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
-        ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
-        BeanUtils.copyProperties(config, roleGroupConfig);
-        roleGroupConfig.setConfigVersion(1);
-        roleGroupConfig.setId(null);
-        roleGroupConfig.setRoleGroupId(roleGroup.getId());
-        roleGroupConfigService.save(roleGroupConfig);
+        if (config != null) {
+            ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
+            BeanUtils.copyProperties(config, roleGroupConfig);
+            roleGroupConfig.setConfigVersion(1);
+            roleGroupConfig.setId(null);
+            roleGroupConfig.setRoleGroupId(roleGroup.getId());
+            roleGroupConfigService.save(roleGroupConfig);
+        }
     }
 
     private boolean isRepeatRoleGroupName(Integer serviceInstanceId, String roleGroupName) {
-        long count = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterServiceInstanceRoleGroup::getRoleGroupName).eq(roleGroupName)
-                .count();
-        return count > 0;
+        return clusterServiceInstanceRoleGroupMapper.countByServiceInstanceIdAndRoleGroupName(serviceInstanceId,
+                roleGroupName) > 0;
     }
 
     @Override
-    public Result bind(String roleInstanceIds, Integer roleGroupId) {
+    public boolean bind(String roleInstanceIds, Integer roleGroupId) {
         // 委托给roleGroupEntityService处理
-        return roleGroupEntityService.bindRoleInstances(roleInstanceIds, roleGroupId);
+        try {
+            roleGroupEntityService.bindRoleInstances(roleInstanceIds, roleGroupId);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean isSameRoleGroup(ClusterServiceRoleInstanceEntity roleInstanceEntity, List<String> ids) {
@@ -126,18 +133,10 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
         return new HashSet<>(ids).containsAll(listIds);
     }
 
-    private boolean isSameConfig(Integer oldRoleGroupId, Integer newRoleGroupId) {
-        ClusterServiceRoleGroupConfig oldConfig = roleGroupConfigService.getConfigByRoleGroupId(oldRoleGroupId);
-        ClusterServiceRoleGroupConfig newConfig = roleGroupConfigService.getConfigByRoleGroupId(newRoleGroupId);
-        return oldConfig.getConfigJsonMd5().equals(newConfig.getConfigJsonMd5());
-    }
-
     @Override
     public ClusterServiceRoleGroupConfig getRoleGroupConfigByServiceId(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroup instanceRoleGroup = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq("default")
-                .one();
+        ClusterServiceInstanceRoleGroup instanceRoleGroup = clusterServiceInstanceRoleGroupMapper
+                .selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId, "default");
 
         if (instanceRoleGroup != null) {
             return roleGroupConfigService.getConfigByRoleGroupId(instanceRoleGroup.getId());
@@ -146,28 +145,32 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
     }
 
     @Override
-    public Result rename(Integer roleGroupId, String roleGroupName) {
+    public boolean rename(Integer roleGroupId, String roleGroupName) {
         ClusterServiceInstanceRoleGroup roleGroup = this.getById(roleGroupId);
+        if (roleGroup == null) {
+            return false;
+        }
         if (!roleGroup.getRoleGroupName().equals(roleGroupName)
                 && isRepeatRoleGroupName(roleGroup.getServiceInstanceId(), roleGroupName)) {
-            return Result.error(Status.REPEAT_ROLE_GROUP_NAME.getMsg());
+            return false; // 重复的角色组名称
         }
         roleGroup.setRoleGroupName(roleGroupName);
-        this.updateById(roleGroup);
-        return Result.success();
+        return this.updateById(roleGroup);
     }
 
     @Override
-    public Result deleteRoleGroup(Integer roleGroupId) {
+    public boolean deleteRoleGroup(Integer roleGroupId) {
         if (hasRoleInstanceUse(roleGroupId)) {
-            return Result.error(Status.THE_CURRENT_ROLE_GROUP_BE_USING.getMsg());
+            return false; // 当前角色组正在使用中
         }
         if (isDefaultRoleGroup(roleGroupId)) {
-            return Result.error(Status.THE_CURRENT_ROLE_GROUP_IS_DEFAULT.getMsg());
+            return false; // 不能删除默认角色组
         }
-        this.removeById(roleGroupId);
-        roleGroupConfigService.removeAllByRoleGroupId(roleGroupId);
-        return Result.success();
+        boolean removed = this.removeByIds(Collections.singletonList(roleGroupId));
+        if (removed) {
+            roleGroupConfigService.removeAllByRoleGroupId(roleGroupId);
+        }
+        return removed;
     }
 
     private boolean isDefaultRoleGroup(Integer roleGroupId) {
@@ -178,9 +181,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
 
     @Override
     public List<ClusterServiceInstanceRoleGroup> listRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        return QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .list();
+        return clusterServiceInstanceRoleGroupMapper.selectByServiceInstanceId(serviceInstanceId);
     }
 
     @Override
@@ -190,8 +191,29 @@ public class ClusterServiceInstanceRoleGroupServiceImpl
     }
 
     private boolean hasRoleInstanceUse(Integer roleGroupId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId)
-                .exists();
+        // 查询是否有角色实例正在使用这个角色组
+        return clusterServiceRoleInstanceMapper.countByRoleGroupId(roleGroupId) > 0;
+    }
+
+    // 基础CRUD方法实现
+
+    @Override
+    public ClusterServiceInstanceRoleGroup getById(Integer id) {
+        return clusterServiceInstanceRoleGroupMapper.selectById(id);
+    }
+
+    @Override
+    public boolean save(ClusterServiceInstanceRoleGroup entity) {
+        return clusterServiceInstanceRoleGroupMapper.insertEntity(entity) > 0;
+    }
+
+    @Override
+    public boolean updateById(ClusterServiceInstanceRoleGroup entity) {
+        return clusterServiceInstanceRoleGroupMapper.updateByIdEntity(entity) > 0;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return clusterServiceInstanceRoleGroupMapper.deleteByIds(ids) > 0;
     }
 }

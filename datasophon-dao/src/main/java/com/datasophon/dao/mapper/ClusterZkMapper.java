@@ -21,16 +21,13 @@ import com.datasophon.dao.entity.ClusterZk;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 
 /**
  * 
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-09-07 10:04:16
+ *
  */
 @Mapper
 public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
@@ -41,6 +38,14 @@ public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
      * @param clusterId 集群ID
      * @return 最大myid值
      */
-    @Select("SELECT MAX(myid) FROM t_ddh_cluster_zk WHERE cluster_id = #{clusterId}")
-    Integer getMaxMyId(@Param("clusterId") Integer clusterId);
+    default Integer getMaxMyId(@Param("clusterId") Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .select("MAX(myid)")
+                .from("t_ddh_cluster_zk")
+                .where(ClusterZk::getClusterId).eq(clusterId);
+
+        // 使用selectObjectByQuery查询单个聚合结果
+        Object result = this.selectObjectByQuery(query);
+        return result != null ? (Integer) result : null;
+    }
 }

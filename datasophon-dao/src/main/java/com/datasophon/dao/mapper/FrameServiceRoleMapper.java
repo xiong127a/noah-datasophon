@@ -23,73 +23,140 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 
 import java.util.List;
 
 /**
  * 框架服务角色表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-18 14:38:53
  */
 @Mapper
 public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntity> {
 
-    /**
-     * 根据服务ID列表和角色类型查询服务角色
-     *
-     * @param serviceIds      服务ID列表
-     * @param serviceRoleType 服务角色类型，可为空
-     * @return 服务角色列表
-     */
-    List<FrameServiceRoleEntity> selectServiceRolesByServiceIds(@Param("serviceIds") List<String> serviceIds,
-            @Param("serviceRoleType") Integer serviceRoleType);
+        /**
+         * 根据服务ID列表和角色类型查询服务角色列表
+         * 
+         * @param serviceIds      服务ID列表
+         * @param serviceRoleType 服务角色类型，可为null
+         * @return 服务角色列表
+         */
+        default List<FrameServiceRoleEntity> selectByServiceIdsAndRoleType(@Param("serviceIds") List<String> serviceIds,
+                        @Param("serviceRoleType") Integer serviceRoleType) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getServiceId).in(serviceIds);
 
-    /**
-     * 根据服务ID列表查询非Master角色
-     *
-     * @param serviceIds 服务ID列表
-     * @return 非Master角色列表
-     */
-    List<FrameServiceRoleEntity> selectNonMasterRolesByServiceIds(@Param("serviceIds") List<String> serviceIds);
+                if (serviceRoleType != null) {
+                        query.and(FrameServiceRoleEntity::getServiceRoleType).eq(serviceRoleType);
+                }
 
-    /**
-     * 根据服务ID和角色名查询服务角色
-     *
-     * @param serviceId       服务ID
-     * @param serviceRoleName 角色名
-     * @return 服务角色实体
-     */
-    FrameServiceRoleEntity selectServiceRoleByServiceIdAndRoleName(@Param("serviceId") Integer serviceId,
-            @Param("serviceRoleName") String serviceRoleName);
+                return this.selectListByQuery(query);
+        }
 
-    /**
-     * 根据框架代码和角色名查询服务角色
-     *
-     * @param frameCode       框架代码
-     * @param serviceRoleName 角色名
-     * @return 服务角色实体
-     */
-    FrameServiceRoleEntity selectServiceRoleByFrameCodeAndRoleName(@Param("frameCode") String frameCode,
-            @Param("serviceRoleName") String serviceRoleName);
+        /**
+         * 根据服务ID和角色名称查询服务角色
+         * 
+         * @param serviceId 服务ID
+         * @param roleName  角色名称
+         * @return 服务角色实体
+         */
+        default FrameServiceRoleEntity selectByServiceIdAndRoleName(@Param("serviceId") Integer serviceId,
+                        @Param("roleName") String roleName) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getServiceId).eq(serviceId)
+                                .and(FrameServiceRoleEntity::getServiceRoleName).eq(roleName);
 
-    /**
-     * 根据服务ID查询所有服务角色
-     *
-     * @param serviceId 服务ID
-     * @return 服务角色列表
-     */
-    List<FrameServiceRoleEntity> selectAllServiceRolesByServiceId(@Param("serviceId") Integer serviceId);
+                return this.selectOneByQuery(query);
+        }
 
-    /**
-     * 根据集群ID和服务名查询服务角色
-     *
-     * @param clusterId 集群ID
-     * @param serviceName 服务名
-     * @return 服务角色列表
-     */
-    List<FrameServiceRoleEntity> selectServiceRolesByServiceName(@Param("clusterId") Integer clusterId, 
-            @Param("serviceName") String serviceName);
+        /**
+         * 根据框架代码和角色名称查询服务角色
+         * 
+         * @param frameCode 框架代码
+         * @param roleName  角色名称
+         * @return 服务角色实体
+         */
+        default FrameServiceRoleEntity selectByFrameCodeAndRoleName(@Param("frameCode") String frameCode,
+                        @Param("roleName") String roleName) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getFrameCode).eq(frameCode)
+                                .and(FrameServiceRoleEntity::getServiceRoleName).eq(roleName);
+
+                return this.selectOneByQuery(query);
+        }
+
+        /**
+         * 根据服务ID列表查询非MASTER角色列表
+         * 
+         * @param serviceIds 服务ID列表
+         * @return 非MASTER角色列表
+         */
+        default List<FrameServiceRoleEntity> selectNonMasterRoles(@Param("serviceIds") List<String> serviceIds) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getServiceRoleType).ne(1)
+                                .and(FrameServiceRoleEntity::getServiceId).in(serviceIds);
+
+                return this.selectListByQuery(query);
+        }
+
+        /**
+         * 根据服务ID查询所有角色列表
+         * 
+         * @param serviceId 服务ID
+         * @return 角色列表
+         */
+        default List<FrameServiceRoleEntity> selectByServiceId(@Param("serviceId") Integer serviceId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getServiceId).eq(serviceId);
+
+                return this.selectListByQuery(query);
+        }
+
+        /**
+         * 根据ID查询服务角色
+         * 
+         * @param id 主键ID
+         * @return 服务角色实体
+         */
+        default FrameServiceRoleEntity selectById(@Param("id") Integer id) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getId).eq(id);
+
+                return this.selectOneByQuery(query);
+        }
+
+        /**
+         * 插入服务角色
+         * 
+         * @param entity 服务角色实体
+         * @return 影响行数
+         */
+        default int insertEntity(FrameServiceRoleEntity entity) {
+                return this.insertSelective(entity);
+        }
+
+        /**
+         * 根据ID更新服务角色
+         * 
+         * @param entity 服务角色实体
+         * @return 影响行数
+         */
+        default int updateByIdEntity(FrameServiceRoleEntity entity) {
+                return this.updateByQuery(entity, QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getId).eq(entity.getId()));
+        }
+
+        /**
+         * 根据ID列表删除服务角色
+         * 
+         * @param ids ID列表
+         * @return 影响行数
+         */
+        default int deleteByIds(@Param("ids") List<Integer> ids) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getId).in(ids);
+
+                return this.deleteByQuery(query);
+        }
 
 }

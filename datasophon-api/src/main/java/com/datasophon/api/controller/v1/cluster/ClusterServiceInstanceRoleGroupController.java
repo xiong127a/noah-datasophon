@@ -40,7 +40,7 @@ public class ClusterServiceInstanceRoleGroupController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result<List<ClusterServiceInstanceRoleGroup>> list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         List<ClusterServiceInstanceRoleGroup> list = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
                 .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
                 .list();
@@ -51,18 +51,18 @@ public class ClusterServiceInstanceRoleGroupController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceInstanceRoleGroup> info(@PathVariable("id") Integer id) {
         ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = clusterServiceInstanceRoleGroupService
                 .getById(id);
 
-        return Result.success().put("clusterServiceInstanceRoleGroup", clusterServiceInstanceRoleGroup);
+        return Result.success(clusterServiceInstanceRoleGroup);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestParam("serviceInstanceId") Integer serviceInstanceId,
+    public Result<Void> save(@RequestParam("serviceInstanceId") Integer serviceInstanceId,
             @RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
         clusterServiceInstanceRoleGroupService.saveRoleGroup(serviceInstanceId, roleGroupId, roleGroupName);
         return Result.success();
@@ -72,19 +72,19 @@ public class ClusterServiceInstanceRoleGroupController {
      * 分配角色组
      */
     @RequestMapping("/bind")
-    public Result bind(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
+    public Result<Boolean> bind(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
             @RequestParam("roleGroupId") Integer roleGroupId) {
-        return clusterServiceInstanceRoleGroupService.bind(serviceRoleInstancesIds, roleGroupId);
+        return Result.success(clusterServiceInstanceRoleGroupService.bind(serviceRoleInstancesIds, roleGroupId));
     }
 
     /**
      * 修改
      */
     @RequestMapping("/rename")
-    public Result update(@RequestParam("roleGroupId") Integer roleGroupId,
+    public Result<Boolean> update(@RequestParam("roleGroupId") Integer roleGroupId,
             @RequestParam("roleGroupName") String roleGroupName) {
 
-        return clusterServiceInstanceRoleGroupService.rename(roleGroupId, roleGroupName);
+        return Result.success(clusterServiceInstanceRoleGroupService.rename(roleGroupId, roleGroupName));
 
     }
 
@@ -92,10 +92,10 @@ public class ClusterServiceInstanceRoleGroupController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestParam("roleGroupId") Integer roleGroupId) {
+    public Result<Boolean> delete(@RequestParam("roleGroupId") Integer roleGroupId) {
         // clusterServiceInstanceRoleGroupService.removeByIds(Arrays.asList(ids));
 
-        return clusterServiceInstanceRoleGroupService.deleteRoleGroup(roleGroupId);
+        return Result.success(clusterServiceInstanceRoleGroupService.deleteRoleGroup(roleGroupId));
     }
 
 }
