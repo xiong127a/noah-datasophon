@@ -17,6 +17,10 @@
 
 package com.datasophon.common.exception;
 
+import lombok.Getter;
+
+import java.io.Serial;
+
 /**
  * 业务异常类
  * Service层抛出此异常，API层统一处理并转换为Result
@@ -25,11 +29,13 @@ package com.datasophon.common.exception;
  */
 public class BusinessException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
      * 错误码
      */
+    @Getter
     private final Integer code;
 
     /**
@@ -47,10 +53,6 @@ public class BusinessException extends RuntimeException {
         super(message, cause);
         this.code = code;
         this.message = message;
-    }
-
-    public Integer getCode() {
-        return code;
     }
 
     @Override

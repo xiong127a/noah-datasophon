@@ -20,6 +20,8 @@ package com.datasophon.common.exception;
 
 import com.datasophon.common.enums.Status;
 
+import java.io.Serial;
+
 /**
  * 用户业务异常类
  * 封装用户相关的业务异常
@@ -28,21 +30,11 @@ import com.datasophon.common.enums.Status;
  */
 public class UserBusinessException extends BusinessException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private UserBusinessException(Integer code, String message) {
         super(code, message);
-    }
-
-    private UserBusinessException(Integer code, String message, Throwable cause) {
-        super(code, message, cause);
-    }
-
-    /**
-     * 用户名已存在异常
-     */
-    public static UserBusinessException usernameExists() {
-        return new UserBusinessException(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
     }
 
     /**
@@ -51,29 +43,6 @@ public class UserBusinessException extends BusinessException {
     public static UserBusinessException usernameExists(String username) {
         return new UserBusinessException(Status.USER_NAME_EXIST.getCode(),
                 "用户名 '" + username + "' 已存在");
-    }
-
-    /**
-     * 用户不存在异常
-     */
-    public static UserBusinessException userNotFound() {
-        return new UserBusinessException(Status.USER_NOT_EXIST.getCode(), "用户不存在");
-    }
-
-    /**
-     * 用户不存在异常（自定义消息）
-     */
-    public static UserBusinessException userNotFound(String username) {
-        return new UserBusinessException(Status.USER_NOT_EXIST.getCode(),
-                "用户 '" + username + "' 不存在");
-    }
-
-    /**
-     * 用户名或密码错误异常
-     */
-    public static UserBusinessException usernameOrPasswordError() {
-        return new UserBusinessException(Status.USER_NAME_PASSWD_ERROR.getCode(),
-                Status.USER_NAME_PASSWD_ERROR.getMsg());
     }
 
     /**
