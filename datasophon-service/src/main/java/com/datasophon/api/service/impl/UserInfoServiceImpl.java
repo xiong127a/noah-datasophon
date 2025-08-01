@@ -45,22 +45,6 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     private UserInfoMapper userInfoMapper;
 
     @Override
-    public UserInfoDTO queryUser(String username, String password) {
-        if (StringUtils.isBlank(username)) {
-            throw UserBusinessException.usernameIsNull();
-        }
-
-        String encodedPassword = passwordEncoder.encode(password);
-        UserInfoEntity entity = userInfoMapper.selectByUsernameAndPassword(username, encodedPassword);
-
-        if (entity == null) {
-            throw UserBusinessException.usernameOrPasswordError();
-        }
-
-        return entityToDto(entity);
-    }
-
-    @Override
     public UserInfoDTO createUser(UserInfoDTO userInfoDTO) {
         if (StringUtils.isBlank(userInfoDTO.getUsername())) {
             throw UserBusinessException.usernameIsNull();
@@ -165,6 +149,11 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         } else {
             return userInfoMapper.existsByUsername(username);
         }
+    }
+
+    @Override
+    public UserInfoEntity getById(Integer id) {
+        return super.getById(id);
     }
 
     // ============ 私有转换方法 ============

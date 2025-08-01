@@ -18,13 +18,18 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.converter.AuthTokenConverter;
 import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.HttpUtils;
+import com.datasophon.common.dto.AuthTokenDTO;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.AuthTokenMapper;
+import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -42,6 +47,10 @@ import java.util.*;
 
 /**
  * JWT认证令牌服务实现类
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
 @Service("authTokenService")
 public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthTokenEntity> implements AuthTokenService {
@@ -54,13 +63,13 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     private static final int MAX_TOKENS_PER_USER = 5;
 
     @Autowired
-    private AuthTokenMapper authTokenMapper;
-
-    @Autowired
     private PersistentTokenManager tokenProvider;
 
     @Autowired
     private UserInfoService userInfoService;
+
+    @Autowired
+    private AuthTokenConverter authTokenConverter;
 
     /**
      * 创建新的认证令牌
@@ -74,10 +83,10 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public AuthTokenEntity createToken(UserInfoEntity user, String token, String refreshToken,
+    public AuthTokenDTO createToken(UserInfoEntity user, String token, String refreshToken,
             HttpServletRequest request, Date expiresAt) {
         // 清理超出限制的旧令牌
-        authTokenMapper.cleanupOldTokens(user.getId(), MAX_TOKENS_PER_USER);
+        this.getMapper().cleanupOldTokens(user.getId(), MAX_TOKENS_PER_USER);
 
         // 获取客户端信息
         String ip = HttpUtils.getClientIpAddress(request);
@@ -101,17 +110,17 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
         // 保存到数据库
         this.save(authToken);
         logger.debug("Created auth token for user: {}, IP: {}", user.getId(), ip);
-        return authToken;
+        return authTokenConverter.entityToDto(authToken);
     }
 
     /**
      * 根据令牌获取认证信息
      *
      * @param token JWT令牌
-     * @return 认证令牌实体
+     * @return 认证令牌DTO
      */
     @Override
-    public AuthTokenEntity getByToken(String token) {
+    public AuthTokenDTO getByToken(String token) {
         if (StrUtil.isBlank(token)) {
             return null;
         }
@@ -122,7 +131,8 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
             actualToken = token.substring(7);
         }
 
-        return authTokenMapper.findByToken(actualToken);
+        AuthTokenEntity entity = this.getMapper().findByToken(actualToken);
+        return entity != null ? authTokenConverter.entityToDto(entity) : null;
     }
 
     /**
@@ -133,7 +143,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      */
     @Override
     public boolean updateAccessTime(Long tokenId) {
-        return authTokenMapper.updateLastAccessTime(tokenId, new Date());
+        return this.getMapper().updateLastAccessTime(tokenId, new Date());
     }
 
     /**
@@ -145,7 +155,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      */
     @Override
     public boolean revokeToken(Long tokenId, String reason) {
-        return authTokenMapper.revokeToken(tokenId, reason);
+        return this.getMapper().revokeToken(tokenId, reason);
     }
 
     /**
@@ -157,10 +167,8 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void revokeAllUserTokens(Integer userId, String reason) {
-        List<AuthTokenEntity> tokens = authTokenMapper.findValidTokensByUserId(userId);
-        for (AuthTokenEntity token : tokens) {
-            authTokenMapper.revokeToken(token.getId(), reason);
-        }
+        List<AuthTokenEntity> tokens = this.getMapper().findValidTokensByUserId(userId);
+        tokens.forEach(token -> this.getMapper().revokeToken(token.getId(), reason));
         logger.debug("Revoked all tokens for user: {}, reason: {}", userId, reason);
     }
 
@@ -176,7 +184,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
         cal.add(Calendar.DAY_OF_MONTH, -7);
         Date cutoffDate = cal.getTime();
 
-        int count = authTokenMapper.deleteExpiredTokens(cutoffDate);
+        int count = this.getMapper().deleteExpiredTokens(cutoffDate);
         logger.debug("Cleaned up {} expired tokens", count);
         return count;
     }
@@ -253,4 +261,53 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
             return null;
         }
     }
+
+    @Override
+    public PageResult<AuthTokenDTO> getUserTokenList(Integer userId, Integer page, Integer pageSize) {
+        // 查询用户的令牌列表
+        List<AuthTokenEntity> tokenList = QueryChain.of(AuthTokenEntity.class)
+                .where(AuthTokenEntity::getUserId).eq(userId)
+                .orderBy(AuthTokenEntity::getIssuedAt, false)
+                .limit((page - 1) * pageSize, pageSize)
+                .list();
+
+        long total = QueryChain.of(AuthTokenEntity.class)
+                .where(AuthTokenEntity::getUserId).eq(userId)
+                .count();
+
+        if (CollectionUtils.isEmpty(tokenList)) {
+            return PageResult.empty(page, pageSize);
+        }
+
+        List<AuthTokenDTO> dtoList = tokenList.stream()
+                .map(authTokenConverter::entityToDto)
+                .toList();
+
+        return PageResult.of(dtoList, total, page, pageSize);
+    }
+
+    @Override
+    public List<AuthTokenDTO> getValidTokensByUserId(Integer userId) {
+        List<AuthTokenEntity> tokens = this.getMapper().findValidTokensByUserId(userId);
+        return tokens.stream()
+                .map(authTokenConverter::entityToDto)
+                .toList();
+    }
+
+    @Override
+    public AuthTokenDTO getAuthTokenById(Long id) {
+        AuthTokenEntity entity = this.getById(id);
+        return entity != null ? authTokenConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public boolean validateToken(String token) {
+        if (StrUtil.isBlank(token)) {
+            return false;
+        }
+
+        AuthTokenDTO tokenDTO = getByToken(token);
+        return tokenDTO != null && tokenDTO.isValid();
+    }
+
 }

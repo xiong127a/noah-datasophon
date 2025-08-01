@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service;
 
-
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.common.model.PageResult;
@@ -31,15 +30,6 @@ import com.datasophon.common.model.PageResult;
  * @date 2022-03-15 17:36:08
  */
 public interface UserInfoService {
-
-    /**
-     * 用户登录验证
-     * 
-     * @param username 用户名
-     * @param password 密码
-     * @return 用户信息DTO
-     */
-    UserInfoDTO queryUser(String username, String password);
 
     /**
      * 创建用户
@@ -95,4 +85,12 @@ public interface UserInfoService {
      * @return 用户Entity
      */
     UserInfoEntity getUserEntityByUsername(String username);
+
+    /**
+     * 根据用户ID查询用户Entity（内部使用）
+     * 
+     * @param id 用户ID
+     * @return 用户Entity
+     */
+    UserInfoEntity getById(Integer id);
 }

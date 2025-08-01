@@ -30,6 +30,10 @@ import java.util.List;
 
 /**
  * JWT认证令牌数据访问层
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
 @Mapper
 @Repository
@@ -60,13 +64,6 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
         return QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getToken).eq(token)
                 .one();
-    }
-
-    /**
-     * 根据令牌查询（与findByToken相同，用于兼容性）
-     */
-    default AuthTokenEntity getByToken(@Param("token") String token) {
-        return findByToken(token);
     }
 
     /**
@@ -129,13 +126,6 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     }
 
     /**
-     * 更新最后访问时间（与updateLastAccessTime相同，用于兼容性）
-     */
-    default boolean updateAccessTime(@Param("id") Long id, @Param("lastAccessTime") Date lastAccessTime) {
-        return updateLastAccessTime(id, lastAccessTime);
-    }
-
-    /**
      * 删除过期的令牌
      * 
      * @param cutoffDate 截止日期
@@ -144,7 +134,6 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     default int deleteExpiredTokens(@Param("cutoffDate") Date cutoffDate) {
         List<Long> expiredTokenIds = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getExpiresAt).lt(cutoffDate)
-                .select(AuthTokenEntity::getId)
                 .list()
                 .stream()
                 .map(AuthTokenEntity::getId)
@@ -185,7 +174,6 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
                 .orderBy(AuthTokenEntity::getIssuedAt, true)
                 .limit(count)
-                .select(AuthTokenEntity::getId)
                 .list()
                 .stream()
                 .map(AuthTokenEntity::getId)

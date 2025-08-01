@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.AlertGroupConverter;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
@@ -56,6 +57,9 @@ public class AlertGroupServiceImpl
 
     @Autowired
     private ClusterAlertQuotaMapper clusterAlertQuotaMapper;
+
+    @Autowired
+    private AlertGroupConverter alertGroupConverter;
 
     @Override
     public PageResult<AlertGroupDTO> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
@@ -105,7 +109,7 @@ public class AlertGroupServiceImpl
 
         // 转换为DTO
         List<AlertGroupDTO> dtoList = alertGroupList.stream()
-                .map(this::entityToDto)
+                .map(alertGroupConverter::entityToDto)
                 .toList();
         return PageResult.of(dtoList, entityPageResult.getTotal(), page, pageSize);
     }
@@ -138,7 +142,7 @@ public class AlertGroupServiceImpl
         }
 
         // 转换为Entity并设置创建时间
-        AlertGroupEntity alertGroupEntity = dtoToEntity(alertGroupDTO);
+        AlertGroupEntity alertGroupEntity = alertGroupConverter.dtoToEntity(alertGroupDTO);
         alertGroupEntity.setCreateTime(new Date());
 
         // 保存告警组
@@ -151,20 +155,20 @@ public class AlertGroupServiceImpl
         clusterAlertGroupMapMapper.insertSelective(clusterAlertGroupMap);
 
         // 转换为DTO并返回
-        return entityToDto(alertGroupEntity);
+        return alertGroupConverter.entityToDto(alertGroupEntity);
     }
 
     @Override
     public AlertGroupDTO getAlertGroupById(Integer id) {
         AlertGroupEntity entity = this.getById(id);
-        return entity != null ? entityToDto(entity) : null;
+        return entity != null ? alertGroupConverter.entityToDto(entity) : null;
     }
 
     @Override
     public AlertGroupDTO updateAlertGroup(AlertGroupDTO alertGroupDTO) {
-        AlertGroupEntity entity = dtoToEntity(alertGroupDTO);
+        AlertGroupEntity entity = alertGroupConverter.dtoToEntity(alertGroupDTO);
         this.updateById(entity);
-        return entityToDto(entity);
+        return alertGroupConverter.entityToDto(entity);
     }
 
     @Override
@@ -180,7 +184,7 @@ public class AlertGroupServiceImpl
     public List<AlertGroupDTO> getAllAlertGroups() {
         List<AlertGroupEntity> entities = this.list();
         return entities.stream()
-                .map(this::entityToDto)
+                .map(alertGroupConverter::entityToDto)
                 .toList();
     }
 
@@ -196,36 +200,4 @@ public class AlertGroupServiceImpl
         }
     }
 
-    /**
-     * Entity转DTO手动转换方法
-     */
-    private AlertGroupDTO entityToDto(AlertGroupEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-        return new AlertGroupDTO(
-                entity.getId(),
-                entity.getAlertGroupName(),
-                entity.getAlertGroupCategory(),
-                entity.getClusterId(),
-                entity.getAlertQuotaNum(),
-                entity.getCreateTime());
-    }
-
-    /**
-     * DTO转Entity手动转换方法
-     */
-    private AlertGroupEntity dtoToEntity(AlertGroupDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-        AlertGroupEntity entity = new AlertGroupEntity();
-        entity.setId(dto.id());
-        entity.setAlertGroupName(dto.alertGroupName());
-        entity.setAlertGroupCategory(dto.alertGroupCategory());
-        entity.setClusterId(dto.clusterId());
-        entity.setAlertQuotaNum(dto.alertQuotaNum());
-        entity.setCreateTime(dto.createTime());
-        return entity;
-    }
 }
