@@ -17,72 +17,120 @@
 
 package com.datasophon.api.controller.v1.system;
 
-import com.datasophon.api.service.impl.NoticeGroupServiceImpl;
+import com.datasophon.api.service.NoticeGroupService;
+import com.datasophon.api.converter.NoticeGroupConverter;
 import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.NoticeGroupEntity;
-import com.datasophon.dao.model.MPage;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.datasophon.api.vo.NoticeGroupVO;
+import com.datasophon.common.dto.NoticeGroupDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
 
-
 /**
- * 通知组
+ * 通知组控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
 @ApiVersion(path = "notice/group")
 public class NoticeGroupController {
 
-    @Autowired
-    private NoticeGroupServiceImpl noticeGroupService;
+    private final NoticeGroupService noticeGroupService;
+    private final NoticeGroupConverter noticeGroupConverter;
 
-
-    /**
-     * 列表带分页
-     */
-    @RequestMapping("/list")
-    public Result list(MPage<NoticeGroupEntity> mPage) {
-        return Result.success(noticeGroupService.pageNoticeGroup(mPage));
+    public NoticeGroupController(NoticeGroupService noticeGroupService, NoticeGroupConverter noticeGroupConverter) {
+        this.noticeGroupService = noticeGroupService;
+        this.noticeGroupConverter = noticeGroupConverter;
     }
 
+    /**
+     * 获取通知组分页列表
+     */
+    @GetMapping("/list")
+    public Result<PageResult<NoticeGroupVO>> list(
+            @RequestParam(value = "noticeGroupName", required = false) String noticeGroupName,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+
+        PageResult<NoticeGroupDTO> dtoPageResult = noticeGroupService.getNoticeGroupList(
+                noticeGroupName, page, pageSize);
+
+        List<NoticeGroupVO> voList = noticeGroupConverter.dtoListToVoList(dtoPageResult.getRecords());
+        PageResult<NoticeGroupVO> voPageResult = PageResult.of(voList, dtoPageResult.getTotal(), page, pageSize);
+
+        return Result.success(voPageResult);
+    }
 
     /**
-     * 保存
+     * 获取通知组详情
      */
-    @RequestMapping("/save")
-    public Result save(@RequestBody NoticeGroupEntity noticeGroup) {
-        List<String> existGroup = noticeGroupService.list()
-                .stream()
-                .map(NoticeGroupEntity::getNoticeGroupName)
-                .toList();
-        if (existGroup.contains(noticeGroup.getNoticeGroupName())) {
-            return Result.error("通知组名称重复");
+    @GetMapping("/info/{id}")
+    public Result<NoticeGroupVO> info(@PathVariable("id") Integer id) {
+        NoticeGroupDTO noticeGroupDTO = noticeGroupService.getNoticeGroupById(id);
+
+        if (noticeGroupDTO == null) {
+            return Result.error("通知组不存在");
         }
-        return noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
-//        return Result.success();
+
+        NoticeGroupVO noticeGroupVO = noticeGroupConverter.dtoToVo(noticeGroupDTO);
+        return Result.success(noticeGroupVO);
     }
 
-
     /**
-     * 修改
+     * 创建通知组
      */
-    @RequestMapping("/update")
-    public Result update(@RequestBody NoticeGroupEntity noticeGroup) {
-        return noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
-//        return Result.success();
+    @PostMapping("/save")
+    public Result<NoticeGroupVO> save(@RequestBody NoticeGroupDTO noticeGroupDTO) {
+        try {
+            NoticeGroupDTO savedDTO = noticeGroupService.saveNoticeGroup(noticeGroupDTO);
+            NoticeGroupVO noticeGroupVO = noticeGroupConverter.dtoToVo(savedDTO);
+            return Result.success(noticeGroupVO);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
+    /**
+     * 更新通知组
+     */
+    @PutMapping("/update")
+    public Result<NoticeGroupVO> update(@RequestBody NoticeGroupDTO noticeGroupDTO) {
+        try {
+            NoticeGroupDTO updatedDTO = noticeGroupService.updateNoticeGroup(noticeGroupDTO);
+            NoticeGroupVO noticeGroupVO = noticeGroupConverter.dtoToVo(updatedDTO);
+            return Result.success(noticeGroupVO);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
 
     /**
-     * 删除
+     * 删除通知组
      */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        noticeGroupService.removeNoticeGroup(Arrays.asList(ids));
-        return Result.success();
+    @DeleteMapping("/delete")
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        try {
+            List<Integer> idList = Arrays.asList(ids);
+            boolean deleted = noticeGroupService.deleteNoticeGroups(idList);
+
+            return deleted ? Result.success("删除成功") : Result.error("删除失败");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取所有通知组
+     */
+    @GetMapping("/all")
+    public Result<List<NoticeGroupVO>> getAllNoticeGroups() {
+        List<NoticeGroupDTO> dtoList = noticeGroupService.getAllNoticeGroups();
+        List<NoticeGroupVO> voList = noticeGroupConverter.dtoListToVoList(dtoList);
+        return Result.success(voList);
     }
 
 }

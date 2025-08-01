@@ -27,10 +27,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 通知组-用户中间表实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
 @Service("noticeGroupUserService")
 public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMapper, NoticeGroupUserEntity>
-        implements
-        NoticeGroupUserService {
+        implements NoticeGroupUserService {
 
     @Override
     public void removeByGroupIds(List<Integer> list) {

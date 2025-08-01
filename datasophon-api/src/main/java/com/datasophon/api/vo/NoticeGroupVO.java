@@ -15,25 +15,26 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.service;
+package com.datasophon.api.vo;
 
-import com.datasophon.dao.entity.NoticeGroupUserEntity;
-import com.mybatisflex.core.service.IService;
-
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.util.Date;
 import java.util.List;
 
 /**
- * 通知组-用户中间表
+ * 通知组视图对象
  *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
-
-    void removeByGroupIds(List<Integer> list);
-
-    List<NoticeGroupUserEntity> listByGroupId(Integer id);
-
-    List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids);
+public record NoticeGroupVO(
+        Integer id,
+        Integer clusterId,
+        String noticeGroupName,
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createTime,
+        String createTimeFormatted,
+        List<UserInfoVO> users,
+        Integer userCount,
+        String userCountFormatted) {
 }

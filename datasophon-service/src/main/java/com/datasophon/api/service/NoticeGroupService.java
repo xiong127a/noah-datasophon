@@ -17,19 +17,59 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.paginate.Page;
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
-import com.datasophon.dao.model.MPage;
+import com.datasophon.common.dto.NoticeGroupDTO;
+import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
-public interface NoticeGroupService {
+/**
+ * 通知组表
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
+public interface NoticeGroupService extends IService<NoticeGroupEntity> {
 
-    Result saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup);
+    /**
+     * 获取通知组分页列表
+     */
+    PageResult<NoticeGroupDTO> getNoticeGroupList(String noticeGroupName, Integer page, Integer pageSize);
 
-    void removeNoticeGroup(List<Integer> list);
+    /**
+     * 保存通知组
+     */
+    NoticeGroupDTO saveNoticeGroup(NoticeGroupDTO noticeGroup);
 
-    Page<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage);
+    /**
+     * 根据ID获取通知组
+     */
+    NoticeGroupDTO getNoticeGroupById(Integer id);
+
+    /**
+     * 更新通知组
+     */
+    NoticeGroupDTO updateNoticeGroup(NoticeGroupDTO noticeGroup);
+
+    /**
+     * 删除通知组
+     */
+    boolean deleteNoticeGroups(List<Integer> ids);
+
+    /**
+     * 获取所有通知组
+     */
+    List<NoticeGroupDTO> getAllNoticeGroups();
+
+    /**
+     * 校验通知组删除前是否被告警指标使用
+     */
+    void validateNoticeGroupBeforeDelete(List<Integer> ids);
+
+    /**
+     * 根据通知组ID列表获取通知组
+     */
+    List<NoticeGroupDTO> getByIds(List<Integer> ids);
 }

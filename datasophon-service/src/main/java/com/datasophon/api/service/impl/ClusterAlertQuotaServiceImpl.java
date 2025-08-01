@@ -23,12 +23,12 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.ClusterAlertQuotaService;
-
+import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
-import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.entity.NoticeGroupEntity;
@@ -67,9 +67,9 @@ public class ClusterAlertQuotaServiceImpl
     @Autowired
     private AlertGroupService alertGroupService;
 
-    // TODO: 待NoticeGroupService改造完成后启用
-    // @Autowired
-    // private NoticeGroupService noticeGroupService;
+    // ✅ NoticeGroupService已完成改造，启用代码
+    @Autowired
+    private NoticeGroupService noticeGroupService;
 
     @Override
     public PageResult<ClusterAlertQuota> getAlertQuotaList(Integer clusterId, Integer alertGroupId,
@@ -87,19 +87,19 @@ public class ClusterAlertQuotaServiceImpl
             return PageResult.empty(page, pageSize);
         }
 
-        // 查询告警组 - TODO: 待AlertGroupService改造完成后启用
-        // Set<Integer> alertGroupIdList = alertQuotaList.stream()
-        // .map(ClusterAlertQuota::getAlertGroupId)
-        // .collect(Collectors.toSet());
+        // 查询告警组 - ✅ AlertGroupService已完成改造，启用代码
+        Set<Integer> alertGroupIdList = alertQuotaList.stream()
+                .map(ClusterAlertQuota::getAlertGroupId)
+                .collect(Collectors.toSet());
 
-        // 查询通知组 - TODO: 待NoticeGroupService改造完成后启用
-        // List<Integer> noticeGroupIdList = alertQuotaList.stream()
-        // .map(ClusterAlertQuota::getNoticeGroupId)
-        // .collect(java.util.stream.Collectors.toList());
+        // 查询通知组 - ✅ NoticeGroupService已完成改造，启用代码
+        Set<Integer> noticeGroupIdList = alertQuotaList.stream()
+                .map(ClusterAlertQuota::getNoticeGroupId)
+                .collect(Collectors.toSet());
 
-        // TODO: 待AlertGroupService和NoticeGroupService改造完成后启用
-        List<AlertGroupEntity> alertGroupEntityList = java.util.Collections.emptyList(); // alertGroupService.selectByAlertGroupIds(alertGroupIdList);
-        List<NoticeGroupEntity> noticeGroupEntityList = java.util.Collections.emptyList(); // noticeGroupService.getByIds(noticeGroupIdList);
+        // ✅ AlertGroupService已完成改造，启用代码
+        List<AlertGroupEntity> alertGroupEntityList = alertGroupService.listByIds(alertGroupIdList);
+        List<NoticeGroupEntity> noticeGroupEntityList = noticeGroupService.listByIds(noticeGroupIdList);
 
         if (CollectionUtils.isNotEmpty(alertGroupEntityList)) {
             // 使用更具描述性的映射变量名
