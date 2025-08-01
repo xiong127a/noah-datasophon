@@ -17,90 +17,113 @@
 
 package com.datasophon.api.controller.v1.system;
 
-import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.vo.Result;
-import com.datasophon.common.enums.Status;
+import com.datasophon.api.vo.AlertGroupVO;
+import com.datasophon.common.dto.AlertGroupDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.api.service.AlertGroupService;
-import com.datasophon.dao.entity.AlertGroupEntity;
-import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.mybatisflex.core.query.QueryChain;
+import com.datasophon.api.converter.AlertGroupConverter;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 
 /**
- * @author 63588
+ * 告警组控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-14
  */
 @ApiVersion(path = "alert/group")
 public class AlertGroupController {
 
     private final AlertGroupService alertGroupService;
+    private final AlertGroupConverter alertGroupConverter;
 
-    public AlertGroupController(AlertGroupService alertGroupService) {
+    public AlertGroupController(AlertGroupService alertGroupService, AlertGroupConverter alertGroupConverter) {
         this.alertGroupService = alertGroupService;
+        this.alertGroupConverter = alertGroupConverter;
     }
 
     /**
-     * 列表
+     * 获取告警组分页列表
      */
-    @RequestMapping("/list")
-    public Result list(@RequestParam("clusterId") Integer clusterId,
-            @RequestParam("alertGroupName") String alertGroupName, @RequestParam("page") Integer page,
-            @RequestParam("pageSize") Integer pageSize) {
-        return alertGroupService.getAlertGroupList(clusterId, alertGroupName, page, pageSize);
+    @GetMapping("/list")
+    public Result<PageResult<AlertGroupVO>> list(
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "alertGroupName", required = false) String alertGroupName,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+
+        PageResult<AlertGroupDTO> dtoPageResult = alertGroupService.getAlertGroupList(
+                clusterId, alertGroupName, page, pageSize);
+
+        List<AlertGroupVO> voList = alertGroupConverter.dtoListToVoList(dtoPageResult.getRecords());
+        PageResult<AlertGroupVO> voPageResult = PageResult.of(voList, dtoPageResult.getTotal(), page, pageSize);
+
+        return Result.success(voPageResult);
     }
 
     /**
-     * 信息
+     * 获取告警组详情
      */
-    @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        AlertGroupEntity alertGroup = alertGroupService.getById(id);
+    @GetMapping("/info/{id}")
+    public Result<AlertGroupVO> info(@PathVariable("id") Integer id) {
+        AlertGroupDTO alertGroupDTO = alertGroupService.getAlertGroupById(id);
 
-        return Result.success().put("alertGroup", alertGroup);
-    }
-
-    /**
-     * 保存
-     */
-    @RequestMapping("/save")
-    public Result save(@RequestBody AlertGroupEntity alertGroup) {
-        alertGroup.setCreateTime(new Date());
-        return alertGroupService.saveAlertGroup(alertGroup);
-    }
-
-    /**
-     * 修改
-     */
-    @RequestMapping("/update")
-    public Result update(@RequestBody AlertGroupEntity alertGroup) {
-        alertGroupService.updateById(alertGroup);
-
-        return Result.success();
-    }
-
-    /**
-     * 删除
-     */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-
-        // 校验是否绑定告警指标
-        List<ClusterAlertQuota> list = QueryChain.of(ClusterAlertQuota.class)
-                .where(ClusterAlertQuota::getAlertGroupId).in((Object[]) ids)
-                .list();
-        if (CollUtil.isNotEmpty(list)) {
-            return Result.error(Status.ALERT_GROUP_TIPS_ONE.getMsg());
+        if (alertGroupDTO == null) {
+            return Result.error("告警组不存在");
         }
-        alertGroupService.removeByIds(Arrays.asList(ids));
 
-        return Result.success();
+        AlertGroupVO alertGroupVO = alertGroupConverter.dtoToVo(alertGroupDTO);
+        return Result.success(alertGroupVO);
+    }
+
+    /**
+     * 创建告警组
+     */
+    @PostMapping("/save")
+    public Result<AlertGroupVO> save(@RequestBody AlertGroupDTO alertGroupDTO) {
+        AlertGroupDTO savedDTO = alertGroupService.saveAlertGroup(alertGroupDTO);
+        AlertGroupVO alertGroupVO = alertGroupConverter.dtoToVo(savedDTO);
+        return Result.success(alertGroupVO);
+    }
+
+    /**
+     * 更新告警组
+     */
+    @PutMapping("/update")
+    public Result<AlertGroupVO> update(@RequestBody AlertGroupDTO alertGroupDTO) {
+        AlertGroupDTO updatedDTO = alertGroupService.updateAlertGroup(alertGroupDTO);
+        AlertGroupVO alertGroupVO = alertGroupConverter.dtoToVo(updatedDTO);
+        return Result.success(alertGroupVO);
+    }
+
+    /**
+     * 删除告警组
+     */
+    @DeleteMapping("/delete")
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        try {
+            List<Integer> idList = Arrays.asList(ids);
+            boolean deleted = alertGroupService.deleteAlertGroups(idList);
+
+            return deleted ? Result.success("删除成功") : Result.error("删除失败");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取所有告警组
+     */
+    @GetMapping("/all")
+    public Result<List<AlertGroupVO>> getAllAlertGroups() {
+        List<AlertGroupDTO> dtoList = alertGroupService.getAllAlertGroups();
+        List<AlertGroupVO> voList = alertGroupConverter.dtoListToVoList(dtoList);
+        return Result.success(voList);
     }
 
 }

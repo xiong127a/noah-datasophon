@@ -18,7 +18,9 @@
 package com.datasophon.api.service;
 
 import com.datasophon.dao.entity.AlertGroupEntity;
+import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
@@ -27,21 +29,43 @@ import java.util.List;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-14
  */
-public interface AlertGroupService {
+public interface AlertGroupService extends IService<AlertGroupEntity> {
 
-    PageResult<AlertGroupEntity> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
+    /**
+     * 获取告警组分页列表
+     */
+    PageResult<AlertGroupDTO> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
             Integer pageSize);
 
-    AlertGroupEntity saveAlertGroup(AlertGroupEntity alertGroup);
+    /**
+     * 保存告警组
+     */
+    AlertGroupDTO saveAlertGroup(AlertGroupDTO alertGroup);
 
-    // 标准CRUD方法
-    AlertGroupEntity getById(Integer id);
+    /**
+     * 根据ID获取告警组
+     */
+    AlertGroupDTO getAlertGroupById(Integer id);
 
-    AlertGroupEntity updateById(AlertGroupEntity entity);
+    /**
+     * 更新告警组
+     */
+    AlertGroupDTO updateAlertGroup(AlertGroupDTO alertGroup);
 
-    boolean removeByIds(List<Integer> ids);
+    /**
+     * 删除告警组
+     */
+    boolean deleteAlertGroups(List<Integer> ids);
 
-    List<AlertGroupEntity> getAllAlertGroups();
+    /**
+     * 获取所有告警组
+     */
+    List<AlertGroupDTO> getAllAlertGroups();
+
+    /**
+     * 校验告警组删除前是否绑定指标
+     */
+    void validateAlertGroupBeforeDelete(List<Integer> ids);
 }
