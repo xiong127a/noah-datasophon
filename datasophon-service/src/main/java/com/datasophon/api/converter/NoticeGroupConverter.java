@@ -26,8 +26,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -104,14 +102,5 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Named("calculateUserCount")
     default Integer calculateUserCount(List<UserInfoVO> users) {
         return users != null ? users.size() : 0;
-    }
-
-    @Named("formatDateTime")
-    default String formatDateTime(Date date) {
-        if (date == null) {
-            return null;
-        }
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return formatter.format(date);
     }
 }

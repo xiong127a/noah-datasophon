@@ -25,8 +25,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -106,17 +104,5 @@ public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, Ale
             case 1 -> "1个指标";
             default -> alertQuotaNum + "个指标";
         };
-    }
-
-    /**
-     * 格式化日期时间
-     */
-    @Named("formatDateTime")
-    default String formatDateTime(Date date) {
-        if (date == null) {
-            return null;
-        }
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return formatter.format(date);
     }
 }
