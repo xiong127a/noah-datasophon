@@ -37,6 +37,8 @@ import com.datasophon.common.command.remote.CreateUnixUserCommand;
 import com.datasophon.common.command.remote.DelUnixUserCommand;
 import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.api.converter.ClusterUserConverter;
+import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -92,8 +94,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     @Autowired
     private ClusterUserGroupService userGroupService;
 
+    @Autowired
+    private ClusterUserConverter clusterUserConverter;
+
     @Override
-    public ClusterUser createClusterUser(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+    public ClusterUserDTO createClusterUser(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -202,11 +207,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return clusterUser;
+        return clusterUserConverter.entityToDto(clusterUser);
     }
 
     @Override
-    public ClusterUser createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
+    public ClusterUserDTO createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
             String groupIds) {
 
         // 用户名校验
@@ -319,7 +324,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return clusterUser;
+        return clusterUserConverter.entityToDto(clusterUser);
     }
 
     private void buildClusterUserGroup(Integer clusterId, Integer userId, Integer groupId, Integer userGroupType) {
@@ -340,7 +345,8 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public PageResult<ClusterUser> listPagedUsers(Integer clusterId, String username, Integer page, Integer pageSize) {
+    public PageResult<ClusterUserDTO> listPagedUsers(Integer clusterId, String username, Integer page,
+            Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
 
         QueryChain<ClusterUser> query = QueryChain.of(ClusterUser.class)
@@ -364,7 +370,8 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         long total = query.count();
-        return PageResult.of(list, total, page, pageSize);
+        List<ClusterUserDTO> dtoList = clusterUserConverter.entityListToDtoList(list);
+        return PageResult.of(dtoList, total, page, pageSize);
     }
 
     @Override
