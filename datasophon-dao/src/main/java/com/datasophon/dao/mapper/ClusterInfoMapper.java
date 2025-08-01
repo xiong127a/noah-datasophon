@@ -103,39 +103,4 @@ public interface ClusterInfoMapper extends BaseMapper<ClusterInfoEntity> {
         return java.util.Collections.emptyList();
     }
 
-    // 基础CRUD方法
-
-    /**
-     * 插入集群信息
-     *
-     * @param entity 集群信息实体
-     * @return 影响的行数
-     */
-    default int insertEntity(ClusterInfoEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新集群信息
-     *
-     * @param entity 集群信息实体
-     * @return 影响的行数
-     */
-    default int updateByIdEntity(ClusterInfoEntity entity) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterInfoEntity::getId).eq(entity.getId());
-        return this.updateByQuery(entity, query);
-    }
-
-    /**
-     * 根据ID列表删除集群信息
-     *
-     * @param ids ID列表
-     * @return 影响的行数
-     */
-    default int deleteByIds(@Param("ids") List<Integer> ids) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterInfoEntity::getId).in(ids);
-        return this.deleteByQuery(query);
-    }
 }

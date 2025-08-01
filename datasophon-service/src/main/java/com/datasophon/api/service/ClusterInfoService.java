@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.mybatisflex.core.service.IService;
@@ -24,97 +25,84 @@ import com.mybatisflex.core.service.IService;
 import java.util.List;
 
 /**
- * The `ClusterInfoService` interface provides methods to manage and retrieve
- * information about clusters.
- * It extends the `IService` interface, which is typically used for common CRUD
- * operations on entities.
- * This service is designed to handle operations related to cluster information,
- * such as retrieving,
- * saving, updating, and deleting cluster details, as well as managing cluster
- * states and configurations.
+ * 集群信息服务接口
+ * 继承IService提供基础CRUD操作，返回DTO进行数据传输
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
  *
- * <p>
- * Key functionalities include:
- * <ul>
- * <li>Retrieving cluster information by cluster code or framework code.</li>
- * <li>Saving and updating cluster information.</li>
- * <li>Fetching lists of clusters, including running clusters.</li>
- * <li>Updating the state of a cluster.</li>
- * <li>Deleting clusters by their IDs.</li>
- * <li>Retrieving Kubernetes configuration and Kerberos information for a
- * cluster.</li>
- * </ul>
- *
- * <p>
- * This interface is intended to be implemented by a service class that
- * interacts with a data source
- * (e.g., a database) to perform the necessary operations on cluster
- * information.
- *
- * @see IService
- * @see ClusterInfoEntity
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ClusterInfoService {
+public interface ClusterInfoService extends IService<ClusterInfoEntity> {
 
-    ClusterInfoEntity getClusterByClusterCode(String clusterCode);
+    /**
+     * 根据集群代码获取集群信息
+     */
+    ClusterInfoDTO getClusterByClusterCode(String clusterCode);
 
-    ClusterInfoEntity saveCluster(ClusterInfoEntity clusterInf);
+    /**
+     * 保存集群信息
+     */
+    ClusterInfoDTO saveCluster(ClusterInfoDTO clusterInfo);
 
-    List<ClusterInfoEntity> getClusterList();
+    /**
+     * 获取集群列表
+     */
+    List<ClusterInfoDTO> getClusterList();
 
-    List<ClusterInfoEntity> runningClusterList();
+    /**
+     * 获取运行中的集群列表
+     */
+    List<ClusterInfoDTO> runningClusterList();
 
+    /**
+     * 更新集群状态
+     */
     boolean updateClusterState(Integer clusterId, Integer clusterState);
 
-    List<ClusterInfoEntity> getClusterByFrameCode(String frameCode);
+    /**
+     * 根据框架代码获取集群列表
+     */
+    List<ClusterInfoDTO> getClusterByFrameCode(String frameCode);
 
-    ClusterInfoEntity updateCluster(ClusterInfoEntity clusterInfo);
+    /**
+     * 更新集群信息
+     */
+    ClusterInfoDTO updateCluster(ClusterInfoDTO clusterInfo);
 
-    void deleteCluster(List<Integer> asList);
+    /**
+     * 删除集群
+     */
+    void deleteCluster(List<Integer> ids);
 
+    /**
+     * 根据集群ID获取Kubernetes配置
+     */
     String getKubeConfigByClusterId(Integer clusterId);
 
     /**
-     * Retrieves metrics information for all service roles in the cluster.
-     * <p>
-     * This method fetches the count of running instances for each service role
-     * in the cluster. It returns a JSON string containing the service role names
-     * as keys and their respective instance counts as values.
-     *
-     * @return A JSON string containing metrics about service roles and their
-     *         instance counts.
-     *         For example: {"HDFS_NAMENODE": 2, "HDFS_DATANODE": 10, ...}
+     * 获取服务角色指标信息
+     * 返回Prometheus格式的服务角色实例统计数据
      */
     String getServiceRoleMetrics();
 
     /**
-     * Retrieves detailed information about a cluster by its ID.
-     *
-     * @param clusterId The ID of the cluster to retrieve information for.
-     * @return The cluster information entity.
+     * 根据ID获取集群详细信息
      */
-    ClusterInfoEntity getClusterById(Integer clusterId);
+    ClusterInfoDTO getClusterById(Integer clusterId);
 
     /**
-     * Retrieves the list of Kubernetes namespaces for a cluster.
-     *
-     * @param kubeConfig The Kubernetes configuration content.
-     * @return The kubernetes namespace dto containing the list of namespaces.
+     * 获取Kubernetes命名空间列表
      */
     KubernetesNamespaceDto getKubernetesNamespaces(String kubeConfig);
 
     /**
      * 更新集群Kubernetes配置
-     *
-     * @param clusterId       集群ID
-     * @param kubeConfig      Kubernetes配置内容
-     * @param namespace       选择的命名空间
-     * @param customNamespace 自定义命名空间（如果选择创建新的命名空间）
-     * @return 更新结果消息
      */
     String updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
 
+    /**
+     * 获取集群的Kubernetes命名空间
+     */
     String getKubernetesNamespace(Integer clusterId);
-
-    ClusterInfoEntity getById(Integer clusterId);
 }

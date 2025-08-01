@@ -17,11 +17,13 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterInfoConverter;
 import com.datasophon.api.dto.KubeConfigUpdateRequest;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.vo.ClusterInfoVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
@@ -32,15 +34,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * 集群信息控制器
+ * 按照架构重构规范，使用Result<VO>返回，调用Converter转换
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-01
  */
 @ApiVersion(path = "cluster")
 public class ClusterInfoController {
@@ -48,14 +50,18 @@ public class ClusterInfoController {
     @Autowired
     private ClusterInfoService clusterInfoService;
 
+    @Autowired
+    private ClusterInfoConverter clusterInfoConverter;
+
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterInfoEntity>> list() {
+    public Result<List<ClusterInfoVO>> list() {
         try {
-            List<ClusterInfoEntity> clusterList = clusterInfoService.getClusterList();
-            return Result.success(clusterList);
+            List<ClusterInfoDTO> clusterDTOList = clusterInfoService.getClusterList();
+            List<ClusterInfoVO> clusterVOList = clusterInfoConverter.dtoListToVoList(clusterDTOList);
+            return Result.success(clusterVOList);
         } catch (Exception e) {
             return Result.error("获取集群列表失败: " + e.getMessage());
         }
@@ -65,10 +71,11 @@ public class ClusterInfoController {
      * 配置好的集群列表
      */
     @RequestMapping("/runningClusterList")
-    public Result<List<ClusterInfoEntity>> runningClusterList() {
+    public Result<List<ClusterInfoVO>> runningClusterList() {
         try {
-            List<ClusterInfoEntity> runningClusters = clusterInfoService.runningClusterList();
-            return Result.success(runningClusters);
+            List<ClusterInfoDTO> runningClusterDTOList = clusterInfoService.runningClusterList();
+            List<ClusterInfoVO> runningClusterVOList = clusterInfoConverter.dtoListToVoList(runningClusterDTOList);
+            return Result.success(runningClusterVOList);
         } catch (Exception e) {
             return Result.error("获取运行中集群列表失败: " + e.getMessage());
         }
@@ -78,10 +85,11 @@ public class ClusterInfoController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterInfoEntity> info(@PathVariable("id") Integer id) {
+    public Result<ClusterInfoVO> info(@PathVariable("id") Integer id) {
         try {
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(id);
-            return Result.success(clusterInfo);
+            ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(id);
+            ClusterInfoVO clusterInfoVO = clusterInfoConverter.dtoToVo(clusterInfoDTO);
+            return Result.success(clusterInfoVO);
         } catch (Exception e) {
             return Result.error("获取集群信息失败: " + e.getMessage());
         }
@@ -92,10 +100,11 @@ public class ClusterInfoController {
      */
     @RequestMapping("/save")
     @UserPermission
-    public Result<ClusterInfoEntity> save(@RequestBody ClusterInfoEntity clusterInfo) {
+    public Result<ClusterInfoVO> save(@RequestBody ClusterInfoDTO clusterInfoDTO) {
         try {
-            ClusterInfoEntity savedCluster = clusterInfoService.saveCluster(clusterInfo);
-            return Result.success(savedCluster);
+            ClusterInfoDTO savedClusterDTO = clusterInfoService.saveCluster(clusterInfoDTO);
+            ClusterInfoVO savedClusterVO = clusterInfoConverter.dtoToVo(savedClusterDTO);
+            return Result.success(savedClusterVO);
         } catch (Exception e) {
             return Result.error("保存集群失败: " + e.getMessage());
         }
@@ -121,10 +130,11 @@ public class ClusterInfoController {
      */
     @RequestMapping("/update")
     @UserPermission
-    public Result<ClusterInfoEntity> update(@RequestBody ClusterInfoEntity clusterInfo) {
+    public Result<ClusterInfoVO> update(@RequestBody ClusterInfoDTO clusterInfoDTO) {
         try {
-            ClusterInfoEntity updatedCluster = clusterInfoService.updateCluster(clusterInfo);
-            return Result.success(updatedCluster);
+            ClusterInfoDTO updatedClusterDTO = clusterInfoService.updateCluster(clusterInfoDTO);
+            ClusterInfoVO updatedClusterVO = clusterInfoConverter.dtoToVo(updatedClusterDTO);
+            return Result.success(updatedClusterVO);
         } catch (Exception e) {
             return Result.error("修改集群失败: " + e.getMessage());
         }
@@ -137,7 +147,7 @@ public class ClusterInfoController {
     @UserPermission
     public Result<String> delete(@RequestBody Integer[] ids) {
         try {
-            clusterInfoService.deleteCluster(Arrays.asList(ids));
+            clusterInfoService.deleteCluster(List.of(ids));
             return Result.success("删除集群成功");
         } catch (Exception e) {
             return Result.error("删除集群失败: " + e.getMessage());
@@ -153,10 +163,11 @@ public class ClusterInfoController {
      * 获取集群详细信息
      */
     @RequestMapping("/detail")
-    public Result<ClusterInfoEntity> getClusterDetail(@ClusterId Integer clusterId) {
+    public Result<ClusterInfoVO> getClusterDetail(@ClusterId Integer clusterId) {
         try {
-            ClusterInfoEntity clusterDetail = clusterInfoService.getClusterById(clusterId);
-            return Result.success(clusterDetail);
+            ClusterInfoDTO clusterDetailDTO = clusterInfoService.getClusterById(clusterId);
+            ClusterInfoVO clusterDetailVO = clusterInfoConverter.dtoToVo(clusterDetailDTO);
+            return Result.success(clusterDetailVO);
         } catch (Exception e) {
             return Result.error("获取集群详细信息失败: " + e.getMessage());
         }
