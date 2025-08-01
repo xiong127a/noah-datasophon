@@ -17,22 +17,22 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
 
 /**
  * 集群服务操作指令主机表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-12 11:28:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterServiceCommandHostService {
 
-    Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize);
+    PageResult<ClusterServiceCommandHostEntity> getCommandHostList(Integer clusterId, String commandId, Integer page,
+            Integer pageSize);
 
     Long getCommandHostSizeByCommandId(String commandId);
 
@@ -57,4 +57,15 @@ public interface ClusterServiceCommandHostService {
      * @param updateDb          是否更新数据库
      */
     void calculateRealTimeHostCommandState(ClusterServiceCommandHostEntity hostCommandEntity, boolean updateDb);
+
+    // 标准CRUD方法
+    ClusterServiceCommandHostEntity getById(String id);
+
+    ClusterServiceCommandHostEntity save(ClusterServiceCommandHostEntity entity);
+
+    ClusterServiceCommandHostEntity updateById(ClusterServiceCommandHostEntity entity);
+
+    boolean removeByIds(List<String> ids);
+
+    List<ClusterServiceCommandHostEntity> getAllCommandHosts();
 }

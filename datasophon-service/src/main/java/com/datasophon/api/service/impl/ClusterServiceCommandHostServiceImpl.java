@@ -20,14 +20,11 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.Constants;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.common.model.PageResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,12 +33,15 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 集群服务操作指令主机表实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterServiceCommandHostService")
-public class ClusterServiceCommandHostServiceImpl
-        extends
-        ServiceImpl<ClusterServiceCommandHostMapper, ClusterServiceCommandHostEntity>
-        implements
-        ClusterServiceCommandHostService {
+public class ClusterServiceCommandHostServiceImpl implements ClusterServiceCommandHostService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostServiceImpl.class);
 
@@ -50,26 +50,20 @@ public class ClusterServiceCommandHostServiceImpl
     private static final Long PROGRESS_INITIAL = 0L;
 
     @Autowired
-    private ClusterServiceCommandHostCommandService hostCommandService;
-
-    @Autowired
     private ClusterServiceCommandHostMapper hostMapper;
 
-    @Override
-    public Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize) {
-        // 使用分页对象代替手动计算偏移量
-        com.mybatisflex.core.paginate.Page<ClusterServiceCommandHostEntity> flexPage = new com.mybatisflex.core.paginate.Page<>(
-                page, pageSize);
+    @Autowired
+    private ClusterServiceCommandHostCommandService hostCommandService;
 
-        // 构建查询条件并执行分页查询
-        com.mybatisflex.core.paginate.Page<ClusterServiceCommandHostEntity> resultPage = QueryChain
-                .of(ClusterServiceCommandHostEntity.class)
-                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
-                .orderBy(ClusterServiceCommandHostEntity::getCreateTime).desc()
-                .page(flexPage);
+    @Override
+    public PageResult<ClusterServiceCommandHostEntity> getCommandHostList(Integer clusterId, String commandId,
+            Integer page, Integer pageSize) {
+        // 使用mapper的分页查询方法
+        PageResult<ClusterServiceCommandHostEntity> pageResult = hostMapper.selectPageByCommandId(commandId, page,
+                pageSize);
+        List<ClusterServiceCommandHostEntity> list = pageResult.getRecords();
 
         // 处理查询结果
-        List<ClusterServiceCommandHostEntity> list = resultPage.getRecords();
         for (ClusterServiceCommandHostEntity commandHostEntity : list) {
             // 实时聚合主机命令进度和状态（只做内存聚合，不做数据库update）
             calculateHostCommandActualProgress(commandHostEntity, false);
@@ -77,7 +71,7 @@ public class ClusterServiceCommandHostServiceImpl
             commandHostEntity.setCommandStateCode(commandHostEntity.getCommandState().getValue());
         }
 
-        return Result.success(list,resultPage.getTotalRow());
+        return pageResult;
     }
 
     /**
@@ -93,7 +87,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (isTerminalState(currentState)) {
                 commandHostEntity.setCommandProgress(PROGRESS_COMPLETE);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_COMPLETE)) {
-                    this.updateById(commandHostEntity);
+                    hostMapper.updateById(commandHostEntity);
                     logProgressUpdate(commandHostEntity, currentState.toString());
                 }
                 return;
@@ -107,7 +101,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandHostEntity.setCommandProgress(PROGRESS_INITIAL);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_INITIAL)) {
-                    this.updateById(commandHostEntity);
+                    hostMapper.updateById(commandHostEntity);
                     logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getCommandHostId());
                 }
                 return;
@@ -136,7 +130,7 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 如果需要更新数据库且进度有变化
             if (shouldUpdateProgress(updateDb, oldProgress, finalProgress)) {
-                this.updateById(commandHostEntity);
+                hostMapper.updateById(commandHostEntity);
                 logger.info("主机命令 {} 进度更新为 {}% 并更新数据库",
                         commandHostEntity.getCommandHostId(), finalProgress);
             }
@@ -204,7 +198,7 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 如果需要更新数据库且状态发生了变化
             if (updateDb && stateChanged) {
-                this.updateById(hostCommandEntity);
+                hostMapper.updateById(hostCommandEntity);
                 logger.info("主机命令 {} 状态从 {} 变为 {}，已更新数据库",
                         hostCommandEntity.getCommandHostId(), oldState, newState);
             }
@@ -215,9 +209,7 @@ public class ClusterServiceCommandHostServiceImpl
 
     @Override
     public Long getCommandHostSizeByCommandId(String commandId) {
-        return QueryChain.of(ClusterServiceCommandHostEntity.class)
-                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
-                .count();
+        return hostMapper.countByCommandId(commandId);
     }
 
     @Override
@@ -227,18 +219,12 @@ public class ClusterServiceCommandHostServiceImpl
 
     @Override
     public List<ClusterServiceCommandHostEntity> findFailedCommandHost(String commandId) {
-        return QueryChain.of(ClusterServiceCommandHostEntity.class)
-                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
-                .and(ClusterServiceCommandHostEntity::getCommandState).eq(CommandState.FAILED)
-                .list();
+        return hostMapper.selectByCommandIdAndState(commandId, CommandState.FAILED);
     }
 
     @Override
     public List<ClusterServiceCommandHostEntity> findCanceledCommandHost(String commandId) {
-        return QueryChain.of(ClusterServiceCommandHostEntity.class)
-                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
-                .and(ClusterServiceCommandHostEntity::getCommandState).eq(CommandState.CANCEL)
-                .list();
+        return hostMapper.selectByCommandIdAndState(commandId, CommandState.CANCEL);
     }
 
     // ========== 辅助方法 ==========
@@ -271,9 +257,7 @@ public class ClusterServiceCommandHostServiceImpl
      * 获取主机命令的所有子命令
      */
     private List<ClusterServiceCommandHostCommandEntity> getHostCommands(String commandHostId) {
-        return hostCommandService.list(
-                QueryWrapper.create()
-                        .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId));
+        return hostCommandService.getHostCommandListByCommandId(commandHostId);
     }
 
     /**
@@ -303,5 +287,33 @@ public class ClusterServiceCommandHostServiceImpl
     private void updateEntityState(ClusterServiceCommandHostEntity entity, CommandState state) {
         entity.setCommandState(state);
         entity.setCommandStateCode(state.getValue());
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public ClusterServiceCommandHostEntity getById(String id) {
+        return hostMapper.selectById(id);
+    }
+
+    @Override
+    public ClusterServiceCommandHostEntity save(ClusterServiceCommandHostEntity entity) {
+        hostMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public ClusterServiceCommandHostEntity updateById(ClusterServiceCommandHostEntity entity) {
+        hostMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<String> ids) {
+        return hostMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<ClusterServiceCommandHostEntity> getAllCommandHosts() {
+        return hostMapper.selectAll();
     }
 }

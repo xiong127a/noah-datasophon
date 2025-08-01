@@ -69,7 +69,7 @@ public class ClusterRoleUserServiceImpl implements ClusterRoleUserService {
                     entity.setUserType(UserType.ADMIN);
                     return entity;
                 })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         clusterRoleUserMapper.saveBatch(entityList);
         return true;

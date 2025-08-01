@@ -17,22 +17,22 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
 
 /**
  * 集群服务操作指令主机指令表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-12 11:28:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterServiceCommandHostCommandService {
 
-    Result getHostCommandList(String hostname, String commandHostId, Integer page, Integer pageSize);
+    PageResult<ClusterServiceCommandHostCommandEntity> getHostCommandList(String hostname, String commandHostId,
+            Integer page, Integer pageSize);
 
     List<ClusterServiceCommandHostCommandEntity> getHostCommandListByCommandId(String id);
 
@@ -44,9 +44,20 @@ public interface ClusterServiceCommandHostCommandService {
 
     Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, String commandHostId);
 
-    Result getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception;
+    String getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception;
 
     List<ClusterServiceCommandHostCommandEntity> findFailedHostCommand(String hostname, String commandHostId);
 
     List<ClusterServiceCommandHostCommandEntity> findCanceledHostCommand(String hostname, String commandHostId);
+
+    // 标准CRUD方法
+    ClusterServiceCommandHostCommandEntity getById(String id);
+
+    ClusterServiceCommandHostCommandEntity save(ClusterServiceCommandHostCommandEntity entity);
+
+    ClusterServiceCommandHostCommandEntity updateById(ClusterServiceCommandHostCommandEntity entity);
+
+    boolean removeByIds(List<String> ids);
+
+    List<ClusterServiceCommandHostCommandEntity> getAllHostCommands();
 }
