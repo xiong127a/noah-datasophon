@@ -17,8 +17,6 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.FrameServiceEntity;
 
 import java.util.List;
@@ -26,17 +24,17 @@ import java.util.List;
 /**
  * 集群框架版本服务表
  *
- * @author dygao2
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface FrameServiceService {
 
-    Result getAllFrameService(Integer clusterId);
+    List<FrameServiceEntity> getAllFrameService(Integer clusterId);
 
-    Result getAllFrameServiceWithRequired(Integer clusterId, String type);
+    List<FrameServiceEntity> getAllFrameServiceWithRequired(Integer clusterId, String type);
 
-    Result getServiceListByServiceIds(List<Integer> serviceIds);
+    List<FrameServiceEntity> getServiceListByServiceIds(List<Integer> serviceIds);
 
     FrameServiceEntity getServiceByFrameIdAndServiceName(Integer id, String serviceName);
 
@@ -45,4 +43,13 @@ public interface FrameServiceService {
     List<FrameServiceEntity> getAllFrameServiceByFrameCode(String clusterFrame);
 
     List<FrameServiceEntity> listServices(String serviceIds);
+
+    // 标准CRUD方法
+    FrameServiceEntity getById(Integer id);
+
+    FrameServiceEntity save(FrameServiceEntity entity);
+
+    FrameServiceEntity updateById(FrameServiceEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
 }

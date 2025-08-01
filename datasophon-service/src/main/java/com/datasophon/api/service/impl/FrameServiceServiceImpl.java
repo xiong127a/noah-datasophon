@@ -20,7 +20,6 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.FrameServiceService;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameInfoEntity;
@@ -28,21 +27,22 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
+/**
+ * 集群框架版本服务表实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("frameServiceService")
-public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, FrameServiceEntity>
-        implements
-        FrameServiceService {
+public class FrameServiceServiceImpl implements FrameServiceService {
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -54,43 +54,46 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     private ClusterServiceInstanceService serviceInstanceService;
 
     @Autowired
-    private static List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
+    private FrameServiceMapper frameServiceMapper;
+
+    private static final List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER");
 
-    @Autowired
-    private static List<String> DATALAKE_REQUIRED_SERVICE = Arrays.asList(
+    private static final List<String> DATALAKE_REQUIRED_SERVICE = Arrays.asList(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
             "SPARK3", "FLINK");
 
-
-
     @Override
-    public Result getAllFrameService(Integer clusterId) {
+    public List<FrameServiceEntity> getAllFrameService(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        if (clusterInfo == null) {
+            throw new RuntimeException("Cluster not found with id: " + clusterId);
+        }
         FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
+        if (frameInfo == null) {
+            throw new RuntimeException("Frame info not found for cluster frame: " + clusterInfo.getClusterFrame());
+        }
 
-        List<FrameServiceEntity> list = QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getFrameId).eq(frameInfo.getId())
-                .orderBy(FrameServiceEntity::getSortNum).asc()
-                .list();
-
+        List<FrameServiceEntity> list = frameServiceMapper.selectByFrameIdOrderBySortNum(frameInfo.getId());
         setInstalled(clusterId, list);
-        return Result.success(list);
+        return list;
     }
 
     @Override
-    public Result getAllFrameServiceWithRequired(Integer clusterId, String type) {
+    public List<FrameServiceEntity> getAllFrameServiceWithRequired(Integer clusterId, String type) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        if (clusterInfo == null) {
+            throw new RuntimeException("Cluster not found with id: " + clusterId);
+        }
         FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
+        if (frameInfo == null) {
+            throw new RuntimeException("Frame info not found for cluster frame: " + clusterInfo.getClusterFrame());
+        }
 
-        List<FrameServiceEntity> list = QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getFrameId).eq(frameInfo.getId())
-                .orderBy(FrameServiceEntity::getSortNum).asc()
-                .list();
-
+        List<FrameServiceEntity> list = frameServiceMapper.selectByFrameIdOrderBySortNum(frameInfo.getId());
         setInstalled(clusterId, list);
         setRequired(list, type);
-        return Result.success(list);
+        return list;
     }
 
     private void setRequired(List<FrameServiceEntity> list, String type) {
@@ -110,40 +113,52 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public Result getServiceListByServiceIds(List<Integer> serviceIds) {
-        Collection<FrameServiceEntity> list = this.listByIds(serviceIds);
-        return Result.success(list);
+    public List<FrameServiceEntity> getServiceListByServiceIds(List<Integer> serviceIds) {
+        return frameServiceMapper.selectByIds(serviceIds);
     }
 
     @Override
     public FrameServiceEntity getServiceByFrameIdAndServiceName(Integer frameId, String serviceName) {
-        return QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getFrameId).eq(frameId)
-                .and(FrameServiceEntity::getServiceName).eq(serviceName)
-                .one();
+        return frameServiceMapper.selectByFrameIdAndServiceName(frameId, serviceName);
     }
 
     @Override
     public FrameServiceEntity getServiceByFrameCodeAndServiceName(String clusterFrame, String serviceName) {
-        return QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getFrameCode).eq(clusterFrame)
-                .and(FrameServiceEntity::getServiceName).eq(serviceName)
-                .one();
+        return frameServiceMapper.selectByFrameCodeAndServiceName(clusterFrame, serviceName);
     }
 
     @Override
     public List<FrameServiceEntity> getAllFrameServiceByFrameCode(String clusterFrame) {
-        return QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getFrameCode).eq(clusterFrame)
-                .list();
+        return frameServiceMapper.selectByFrameCode(clusterFrame);
     }
 
     @Override
     public List<FrameServiceEntity> listServices(String serviceIds) {
-        List<String> ids = Arrays.stream(serviceIds.split(",")).collect(Collectors.toList());
-        return QueryChain.of(FrameServiceEntity.class)
-                .where(FrameServiceEntity::getId).in(ids)
-                .list();
+        List<String> ids = Arrays.stream(serviceIds.split(",")).collect(java.util.stream.Collectors.toList());
+        return frameServiceMapper.selectByStringIds(ids);
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public FrameServiceEntity getById(Integer id) {
+        return frameServiceMapper.selectById(id);
+    }
+
+    @Override
+    public FrameServiceEntity save(FrameServiceEntity entity) {
+        frameServiceMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public FrameServiceEntity updateById(FrameServiceEntity entity) {
+        frameServiceMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return frameServiceMapper.deleteByIds(ids) > 0;
     }
 
 }

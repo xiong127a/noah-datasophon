@@ -18,19 +18,32 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterAlertQuota;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
+import java.util.Set;
 
 /**
- * 集群告警指标表 
+ * 集群告警指标表
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-24 15:10:41
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
 
+    /**
+     * 根据告警组ID集合查询告警指标
+     */
+    default List<ClusterAlertQuota> selectByAlertGroupIds(Set<Integer> alertGroupIds) {
+        if (alertGroupIds == null || alertGroupIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getAlertGroupId).in(alertGroupIds);
+        return this.selectListByQuery(query);
+    }
 }

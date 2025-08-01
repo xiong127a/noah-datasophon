@@ -17,20 +17,31 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
+import com.datasophon.common.model.PageResult;
+
+import java.util.List;
 
 /**
  * 告警组表
  *
- * @author dygao2
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface AlertGroupService {
 
-    Result getAlertGroupList(Integer clusterId, String alertGroupName, Integer page, Integer pageSize);
+    PageResult<AlertGroupEntity> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
+            Integer pageSize);
 
-    Result saveAlertGroup(AlertGroupEntity alertGroup);
+    AlertGroupEntity saveAlertGroup(AlertGroupEntity alertGroup);
+
+    // 标准CRUD方法
+    AlertGroupEntity getById(Integer id);
+
+    AlertGroupEntity updateById(AlertGroupEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<AlertGroupEntity> getAllAlertGroups();
 }

@@ -18,19 +18,28 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
 
 /**
+ * 集群告警组映射表
  * 
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-07-13 10:01:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface ClusterAlertGroupMapMapper extends BaseMapper<ClusterAlertGroupMap> {
 
+    /**
+     * 根据集群ID查询告警组映射
+     */
+    default List<ClusterAlertGroupMap> selectByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertGroupMap::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
 }
