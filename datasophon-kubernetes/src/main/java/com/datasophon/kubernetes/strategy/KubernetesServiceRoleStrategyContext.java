@@ -43,7 +43,7 @@ public class KubernetesServiceRoleStrategyContext {
         map.put("SRFEObserver", new KubernetesSRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
 
         map.put("Storage", new KubernetesStorageHandlerStrategy("NEBULAGRAPH", "Storage"));
-        map.put("TezServer", new KubernetesTezServerHandlerStrategy("TEZ", "TezServer"));
+//        map.put("TezServer", new KubernetesTezServerHandlerStrategy("TEZ", "TezServer"));
 
         // TODO 添加其他组件
         map.put("ZOOKEEPER", new KubernetesZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
