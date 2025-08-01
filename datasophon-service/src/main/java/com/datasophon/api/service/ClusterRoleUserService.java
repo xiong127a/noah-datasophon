@@ -17,8 +17,6 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 
@@ -27,15 +25,26 @@ import java.util.List;
 /**
  * 集群角色用户中间表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterRoleUserService {
 
-    boolean isClusterManager(Integer id, String clusterId);
+    boolean isClusterManager(Integer userId, String clusterId);
 
-    Result saveClusterManager(Integer clusterId, String userIds);
+    boolean saveClusterManager(Integer clusterId, String userIds);
 
-    List<UserInfoEntity> getAllClusterManagerByClusterId(Integer id);
+    List<UserInfoEntity> getAllClusterManagerByClusterId(Integer clusterId);
+
+    // 标准CRUD方法
+    ClusterRoleUserEntity getById(Integer id);
+
+    ClusterRoleUserEntity save(ClusterRoleUserEntity entity);
+
+    ClusterRoleUserEntity updateById(ClusterRoleUserEntity entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterRoleUserEntity> getAllClusterRoleUsers();
 }

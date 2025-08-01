@@ -18,14 +18,10 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.ClusterRoleUserService;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.UserType;
 import com.datasophon.dao.mapper.ClusterRoleUserMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.query.QueryWrapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,32 +31,33 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 集群角色用户服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterRoleUserService")
-public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMapper, ClusterRoleUserEntity>
-        implements
-        ClusterRoleUserService {
+public class ClusterRoleUserServiceImpl implements ClusterRoleUserService {
 
     @Autowired
     private ClusterRoleUserMapper clusterRoleUserMapper;
 
     @Override
     public boolean isClusterManager(Integer userId, String clusterId) {
-        List<ClusterRoleUserEntity> list = QueryChain.of(ClusterRoleUserEntity.class)
-                .where(ClusterRoleUserEntity::getUserId).eq(userId)
-                .and(ClusterRoleUserEntity::getClusterId).eq(clusterId)
-                .list();
+        List<ClusterRoleUserEntity> list = clusterRoleUserMapper.selectByUserIdAndClusterId(userId, clusterId);
         return Objects.nonNull(list) && list.size() == 1;
     }
 
     @Override
-    public Result saveClusterManager(Integer clusterId, String userIds) {
+    public boolean saveClusterManager(Integer clusterId, String userIds) {
         // 首先删除原有管理员
-        this.remove(QueryWrapper.create()
-                .where(ClusterRoleUserEntity::getClusterId).eq(clusterId));
+        clusterRoleUserMapper.removeByClusterId(clusterId);
 
         if (StringUtils.isEmpty(userIds)) {
             // userIds 为空,表示取消授权
-            return Result.success();
+            return true;
         }
 
         // 使用流式处理构建实体列表
@@ -72,14 +69,42 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
                     entity.setUserType(UserType.ADMIN);
                     return entity;
                 })
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
 
-        this.saveBatch(entityList);
-        return Result.success();
+        clusterRoleUserMapper.saveBatch(entityList);
+        return true;
     }
 
     @Override
     public List<UserInfoEntity> getAllClusterManagerByClusterId(Integer clusterId) {
         return clusterRoleUserMapper.getAllClusterManagerByClusterId(clusterId);
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public ClusterRoleUserEntity getById(Integer id) {
+        return clusterRoleUserMapper.selectById(id);
+    }
+
+    @Override
+    public ClusterRoleUserEntity save(ClusterRoleUserEntity entity) {
+        clusterRoleUserMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public ClusterRoleUserEntity updateById(ClusterRoleUserEntity entity) {
+        clusterRoleUserMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return clusterRoleUserMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<ClusterRoleUserEntity> getAllClusterRoleUsers() {
+        return clusterRoleUserMapper.selectAll();
     }
 }

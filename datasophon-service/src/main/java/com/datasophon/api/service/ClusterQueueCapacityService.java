@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service;
 
-
 import com.datasophon.dao.entity.ClusterQueueCapacity;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 

@@ -23,32 +23,37 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.string.validator.GeneralValidator;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.mapper.ClusterRackMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 集群机架服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Service("clusterRackService")
-public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, ClusterRack> implements ClusterRackService {
+public class ClusterRackServiceImpl implements ClusterRackService {
+
+    @Autowired
+    private ClusterRackMapper clusterRackMapper;
 
     @Autowired
     private ClusterHostService hostService;
 
     @Override
     public List<ClusterRack> queryClusterRack(Integer clusterId) {
-        return QueryChain.of(ClusterRack.class)
-                .where(ClusterRack::getClusterId).eq(clusterId)
-                .list();
+        return clusterRackMapper.selectByClusterId(clusterId);
     }
 
     @Override
-    public Result saveRack(Integer clusterId, String rack) {
+    public ClusterRack saveRack(Integer clusterId, String rack) {
         // 机架名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         GeneralValidator generalValidator = new GeneralValidator();
@@ -58,34 +63,34 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
         try {
             notEmptyValidator.validate(rack);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         // 重复校验
-        boolean exists = QueryChain.of(ClusterRack.class)
-                .where(ClusterRack::getClusterId).eq(clusterId)
-                .and(ClusterRack::getRack).eq(rack)
-                .exists();
+        boolean exists = clusterRackMapper.existsByClusterIdAndRack(clusterId, rack);
 
         if (exists) {
-            return Result.error("机架名称重复");
+            throw new RuntimeException("机架名称重复");
         }
 
         ClusterRack clusterRack = new ClusterRack();
         clusterRack.setRack(rack);
         clusterRack.setClusterId(clusterId);
-        this.save(clusterRack);
-        return Result.success();
+        clusterRackMapper.insert(clusterRack);
+        return clusterRack;
     }
 
     @Override
-    public Result deleteRack(Integer rackId) {
-        ClusterRack clusterRack = this.getById(rackId);
-        if (rackInUse(clusterRack)) {
-            return Result.error(Status.RACK_IS_USING.getMsg());
+    public boolean deleteRack(Integer rackId) {
+        ClusterRack clusterRack = clusterRackMapper.selectById(rackId);
+        if (clusterRack == null) {
+            throw new RuntimeException("Rack not found with id: " + rackId);
         }
-        this.removeById(rackId);
-        return Result.success();
+        if (rackInUse(clusterRack)) {
+            throw new RuntimeException(Status.RACK_IS_USING.getMsg());
+        }
+        clusterRackMapper.removeById(rackId);
+        return true;
     }
 
     @Override
@@ -93,11 +98,39 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
         ClusterRack clusterRack = new ClusterRack();
         clusterRack.setRack("/default-rack");
         clusterRack.setClusterId(clusterId);
-        this.save(clusterRack);
+        clusterRackMapper.insert(clusterRack);
     }
 
     private boolean rackInUse(ClusterRack clusterRack) {
         List<ClusterHostDO> list = hostService.getClusterHostByRack(clusterRack.getClusterId(), clusterRack.getRack());
         return !list.isEmpty();
+    }
+
+    // 标准CRUD方法实现
+    @Override
+    public ClusterRack getById(Integer id) {
+        return clusterRackMapper.selectById(id);
+    }
+
+    @Override
+    public ClusterRack save(ClusterRack entity) {
+        clusterRackMapper.insert(entity);
+        return entity;
+    }
+
+    @Override
+    public ClusterRack updateById(ClusterRack entity) {
+        clusterRackMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    public boolean removeByIds(List<Integer> ids) {
+        return clusterRackMapper.deleteByIds(ids) > 0;
+    }
+
+    @Override
+    public List<ClusterRack> getAllRacks() {
+        return clusterRackMapper.selectAll();
     }
 }

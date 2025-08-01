@@ -17,26 +17,35 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterRack;
 
 import java.util.List;
 
 /**
- * 
+ * 集群机架服务
  *
- * @author dygao2
- * @email dygao2@datasophon.com
- * @date 2022-11-25 11:31:59
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public interface ClusterRackService {
 
     List<ClusterRack> queryClusterRack(Integer clusterId);
 
-    Result saveRack(Integer clusterId, String rack);
+    ClusterRack saveRack(Integer clusterId, String rack);
 
-    Result deleteRack(Integer rackId);
+    boolean deleteRack(Integer rackId);
 
     void createDefaultRack(Integer clusterId);
+
+    // 标准CRUD方法
+    ClusterRack getById(Integer id);
+
+    ClusterRack save(ClusterRack entity);
+
+    ClusterRack updateById(ClusterRack entity);
+
+    boolean removeByIds(List<Integer> ids);
+
+    List<ClusterRack> getAllRacks();
 }

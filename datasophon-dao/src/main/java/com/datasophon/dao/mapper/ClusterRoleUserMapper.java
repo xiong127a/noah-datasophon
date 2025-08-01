@@ -21,6 +21,7 @@ import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -32,9 +33,9 @@ import static com.datasophon.dao.entity.table.UserInfoEntityTableDef.USER_INFO_E
 /**
  * 集群角色用户中间表
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 @Mapper
 public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity> {
@@ -54,5 +55,77 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
                 .leftJoin(USER_INFO_ENTITY).on(USER_INFO_ENTITY.ID.eq(CLUSTER_ROLE_USER_ENTITY.USER_ID))
                 .where(CLUSTER_ROLE_USER_ENTITY.CLUSTER_ID.eq(clusterId))
                 .listAs(UserInfoEntity.class);
+    }
+
+    /**
+     * 根据用户ID和集群ID查询角色用户关系
+     */
+    default List<ClusterRoleUserEntity> selectByUserIdAndClusterId(Integer userId, String clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterRoleUserEntity::getUserId).eq(userId)
+                .and(ClusterRoleUserEntity::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID删除角色用户关系
+     */
+    default int removeByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterRoleUserEntity::getClusterId).eq(clusterId);
+        return this.deleteByQuery(query);
+    }
+
+    /**
+     * 批量保存角色用户关系
+     */
+    default int saveBatch(List<ClusterRoleUserEntity> entityList) {
+        if (entityList == null || entityList.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (ClusterRoleUserEntity entity : entityList) {
+            count += this.insertSelective(entity);
+        }
+        return count;
+    }
+
+    /**
+     * 根据ID查询单个实体
+     */
+    default ClusterRoleUserEntity selectById(Integer id) {
+        return this.selectOneById(id);
+    }
+
+    /**
+     * 插入实体
+     */
+    default int insert(ClusterRoleUserEntity entity) {
+        return this.insertSelective(entity);
+    }
+
+    /**
+     * 根据ID更新实体
+     */
+    default int updateById(ClusterRoleUserEntity entity) {
+        return this.update(entity);
+    }
+
+    /**
+     * 根据ID列表删除
+     */
+    default int deleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return this.deleteBatchByIds(ids);
+    }
+
+    /**
+     * 查询所有角色用户关系
+     */
+    default List<ClusterRoleUserEntity> selectAll() {
+        QueryWrapper query = QueryWrapper.create();
+        return this.selectListByQuery(query);
     }
 }
