@@ -34,6 +34,7 @@ import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.enums.QuotaState;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
@@ -50,19 +51,18 @@ import java.util.stream.Collectors;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
 @Service("clusterAlertQuotaService")
-public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
+public class ClusterAlertQuotaServiceImpl
+        extends ServiceImpl<ClusterAlertQuotaMapper, ClusterAlertQuota>
+        implements ClusterAlertQuotaService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertQuotaServiceImpl.class);
 
     private static final String ALERT_RULE_FILE_SUFFIX = ".yml";
     private static final String ALERT_CONFIG_FORMAT = "prometheus";
     private static final String ALERT_OUTPUT_DIRECTORY = "alert_rules";
-
-    @Autowired
-    private ClusterAlertQuotaMapper clusterAlertQuotaMapper;
 
     @Autowired
     private AlertGroupService alertGroupService;
@@ -78,7 +78,7 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
             Integer pageSize) {
 
         // 使用mapper的分页查询方法
-        PageResult<ClusterAlertQuota> pageResult = clusterAlertQuotaMapper.selectAlertQuotaListWithPage(
+        PageResult<ClusterAlertQuota> pageResult = this.getMapper().selectAlertQuotaListWithPage(
                 clusterId, alertGroupId, noticeGroupId, quotaName, page, pageSize);
 
         List<ClusterAlertQuota> alertQuotaList = pageResult.getRecords();
@@ -140,7 +140,7 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
 
             if (!alertsByCategoryMap.containsKey(category)) {
                 // 查询该类别下所有已启动的告警指标
-                List<ClusterAlertQuota> activeQuotas = clusterAlertQuotaMapper.selectRunningByServiceCategory(category);
+                List<ClusterAlertQuota> activeQuotas = this.getMapper().selectRunningByServiceCategory(category);
 
                 activeQuotas.add(alertQuota);
                 alertsByCategoryMap.put(category, activeQuotas);
@@ -153,7 +153,10 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
 
         if (!alertQuotaList.isEmpty()) {
             logger.info("启动告警指标数量: {}", alertQuotaList.size());
-            clusterAlertQuotaMapper.updateBatch(alertQuotaList);
+            // 批量更新告警指标状态
+            for (ClusterAlertQuota quota : alertQuotaList) {
+                this.updateById(quota);
+            }
         }
 
         // 构建告警配置文件映射
@@ -230,7 +233,7 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
             return;
         }
 
-        List<ClusterAlertQuota> alertQuotaList = clusterAlertQuotaMapper.selectByIds(ids);
+        List<ClusterAlertQuota> alertQuotaList = this.listByIds(ids);
         alertRuleFile(clusterId, alertQuotaList);
     }
 
@@ -249,19 +252,20 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
         Set<String> categories = new HashSet<>(ids.size());
 
         // 1、修改禁用状态并更新
-        List<ClusterAlertQuota> alertQuotas = clusterAlertQuotaMapper.selectByIds(ids);
+        List<ClusterAlertQuota> alertQuotas = this.listByIds(ids);
         alertQuotas.forEach(quota -> {
             quota.setQuotaState(QuotaState.STOPPED);
             categories.add(quota.getServiceCategory());
         });
-        clusterAlertQuotaMapper.updateBatch(alertQuotas);
+        // 批量更新告警指标状态
+        alertQuotas.forEach(this::updateById);
 
         // 2、查询需要重新生成告警规则文件的告警指标
         if (CollUtil.isEmpty(categories)) {
             return;
         }
 
-        List<ClusterAlertQuota> activeQuotas = clusterAlertQuotaMapper.selectRunningByServiceCategories(categories);
+        List<ClusterAlertQuota> activeQuotas = this.getMapper().selectRunningByServiceCategories(categories);
 
         if (CollUtil.isEmpty(activeQuotas)) {
             return;
@@ -279,13 +283,13 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
         AlertGroupEntity alertGroupEntity = alertGroupService.getById(clusterAlertQuota.getAlertGroupId());
         clusterAlertQuota.setServiceCategory(alertGroupEntity.getAlertGroupCategory());
 
-        clusterAlertQuotaMapper.insert(clusterAlertQuota);
+        this.save(clusterAlertQuota);
         return clusterAlertQuota;
     }
 
     @Override
     public List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName) {
-        return clusterAlertQuotaMapper.selectByServiceCategory(serviceName);
+        return this.getMapper().selectByServiceCategory(serviceName);
     }
 
     @Override
@@ -293,7 +297,7 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
         if (CollUtil.isEmpty(groupIds)) {
             return new ArrayList<>();
         }
-        return clusterAlertQuotaMapper.selectByNoticeGroupIds(groupIds);
+        return this.getMapper().selectByNoticeGroupIds(groupIds);
     }
 
     @Override
@@ -301,34 +305,9 @@ public class ClusterAlertQuotaServiceImpl implements ClusterAlertQuotaService {
         if (alertGroupIds == null || alertGroupIds.isEmpty()) {
             return new ArrayList<>();
         }
-        return clusterAlertQuotaMapper.selectByAlertGroupIds(alertGroupIds);
+        return this.getMapper().selectByAlertGroupIds(alertGroupIds);
     }
 
-    // 标准CRUD方法实现
-    @Override
-    public ClusterAlertQuota getById(Integer id) {
-        return clusterAlertQuotaMapper.selectById(id);
-    }
-
-    @Override
-    public ClusterAlertQuota save(ClusterAlertQuota entity) {
-        clusterAlertQuotaMapper.insert(entity);
-        return entity;
-    }
-
-    @Override
-    public ClusterAlertQuota updateById(ClusterAlertQuota entity) {
-        clusterAlertQuotaMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterAlertQuotaMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterAlertQuota> getAllAlertQuotas() {
-        return clusterAlertQuotaMapper.selectAll();
-    }
+    // 注意：继承ServiceImpl后，基础CRUD方法已自动提供，无需重复实现
+    // 如果需要自定义逻辑，可以重写对应方法
 }

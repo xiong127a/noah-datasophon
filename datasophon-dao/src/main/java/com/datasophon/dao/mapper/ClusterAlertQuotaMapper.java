@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -35,7 +36,7 @@ import java.util.Set;
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
 @Mapper
 public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
@@ -45,7 +46,7 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
      */
     default List<ClusterAlertQuota> selectByAlertGroupIds(Set<Integer> alertGroupIds) {
         if (alertGroupIds == null || alertGroupIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertQuota::getAlertGroupId).in(alertGroupIds);
@@ -102,7 +103,7 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
      */
     default List<ClusterAlertQuota> selectRunningByServiceCategories(Collection<String> categories) {
         if (categories == null || categories.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertQuota::getQuotaState).eq(QuotaState.RUNNING)
@@ -124,7 +125,7 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
      */
     default List<ClusterAlertQuota> selectByNoticeGroupIds(List<Integer> groupIds) {
         if (groupIds == null || groupIds.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertQuota::getNoticeGroupId).in(groupIds);
@@ -132,65 +133,18 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
     }
 
     /**
-     * 根据ID集合查询告警指标
+     * 批量更新告警指标状态
+     * 注意：这里保留是因为有实际的循环更新逻辑，如果Service层可以替代则建议删除
      */
-    default List<ClusterAlertQuota> selectByIds(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return java.util.Collections.emptyList();
-        }
-        return this.selectListByIds(ids);
-    }
-
-    /**
-     * 批量更新告警指标
-     */
-    default int updateBatch(Collection<ClusterAlertQuota> entityList) {
+    default int updateBatchQuotaState(Collection<ClusterAlertQuota> entityList, QuotaState newState) {
         if (entityList == null || entityList.isEmpty()) {
             return 0;
         }
         int count = 0;
         for (ClusterAlertQuota entity : entityList) {
+            entity.setQuotaState(newState);
             count += this.update(entity);
         }
         return count;
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterAlertQuota selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterAlertQuota entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterAlertQuota entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有告警指标
-     */
-    default List<ClusterAlertQuota> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
     }
 }
