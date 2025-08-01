@@ -69,10 +69,6 @@
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-sftp</artifactId>
         </dependency>
-        <dependency>
-            <groupId>net.i2p.crypto</groupId>
-            <artifactId>eddsa</artifactId>
-        </dependency>
         <!-- K8s业务模块：被service层调用，处理K8s相关业务 -->
         <dependency>
             <groupId>com.datasophon</groupId>
