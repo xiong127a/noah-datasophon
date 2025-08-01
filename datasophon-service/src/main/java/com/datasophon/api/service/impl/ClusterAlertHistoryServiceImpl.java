@@ -23,13 +23,16 @@ import com.datasophon.api.master.alert.AlertActor;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.RoleInstanceQueryService;
-
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.model.PageResult;
+
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,20 +45,18 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 集群告警历史表实现
+ * 集群告警历史服务实现
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
 @Service("clusterAlertHistoryService")
 @Transactional
-public class ClusterAlertHistoryServiceImpl implements ClusterAlertHistoryService {
+public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistory>
+                implements ClusterAlertHistoryService {
 
         private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
-
-        @Autowired
-        private ClusterAlertHistoryMapper clusterAlertHistoryMapper;
 
         @Autowired
         private RoleInstanceQueryService roleInstanceQueryService;
@@ -76,62 +77,75 @@ public class ClusterAlertHistoryServiceImpl implements ClusterAlertHistoryServic
 
         @Override
         public List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId) {
-                return clusterAlertHistoryMapper.selectEnabledByServiceInstanceId(serviceInstanceId);
+                try {
+                        return QueryChain.of(ClusterAlertHistory.class)
+                                        .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
+                                        .and(ClusterAlertHistory::getIsEnabled).eq(1) // 启用的告警
+                                        .orderBy(ClusterAlertHistory::getCreateTime, false)
+                                        .list();
+                } catch (Exception e) {
+                        logger.error("根据服务实例ID查询告警历史失败: {}", e.getMessage(), e);
+                        throw new RuntimeException("查询告警历史失败: " + e.getMessage());
+                }
         }
 
         @Override
         public PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
-                return clusterAlertHistoryMapper.selectEnabledByClusterIdWithPage(clusterId, page, pageSize);
+                try {
+                        Page<ClusterAlertHistory> result = QueryChain.of(ClusterAlertHistory.class)
+                                        .where(ClusterAlertHistory::getClusterId).eq(clusterId)
+                                        .and(ClusterAlertHistory::getIsEnabled).eq(1) // 启用的告警
+                                        .orderBy(ClusterAlertHistory::getCreateTime, false)
+                                        .page(Page.of(page, pageSize));
+
+                        return PageResult.of(
+                                        result.getRecords(),
+                                        result.getTotalRow(),
+                                        page,
+                                        pageSize);
+                } catch (Exception e) {
+                        logger.error("分页查询告警历史失败: {}", e.getMessage(), e);
+                        throw new RuntimeException("查询告警历史失败: " + e.getMessage());
+                }
         }
 
         @Override
         public void removeAlertByRoleInstanceIds(List<Integer> ids) {
-                ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService.getById(ids.get(0));
-                ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+                try {
+                        if (ids == null || ids.isEmpty()) {
+                                return;
+                        }
 
-                // 删除告警历史记录
-                clusterAlertHistoryMapper.removeEnabledByRoleInstanceIds(ids);
+                        ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceQueryService
+                                        .getById(ids.getFirst());
+                        ClusterInfoEntity clusterInfoEntity = clusterInfoService
+                                        .getById(roleInstanceEntity.getClusterId());
 
-                // 重新配置prometheus
-                ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
-                                ActorUtils.getActorRefName(PrometheusActor.class));
-                GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
-                prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
-                prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
-                prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
-                prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
-        }
+                        // 删除告警历史记录 - 查询符合条件的记录并删除
+                        List<ClusterAlertHistory> entitiesToDelete = QueryChain.of(ClusterAlertHistory.class)
+                                        .where(ClusterAlertHistory::getServiceRoleInstanceId).in(ids)
+                                        .list();
 
-        @Override
-        public long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
-                return clusterAlertHistoryMapper.countEnabledByServiceInstanceId(serviceInstanceId);
-        }
+                        if (!entitiesToDelete.isEmpty()) {
+                                List<Integer> idsToDelete = entitiesToDelete.stream()
+                                                .map(ClusterAlertHistory::getId)
+                                                .toList();
+                                this.removeByIds(idsToDelete);
+                        }
 
-        // 标准CRUD方法实现
-        @Override
-        public ClusterAlertHistory getById(Integer id) {
-                return clusterAlertHistoryMapper.selectById(id);
-        }
+                        // 重新配置prometheus
+                        ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                                        ActorUtils.getActorRefName(PrometheusActor.class));
+                        GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
+                        prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
+                        prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
+                        prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
+                        prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
 
-        @Override
-        public ClusterAlertHistory save(ClusterAlertHistory entity) {
-                clusterAlertHistoryMapper.insert(entity);
-                return entity;
-        }
-
-        @Override
-        public ClusterAlertHistory updateById(ClusterAlertHistory entity) {
-                clusterAlertHistoryMapper.updateById(entity);
-                return entity;
-        }
-
-        @Override
-        public boolean removeByIds(List<Integer> ids) {
-                return clusterAlertHistoryMapper.deleteByIds(ids) > 0;
-        }
-
-        @Override
-        public List<ClusterAlertHistory> getAllAlertHistories() {
-                return clusterAlertHistoryMapper.selectAll();
+                        logger.info("删除角色实例相关告警历史成功，角色实例ID: {}", ids);
+                } catch (Exception e) {
+                        logger.error("删除角色实例相关告警历史失败: {}", e.getMessage(), e);
+                        throw new RuntimeException("删除角色实例相关告警历史失败: " + e.getMessage());
+                }
         }
 }

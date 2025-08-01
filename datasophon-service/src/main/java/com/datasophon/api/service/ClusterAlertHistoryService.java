@@ -17,39 +17,51 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群告警历史表
+ * 集群告警历史服务
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
-public interface ClusterAlertHistoryService {
+public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory> {
 
+    /**
+     * 保存告警历史（异步处理告警消息）
+     * 
+     * @param alertMessage 告警消息
+     */
     void saveAlertHistory(String alertMessage);
 
+    /**
+     * 根据服务实例ID获取告警列表
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 告警历史列表
+     */
     List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId);
 
+    /**
+     * 分页查询所有告警历史
+     * 
+     * @param clusterId 集群ID
+     * @param page      页码
+     * @param pageSize  页大小
+     * @return 分页结果
+     */
     PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
 
+    /**
+     * 根据角色实例ID列表删除告警（业务逻辑：删除+重新配置Prometheus）
+     * 
+     * @param ids 角色实例ID列表
+     */
     void removeAlertByRoleInstanceIds(List<Integer> ids);
 
-    // 新增方法：根据服务实例ID统计启用的告警数量
-    long countEnabledByServiceInstanceId(Integer serviceInstanceId);
-
-    // 标准CRUD方法
-    ClusterAlertHistory getById(Integer id);
-
-    ClusterAlertHistory save(ClusterAlertHistory entity);
-
-    ClusterAlertHistory updateById(ClusterAlertHistory entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterAlertHistory> getAllAlertHistories();
 }

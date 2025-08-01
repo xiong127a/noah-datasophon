@@ -18,8 +18,11 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterAlertHistoryService;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertHistory;
+
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,23 +42,36 @@ public class ClusterAlertHistoryController {
      * 列表
      */
     @RequestMapping("/getAlertList")
-    public Result getAlertList(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
-        return clusterAlertHistoryService.getAlertList(serviceInstanceId);
+    public Result<Object> getAlertList(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+        try {
+            List<ClusterAlertHistory> alertList = clusterAlertHistoryService.getAlertList(serviceInstanceId);
+            return Result.success().put("alertList", alertList);
+        } catch (Exception e) {
+            return Result.error("查询告警历史失败");
+        }
     }
 
     /**
      * 列表
      */
     @RequestMapping("/getAllAlertList")
-    public Result getAllAlertList(@RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
-        return clusterAlertHistoryService.getAllAlertList(clusterId, page, pageSize);
+    public Result<Object> getAllAlertList(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
+        try {
+            PageResult<ClusterAlertHistory> pageResult = clusterAlertHistoryService.getAllAlertList(clusterId, page,
+                    pageSize);
+            return Result.success().put("page", pageResult);
+        } catch (Exception e) {
+            return Result.error("查询告警历史失败");
+        }
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<Object> info(@PathVariable("id") Integer id) {
         ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryService.getById(id);
 
         return Result.success().put("clusterAlertHistory", clusterAlertHistory);
@@ -65,7 +81,7 @@ public class ClusterAlertHistoryController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody String alertMessage) {
+    public Result<Object> save(@RequestBody String alertMessage) {
         clusterAlertHistoryService.saveAlertHistory(alertMessage);
         return Result.success();
     }
@@ -74,7 +90,7 @@ public class ClusterAlertHistoryController {
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterAlertHistory clusterAlertHistory) {
+    public Result<Object> update(@RequestBody ClusterAlertHistory clusterAlertHistory) {
 
         clusterAlertHistoryService.updateById(clusterAlertHistory);
 
@@ -85,7 +101,7 @@ public class ClusterAlertHistoryController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
+    public Result<Object> delete(@RequestBody Integer[] ids) {
         clusterAlertHistoryService.removeByIds(Arrays.asList(ids));
 
         return Result.success();

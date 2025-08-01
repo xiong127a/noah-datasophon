@@ -17,14 +17,16 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.dao.entity.ClusterAlertExpression;
+import com.mybatisflex.core.service.IService;
 
 /**
- * 表达式常量表
+ * 集群告警表达式服务
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-07 12:04:38
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
-public interface ClusterAlertExpressionService {
+public interface ClusterAlertExpressionService extends IService<ClusterAlertExpression> {
 
 }

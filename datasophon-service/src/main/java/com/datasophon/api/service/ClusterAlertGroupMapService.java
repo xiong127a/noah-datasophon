@@ -17,13 +17,16 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.dao.entity.ClusterAlertGroupMap;
+import com.mybatisflex.core.service.IService;
+
 /**
- * 
+ * 集群告警组映射服务
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-07-13 10:01:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
-public interface ClusterAlertGroupMapService {
+public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupMap> {
 
 }

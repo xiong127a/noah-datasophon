@@ -17,15 +17,21 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import com.datasophon.dao.mapper.ClusterAlertGroupMapMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
+/**
+ * 集群告警组映射服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
 @Service("clusterAlertGroupMapService")
 public class ClusterAlertGroupMapServiceImpl extends ServiceImpl<ClusterAlertGroupMapMapper, ClusterAlertGroupMap>
-        implements
-        ClusterAlertGroupMapService {
+                implements ClusterAlertGroupMapService {
 
 }
