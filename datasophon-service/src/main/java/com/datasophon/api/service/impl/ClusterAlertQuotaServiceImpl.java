@@ -228,7 +228,7 @@ public class ClusterAlertQuotaServiceImpl
             return;
         }
 
-        List<String> ids = Arrays.asList(alertQuotaIds.split(StrUtil.COMMA));
+        List<String> ids = List.of(alertQuotaIds.split(StrUtil.COMMA));
         if (CollUtil.isEmpty(ids)) {
             return;
         }
@@ -244,7 +244,7 @@ public class ClusterAlertQuotaServiceImpl
             return;
         }
 
-        List<String> ids = Arrays.asList(alertQuotaIds.split(StrUtil.COMMA));
+        List<String> ids = List.of(alertQuotaIds.split(StrUtil.COMMA));
         if (CollUtil.isEmpty(ids)) {
             return;
         }
