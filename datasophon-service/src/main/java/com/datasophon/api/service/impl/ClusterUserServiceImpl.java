@@ -37,7 +37,7 @@ import com.datasophon.common.command.remote.CreateUnixUserCommand;
 import com.datasophon.common.command.remote.DelUnixUserCommand;
 import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
@@ -71,6 +71,13 @@ import java.util.stream.Collectors;
 
 import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
 
+/**
+ * 集群用户服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
 @Service("clusterUserService")
 @Transactional
 public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUser> implements ClusterUserService {
@@ -86,7 +93,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     private ClusterUserGroupService userGroupService;
 
     @Override
-    public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+    public ClusterUser createClusterUser(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -97,11 +104,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         try {
             notEmptyValidator.validate(username);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         if (hasRepeatUserName(clusterId, username)) {
-            return Result.error(Status.DUPLICATE_USER_NAME.getMsg());
+            throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
 
@@ -195,11 +202,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return Result.success();
+        return clusterUser;
     }
 
     @Override
-    public Result createOnKubernetes(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+    public ClusterUser createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
+            String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -210,11 +218,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         try {
             notEmptyValidator.validate(username);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         if (hasRepeatUserName(clusterId, username)) {
-            return Result.error(Status.DUPLICATE_USER_NAME.getMsg());
+            throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
 
@@ -239,8 +247,8 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         Integer systemInitMaxUid = userNameMap.values().stream()
                 .map(UserEnum::getUserId)
                 .max(Integer::compareTo)
-                .orElse(null);
-        Integer globalMaxUid = null; // 声明一个全局变量来存储最大 UID
+                .orElse(0);
+        int globalMaxUid = 0; // 声明一个全局变量来存储最大 UID
 
         for (ClusterHostDO clusterHost : hostList) {
             // 执行命令获取当前主机的最大 UID
@@ -257,7 +265,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             }
 
             // 更新全局最大 UID
-            if (globalMaxUid == null || currentMaxUid > globalMaxUid) {
+            if (currentMaxUid > globalMaxUid) {
                 globalMaxUid = currentMaxUid;
             }
         }
@@ -269,13 +277,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         for (ClusterHostDO clusterHost : hostList) {
-            ExecResult execResult = null;
             try {
                 if (!createUnixUser(username, mainGroup.getGroupName(), otherGroup, clusterHost.getHostname(),
                         createUnixUserUid).equals(Constants.FAILED)) {
                     logger.info("create unix user {} success at {}", username, clusterHost.getHostname());
                 } else {
-                    logger.info(execResult.getExecOut());
                     throw new ServiceException(500,
                             "create unix user " + username + " failed at " + clusterHost.getHostname());
                 }
@@ -313,7 +319,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return Result.success();
+        return clusterUser;
     }
 
     private void buildClusterUserGroup(Integer clusterId, Integer userId, Integer groupId, Integer userGroupType) {
@@ -334,7 +340,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public Result listPage(Integer clusterId, String username, Integer page, Integer pageSize) {
+    public PageResult<ClusterUser> listPagedUsers(Integer clusterId, String username, Integer page, Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
 
         QueryChain<ClusterUser> query = QueryChain.of(ClusterUser.class)
@@ -358,11 +364,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         long total = query.count();
-        return Result.success(list,total);
+        return PageResult.of(list, total, page, pageSize);
     }
 
     @Override
-    public Result deleteClusterUser(Integer id) {
+    public boolean deleteClusterUser(Integer id) {
         ClusterUser clusterUser = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
@@ -418,12 +424,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        this.removeById(id);
-        return Result.success();
+        return this.removeById(id);
     }
 
     @Override
-    public Result deleteClusterUserOnkubernetes(Integer id) {
+    public boolean deleteClusterUserOnKubernetes(Integer id) {
         ClusterUser clusterUser = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
@@ -463,8 +468,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        this.removeById(id);
-        return Result.success();
+        return this.removeById(id);
     }
 
     @Override

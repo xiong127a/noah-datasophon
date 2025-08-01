@@ -18,6 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterAlertQuotaService;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.enums.QuotaState;
@@ -35,26 +36,27 @@ public class ClusterAlertQuotaController {
     @Autowired
     private ClusterAlertQuotaService clusterAlertQuotaService;
 
-
     /**
      * list alert quota
      */
     @RequestMapping("/list")
-    public Result info(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> info(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("alertGroupId") Integer alertGroupId,
             @RequestParam("noticeGroupId") Integer noticeGroupId,
             @RequestParam("quotaName") String quotaName,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
-        return clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId, noticeGroupId, quotaName, page,
+        PageResult<ClusterAlertQuota> pageResult = clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId,
+                noticeGroupId, quotaName, page,
                 pageSize);
+        return Result.success().put("page", pageResult);
     }
 
     /**
      * enable alert quota
      */
     @RequestMapping("/start")
-    public Result start(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> start(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.start(clusterId, alertQuotaIds);
         return Result.success();
@@ -64,7 +66,7 @@ public class ClusterAlertQuotaController {
      * disable alert quota
      */
     @RequestMapping("/stop")
-    public Result stop(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> stop(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.stop(clusterId, alertQuotaIds);
         return Result.success();
@@ -74,7 +76,7 @@ public class ClusterAlertQuotaController {
      * save alert quota
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterAlertQuota clusterAlertQuota) {
+    public Result<Object> save(@RequestBody ClusterAlertQuota clusterAlertQuota) {
 
         clusterAlertQuotaService.saveAlertQuota(clusterAlertQuota);
         return Result.success();
@@ -84,7 +86,7 @@ public class ClusterAlertQuotaController {
      * update alert quota
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterAlertQuota clusterAlertQuota) {
+    public Result<Object> update(@RequestBody ClusterAlertQuota clusterAlertQuota) {
         clusterAlertQuota.setQuotaState(QuotaState.WAIT_TO_UPDATE);
         clusterAlertQuotaService.updateById(clusterAlertQuota);
 
@@ -95,7 +97,7 @@ public class ClusterAlertQuotaController {
      * delete alert quota
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
+    public Result<Object> delete(@RequestBody Integer[] ids) {
         clusterAlertQuotaService.removeByIds(Arrays.asList(ids));
 
         return Result.success();

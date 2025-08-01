@@ -17,25 +17,84 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterUser;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
-public interface ClusterUserService {
+/**
+ * 集群用户服务
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
+public interface ClusterUserService extends IService<ClusterUser> {
 
-    Result create(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
+    /**
+     * 创建集群用户
+     *
+     * @param clusterId     集群ID
+     * @param username      用户名
+     * @param mainGroupId   主组ID
+     * @param otherGroupIds 其他组ID
+     * @return 创建的用户
+     */
+    ClusterUser createClusterUser(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
 
-    Result createOnKubernetes(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
+    /**
+     * 在Kubernetes上创建集群用户
+     *
+     * @param clusterId     集群ID
+     * @param username      用户名
+     * @param mainGroupId   主组ID
+     * @param otherGroupIds 其他组ID
+     * @return 创建的用户
+     */
+    ClusterUser createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
+            String otherGroupIds);
 
-    Result listPage(Integer clusterId, String username, Integer page, Integer pageSize);
+    /**
+     * 分页查询集群用户
+     *
+     * @param clusterId 集群ID
+     * @param username  用户名
+     * @param page      页码
+     * @param pageSize  页大小
+     * @return 分页结果
+     */
+    PageResult<ClusterUser> listPagedUsers(Integer clusterId, String username, Integer page, Integer pageSize);
 
-    Result deleteClusterUser(Integer id);
+    /**
+     * 删除集群用户
+     *
+     * @param id 用户ID
+     * @return 是否删除成功
+     */
+    boolean deleteClusterUser(Integer id);
 
-    Result deleteClusterUserOnkubernetes(Integer id);
+    /**
+     * 在Kubernetes上删除集群用户
+     *
+     * @param id 用户ID
+     * @return 是否删除成功
+     */
+    boolean deleteClusterUserOnKubernetes(Integer id);
 
+    /**
+     * 查询集群下所有用户
+     *
+     * @param clusterId 集群ID
+     * @return 用户列表
+     */
     List<ClusterUser> listAllUser(Integer clusterId);
 
+    /**
+     * 在主机上创建Unix用户
+     *
+     * @param clusterUser 集群用户
+     * @param hostname    主机名
+     */
     void createUnixUserOnHost(ClusterUser clusterUser, String hostname);
 }

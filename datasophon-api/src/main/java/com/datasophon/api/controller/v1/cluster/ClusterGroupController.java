@@ -20,6 +20,7 @@ package com.datasophon.api.controller.v1.cluster;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,16 +39,18 @@ public class ClusterGroupController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("groupName") String groupName, @RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
-
-        return clusterGroupService.listPage(groupName, clusterId, page, pageSize);
+    public Result<Object> list(@RequestParam("groupName") String groupName,
+            @RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
+        PageResult<ClusterGroup> pageResult = clusterGroupService.listPage(groupName, clusterId, page, pageSize);
+        return Result.success().put("page", pageResult);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<Object> info(@PathVariable("id") Integer id) {
         ClusterGroup clusterGroup = clusterGroupService.getById(id);
 
         return Result.success().put("clusterGroup", clusterGroup);
@@ -57,24 +60,30 @@ public class ClusterGroupController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestParam("clusterId") Integer clusterId, @RequestParam("groupName") String groupName) {
-        return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.saveClusterGroup(clusterId, groupName):clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
+    public Result<Object> save(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("groupName") String groupName) {
+        ClusterGroup clusterGroup = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
+                ? clusterGroupService.saveClusterGroup(clusterId, groupName)
+                : clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
+        return Result.success().put("clusterGroup", clusterGroup);
     }
 
     /**
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestParam("clusterId") Integer clusterId,@RequestParam("id") Integer id) {
-        return Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))?clusterGroupService.deleteUserGroup(id):clusterGroupService.deleteUserGroupOnKubernetes(id);
-
+    public Result<Object> delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("id") Integer id) {
+        boolean success = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
+                ? clusterGroupService.deleteUserGroup(id)
+                : clusterGroupService.deleteUserGroupOnKubernetes(id);
+        return success ? Result.success() : Result.error("删除失败");
     }
 
     /**
      * 刷新用户组到主机
      */
     @RequestMapping("/refreshUserGroupToHost")
-    public Result refreshUserGroupToHost(@RequestParam("clusterId") Integer clusterId) {
+    public Result<Object> refreshUserGroupToHost(@RequestParam("clusterId") Integer clusterId) {
 
         clusterGroupService.refreshUserGroupToHost(clusterId);
 

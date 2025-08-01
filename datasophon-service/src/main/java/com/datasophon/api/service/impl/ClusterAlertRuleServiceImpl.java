@@ -17,15 +17,21 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterAlertRuleService;
 import com.datasophon.dao.entity.ClusterAlertRule;
 import com.datasophon.dao.mapper.ClusterAlertRuleMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
+/**
+ * 集群告警规则服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
 @Service("clusterAlertRuleService")
 public class ClusterAlertRuleServiceImpl extends ServiceImpl<ClusterAlertRuleMapper, ClusterAlertRule>
-        implements
-            ClusterAlertRuleService {
+        implements ClusterAlertRuleService {
 
 }

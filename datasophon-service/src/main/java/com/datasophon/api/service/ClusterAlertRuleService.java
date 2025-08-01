@@ -17,13 +17,16 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.dao.entity.ClusterAlertRule;
+import com.mybatisflex.core.service.IService;
+
 /**
- * 规则表
+ * 集群告警规则服务
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-07 12:04:38
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
  */
-public interface ClusterAlertRuleService {
+public interface ClusterAlertRuleService extends IService<ClusterAlertRule> {
 
 }

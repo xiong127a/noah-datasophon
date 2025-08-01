@@ -17,14 +17,21 @@
 
 package com.datasophon.api.service;
 
-
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
-public interface ClusterUserGroupService {
+/**
+ * 集群用户组服务
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-01
+ */
+public interface ClusterUserGroupService extends IService<ClusterUserGroup> {
 
     Long countGroupUserNum(Integer id);
 

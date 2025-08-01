@@ -19,6 +19,7 @@ package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterUser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,24 +37,24 @@ public class ClusterUserController {
     @Autowired
     private ClusterUserService clusterUserService;
 
-
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> list(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
 
-        return clusterUserService.listPage(clusterId, username, page, pageSize);
+        PageResult<ClusterUser> pageResult = clusterUserService.listPagedUsers(clusterId, username, page, pageSize);
+        return Result.success().put("page", pageResult);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<Object> info(@PathVariable("id") Integer id) {
         ClusterUser clusterUser = clusterUserService.getById(id);
 
         return Result.success().put("clusterUser", clusterUser);
@@ -63,20 +64,21 @@ public class ClusterUserController {
      * 保存
      */
     @RequestMapping("/create")
-    public Result save(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> save(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("mainGroupId") Integer mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))
-                ? clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds)
-                : clusterUserService.createOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
+        ClusterUser clusterUser = Constants.PVM_MODE.equals(getDepMode(clusterId))
+                ? clusterUserService.createClusterUser(clusterId, username, mainGroupId, otherGroupIds)
+                : clusterUserService.createClusterUserOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
+        return Result.success().put("clusterUser", clusterUser);
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterUser clusterUser) {
+    public Result<Object> update(@RequestBody ClusterUser clusterUser) {
 
         clusterUserService.updateById(clusterUser);
 
@@ -87,10 +89,12 @@ public class ClusterUserController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> delete(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("id") Integer id) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId)) ? clusterUserService.deleteClusterUser(id)
-                : clusterUserService.deleteClusterUserOnkubernetes(id);
+        boolean success = Constants.PVM_MODE.equals(getDepMode(clusterId))
+                ? clusterUserService.deleteClusterUser(id)
+                : clusterUserService.deleteClusterUserOnKubernetes(id);
+        return success ? Result.success() : Result.error("删除失败");
     }
 
 }

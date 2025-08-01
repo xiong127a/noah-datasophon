@@ -38,6 +38,7 @@ import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 
 import org.apache.pekko.actor.ActorRef;
@@ -64,16 +65,14 @@ import java.util.stream.Collectors;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
 @Service("clusterGroupService")
 @Transactional
-public class ClusterGroupServiceImpl implements ClusterGroupService {
+public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, ClusterGroup>
+        implements ClusterGroupService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterGroupServiceImpl.class);
-
-    @Autowired
-    private ClusterGroupMapper clusterGroupMapper;
 
     @Autowired
     private ClusterHostService hostService;
@@ -101,7 +100,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
         ClusterGroup clusterGroup = new ClusterGroup();
         clusterGroup.setClusterId(clusterId);
         clusterGroup.setGroupName(groupName);
-        clusterGroupMapper.insert(clusterGroup);
+        this.save(clusterGroup);
 
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
         for (ClusterHostDO clusterHost : hostList) {
@@ -149,13 +148,13 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
         ClusterGroup clusterGroup = new ClusterGroup();
         clusterGroup.setClusterId(clusterId);
         clusterGroup.setGroupName(groupName);
-        clusterGroupMapper.insert(clusterGroup);
+        this.save(clusterGroup);
 
         Map<String, UserEnum> groupNameMap = UserEnum.getGroupNameMap();
         Integer systemInitMaxGid = groupNameMap.values().stream()
                 .map(UserEnum::getGroupId)
                 .max(Integer::compareTo)
-                .orElse(null);
+                .orElse(0);
 
         int globalMaxGid = 0;
 
@@ -207,14 +206,14 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
     }
 
     private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
-        List<ClusterGroup> list = clusterGroupMapper.selectByClusterIdAndGroupName(clusterId, groupName);
+        List<ClusterGroup> list = this.getMapper().selectByClusterIdAndGroupName(clusterId, groupName);
         return CollUtil.isNotEmpty(list);
     }
 
     @Override
     public void refreshUserGroupToHost(Integer clusterId) {
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
-        List<ClusterGroup> groupList = clusterGroupMapper.selectAll();
+        List<ClusterGroup> groupList = this.list();
         for (ClusterGroup clusterGroup : groupList) {
             ProcessUtils.syncUserGroupToHosts(hostList, clusterGroup.getGroupName(), "groupadd");
         }
@@ -222,7 +221,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
 
     @Override
     public boolean deleteUserGroup(Integer id) {
-        ClusterGroup clusterGroup = clusterGroupMapper.selectById(id);
+        ClusterGroup clusterGroup = this.getById(id);
         if (clusterGroup == null) {
             throw new RuntimeException("Group not found with id: " + id);
         }
@@ -230,7 +229,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
         if (num > 0) {
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
-        clusterGroupMapper.removeById(id);
+        this.removeById(id);
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
         for (ClusterHostDO clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
@@ -255,7 +254,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
 
     @Override
     public boolean deleteUserGroupOnKubernetes(Integer id) {
-        ClusterGroup clusterGroup = clusterGroupMapper.selectById(id);
+        ClusterGroup clusterGroup = this.getById(id);
         if (clusterGroup == null) {
             throw new RuntimeException("Group not found with id: " + id);
         }
@@ -263,7 +262,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
         if (num > 0) {
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
-        clusterGroupMapper.removeById(id);
+        this.removeById(id);
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
         for (ClusterHostDO clusterHost : hostList) {
             try {
@@ -282,7 +281,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
     @Override
     public PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
-        PageResult<ClusterGroup> pageResult = clusterGroupMapper.selectPageByClusterIdAndGroupName(
+        PageResult<ClusterGroup> pageResult = this.getMapper().selectPageByClusterIdAndGroupName(
                 clusterId, groupName, page, pageSize);
 
         List<ClusterGroup> list = pageResult.getRecords();
@@ -301,7 +300,7 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
 
     @Override
     public List<ClusterGroup> listAllUserGroup(Integer clusterId) {
-        return clusterGroupMapper.selectByClusterId(clusterId);
+        return this.getMapper().selectByClusterId(clusterId);
     }
 
     @Override
@@ -357,30 +356,6 @@ public class ClusterGroupServiceImpl implements ClusterGroupService {
     }
 
     // 标准CRUD方法实现
-    @Override
-    public ClusterGroup getById(Integer id) {
-        return clusterGroupMapper.selectById(id);
-    }
-
-    @Override
-    public ClusterGroup save(ClusterGroup entity) {
-        clusterGroupMapper.insert(entity);
-        return entity;
-    }
-
-    @Override
-    public ClusterGroup updateById(ClusterGroup entity) {
-        clusterGroupMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterGroupMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterGroup> getAllClusterGroups() {
-        return clusterGroupMapper.selectAll();
-    }
+    // 基础CRUD方法已由ServiceImpl提供，无需重新实现
+    // 如需自定义逻辑，可在此重写对应方法
 }

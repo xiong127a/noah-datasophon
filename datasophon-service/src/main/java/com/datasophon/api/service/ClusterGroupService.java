@@ -17,8 +17,9 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.dao.entity.ClusterGroup;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
@@ -27,34 +28,75 @@ import java.util.List;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-01
  */
-public interface ClusterGroupService {
+public interface ClusterGroupService extends IService<ClusterGroup> {
 
+    /**
+     * 保存集群组
+     * 
+     * @param clusterId 集群ID
+     * @param groupName 组名
+     * @return 保存的集群组
+     */
     ClusterGroup saveClusterGroup(Integer clusterId, String groupName);
 
+    /**
+     * 刷新用户组到主机
+     * 
+     * @param clusterId 集群ID
+     */
     void refreshUserGroupToHost(Integer clusterId);
 
+    /**
+     * 删除用户组
+     * 
+     * @param id 组ID
+     * @return 是否删除成功
+     */
     boolean deleteUserGroup(Integer id);
 
+    /**
+     * 在Kubernetes上删除用户组
+     * 
+     * @param id 组ID
+     * @return 是否删除成功
+     */
     boolean deleteUserGroupOnKubernetes(Integer id);
 
+    /**
+     * 分页查询集群组
+     * 
+     * @param groupName 组名
+     * @param clusterId 集群ID
+     * @param page      页码
+     * @param pageSize  页大小
+     * @return 分页结果
+     */
     PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
 
+    /**
+     * 查询集群下所有用户组
+     * 
+     * @param clusterId 集群ID
+     * @return 用户组列表
+     */
     List<ClusterGroup> listAllUserGroup(Integer clusterId);
 
+    /**
+     * 在主机上创建Unix组
+     * 
+     * @param hostname  主机名
+     * @param groupName 组名
+     */
     void createUnixGroupOnHost(String hostname, String groupName);
 
+    /**
+     * 在Kubernetes上保存集群组
+     * 
+     * @param clusterId 集群ID
+     * @param groupName 组名
+     * @return 保存的集群组
+     */
     ClusterGroup saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
-
-    // 标准CRUD方法
-    ClusterGroup getById(Integer id);
-
-    ClusterGroup save(ClusterGroup entity);
-
-    ClusterGroup updateById(ClusterGroup entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterGroup> getAllClusterGroups();
 }
