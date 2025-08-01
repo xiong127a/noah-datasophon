@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service.host;
 
-
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -81,4 +80,11 @@ public interface ClusterHostService {
      * 获取K8S模式下的完整硬件信息
      */
     List<ClusterHostDO> getK8sHostsWithHardwareInfo(Integer clusterId);
+
+    /**
+     * 批量更新主机状态信息
+     *
+     * @param hosts 需要更新的主机列表
+     */
+    void updateBatchHostStatus(List<ClusterHostDO> hosts);
 }

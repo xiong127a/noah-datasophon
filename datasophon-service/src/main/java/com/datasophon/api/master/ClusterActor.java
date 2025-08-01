@@ -34,7 +34,7 @@ import com.datasophon.common.enums.ClusterCommandType;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.api.vo.Result;
+
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
@@ -53,6 +53,10 @@ import java.util.stream.Collectors;
 
 /**
  * 节点状态监测
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public class ClusterActor extends AbstractActor {
 
@@ -77,8 +81,7 @@ public class ClusterActor extends AbstractActor {
 
             if (ClusterCommandType.CHECK.equals(clusterCommand.getCommandType())) {
                 // 获取所有集群
-                Result result = clusterInfoService.getClusterList();
-                List<ClusterInfoEntity> clusterList = (List<ClusterInfoEntity>) result.getData();
+                List<ClusterInfoEntity> clusterList = clusterInfoService.getClusterList();
 
                 for (ClusterInfoEntity clusterInfoEntity : clusterList) {
                     // 获取集群上正在运行的服务
@@ -89,9 +92,17 @@ public class ClusterActor extends AbstractActor {
                         if (!roleInstanceList.isEmpty()) {
                             if (roleInstanceList.stream().allMatch(
                                     roleInstance -> ServiceRoleState.STOP.equals(roleInstance.getServiceRoleState()))) {
-                                clusterInfoService.updateClusterState(clusterId, ClusterState.STOP.getValue());
+                                boolean stopResult = clusterInfoService.updateClusterState(clusterId,
+                                        ClusterState.STOP.getValue());
+                                if (!stopResult) {
+                                    logger.warn("Failed to update cluster {} state to STOP", clusterId);
+                                }
                             } else {
-                                clusterInfoService.updateClusterState(clusterId, ClusterState.RUNNING.getValue());
+                                boolean runningResult = clusterInfoService.updateClusterState(clusterId,
+                                        ClusterState.RUNNING.getValue());
+                                if (!runningResult) {
+                                    logger.warn("Failed to update cluster {} state to RUNNING", clusterId);
+                                }
                             }
                         }
                     }
@@ -188,12 +199,31 @@ public class ClusterActor extends AbstractActor {
                         }
                         List<ClusterServiceInstanceEntity> serviceInstanceList = clusterServiceInstanceService
                                 .listAll(clusterId);
-                        if (serviceInstanceList.stream().allMatch(instance -> clusterServiceInstanceService
-                                .delServiceInstance(instance.getId()).isSuccess())) {
+                        // 删除服务实例
+                        boolean allInstancesDeleted = true;
+                        for (ClusterServiceInstanceEntity instance : serviceInstanceList) {
+                            try {
+                                clusterServiceInstanceService.delServiceInstance(instance.getId());
+                            } catch (Exception e) {
+                                logger.error("Failed to delete service instance {}", instance.getId(), e);
+                                allInstancesDeleted = false;
+                                break;
+                            }
+                        }
+
+                        if (allInstancesDeleted) {
                             List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
-                            clusterHostService.deleteHosts(hostList.stream().map(h -> String.valueOf(h.getId()))
-                                    .collect(Collectors.joining(Constants.COMMA)));
-                            clusterInfoService.removeById(clusterId);
+                            String hostIds = hostList.stream()
+                                    .map(h -> String.valueOf(h.getId()))
+                                    .collect(Collectors.joining(Constants.COMMA));
+                            clusterHostService.deleteHosts(hostIds);
+
+                            // 删除集群信息 - 根据Service层的新接口调整
+                            try {
+                                clusterInfoService.deleteCluster(java.util.Collections.singletonList(clusterId));
+                            } catch (Exception e) {
+                                logger.error("Failed to delete cluster {}", clusterId, e);
+                            }
                         }
                     }
                 }

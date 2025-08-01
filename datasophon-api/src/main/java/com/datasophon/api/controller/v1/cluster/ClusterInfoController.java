@@ -33,7 +33,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Arrays;
+import java.util.List;
 
+/**
+ * 集群信息控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @ApiVersion(path = "cluster")
 public class ClusterInfoController {
 
@@ -44,26 +52,39 @@ public class ClusterInfoController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result list() {
-        return clusterInfoService.getClusterList();
+    public Result<List<ClusterInfoEntity>> list() {
+        try {
+            List<ClusterInfoEntity> clusterList = clusterInfoService.getClusterList();
+            return Result.success(clusterList);
+        } catch (Exception e) {
+            return Result.error("获取集群列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 配置好的集群列表
      */
     @RequestMapping("/runningClusterList")
-    public Result runningClusterList() {
-        return clusterInfoService.runningClusterList();
+    public Result<List<ClusterInfoEntity>> runningClusterList() {
+        try {
+            List<ClusterInfoEntity> runningClusters = clusterInfoService.runningClusterList();
+            return Result.success(runningClusters);
+        } catch (Exception e) {
+            return Result.error("获取运行中集群列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(id);
-
-        return Result.success(clusterInfo);
+    public Result<ClusterInfoEntity> info(@PathVariable("id") Integer id) {
+        try {
+            ClusterInfoEntity clusterInfo = clusterInfoService.getById(id);
+            return Result.success(clusterInfo);
+        } catch (Exception e) {
+            return Result.error("获取集群信息失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -71,15 +92,28 @@ public class ClusterInfoController {
      */
     @RequestMapping("/save")
     @UserPermission
-    public Result save(@RequestBody ClusterInfoEntity clusterInfo) {
-        return clusterInfoService.saveCluster(clusterInfo);
+    public Result<ClusterInfoEntity> save(@RequestBody ClusterInfoEntity clusterInfo) {
+        try {
+            ClusterInfoEntity savedCluster = clusterInfoService.saveCluster(clusterInfo);
+            return Result.success(savedCluster);
+        } catch (Exception e) {
+            return Result.error("保存集群失败: " + e.getMessage());
+        }
     }
 
     @RequestMapping("/updateClusterState")
-    public Result updateClusterState(@ClusterId Integer clusterId,
+    public Result<String> updateClusterState(@ClusterId Integer clusterId,
             @RequestParam("clusterState") Integer clusterState) {
-
-        return clusterInfoService.updateClusterState(clusterId, clusterState);
+        try {
+            boolean success = clusterInfoService.updateClusterState(clusterId, clusterState);
+            if (success) {
+                return Result.success("集群状态更新成功");
+            } else {
+                return Result.error("集群状态更新失败");
+            }
+        } catch (Exception e) {
+            return Result.error("更新集群状态失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -87,9 +121,13 @@ public class ClusterInfoController {
      */
     @RequestMapping("/update")
     @UserPermission
-    public Result update(@RequestBody ClusterInfoEntity clusterInfo) {
-        return clusterInfoService.updateCluster(clusterInfo);
-
+    public Result<ClusterInfoEntity> update(@RequestBody ClusterInfoEntity clusterInfo) {
+        try {
+            ClusterInfoEntity updatedCluster = clusterInfoService.updateCluster(clusterInfo);
+            return Result.success(updatedCluster);
+        } catch (Exception e) {
+            return Result.error("修改集群失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -97,10 +135,13 @@ public class ClusterInfoController {
      */
     @RequestMapping("/delete")
     @UserPermission
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterInfoService.deleteCluster(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        try {
+            clusterInfoService.deleteCluster(Arrays.asList(ids));
+            return Result.success("删除集群成功");
+        } catch (Exception e) {
+            return Result.error("删除集群失败: " + e.getMessage());
+        }
     }
 
     @RequestMapping("/grafana/metrics")
@@ -112,30 +153,45 @@ public class ClusterInfoController {
      * 获取集群详细信息
      */
     @RequestMapping("/detail")
-    public Result getClusterDetail(@ClusterId Integer clusterId) {
-        return clusterInfoService.getClusterById(clusterId);
+    public Result<ClusterInfoEntity> getClusterDetail(@ClusterId Integer clusterId) {
+        try {
+            ClusterInfoEntity clusterDetail = clusterInfoService.getClusterById(clusterId);
+            return Result.success(clusterDetail);
+        } catch (Exception e) {
+            return Result.error("获取集群详细信息失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Kubernetes命名空间列表
      */
     @PostMapping("/namespaces")
-    public Result getKubernetesNamespaces(@RequestBody JsonNode jsonNode) {
-        String kubeConfigContent = jsonNode.get("kubeConfigContent").asText();
-        return clusterInfoService.getKubernetesNamespaces(kubeConfigContent);
+    public Result<Object> getKubernetesNamespaces(@RequestBody JsonNode jsonNode) {
+        try {
+            String kubeConfigContent = jsonNode.get("kubeConfigContent").asText();
+            Object namespaces = clusterInfoService.getKubernetesNamespaces(kubeConfigContent);
+            return Result.success(namespaces);
+        } catch (Exception e) {
+            return Result.error("获取Kubernetes命名空间列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 更新集群Kubernetes配置
      */
     @PostMapping("/kube-config")
-    public Result updateClusterKubeConfig(@ClusterId Integer clusterId, 
-                                        @RequestBody KubeConfigUpdateRequest request) {
-        return clusterInfoService.updateClusterKubeConfig(
-                clusterId,
-                request.getKubeConfig(),
-                request.getNamespace(),
-                request.getCustomNamespace());
+    public Result<String> updateClusterKubeConfig(@ClusterId Integer clusterId,
+            @RequestBody KubeConfigUpdateRequest request) {
+        try {
+            String result = clusterInfoService.updateClusterKubeConfig(
+                    clusterId,
+                    request.getKubeConfig(),
+                    request.getNamespace(),
+                    request.getCustomNamespace());
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("更新Kubernetes配置失败: " + e.getMessage());
+        }
     }
 
 }

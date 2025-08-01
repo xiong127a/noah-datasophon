@@ -364,4 +364,27 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             throw new BusinessException(500, "获取K8S完整硬件信息失败: " + e.getMessage());
         }
     }
+
+    @Override
+    public void updateBatchHostStatus(List<ClusterHostDO> hosts) {
+        if (hosts == null || hosts.isEmpty()) {
+            return;
+        }
+
+        try {
+            // 使用继承的updateBatch方法批量更新
+            this.updateBatch(hosts);
+            logger.debug("Successfully updated {} hosts status", hosts.size());
+        } catch (Exception e) {
+            logger.error("Failed to batch update hosts status", e);
+            // 如果批量更新失败，尝试逐个更新
+            for (ClusterHostDO host : hosts) {
+                try {
+                    this.updateById(host);
+                } catch (Exception ex) {
+                    logger.warn("Failed to update host {} status", host.getId(), ex);
+                }
+            }
+        }
+    }
 }

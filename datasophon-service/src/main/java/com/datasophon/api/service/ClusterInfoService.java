@@ -17,9 +17,9 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
@@ -58,17 +58,17 @@ public interface ClusterInfoService {
 
     ClusterInfoEntity getClusterByClusterCode(String clusterCode);
 
-    Result saveCluster(ClusterInfoEntity clusterInf);
+    ClusterInfoEntity saveCluster(ClusterInfoEntity clusterInf);
 
-    Result getClusterList();
+    List<ClusterInfoEntity> getClusterList();
 
-    Result runningClusterList();
+    List<ClusterInfoEntity> runningClusterList();
 
-    Result updateClusterState(Integer clusterId, Integer clusterState);
+    boolean updateClusterState(Integer clusterId, Integer clusterState);
 
     List<ClusterInfoEntity> getClusterByFrameCode(String frameCode);
 
-    Result updateCluster(ClusterInfoEntity clusterInfo);
+    ClusterInfoEntity updateCluster(ClusterInfoEntity clusterInfo);
 
     void deleteCluster(List<Integer> asList);
 
@@ -91,17 +91,17 @@ public interface ClusterInfoService {
      * Retrieves detailed information about a cluster by its ID.
      *
      * @param clusterId The ID of the cluster to retrieve information for.
-     * @return A Result object containing the cluster information.
+     * @return The cluster information entity.
      */
-    Result getClusterById(Integer clusterId);
+    ClusterInfoEntity getClusterById(Integer clusterId);
 
     /**
      * Retrieves the list of Kubernetes namespaces for a cluster.
      *
      * @param kubeConfig The Kubernetes configuration content.
-     * @return A Result object containing the list of namespaces.
+     * @return The kubernetes namespace dto containing the list of namespaces.
      */
-    Result getKubernetesNamespaces(String kubeConfig);
+    KubernetesNamespaceDto getKubernetesNamespaces(String kubeConfig);
 
     /**
      * 更新集群Kubernetes配置
@@ -110,9 +110,11 @@ public interface ClusterInfoService {
      * @param kubeConfig      Kubernetes配置内容
      * @param namespace       选择的命名空间
      * @param customNamespace 自定义命名空间（如果选择创建新的命名空间）
-     * @return 更新结果
+     * @return 更新结果消息
      */
-    Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
+    String updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
 
     String getKubernetesNamespace(Integer clusterId);
+
+    ClusterInfoEntity getById(Integer clusterId);
 }

@@ -27,11 +27,10 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
 import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.checker.common.CommandResult;
-import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
+
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
 import com.datasophon.api.utils.MinaUtils;
@@ -67,13 +66,10 @@ import org.apache.pekko.actor.ActorRef;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -94,15 +90,6 @@ public class InstallServiceImpl implements InstallService {
 
     @Autowired
     private ClusterHostService hostService;
-
-    // @Autowired
-    private HostCheckService hostCheckService;
-
-    @Autowired
-    private HostCheckQueueManager hostCheckQueueManager;
-
-    @Autowired
-    private ApplicationContext applicationContext;
 
     @Autowired
     private OsInfoService osInfoService;
@@ -909,7 +896,8 @@ public class InstallServiceImpl implements InstallService {
             processHostWithoutOsInfo(host, sshPort, sshUser, sshPassword, clusterId, tempMap);
         }
 
-        List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+//        List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+        List<CheckItem> checkItems = null;
         // 3. 将所有主机信息添加到返回结果中，以IP为键
         for (HostInfo hostInfo : tempMap.values()) {
             // 获取主机检查项列表
@@ -1319,90 +1307,11 @@ public class InstallServiceImpl implements InstallService {
                         }
                     }
                 }
-
             }
-
-            // 3. 关闭任务清理和连接清理
-            // 如果有特定于集群ID的检查任务，可以取消它们
-            if (hostCheckQueueManager != null) {
-                logger.info("开始清理集群[{}]的检查任务和监控", clusterId);
-
-                // 关闭队列健康监控
-                hostCheckQueueManager.stopQueueHealthMonitor();
-                logger.info("已关闭队列健康监控");
-
-                // 关闭任务超时监控
-                hostCheckQueueManager.stopTaskTimeoutMonitor();
-                logger.info("已关闭任务超时监控");
-
-                // 取消所有与该集群相关的任务
-                try {
-                    // cancelTask方法没有返回值，所以我们不能统计取消的任务数
-                    hostCheckQueueManager.cancelTask(clusterId, null); // 取消所有主机的任务
-                    logger.info("已取消集群[{}]的所有检查任务", clusterId);
-                } catch (Exception e) {
-                    logger.warn("取消集群[{}]的检查任务时发生异常: {}", clusterId, e.getMessage());
-                }
-
-                // 关闭定时任务（停止监控）
-                hostCheckQueueManager.stopScheduledTasks();
-                logger.info("已关闭所有定时监控任务");
-            } else {
-                logger.warn("hostCheckQueueManager为空，无法关闭相关任务");
-            }
-
-            // 4. 尝试获取并关闭AsyncCheckService的SSH连接清理
-            try {
-                // 通过Spring获取AsyncCheckService实例 - 考虑添加@Autowired注入AsyncCheckService
-                Object asyncCheckService = applicationContext.getBean("asyncCheckService");
-                if (asyncCheckService.getClass().getName().contains("AsyncCheckService")) {
-                    // 反射调用stopConnectionCleanup方法停止SSH连接清理
-                    Method stopConnectionCleanupMethod = asyncCheckService.getClass()
-                            .getMethod("stopConnectionCleanup");
-                    stopConnectionCleanupMethod.invoke(asyncCheckService);
-                    logger.info("已停止AsyncCheckService的SSH连接清理任务");
-
-                    // 反射调用stopTaskCleanup方法停止任务清理
-                    Method stopTaskCleanupMethod = asyncCheckService.getClass()
-                            .getMethod("stopTaskCleanup");
-                    stopTaskCleanupMethod.invoke(asyncCheckService);
-                    logger.info("已停止AsyncCheckService的任务清理任务");
-
-                    // 尝试调用stopScheduledTasks方法停止所有定时任务
-                    try {
-                        Method stopScheduledTasksMethod = asyncCheckService.getClass()
-                                .getMethod("stopScheduledTasks");
-                        stopScheduledTasksMethod.invoke(asyncCheckService);
-                        logger.info("已停止AsyncCheckService的所有定时任务");
-                    } catch (NoSuchMethodException nsme) {
-                        logger.info("AsyncCheckService没有stopScheduledTasks方法，已单独停止各项定时任务");
-                    }
-
-                    // 尝试调用disableScheduledTasks方法禁用所有定时任务
-                    try {
-                        Method disableScheduledTasksMethod = asyncCheckService.getClass()
-                                .getMethod("disableScheduledTasks");
-                        disableScheduledTasksMethod.invoke(asyncCheckService);
-                        logger.info("已禁用AsyncCheckService的所有定时任务");
-                    } catch (NoSuchMethodException nsme) {
-                        logger.info("AsyncCheckService没有disableScheduledTasks方法");
-                    }
-                }
-            } catch (NoSuchBeanDefinitionException e) {
-                logger.warn("无法找到AsyncCheckService实例，跳过任务清理的停止");
-            } catch (Exception e) {
-                logger.warn("关闭AsyncCheckService的任务时发生异常: {}", e.getMessage());
-            }
-
-            logger.info("集群[{}]的主机检查资源清理完成", clusterId);
-            return true;
         } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("清理主机检查资源时发生错误", e);
-            throw new BusinessException(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(),
-                    "清理主机检查资源失败: " + e.getMessage());
+            throw new RuntimeException(e);
         }
+        return false;
     }
 
     @Override
@@ -1547,8 +1456,8 @@ public class InstallServiceImpl implements InstallService {
             String clusterCode = clusterInfo.getClusterCode();
 
             // 获取检查项列表（K8S模式下也需要检查项用于环境验证）
-            List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
-
+//            List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+            List<CheckItem> checkItems = null;
             // 保存从K8S API获取的完整节点信息，用于后续保存
             List<ClusterHostDO> kubernetesHostsForSave = new ArrayList<>();
 

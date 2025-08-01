@@ -17,6 +17,7 @@
 
 package com.datasophon.api.master;
 
+import cn.hutool.core.util.StrUtil;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
@@ -32,7 +33,7 @@ import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PromInfoUtils;
-import com.datasophon.api.vo.Result;
+
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -53,6 +54,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 节点状态监测
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
  */
 public class HostCheckActor extends AbstractActor {
 
@@ -78,8 +83,7 @@ public class HostCheckActor extends AbstractActor {
       final HostInfo hostInfo = hostCheckCommand.getHostInfo();
 
       // 获取当前安装并且正在运行的集群
-      Result result = clusterInfoService.runningClusterList();
-      List<ClusterInfoEntity> clusterList = (List<ClusterInfoEntity>) result.getData();
+      List<ClusterInfoEntity> clusterList = clusterInfoService.runningClusterList();
 
       for (ClusterInfoEntity clusterInfoEntity : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
@@ -98,7 +102,7 @@ public class HostCheckActor extends AbstractActor {
 
           String promUrl = "http://" + prometheusInstance.getHostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostDO clusterHostDO : list) {
-            if (hostInfo != null && !StringUtils.equals(clusterHostDO.getHostname(), hostInfo.getIp())) {
+            if (hostInfo != null && !StrUtil.equals(clusterHostDO.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }
@@ -151,14 +155,15 @@ public class HostCheckActor extends AbstractActor {
             }
           }
           if (!list.isEmpty()) {
-            clusterHostService.updateBatch( list);
+            // 批量更新主机状态信息（包含内存、磁盘、CPU等监控数据）
+            clusterHostService.updateBatchHostStatus(list);
           }
         } else {
           // 没有 Prometheus？直接获取节点，通过 rpc 检测是否启动
           List<ClusterHostDO> hosts = clusterHostService.getHostListByClusterId(clusterId);
           List<ClusterHostDO> checkedHosts = new ArrayList<>(hosts.size());
           for (ClusterHostDO host : hosts) {
-            if (hostInfo != null && !StringUtils.equals(host.getHostname(), hostInfo.getIp())) {
+            if (hostInfo != null && !StrUtil.equals(host.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }
@@ -169,6 +174,10 @@ public class HostCheckActor extends AbstractActor {
             try {
               // rpc 检测
               ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+              if (clusterInfo == null) {
+                logger.warn("Cluster with id {} not found", clusterId);
+                continue;
+              }
               if (Constants.KUBERNETES_MODE.equals(depType)) {
                 try {
                   // 使用Java原生的isReachable方法替代系统ping命令
@@ -184,7 +193,8 @@ public class HostCheckActor extends AbstractActor {
                     checkedHost.setHostState(HostState.OFFLINE);
                   }
                 } catch (Exception e) {
-                  Objects.requireNonNull(logger).warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
+                  Objects.requireNonNull(logger).warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(),
+                      e.getMessage());
                   checkedHost.setHostState(HostState.OFFLINE);
                 }
                 continue; // 跳过下面的pingActor检测
@@ -204,13 +214,14 @@ public class HostCheckActor extends AbstractActor {
               checkedHost.setHostState(HostState.RUNNING);
               checkedHost.setManaged(MANAGED.YES);
             } catch (Exception e) {
-                Objects.requireNonNull(logger).warn("host: {} rpc error, cause: {}", host.getHostname(), e.getMessage());
+              Objects.requireNonNull(logger).warn("host: {} rpc error, cause: {}", host.getHostname(), e.getMessage());
               checkedHost.setHostState(HostState.OFFLINE);
             }
             checkedHosts.add(checkedHost);
           }
           if (!checkedHosts.isEmpty()) {
-              clusterHostService.updateBatch(checkedHosts);
+            // 批量更新主机状态信息
+            clusterHostService.updateBatchHostStatus(checkedHosts);
           }
         }
       }

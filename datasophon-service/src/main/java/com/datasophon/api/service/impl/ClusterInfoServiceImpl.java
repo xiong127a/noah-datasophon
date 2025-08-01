@@ -32,9 +32,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ClusterCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
-import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.AlertGroupEntity;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
+
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -43,8 +41,7 @@ import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pekko.actor.ActorRef;
@@ -56,27 +53,27 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 集群信息服务实现类
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2024-12-19
+ */
 @Slf4j
 @Service("clusterInfoService")
 @Transactional
-public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, ClusterInfoEntity>
-        implements
-        ClusterInfoService {
+public class ClusterInfoServiceImpl implements ClusterInfoService {
 
     @Autowired
     private ClusterInfoMapper clusterInfoMapper;
 
     @Autowired
     private ClusterRoleUserService clusterUserService;
-
-    @Autowired
-    private AlertGroupService alertGroupService;
-
-    @Autowired
-    private ClusterAlertGroupMapService groupMapService;
 
     @Autowired
     private ConfigBean configBean;
@@ -103,54 +100,56 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     @Autowired
     private ClusterServiceInstanceService clusterServiceInstanceService;
 
-
     @Override
     public ClusterInfoEntity getClusterByClusterCode(String clusterCode) {
         return clusterInfoMapper.getClusterByClusterCode(clusterCode);
     }
 
     @Override
-    public Result saveCluster(ClusterInfoEntity clusterInfo) {
-
-        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
-                .where(ClusterInfoEntity::getClusterCode).eq(clusterInfo.getClusterCode())
-                .list();
-
-        if (Objects.nonNull(list) && !list.isEmpty()) {
-            return Result.error(Status.CLUSTER_CODE_EXISTS.getMsg());
+    public ClusterInfoEntity saveCluster(ClusterInfoEntity clusterInfo) {
+        // 检查集群编码是否已存在
+        ClusterInfoEntity existingCluster = clusterInfoMapper.selectByClusterCode(clusterInfo.getClusterCode());
+        if (existingCluster != null) {
+            throw new RuntimeException(Status.CLUSTER_CODE_EXISTS.getMsg());
         }
         clusterInfo.setCreateTime(new Date());
-        clusterInfo.setCreateBy(SecurityUtils.getAuthUser().getUsername());
+        clusterInfo.setCreateBy(Objects.requireNonNull(SecurityUtils.getAuthUser()).getUsername());
         clusterInfo.setClusterState(ClusterState.NEED_CONFIG);
-        this.save(clusterInfo);
+
         // 检查集群管理员列表是否为空
         if (clusterInfo.getClusterManagerList() == null || clusterInfo.getClusterManagerList().isEmpty()) {
-            return Result.error("集群管理员不能为空，请指定至少一个管理员");
+            throw new RuntimeException("集群管理员不能为空，请指定至少一个管理员");
         }
-        
+
+        // 保存集群信息
+        clusterInfoMapper.insertEntity(clusterInfo);
+
         // 从 UserInfoEntity 对象列表中提取用户 ID
         String managerIds = clusterInfo.getClusterManagerList().stream()
                 .map(user -> user.getId().toString())
                 .collect(Collectors.joining(","));
-        
+
         // 保存集群管理员关系
         clusterUserService.saveClusterManager(clusterInfo.getId(), managerIds);
-        List<AlertGroupEntity> alertGroupList = alertGroupService.list();
-        for (AlertGroupEntity alertGroupEntity : alertGroupList) {
-            ClusterAlertGroupMap alertGroupMap = new ClusterAlertGroupMap();
-            alertGroupMap.setAlertGroupId(alertGroupEntity.getId());
-            alertGroupMap.setClusterId(clusterInfo.getId());
-            groupMapService.save(alertGroupMap);
-        }
-        ProcessUtils.createServiceActor(clusterInfo);
 
+        // TODO: 获取所有告警组并关联到集群 - 需要完善相关Service方法
+        // List<AlertGroupEntity> alertGroupList =
+        // alertGroupService.getAllAlertGroups();
+        // for (AlertGroupEntity alertGroupEntity : alertGroupList) {
+        // ClusterAlertGroupMap alertGroupMap = new ClusterAlertGroupMap();
+        // alertGroupMap.setAlertGroupId(alertGroupEntity.getId());
+        // alertGroupMap.setClusterId(clusterInfo.getId());
+        // groupMapService.saveAlertGroupMap(alertGroupMap);
+        // }
+
+        ProcessUtils.createServiceActor(clusterInfo);
         yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
         nodeLabelService.createDefaultNodeLabel(clusterInfo.getId());
         queueCapacityService.createDefaultQueue(clusterInfo.getId());
         rackService.createDefaultRack(clusterInfo.getId());
-
         putClusterVariable(clusterInfo);
-        return Result.success();
+
+        return clusterInfo;
     }
 
     private void putClusterVariable(ClusterInfoEntity clusterInfo) {
@@ -171,65 +170,55 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public Result getClusterList() {
-        List<ClusterInfoEntity> list = this.list();
+    public List<ClusterInfoEntity> getClusterList() {
+        List<ClusterInfoEntity> list = clusterInfoMapper.selectAll();
         for (ClusterInfoEntity clusterInfoEntity : list) {
             List<UserInfoEntity> userList = clusterUserService
                     .getAllClusterManagerByClusterId(clusterInfoEntity.getId());
             clusterInfoEntity.setClusterManagerList(userList);
             clusterInfoEntity.setClusterStateCode(clusterInfoEntity.getClusterState().getValue());
         }
-        return Result.success(list);
+        return list;
     }
 
     @Override
-    public Result runningClusterList() {
-        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
-                .where(ClusterInfoEntity::getClusterState).eq(ClusterState.RUNNING)
-                .list();
-
-        return Result.success(list);
+    public List<ClusterInfoEntity> runningClusterList() {
+        return clusterInfoMapper.selectByClusterState(ClusterState.RUNNING);
     }
 
     @Override
-    public Result updateClusterState(Integer clusterId, Integer clusterState) {
+    public boolean updateClusterState(Integer clusterId, Integer clusterState) {
         ClusterInfoEntity clusterInfo = this.getById(clusterId);
         ClusterState state = ClusterState.of(clusterState);
         if (state != null) {
             clusterInfo.setClusterState(state);
-            this.updateById(clusterInfo);
-            return Result.success();
+            return clusterInfoMapper.updateByIdEntity(clusterInfo) > 0;
         } else {
-            return Result.error("未知状态");
+            throw new RuntimeException("未知状态");
         }
     }
 
     @Override
     public List<ClusterInfoEntity> getClusterByFrameCode(String frameCode) {
-        return QueryChain.of(ClusterInfoEntity.class)
-                .where(ClusterInfoEntity::getClusterFrame).eq(frameCode)
-                .list();
+        return clusterInfoMapper.selectByFrameCode(frameCode);
     }
 
     @Override
-    public Result updateCluster(ClusterInfoEntity clusterInfo) {
+    public ClusterInfoEntity updateCluster(ClusterInfoEntity clusterInfo) {
         // 集群编码判重
-        List<ClusterInfoEntity> list = QueryChain.of(ClusterInfoEntity.class)
-                .where(ClusterInfoEntity::getClusterCode).eq(clusterInfo.getClusterCode())
-                .list();
+        ClusterInfoEntity existingCluster = clusterInfoMapper.selectByClusterCode(clusterInfo.getClusterCode());
 
-        if (Objects.nonNull(list) && !list.isEmpty()) {
-            ClusterInfoEntity clusterInfoEntity = list.getFirst();
-            if (!clusterInfoEntity.getId().equals(clusterInfo.getId())) {
-                return Result.error(Status.CLUSTER_CODE_EXISTS.getMsg());
-            }
+        if (existingCluster != null && !existingCluster.getId().equals(clusterInfo.getId())) {
+            throw new RuntimeException(Status.CLUSTER_CODE_EXISTS.getMsg());
         }
+
         ClusterInfoEntity cluster = this.getById(clusterInfo.getId());
         if (!cluster.getClusterCode().equals(clusterInfo.getClusterCode())) {
             ProcessUtils.createServiceActor(clusterInfo);
         }
-        this.updateById(clusterInfo);
-        return Result.success();
+
+        clusterInfoMapper.updateByIdEntity(clusterInfo);
+        return clusterInfo;
     }
 
     @Override
@@ -249,11 +238,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             }
         }
         if (ClusterState.NEED_CONFIG.equals(clusterInfo.getClusterState())) {
-            this.removeByIds(ids);
+            clusterInfoMapper.deleteByIds(ids);
             // delete host
             clusterHostService.removeHostByClusterId(id);
         }
-
     }
 
     @Override
@@ -264,9 +252,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     @Override
     public String getServiceRoleMetrics() {
         // 获取所有运行中的服务角色实例
-        List<ClusterServiceRoleInstanceEntity> roleInstances = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(1)
-                .list();
+        List<ClusterServiceRoleInstanceEntity> roleInstances = clusterInfoMapper.selectRunningRoleInstances();
 
         // 按服务角色名称分组并计数
         Map<String, Long> roleCountMap = roleInstances.stream()
@@ -294,18 +280,18 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public Result getClusterById(Integer clusterId) {
+    public ClusterInfoEntity getClusterById(Integer clusterId) {
         ClusterInfoEntity clusterInfo = this.getById(clusterId);
         if (clusterInfo == null) {
-            return Result.error("集群不存在");
+            throw new RuntimeException("集群不存在");
         }
-        return Result.success(clusterInfo);
+        return clusterInfo;
     }
 
     @Override
-    public Result getKubernetesNamespaces(String kubeConfig) {
+    public KubernetesNamespaceDto getKubernetesNamespaces(String kubeConfig) {
         if (kubeConfig == null || kubeConfig.trim().isEmpty()) {
-            return Result.error("Kubernetes配置不能为空");
+            throw new RuntimeException("Kubernetes配置不能为空");
         }
 
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
@@ -327,7 +313,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             kubernetesNamespaceDto.setDefaultNamespace("datasophon");
             kubernetesNamespaceDto.setShowNamespaceSelector(true);
             kubernetesNamespaceDto.setClusterVersion(client.getKubernetesVersion().getGitVersion());
-            return Result.success(kubernetesNamespaceDto);
+            return kubernetesNamespaceDto;
         } catch (io.fabric8.kubernetes.client.KubernetesClientException e) {
             log.error("Kubernetes客户端异常", e);
             String errorMsg = "连接Kubernetes集群失败";
@@ -338,26 +324,25 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             } else if (e.getMessage().contains("timeout")) {
                 errorMsg = "连接超时，请检查网络连接和集群状态";
             }
-            return Result.error(errorMsg + ": " + e.getMessage());
+            throw new RuntimeException(errorMsg + ": " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("获取Kubernetes命名空间失败", e);
-            return Result.error("处理Kubernetes配置时出错: " + e.getMessage());
+            throw new RuntimeException("处理Kubernetes配置时出错: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public Result updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace,
+    public String updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace,
             String customNamespace) {
         try {
             ClusterInfoEntity clusterInfo = this.getById(clusterId);
             if (clusterInfo == null) {
-                return Result.error("集群不存在");
+                throw new RuntimeException("集群不存在");
             }
 
             // 使用传入的命名空间名称
-
             if (namespace == null || namespace.trim().isEmpty()) {
-                return Result.error("命名空间名称不能为空");
+                throw new RuntimeException("命名空间名称不能为空");
             }
 
             // 验证配置有效性
@@ -370,7 +355,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
                     // 创建命名空间
                     if (!KubeUtil.createNamespace(client, namespace)) {
-                        return Result.error("创建命名空间 '" + namespace + "' 失败");
+                        throw new RuntimeException("创建命名空间 '" + namespace + "' 失败");
                     }
 
                     log.info("成功创建命名空间：{}", namespace);
@@ -382,17 +367,35 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             // 更新集群信息
             clusterInfo.setKubeConfig(kubeConfig);
             clusterInfo.setNamespace(namespace);
-            this.updateById(clusterInfo);
+            clusterInfoMapper.updateByIdEntity(clusterInfo);
 
-            return Result.success("Kubernetes配置更新成功");
+            return "Kubernetes配置更新成功";
         } catch (Exception e) {
             log.error("更新Kubernetes配置失败", e);
-            return Result.error("更新Kubernetes配置失败: " + e.getMessage());
+            throw new RuntimeException("更新Kubernetes配置失败: " + e.getMessage(), e);
         }
     }
 
     @Override
     public String getKubernetesNamespace(Integer clusterId) {
         return getById(clusterId).getNamespace();
+    }
+
+    @Override
+    public ClusterInfoEntity getById(Integer clusterId) {
+        return clusterInfoMapper.selectOneById(clusterId);
+    }
+
+    // 基础CRUD方法实现
+    public boolean save(ClusterInfoEntity entity) {
+        return clusterInfoMapper.insertEntity(entity) > 0;
+    }
+
+    public boolean updateById(ClusterInfoEntity entity) {
+        return clusterInfoMapper.updateByIdEntity(entity) > 0;
+    }
+
+    public boolean removeByIds(List<Integer> ids) {
+        return clusterInfoMapper.deleteByIds(ids) > 0;
     }
 }
