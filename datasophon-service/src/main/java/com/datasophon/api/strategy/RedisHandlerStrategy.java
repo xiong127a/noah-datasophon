@@ -5,15 +5,19 @@ import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class RedisHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
@@ -36,8 +40,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING;
-                HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
-                });
+                Map<String, List<String>> map = CacheOperateUtils.getGeneric(hostMapKey, TypeRefs.MAP_STRING_LIST_STRING);
 
                 List<String> masterHostList = map.get("RedisMaster");
                 List<String> workerHostList = map.get("RedisWorker");

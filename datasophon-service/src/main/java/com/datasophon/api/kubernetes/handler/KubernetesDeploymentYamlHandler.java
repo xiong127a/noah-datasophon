@@ -1,8 +1,5 @@
 package com.datasophon.api.kubernetes.handler;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
@@ -10,21 +7,24 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesGenerateDeploymentYamlCommand;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.kubernetes.actor.KubernetesYamlDeploymentActor;
-import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pekko.actor.ActorRef;
+import org.apache.pekko.pattern.Patterns;
+import org.apache.pekko.util.Timeout;
 import org.springframework.util.ObjectUtils;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -66,8 +66,7 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<>() {
-        });
+        Map<String, List<String>> map = CacheOperateUtils.getGeneric(hostMapKey, TypeRefs.MAP_STRING_LIST_STRING);
         if (ObjectUtils.isEmpty(map)){
             log.warn("hostMapKey is empty");
         }

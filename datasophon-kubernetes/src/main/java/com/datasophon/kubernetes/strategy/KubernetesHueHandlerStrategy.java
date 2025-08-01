@@ -15,10 +15,8 @@ import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-import java.io.IOException;
-import java.sql.SQLException;
-
-public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesHueHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -28,16 +26,18 @@ public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrat
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
-        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
 
         if (command.getEnableKerberos()) {
             logger.info("start to get hue keytab file");
             String hostname = CacheUtils.getString(Constants.HOSTNAME);
             KubernetesKerberosUtils.createKeytabDir(hostname);
             if (!FileUtil.exist("/opt/datasophon/hue/hue.service.keytab")) {
-                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname,"hue/" + hostname, "hue.service.keytab");
-                KubernetesMinaUtils.execCmdWithResult(hostname,"cp /etc/security/keytab/hue.service.keytab /opt/datasophon/hue/hue.service.keytab");
-                KubernetesMinaUtils.execCmdWithResult(hostname,"chmod 777 /opt/datasophon/hue/hue.service.keytab");
+                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "hue/" + hostname, "hue.service.keytab");
+                KubernetesMinaUtils.execCmdWithResult(hostname,
+                        "cp /etc/security/keytab/hue.service.keytab /opt/datasophon/hue/hue.service.keytab");
+                KubernetesMinaUtils.execCmdWithResult(hostname, "chmod 777 /opt/datasophon/hue/hue.service.keytab");
             }
         }
 
@@ -47,17 +47,17 @@ public class KubernetesHueHandlerStrategy extends KubernetesAbstractHandlerStrat
             String initCommand = "su - hue -c \"cd " + workPath + "/build/env/bin/ && "
                     + " ./hue syncdb && "
                     + " ./hue migrate\"";
-            VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
+            VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap(),
+                    command.getEnableKerberos());
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 KubernetesUtil.runJob(
-                        getKubernetesNamespace(command.getClusterId()),
+                        command.getNamespace(),
                         "hue-database-init",
                         kubeClient,
                         volumeMounts,
                         DockerImageUtils.getString(command.getServiceName()),
                         initCommand,
-                        command.getHostname()
-                );
+                        command.getHostname());
                 logger.info("hue database init success");
                 startResult.setExecResult(true);
             } catch (Exception e) {

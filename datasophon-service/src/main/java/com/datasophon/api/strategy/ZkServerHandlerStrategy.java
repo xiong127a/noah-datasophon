@@ -26,19 +26,18 @@ import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -133,10 +132,9 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
 
                 String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING;
-            HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
+            Map<String, List<String>> hostMap = CacheOperateUtils.getGeneric(
                                 hostMapKey,
-                        new TypeReference<>() {
-                        });
+                    TypeRefs.MAP_STRING_LIST_STRING);
                 if (Objects.nonNull(hostMap)) {
                         List<String> zkServers = hostMap.get("ZkServer");
 
@@ -258,18 +256,11 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                         List<InfoItem> connectInfoItems = new ArrayList<>();
 
                         // CLI命令
-                        String cliCommand = zkServerList.getFirst() + ":" + clientPort + " 2>/dev/null";
-                        connectInfoItems.add(new InfoItem("connectString", "ZooKeeper连接字符串", zkConnectString));
+                    zkServerList.getFirst();
+                    connectInfoItems.add(new InfoItem("connectString", "ZooKeeper连接字符串", zkConnectString));
 
                         // 构建重要键列表
                         List<String> importantKeys = Arrays.asList("connectString", "cliCommand");
-
-                        if (enableKerberos) {
-                                String principal = configMap.getOrDefault("kerberos.service.principal",
-                                                "zookeeper/_HOST@EXAMPLE.COM");
-                                String keytab = configMap.getOrDefault("kerberos.keytab.file",
-                                                "/etc/security/keytabs/zookeeper.keytab");
-                        }
 
                         // 返回连接信息构建器
                         logger.info("ZooKeeper连接信息生成成功");

@@ -37,6 +37,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -111,9 +112,8 @@ public class ClusterServiceCommandServiceImpl
         List<String> commandIds = new ArrayList<>();
 
         Map<String, List<String>> serviceRoleHostMap = CacheOperateUtils
-                .getWithType(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING,
-                        new TypeReference<>() {
-                        });
+                .getGeneric(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING,
+                        TypeRefs.MAP_STRING_LIST_STRING);
 
         for (String serviceName : serviceNames) {
             // 1、生成操作指令

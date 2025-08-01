@@ -20,6 +20,8 @@ public class KubernetesGenerateDeploymentYamlCommand implements Serializable {
 
     private Integer clusterId;
 
+    private String namespace;
+
     private String serviceName;
 
     private String decompressPackageName;
@@ -51,7 +53,6 @@ public class KubernetesGenerateDeploymentYamlCommand implements Serializable {
     private Boolean enableRangerPlugin;
 
     private CommandType commandType;
-
 
     public KubernetesGenerateDeploymentYamlCommand() {
         this.enableKerberos = false;

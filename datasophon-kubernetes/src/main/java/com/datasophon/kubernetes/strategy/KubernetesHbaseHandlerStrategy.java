@@ -1,6 +1,5 @@
 package com.datasophon.kubernetes.strategy;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceRoleType;
@@ -13,10 +12,10 @@ import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
-import java.io.IOException;
 import java.util.List;
 
-public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesHbaseHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -25,8 +24,8 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
     @Override
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult = new ExecResult();
-        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(), command.getServiceRoleName());
-        final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
+        KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
+                command.getServiceRoleName());
         String hostname = command.getHostname();
 
         String jobCmd = "";
@@ -36,11 +35,13 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
             if (!KubernetesMinaUtils.checkPathExists(hostname, "/etc/security/keytab/hbase.keytab")) {
                 KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "hbase/" + hostname, "hbase.keytab");
             }
-            jobCmd = "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM\"  && ";
+            jobCmd = "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname
+                    + "@HADOOP.COM\"  && ";
             jobCmd += "su - hdfs -c \"kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
         }
 
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)&&command.getServiceRoleType().equals(ServiceRoleType.MASTER)) {
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)
+                && command.getServiceRoleType().equals(ServiceRoleType.MASTER)) {
             String hadoopHome = "/opt/datasophon/hadoop-3.3.3";
             String dirPath = "/hbase";
             jobCmd += "su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -test -e " + dirPath + "\" " +
@@ -70,22 +71,23 @@ public class KubernetesHbaseHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             return;
         }
 
         for (ServiceConfig config : list) {
             String name = config.getName();
-            if (name != null && "hbase.zookeeper.quorum".equals(name)) {
+            if ("hbase.zookeeper.quorum".equals(name)) {
                 try {
                     String value = (String) config.getValue();// 获取当前配置值
                     String[] split = value.split(",");
                     StringBuilder newValue = new StringBuilder();
-                    for (int i = 0; i < split.length; i++){
-                        newValue.append("zookeeper-zkserver-").append(i).append(".zookeeper-zkserver.datasophon.svc.cluster.local:2181,");
+                    for (int i = 0; i < split.length; i++) {
+                        newValue.append("zookeeper-zkserver-").append(i)
+                                .append(".zookeeper-zkserver.datasophon.svc.cluster.local:2181,");
                     }
-                     config.setValue(newValue.substring(0, newValue.length() - 1)); // 去掉最后一个逗号
+                    config.setValue(newValue.substring(0, newValue.length() - 1)); // 去掉最后一个逗号
                 } catch (Exception e) {
                     // 忽略错误
                 }

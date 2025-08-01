@@ -27,8 +27,10 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class KubernetesSRBEHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesSRBEHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesSRBEHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -79,15 +81,13 @@ public class KubernetesSRBEHandlerStrategy extends KubernetesAbstractHandlerStra
                     }
 
                     // 创建SQL语句列表 - 使用IntStream更优雅地生成
-                    List<String> sqlStatements = java.util.stream.IntStream.rangeClosed(existingNodesCount, endPodIndex)
+                    List<String> sqlStatements = IntStream.rangeClosed(existingNodesCount, endPodIndex)
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String beHostPort = String.format("%s-%d.%s.%s.svc.cluster.local:9050",
-                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(
-                                                command.getClusterId()));
+                                        serviceRoleFullName, i, serviceRoleFullName, command.getNamespace());
                                 String beHost = String.format("%s-%d.%s.%s.svc.cluster.local",
-                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(
-                                                command.getClusterId()));
+                                        serviceRoleFullName, i, serviceRoleFullName, command.getNamespace());
 
                                 logger.info("添加BE节点 {}: {}:{}", i - existingNodesCount + 1, beHost, "9050");
 
@@ -105,7 +105,7 @@ public class KubernetesSRBEHandlerStrategy extends KubernetesAbstractHandlerStra
 
                     // 使用executeMySqlInPod批量执行SQL语句
                     startResult = executeMySqlInPod(
-                            command.getClusterId(),
+                            command.getNamespace(),
                             kubeClient,
                             "starrocks-srfe-0", // 使用第一个FE节点执行命令
                             sqlStatements);

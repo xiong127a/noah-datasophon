@@ -8,14 +8,13 @@ import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 
 import static com.datasophon.common.Constants.UNDERLINE;
 
-public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesResourceManagerHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -37,7 +36,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新服务配置");
             return;
@@ -66,7 +65,7 @@ public class KubernetesResourceManagerHandlerStrategy extends KubernetesAbstract
         // 遍历所有配置
         for (ServiceConfig config : list) {
             String name = config.getName();
-            String namespace = getKubernetesNamespace(clusterId);
+            // namespace已通过参数传入，无需查询
             // 处理ResourceManager相关配置
             switch (name) {
                 case "yarn.resourcemanager.hostname.rm1": {

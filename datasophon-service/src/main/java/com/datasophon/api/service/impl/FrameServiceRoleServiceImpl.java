@@ -24,6 +24,7 @@ import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.api.vo.Result;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
@@ -100,10 +101,9 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             }
             // 否则，尝试从缓存中获取
             else if (CacheOperateUtils.containsKey(cacheKey)) {
-                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getWithType(
+                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getGeneric(
                         cacheKey,
-                        new TypeReference<>() {
-                        });
+                        TypeRefs.MAP_STRING_LIST_STRING);
 
                 if (roleToHostsMap.containsKey(role.getServiceRoleName())) {
                     role.setHosts(roleToHostsMap.get(role.getServiceRoleName()));
@@ -169,10 +169,9 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             }
             // 否则，尝试从缓存中获取
             else if (CacheOperateUtils.containsKey(cacheKey)) {
-                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getWithType(
+                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getGeneric(
                         cacheKey,
-                        new TypeReference<>() {
-                        });
+                        TypeRefs.MAP_STRING_LIST_STRING);
 
                 if (roleToHostsMap.containsKey(role.getServiceRoleName())) {
                     hosts = roleToHostsMap.get(role.getServiceRoleName());

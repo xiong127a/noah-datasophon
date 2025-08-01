@@ -19,7 +19,6 @@ package com.datasophon.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 public enum ServiceRoleType {

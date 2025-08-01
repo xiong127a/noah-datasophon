@@ -30,7 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesSRFEHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -82,7 +83,6 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
 
                 // 如果需要添加follower，继续执行
                 try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                    StringBuilder cmdBuilder = new StringBuilder();
 
                     // 先确定是否是新集群安装还是扩容
                     boolean isNewCluster = existingNodesCount == 0;
@@ -111,9 +111,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String followerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
-                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(clusterId));
-                                String followerHost = String.format("%s-%d.%s.%s.svc.cluster.local",
-                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(clusterId));
+                                        serviceRoleFullName, i, serviceRoleFullName, command.getNamespace());
 
                                 logger.info("添加follower节点: {}", followerAddr);
 
@@ -131,7 +129,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
 
                     // 使用executeMySqlInPod批量执行SQL语句
                     startResult = executeMySqlInPod(
-                            clusterId,
+                            command.getNamespace(),
                             kubeClient,
                             serviceRoleFullName + "-0", // 使用第一个FE节点执行命令
                             sqlStatements);
@@ -150,7 +148,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         // 移除在Kubernetes环境中不需要的参数
         logger.info("开始移除StarRocks在Kubernetes环境下不需要的参数...");
 

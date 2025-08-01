@@ -27,7 +27,6 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.TypeReference;
-import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
@@ -37,10 +36,15 @@ import com.datasophon.api.service.*;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.vo.Result;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.ServiceRoleType;
+import com.datasophon.common.enums.Status;
+// TypeRefs 现在位于 CacheUtils.TypeRefs 中
 import com.datasophon.common.model.DAG;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.HostServiceRoleMapping;
@@ -51,7 +55,6 @@ import com.datasophon.common.model.ServiceNodeEdge;
 import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
@@ -70,7 +73,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
@@ -92,7 +103,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallServiceImpl.class);
 
     @Autowired
-    private     FrameServiceService frameService;
+    private FrameServiceService frameService;
     @Autowired
     private ClusterServiceCommandService commandService;
     @Autowired
@@ -111,7 +122,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
     private ConfigVersionInfoService configVersionInfoService;
-
 
     /**
      * 处理配置列表，根据集群模式修改配置项的hidden和required属性
@@ -172,7 +182,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             KubernetesServiceRoleStrategy kubernetesServiceRoleStrategy = KubernetesServiceRoleStrategyContext
                     .getServiceRoleHandler(serviceName);
             if (Objects.nonNull(kubernetesServiceRoleStrategy)) {
-                kubernetesServiceRoleStrategy.getConfig(clusterId, list);
+                // 通过ClusterInfoUtils获取namespace，避免kubernetes模块直接访问数据库
+                String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
+                kubernetesServiceRoleStrategy.getConfig(clusterId, namespace, list);
             }
         }
 
@@ -345,7 +357,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return Result.success().put("versionCreated", versionCreated);
     }
 
-
     @Override
     public Result saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list) {
 
@@ -353,12 +364,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         String hostMapKey = clusterInfo.getClusterCode()
                 + UNDERLINE
                 + SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = new HashMap<>();
-        if (CacheOperateUtils.containsKey(hostMapKey)) {
-            map = CacheOperateUtils.getWithType(hostMapKey,
-                    new com.fasterxml.jackson.core.type.TypeReference<>() {
-                    });
-        }
+        // 使用 getGeneric 自动返回空Map，避免空指针异常
+        Map<String, List<String>> map = CacheOperateUtils.getGeneric(hostMapKey,
+                CacheUtils.TypeRefs.MAP_STRING_LIST_STRING);
 
         for (ServiceRoleHostMapping serviceRoleHostMapping : list) {
             serviceValidation(serviceRoleHostMapping);
@@ -413,12 +421,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     @Override
     public Result getServiceRoleDeployOverview(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(
+        // 使用 getGeneric 自动返回空Map，避免空指针异常
+        Map<String, List<String>> map = CacheOperateUtils.getGeneric(
                 clusterInfo.getClusterCode()
                         + UNDERLINE
                         + SERVICE_ROLE_HOST_MAPPING,
-                new com.fasterxml.jackson.core.type.TypeReference<>() {
-                });
+                CacheUtils.TypeRefs.MAP_STRING_LIST_STRING);
         return Result.success(map);
     }
 
@@ -710,7 +718,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      */
     private Map<Generators, List<ServiceConfig>> parseConfigJson(String configJson) {
         return JSON.parseObject(configJson,
-                new TypeReference<>() {
+                new TypeReference<Map<Generators, List<ServiceConfig>>>() {
                 });
     }
 
@@ -820,7 +828,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // 更新其他版本为非当前版本
         configVersionInfoService.updateCurrentVersion(configVersionInfo.getVersion(), refType, refId);
     }
-
 
     private void serviceValidation(ServiceRoleHostMapping serviceRoleHostMapping) {
         String serviceRole = serviceRoleHostMapping.getServiceRole();
@@ -1033,7 +1040,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 // 映射子组名称为更友好的显示名称
                 List<String> friendlySubgroupNames = subgroups.stream()
                         .map(this::getFriendlySubgroupName)
-                        .toList();
+                        .collect(Collectors.toList());
 
                 for (int i = 0; i < friendlySubgroupNames.size(); i++) {
                     if (i > 0) {

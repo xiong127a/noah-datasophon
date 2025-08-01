@@ -27,7 +27,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class KubernetesSRFEObserverHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesSRFEObserverHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesSRFEObserverHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -82,8 +83,7 @@ public class KubernetesSRFEObserverHandlerStrategy extends KubernetesAbstractHan
                             .mapToObj(i -> {
                                 // 构建完整的节点地址（Pod名称格式是serviceName-podIndex）
                                 String observerAddr = String.format("%s-%d.%s.%s.svc.cluster.local:9010",
-                                        serviceRoleFullName, i, serviceRoleFullName, getKubernetesNamespace(command.getClusterId()));
-                                getKubernetesNamespace(command.getClusterId());
+                                        serviceRoleFullName, i, serviceRoleFullName, command.getNamespace());
 
                                 logger.info("添加Observer节点 {}: {}", i - existingNodesCount + 1, observerAddr);
 
@@ -101,7 +101,7 @@ public class KubernetesSRFEObserverHandlerStrategy extends KubernetesAbstractHan
 
                     // 使用executeMySqlInPod批量执行SQL语句
                     startResult = executeMySqlInPod(
-                            command.getClusterId(),
+                            command.getNamespace(),
                             kubeClient,
                             "starrocks-srfe-0", // 使用第一个FE节点执行命令
                             sqlStatements);

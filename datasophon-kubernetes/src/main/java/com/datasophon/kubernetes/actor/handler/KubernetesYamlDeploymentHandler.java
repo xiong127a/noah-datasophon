@@ -24,7 +24,6 @@ import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.DockerImageUtils;
 import com.datasophon.kubernetes.util.KubernetesFreeMakerUtils;
-import com.datasophon.kubernetes.util.KubernetesUtil;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -171,7 +170,7 @@ public class KubernetesYamlDeploymentHandler {
         }
     }
 
-    public ExecResult configure(Integer clusterId,Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
+    public ExecResult configure(String namespace, Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs,
             ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt,
             String decompressPackageName, String logFile, String serviceRoleName, String masterHost,
             boolean enableKerberos, boolean enableRangerPlugin, CommandType commandType) {
@@ -193,7 +192,9 @@ public class KubernetesYamlDeploymentHandler {
 
             volumeEnableKerberosConfig(volumeConfigMapSet, serviceRoleName, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(clusterId,runAs, startRunner, statusRunner, roleNodeCnt, appHome,
+            // namespace已由调用方传入，保持架构清晰
+            Map<String, Object> data = prepareTemplateMap(namespace, runAs, startRunner, statusRunner, roleNodeCnt,
+                    appHome,
                     volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin,
                     logFile, commandType);
             if ("hdfs-zkfc".equalsIgnoreCase(serviceRoleFullName)) {
@@ -242,7 +243,8 @@ public class KubernetesYamlDeploymentHandler {
         // 使用方括号语法替代后，不再需要特别设置命名约定
         config.setTemplateLoader(new MultiTemplateLoader(new TemplateLoader[] { new ClassTemplateLoader(
                 KubernetesFreeMakerUtils.class,
-                "/Kubernetes" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "Kubernetes") }));
+                "/Kubernetes" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH
+                        + "Kubernetes") }));
         return config.getTemplate(serviceRoleFullName + ".yaml.ftl");
     }
 
@@ -329,14 +331,13 @@ public class KubernetesYamlDeploymentHandler {
         return resultConfigMap;
     }
 
-    private Map<String, Object> prepareTemplateMap(Integer clusterId,RunAs runAs, ServiceRoleRunner startRunner,
+    private Map<String, Object> prepareTemplateMap(String namespace, RunAs runAs, ServiceRoleRunner startRunner,
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
             String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin, String logFile,
             CommandType commandType) {
         // 获取参数映射，使用runAs中的用户名，在Kubernetes环境中使用$(hostname)
         Map<String, String> paramMap = createParamMap(runAs.getUser(), true);
-        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         // 处理logFile
         String processedLogFile = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
         String logFilePath = FileUtils.concatPath(appHome, processedLogFile);
@@ -430,12 +431,12 @@ public class KubernetesYamlDeploymentHandler {
         if ("GRAFANA".equals(serviceName)) {
             String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
 
-
-            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_Kubernetes",false);
+            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_Kubernetes", false);
 
             // 使用三元运算符简化主机名选择
             String hostOrService = isRunningInKubernetes ? "datasophon-api-service" : NetUtil.getLocalHostName();
-            logger.info("Grafana通信配置: 运行环境[{}], 使用地址[{}]", isRunningInKubernetes ? "Kubernetes" : "非Kubernetes", hostOrService);
+            logger.info("Grafana通信配置: 运行环境[{}], 使用地址[{}]", isRunningInKubernetes ? "Kubernetes" : "非Kubernetes",
+                    hostOrService);
 
             data.put("apiUrl", String.format(url, hostOrService, 8081));
         }
@@ -455,11 +456,12 @@ public class KubernetesYamlDeploymentHandler {
         }
         if ("PROMETHEUS".equals(serviceName)) {
             // 使用Hutool工具类检查环境变量并直接转为布尔值
-            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_KUBERNETES",false);
+            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_KUBERNETES", false);
 
             // 使用三元运算符简化主机名选择
             String hostOrService = isRunningInKubernetes ? "datasophon-api-service" : NetUtil.getLocalHostName();
-            logger.info("Prometheus通信配置: 运行环境[{}], 使用地址[{}]", isRunningInKubernetes ? "Kubernetes" : "非Kubernetes", hostOrService);
+            logger.info("Prometheus通信配置: 运行环境[{}], 使用地址[{}]", isRunningInKubernetes ? "Kubernetes" : "非Kubernetes",
+                    hostOrService);
 
             data.put("apiUrl", String.format("%s:8081", hostOrService));
         }
@@ -758,7 +760,7 @@ public class KubernetesYamlDeploymentHandler {
             secretData.put("temp-storage", tempStorage);
 
             // 缓存Secret，将在Kubernetes集群中创建
-            KubernetesFreeMakerUtils.cacheDatabaseSecret(namespace,serviceRoleFullName, secretData, "-db-secret");
+            KubernetesFreeMakerUtils.cacheDatabaseSecret(namespace, serviceRoleFullName, secretData, "-db-secret");
 
             logger.info("成功提取数据库连接信息和HDFS路径配置并创建Secret");
             logger.info("数据库信息: 类型={}, 主机={}, 端口={}, 数据库名={}",

@@ -22,13 +22,13 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
  * Grafana服务角色策略处理类
  */
-public class KubernetesGrafanaHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesGrafanaHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesGrafanaHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -43,7 +43,7 @@ public class KubernetesGrafanaHandlerStrategy extends KubernetesAbstractHandlerS
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新Grafana服务配置");
             return;

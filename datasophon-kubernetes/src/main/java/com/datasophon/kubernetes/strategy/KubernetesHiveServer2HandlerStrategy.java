@@ -7,13 +7,13 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
 import static com.datasophon.common.Constants.UNDERLINE;
 
-public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesHiveServer2HandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -29,12 +29,11 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         if (Objects.isNull(list) || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新HiveMetaStore服务地址");
             return;
         }
-        String namespace = getKubernetesNamespace(clusterId);
         // 动态获取ZK节点数量 - 直接从缓存获取，不再使用备用逻辑
         int zkNodeCount = 0;
         String zkNodeCountKey = clusterId + UNDERLINE + "zookeeper_node_count";
@@ -63,7 +62,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
                     .append(namespace).append(".")
                     .append(CLUSTER_DOMAIN).append(":9083");
         }
-        
+
         logger.info("开始更新Hive配置，适配Kubernetes服务...");
 
         for (ServiceConfig config : list) {

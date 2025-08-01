@@ -8,10 +8,10 @@ import com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler;
 import com.datasophon.kubernetes.util.CommonUtil;
 import com.datasophon.kubernetes.util.KubernetesKerberosUtils;
 
-import java.io.IOException;
 import java.util.List;
 
-public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandlerStrategy implements KubernetesServiceRoleStrategy {
+public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandlerStrategy
+        implements KubernetesServiceRoleStrategy {
 
     public KubernetesZkServerHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
@@ -29,10 +29,12 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
             String hostname = command.getHostname();
             KubernetesKerberosUtils.createKeytabDir(command.getHostname());
             if (!FileUtil.exist("/etc/security/keytab/zkserver.service.keytab")) {
-                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "zookeeper/" + hostname, "zkserver.service.keytab");
+                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "zookeeper/" + hostname,
+                        "zkserver.service.keytab");
             }
             if (!FileUtil.exist("/etc/security/keytab/zkclient.service.keytab")) {
-                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "zkcli/" + hostname, "zkclient.service.keytab");
+                KubernetesKerberosUtils.downloadKeytabFromMaster(hostname, "zkcli/" + hostname,
+                        "zkclient.service.keytab");
             }
         }
         startResult = serviceHandler.start(command);
@@ -40,7 +42,7 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             return;
         }
@@ -59,7 +61,7 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
                     int podIndex = serverId - 1;
 
                     // 修改为 FQDN DNS 名称
-                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + "." + getKubernetesNamespace(clusterId) + "."
+                    String newValue = ZK_SERVICE_NAME + "-" + podIndex + "." + ZK_SERVICE_NAME + "." + namespace + "."
                             + CLUSTER_DOMAIN + ":2888:3888";
                     config.setValue(newValue);
 

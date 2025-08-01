@@ -34,10 +34,6 @@ public class KubernetesAbstractHandlerStrategy {
 
     public Logger logger;
 
-    public String getKubernetesNamespace(Integer clusterId) {
-        return KubernetesUtil.getKubernetesNamespace(clusterId);
-    }
-
     public KubernetesAbstractHandlerStrategy(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
@@ -93,7 +89,7 @@ public class KubernetesAbstractHandlerStrategy {
     }
 
     public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap,
-                                            boolean enableKerberos) {
+            boolean enableKerberos) {
         List<VolumeMountDTO> volumeList = new ArrayList<>();
         int fileCount = 1;
         int pathCount = 1;
@@ -137,21 +133,17 @@ public class KubernetesAbstractHandlerStrategy {
         return volumeList.toArray(new VolumeMountDTO[0]);
     }
 
-
-
-
-
     /**
      * 直接在指定Pod中批量执行MySQL SQL命令
      *
-     * @param clusterId     集群id
+     * @param namespace     Kubernetes命名空间
      * @param kubeClient    Kubernetes客户端
      * @param podName       Pod名称(如: starrocks-srfe-0)
      * @param sqlStatements SQL语句列表
      * @return 执行结果
      */
-    public ExecResult executeMySqlInPod(Integer clusterId, KubernetesClient kubeClient,
-                                        String podName, List<String> sqlStatements) {
+    public ExecResult executeMySqlInPod(String namespace, KubernetesClient kubeClient,
+            String podName, List<String> sqlStatements) {
         if (cn.hutool.core.collection.CollUtil.isEmpty(sqlStatements)) {
             logger.warn("没有提供SQL语句，无法执行");
             ExecResult result = new ExecResult();
@@ -169,7 +161,6 @@ public class KubernetesAbstractHandlerStrategy {
         String finalCmd = cn.hutool.core.util.StrUtil.join(" && ", mysqlCommands);
 
         logger.info("在Pod [{}] 中执行MySQL命令: {}", podName, finalCmd);
-        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
         return KubernetesUtil.runCmdInPod(namespace, kubeClient, podName, finalCmd);
     }
 }
