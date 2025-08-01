@@ -58,20 +58,14 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
         if (clusterState == null)
             return null;
         // 这里需要根据实际的ClusterState枚举值来映射
-        switch (clusterState) {
-            case 1:
-                return "待配置";
-            case 2:
-                return "正在运行";
-            case 3:
-                return "停止";
-            case 4:
-                return "删除中";
-            case 5:
-                return "已删除";
-            default:
-                return "未知状态";
-        }
+        return switch (clusterState) {
+            case 1 -> "待配置";
+            case 2 -> "正在运行";
+            case 3 -> "停止";
+            case 4 -> "删除中";
+            case 5 -> "已删除";
+            default -> "未知状态";
+        };
     }
 
     /**
