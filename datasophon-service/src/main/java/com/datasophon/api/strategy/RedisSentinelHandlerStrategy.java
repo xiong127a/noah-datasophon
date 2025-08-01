@@ -98,16 +98,11 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
             // 获取服务节点列表
             List<String> sentinelNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinel");
             List<String> masterNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinelMaster");
-            List<String> slaveNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinelSlave");
-
-            String primaryNode = masterNodes.isEmpty() ? (sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.getFirst())
-                    : masterNodes.getFirst();
             String sentinelHost = sentinelNodes.isEmpty() ? "localhost" : sentinelNodes.getFirst();
 
             // 获取端口和配置信息
             String sentinelPort = configMap.getOrDefault("redisSentinelPort", "26379");
             String masterPort = configMap.getOrDefault("redisSentinelMasterPort", "6379");
-            String slavePort = configMap.getOrDefault("redisSentinelSlavePort", "6380");
             String masterName = configMap.getOrDefault("redisSentinelMasterName", "mymaster");
 
             // 判断是否启用安全认证
