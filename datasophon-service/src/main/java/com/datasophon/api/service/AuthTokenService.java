@@ -139,4 +139,14 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @return 是否有效
      */
     boolean validateToken(String token);
+
+    /**
+     * 清理用户过多的令牌，保持在限制数量内
+     * 自动删除最旧的令牌，确保用户令牌数量不超过限制
+     * 
+     * @param userId    用户ID
+     * @param maxTokens 最大令牌数量
+     * @return 清理的令牌数量
+     */
+    int cleanupExcessiveTokens(Integer userId, int maxTokens);
 }

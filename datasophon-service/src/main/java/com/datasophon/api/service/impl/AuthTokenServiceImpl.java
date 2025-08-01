@@ -287,14 +287,6 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     }
 
     @Override
-    public List<AuthTokenDTO> getValidTokensByUserId(Integer userId) {
-        List<AuthTokenEntity> tokens = this.getMapper().findValidTokensByUserId(userId);
-        return tokens.stream()
-                .map(authTokenConverter::entityToDto)
-                .toList();
-    }
-
-    @Override
     public AuthTokenDTO getAuthTokenById(Long id) {
         AuthTokenEntity entity = this.getById(id);
         return entity != null ? authTokenConverter.entityToDto(entity) : null;
@@ -308,6 +300,72 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
 
         AuthTokenDTO tokenDTO = getByToken(token);
         return tokenDTO != null && tokenDTO.isValid();
+    }
+
+    @Override
+    public List<AuthTokenDTO> getValidTokensByUserId(Integer userId) {
+        if (userId == null) {
+            return List.of();
+        }
+
+        try {
+            // 查询用户的有效令牌（未撤销且未过期）
+            List<AuthTokenEntity> validTokens = QueryChain.of(AuthTokenEntity.class)
+                    .where(AuthTokenEntity::getUserId).eq(userId)
+                    .and(AuthTokenEntity::getIsRevoked).eq(false)
+                    .and(AuthTokenEntity::getExpiresAt).gt(new Date())
+                    .orderBy(AuthTokenEntity::getIssuedAt, false) // 按发布时间降序排列
+                    .list();
+
+            return authTokenConverter.entityListToDtoList(validTokens);
+        } catch (Exception e) {
+            logger.error("获取用户有效令牌失败: userId={}", userId, e);
+            return List.of();
+        }
+    }
+
+    @Override
+    public int cleanupExcessiveTokens(Integer userId, int maxTokens) {
+        if (userId == null || maxTokens <= 0) {
+            return 0;
+        }
+
+        try {
+            // 获取用户当前有效令牌
+            List<AuthTokenDTO> validTokens = getValidTokensByUserId(userId);
+
+            if (validTokens.size() <= maxTokens) {
+                logger.debug("用户 {} 的令牌数量 {} 未超过限制 {}", userId, validTokens.size(), maxTokens);
+                return 0; // 无需清理
+            }
+
+            // 计算需要清理的数量
+            int deleteCount = validTokens.size() - maxTokens;
+            logger.info("用户 {} 的令牌数量 {} 超过限制 {}，需要清理 {} 个",
+                    userId, validTokens.size(), maxTokens, deleteCount);
+
+            // 按发布时间排序，删除最旧的令牌（保留最新的maxTokens个）
+            List<Long> tokenIdsToDelete = validTokens.stream()
+                    .sorted(Comparator.comparing(AuthTokenDTO::issuedAt)) // 按发布时间升序
+                    .limit(deleteCount)
+                    .map(AuthTokenDTO::id)
+                    .toList();
+
+            // 批量撤销过期令牌
+            int deletedCount = 0;
+            for (Long tokenId : tokenIdsToDelete) {
+                if (revokeToken(tokenId, "超出最大令牌数量限制，自动清理")) {
+                    deletedCount++;
+                }
+            }
+
+            logger.info("用户 {} 已清理 {} 个过期令牌", userId, deletedCount);
+            return deletedCount;
+
+        } catch (Exception e) {
+            logger.error("清理用户过多令牌失败: userId={}, maxTokens={}", userId, maxTokens, e);
+            return 0;
+        }
     }
 
 }
