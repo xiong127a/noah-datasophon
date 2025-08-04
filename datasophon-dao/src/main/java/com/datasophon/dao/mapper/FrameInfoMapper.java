@@ -52,4 +52,18 @@ public interface FrameInfoMapper extends BaseMapper<FrameInfoEntity> {
         return this.selectOneByQuery(queryWrapper);
     }
 
+    /**
+     * 获取所有框架信息列表
+     * 迁移Service层的QueryChain逻辑到DAO层
+     *
+     * @return 框架信息列表
+     */
+    default List<FrameInfoEntity> selectAllFrameInfo() {
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .select(FRAME_INFO_ENTITY.ALL_COLUMNS)
+                .from(FRAME_INFO_ENTITY);
+
+        return this.selectListByQuery(queryWrapper);
+    }
+
 }

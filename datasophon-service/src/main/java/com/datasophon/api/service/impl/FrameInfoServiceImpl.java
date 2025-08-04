@@ -26,16 +26,16 @@ import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.stream.Collectors;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-
-import static com.datasophon.dao.entity.table.FrameInfoEntityTableDef.FRAME_INFO_ENTITY;
 
 /**
  * 集群框架表服务实现
@@ -56,19 +56,17 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
 
     @Override
     public List<FrameInfoDTO> getAllClusterFrame() {
-        // 使用QueryChain查询所有框架信息
-        List<FrameInfoEntity> frameInfoEntities = QueryChain.of(FrameInfoEntity.class)
-                .from(FRAME_INFO_ENTITY)
-                .list();
+        // 调用DAO层方法查询所有框架信息
+        List<FrameInfoEntity> frameInfoEntities = getMapper().selectAllFrameInfo();
 
         if (frameInfoEntities.isEmpty()) {
             return List.of();
         }
 
-        // 获取框架ID集合，使用JDK21特性
-        var frameInfoIds = frameInfoEntities.stream()
+        // 获取框架ID集合，使用JDK21特性，转换为Set类型
+        Set<Integer> frameInfoIds = frameInfoEntities.stream()
                 .map(FrameInfoEntity::getId)
-                .toList();
+                .collect(Collectors.toSet());
 
         // 查询关联的服务信息
         Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper
@@ -162,9 +160,7 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
 
     @Override
     public List<FrameInfoDTO> getAllFrameInfos() {
-        List<FrameInfoEntity> entities = QueryChain.of(FrameInfoEntity.class)
-                .from(FRAME_INFO_ENTITY)
-                .list();
+        List<FrameInfoEntity> entities = getMapper().selectAllFrameInfo();
 
         return frameInfoConverter.entityListToDtoList(entities);
     }
