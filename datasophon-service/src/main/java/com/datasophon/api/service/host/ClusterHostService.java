@@ -17,11 +17,11 @@
 
 package com.datasophon.api.service.host;
 
+import com.datasophon.common.dto.ClusterRackDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.common.exception.BusinessException;
 
 import java.util.List;
@@ -43,7 +43,7 @@ public interface ClusterHostService {
      */
     List<ClusterHostDO> getAllManagedHostsByClusterId(Integer clusterId);
 
-    List<ClusterServiceRoleInstanceEntity> getRoleListByHostname(Integer clusterId, String hostname);
+    List<ClusterServiceRoleInstanceDTO> getRoleListByHostname(Integer clusterId, String hostname);
 
     /**
      * 批量删除主机。
@@ -55,7 +55,7 @@ public interface ClusterHostService {
      */
     void deleteHosts(String hostIds) throws BusinessException;
 
-    List<ClusterRack> getRack(Integer clusterId);
+    List<ClusterRackDTO> getRack(Integer clusterId);
 
     void removeHostByClusterId(Integer id);
 
@@ -87,4 +87,11 @@ public interface ClusterHostService {
      * @param hosts 需要更新的主机列表
      */
     void updateBatchHostStatus(List<ClusterHostDO> hosts);
+
+    /**
+     * 保存主机信息
+     *
+     * @param clusterHostDO 主机信息
+     */
+    void saveHost(ClusterHostDO clusterHostDO);
 }

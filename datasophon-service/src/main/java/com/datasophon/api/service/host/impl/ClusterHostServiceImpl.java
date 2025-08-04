@@ -36,11 +36,12 @@ import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
 import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.dto.ClusterRackDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.exception.BusinessException;
 import com.mybatisflex.core.paginate.Page;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
@@ -56,13 +57,19 @@ import org.springframework.transaction.annotation.Transactional;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
+/**
+ * 集群主机服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("clusterHostService")
 @Transactional
 public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, ClusterHostDO>
@@ -113,13 +120,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> getRoleListByHostname(Integer clusterId, String hostname) {
-        List<ClusterServiceRoleInstanceEntity> list = roleInstanceQueryService
-                .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
-        for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
-            roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
-        }
-        return list;
+    public List<ClusterServiceRoleInstanceDTO> getRoleListByHostname(Integer clusterId, String hostname) {
+        // 直接返回查询结果，DTO应该已经包含正确的状态码
+        return roleInstanceQueryService.getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
     }
 
     /**
@@ -191,13 +194,18 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterRack> getRack(Integer clusterId) {
+    public List<ClusterRackDTO> getRack(Integer clusterId) {
         return clusterRackService.queryClusterRack(clusterId);
     }
 
     @Override
     public void removeHostByClusterId(Integer clusterId) {
         clusterHostMapper.deleteByClusterId(clusterId);
+    }
+
+    @Override
+    public void saveHost(ClusterHostDO clusterHostDO) {
+        this.save(clusterHostDO);
     }
 
     @Override
@@ -238,7 +246,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public void assignRack(Integer clusterId, String rack, String hostIds) throws BusinessException {
-        List<String> ids = Arrays.asList(hostIds.split(","));
+        List<String> ids = List.of(hostIds.split(","));
         List<ClusterHostDO> list = clusterHostMapper.selectByIds(ids);
         for (ClusterHostDO clusterHostDO : list) {
             clusterHostDO.setRack(rack);
