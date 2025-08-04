@@ -17,35 +17,54 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterRackDTO;
 import com.datasophon.dao.entity.ClusterRack;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群机架服务
+ * 集群机架服务接口
+ * 提供集群机架的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface ClusterRackService {
+public interface ClusterRackService extends IService<ClusterRack> {
 
-    List<ClusterRack> queryClusterRack(Integer clusterId);
+    /**
+     * 查询集群机架
+     */
+    List<ClusterRackDTO> queryClusterRack(Integer clusterId);
 
-    ClusterRack saveRack(Integer clusterId, String rack);
+    /**
+     * 保存机架
+     */
+    ClusterRackDTO saveRack(Integer clusterId, String rack);
 
+    /**
+     * 删除机架
+     */
     boolean deleteRack(Integer rackId);
 
+    /**
+     * 创建默认机架
+     */
     void createDefaultRack(Integer clusterId);
 
-    // 标准CRUD方法
-    ClusterRack getById(Integer id);
+    /**
+     * 根据ID获取机架DTO
+     */
+    ClusterRackDTO getByIdAsDto(Integer id);
 
-    ClusterRack save(ClusterRack entity);
+    /**
+     * 保存机架DTO
+     */
+    ClusterRackDTO saveRackDto(ClusterRackDTO dto);
 
-    ClusterRack updateById(ClusterRack entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterRack> getAllRacks();
+    /**
+     * 更新机架
+     */
+    void updateRack(ClusterRackDTO dto);
 }

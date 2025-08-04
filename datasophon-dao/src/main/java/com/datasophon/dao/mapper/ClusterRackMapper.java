@@ -25,11 +25,12 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群机架映射器
+ * 集群机架数据访问对象
+ * 提供集群机架的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterRackMapper extends BaseMapper<ClusterRack> {
@@ -51,51 +52,5 @@ public interface ClusterRackMapper extends BaseMapper<ClusterRack> {
                 .where(ClusterRack::getClusterId).eq(clusterId)
                 .and(ClusterRack::getRack).eq(rack);
         return this.selectOneByQuery(query) != null;
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterRack selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterRack entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterRack entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID删除
-     */
-    default int removeById(Integer id) {
-        return this.deleteById(id);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有机架
-     */
-    default List<ClusterRack> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
     }
 }

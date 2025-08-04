@@ -17,6 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterRackConverter;
+import com.datasophon.common.dto.ClusterRackDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.host.ClusterHostService;
@@ -26,34 +28,38 @@ import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.mapper.ClusterRackMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 集群机架服务实现
+ * 集群机架服务实现类
+ * 提供集群机架的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Service("clusterRackService")
-public class ClusterRackServiceImpl implements ClusterRackService {
+public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, ClusterRack>
+        implements ClusterRackService {
 
     @Autowired
-    private ClusterRackMapper clusterRackMapper;
+    private ClusterRackConverter clusterRackConverter;
 
     @Autowired
     private ClusterHostService hostService;
 
     @Override
-    public List<ClusterRack> queryClusterRack(Integer clusterId) {
-        return clusterRackMapper.selectByClusterId(clusterId);
+    public List<ClusterRackDTO> queryClusterRack(Integer clusterId) {
+        List<ClusterRack> entities = getMapper().selectByClusterId(clusterId);
+        return clusterRackConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public ClusterRack saveRack(Integer clusterId, String rack) {
+    public ClusterRackDTO saveRack(Integer clusterId, String rack) {
         // 机架名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         GeneralValidator generalValidator = new GeneralValidator();
@@ -67,7 +73,7 @@ public class ClusterRackServiceImpl implements ClusterRackService {
         }
 
         // 重复校验
-        boolean exists = clusterRackMapper.existsByClusterIdAndRack(clusterId, rack);
+        boolean exists = getMapper().existsByClusterIdAndRack(clusterId, rack);
 
         if (exists) {
             throw new RuntimeException("机架名称重复");
@@ -76,20 +82,21 @@ public class ClusterRackServiceImpl implements ClusterRackService {
         ClusterRack clusterRack = new ClusterRack();
         clusterRack.setRack(rack);
         clusterRack.setClusterId(clusterId);
-        clusterRackMapper.insert(clusterRack);
-        return clusterRack;
+        this.save(clusterRack);
+        // Service层：Entity → DTO转换
+        return clusterRackConverter.entityToDto(clusterRack);
     }
 
     @Override
     public boolean deleteRack(Integer rackId) {
-        ClusterRack clusterRack = clusterRackMapper.selectById(rackId);
+        ClusterRack clusterRack = this.getById(rackId);
         if (clusterRack == null) {
             throw new RuntimeException("Rack not found with id: " + rackId);
         }
         if (rackInUse(clusterRack)) {
             throw new RuntimeException(Status.RACK_IS_USING.getMsg());
         }
-        clusterRackMapper.removeById(rackId);
+        this.removeById(rackId);
         return true;
     }
 
@@ -98,7 +105,7 @@ public class ClusterRackServiceImpl implements ClusterRackService {
         ClusterRack clusterRack = new ClusterRack();
         clusterRack.setRack("/default-rack");
         clusterRack.setClusterId(clusterId);
-        clusterRackMapper.insert(clusterRack);
+        this.save(clusterRack);
     }
 
     private boolean rackInUse(ClusterRack clusterRack) {
@@ -106,31 +113,23 @@ public class ClusterRackServiceImpl implements ClusterRackService {
         return !list.isEmpty();
     }
 
-    // 标准CRUD方法实现
+    // 新增DTO方法实现
     @Override
-    public ClusterRack getById(Integer id) {
-        return clusterRackMapper.selectById(id);
+    public ClusterRackDTO getByIdAsDto(Integer id) {
+        ClusterRack entity = this.getById(id);
+        return clusterRackConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterRack save(ClusterRack entity) {
-        clusterRackMapper.insert(entity);
-        return entity;
+    public ClusterRackDTO saveRackDto(ClusterRackDTO dto) {
+        ClusterRack entity = clusterRackConverter.dtoToEntity(dto);
+        this.save(entity);
+        return clusterRackConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterRack updateById(ClusterRack entity) {
-        clusterRackMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterRackMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterRack> getAllRacks() {
-        return clusterRackMapper.selectAll();
+    public void updateRack(ClusterRackDTO dto) {
+        ClusterRack entity = clusterRackConverter.dtoToEntity(dto);
+        this.updateById(entity);
     }
 }
