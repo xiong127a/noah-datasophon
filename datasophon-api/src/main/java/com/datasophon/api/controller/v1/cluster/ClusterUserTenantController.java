@@ -1,37 +1,222 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.api.dto.Result;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.datasophon.dao.entity.ClusterUserTenant;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
-@ApiVersion(path = "cluster/user/tenant")
-@Validated
+import java.util.List;
+
+/**
+ * 集群用户租户控制器
+ * 提供集群用户租户关系的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
+@RestController
+@RequestMapping("/api/v1/cluster/user/tenant")
 public class ClusterUserTenantController {
 
     @Autowired
     private ClusterUserTenantService clusterUserTenantService;
 
-
-    @RequestMapping(value = "/add", method = RequestMethod.GET)
-    public Result add(@RequestParam("clusterId") @NotNull Integer clusterId, @RequestParam("userId") @NotNull Integer userId, @RequestParam("tenantIds") @NotBlank String tenantIds) {
-        return clusterUserTenantService.addUserToTenant(clusterId, userId, tenantIds);
+    /**
+     * 为用户添加租户授权
+     */
+    @PostMapping("/add")
+    public Result<Void> addUserToTenant(
+            @RequestParam Integer clusterId,
+            @RequestParam Integer userId,
+            @RequestParam String tenantIds) {
+        try {
+            clusterUserTenantService.addUserToTenant(clusterId, userId, tenantIds);
+            return Result.success();
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("添加用户租户授权失败: " + e.getMessage());
+        }
     }
 
-    @RequestMapping(value = "/delete", method = RequestMethod.DELETE)
-    public Result delete(@RequestParam("clusterId") @NotNull Integer clusterId, @RequestParam("userId") @NotNull Integer userId, @RequestParam("tenantIds") @NotBlank String tenantIds) {
-        return clusterUserTenantService.deleteUser(clusterId, userId, tenantIds);
+    /**
+     * 删除用户租户授权
+     */
+    @DeleteMapping("/delete")
+    public Result<Void> deleteUser(
+            @RequestParam Integer clusterId,
+            @RequestParam Integer userId,
+            @RequestParam String tenantIds) {
+        try {
+            clusterUserTenantService.deleteUser(clusterId, userId, tenantIds);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error("删除用户租户授权失败: " + e.getMessage());
+        }
     }
 
-    @RequestMapping(value = "/getListByUserId")
-    public Result getListByUserId(@RequestParam("clusterId") Integer clusterId, @RequestParam("userId") Integer userId) {
-        return clusterUserTenantService.getListByUserId(clusterId, userId);
+    /**
+     * 根据用户ID获取授权租户列表
+     */
+    @GetMapping("/list")
+    public Result<List<ClusterUserTenant>> getListByUserId(
+            @RequestParam Integer clusterId,
+            @RequestParam Integer userId) {
+        try {
+            List<ClusterUserTenant> userTenantList = clusterUserTenantService.getListByUserId(clusterId, userId);
+            return Result.success(userTenantList);
+        } catch (Exception e) {
+            return Result.error("获取用户租户授权列表失败: " + e.getMessage());
+        }
     }
 
+    /**
+     * 根据ID获取用户租户关系详情
+     */
+    @GetMapping("/{id}")
+    public Result<ClusterUserTenant> getUserTenantById(@PathVariable Integer id) {
+        try {
+            ClusterUserTenant userTenant = clusterUserTenantService.getById(id);
+            if (userTenant == null) {
+                return Result.error("用户租户关系不存在");
+            }
+            return Result.success(userTenant);
+        } catch (Exception e) {
+            return Result.error("获取用户租户关系详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 创建用户租户关系
+     */
+    @PostMapping
+    public Result<ClusterUserTenant> createUserTenant(@RequestBody ClusterUserTenant userTenant) {
+        try {
+            boolean saved = clusterUserTenantService.save(userTenant);
+            if (saved) {
+                return Result.success(userTenant);
+            } else {
+                return Result.error("创建用户租户关系失败");
+            }
+        } catch (Exception e) {
+            return Result.error("创建用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新用户租户关系
+     */
+    @PutMapping("/{id}")
+    public Result<ClusterUserTenant> updateUserTenant(
+            @PathVariable Integer id, @RequestBody ClusterUserTenant userTenant) {
+        try {
+            userTenant.setId(id);
+            boolean updated = clusterUserTenantService.updateById(userTenant);
+            if (updated) {
+                return Result.success(userTenant);
+            } else {
+                return Result.error("更新用户租户关系失败");
+            }
+        } catch (Exception e) {
+            return Result.error("更新用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 删除用户租户关系
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteUserTenant(@PathVariable Integer id) {
+        try {
+            boolean deleted = clusterUserTenantService.removeById(id);
+            if (deleted) {
+                return Result.success();
+            } else {
+                return Result.error("删除用户租户关系失败");
+            }
+        } catch (Exception e) {
+            return Result.error("删除用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除用户租户关系
+     */
+    @DeleteMapping("/batch")
+    public Result<Void> deleteUserTenantBatch(@RequestBody List<Integer> ids) {
+        try {
+            boolean deleted = clusterUserTenantService.removeByIds(ids);
+            if (deleted) {
+                return Result.success();
+            } else {
+                return Result.error("批量删除用户租户关系失败");
+            }
+        } catch (Exception e) {
+            return Result.error("批量删除用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取所有用户租户关系
+     */
+    @GetMapping("/all")
+    public Result<List<ClusterUserTenant>> getAllUserTenants() {
+        try {
+            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list();
+            return Result.success(userTenantList);
+        } catch (Exception e) {
+            return Result.error("获取所有用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据集群ID获取用户租户关系
+     */
+    @GetMapping("/cluster/{clusterId}")
+    public Result<List<ClusterUserTenant>> getUserTenantsByClusterId(@PathVariable Integer clusterId) {
+        try {
+            // 暂时简化实现
+            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list().stream()
+                    .filter(ut -> ut.getClusterId().equals(clusterId))
+                    .toList();
+            return Result.success(userTenantList);
+        } catch (Exception e) {
+            return Result.error("获取集群用户租户关系失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据租户ID获取用户租户关系
+     */
+    @GetMapping("/tenant/{tenantId}")
+    public Result<List<ClusterUserTenant>> getUserTenantsByTenantId(@PathVariable Integer tenantId) {
+        try {
+            // 暂时简化实现
+            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list().stream()
+                    .filter(ut -> ut.getTenantId().equals(tenantId))
+                    .toList();
+            return Result.success(userTenantList);
+        } catch (Exception e) {
+            return Result.error("获取租户用户关系失败: " + e.getMessage());
+        }
+    }
 }
