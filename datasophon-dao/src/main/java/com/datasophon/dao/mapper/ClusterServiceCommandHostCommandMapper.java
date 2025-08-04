@@ -30,11 +30,12 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 集群服务操作指令主机指令表
+ * 集群服务命令主机命令数据访问对象
+ * 提供集群服务命令主机命令的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterServiceCommandHostCommandMapper extends BaseMapper<ClusterServiceCommandHostCommandEntity> {
@@ -125,45 +126,6 @@ public interface ClusterServiceCommandHostCommandMapper extends BaseMapper<Clust
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(commandHostId)
                 .and(ClusterServiceCommandHostCommandEntity::getCommandState).eq(commandState);
-        return this.selectListByQuery(query);
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterServiceCommandHostCommandEntity selectById(String id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterServiceCommandHostCommandEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterServiceCommandHostCommandEntity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有主机命令
-     */
-    default List<ClusterServiceCommandHostCommandEntity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
         return this.selectListByQuery(query);
     }
 }

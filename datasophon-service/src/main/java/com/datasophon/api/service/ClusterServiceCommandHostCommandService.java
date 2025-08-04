@@ -17,47 +17,81 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群服务操作指令主机指令表
+ * 集群服务命令主机命令服务接口
+ * 提供集群服务命令主机命令的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface ClusterServiceCommandHostCommandService {
+public interface ClusterServiceCommandHostCommandService extends IService<ClusterServiceCommandHostCommandEntity> {
 
+    /**
+     * 获取主机命令列表（分页）
+     */
     PageResult<ClusterServiceCommandHostCommandEntity> getHostCommandList(String hostname, String commandHostId,
             Integer page, Integer pageSize);
 
-    List<ClusterServiceCommandHostCommandEntity> getHostCommandListByCommandId(String id);
+    /**
+     * 根据命令ID获取主机命令列表
+     */
+    List<ClusterServiceCommandHostCommandDTO> getHostCommandListByCommandId(String id);
 
-    ClusterServiceCommandHostCommandEntity getByHostCommandId(String hostCommandId);
+    /**
+     * 根据主机命令ID获取命令
+     */
+    ClusterServiceCommandHostCommandDTO getByHostCommandId(String hostCommandId);
 
+    /**
+     * 根据主机命令ID更新命令
+     */
     void updateByHostCommandId(ClusterServiceCommandHostCommandEntity hostCommand);
 
+    /**
+     * 获取主机命令大小
+     */
     Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId);
 
+    /**
+     * 获取主机命令总进度
+     */
     Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, String commandHostId);
 
+    /**
+     * 获取主机命令日志
+     */
     String getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception;
 
-    List<ClusterServiceCommandHostCommandEntity> findFailedHostCommand(String hostname, String commandHostId);
+    /**
+     * 查找失败的主机命令
+     */
+    List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, String commandHostId);
 
-    List<ClusterServiceCommandHostCommandEntity> findCanceledHostCommand(String hostname, String commandHostId);
+    /**
+     * 查找取消的主机命令
+     */
+    List<ClusterServiceCommandHostCommandDTO> findCanceledHostCommand(String hostname, String commandHostId);
 
-    // 标准CRUD方法
-    ClusterServiceCommandHostCommandEntity getById(String id);
+    /**
+     * 根据ID获取主机命令DTO
+     */
+    ClusterServiceCommandHostCommandDTO getByIdAsDto(String id);
 
-    ClusterServiceCommandHostCommandEntity save(ClusterServiceCommandHostCommandEntity entity);
+    /**
+     * 保存主机命令DTO
+     */
+    ClusterServiceCommandHostCommandDTO saveHostCommand(ClusterServiceCommandHostCommandDTO dto);
 
-    ClusterServiceCommandHostCommandEntity updateById(ClusterServiceCommandHostCommandEntity entity);
-
-    boolean removeByIds(List<String> ids);
-
-    List<ClusterServiceCommandHostCommandEntity> getAllHostCommands();
+    /**
+     * 更新主机命令
+     */
+    void updateHostCommand(ClusterServiceCommandHostCommandDTO dto);
 }
