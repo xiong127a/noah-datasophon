@@ -22,15 +22,42 @@ import com.datasophon.dao.entity.ClusterYarnScheduler;
 import org.apache.ibatis.annotations.Mapper;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
+
+import java.util.List;
 
 /**
+ * 集群Yarn调度器映射器
+ * 迁移SQL逻辑到DAO层
  * 
- * 
- * @author dygao2
- * @email dygao2@datasophon.com
- * @date 2022-11-25 15:02:11
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterYarnSchedulerMapper extends BaseMapper<ClusterYarnScheduler> {
 
+    /**
+     * 根据集群ID查询调度器
+     *
+     * @param clusterId 集群ID
+     * @return 调度器实体
+     */
+    default ClusterYarnScheduler selectByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterYarnScheduler::getClusterId).eq(clusterId);
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据集群ID查询所有调度器
+     *
+     * @param clusterId 集群ID
+     * @return 调度器列表
+     */
+    default List<ClusterYarnScheduler> selectAllByClusterId(Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterYarnScheduler::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
 }

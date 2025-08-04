@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterYarnSchedulerService;
 import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
 import com.datasophon.dao.mapper.ClusterYarnSchedulerMapper;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,9 +52,8 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
 
     @Override
     public ClusterYarnSchedulerDTO getScheduler(Integer clusterId) {
-        ClusterYarnScheduler entity = QueryChain.of(ClusterYarnScheduler.class)
-                .where(ClusterYarnScheduler::getClusterId).eq(clusterId)
-                .one();
+        // SQL逻辑迁移到DAO层
+        ClusterYarnScheduler entity = getMapper().selectByClusterId(clusterId);
         return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
     }
 
@@ -76,9 +75,8 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
 
     @Override
     public List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Integer clusterId) {
-        List<ClusterYarnScheduler> entities = QueryChain.of(ClusterYarnScheduler.class)
-                .where(ClusterYarnScheduler::getClusterId).eq(clusterId)
-                .list();
+        // SQL逻辑迁移到DAO层
+        List<ClusterYarnScheduler> entities = getMapper().selectAllByClusterId(clusterId);
         return clusterYarnSchedulerConverter.entityListToDtoList(entities);
     }
 

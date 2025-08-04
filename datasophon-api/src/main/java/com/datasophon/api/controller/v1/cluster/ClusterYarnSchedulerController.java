@@ -17,71 +17,145 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterYarnSchedulerConverter;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
+import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
+import com.datasophon.common.vo.ClusterYarnSchedulerVO;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterYarnScheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
+import java.util.List;
 
+/**
+ * 集群Yarn调度器控制器
+ * 按照架构重构规范，使用Result<VO>返回，调用Converter转换
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @ApiVersion(path = "cluster/yarn/scheduler")
 public class ClusterYarnSchedulerController {
 
     @Autowired
     private ClusterYarnSchedulerService clusterYarnSchedulerService;
 
+    @Autowired
+    private ClusterYarnSchedulerConverter clusterYarnSchedulerConverter;
+
     /**
-     * 列表
+     * 根据集群ID获取调度器信息
+     */
+    @RequestMapping("/get")
+    public Result<ClusterYarnSchedulerVO> getScheduler(@RequestParam("clusterId") Integer clusterId) {
+        try {
+            ClusterYarnSchedulerDTO dto = clusterYarnSchedulerService.getScheduler(clusterId);
+            if (dto != null) {
+                ClusterYarnSchedulerVO vo = clusterYarnSchedulerConverter.dtoToVo(dto);
+                return Result.success(vo);
+            } else {
+                return Result.error("调度器不存在");
+            }
+        } catch (Exception e) {
+            return Result.error("获取Yarn调度器失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据集群ID获取所有调度器列表
      */
     @RequestMapping("/list")
-    public Result list() {
-
-        return Result.success();
+    public Result<List<ClusterYarnSchedulerVO>> list(@RequestParam("clusterId") Integer clusterId) {
+        try {
+            List<ClusterYarnSchedulerDTO> dtoList = clusterYarnSchedulerService.getSchedulersByClusterId(clusterId);
+            List<ClusterYarnSchedulerVO> voList = clusterYarnSchedulerConverter.dtoListToVoList(dtoList);
+            return Result.success(voList);
+        } catch (Exception e) {
+            return Result.error("获取Yarn调度器列表失败: " + e.getMessage());
+        }
     }
 
     /**
-     * 信息
+     * 根据ID获取调度器信息
      */
-    @RequestMapping("/info")
-    public Result info(@RequestParam("clusterId") Integer clusterId) {
-        ClusterYarnScheduler clusterYarnScheduler = clusterYarnSchedulerService.getScheduler(clusterId);
-
-        return Result.success(clusterYarnScheduler.getScheduler());
+    @RequestMapping("/info/{id}")
+    public Result<ClusterYarnSchedulerVO> info(@PathVariable("id") Integer id) {
+        try {
+            ClusterYarnSchedulerDTO dto = clusterYarnSchedulerService.getByIdAsDto(id);
+            if (dto != null) {
+                ClusterYarnSchedulerVO vo = clusterYarnSchedulerConverter.dtoToVo(dto);
+                return Result.success(vo);
+            } else {
+                return Result.error("调度器不存在");
+            }
+        } catch (Exception e) {
+            return Result.error("获取Yarn调度器信息失败: " + e.getMessage());
+        }
     }
 
     /**
-     * 保存
+     * 保存或更新调度器
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterYarnScheduler clusterYarnScheduler) {
-        clusterYarnSchedulerService.save(clusterYarnScheduler);
-
-        return Result.success();
+    public Result<ClusterYarnSchedulerVO> save(@RequestBody ClusterYarnSchedulerDTO clusterYarnSchedulerDTO) {
+        try {
+            ClusterYarnSchedulerDTO savedDTO = clusterYarnSchedulerService
+                    .saveOrUpdateScheduler(clusterYarnSchedulerDTO);
+            ClusterYarnSchedulerVO savedVO = clusterYarnSchedulerConverter.dtoToVo(savedDTO);
+            return Result.success(savedVO);
+        } catch (Exception e) {
+            return Result.error("保存Yarn调度器失败: " + e.getMessage());
+        }
     }
 
     /**
-     * 修改
+     * 更新调度器
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterYarnScheduler clusterYarnScheduler) {
-
-        clusterYarnSchedulerService.updateById(clusterYarnScheduler);
-
-        return Result.success();
+    public Result<ClusterYarnSchedulerVO> update(@RequestBody ClusterYarnSchedulerDTO clusterYarnSchedulerDTO) {
+        try {
+            ClusterYarnSchedulerDTO updatedDTO = clusterYarnSchedulerService
+                    .saveOrUpdateScheduler(clusterYarnSchedulerDTO);
+            ClusterYarnSchedulerVO updatedVO = clusterYarnSchedulerConverter.dtoToVo(updatedDTO);
+            return Result.success(updatedVO);
+        } catch (Exception e) {
+            return Result.error("更新Yarn调度器失败: " + e.getMessage());
+        }
     }
 
     /**
-     * 删除
+     * 删除调度器
      */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterYarnSchedulerService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    @RequestMapping("/delete/{id}")
+    public Result<String> delete(@PathVariable("id") Integer id) {
+        try {
+            boolean success = clusterYarnSchedulerService.deleteScheduler(id);
+            if (success) {
+                return Result.success("删除成功");
+            } else {
+                return Result.error("删除失败");
+            }
+        } catch (Exception e) {
+            return Result.error("删除Yarn调度器失败: " + e.getMessage());
+        }
     }
 
+    /**
+     * 创建默认调度器
+     */
+    @RequestMapping("/createDefault")
+    public Result<ClusterYarnSchedulerVO> createDefault(@RequestParam("clusterId") Integer clusterId) {
+        try {
+            ClusterYarnSchedulerDTO createdDTO = clusterYarnSchedulerService.createDefaultYarnScheduler(clusterId);
+            ClusterYarnSchedulerVO createdVO = clusterYarnSchedulerConverter.dtoToVo(createdDTO);
+            return Result.success(createdVO);
+        } catch (Exception e) {
+            return Result.error("创建默认Yarn调度器失败: " + e.getMessage());
+        }
+    }
 }
