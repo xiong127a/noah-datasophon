@@ -17,15 +17,27 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.service.ClusterServiceDashboardService;
+import com.datasophon.common.dto.ClusterServiceDashboardDTO;
+import com.datasophon.common.vo.ClusterServiceDashboardVO;
 import com.datasophon.common.vo.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+
 /**
- * 集群服务 dashboard inti
+ * 集群服务仪表盘控制器
+ * 提供集群服务仪表盘的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @ApiVersion(path = "cluster/service/dashboard")
 public class ClusterServiceDashboardController {
@@ -33,28 +45,81 @@ public class ClusterServiceDashboardController {
     @Autowired
     private ClusterServiceDashboardService clusterServiceDashboardService;
 
+    @Autowired
+    private ClusterServiceDashboardConverter converter;
 
     /**
-     * get dashboard url
+     * 获取仪表盘URL
      * 
-     * @param clusterId clusterId
-     * @return Result
+     * @param clusterId 集群ID
+     * @return Result<String>
      */
     @RequestMapping("/getDashboardUrl")
-    public Result getDashboardUrl(@RequestParam("clusterId")Integer clusterId) {
-
-        return clusterServiceDashboardService.getDashboardUrl(clusterId);
+    public Result<String> getDashboardUrl(@RequestParam("clusterId") Integer clusterId) {
+        String dashboardUrl = clusterServiceDashboardService.getDashboardUrl(clusterId);
+        return Result.success(dashboardUrl);
     }
 
     /**
-     * get datasophon dashboard url
+     * 获取Datasophon仪表盘URL
      * 
-     * @param clusterId clusterId
-     * @return Result
+     * @param clusterId 集群ID
+     * @return Result<String>
      */
     @RequestMapping("/getDatasophonDashboard")
-    public Result getDatasophonDashboard(@RequestParam("clusterId") Integer clusterId) {
+    public Result<String> getDatasophonDashboard(@RequestParam("clusterId") Integer clusterId) {
+        String dashboardUrl = clusterServiceDashboardService.getDatasophonDashboard(clusterId);
+        return Result.success(dashboardUrl);
+    }
 
-        return clusterServiceDashboardService.getDatasophonDashboard(clusterId);
+    /**
+     * 根据ID获取仪表盘信息
+     */
+    @RequestMapping("/info/{id}")
+    public Result<ClusterServiceDashboardVO> info(@PathVariable("id") Integer id) {
+        ClusterServiceDashboardDTO dto = clusterServiceDashboardService.getByIdAsDto(id);
+        if (dto == null) {
+            return Result.error("仪表盘不存在");
+        }
+        ClusterServiceDashboardVO vo = converter.dtoToVo(dto);
+        return Result.success(vo);
+    }
+
+    /**
+     * 保存仪表盘
+     */
+    @RequestMapping("/save")
+    public Result<ClusterServiceDashboardVO> save(@RequestBody ClusterServiceDashboardDTO dto) {
+        ClusterServiceDashboardDTO savedDto = clusterServiceDashboardService.saveDashboard(dto);
+        ClusterServiceDashboardVO vo = converter.dtoToVo(savedDto);
+        return Result.success(vo);
+    }
+
+    /**
+     * 更新仪表盘
+     */
+    @RequestMapping("/update")
+    public Result<String> update(@RequestBody ClusterServiceDashboardDTO dto) {
+        clusterServiceDashboardService.updateDashboard(dto);
+        return Result.success("更新成功");
+    }
+
+    /**
+     * 删除仪表盘
+     */
+    @RequestMapping("/delete")
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        clusterServiceDashboardService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
+    }
+
+    /**
+     * 获取所有仪表盘
+     */
+    @RequestMapping("/list")
+    public Result<List<ClusterServiceDashboardVO>> getAllDashboards() {
+        List<ClusterServiceDashboard> entities = clusterServiceDashboardService.list();
+        List<ClusterServiceDashboardVO> vos = converter.entityListToVoList(entities);
+        return Result.success(vos);
     }
 }

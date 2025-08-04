@@ -17,20 +17,42 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.mybatisflex.core.service.IService;
 
 /**
- * 集群服务总览仪表盘
+ * 集群服务仪表盘服务接口
+ * 提供集群服务仪表盘的业务逻辑处理
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-23 17:01:58
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface ClusterServiceDashboardService {
+public interface ClusterServiceDashboardService extends IService<ClusterServiceDashboard> {
 
-    Result getDashboardUrl(Integer clusterId);
+    /**
+     * 获取仪表盘URL
+     */
+    String getDashboardUrl(Integer clusterId);
 
-    Result getDatasophonDashboard(Integer clusterId);
+    /**
+     * 获取Datasophon仪表盘URL
+     */
+    String getDatasophonDashboard(Integer clusterId);
+
+    /**
+     * 根据ID获取仪表盘DTO
+     */
+    ClusterServiceDashboardDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存仪表盘DTO
+     */
+    ClusterServiceDashboardDTO saveDashboard(ClusterServiceDashboardDTO dto);
+
+    /**
+     * 更新仪表盘
+     */
+    void updateDashboard(ClusterServiceDashboardDTO dto);
 }

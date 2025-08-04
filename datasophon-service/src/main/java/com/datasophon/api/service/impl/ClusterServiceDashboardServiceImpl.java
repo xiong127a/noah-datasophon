@@ -18,22 +18,31 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
 import com.datasophon.dao.mapper.ClusterServiceDashboardMapper;
 import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.mybatisflex.core.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
+/**
+ * 集群服务仪表盘服务实现
+ * 提供集群服务仪表盘的业务逻辑处理
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterServiceDashboardService")
 public class ClusterServiceDashboardServiceImpl
                 extends
@@ -41,10 +50,14 @@ public class ClusterServiceDashboardServiceImpl
                 implements
                 ClusterServiceDashboardService {
 
+        @Autowired
+        private ClusterServiceDashboardConverter converter;
+
+        @Autowired
+        private ClusterInfoService clusterInfoService;
 
         @Override
-        public Result getDashboardUrl(Integer clusterId) {
-                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        public String getDashboardUrl(Integer clusterId) {
                 ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
                 String depType = clusterInfoEntity.getDepType();
                 String serviceName = "TOTAL";
@@ -58,11 +71,11 @@ public class ClusterServiceDashboardServiceImpl
 
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
-                return Result.success(dashboardUrl);
+                return dashboardUrl;
         }
 
         @Override
-        public Result getDatasophonDashboard(Integer clusterId) {
+        public String getDatasophonDashboard(Integer clusterId) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
                                 .where(ClusterServiceDashboard::getServiceName).eq("DATASOPHON")
@@ -70,6 +83,26 @@ public class ClusterServiceDashboardServiceImpl
 
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
-                return Result.success(dashboardUrl);
+                return dashboardUrl;
+        }
+
+        // DTO相关的CRUD方法实现
+        @Override
+        public ClusterServiceDashboardDTO getByIdAsDto(Integer id) {
+                ClusterServiceDashboard entity = getById(id);
+                return entity != null ? converter.entityToDto(entity) : null;
+        }
+
+        @Override
+        public ClusterServiceDashboardDTO saveDashboard(ClusterServiceDashboardDTO dto) {
+                ClusterServiceDashboard entity = converter.dtoToEntity(dto);
+                save(entity);
+                return converter.entityToDto(entity);
+        }
+
+        @Override
+        public void updateDashboard(ClusterServiceDashboardDTO dto) {
+                ClusterServiceDashboard entity = converter.dtoToEntity(dto);
+                updateById(entity);
         }
 }
