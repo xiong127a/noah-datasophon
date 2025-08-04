@@ -17,21 +17,48 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterAlertExpressionConverter;
 import com.datasophon.api.service.ClusterAlertExpressionService;
+import com.datasophon.common.dto.ClusterAlertExpressionDTO;
 import com.datasophon.dao.entity.ClusterAlertExpression;
 import com.datasophon.dao.mapper.ClusterAlertExpressionMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 集群告警表达式服务实现
+ * 集群告警表达式服务实现类
+ * 提供集群告警表达式的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 @Service("clusterAlertExpressionService")
 public class ClusterAlertExpressionServiceImpl extends ServiceImpl<ClusterAlertExpressionMapper, ClusterAlertExpression>
-        implements ClusterAlertExpressionService {
+                implements ClusterAlertExpressionService {
 
+        @Autowired
+        private ClusterAlertExpressionConverter clusterAlertExpressionConverter;
+
+        @Override
+        public ClusterAlertExpressionDTO getByIdAsDto(Long id) {
+                // Service层：Entity → DTO转换
+                ClusterAlertExpression entity = this.getById(id);
+                return clusterAlertExpressionConverter.entityToDto(entity);
+        }
+
+        @Override
+        public void saveAlertExpression(ClusterAlertExpressionDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertExpression entity = clusterAlertExpressionConverter.dtoToEntity(dto);
+                this.save(entity);
+        }
+
+        @Override
+        public void updateAlertExpression(ClusterAlertExpressionDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertExpression entity = clusterAlertExpressionConverter.dtoToEntity(dto);
+                this.updateById(entity);
+        }
 }

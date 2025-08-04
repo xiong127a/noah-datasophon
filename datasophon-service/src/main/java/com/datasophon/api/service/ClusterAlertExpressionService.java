@@ -17,16 +17,39 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterAlertExpressionDTO;
 import com.datasophon.dao.entity.ClusterAlertExpression;
 import com.mybatisflex.core.service.IService;
 
 /**
- * 集群告警表达式服务
+ * 集群告警表达式服务接口
+ * 提供集群告警表达式的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterAlertExpressionService extends IService<ClusterAlertExpression> {
 
+    /**
+     * 根据ID获取告警表达式DTO
+     *
+     * @param id 告警表达式ID
+     * @return 告警表达式DTO
+     */
+    ClusterAlertExpressionDTO getByIdAsDto(Long id);
+
+    /**
+     * 保存告警表达式
+     *
+     * @param dto 告警表达式DTO
+     */
+    void saveAlertExpression(ClusterAlertExpressionDTO dto);
+
+    /**
+     * 更新告警表达式
+     *
+     * @param dto 告警表达式DTO
+     */
+    void updateAlertExpression(ClusterAlertExpressionDTO dto);
 }

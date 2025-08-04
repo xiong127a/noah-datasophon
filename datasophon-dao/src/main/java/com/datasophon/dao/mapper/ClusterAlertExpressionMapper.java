@@ -24,11 +24,12 @@ import org.apache.ibatis.annotations.Mapper;
 import com.mybatisflex.core.BaseMapper;
 
 /**
- * 表达式常量表
+ * 集群告警表达式数据访问对象
+ * 提供集群告警表达式的数据库操作
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-06-07 12:04:38
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterAlertExpressionMapper extends BaseMapper<ClusterAlertExpression> {
