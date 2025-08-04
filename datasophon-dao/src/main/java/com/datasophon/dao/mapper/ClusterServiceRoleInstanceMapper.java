@@ -377,4 +377,31 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
                                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state);
                 return this.deleteByQuery(query);
         }
+
+        /**
+         * 根据主机名和集群ID查询服务角色实例列表（RoleEntityService专用）
+         */
+        default List<ClusterServiceRoleInstanceEntity> selectByHostnameAndClusterId(String hostname,
+                        Integer clusterId) {
+                return selectListByQuery(QueryWrapper.create()
+                                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId));
+        }
+
+        /**
+         * 根据服务角色名称和集群ID查询服务角色实例列表（可选主机名过滤）
+         */
+        default List<ClusterServiceRoleInstanceEntity> selectByServiceRoleNameAndClusterId(String serviceRoleName,
+                        Integer clusterId, String hostname) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+
+                if (hostname != null && !hostname.trim().isEmpty()) {
+                        query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+                }
+
+                return selectListByQuery(query);
+        }
+
 }

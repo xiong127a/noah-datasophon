@@ -21,8 +21,9 @@ import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
-import com.mybatisflex.core.query.QueryChain;
-import org.apache.commons.lang3.StringUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,10 +32,16 @@ import java.util.Objects;
 
 /**
  * 服务角色实例实体服务实现类
- * 整合了查询和更新功能，避免循环依赖
+ * 按照架构重构规范，迁移QueryChain到DAO层，整合查询和更新功能
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Service
 public class RoleEntityServiceImpl implements RoleEntityService {
+
+    private static final Logger logger = LoggerFactory.getLogger(RoleEntityServiceImpl.class);
 
     @Autowired
     private ClusterServiceRoleInstanceMapper roleInstanceMapper;
@@ -42,10 +49,7 @@ public class RoleEntityServiceImpl implements RoleEntityService {
     @Override
     public List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname,
             Integer clusterId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
-                .list();
+        return roleInstanceMapper.selectByHostnameAndClusterId(hostname, clusterId);
     }
 
     @Override
@@ -55,35 +59,24 @@ public class RoleEntityServiceImpl implements RoleEntityService {
 
     @Override
     public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
-                .list();
+        return roleInstanceMapper.selectByServiceId(serviceId);
     }
 
     @Override
     public ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname,
             Integer clusterId) {
-        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+        List<ClusterServiceRoleInstanceEntity> list = roleInstanceMapper
+                .selectByServiceRoleNameAndClusterId(serviceRoleName, clusterId, hostname);
 
-        if (StringUtils.isNotBlank(hostname)) {
-            query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
-        }
-
-        List<ClusterServiceRoleInstanceEntity> list = query.list();
         if (Objects.nonNull(list) && !list.isEmpty()) {
-            return list.getFirst();
+            return list.getFirst(); // JDK21现代特性：使用getFirst()替代get(0)
         }
         return null;
     }
 
     @Override
     public List<ClusterServiceRoleInstanceEntity> listRoleIns(String hostname, String serviceName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName)
-                .list();
+        return roleInstanceMapper.selectByHostnameAndServiceName(hostname, serviceName);
     }
 
     @Override

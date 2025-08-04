@@ -42,7 +42,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
      */
     default List<ClusterServiceRoleInstanceWebuis> selectByServiceInstanceId(Integer serviceInstanceId) {
         return selectListByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
 
     /**
@@ -50,7 +50,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
      */
     default int deleteByServiceInstanceId(Integer serviceInstanceId) {
         return deleteByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
 
     /**
@@ -58,7 +58,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
      */
     default ClusterServiceRoleInstanceWebuis selectByServiceRoleInstanceId(Integer roleInstanceId) {
         return selectOneByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }
 
     /**
@@ -69,7 +69,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
             return 0;
         }
         return deleteByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.in(roleInstanceIds)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.in(roleInstanceIds)));
     }
 
     /**
@@ -77,6 +77,6 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
      */
     default List<ClusterServiceRoleInstanceWebuis> selectListByServiceRoleInstanceId(Integer roleInstanceId) {
         return selectListByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }
 }

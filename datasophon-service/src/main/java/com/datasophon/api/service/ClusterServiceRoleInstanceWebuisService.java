@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 集群服务角色对应web ui表 
+ * 集群服务角色对应web ui表
  *
  * @author 任相鹏
  * @email 635887935@qq.com

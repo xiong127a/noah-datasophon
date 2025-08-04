@@ -83,7 +83,8 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     private void updateWebUiName(Integer roleInstanceId, String state) {
-        List<ClusterServiceRoleInstanceWebuis> webuisList = getMapper().selectListByServiceRoleInstanceId(roleInstanceId);
+        List<ClusterServiceRoleInstanceWebuis> webuisList = getMapper()
+                .selectListByServiceRoleInstanceId(roleInstanceId);
 
         if (webuisList.isEmpty()) {
             return;
@@ -92,24 +93,24 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
         for (ClusterServiceRoleInstanceWebuis webuis : webuisList) {
             String webuiName = webuis.getName();
             boolean needUpdate = false;
-            
+
             if (webuiName.contains(ACTIVE) && STANDBY.equals(state)) {
                 webuiName = webuiName.replace(ACTIVE, STANDBY);
                 needUpdate = true;
             }
-            
+
             if (webuiName.contains(STANDBY) && ACTIVE.equals(state)) {
                 webuiName = webuiName.replace(STANDBY, ACTIVE);
                 needUpdate = true;
             }
-            
+
             webuis.setName(webuiName);
-            
+
             if (!webuiName.contains(ACTIVE) && !webuiName.contains(STANDBY)) {
                 webuis.setName(webuis.getName() + state);
                 needUpdate = true;
             }
-            
+
             if (needUpdate) {
                 this.updateById(webuis);
             }
