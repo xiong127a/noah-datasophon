@@ -17,26 +17,37 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterGroupConverter;
+import com.datasophon.api.converter.ClusterUserConverter;
+import com.datasophon.api.converter.ClusterUserGroupConverter;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.common.dto.ClusterGroupDTO;
+import com.datasophon.common.dto.ClusterUserDTO;
+import com.datasophon.common.dto.ClusterUserGroupDTO;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.datasophon.dao.mapper.ClusterUserGroupMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 集群用户组关联服务实现类
+ * 提供集群用户组关联的业务逻辑处理
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterUserGroupService")
 public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMapper, ClusterUserGroup>
-        implements
-        ClusterUserGroupService {
+        implements ClusterUserGroupService {
 
     // 用户组类型常量
     private static final int USER_GROUP_TYPE_MAIN = 1;
@@ -48,26 +59,29 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     @Autowired
     private ClusterUserService userService;
 
+    @Autowired
+    private ClusterUserGroupConverter clusterUserGroupConverter;
+
+    @Autowired
+    private ClusterGroupConverter clusterGroupConverter;
+
+    @Autowired
+    private ClusterUserConverter clusterUserConverter;
+
     @Override
     public Long countGroupUserNum(Integer groupId) {
-        return QueryChain.of(ClusterUserGroup.class)
-                .where(ClusterUserGroup::getGroupId).eq(groupId)
-                .count();
+        return getMapper().countByGroupId(groupId);
     }
 
     @Override
     public void deleteByUser(Integer userId) {
-        this.remove(QueryChain.of(ClusterUserGroup.class)
-                .where(ClusterUserGroup::getUserId).eq(userId));
+        getMapper().deleteByUserId(userId);
     }
 
     @Override
-    public ClusterGroup queryMainGroup(Integer userId) {
+    public ClusterGroupDTO queryMainGroup(Integer userId) {
         // 查询指定用户的主用户组
-        List<ClusterUserGroup> userGroups = QueryChain.of(ClusterUserGroup.class)
-                .where(ClusterUserGroup::getUserId).eq(userId)
-                .and(ClusterUserGroup::getUserGroupType).eq(USER_GROUP_TYPE_MAIN)
-                .list();
+        List<ClusterUserGroup> userGroups = getMapper().selectByUserIdAndType(userId, USER_GROUP_TYPE_MAIN);
 
         if (userGroups.isEmpty()) {
             return null;
@@ -75,16 +89,14 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
 
         // 获取第一个组ID并查询组信息
         Integer groupId = userGroups.getFirst().getGroupId();
-        return clusterGroupService.getById(groupId);
+        ClusterGroup clusterGroup = clusterGroupService.getById(groupId);
+        return clusterGroupConverter.entityToDto(clusterGroup);
     }
 
     @Override
-    public List<ClusterGroup> listOtherGroups(Integer userId) {
+    public List<ClusterGroupDTO> listOtherGroups(Integer userId) {
         // 查询指定用户的其他用户组
-        List<ClusterUserGroup> userGroups = QueryChain.of(ClusterUserGroup.class)
-                .where(ClusterUserGroup::getUserId).eq(userId)
-                .and(ClusterUserGroup::getUserGroupType).eq(USER_GROUP_TYPE_OTHER)
-                .list();
+        List<ClusterUserGroup> userGroups = getMapper().selectByUserIdAndType(userId, USER_GROUP_TYPE_OTHER);
 
         if (userGroups.isEmpty()) {
             return Collections.emptyList();
@@ -93,17 +105,18 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
         // 提取组ID列表并查询组信息
         List<Integer> groupIds = userGroups.stream()
                 .map(ClusterUserGroup::getGroupId)
-                .collect(Collectors.toList());
+                .toList();
 
-        return clusterGroupService.listByIds(groupIds);
+        List<ClusterGroup> clusterGroups = clusterGroupService.listByIds(groupIds);
+        return clusterGroups.stream()
+                .map(clusterGroupConverter::entityToDto)
+                .toList();
     }
 
     @Override
-    public List<ClusterUser> listClusterUsers(Integer groupId) {
+    public List<ClusterUserDTO> listClusterUsers(Integer groupId) {
         // 查询指定组的所有用户关联
-        List<ClusterUserGroup> userGroups = QueryChain.of(ClusterUserGroup.class)
-                .where(ClusterUserGroup::getGroupId).eq(groupId)
-                .list();
+        List<ClusterUserGroup> userGroups = getMapper().selectByGroupId(groupId);
 
         if (userGroups.isEmpty()) {
             return Collections.emptyList();
@@ -112,8 +125,32 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
         // 提取用户ID列表并查询用户信息
         List<Integer> userIds = userGroups.stream()
                 .map(ClusterUserGroup::getUserId)
-                .collect(Collectors.toList());
+                .toList();
 
-        return userService.listByIds(userIds);
+        List<ClusterUser> clusterUsers = userService.listByIds(userIds);
+        return clusterUsers.stream()
+                .map(clusterUserConverter::entityToDto)
+                .toList();
+    }
+
+    @Override
+    public ClusterUserGroupDTO getByIdAsDto(Integer id) {
+        // Service层：Entity → DTO转换
+        ClusterUserGroup entity = this.getById(id);
+        return clusterUserGroupConverter.entityToDto(entity);
+    }
+
+    @Override
+    public void saveUserGroup(ClusterUserGroupDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterUserGroup entity = clusterUserGroupConverter.dtoToEntity(dto);
+        this.save(entity);
+    }
+
+    @Override
+    public void updateUserGroup(ClusterUserGroupDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterUserGroup entity = clusterUserGroupConverter.dtoToEntity(dto);
+        this.updateById(entity);
     }
 }

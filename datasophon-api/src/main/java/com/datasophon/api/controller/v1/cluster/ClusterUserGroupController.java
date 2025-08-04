@@ -17,61 +17,83 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterUserGroupConverter;
 import com.datasophon.api.service.ClusterUserGroupService;
+import com.datasophon.common.dto.ClusterUserGroupDTO;
+import com.datasophon.common.vo.ClusterUserGroupVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.ClusterUserGroup;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.Arrays;
+import java.util.List;
 
+/**
+ * 集群用户组关联控制器
+ * 提供集群用户组关联的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @ApiVersion(path = "cluster/user/group")
 public class ClusterUserGroupController {
 
     @Autowired
     private ClusterUserGroupService clusterUserGroupService;
 
+    @Autowired
+    private ClusterUserGroupConverter clusterUserGroupConverter;
 
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result list() {
-
+    public Result<List<ClusterUserGroupVO>> list() {
+        // 这里需要根据实际业务需求实现列表查询逻辑
         return Result.success();
+    }
+
+    /**
+     * 信息
+     */
+    @RequestMapping("/info/{id}")
+    public Result<ClusterUserGroupVO> info(@PathVariable("id") Integer id) {
+        // 调用Service层方法，获取DTO
+        ClusterUserGroupDTO dto = clusterUserGroupService.getByIdAsDto(id);
+        // Controller层：DTO → VO转换
+        ClusterUserGroupVO vo = clusterUserGroupConverter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterUserGroup clusterUserGroup) {
-        clusterUserGroupService.save(clusterUserGroup);
-
-        return Result.success();
+    public Result<String> save(@RequestBody ClusterUserGroupDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterUserGroupService.saveUserGroup(dto);
+        return Result.success("保存成功");
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterUserGroup clusterUserGroup) {
-
-        clusterUserGroupService.updateById(clusterUserGroup);
-
-        return Result.success();
+    public Result<String> update(@RequestBody ClusterUserGroupDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterUserGroupService.updateUserGroup(dto);
+        return Result.success("更新成功");
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterUserGroupService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        clusterUserGroupService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
     }
-
 }

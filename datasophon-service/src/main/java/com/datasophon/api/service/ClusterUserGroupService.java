@@ -17,29 +17,82 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterGroup;
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.common.dto.ClusterGroupDTO;
+import com.datasophon.common.dto.ClusterUserDTO;
+import com.datasophon.common.dto.ClusterUserGroupDTO;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群用户组服务
+ * 集群用户组服务接口
+ * 提供集群用户组关联的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterUserGroupService extends IService<ClusterUserGroup> {
 
-    Long countGroupUserNum(Integer id);
+    /**
+     * 统计指定组的用户数量
+     *
+     * @param groupId 组ID
+     * @return 用户数量
+     */
+    Long countGroupUserNum(Integer groupId);
 
-    void deleteByUser(Integer id);
+    /**
+     * 删除指定用户的所有组关联
+     *
+     * @param userId 用户ID
+     */
+    void deleteByUser(Integer userId);
 
-    ClusterGroup queryMainGroup(Integer id);
+    /**
+     * 查询指定用户的主用户组
+     *
+     * @param userId 用户ID
+     * @return 主用户组DTO
+     */
+    ClusterGroupDTO queryMainGroup(Integer userId);
 
-    List<ClusterGroup> listOtherGroups(Integer userId);
+    /**
+     * 查询指定用户的其他用户组列表
+     *
+     * @param userId 用户ID
+     * @return 其他用户组DTO列表
+     */
+    List<ClusterGroupDTO> listOtherGroups(Integer userId);
 
-    List<ClusterUser> listClusterUsers(Integer groupId);
+    /**
+     * 查询指定组的所有用户列表
+     *
+     * @param groupId 组ID
+     * @return 用户DTO列表
+     */
+    List<ClusterUserDTO> listClusterUsers(Integer groupId);
+
+    /**
+     * 根据ID获取用户组关联DTO
+     *
+     * @param id 关联ID
+     * @return 用户组关联DTO
+     */
+    ClusterUserGroupDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存用户组关联
+     *
+     * @param dto 用户组关联DTO
+     */
+    void saveUserGroup(ClusterUserGroupDTO dto);
+
+    /**
+     * 更新用户组关联
+     *
+     * @param dto 用户组关联DTO
+     */
+    void updateUserGroup(ClusterUserGroupDTO dto);
 }
