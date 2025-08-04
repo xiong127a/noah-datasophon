@@ -23,11 +23,18 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceConfigMapper;
 import org.springframework.stereotype.Service;
 
+/**
+ * 集群服务角色实例配置服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("clusterServiceRoleInstanceConfigService")
 public class ClusterServiceRoleInstanceConfigServiceImpl
         extends
-            ServiceImpl<ClusterServiceRoleInstanceConfigMapper, ClusterServiceRoleInstanceConfigEntity>
+        ServiceImpl<ClusterServiceRoleInstanceConfigMapper, ClusterServiceRoleInstanceConfigEntity>
         implements
-            ClusterServiceRoleInstanceConfigService {
+        ClusterServiceRoleInstanceConfigService {
 
 }

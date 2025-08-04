@@ -182,7 +182,7 @@ public class ClusterAlertQuotaServiceImpl
             // 转换告警指标为AlertItem
             List<AlertItem> alertItems = uniqueAlerts.stream().map(this::convertToAlertItem)
                     .peek(item -> item.setClusterId(clusterId))
-                    .collect(Collectors.toList());
+                    .toList();
 
             configFileMap.put(generators, alertItems);
         }
