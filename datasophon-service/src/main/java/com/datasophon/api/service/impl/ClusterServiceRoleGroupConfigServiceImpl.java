@@ -17,53 +17,76 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.mapper.ClusterServiceRoleGroupConfigMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 集群服务角色组配置服务实现类
+ * 提供集群服务角色组配置的业务逻辑处理
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterServiceRoleGroupConfigService")
 public class ClusterServiceRoleGroupConfigServiceImpl
-        extends
-        ServiceImpl<ClusterServiceRoleGroupConfigMapper, ClusterServiceRoleGroupConfig>
-        implements
-        ClusterServiceRoleGroupConfigService {
+        extends ServiceImpl<ClusterServiceRoleGroupConfigMapper, ClusterServiceRoleGroupConfig>
+        implements ClusterServiceRoleGroupConfigService {
+
+    @Autowired
+    private ClusterServiceRoleGroupConfigConverter clusterServiceRoleGroupConfigConverter;
 
     @Override
-    public ClusterServiceRoleGroupConfig getConfigByRoleGroupId(Integer roleGroupId) {
-        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
-                .one();
+    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Integer roleGroupId) {
+        ClusterServiceRoleGroupConfig entity = getMapper().selectByRoleGroupId(roleGroupId);
+        return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterServiceRoleGroupConfig getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version) {
-        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .and(ClusterServiceRoleGroupConfig::getConfigVersion).eq(version)
-                .one();
+    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version) {
+        ClusterServiceRoleGroupConfig entity = getMapper().selectByRoleGroupIdAndVersion(roleGroupId, version);
+        return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
     @Override
     public void removeAllByRoleGroupId(Integer roleGroupId) {
-        this.remove(QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId));
+        getMapper().deleteByRoleGroupId(roleGroupId);
     }
 
     @Override
-    public List<ClusterServiceRoleGroupConfig> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds) {
-        return QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds)
-                .list();
+    public List<ClusterServiceRoleGroupConfigDTO> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds) {
+        List<ClusterServiceRoleGroupConfig> entities = getMapper().selectByRoleGroupIds(roleGroupIds);
+        return entities.stream()
+                .map(clusterServiceRoleGroupConfigConverter::entityToDto)
+                .toList();
     }
 
     @Override
-    public boolean save(ClusterServiceRoleGroupConfig config) {
-        return super.save(config);
+    public ClusterServiceRoleGroupConfigDTO getByIdAsDto(Integer id) {
+        // Service层：Entity → DTO转换
+        ClusterServiceRoleGroupConfig entity = this.getById(id);
+        return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
+    }
+
+    @Override
+    public void saveConfig(ClusterServiceRoleGroupConfigDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterServiceRoleGroupConfig entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
+        this.save(entity);
+    }
+
+    @Override
+    public void updateConfig(ClusterServiceRoleGroupConfigDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterServiceRoleGroupConfig entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
+        this.updateById(entity);
     }
 }

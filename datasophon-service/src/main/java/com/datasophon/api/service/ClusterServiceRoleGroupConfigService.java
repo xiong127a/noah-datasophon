@@ -17,23 +17,73 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 
+ * 集群服务角色组配置服务接口
+ * 提供集群服务角色组配置的业务逻辑处理
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface ClusterServiceRoleGroupConfigService {
+public interface ClusterServiceRoleGroupConfigService extends IService<ClusterServiceRoleGroupConfig> {
 
-    ClusterServiceRoleGroupConfig getConfigByRoleGroupId(Integer roleGroupId);
+    /**
+     * 根据角色组ID获取配置（最新版本）
+     *
+     * @param roleGroupId 角色组ID
+     * @return 配置DTO
+     */
+    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Integer roleGroupId);
 
-    ClusterServiceRoleGroupConfig getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version);
+    /**
+     * 根据角色组ID和版本号获取配置
+     *
+     * @param roleGroupId 角色组ID
+     * @param version     版本号
+     * @return 配置DTO
+     */
+    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version);
 
+    /**
+     * 删除指定角色组的所有配置
+     *
+     * @param roleGroupId 角色组ID
+     */
     void removeAllByRoleGroupId(Integer roleGroupId);
 
-    List<ClusterServiceRoleGroupConfig> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds);
+    /**
+     * 根据角色组ID列表获取配置列表
+     *
+     * @param roleGroupIds 角色组ID列表
+     * @return 配置DTO列表
+     */
+    List<ClusterServiceRoleGroupConfigDTO> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds);
 
-    boolean save(ClusterServiceRoleGroupConfig config);
+    /**
+     * 根据ID获取配置DTO
+     *
+     * @param id 配置ID
+     * @return 配置DTO
+     */
+    ClusterServiceRoleGroupConfigDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存配置
+     *
+     * @param dto 配置DTO
+     */
+    void saveConfig(ClusterServiceRoleGroupConfigDTO dto);
+
+    /**
+     * 更新配置
+     *
+     * @param dto 配置DTO
+     */
+    void updateConfig(ClusterServiceRoleGroupConfigDTO dto);
 }
