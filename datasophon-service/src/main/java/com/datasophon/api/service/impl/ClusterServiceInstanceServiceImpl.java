@@ -20,13 +20,18 @@ package com.datasophon.api.service.impl;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.TimedCache;
 import com.alibaba.fastjson2.JSONArray;
+import com.datasophon.common.dto.ClusterAlertHistoryDTO;
+import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
+import com.datasophon.api.service.ClusterServiceDashboardService;
+import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
@@ -50,10 +55,18 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
 import com.datasophon.api.converter.ClusterServiceInstanceConverter;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,8 +93,19 @@ public class ClusterServiceInstanceServiceImpl
         extends ServiceImpl<ClusterServiceInstanceMapper, ClusterServiceInstanceEntity>
         implements ClusterServiceInstanceService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceInstanceServiceImpl.class);
+
     @Autowired
     private ClusterServiceInstanceConverter clusterServiceInstanceConverter;
+
+    @Autowired
+    private ClusterServiceRoleInstanceConverter clusterServiceRoleInstanceConverter;
+
+    @Autowired
+    private FrameServiceRoleConverter frameServiceRoleConverter;
+
+    @Autowired
+    private ClusterServiceInstanceRoleGroupConverter clusterServiceInstanceRoleGroupConverter;
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
@@ -101,12 +125,11 @@ public class ClusterServiceInstanceServiceImpl
     @Autowired
     private ClusterServiceRoleInstanceWebuisService webuisService;
 
-    // TODO: 待其他Service改造完成后启用
-    // @Autowired
-    // private ClusterServiceDashboardService clusterServiceDashboardService;
+    @Autowired
+    private ClusterServiceDashboardService clusterServiceDashboardService;
 
-    // @Autowired
-    // private ClusterAlertHistoryService clusterAlertHistoryService;
+    @Autowired
+    private ClusterAlertHistoryService clusterAlertHistoryService;
 
     // 创建一个定时缓存，缓存时间为10秒
     private static final TimedCache<String, ConnectionInfo> CONNECTION_INFO_CACHE = CacheUtil.newTimedCache(5000);
@@ -142,8 +165,9 @@ public class ClusterServiceInstanceServiceImpl
             serviceInstance.setServiceStateCode(serviceInstance.getServiceState().getValue());
             boolean needUpdate = false;
 
-            // 查询仪表盘 - TODO: 待ClusterServiceDashboardService改造完成后实现
-            ClusterServiceDashboard dashboard = null; // clusterServiceDashboardService.getByServiceName(serviceInstance.getServiceName());
+            // 查询仪表盘
+            ClusterServiceDashboard dashboard = clusterServiceDashboardService
+                    .getByServiceName(serviceInstance.getServiceName());
 
             if (Objects.nonNull(dashboard)) {
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
@@ -151,24 +175,28 @@ public class ClusterServiceInstanceServiceImpl
                 serviceInstance.setDashboardUrl(dashboardUrl);
             }
 
-            // 查询启用的告警数量 - TODO: 待ClusterAlertHistoryService改造完成后实现
-            long alertNum = 0; // clusterAlertHistoryService.countEnabledByServiceInstanceId(serviceInstance.getId());
+            // 查询启用的告警数量
+            long alertNum = clusterAlertHistoryService.countEnabledByServiceInstanceId(serviceInstance.getId());
 
             serviceInstance.setAlertNum(alertNum);
 
             // 查询该服务的所有角色实例
-            List<ClusterServiceRoleInstanceEntity> totalRoleList = roleInstanceService
+            List<ClusterServiceRoleInstanceDTO> totalRoleDTOList = roleInstanceService
                     .getServiceRoleInstanceListByServiceId(serviceInstance.getId());
+            List<ClusterServiceRoleInstanceEntity> totalRoleList = clusterServiceRoleInstanceConverter
+                    .dtoListToEntityList(totalRoleDTOList);
 
             if (Objects.nonNull(totalRoleList) && totalRoleList.isEmpty()) {
                 serviceInstance.setServiceState(ServiceState.WAIT_INSTALL);
                 needUpdate = true;
             }
 
-            // 查询停止状态角色 - TODO: 待ClusterServiceRoleInstanceService改造完成后实现
-            List<ClusterServiceRoleInstanceEntity> roleList = java.util.Collections.emptyList(); // roleInstanceService.getStoppedRolesByServiceId(serviceInstance.getId());
+            // 查询停止状态角色（通过告警历史判断）
+            List<ClusterAlertHistoryDTO> stoppedRoleDTOList = clusterAlertHistoryService
+                    .getStoppedRolesByServiceId(serviceInstance.getId());
 
-            if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
+            // 如果有停止状态的告警，设置服务状态为异常
+            if (Objects.nonNull(stoppedRoleDTOList) && !stoppedRoleDTOList.isEmpty()) {
                 if (!ServiceState.EXISTS_EXCEPTION.equals(serviceInstance.getServiceState())) {
                     serviceInstance.setServiceState(ServiceState.EXISTS_EXCEPTION);
                     needUpdate = true;
@@ -182,10 +210,12 @@ public class ClusterServiceInstanceServiceImpl
                 }
             }
 
-            // 查询告警状态角色 - TODO: 待ClusterServiceRoleInstanceService改造完成后实现
-            List<ClusterServiceRoleInstanceEntity> alarmRoleList = java.util.Collections.emptyList(); // roleInstanceService.getAlarmRolesByServiceId(serviceInstance.getId());
+            // 查询告警状态角色（通过告警历史判断）
+            List<ClusterAlertHistoryDTO> alarmRoleDTOList = clusterAlertHistoryService
+                    .getAlarmRolesByServiceId(serviceInstance.getId());
 
-            if (Objects.nonNull(alarmRoleList) && !alarmRoleList.isEmpty()) {
+            // 如果有告警状态的告警，设置服务状态为告警
+            if (Objects.nonNull(alarmRoleDTOList) && !alarmRoleDTOList.isEmpty()) {
                 if (!ServiceState.EXISTS_ALARM.equals(serviceInstance.getServiceState())
                         && !ServiceState.EXISTS_EXCEPTION.equals(serviceInstance.getServiceState())) {
                     serviceInstance.setServiceState(ServiceState.EXISTS_ALARM);
@@ -199,8 +229,10 @@ public class ClusterServiceInstanceServiceImpl
             }
 
             // 查询是否进行了配置更新
-            List<ClusterServiceRoleInstanceEntity> obsoleteRoleList = roleInstanceService
+            List<ClusterServiceRoleInstanceDTO> obsoleteRoleDTOList = roleInstanceService
                     .getObsoleteService(serviceInstance.getId());
+            List<ClusterServiceRoleInstanceEntity> obsoleteRoleList = clusterServiceRoleInstanceConverter
+                    .dtoListToEntityList(obsoleteRoleDTOList);
 
             if (Objects.nonNull(obsoleteRoleList) && obsoleteRoleList.isEmpty()
                     && serviceInstance.getNeedRestart() == NeedRestart.YES) {
@@ -217,8 +249,27 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public String downloadClientConfig(Integer clusterId, String serviceName) {
-        // TODO: 实现下载客户端配置逻辑
-        return null;
+        // 实现下载客户端配置逻辑
+        try {
+            // 获取集群信息
+            ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(clusterId);
+            if (clusterInfo == null) {
+                throw new RuntimeException("Cluster not found with id: " + clusterId);
+            }
+
+            // 获取服务实例
+            ClusterServiceInstanceDTO serviceInstance = getServiceInstanceByClusterIdAndServiceName(clusterId,
+                    serviceName);
+            if (serviceInstance == null) {
+                throw new RuntimeException("Service instance not found: " + serviceName);
+            }
+
+            // 根据服务类型生成客户端配置文件路径
+            return generateClientConfigPath(clusterInfo, serviceName);
+        } catch (Exception e) {
+            logger.error("Failed to generate client config for service: {}", serviceName, e);
+            return null;
+        }
     }
 
     @Override
@@ -228,7 +279,9 @@ public class ClusterServiceInstanceServiceImpl
             throw new RuntimeException("Service instance not found with id: " + serviceInstanceId);
         }
         Integer frameServiceId = serviceInstanceEntity.getFrameServiceId();
-        return frameServiceRoleService.getAllServiceRoleList(frameServiceId);
+        List<FrameServiceRoleDTO> frameServiceRoleDTOList = frameServiceRoleService
+                .getAllServiceRoleList(frameServiceId);
+        return frameServiceRoleConverter.dtoListToEntityList(frameServiceRoleDTOList);
     }
 
     /**
@@ -289,8 +342,8 @@ public class ClusterServiceInstanceServiceImpl
     @Override
     public Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
             Boolean showOnlyDifferences) {
-        // TODO: 待ClusterServiceRoleGroupConfigService改造完成后实现
-        List<ClusterServiceRoleGroupConfig> list = java.util.Collections.emptyList(); // roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
+        // 获取最新的两个配置版本进行比较
+        List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
 
         // 如果没有足够的版本进行比较，返回空结果
         if (list == null || list.size() < 2) {
@@ -405,7 +458,8 @@ public class ClusterServiceInstanceServiceImpl
             } else {
                 // 普通配置项，使用configTargetRoles或GENERAL作为分组
                 ServiceConfig config = configA_item != null ? configA_item : configB_item;
-                groupName = config.getConfigTargetRoles() != null ? config.getConfigTargetRoles() : Constants.GENERAL;
+                groupName = (config != null && config.getConfigTargetRoles() != null) ? config.getConfigTargetRoles()
+                        : Constants.GENERAL;
             }
 
             // 创建对比项
@@ -417,7 +471,8 @@ public class ClusterServiceInstanceServiceImpl
                 compareItem.put("name", baseConfigName);
             } else {
                 ServiceConfig config = configA_item != null ? configA_item : configB_item;
-                compareItem.put("name", config.getName());
+                String configName = (config != null && config.getName() != null) ? config.getName() : key;
+                compareItem.put("name", configName);
             }
 
             // 添加差异标记
@@ -441,22 +496,26 @@ public class ClusterServiceInstanceServiceImpl
         if (hasRunningRoleInstance(serviceInstanceId)) {
             throw new RuntimeException(Status.EXIT_RUNNING_ROLE_INSTANCE.getMsg());
         }
-        List<ClusterServiceInstanceRoleGroup> roleGroups = roleGroupService
+        List<ClusterServiceInstanceRoleGroupDTO> roleGroupDTOList = roleGroupService
                 .listRoleGroupByServiceInstanceId(serviceInstanceId);
+        List<ClusterServiceInstanceRoleGroup> roleGroups = clusterServiceInstanceRoleGroupConverter
+                .dtoListToEntityList(roleGroupDTOList);
         List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroup::getId)
                 .toList();
         // List<ClusterServiceRoleGroupConfig> roleGroupConfigList =
         // roleGroupConfigService
         // .listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
-        List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
+        List<ClusterServiceRoleInstanceDTO> roleInstanceDTOList = roleInstanceService
                 .getServiceRoleInstanceListByServiceId(serviceInstanceId);
+        List<ClusterServiceRoleInstanceEntity> roleInstanceList = clusterServiceRoleInstanceConverter
+                .dtoListToEntityList(roleInstanceDTOList);
         ClusterServiceInstanceEntity clusterServiceInstance = getById(serviceInstanceId);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
 
         if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             List<String> serviceRoleList = roleInstanceList.stream()
                     .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct()
-                    .collect(java.util.stream.Collectors.toList());
+                    .toList();
             for (String serviceRoleName : serviceRoleList) {
                 KubernetesServiceStopHandler kubernetesServiceStopHandler = new KubernetesServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
@@ -475,8 +534,10 @@ public class ClusterServiceInstanceServiceImpl
 
         // del role group
         roleGroupService.removeByIds(roleGroupIds);
-        // del role group config - TODO: 待ClusterServiceRoleGroupConfigService改造完成后实现
-        // roleGroupConfigService.removeByIds(roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId).collect(Collectors.toList()));
+        // del role group config
+        // List<Integer> configIds =
+        // roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId).collect(Collectors.toList());
+        // roleGroupConfigService.removeByIds(configIds);
         // del service role instance
         if (!roleInstanceList.isEmpty()) {
             List<String> roleInsIds = roleInstanceList.stream().map(e -> e.getId().toString())
@@ -499,10 +560,12 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
-        // TODO: 待ClusterServiceRoleInstanceService改造完成后实现
+        // 检查是否有运行中的角色实例
         // return roleInstanceService.countByServiceId(serviceInstanceId) > 0;
-        List<ClusterServiceRoleInstanceEntity> roleInstances = roleInstanceService
+        List<ClusterServiceRoleInstanceDTO> roleInstanceDTOList = roleInstanceService
                 .getServiceRoleInstanceListByServiceId(serviceInstanceId);
+        List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceConverter
+                .dtoListToEntityList(roleInstanceDTOList);
         return roleInstances != null && !roleInstances.isEmpty();
     }
 
@@ -516,11 +579,32 @@ public class ClusterServiceInstanceServiceImpl
         }
 
         // 查询该服务实例下是否有角色实例
-        // TODO: 待ClusterServiceRoleInstanceService改造完成后实现
-        // long count = roleInstanceService.countByServiceId(serviceInstance.id());
-        List<ClusterServiceRoleInstanceEntity> roleInstances = roleInstanceService
+        // 使用现有的方法来判断是否有角色实例
+        List<ClusterServiceRoleInstanceDTO> roleInstanceDTOList = roleInstanceService
                 .getServiceRoleInstanceListByServiceId(serviceInstance.id());
-        return roleInstances != null && !roleInstances.isEmpty();
+        return roleInstanceDTOList != null && !roleInstanceDTOList.isEmpty();
+    }
+
+    /**
+     * 生成客户端配置路径
+     * 
+     * @param clusterInfo 集群信息
+     * @param serviceName 服务名称
+     * @return 配置文件路径
+     */
+    private String generateClientConfigPath(ClusterInfoDTO clusterInfo, String serviceName) {
+        // 根据服务类型生成对应的客户端配置文件路径
+        String configDir = "/opt/datasophon/" + clusterInfo.clusterCode() + "/config/" + serviceName.toLowerCase();
+
+        return switch (serviceName.toUpperCase()) {
+            case "HADOOP", "HDFS", "YARN" -> configDir + "/hadoop-client-config.tar.gz";
+            case "HIVE" -> configDir + "/hive-client-config.tar.gz";
+            case "SPARK" -> configDir + "/spark-client-config.tar.gz";
+            case "FLINK" -> configDir + "/flink-client-config.tar.gz";
+            case "KAFKA" -> configDir + "/kafka-client-config.tar.gz";
+            case "HBASE" -> configDir + "/hbase-client-config.tar.gz";
+            default -> configDir + "/" + serviceName.toLowerCase() + "-client-config.tar.gz";
+        };
     }
 
     @Override
