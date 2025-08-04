@@ -19,10 +19,14 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.api.service.RoleGroupEntityService;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
@@ -31,6 +35,7 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,11 +44,21 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
+/**
+ * 集群服务实例角色组服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("clusterServiceInstanceRoleGroupService")
-public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServiceInstanceRoleGroupService {
+public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroup> implements ClusterServiceInstanceRoleGroupService {
 
     @Autowired
-    private ClusterServiceInstanceRoleGroupMapper clusterServiceInstanceRoleGroupMapper;
+    private ClusterServiceInstanceRoleGroupConverter clusterServiceInstanceRoleGroupConverter;
+
+    @Autowired
+    private ClusterServiceRoleGroupConfigConverter clusterServiceRoleGroupConfigConverter;
 
     @Autowired
     private ClusterServiceInstanceMapper clusterServiceInstanceMapper;
@@ -71,9 +86,10 @@ public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServic
     }
 
     @Override
-    public ClusterServiceInstanceRoleGroup getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        return clusterServiceInstanceRoleGroupMapper.selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
+    public ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
+        ClusterServiceInstanceRoleGroup entity = getMapper().selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
                 DEFAULT);
+        return clusterServiceInstanceRoleGroupConverter.entityToDto(entity);
     }
 
     @Override
@@ -109,7 +125,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServic
     }
 
     private boolean isRepeatRoleGroupName(Integer serviceInstanceId, String roleGroupName) {
-        return clusterServiceInstanceRoleGroupMapper.countByServiceInstanceIdAndRoleGroupName(serviceInstanceId,
+        return getMapper().countByServiceInstanceIdAndRoleGroupName(serviceInstanceId,
                 roleGroupName) > 0;
     }
 
@@ -134,12 +150,13 @@ public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServic
     }
 
     @Override
-    public ClusterServiceRoleGroupConfig getRoleGroupConfigByServiceId(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroup instanceRoleGroup = clusterServiceInstanceRoleGroupMapper
+    public ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Integer serviceInstanceId) {
+        ClusterServiceInstanceRoleGroup instanceRoleGroup = getMapper()
                 .selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId, "default");
 
         if (instanceRoleGroup != null) {
-            return roleGroupConfigService.getConfigByRoleGroupId(instanceRoleGroup.getId());
+            ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(instanceRoleGroup.getId());
+            return clusterServiceRoleGroupConfigConverter.entityToDto(config);
         }
         return null;
     }
@@ -180,8 +197,9 @@ public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServic
     }
 
     @Override
-    public List<ClusterServiceInstanceRoleGroup> listRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        return clusterServiceInstanceRoleGroupMapper.selectByServiceInstanceId(serviceInstanceId);
+    public List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
+        List<ClusterServiceInstanceRoleGroup> entities = getMapper().selectByServiceInstanceId(serviceInstanceId);
+        return clusterServiceInstanceRoleGroupConverter.entityListToDtoList(entities);
     }
 
     @Override
@@ -197,23 +215,5 @@ public class ClusterServiceInstanceRoleGroupServiceImpl implements ClusterServic
 
     // 基础CRUD方法实现
 
-    @Override
-    public ClusterServiceInstanceRoleGroup getById(Integer id) {
-        return clusterServiceInstanceRoleGroupMapper.selectById(id);
-    }
-
-    @Override
-    public boolean save(ClusterServiceInstanceRoleGroup entity) {
-        return clusterServiceInstanceRoleGroupMapper.insertEntity(entity) > 0;
-    }
-
-    @Override
-    public boolean updateById(ClusterServiceInstanceRoleGroup entity) {
-        return clusterServiceInstanceRoleGroupMapper.updateByIdEntity(entity) > 0;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterServiceInstanceRoleGroupMapper.deleteByIds(ids) > 0;
-    }
+    // 基础CRUD方法已由ServiceImpl提供，无需重复实现
 }

@@ -29,7 +29,11 @@ import java.util.List;
 
 /**
  * 集群服务实例角色组映射器
+ * 只保留业务特定的查询方法，标准CRUD使用IService提供
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<ClusterServiceInstanceRoleGroup> {
@@ -81,51 +85,6 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
         return this.selectListByQuery(query);
     }
 
-    /**
-     * 根据ID查询角色组
-     * 
-     * @param id 主键ID
-     * @return 角色组实体
-     */
-    default ClusterServiceInstanceRoleGroup selectById(@Param("id") Integer id) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getId).eq(id);
-
-        return this.selectOneByQuery(query);
-    }
-
-    /**
-     * 插入角色组
-     * 
-     * @param entity 角色组实体
-     * @return 影响行数
-     */
-    default int insertEntity(ClusterServiceInstanceRoleGroup entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新角色组
-     * 
-     * @param entity 角色组实体
-     * @return 影响行数
-     */
-    default int updateByIdEntity(ClusterServiceInstanceRoleGroup entity) {
-        return this.updateByQuery(entity, QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getId).eq(entity.getId()));
-    }
-
-    /**
-     * 根据ID列表删除角色组
-     * 
-     * @param ids ID列表
-     * @return 影响行数
-     */
-    default int deleteByIds(@Param("ids") List<Integer> ids) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getId).in(ids);
-
-        return this.deleteByQuery(query);
-    }
+    // 基础CRUD方法已由BaseMapper提供，此处只保留业务特定查询方法
 
 }

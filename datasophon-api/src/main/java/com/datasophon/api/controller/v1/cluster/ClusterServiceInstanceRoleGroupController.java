@@ -17,10 +17,12 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,33 +31,41 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+/**
+ * 集群服务实例角色组控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @ApiVersion(path = "cluster/service/instance/role/group")
 public class ClusterServiceInstanceRoleGroupController {
 
     @Autowired
     private ClusterServiceInstanceRoleGroupService clusterServiceInstanceRoleGroupService;
 
+    @Autowired
+    private ClusterServiceInstanceRoleGroupConverter clusterServiceInstanceRoleGroupConverter;
+
 
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterServiceInstanceRoleGroup>> list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
-        List<ClusterServiceInstanceRoleGroup> list = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .list();
-        return Result.success(list);
+    public Result<List<ClusterServiceInstanceRoleGroupVO>> list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+        List<ClusterServiceInstanceRoleGroupDTO> dtoList = clusterServiceInstanceRoleGroupService.listRoleGroupByServiceInstanceId(serviceInstanceId);
+        List<ClusterServiceInstanceRoleGroupVO> voList = clusterServiceInstanceRoleGroupConverter.dtoListToVoList(dtoList);
+        return Result.success(voList);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterServiceInstanceRoleGroup> info(@PathVariable("id") Integer id) {
-        ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = clusterServiceInstanceRoleGroupService
-                .getById(id);
-
-        return Result.success(clusterServiceInstanceRoleGroup);
+    public Result<ClusterServiceInstanceRoleGroupVO> info(@PathVariable("id") Integer id) {
+        ClusterServiceInstanceRoleGroup entity = clusterServiceInstanceRoleGroupService.getById(id);
+        ClusterServiceInstanceRoleGroupVO vo = clusterServiceInstanceRoleGroupConverter.entityToVo(entity);
+        return Result.success(vo);
     }
 
     /**

@@ -19,23 +19,29 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群服务实例角色组服务接口
+ * 集群服务实例角色组服务
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ClusterServiceInstanceRoleGroupService {
+public interface ClusterServiceInstanceRoleGroupService extends IService<ClusterServiceInstanceRoleGroup> {
 
     /**
      * 根据服务实例ID获取角色组
      * 
      * @param serviceInstanceId 服务实例ID
-     * @return 角色组实体
+     * @return 角色组DTO
      */
-    ClusterServiceInstanceRoleGroup getRoleGroupByServiceInstanceId(Integer serviceInstanceId);
+    ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Integer serviceInstanceId);
 
     /**
      * 保存角色组
@@ -59,9 +65,9 @@ public interface ClusterServiceInstanceRoleGroupService {
      * 根据服务ID获取角色组配置
      * 
      * @param serviceId 服务ID
-     * @return 角色组配置
+     * @return 角色组配置DTO
      */
-    ClusterServiceRoleGroupConfig getRoleGroupConfigByServiceId(Integer serviceId);
+    ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Integer serviceId);
 
     /**
      * 重命名角色组
@@ -84,9 +90,9 @@ public interface ClusterServiceInstanceRoleGroupService {
      * 根据服务实例ID获取角色组列表
      * 
      * @param serviceInstanceId 服务实例ID
-     * @return 角色组列表
+     * @return 角色组DTO列表
      */
-    List<ClusterServiceInstanceRoleGroup> listRoleGroupByServiceInstanceId(Integer serviceInstanceId);
+    List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Integer serviceInstanceId);
 
     /**
      * 更新角色组为需要重启状态
@@ -95,37 +101,5 @@ public interface ClusterServiceInstanceRoleGroupService {
      */
     void updateToNeedRestart(Integer roleGroupId);
 
-    // 基础CRUD方法
-
-    /**
-     * 根据ID获取角色组
-     * 
-     * @param id 主键ID
-     * @return 角色组实体
-     */
-    ClusterServiceInstanceRoleGroup getById(Integer id);
-
-    /**
-     * 保存角色组
-     * 
-     * @param entity 角色组实体
-     * @return 是否保存成功
-     */
-    boolean save(ClusterServiceInstanceRoleGroup entity);
-
-    /**
-     * 根据ID更新角色组
-     * 
-     * @param entity 角色组实体
-     * @return 是否更新成功
-     */
-    boolean updateById(ClusterServiceInstanceRoleGroup entity);
-
-    /**
-     * 根据ID列表批量删除角色组
-     * 
-     * @param ids ID列表
-     * @return 是否删除成功
-     */
-    boolean removeByIds(List<Integer> ids);
+    // 基础CRUD方法已由IService提供
 }
