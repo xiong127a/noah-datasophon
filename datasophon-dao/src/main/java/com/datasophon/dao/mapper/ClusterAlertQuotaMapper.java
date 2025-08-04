@@ -54,6 +54,18 @@ public interface ClusterAlertQuotaMapper extends BaseMapper<ClusterAlertQuota> {
     }
 
     /**
+     * 根据告警组ID列表查询告警指标（重载方法，支持List参数）
+     */
+    default List<ClusterAlertQuota> selectByAlertGroupIds(List<Integer> alertGroupIds) {
+        if (alertGroupIds == null || alertGroupIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertQuota::getAlertGroupId).in(alertGroupIds);
+        return this.selectListByQuery(query);
+    }
+
+    /**
      * 分页查询告警指标列表
      */
     default PageResult<ClusterAlertQuota> selectAlertQuotaListWithPage(Integer clusterId, Integer alertGroupId,

@@ -404,6 +404,4 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
                 return selectListByQuery(query);
         }
 
-
-
 }

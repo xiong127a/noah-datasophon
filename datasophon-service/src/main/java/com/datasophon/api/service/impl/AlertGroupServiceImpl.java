@@ -30,8 +30,9 @@ import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.mapper.AlertGroupMapper;
 import com.datasophon.dao.mapper.ClusterAlertGroupMapMapper;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,15 +43,18 @@ import java.util.Set;
 
 /**
  * 告警组表实现
+ * 按照架构重构规范，迁移QueryChain到DAO层
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-14
+ * @date 2025-01-01
  */
 @Service("alertGroupService")
 public class AlertGroupServiceImpl
         extends ServiceImpl<AlertGroupMapper, AlertGroupEntity>
         implements AlertGroupService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AlertGroupServiceImpl.class);
 
     @Autowired
     private ClusterAlertGroupMapMapper clusterAlertGroupMapMapper;
@@ -191,13 +195,13 @@ public class AlertGroupServiceImpl
     @Override
     public void validateAlertGroupBeforeDelete(List<Integer> ids) {
         // 校验是否绑定告警指标
-        List<ClusterAlertQuota> quotaList = QueryChain.of(ClusterAlertQuota.class)
-                .where(ClusterAlertQuota::getAlertGroupId).in(ids)
-                .list();
+        List<ClusterAlertQuota> quotaList = clusterAlertQuotaMapper.selectByAlertGroupIds(ids);
 
         if (CollectionUtils.isNotEmpty(quotaList)) {
+            logger.warn("告警组删除验证失败，存在 {} 个绑定的告警指标", quotaList.size());
             throw new RuntimeException("告警组已绑定告警指标，无法删除");
         }
+        logger.debug("告警组删除验证通过，无绑定的告警指标");
     }
 
 }
