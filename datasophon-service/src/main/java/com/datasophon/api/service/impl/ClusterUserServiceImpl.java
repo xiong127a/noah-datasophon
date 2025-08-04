@@ -39,6 +39,7 @@ import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.converter.ClusterUserConverter;
 import com.datasophon.common.dto.ClusterUserDTO;
+import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -46,7 +47,7 @@ import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.datasophon.dao.mapper.ClusterUserMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
@@ -338,10 +339,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     private boolean hasRepeatUserName(Integer clusterId, String username) {
-        List<ClusterUser> list = QueryChain.of(ClusterUser.class)
-                .where(ClusterUser::getClusterId).eq(clusterId)
-                .and(ClusterUser::getUsername).eq(username)
-                .list();
+        List<ClusterUser> list = getMapper().selectByClusterIdAndUsername(clusterId, username);
         return CollUtil.isNotEmpty(list);
     }
 
@@ -350,27 +348,20 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
 
-        QueryChain<ClusterUser> query = QueryChain.of(ClusterUser.class)
-                .where(ClusterUser::getClusterId).eq(clusterId);
-
-        if (StringUtils.isNotBlank(username)) {
-            query.and(ClusterUser::getUsername).like("%" + username + "%");
-        }
-
-        List<ClusterUser> list = query.limit(offset, pageSize).list();
+        List<ClusterUser> list = getMapper().selectByClusterIdWithPagination(clusterId, username, offset, pageSize);
 
         for (ClusterUser clusterUser : list) {
-            ClusterGroup mainGroup = userGroupService.queryMainGroup(clusterUser.getId());
-            List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
+            ClusterGroupDTO mainGroup = userGroupService.queryMainGroup(clusterUser.getId());
+            List<ClusterGroupDTO> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
             if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
-                String otherGroups = otherGroupList.stream().map(ClusterGroup::getGroupName)
+                String otherGroups = otherGroupList.stream().map(ClusterGroupDTO::groupName)
                         .collect(java.util.stream.Collectors.joining(","));
                 clusterUser.setOtherGroups(otherGroups);
             }
-            clusterUser.setMainGroup(mainGroup.getGroupName());
+            clusterUser.setMainGroup(mainGroup.groupName());
         }
 
-        long total = query.count();
+        long total = getMapper().countByClusterIdAndUsername(clusterId, username);
         List<ClusterUserDTO> dtoList = clusterUserConverter.entityListToDtoList(list);
         return PageResult.of(dtoList, total, page, pageSize);
     }
@@ -481,21 +472,19 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Override
     public List<ClusterUserDTO> listAllUser(Integer clusterId) {
-        List<ClusterUser> entities = QueryChain.of(ClusterUser.class)
-                .where(ClusterUser::getClusterId).eq(clusterId)
-                .list();
+        List<ClusterUser> entities = getMapper().selectByClusterId(clusterId);
         return clusterUserConverter.entityListToDtoList(entities);
     }
 
     @Override
     public void createUnixUserOnHost(ClusterUserDTO clusterUserDTO, String hostname) {
         String username = clusterUserDTO.username();
-        ClusterGroup mainGroup = userGroupService.queryMainGroup(clusterUserDTO.id());
-        List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUserDTO.id());
+        ClusterGroupDTO mainGroup = userGroupService.queryMainGroup(clusterUserDTO.id());
+        List<ClusterGroupDTO> otherGroupList = userGroupService.listOtherGroups(clusterUserDTO.id());
         String otherGroup = "";
         if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
             otherGroup = otherGroupList.stream()
-                    .map(ClusterGroup::getGroupName)
+                    .map(ClusterGroupDTO::groupName)
                     .collect(java.util.stream.Collectors.joining(","));
         }
         ActorSelection unixUserActor = ActorUtils.actorSystem
@@ -503,7 +492,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
         createUnixUserCommand.setUsername(clusterUserDTO.username());
-        createUnixUserCommand.setMainGroup(mainGroup.getGroupName());
+        createUnixUserCommand.setMainGroup(mainGroup.groupName());
         createUnixUserCommand.setOtherGroups(otherGroup);
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
