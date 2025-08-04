@@ -24,7 +24,7 @@ import org.apache.ibatis.annotations.Param;
 
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
 
 import java.util.List;
 
@@ -43,28 +43,28 @@ public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueue> {
      */
     default Page<ClusterYarnQueue> selectPageByClusterId(Page<ClusterYarnQueue> page,
             @Param("clusterId") Integer clusterId) {
-        QueryChain<ClusterYarnQueue> query = QueryChain.of(ClusterYarnQueue.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterYarnQueue::getClusterId).eq(clusterId)
                 .orderBy(ClusterYarnQueue::getCreateTime).desc();
-        return query.page(page);
+        return this.paginate(page, query);
     }
 
     /**
      * 根据队列名称查询是否存在
      */
     default boolean existsByQueueName(@Param("queueName") String queueName) {
-        return QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getQueueName).eq(queueName)
-                .exists();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterYarnQueue::getQueueName).eq(queueName);
+        return this.selectCountByQuery(query) > 0;
     }
 
     /**
      * 根据集群ID查询所有队列
      */
     default List<ClusterYarnQueue> selectByClusterId(@Param("clusterId") Integer clusterId) {
-        return QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .list();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -72,9 +72,9 @@ public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueue> {
      */
     default ClusterYarnQueue selectByClusterIdAndQueueName(@Param("clusterId") Integer clusterId,
             @Param("queueName") String queueName) {
-        return QueryChain.of(ClusterYarnQueue.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterYarnQueue::getQueueName).eq(queueName)
-                .and(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .one();
+                .and(ClusterYarnQueue::getClusterId).eq(clusterId);
+        return this.selectOneByQuery(query);
     }
 }

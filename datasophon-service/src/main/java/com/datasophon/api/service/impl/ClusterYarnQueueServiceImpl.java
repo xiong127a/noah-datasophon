@@ -38,7 +38,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorSelection;
@@ -199,9 +199,8 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
     @Override
     public List<ClusterYarnQueueDTO> getQueuesByClusterId(Integer clusterId) {
-        List<ClusterYarnQueue> entities = QueryChain.of(ClusterYarnQueue.class)
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .list();
+        // SQL逻辑已在DAO层，直接调用Mapper方法
+        List<ClusterYarnQueue> entities = getMapper().selectByClusterId(clusterId);
         return clusterYarnQueueConverter.entityListToDtoList(entities);
     }
 

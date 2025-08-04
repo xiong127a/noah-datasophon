@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.paginate.Page;
 import org.apache.ibatis.annotations.Mapper;
@@ -48,10 +48,10 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
      * @return 总进度
      */
     default Integer getCommandHostTotalProgressByCommandId(@Param("commandId") String commandId) {
-        // 使用QueryChain和流处理，获取所有命令实例然后计算总和
-        List<ClusterServiceCommandHostEntity> entities = QueryChain.of(ClusterServiceCommandHostEntity.class)
-                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
-                .list();
+        // SQL逻辑迁移到DAO层，使用QueryWrapper
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
+        List<ClusterServiceCommandHostEntity> entities = this.selectListByQuery(query);
 
         // 使用JDK 21的Stream API处理结果
         return entities.stream()
@@ -101,6 +101,15 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
                 .and(ClusterServiceCommandHostEntity::getCommandState).eq(commandState);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据命令ID查询所有主机命令
+     */
+    default List<ClusterServiceCommandHostEntity> selectByCommandId(String commandId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
         return this.selectListByQuery(query);
     }
 }

@@ -22,6 +22,7 @@ import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import org.apache.ibatis.annotations.Mapper;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 
 /**
  * 集群服务命令数据访问对象
@@ -34,4 +35,25 @@ import com.mybatisflex.core.BaseMapper;
 @Mapper
 public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCommandEntity> {
 
+    /**
+     * 根据命令ID查询命令实体
+     */
+    default ClusterServiceCommandEntity selectByCommandId(String commandId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceCommandEntity::getCommandId).eq(commandId);
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据服务实例ID和命令类型查询最新命令
+     */
+    default ClusterServiceCommandEntity selectLatestByServiceInstanceIdAndCommandType(Integer serviceInstanceId,
+            int commandType) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceCommandEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterServiceCommandEntity::getCommandType).eq(commandType)
+                .orderBy(ClusterServiceCommandEntity::getCreateTime).desc()
+                .limit(1);
+        return this.selectOneByQuery(query);
+    }
 }
