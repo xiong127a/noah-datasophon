@@ -104,4 +104,22 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
 
         return this.selectCountByQuery(query);
     }
+
+    /**
+     * 根据用户ID列表获取用户名列表
+     *
+     * @param userIds 用户ID列表
+     * @return 用户名列表
+     */
+    default List<String> selectUsernamesByIds(@Param("userIds") List<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterUser::getId).in(userIds);
+        return this.selectListByQuery(query)
+                .stream()
+                .map(ClusterUser::getUsername)
+                .toList(); // JDK21现代特性
+    }
 }

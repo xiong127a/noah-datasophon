@@ -98,4 +98,12 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param hostname       主机名
      */
     void createUnixUserOnHost(ClusterUserDTO clusterUserDTO, String hostname);
+
+    /**
+     * 根据用户ID列表获取用户名列表
+     *
+     * @param userIds 用户ID列表
+     * @return 用户名列表
+     */
+    List<String> getUsernamesByIds(List<Integer> userIds);
 }

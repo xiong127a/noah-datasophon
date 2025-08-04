@@ -552,4 +552,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
 
+    @Override
+    public List<String> getUsernamesByIds(List<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return getMapper().selectUsernamesByIds(userIds);
+    }
+
 }
