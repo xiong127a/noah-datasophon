@@ -23,15 +23,16 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.exception.BusinessException;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,8 +42,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import static com.datasophon.dao.entity.table.FrameServiceEntityTableDef.FRAME_SERVICE_ENTITY;
-
 /**
  * 集群框架版本服务表服务实现
  * 继承ServiceImpl提供基础CRUD操作，使用Converter进行对象转换
@@ -50,7 +49,7 @@ import static com.datasophon.dao.entity.table.FrameServiceEntityTableDef.FRAME_S
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
 @Slf4j
 @Service("frameServiceService")
@@ -135,10 +134,10 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     private List<FrameServiceDTO> setInstalledStatus(Integer clusterId, List<FrameServiceDTO> dtos) {
         return dtos.stream()
                 .map(dto -> {
-                    ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                    ClusterServiceInstanceDTO serviceInstance = serviceInstanceService
                             .getServiceInstanceByClusterIdAndServiceName(clusterId, dto.serviceName());
                     boolean installed = Objects.nonNull(serviceInstance)
-                            && !serviceInstance.getServiceState().equals(ServiceState.WAIT_INSTALL);
+                            && !serviceInstance.serviceState().equals(ServiceState.WAIT_INSTALL.getValue());
                     return dto.withInstalled(installed);
                 })
                 .toList();
@@ -204,7 +203,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
             return List.of();
         }
 
-        var ids = Arrays.stream(serviceIds.split(","))
+        List<String> ids = Arrays.stream(serviceIds.split(","))
                 .filter(StrUtil::isNotBlank)
                 .toList();
 
