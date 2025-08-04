@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.AlertManagersActor;
@@ -35,12 +34,10 @@ import com.datasophon.common.dto.NoticeGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +53,7 @@ import java.util.stream.Collectors;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-01-01
  */
 @Service("noticeGroupService")
 public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, NoticeGroupEntity>
@@ -255,14 +252,14 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         /*
          * 更新配置信息，修改了通知组之后，配置要同步变更，
          */
-        List<ClusterServiceRoleInstanceEntity> alertManager = clusterServiceRoleInstanceService
+        List<com.datasophon.common.dto.ClusterServiceRoleInstanceDTO> alertManager = clusterServiceRoleInstanceService
                 .listServiceRoleByName("AlertManager");
-        for (ClusterServiceRoleInstanceEntity roleInstanceEntity : alertManager) {
-            ClusterServiceRoleGroupConfig roleGroupConfig = clusterServiceRoleGroupConfigService
-                    .getConfigByRoleGroupId(roleInstanceEntity.getRoleGroupId());
+        for (com.datasophon.common.dto.ClusterServiceRoleInstanceDTO roleInstanceDto : alertManager) {
+            com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO roleGroupConfig = clusterServiceRoleGroupConfigService
+                    .getConfigByRoleGroupId(roleInstanceDto.roleGroupId());
             List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
-            serviceInstallService.saveServiceConfig(roleInstanceEntity.getClusterId(), "ALERTMANAGER", serviceConfig,
-                    roleGroupConfig.getRoleGroupId(), "(AUTO) 生成alertManager 配置信息", -1, "system");
+            serviceInstallService.saveServiceConfig(roleInstanceDto.clusterId(), "ALERTMANAGER", serviceConfig,
+                    roleGroupConfig.roleGroupId(), "(AUTO) 生成alertManager 配置信息", -1, "system");
         }
 
         // 调用配置生成
