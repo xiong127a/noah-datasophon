@@ -17,7 +17,10 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,14 +29,23 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 集群服务角色实例控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @ApiVersion(path = "cluster/service/role/instance")
 public class ClusterServiceRoleInstanceController {
 
     @Autowired
     private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
+
+    @Autowired
+    private ClusterServiceRoleInstanceConverter clusterServiceRoleInstanceConverter;
 
 
     /**
@@ -74,19 +86,20 @@ public class ClusterServiceRoleInstanceController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterServiceRoleInstanceEntity clusterServiceRoleInstance) {
+    public Result<String> save(@RequestBody ClusterServiceRoleInstanceDTO clusterServiceRoleInstanceDTO) {
+        ClusterServiceRoleInstanceEntity clusterServiceRoleInstance = clusterServiceRoleInstanceConverter.dtoToEntity(clusterServiceRoleInstanceDTO);
         clusterServiceRoleInstanceService.save(clusterServiceRoleInstance);
-
-        return Result.success();
+        return Result.success("保存成功");
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterServiceRoleInstanceEntity clusterServiceRoleInstance) {
+    public Result<String> update(@RequestBody ClusterServiceRoleInstanceDTO clusterServiceRoleInstanceDTO) {
+        ClusterServiceRoleInstanceEntity clusterServiceRoleInstance = clusterServiceRoleInstanceConverter.dtoToEntity(clusterServiceRoleInstanceDTO);
         clusterServiceRoleInstanceService.updateById(clusterServiceRoleInstance);
-        return Result.success();
+        return Result.success("更新成功");
     }
 
     /**
@@ -94,7 +107,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @RequestMapping("/delete")
     public Result delete(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds) {
-        List<String> idList = Arrays.asList(serviceRoleInstancesIds.split(","));
+        List<String> idList = List.of(serviceRoleInstancesIds.split(","));
         return clusterServiceRoleInstanceService.deleteServiceRole(idList);
     }
 

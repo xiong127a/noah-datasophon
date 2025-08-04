@@ -17,75 +17,150 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.ServiceRoleState;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群服务角色实例表
+ * 集群服务角色实例服务
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ClusterServiceRoleInstanceService {
+public interface ClusterServiceRoleInstanceService extends IService<ClusterServiceRoleInstanceEntity> {
 
-    List<ClusterServiceRoleInstanceEntity> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
+    /**
+     * 根据主机名和集群ID获取停止的服务角色列表
+     */
+    List<ClusterServiceRoleInstanceDTO> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
                                                                                             Integer clusterId);
 
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname, Integer clusterId);
+    /**
+     * 根据主机名和集群ID获取服务角色列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname, Integer clusterId);
 
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceIdAndRoleState(Integer id,
+    /**
+     * 根据服务ID和角色状态获取服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Integer id,
                                                                                              ServiceRoleState stop);
 
-    ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname, Integer clusterId);
+    /**
+     * 获取单个服务角色
+     */
+    ClusterServiceRoleInstanceDTO getOneServiceRole(String serviceRoleName, String hostname, Integer clusterId);
 
+    /**
+     * 分页列表查询
+     */
     Result listAll(Integer serviceInstanceId, String hostname, Integer serviceRoleState, String serviceRoleName,
                    Integer roleGroupId, Integer page, Integer pageSize);
 
+    /**
+     * 获取日志
+     */
     Result getLog(Integer serviceRoleInstanceId) throws Exception;
 
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int id);
+    /**
+     * 根据服务ID获取服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int id);
 
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByClusterId(int clusterId);
+    /**
+     * 根据集群ID获取服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterId(int clusterId);
 
+    /**
+     * 删除服务角色
+     */
     Result deleteServiceRole(List<String> idList);
 
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
+    /**
+     * 根据集群ID和角色名称获取服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
                                                                                             String roleName);
 
-    List<ClusterServiceRoleInstanceEntity> getRunningServiceRoleInstanceListByServiceId(Integer serviceInstanceId);
+    /**
+     * 获取正在运行的服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getRunningServiceRoleInstanceListByServiceId(Integer serviceInstanceId);
 
+    /**
+     * 重启过时服务
+     */
     Result restartObsoleteService(Integer roleGroupId);
 
+    /**
+     * 退役节点
+     */
     Result decommissionNode(String serviceRoleInstanceIds, String serviceName) throws Exception;
 
+    /**
+     * 更新为需要重启状态
+     */
     void updateToNeedRestart(Integer roleGroupId);
 
-    void updateToNeedRestart(Integer roleGroupId,String serviceRoleName);
+    /**
+     * 更新为需要重启状态（指定服务角色名称）
+     */
+    void updateToNeedRestart(Integer roleGroupId, String serviceRoleName);
 
+    /**
+     * 根据主机名更新为需要重启状态
+     */
     void updateToNeedRestartByHost(String hostName);
 
-    List<ClusterServiceRoleInstanceEntity> getObsoleteService(Integer id);
+    /**
+     * 获取过时服务
+     */
+    List<ClusterServiceRoleInstanceDTO> getObsoleteService(Integer id);
 
-    List<ClusterServiceRoleInstanceEntity> getStoppedRoleInstanceOnHost(Integer clusterId, String hostname,
+    /**
+     * 获取主机上停止的角色实例
+     */
+    List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Integer clusterId, String hostname,
                                                                         ServiceRoleState state);
 
+    /**
+     * 移除角色实例
+     */
     void reomveRoleInstance(Integer serviceInstanceId);
 
-    ClusterServiceRoleInstanceEntity getKAdminRoleIns(Integer clusterId);
+    /**
+     * 获取KAdmin角色实例
+     */
+    ClusterServiceRoleInstanceDTO getKAdminRoleIns(Integer clusterId);
 
-    List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String serviceRoleName);
+    /**
+     * 根据服务角色名称列表查询
+     */
+    List<ClusterServiceRoleInstanceDTO> listServiceRoleByName(String serviceRoleName);
 
-    ClusterServiceRoleInstanceEntity listServiceRoleByNameAndClusterId(Integer clusterId,String serviceRoleName);
+    /**
+     * 根据集群ID和服务角色名称查询
+     */
+    ClusterServiceRoleInstanceDTO listServiceRoleByNameAndClusterId(Integer clusterId, String serviceRoleName);
 
-    ClusterServiceRoleInstanceEntity getServiceRoleInsByHostAndName(String hostName, String serviceRoleName);
+    /**
+     * 根据主机名和服务角色名称获取服务角色实例
+     */
+    ClusterServiceRoleInstanceDTO getServiceRoleInsByHostAndName(String hostName, String serviceRoleName);
 
-    List<ClusterServiceRoleInstanceEntity> listRoleIns(String hostname, String serviceName);
+    /**
+     * 根据主机名和服务名称列出角色实例
+     */
+    List<ClusterServiceRoleInstanceDTO> listRoleIns(String hostname, String serviceName);
 
-
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,Integer serviceInstanceId, String roleName);
+    /**
+     * 根据集群ID、服务实例ID和角色名称获取服务角色实例列表
+     */
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId, Integer serviceInstanceId, String roleName);
 }

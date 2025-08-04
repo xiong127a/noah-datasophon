@@ -31,8 +31,12 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 集群服务角色实例表
+ * 集群服务角色实例映射器
+ * 只保留业务特定的查询方法，标准CRUD使用IService提供
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServiceRoleInstanceEntity> {
