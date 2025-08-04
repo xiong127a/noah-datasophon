@@ -31,11 +31,12 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 集群服务操作指令主机表
+ * 集群服务命令主机数据访问对象
+ * 提供集群服务命令主机的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServiceCommandHostEntity> {
@@ -100,45 +101,6 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
                 .and(ClusterServiceCommandHostEntity::getCommandState).eq(commandState);
-        return this.selectListByQuery(query);
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterServiceCommandHostEntity selectById(String id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterServiceCommandHostEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterServiceCommandHostEntity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有命令主机
-     */
-    default List<ClusterServiceCommandHostEntity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
         return this.selectListByQuery(query);
     }
 }

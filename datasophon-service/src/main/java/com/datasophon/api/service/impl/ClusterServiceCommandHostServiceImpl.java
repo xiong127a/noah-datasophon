@@ -17,14 +17,18 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterServiceCommandHostConverter;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
 import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.impl.ServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,14 +38,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 集群服务操作指令主机表实现
+ * 集群服务命令主机服务实现
+ * 提供集群服务命令主机的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Service("clusterServiceCommandHostService")
-public class ClusterServiceCommandHostServiceImpl implements ClusterServiceCommandHostService {
+public class ClusterServiceCommandHostServiceImpl
+        extends ServiceImpl<ClusterServiceCommandHostMapper, ClusterServiceCommandHostEntity>
+        implements ClusterServiceCommandHostService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostServiceImpl.class);
 
@@ -50,7 +57,7 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
     private static final Long PROGRESS_INITIAL = 0L;
 
     @Autowired
-    private ClusterServiceCommandHostMapper hostMapper;
+    private ClusterServiceCommandHostConverter converter;
 
     @Autowired
     private ClusterServiceCommandHostCommandService hostCommandService;
@@ -59,7 +66,7 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
     public PageResult<ClusterServiceCommandHostEntity> getCommandHostList(Integer clusterId, String commandId,
             Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
-        PageResult<ClusterServiceCommandHostEntity> pageResult = hostMapper.selectPageByCommandId(commandId, page,
+        PageResult<ClusterServiceCommandHostEntity> pageResult = getMapper().selectPageByCommandId(commandId, page,
                 pageSize);
         List<ClusterServiceCommandHostEntity> list = pageResult.getRecords();
 
@@ -101,7 +108,7 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandHostEntity.setCommandProgress(PROGRESS_INITIAL);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_INITIAL)) {
-                    hostMapper.updateById(commandHostEntity);
+                    getMapper().updateById(commandHostEntity);
                     logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getCommandHostId());
                 }
                 return;
@@ -130,7 +137,7 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
 
             // 如果需要更新数据库且进度有变化
             if (shouldUpdateProgress(updateDb, oldProgress, finalProgress)) {
-                hostMapper.updateById(commandHostEntity);
+                getMapper().updateById(commandHostEntity);
                 logger.info("主机命令 {} 进度更新为 {}% 并更新数据库",
                         commandHostEntity.getCommandHostId(), finalProgress);
             }
@@ -198,7 +205,7 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
 
             // 如果需要更新数据库且状态发生了变化
             if (updateDb && stateChanged) {
-                hostMapper.updateById(hostCommandEntity);
+                getMapper().updateById(hostCommandEntity);
                 logger.info("主机命令 {} 状态从 {} 变为 {}，已更新数据库",
                         hostCommandEntity.getCommandHostId(), oldState, newState);
             }
@@ -209,22 +216,26 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
 
     @Override
     public Long getCommandHostSizeByCommandId(String commandId) {
-        return hostMapper.countByCommandId(commandId);
+        return getMapper().countByCommandId(commandId);
     }
 
     @Override
     public Integer getCommandHostTotalProgressByCommandId(String commandId) {
-        return hostMapper.getCommandHostTotalProgressByCommandId(commandId);
+        return getMapper().getCommandHostTotalProgressByCommandId(commandId);
     }
 
     @Override
-    public List<ClusterServiceCommandHostEntity> findFailedCommandHost(String commandId) {
-        return hostMapper.selectByCommandIdAndState(commandId, CommandState.FAILED);
+    public List<ClusterServiceCommandHostDTO> findFailedCommandHost(String commandId) {
+        List<ClusterServiceCommandHostEntity> entities = getMapper().selectByCommandIdAndState(commandId,
+                CommandState.FAILED);
+        return converter.entityListToDtoList(entities);
     }
 
     @Override
-    public List<ClusterServiceCommandHostEntity> findCanceledCommandHost(String commandId) {
-        return hostMapper.selectByCommandIdAndState(commandId, CommandState.CANCEL);
+    public List<ClusterServiceCommandHostDTO> findCanceledCommandHost(String commandId) {
+        List<ClusterServiceCommandHostEntity> entities = getMapper().selectByCommandIdAndState(commandId,
+                CommandState.CANCEL);
+        return converter.entityListToDtoList(entities);
     }
 
     // ========== 辅助方法 ==========
@@ -257,7 +268,34 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
      * 获取主机命令的所有子命令
      */
     private List<ClusterServiceCommandHostCommandEntity> getHostCommands(String commandHostId) {
-        return hostCommandService.getHostCommandListByCommandId(commandHostId);
+        // hostCommandService现在返回DTO，需要转换为Entity以保持现有业务逻辑兼容性
+        List<ClusterServiceCommandHostCommandDTO> dtos = hostCommandService
+                .getHostCommandListByCommandId(commandHostId);
+        return dtos.stream()
+                .map(dto -> {
+                    ClusterServiceCommandHostCommandEntity entity = new ClusterServiceCommandHostCommandEntity();
+                    entity.setHostCommandId(dto.hostCommandId());
+                    entity.setCommandProgress(dto.commandProgress());
+                    entity.setCommandState(integerToCommandState(dto.commandState()));
+                    return entity;
+                })
+                .toList();
+    }
+
+    /**
+     * Integer转换为CommandState枚举（内部辅助方法）
+     */
+    private CommandState integerToCommandState(Integer value) {
+        if (value == null)
+            return null;
+        return switch (value) {
+            case 0 -> CommandState.WAIT;
+            case 1 -> CommandState.RUNNING;
+            case 2 -> CommandState.SUCCESS;
+            case 3 -> CommandState.FAILED;
+            case 4 -> CommandState.CANCEL;
+            default -> null;
+        };
     }
 
     /**
@@ -289,31 +327,23 @@ public class ClusterServiceCommandHostServiceImpl implements ClusterServiceComma
         entity.setCommandStateCode(state.getValue());
     }
 
-    // 标准CRUD方法实现
+    // DTO相关的CRUD方法实现
     @Override
-    public ClusterServiceCommandHostEntity getById(String id) {
-        return hostMapper.selectById(id);
+    public ClusterServiceCommandHostDTO getByIdAsDto(String id) {
+        ClusterServiceCommandHostEntity entity = getById(id);
+        return entity != null ? converter.entityToDto(entity) : null;
     }
 
     @Override
-    public ClusterServiceCommandHostEntity save(ClusterServiceCommandHostEntity entity) {
-        hostMapper.insert(entity);
-        return entity;
+    public ClusterServiceCommandHostDTO saveCommandHost(ClusterServiceCommandHostDTO dto) {
+        ClusterServiceCommandHostEntity entity = converter.dtoToEntity(dto);
+        save(entity);
+        return converter.entityToDto(entity);
     }
 
     @Override
-    public ClusterServiceCommandHostEntity updateById(ClusterServiceCommandHostEntity entity) {
-        hostMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<String> ids) {
-        return hostMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterServiceCommandHostEntity> getAllCommandHosts() {
-        return hostMapper.selectAll();
+    public void updateCommandHost(ClusterServiceCommandHostDTO dto) {
+        ClusterServiceCommandHostEntity entity = converter.dtoToEntity(dto);
+        updateById(entity);
     }
 }

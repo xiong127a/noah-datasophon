@@ -17,30 +17,48 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群服务操作指令主机表
+ * 集群服务命令主机服务接口
+ * 提供集群服务命令主机的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface ClusterServiceCommandHostService {
+public interface ClusterServiceCommandHostService extends IService<ClusterServiceCommandHostEntity> {
 
+    /**
+     * 获取命令主机列表（分页）
+     */
     PageResult<ClusterServiceCommandHostEntity> getCommandHostList(Integer clusterId, String commandId, Integer page,
             Integer pageSize);
 
+    /**
+     * 根据命令ID获取命令主机大小
+     */
     Long getCommandHostSizeByCommandId(String commandId);
 
+    /**
+     * 根据命令ID获取命令主机总进度
+     */
     Integer getCommandHostTotalProgressByCommandId(String commandId);
 
-    List<ClusterServiceCommandHostEntity> findFailedCommandHost(String commandId);
+    /**
+     * 查找失败的命令主机
+     */
+    List<ClusterServiceCommandHostDTO> findFailedCommandHost(String commandId);
 
-    List<ClusterServiceCommandHostEntity> findCanceledCommandHost(String commandId);
+    /**
+     * 查找取消的命令主机
+     */
+    List<ClusterServiceCommandHostDTO> findCanceledCommandHost(String commandId);
 
     /**
      * 计算主机命令的实际进度
@@ -58,14 +76,18 @@ public interface ClusterServiceCommandHostService {
      */
     void calculateRealTimeHostCommandState(ClusterServiceCommandHostEntity hostCommandEntity, boolean updateDb);
 
-    // 标准CRUD方法
-    ClusterServiceCommandHostEntity getById(String id);
+    /**
+     * 根据ID获取命令主机DTO
+     */
+    ClusterServiceCommandHostDTO getByIdAsDto(String id);
 
-    ClusterServiceCommandHostEntity save(ClusterServiceCommandHostEntity entity);
+    /**
+     * 保存命令主机DTO
+     */
+    ClusterServiceCommandHostDTO saveCommandHost(ClusterServiceCommandHostDTO dto);
 
-    ClusterServiceCommandHostEntity updateById(ClusterServiceCommandHostEntity entity);
-
-    boolean removeByIds(List<String> ids);
-
-    List<ClusterServiceCommandHostEntity> getAllCommandHosts();
+    /**
+     * 更新命令主机
+     */
+    void updateCommandHost(ClusterServiceCommandHostDTO dto);
 }
