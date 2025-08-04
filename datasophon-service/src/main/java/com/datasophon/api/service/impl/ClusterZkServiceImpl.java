@@ -20,28 +20,33 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.service.ClusterZkService;
 import com.datasophon.dao.entity.ClusterZk;
 import com.datasophon.dao.mapper.ClusterZkMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 集群ZooKeeper服务实现
+ * 按照架构重构规范，迁移QueryChain到DAO层
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("clusterZkService")
 public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZk> implements ClusterZkService {
 
-    @Autowired
-    private ClusterZkMapper clusterZkMapper;
+    private static final Logger logger = LoggerFactory.getLogger(ClusterZkServiceImpl.class);
 
     @Override
     public Integer getMaxMyId(Integer clusterId) {
-        return clusterZkMapper.getMaxMyId(clusterId);
+        return getMapper().getMaxMyId(clusterId);
     }
 
     @Override
     public List<ClusterZk> getAllZkServer(Integer clusterId) {
-        return QueryChain.of(ClusterZk.class)
-                .where(ClusterZk::getClusterId).eq(clusterId)
-                .list();
+        return getMapper().selectByClusterId(clusterId);
     }
 }

@@ -25,9 +25,15 @@ import org.apache.ibatis.annotations.Param;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 
+import java.util.List;
+
 /**
+ * 集群ZooKeeper映射器
+ * 按照架构重构规范，迁移QueryChain到DAO层
  * 
- *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
@@ -47,5 +53,17 @@ public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
         // 使用selectObjectByQuery查询单个聚合结果
         Object result = this.selectObjectByQuery(query);
         return result != null ? (Integer) result : null;
+    }
+
+    /**
+     * 根据集群ID查询所有ZK服务器
+     *
+     * @param clusterId 集群ID
+     * @return ZK服务器列表
+     */
+    default List<ClusterZk> selectByClusterId(@Param("clusterId") Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterZk::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
     }
 }

@@ -17,14 +17,33 @@
 
 package com.datasophon.api.service;
 
-
 import com.datasophon.dao.entity.ClusterZk;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
-public interface ClusterZkService {
+/**
+ * 集群ZooKeeper服务
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
+public interface ClusterZkService extends IService<ClusterZk> {
 
+    /**
+     * 获取最大MyId
+     * 
+     * @param clusterId 集群ID
+     * @return 最大MyId
+     */
     Integer getMaxMyId(Integer clusterId);
 
+    /**
+     * 获取所有ZK服务器
+     * 
+     * @param clusterId 集群ID
+     * @return ZK服务器列表
+     */
     List<ClusterZk> getAllZkServer(Integer clusterId);
 }
