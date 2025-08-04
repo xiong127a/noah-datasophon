@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterServiceInstanceConverter;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.vo.ClusterServiceInstanceVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -21,7 +21,7 @@ import com.datasophon.api.converter.FrameInfoConverter;
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.common.dto.FrameInfoDTO;
 import com.datasophon.common.vo.FrameInfoVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

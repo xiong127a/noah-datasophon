@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.common.dto.ClusterQueueCapacityDTO;
 import com.datasophon.common.vo.ClusterQueueCapacityVO;
 import com.datasophon.common.vo.ClusterQueueCapacityListVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

@@ -24,7 +24,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterGroupVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterServiceCommandHostVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

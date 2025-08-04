@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterAlertHistoryVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;

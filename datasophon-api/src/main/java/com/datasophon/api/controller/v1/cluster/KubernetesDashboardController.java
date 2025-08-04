@@ -20,10 +20,8 @@ package com.datasophon.api.controller.v1.cluster;
 import com.datasophon.api.converter.K8sResourceConverter;
 import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.dto.K8sNamespaceDTO;
-import com.datasophon.common.dto.K8sResourceStatsDTO;
 import com.datasophon.common.vo.K8sNamespaceVO;
-import com.datasophon.common.vo.K8sResourceStatsVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

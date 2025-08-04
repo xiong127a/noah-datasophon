@@ -18,7 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

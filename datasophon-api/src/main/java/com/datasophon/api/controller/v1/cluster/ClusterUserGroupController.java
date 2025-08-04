@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterUserGroupConverter;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.common.dto.ClusterUserGroupDTO;
 import com.datasophon.common.vo.ClusterUserGroupVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;

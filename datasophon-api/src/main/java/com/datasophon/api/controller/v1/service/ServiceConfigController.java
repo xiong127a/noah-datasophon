@@ -22,7 +22,7 @@ package com.datasophon.api.controller.v1.service;
 import com.datasophon.api.service.ServiceConfigFileService;
 import com.datasophon.api.utils.CompressUtils;
 import com.datasophon.common.model.ConfigFile;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;

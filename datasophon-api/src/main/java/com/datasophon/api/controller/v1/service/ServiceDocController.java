@@ -20,7 +20,7 @@ package com.datasophon.api.controller.v1.service;
 import com.datasophon.api.converter.ServiceDocConverter;
 import com.datasophon.api.service.DocService;
 import com.datasophon.common.dto.ServiceDocDTO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.common.vo.ServiceDocVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

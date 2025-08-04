@@ -24,7 +24,7 @@ import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.dto.InstallStepDto;
 import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.datasophon.api.annotation.ApiVersion;

@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterNodeLabelConverter;
 import com.datasophon.api.service.ClusterNodeLabelService;
 import com.datasophon.common.dto.ClusterNodeLabelDTO;
 import com.datasophon.common.vo.ClusterNodeLabelVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;

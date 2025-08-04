@@ -22,7 +22,7 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.api.converter.UserInfoConverter;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.common.vo.UserInfoVO;
 import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.dao.entity.UserInfoEntity;

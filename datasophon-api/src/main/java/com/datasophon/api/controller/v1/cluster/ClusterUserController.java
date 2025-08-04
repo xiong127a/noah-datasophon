@@ -23,7 +23,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterUserVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterUser;
 import org.springframework.beans.factory.annotation.Autowired;
 

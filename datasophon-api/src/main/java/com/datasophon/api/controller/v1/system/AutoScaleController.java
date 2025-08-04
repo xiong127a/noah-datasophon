@@ -7,7 +7,7 @@ import com.datasophon.common.dto.AutoScaleTaskDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.AutoScaleTaskVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

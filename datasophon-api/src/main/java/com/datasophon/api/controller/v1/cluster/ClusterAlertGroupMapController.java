@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterAlertGroupMapConverter;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
 import com.datasophon.common.vo.ClusterAlertGroupMapVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;

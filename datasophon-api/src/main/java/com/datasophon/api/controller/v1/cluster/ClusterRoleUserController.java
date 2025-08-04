@@ -22,7 +22,7 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.common.dto.ClusterRoleUserDTO;
 import com.datasophon.common.vo.ClusterRoleUserVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;

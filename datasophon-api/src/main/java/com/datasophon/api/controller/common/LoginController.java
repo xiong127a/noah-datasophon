@@ -25,7 +25,7 @@ import com.datasophon.common.dto.LoginRequestDTO;
 import com.datasophon.common.dto.RefreshTokenRequestDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.common.vo.LoginResponseVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.common.vo.TokenResponseVO;
 import com.datasophon.common.vo.UserInfoVO;
 import com.datasophon.dao.entity.UserInfoEntity;

@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.vo.ClusterServiceDashboardVO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;

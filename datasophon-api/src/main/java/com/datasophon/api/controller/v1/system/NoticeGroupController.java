@@ -19,7 +19,7 @@ package com.datasophon.api.controller.v1.system;
 
 import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.api.converter.NoticeGroupConverter;
-import com.datasophon.common.vo.Result;
+import com.datasophon.api.dto.Result;
 import com.datasophon.common.vo.NoticeGroupVO;
 import com.datasophon.common.dto.NoticeGroupDTO;
 import com.datasophon.common.model.PageResult;
