@@ -27,11 +27,12 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 集群服务表
+ * 集群服务实例映射器
+ * 只保留业务特定的查询方法，标准CRUD使用IService提供
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceInstanceEntity> {
@@ -89,42 +90,4 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
                 return this.selectListByQuery(query);
         }
 
-        /**
-         * 根据ID查询单个实体
-         */
-        default ClusterServiceInstanceEntity selectById(Integer id) {
-                return this.selectOneById(id);
-        }
-
-        /**
-         * 插入实体
-         */
-        default int insert(ClusterServiceInstanceEntity entity) {
-                return this.insertSelective(entity);
-        }
-
-        /**
-         * 根据ID更新实体
-         */
-        default int updateById(ClusterServiceInstanceEntity entity) {
-                return this.update(entity);
-        }
-
-        /**
-         * 根据ID列表删除
-         */
-        default int deleteByIds(List<Integer> ids) {
-                if (ids == null || ids.isEmpty()) {
-                        return 0;
-                }
-                return this.deleteBatchByIds(ids);
-        }
-
-        /**
-         * 查询所有服务实例
-         */
-        default List<ClusterServiceInstanceEntity> selectAll() {
-                QueryWrapper query = QueryWrapper.create();
-                return this.selectListByQuery(query);
-        }
 }

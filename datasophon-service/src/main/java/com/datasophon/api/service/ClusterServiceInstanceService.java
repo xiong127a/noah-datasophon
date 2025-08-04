@@ -17,41 +17,109 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.common.model.ConnectionInfo;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 集群服务表
+ * 集群服务实例服务
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-01
  */
-public interface ClusterServiceInstanceService {
+public interface ClusterServiceInstanceService extends IService<ClusterServiceInstanceEntity> {
 
-    ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId, String parentName);
+    /**
+     * 根据集群ID和服务名称获取服务实例
+     *
+     * @param clusterId   集群ID
+     * @param serviceName 服务名称
+     * @return 服务实例
+     */
+    ClusterServiceInstanceDTO getServiceInstanceByClusterIdAndServiceName(Integer clusterId, String serviceName);
 
+    /**
+     * 根据集群ID和服务名称获取服务配置
+     *
+     * @param id   集群ID
+     * @param node 节点
+     * @return 配置字符串
+     */
     String getServiceConfigByClusterIdAndServiceName(Integer id, String node);
 
-    List<ClusterServiceInstanceEntity> listAll(Integer clusterId);
+    /**
+     * 获取集群下所有服务实例
+     *
+     * @param clusterId 集群ID
+     * @return 服务实例列表
+     */
+    List<ClusterServiceInstanceDTO> listAll(Integer clusterId);
 
+    /**
+     * 下载客户端配置
+     *
+     * @param clusterId   集群ID
+     * @param serviceName 服务名称
+     * @return 配置文件路径
+     */
     String downloadClientConfig(Integer clusterId, String serviceName);
 
+    /**
+     * 获取服务角色类型
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 角色类型列表
+     */
     List<FrameServiceRoleEntity> getServiceRoleType(Integer serviceInstanceId);
 
+    /**
+     * 配置版本比较
+     *
+     * @param serviceInstanceId   服务实例ID
+     * @param roleGroupId         角色组ID
+     * @param showOnlyDifferences 是否仅显示差异
+     * @return 比较结果
+     */
     Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
             Boolean showOnlyDifferences);
 
+    /**
+     * 删除服务实例
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 是否删除成功
+     */
     boolean delServiceInstance(Integer serviceInstanceId);
 
-    List<ClusterServiceInstanceEntity> listRunningServiceInstance(Integer clusterId);
+    /**
+     * 获取集群下正在运行的服务实例
+     *
+     * @param clusterId 集群ID
+     * @return 运行中的服务实例列表
+     */
+    List<ClusterServiceInstanceDTO> listRunningServiceInstance(Integer clusterId);
 
+    /**
+     * 判断服务实例是否有正在运行的角色实例
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 是否有运行中的角色实例
+     */
     boolean hasRunningRoleInstance(Integer serviceInstanceId);
 
+    /**
+     * 判断集群中是否存在指定服务的角色实例
+     *
+     * @param clusterId   集群ID
+     * @param serviceName 服务名称
+     * @return 是否存在角色实例
+     */
     Boolean hasRoleInstance(Integer clusterId, String serviceName);
 
     /**
@@ -62,14 +130,10 @@ public interface ClusterServiceInstanceService {
      */
     ConnectionInfo getConnectionInfo(Integer serviceInstanceId);
 
-    // 标准CRUD方法
-    ClusterServiceInstanceEntity getById(Integer id);
-
-    ClusterServiceInstanceEntity save(ClusterServiceInstanceEntity entity);
-
-    ClusterServiceInstanceEntity updateById(ClusterServiceInstanceEntity entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterServiceInstanceEntity> getAllServiceInstances();
+    /**
+     * 获取所有服务实例
+     *
+     * @return 所有服务实例列表
+     */
+    List<ClusterServiceInstanceDTO> getAllServiceInstances();
 }
