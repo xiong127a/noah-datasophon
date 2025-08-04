@@ -17,12 +17,16 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 
 /**
  * 服务角色组实体服务
- * 这个接口提供角色组相关的功能，避免循环依赖
+ * 工具服务接口，提供角色组相关的功能，避免循环依赖
+ * 按照架构重构规范，ServiceImpl不返回Result类型
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 public interface RoleGroupEntityService {
     /**
@@ -38,9 +42,9 @@ public interface RoleGroupEntityService {
      * 
      * @param roleInstanceIds 角色实例ID列表，以逗号分隔
      * @param roleGroupId     角色组ID
-     * @return 绑定结果
+     * @throws RuntimeException 绑定失败时抛出异常
      */
-    Result bindRoleInstances(String roleInstanceIds, Integer roleGroupId);
+    void bindRoleInstances(String roleInstanceIds, Integer roleGroupId);
 
     /**
      * 更新角色组的需要重启标志
