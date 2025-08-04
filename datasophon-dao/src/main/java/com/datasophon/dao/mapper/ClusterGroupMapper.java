@@ -28,17 +28,22 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群组映射器
+ * 集群组数据访问对象
+ * 提供集群组的数据库操作
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
 
     /**
      * 根据集群ID和组名查询集群组
+     *
+     * @param clusterId 集群ID
+     * @param groupName 组名
+     * @return 集群组列表
      */
     default List<ClusterGroup> selectByClusterIdAndGroupName(Integer clusterId, String groupName) {
         QueryWrapper query = QueryWrapper.create()
@@ -49,6 +54,9 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
 
     /**
      * 根据集群ID查询集群组
+     *
+     * @param clusterId 集群ID
+     * @return 集群组列表
      */
     default List<ClusterGroup> selectByClusterId(Integer clusterId) {
         QueryWrapper query = QueryWrapper.create()
@@ -58,6 +66,12 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
 
     /**
      * 分页查询集群组
+     *
+     * @param clusterId 集群ID
+     * @param groupName 组名（可选）
+     * @param page      页码
+     * @param pageSize  页大小
+     * @return 分页结果
      */
     default PageResult<ClusterGroup> selectPageByClusterIdAndGroupName(Integer clusterId, String groupName,
             Integer page, Integer pageSize) {
@@ -80,51 +94,5 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
         Page<ClusterGroup> resultPage = this.paginate(flexPage, query);
 
         return PageResult.of(resultPage.getRecords(), count, page, pageSize);
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterGroup selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterGroup entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterGroup entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID删除
-     */
-    default int removeById(Integer id) {
-        return this.deleteById(id);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有集群组
-     */
-    default List<ClusterGroup> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
     }
 }

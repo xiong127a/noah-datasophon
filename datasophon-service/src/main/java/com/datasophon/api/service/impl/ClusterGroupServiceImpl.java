@@ -18,6 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.datasophon.api.converter.ClusterGroupConverter;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
@@ -31,12 +32,13 @@ import com.datasophon.api.utils.string.validator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.remote.CreateUnixGroupCommand;
 import com.datasophon.common.command.remote.DelUnixGroupCommand;
+import com.datasophon.common.dto.ClusterGroupDTO;
+import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
@@ -58,14 +60,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
- * 集群组服务实现
+ * 集群组服务实现类
+ * 提供集群组的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 @Service("clusterGroupService")
 @Transactional
@@ -80,8 +82,11 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     @Autowired
     private ClusterUserGroupService userGroupService;
 
+    @Autowired
+    private ClusterGroupConverter clusterGroupConverter;
+
     @Override
-    public ClusterGroup saveClusterGroup(Integer clusterId, String groupName) {
+    public ClusterGroupDTO saveClusterGroup(Integer clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -125,11 +130,12 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
         }
 
-        return clusterGroup;
+        // Service层：Entity → DTO转换
+        return clusterGroupConverter.entityToDto(clusterGroup);
     }
 
     @Override
-    public ClusterGroup saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
+    public ClusterGroupDTO saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -202,7 +208,8 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             }
         }
 
-        return clusterGroup;
+        // Service层：Entity → DTO转换
+        return clusterGroupConverter.entityToDto(clusterGroup);
     }
 
     private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
@@ -279,28 +286,35 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     @Override
-    public PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
+    public PageResult<ClusterGroupDTO> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
         PageResult<ClusterGroup> pageResult = this.getMapper().selectPageByClusterIdAndGroupName(
                 clusterId, groupName, page, pageSize);
 
         List<ClusterGroup> list = pageResult.getRecords();
 
+        // 填充用户信息并转换为DTO
+        List<ClusterGroupDTO> dtoList = new ArrayList<>();
         for (ClusterGroup clusterGroup : list) {
-            List<ClusterUser> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
+            List<ClusterUserDTO> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
             if (Objects.nonNull(clusterUserList) && !clusterUserList.isEmpty()) {
-                String clusterUsers = clusterUserList.stream().map(ClusterUser::getUsername)
-                        .collect(Collectors.joining(","));
+                String clusterUsers = clusterUserList.stream().map(ClusterUserDTO::username)
+                        .collect(java.util.stream.Collectors.joining(","));
                 clusterGroup.setClusterUsers(clusterUsers);
             }
+            // Entity → DTO转换
+            dtoList.add(clusterGroupConverter.entityToDto(clusterGroup));
         }
 
-        return pageResult;
+        return PageResult.of(dtoList, pageResult.getTotal(), pageResult.getCurrent(), pageResult.getSize());
     }
 
     @Override
-    public List<ClusterGroup> listAllUserGroup(Integer clusterId) {
-        return this.getMapper().selectByClusterId(clusterId);
+    public List<ClusterGroupDTO> listAllUserGroup(Integer clusterId) {
+        List<ClusterGroup> entities = this.getMapper().selectByClusterId(clusterId);
+        return entities.stream()
+                .map(clusterGroupConverter::entityToDto)
+                .toList();
     }
 
     @Override
@@ -355,7 +369,24 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         return !Objects.requireNonNull(result).equals(Constants.FAILED);
     }
 
-    // 标准CRUD方法实现
-    // 基础CRUD方法已由ServiceImpl提供，无需重新实现
-    // 如需自定义逻辑，可在此重写对应方法
+    @Override
+    public ClusterGroupDTO getByIdAsDto(Integer id) {
+        // Service层：Entity → DTO转换
+        ClusterGroup entity = this.getById(id);
+        return clusterGroupConverter.entityToDto(entity);
+    }
+
+    @Override
+    public void saveClusterGroupDto(ClusterGroupDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterGroup entity = clusterGroupConverter.dtoToEntity(dto);
+        this.save(entity);
+    }
+
+    @Override
+    public void updateClusterGroup(ClusterGroupDTO dto) {
+        // Service层：DTO → Entity转换
+        ClusterGroup entity = clusterGroupConverter.dtoToEntity(dto);
+        this.updateById(entity);
+    }
 }

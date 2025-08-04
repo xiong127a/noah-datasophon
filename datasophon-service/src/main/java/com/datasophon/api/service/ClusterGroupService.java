@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.mybatisflex.core.service.IService;
@@ -24,11 +25,12 @@ import com.mybatisflex.core.service.IService;
 import java.util.List;
 
 /**
- * 集群组服务
+ * 集群组服务接口
+ * 提供集群组的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterGroupService extends IService<ClusterGroup> {
 
@@ -37,9 +39,9 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * 
      * @param clusterId 集群ID
      * @param groupName 组名
-     * @return 保存的集群组
+     * @return 保存的集群组DTO
      */
-    ClusterGroup saveClusterGroup(Integer clusterId, String groupName);
+    ClusterGroupDTO saveClusterGroup(Integer clusterId, String groupName);
 
     /**
      * 刷新用户组到主机
@@ -71,17 +73,17 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * @param clusterId 集群ID
      * @param page      页码
      * @param pageSize  页大小
-     * @return 分页结果
+     * @return 分页结果DTO
      */
-    PageResult<ClusterGroup> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterGroupDTO> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
 
     /**
      * 查询集群下所有用户组
      * 
      * @param clusterId 集群ID
-     * @return 用户组列表
+     * @return 用户组DTO列表
      */
-    List<ClusterGroup> listAllUserGroup(Integer clusterId);
+    List<ClusterGroupDTO> listAllUserGroup(Integer clusterId);
 
     /**
      * 在主机上创建Unix组
@@ -96,7 +98,29 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * 
      * @param clusterId 集群ID
      * @param groupName 组名
-     * @return 保存的集群组
+     * @return 保存的集群组DTO
      */
-    ClusterGroup saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
+    ClusterGroupDTO saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
+
+    /**
+     * 根据ID获取集群组DTO
+     *
+     * @param id 组ID
+     * @return 集群组DTO
+     */
+    ClusterGroupDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存集群组
+     *
+     * @param dto 集群组DTO
+     */
+    void saveClusterGroupDto(ClusterGroupDTO dto);
+
+    /**
+     * 更新集群组
+     *
+     * @param dto 集群组DTO
+     */
+    void updateClusterGroup(ClusterGroupDTO dto);
 }

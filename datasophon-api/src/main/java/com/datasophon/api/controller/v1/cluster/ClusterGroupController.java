@@ -17,77 +17,120 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterGroupConverter;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.common.vo.ClusterGroupVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.ClusterGroup;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+
+/**
+ * 集群组控制器
+ * 提供集群组的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @ApiVersion(path = "cluster/group")
 public class ClusterGroupController {
 
     @Autowired
     private ClusterGroupService clusterGroupService;
 
+    @Autowired
+    private ClusterGroupConverter clusterGroupConverter;
+
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result<Object> list(@RequestParam("groupName") String groupName,
+    public Result<PageResult<ClusterGroupVO>> list(@RequestParam("groupName") String groupName,
             @RequestParam("clusterId") Integer clusterId, @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
-        PageResult<ClusterGroup> pageResult = clusterGroupService.listPage(groupName, clusterId, page, pageSize);
-        return Result.success().put("page", pageResult);
+        PageResult<ClusterGroupDTO> dtoPageResult = clusterGroupService.listPage(groupName, clusterId, page, pageSize);
+        // Controller层：DTO → VO转换
+        List<ClusterGroupVO> voList = dtoPageResult.getRecords().stream()
+                .map(clusterGroupConverter::dtoToVo)
+                .toList();
+        PageResult<ClusterGroupVO> voPageResult = PageResult.of(voList, dtoPageResult.getTotal(),
+                dtoPageResult.getCurrent(), dtoPageResult.getSize());
+        return Result.success(voPageResult);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<Object> info(@PathVariable("id") Integer id) {
-        ClusterGroup clusterGroup = clusterGroupService.getById(id);
-
-        return Result.success().put("clusterGroup", clusterGroup);
+    public Result<ClusterGroupVO> info(@PathVariable("id") Integer id) {
+        // 调用Service层方法，获取DTO
+        ClusterGroupDTO dto = clusterGroupService.getByIdAsDto(id);
+        // Controller层：DTO → VO转换
+        ClusterGroupVO vo = clusterGroupConverter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    public Result<Object> save(@RequestParam("clusterId") Integer clusterId,
+    public Result<ClusterGroupVO> save(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("groupName") String groupName) {
-        ClusterGroup clusterGroup = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
+        ClusterGroupDTO dto = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
                 ? clusterGroupService.saveClusterGroup(clusterId, groupName)
                 : clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
-        return Result.success().put("clusterGroup", clusterGroup);
+        // Controller层：DTO → VO转换
+        ClusterGroupVO vo = clusterGroupConverter.dtoToVo(dto);
+        return Result.success(vo);
+    }
+
+    /**
+     * 保存（使用DTO）
+     */
+    @RequestMapping("/saveDto")
+    public Result<String> saveDto(@RequestBody ClusterGroupDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterGroupService.saveClusterGroupDto(dto);
+        return Result.success("保存成功");
+    }
+
+    /**
+     * 更新
+     */
+    @RequestMapping("/update")
+    public Result<String> update(@RequestBody ClusterGroupDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterGroupService.updateClusterGroup(dto);
+        return Result.success("更新成功");
     }
 
     /**
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result<Object> delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("id") Integer id) {
+    public Result<String> delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("id") Integer id) {
         boolean success = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
                 ? clusterGroupService.deleteUserGroup(id)
                 : clusterGroupService.deleteUserGroupOnKubernetes(id);
-        return success ? Result.success() : Result.error("删除失败");
+        return success ? Result.success("删除成功") : Result.error("删除失败");
     }
 
     /**
      * 刷新用户组到主机
      */
     @RequestMapping("/refreshUserGroupToHost")
-    public Result<Object> refreshUserGroupToHost(@RequestParam("clusterId") Integer clusterId) {
-
+    public Result<String> refreshUserGroupToHost(@RequestParam("clusterId") Integer clusterId) {
         clusterGroupService.refreshUserGroupToHost(clusterId);
-
-        return Result.success();
+        return Result.success("刷新成功");
     }
-
 }
