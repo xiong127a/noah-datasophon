@@ -94,4 +94,9 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     public List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId) {
         return getMapper().selectConfigVersionsByRoleGroupId(roleGroupId);
     }
+
+    @Override
+    public List<ClusterServiceRoleGroupConfig> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId) {
+        return getMapper().selectLatestTwoConfigsByRoleGroupId(roleGroupId);
+    }
 }

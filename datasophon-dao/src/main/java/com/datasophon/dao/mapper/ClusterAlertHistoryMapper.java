@@ -99,4 +99,32 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
         return this.selectCountByQuery(query);
     }
 
+    /**
+     * 根据服务实例ID查询停止状态的角色实例
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 停止状态的告警历史列表
+     */
+    default List<ClusterAlertHistory> selectStoppedRolesByServiceId(Integer serviceInstanceId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterAlertHistory::getIsEnabled).eq(1)
+                .and(ClusterAlertHistory::getAlertName).like("%停止%");
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务实例ID查询告警状态的角色实例
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 告警状态的告警历史列表
+     */
+    default List<ClusterAlertHistory> selectAlarmRolesByServiceId(Integer serviceInstanceId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterAlertHistory::getIsEnabled).eq(1)
+                .and(ClusterAlertHistory::getAlertLevel).in("WARNING", "ERROR", "CRITICAL");
+        return this.selectListByQuery(query);
+    }
+
 }

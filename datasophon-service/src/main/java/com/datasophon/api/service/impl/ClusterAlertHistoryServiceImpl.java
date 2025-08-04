@@ -168,4 +168,45 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                 ClusterAlertHistory entity = clusterAlertHistoryConverter.dtoToEntity(dto);
                 this.updateById(entity);
         }
+
+        @Override
+        public long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
+                try {
+                        return getMapper().countEnabledByServiceInstanceId(serviceInstanceId);
+                } catch (Exception e) {
+                        logger.error("统计启用告警数量失败: {}", e.getMessage(), e);
+                        return 0;
+                }
+        }
+
+        @Override
+        public List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Integer serviceInstanceId) {
+                try {
+                        // 这里假设我们有一个mapper方法来查询停止状态的角色
+                        // 实际实现时需要根据具体的数据模型来调整
+                        List<ClusterAlertHistory> entities = getMapper()
+                                        .selectStoppedRolesByServiceId(serviceInstanceId);
+                        return entities.stream()
+                                        .map(clusterAlertHistoryConverter::entityToDto)
+                                        .toList();
+                } catch (Exception e) {
+                        logger.error("查询停止状态角色失败: {}", e.getMessage(), e);
+                        return java.util.Collections.emptyList();
+                }
+        }
+
+        @Override
+        public List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Integer serviceInstanceId) {
+                try {
+                        // 这里假设我们有一个mapper方法来查询告警状态的角色
+                        // 实际实现时需要根据具体的数据模型来调整
+                        List<ClusterAlertHistory> entities = getMapper().selectAlarmRolesByServiceId(serviceInstanceId);
+                        return entities.stream()
+                                        .map(clusterAlertHistoryConverter::entityToDto)
+                                        .toList();
+                } catch (Exception e) {
+                        logger.error("查询告警状态角色失败: {}", e.getMessage(), e);
+                        return java.util.Collections.emptyList();
+                }
+        }
 }

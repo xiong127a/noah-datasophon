@@ -55,4 +55,12 @@ public interface ClusterServiceDashboardService extends IService<ClusterServiceD
      * 更新仪表盘
      */
     void updateDashboard(ClusterServiceDashboardDTO dto);
+
+    /**
+     * 根据服务名称获取仪表盘
+     * 
+     * @param serviceName 服务名称
+     * @return 仪表盘实体
+     */
+    ClusterServiceDashboard getByServiceName(String serviceName);
 }

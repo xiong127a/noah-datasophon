@@ -71,6 +71,11 @@ public interface BaseConverter<E, D, V> {
     List<V> dtoListToVoList(List<D> dtoList);
 
     /**
+     * DTO 列表转换为 Entity 列表
+     */
+    List<E> dtoListToEntityList(List<D> dtoList);
+
+    /**
      * 更新Entity对象（用于部分字段更新）
      */
     void updateEntityFromDto(D dto, @MappingTarget E entity);

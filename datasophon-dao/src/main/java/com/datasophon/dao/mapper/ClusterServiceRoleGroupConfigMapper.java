@@ -36,73 +36,88 @@ import java.util.List;
 @Mapper
 public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterServiceRoleGroupConfig> {
 
-    /**
-     * 根据角色组ID获取配置（最新版本）
-     *
-     * @param roleGroupId 角色组ID
-     * @return 配置实体
-     */
-    default ClusterServiceRoleGroupConfig selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
-                .limit(1);
-        List<ClusterServiceRoleGroupConfig> results = this.selectListByQuery(query);
-        return results.isEmpty() ? null : results.get(0);
-    }
+        /**
+         * 根据角色组ID获取配置（最新版本）
+         *
+         * @param roleGroupId 角色组ID
+         * @return 配置实体
+         */
+        default ClusterServiceRoleGroupConfig selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                                .limit(1);
+                List<ClusterServiceRoleGroupConfig> results = this.selectListByQuery(query);
+                return results.isEmpty() ? null : results.get(0);
+        }
 
-    /**
-     * 根据角色组ID和版本号获取配置
-     *
-     * @param roleGroupId 角色组ID
-     * @param version     版本号
-     * @return 配置实体
-     */
-    default ClusterServiceRoleGroupConfig selectByRoleGroupIdAndVersion(
-            @Param("roleGroupId") Integer roleGroupId,
-            @Param("version") Integer version) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .and(ClusterServiceRoleGroupConfig::getConfigVersion).eq(version);
-        return this.selectOneByQuery(query);
-    }
+        /**
+         * 根据角色组ID和版本号获取配置
+         *
+         * @param roleGroupId 角色组ID
+         * @param version     版本号
+         * @return 配置实体
+         */
+        default ClusterServiceRoleGroupConfig selectByRoleGroupIdAndVersion(
+                        @Param("roleGroupId") Integer roleGroupId,
+                        @Param("version") Integer version) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                                .and(ClusterServiceRoleGroupConfig::getConfigVersion).eq(version);
+                return this.selectOneByQuery(query);
+        }
 
-    /**
-     * 删除指定角色组的所有配置
-     *
-     * @param roleGroupId 角色组ID
-     * @return 删除的记录数
-     */
-    default int deleteByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId);
-        return this.deleteByQuery(query);
-    }
+        /**
+         * 删除指定角色组的所有配置
+         *
+         * @param roleGroupId 角色组ID
+         * @return 删除的记录数
+         */
+        default int deleteByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId);
+                return this.deleteByQuery(query);
+        }
 
-    /**
-     * 根据角色组ID列表获取配置列表
-     *
-     * @param roleGroupIds 角色组ID列表
-     * @return 配置实体列表
-     */
-    default List<ClusterServiceRoleGroupConfig> selectByRoleGroupIds(
-            @Param("roleGroupIds") List<Integer> roleGroupIds) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds);
-        return this.selectListByQuery(query);
-    }
+        /**
+         * 根据角色组ID列表获取配置列表
+         *
+         * @param roleGroupIds 角色组ID列表
+         * @return 配置实体列表
+         */
+        default List<ClusterServiceRoleGroupConfig> selectByRoleGroupIds(
+                        @Param("roleGroupIds") List<Integer> roleGroupIds) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds);
+                return this.selectListByQuery(query);
+        }
 
-    /**
-     * 根据角色组ID获取配置版本列表（按版本号降序）
-     *
-     * @param roleGroupId 角色组ID
-     * @return 配置版本列表
-     */
-    default List<ClusterServiceRoleGroupConfig> selectConfigVersionsByRoleGroupId(
-            @Param("roleGroupId") Integer roleGroupId) {
-        QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc();
-        return this.selectListByQuery(query);
-    }
+        /**
+         * 根据角色组ID获取配置版本列表（按版本号降序）
+         *
+         * @param roleGroupId 角色组ID
+         * @return 配置版本列表
+         */
+        default List<ClusterServiceRoleGroupConfig> selectConfigVersionsByRoleGroupId(
+                        @Param("roleGroupId") Integer roleGroupId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc();
+                return this.selectListByQuery(query);
+        }
+
+        /**
+         * 根据角色组ID获取最新的两个配置版本（用于版本比较）
+         *
+         * @param roleGroupId 角色组ID
+         * @return 最新的两个配置版本列表
+         */
+        default List<ClusterServiceRoleGroupConfig> selectLatestTwoConfigsByRoleGroupId(
+                        @Param("roleGroupId") Integer roleGroupId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                                .limit(2);
+                return this.selectListByQuery(query);
+        }
 }

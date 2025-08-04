@@ -102,4 +102,9 @@ public class ClusterServiceDashboardServiceImpl
                 ClusterServiceDashboard entity = converter.dtoToEntity(dto);
                 updateById(entity);
         }
+
+        @Override
+        public ClusterServiceDashboard getByServiceName(String serviceName) {
+                return getMapper().selectByServiceName(serviceName);
+        }
 }

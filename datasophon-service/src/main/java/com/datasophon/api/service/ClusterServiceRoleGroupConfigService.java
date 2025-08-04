@@ -94,4 +94,12 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @return 配置列表
      */
     List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId);
+
+    /**
+     * 根据角色组ID获取最新的两个配置版本（用于版本比较）
+     *
+     * @param roleGroupId 角色组ID
+     * @return 最新的两个配置版本列表
+     */
+    List<ClusterServiceRoleGroupConfig> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId);
 }

@@ -87,4 +87,28 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param dto 告警历史DTO
      */
     void updateAlertHistory(ClusterAlertHistoryDTO dto);
+
+    /**
+     * 统计指定服务实例的启用告警数量
+     * 
+     * @param serviceInstanceId 服务实例 ID
+     * @return 启用的告警数量
+     */
+    long countEnabledByServiceInstanceId(Integer serviceInstanceId);
+
+    /**
+     * 获取停止状态的角色实例列表
+     * 
+     * @param serviceInstanceId 服务实例 ID
+     * @return 停止状态的角色实例列表
+     */
+    List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Integer serviceInstanceId);
+
+    /**
+     * 获取告警状态的角色实例列表
+     * 
+     * @param serviceInstanceId 服务实例 ID
+     * @return 告警状态的角色实例列表
+     */
+    List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Integer serviceInstanceId);
 }
