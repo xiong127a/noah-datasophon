@@ -18,19 +18,51 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.List;
+
+import static com.datasophon.dao.entity.table.NoticeGroupUserEntityTableDef.NOTICE_GROUP_USER_ENTITY;
 
 /**
  * 通知组-用户中间表
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface NoticeGroupUserMapper extends BaseMapper<NoticeGroupUserEntity> {
 
+    /**
+     * 根据通知组ID列表删除用户关联关系
+     */
+    default int deleteByGroupIds(List<Integer> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return 0;
+        }
+        return deleteByQuery(QueryWrapper.create()
+                .where(NOTICE_GROUP_USER_ENTITY.NOTICE_GROUP_ID.in(groupIds)));
+    }
+
+    /**
+     * 根据通知组ID查询用户关联关系列表
+     */
+    default List<NoticeGroupUserEntity> selectByGroupId(Integer groupId) {
+        return selectListByQuery(QueryWrapper.create()
+                .where(NOTICE_GROUP_USER_ENTITY.NOTICE_GROUP_ID.eq(groupId)));
+    }
+
+    /**
+     * 根据通知组ID列表查询用户关联关系列表
+     */
+    default List<NoticeGroupUserEntity> selectByGroupIds(List<Integer> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return List.of(); // JDK21现代特性：使用List.of()替代Collections.emptyList()
+        }
+        return selectListByQuery(QueryWrapper.create()
+                .where(NOTICE_GROUP_USER_ENTITY.NOTICE_GROUP_ID.in(groupIds)));
+    }
 }

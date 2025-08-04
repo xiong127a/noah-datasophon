@@ -17,12 +17,12 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import com.datasophon.dao.mapper.ConfigVersionInfoMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,40 +30,31 @@ import java.util.List;
 
 /**
  * 配置版本详情服务实现类
+ * 按照架构重构规范，迁移QueryChain/UpdateChain到DAO层
  *
- * @author datasophon
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Service("configVersionInfoService")
 public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoMapper, ConfigVersionInfoEntity>
                 implements ConfigVersionInfoService {
 
+        private static final Logger logger = LoggerFactory.getLogger(ConfigVersionInfoServiceImpl.class);
+
         @Override
         public List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Integer refId) {
-                return QueryChain.of(ConfigVersionInfoEntity.class)
-                                .where(ConfigVersionInfoEntity::getRefType).eq(refType)
-                                .and(ConfigVersionInfoEntity::getRefId).eq(refId)
-                                .orderBy(ConfigVersionInfoEntity::getVersion).desc()
-                                .list();
+                return getMapper().selectVersionInfoList(refType, refId);
         }
 
         @Override
         public ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Integer refId) {
-                return QueryChain.of(ConfigVersionInfoEntity.class)
-                                .where(ConfigVersionInfoEntity::getVersion).eq(version)
-                                .and(ConfigVersionInfoEntity::getRefType).eq(refType)
-                                .and(ConfigVersionInfoEntity::getRefId).eq(refId)
-                                .one();
+                return getMapper().selectVersionInfo(version, refType, refId);
         }
 
         @Override
         public Integer getMaxVersion(String refType, Integer refId) {
-                ConfigVersionInfoEntity latestVersion = QueryChain.of(ConfigVersionInfoEntity.class)
-                                .where(ConfigVersionInfoEntity::getRefType).eq(refType)
-                                .and(ConfigVersionInfoEntity::getRefId).eq(refId)
-                                .orderBy(ConfigVersionInfoEntity::getVersion).desc()
-                                .limit(1)
-                                .one();
-
+                ConfigVersionInfoEntity latestVersion = getMapper().selectLatestVersion(refType, refId);
                 return latestVersion != null ? latestVersion.getVersion() : 0;
         }
 
@@ -71,19 +62,9 @@ public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoM
         @Transactional(rollbackFor = Exception.class)
         public void updateCurrentVersion(Integer version, String refType, Integer refId) {
                 // 先将所有版本设置为非当前版本
-                boolean updateAll = UpdateChain.of(ConfigVersionInfoEntity.class)
-                                .set(ConfigVersionInfoEntity::getIsCurrent, false)
-                                .where(ConfigVersionInfoEntity::getRefType).eq(refType)
-                                .and(ConfigVersionInfoEntity::getRefId).eq(refId)
-                                .update();
+                getMapper().updateAllToNonCurrent(refType, refId);
 
                 // 再将指定版本设置为当前版本
-                boolean updateOne = UpdateChain.of(ConfigVersionInfoEntity.class)
-                                .set(ConfigVersionInfoEntity::getIsCurrent, true)
-                                .where(ConfigVersionInfoEntity::getVersion).eq(version)
-                                .and(ConfigVersionInfoEntity::getRefType).eq(refType)
-                                .and(ConfigVersionInfoEntity::getRefId).eq(refId)
-                                .update();
-
+                getMapper().updateToCurrent(version, refType, refId);
         }
 }

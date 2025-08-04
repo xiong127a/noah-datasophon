@@ -18,46 +18,45 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.service.NoticeGroupUserService;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.mapper.NoticeGroupUserMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
  * 通知组-用户中间表实现
+ * 按照架构重构规范，迁移QueryChain到DAO层
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-01-01
  */
 @Service("noticeGroupUserService")
 public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMapper, NoticeGroupUserEntity>
         implements NoticeGroupUserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(NoticeGroupUserServiceImpl.class);
 
     @Override
     public void removeByGroupIds(List<Integer> list) {
         if (CollectionUtil.isEmpty(list)) {
             return;
         }
-        this.remove(QueryChain.of(NoticeGroupUserEntity.class)
-                .where(NoticeGroupUserEntity::getNoticeGroupId).in(list));
+        getMapper().deleteByGroupIds(list);
     }
 
     @Override
     public List<NoticeGroupUserEntity> listByGroupId(Integer id) {
-        return QueryChain.of(NoticeGroupUserEntity.class)
-                .where(NoticeGroupUserEntity::getNoticeGroupId).eq(id)
-                .list();
+        return getMapper().selectByGroupId(id);
     }
 
     @Override
     public List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids) {
-        return QueryChain.of(NoticeGroupUserEntity.class)
-                .where(NoticeGroupUserEntity::getNoticeGroupId).in(ids)
-                .list();
+        return getMapper().selectByGroupIds(ids);
     }
 }

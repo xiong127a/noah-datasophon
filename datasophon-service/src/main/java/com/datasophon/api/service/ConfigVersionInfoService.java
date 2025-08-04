@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-
+import com.mybatisflex.core.service.IService;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 
 import java.util.List;
@@ -25,9 +25,11 @@ import java.util.List;
 /**
  * 配置版本详情服务接口
  *
- * @author datasophon
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ConfigVersionInfoService {
+public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEntity> {
 
     /**
      * 根据引用类型和引用ID获取配置版本详情列表
