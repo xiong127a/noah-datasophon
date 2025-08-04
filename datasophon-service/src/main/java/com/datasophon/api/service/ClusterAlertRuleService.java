@@ -17,16 +17,39 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterAlertRuleDTO;
 import com.datasophon.dao.entity.ClusterAlertRule;
 import com.mybatisflex.core.service.IService;
 
 /**
- * 集群告警规则服务
+ * 集群告警规则服务接口
+ * 提供集群告警规则的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterAlertRuleService extends IService<ClusterAlertRule> {
 
+    /**
+     * 根据ID获取告警规则DTO
+     *
+     * @param id 告警规则ID
+     * @return 告警规则DTO
+     */
+    ClusterAlertRuleDTO getByIdAsDto(Long id);
+
+    /**
+     * 保存告警规则
+     *
+     * @param dto 告警规则DTO
+     */
+    void saveAlertRule(ClusterAlertRuleDTO dto);
+
+    /**
+     * 更新告警规则
+     *
+     * @param dto 告警规则DTO
+     */
+    void updateAlertRule(ClusterAlertRuleDTO dto);
 }

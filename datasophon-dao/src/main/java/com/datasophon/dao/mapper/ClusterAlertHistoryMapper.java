@@ -27,11 +27,12 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群告警历史表
+ * 集群告警历史数据访问对象
+ * 提供集群告警历史的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistory> {
@@ -98,42 +99,4 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
         return this.selectCountByQuery(query);
     }
 
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterAlertHistory selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterAlertHistory entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterAlertHistory entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有告警历史
-     */
-    default List<ClusterAlertHistory> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
-    }
 }

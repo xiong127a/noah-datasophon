@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.mybatisflex.core.service.IService;
@@ -24,11 +25,12 @@ import com.mybatisflex.core.service.IService;
 import java.util.List;
 
 /**
- * 集群告警历史服务
+ * 集群告警历史服务接口
+ * 提供集群告警历史的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory> {
 
@@ -43,9 +45,9 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * 根据服务实例ID获取告警列表
      * 
      * @param serviceInstanceId 服务实例ID
-     * @return 告警历史列表
+     * @return 告警历史DTO列表
      */
-    List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId);
+    List<ClusterAlertHistoryDTO> getAlertList(Integer serviceInstanceId);
 
     /**
      * 分页查询所有告警历史
@@ -53,9 +55,9 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param clusterId 集群ID
      * @param page      页码
      * @param pageSize  页大小
-     * @return 分页结果
+     * @return 分页DTO结果
      */
-    PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterAlertHistoryDTO> getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
 
     /**
      * 根据角色实例ID列表删除告警（业务逻辑：删除+重新配置Prometheus）
@@ -64,4 +66,25 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      */
     void removeAlertByRoleInstanceIds(List<Integer> ids);
 
+    /**
+     * 根据ID获取告警历史DTO
+     *
+     * @param id 告警历史ID
+     * @return 告警历史DTO
+     */
+    ClusterAlertHistoryDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存告警历史
+     *
+     * @param dto 告警历史DTO
+     */
+    void saveAlertHistoryDto(ClusterAlertHistoryDTO dto);
+
+    /**
+     * 更新告警历史
+     *
+     * @param dto 告警历史DTO
+     */
+    void updateAlertHistory(ClusterAlertHistoryDTO dto);
 }

@@ -17,10 +17,12 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterAlertHistoryConverter;
 import com.datasophon.api.service.ClusterAlertHistoryService;
+import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.common.vo.ClusterAlertHistoryVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.ClusterAlertHistory;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,38 +32,63 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
-
+/**
+ * 集群告警历史控制器
+ * 提供集群告警历史的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @ApiVersion(path = "cluster/alert/history")
 public class ClusterAlertHistoryController {
 
     @Autowired
     private ClusterAlertHistoryService clusterAlertHistoryService;
 
+    @Autowired
+    private ClusterAlertHistoryConverter clusterAlertHistoryConverter;
+
     /**
-     * 列表
+     * 根据服务实例ID获取告警列表
      */
     @RequestMapping("/getAlertList")
-    public Result<Object> getAlertList(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result<List<ClusterAlertHistoryVO>> getAlertList(
+            @RequestParam("serviceInstanceId") Integer serviceInstanceId) {
         try {
-            List<ClusterAlertHistory> alertList = clusterAlertHistoryService.getAlertList(serviceInstanceId);
-            return Result.success().put("alertList", alertList);
+            // 调用Service层方法，获取DTO列表
+            List<ClusterAlertHistoryDTO> dtoList = clusterAlertHistoryService.getAlertList(serviceInstanceId);
+            // Controller层：DTO → VO转换
+            List<ClusterAlertHistoryVO> voList = dtoList.stream()
+                    .map(clusterAlertHistoryConverter::dtoToVo)
+                    .toList();
+            return Result.success(voList);
         } catch (Exception e) {
             return Result.error("查询告警历史失败");
         }
     }
 
     /**
-     * 列表
+     * 分页查询所有告警历史
      */
     @RequestMapping("/getAllAlertList")
-    public Result<Object> getAllAlertList(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterAlertHistoryVO>> getAllAlertList(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         try {
-            PageResult<ClusterAlertHistory> pageResult = clusterAlertHistoryService.getAllAlertList(clusterId, page,
+            // 调用Service层方法，获取DTO分页结果
+            PageResult<ClusterAlertHistoryDTO> dtoPageResult = clusterAlertHistoryService.getAllAlertList(clusterId,
+                    page, pageSize);
+            // Controller层：DTO → VO转换
+            List<ClusterAlertHistoryVO> voList = dtoPageResult.getRecords().stream()
+                    .map(clusterAlertHistoryConverter::dtoToVo)
+                    .toList();
+            PageResult<ClusterAlertHistoryVO> voPageResult = PageResult.of(
+                    voList,
+                    dtoPageResult.getTotal(),
+                    page,
                     pageSize);
-            return Result.success().put("page", pageResult);
+            return Result.success(voPageResult);
         } catch (Exception e) {
             return Result.error("查询告警历史失败");
         }
@@ -71,40 +98,50 @@ public class ClusterAlertHistoryController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<Object> info(@PathVariable("id") Integer id) {
-        ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryService.getById(id);
-
-        return Result.success().put("clusterAlertHistory", clusterAlertHistory);
+    public Result<ClusterAlertHistoryVO> info(@PathVariable("id") Integer id) {
+        // 调用Service层方法，获取DTO
+        ClusterAlertHistoryDTO dto = clusterAlertHistoryService.getByIdAsDto(id);
+        // Controller层：DTO → VO转换
+        ClusterAlertHistoryVO vo = clusterAlertHistoryConverter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
     /**
-     * 保存
+     * 保存告警历史（异步处理告警消息）
      */
     @RequestMapping("/save")
-    public Result<Object> save(@RequestBody String alertMessage) {
+    public Result<String> save(@RequestBody String alertMessage) {
         clusterAlertHistoryService.saveAlertHistory(alertMessage);
-        return Result.success();
+        return Result.success("保存告警消息成功");
+    }
+
+    /**
+     * 保存告警历史DTO
+     */
+    @RequestMapping("/saveDto")
+    public Result<String> saveDto(@RequestBody ClusterAlertHistoryDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterAlertHistoryService.saveAlertHistoryDto(dto);
+        return Result.success("保存成功");
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result<Object> update(@RequestBody ClusterAlertHistory clusterAlertHistory) {
-
-        clusterAlertHistoryService.updateById(clusterAlertHistory);
-
-        return Result.success();
+    public Result<String> update(@RequestBody ClusterAlertHistoryDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterAlertHistoryService.updateAlertHistory(dto);
+        return Result.success("更新成功");
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<Object> delete(@RequestBody Integer[] ids) {
-        clusterAlertHistoryService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        clusterAlertHistoryService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
     }
 
 }

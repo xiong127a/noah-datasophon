@@ -17,21 +17,48 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterAlertRuleConverter;
 import com.datasophon.api.service.ClusterAlertRuleService;
+import com.datasophon.common.dto.ClusterAlertRuleDTO;
 import com.datasophon.dao.entity.ClusterAlertRule;
 import com.datasophon.dao.mapper.ClusterAlertRuleMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 集群告警规则服务实现
+ * 集群告警规则服务实现类
+ * 提供集群告警规则的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 @Service("clusterAlertRuleService")
 public class ClusterAlertRuleServiceImpl extends ServiceImpl<ClusterAlertRuleMapper, ClusterAlertRule>
-        implements ClusterAlertRuleService {
+                implements ClusterAlertRuleService {
 
+        @Autowired
+        private ClusterAlertRuleConverter clusterAlertRuleConverter;
+
+        @Override
+        public ClusterAlertRuleDTO getByIdAsDto(Long id) {
+                // Service层：Entity → DTO转换
+                ClusterAlertRule entity = this.getById(id);
+                return clusterAlertRuleConverter.entityToDto(entity);
+        }
+
+        @Override
+        public void saveAlertRule(ClusterAlertRuleDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertRule entity = clusterAlertRuleConverter.dtoToEntity(dto);
+                this.save(entity);
+        }
+
+        @Override
+        public void updateAlertRule(ClusterAlertRuleDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertRule entity = clusterAlertRuleConverter.dtoToEntity(dto);
+                this.updateById(entity);
+        }
 }

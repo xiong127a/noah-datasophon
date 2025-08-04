@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterAlertHistoryConverter;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.alert.AlertActor;
@@ -24,14 +25,12 @@ import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
+import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
-
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
-import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
@@ -45,11 +44,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 集群告警历史服务实现
+ * 集群告警历史服务实现类
+ * 提供集群告警历史的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 @Service("clusterAlertHistoryService")
 @Transactional
@@ -57,6 +57,9 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                 implements ClusterAlertHistoryService {
 
         private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
+
+        @Autowired
+        private ClusterAlertHistoryConverter clusterAlertHistoryConverter;
 
         @Autowired
         private RoleInstanceQueryService roleInstanceQueryService;
@@ -76,13 +79,15 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public List<ClusterAlertHistory> getAlertList(Integer serviceInstanceId) {
+        public List<ClusterAlertHistoryDTO> getAlertList(Integer serviceInstanceId) {
                 try {
-                        return QueryChain.of(ClusterAlertHistory.class)
-                                        .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
-                                        .and(ClusterAlertHistory::getIsEnabled).eq(1) // 启用的告警
-                                        .orderBy(ClusterAlertHistory::getCreateTime, false)
-                                        .list();
+                        // DAO层：使用Mapper查询
+                        List<ClusterAlertHistory> entities = getMapper()
+                                        .selectEnabledByServiceInstanceId(serviceInstanceId);
+                        // Service层：Entity → DTO转换
+                        return entities.stream()
+                                        .map(clusterAlertHistoryConverter::entityToDto)
+                                        .toList();
                 } catch (Exception e) {
                         logger.error("根据服务实例ID查询告警历史失败: {}", e.getMessage(), e);
                         throw new RuntimeException("查询告警历史失败: " + e.getMessage());
@@ -90,17 +95,20 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public PageResult<ClusterAlertHistory> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
+        public PageResult<ClusterAlertHistoryDTO> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
                 try {
-                        Page<ClusterAlertHistory> result = QueryChain.of(ClusterAlertHistory.class)
-                                        .where(ClusterAlertHistory::getClusterId).eq(clusterId)
-                                        .and(ClusterAlertHistory::getIsEnabled).eq(1) // 启用的告警
-                                        .orderBy(ClusterAlertHistory::getCreateTime, false)
-                                        .page(Page.of(page, pageSize));
+                        // DAO层：使用Mapper分页查询
+                        PageResult<ClusterAlertHistory> entityPageResult = getMapper()
+                                        .selectEnabledByClusterIdWithPage(clusterId, page, pageSize);
+
+                        // Service层：Entity → DTO转换
+                        List<ClusterAlertHistoryDTO> dtoList = entityPageResult.getRecords().stream()
+                                        .map(clusterAlertHistoryConverter::entityToDto)
+                                        .toList();
 
                         return PageResult.of(
-                                        result.getRecords(),
-                                        result.getTotalRow(),
+                                        dtoList,
+                                        entityPageResult.getTotal(),
                                         page,
                                         pageSize);
                 } catch (Exception e) {
@@ -121,17 +129,8 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                         ClusterInfoEntity clusterInfoEntity = clusterInfoService
                                         .getById(roleInstanceEntity.getClusterId());
 
-                        // 删除告警历史记录 - 查询符合条件的记录并删除
-                        List<ClusterAlertHistory> entitiesToDelete = QueryChain.of(ClusterAlertHistory.class)
-                                        .where(ClusterAlertHistory::getServiceRoleInstanceId).in(ids)
-                                        .list();
-
-                        if (!entitiesToDelete.isEmpty()) {
-                                List<Integer> idsToDelete = entitiesToDelete.stream()
-                                                .map(ClusterAlertHistory::getId)
-                                                .toList();
-                                this.removeByIds(idsToDelete);
-                        }
+                        // DAO层：直接删除符合条件的记录
+                        getMapper().removeEnabledByRoleInstanceIds(ids);
 
                         // 重新配置prometheus
                         ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
@@ -147,5 +146,26 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                         logger.error("删除角色实例相关告警历史失败: {}", e.getMessage(), e);
                         throw new RuntimeException("删除角色实例相关告警历史失败: " + e.getMessage());
                 }
+        }
+
+        @Override
+        public ClusterAlertHistoryDTO getByIdAsDto(Integer id) {
+                // Service层：Entity → DTO转换
+                ClusterAlertHistory entity = this.getById(id);
+                return clusterAlertHistoryConverter.entityToDto(entity);
+        }
+
+        @Override
+        public void saveAlertHistoryDto(ClusterAlertHistoryDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertHistory entity = clusterAlertHistoryConverter.dtoToEntity(dto);
+                this.save(entity);
+        }
+
+        @Override
+        public void updateAlertHistory(ClusterAlertHistoryDTO dto) {
+                // Service层：DTO → Entity转换
+                ClusterAlertHistory entity = clusterAlertHistoryConverter.dtoToEntity(dto);
+                this.updateById(entity);
         }
 }
