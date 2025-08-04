@@ -78,20 +78,12 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
     @Override
     public PageResult<NoticeGroupDTO> getNoticeGroupList(String noticeGroupName, Integer page, Integer pageSize) {
-        // 构建查询链
-        QueryChain<NoticeGroupEntity> query = QueryChain.of(NoticeGroupEntity.class);
-
-        // 根据名称模糊查询
-        if (StrUtil.isNotBlank(noticeGroupName)) {
-            query.where(NoticeGroupEntity::getNoticeGroupName).like(noticeGroupName);
-        }
-
         // 执行分页查询
-        List<NoticeGroupEntity> noticeGroupList = query
-                .limit((page - 1) * pageSize, pageSize)
-                .list();
+        List<NoticeGroupEntity> noticeGroupList = getMapper().selectByNameWithPagination(
+                noticeGroupName, (page - 1) * pageSize, pageSize);
 
-        long total = query.count();
+        // 执行总数查询
+        long total = getMapper().countByName(noticeGroupName);
 
         if (CollectionUtils.isEmpty(noticeGroupList)) {
             return PageResult.empty(page, pageSize);
@@ -132,9 +124,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
 
         // 重复校验
-        List<NoticeGroupEntity> existGroups = QueryChain.of(NoticeGroupEntity.class)
-                .where(NoticeGroupEntity::getNoticeGroupName).eq(noticeGroupDTO.noticeGroupName())
-                .list();
+        List<NoticeGroupEntity> existGroups = getMapper().selectByNameExcludingId(noticeGroupDTO.noticeGroupName(),
+                null);
 
         if (CollectionUtils.isNotEmpty(existGroups)) {
             throw new RuntimeException("通知组名称重复");
@@ -189,10 +180,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
 
         // 重复校验（排除自身）
-        List<NoticeGroupEntity> existGroups = QueryChain.of(NoticeGroupEntity.class)
-                .where(NoticeGroupEntity::getNoticeGroupName).eq(noticeGroupDTO.noticeGroupName())
-                .and(NoticeGroupEntity::getId).ne(noticeGroupDTO.id())
-                .list();
+        List<NoticeGroupEntity> existGroups = getMapper().selectByNameExcludingId(noticeGroupDTO.noticeGroupName(),
+                noticeGroupDTO.id());
 
         if (CollectionUtils.isNotEmpty(existGroups)) {
             throw new RuntimeException("通知组名称重复");
