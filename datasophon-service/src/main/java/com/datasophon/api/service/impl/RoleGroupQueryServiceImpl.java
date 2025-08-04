@@ -17,24 +17,38 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
 import com.datasophon.api.service.RoleGroupQueryService;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
  * 服务角色组查询服务实现类
- * 这个服务仅用于提供查询功能，避免循环依赖
+ * 这个服务专门用于查询功能，避免循环依赖
+ * 符合三层架构：DAO ← Service ← Controller
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-@Service
-public class RoleGroupQueryServiceImpl implements RoleGroupQueryService {
+@Service("roleGroupQueryService")
+public class RoleGroupQueryServiceImpl
+        extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroup>
+        implements RoleGroupQueryService {
 
     @Autowired
-    private ClusterServiceInstanceRoleGroupMapper roleGroupMapper;
+    private ClusterServiceInstanceRoleGroupConverter converter;
 
     @Override
-    public ClusterServiceInstanceRoleGroup getById(Integer id) {
-        return roleGroupMapper.selectOneById(id);
+    public ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Integer id) {
+        ClusterServiceInstanceRoleGroup entity = this.getById(id);
+        if (entity == null) {
+            return null;
+        }
+        return converter.entityToDto(entity);
     }
 }

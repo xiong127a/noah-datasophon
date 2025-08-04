@@ -17,10 +17,12 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.service.RoleInstanceQueryService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
-import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,54 +30,63 @@ import java.util.List;
 
 /**
  * 服务角色实例查询服务实现类
- * 这个服务仅用于提供查询功能，避免循环依赖
+ * 这个服务专门用于查询功能，避免循环依赖
+ * 符合三层架构：DAO ← Service ← Controller
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-@Service
-public class RoleInstanceQueryServiceImpl implements RoleInstanceQueryService {
+@Service("roleInstanceQueryService")
+public class RoleInstanceQueryServiceImpl
+        extends ServiceImpl<ClusterServiceRoleInstanceMapper, ClusterServiceRoleInstanceEntity>
+        implements RoleInstanceQueryService {
 
     @Autowired
-    private ClusterServiceRoleInstanceMapper roleInstanceMapper;
+    private ClusterServiceRoleInstanceConverter converter;
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname,
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname,
             Integer clusterId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
-                .list();
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterIdAndHostname(clusterId, hostname);
+        return converter.entityListToDtoList(entities);
     }
 
     @Override
-    public ClusterServiceRoleInstanceEntity getById(Integer id) {
-        return roleInstanceMapper.selectOneById(id);
+    public ClusterServiceRoleInstanceDTO getByIdAsDto(Integer id) {
+        ClusterServiceRoleInstanceEntity entity = this.getById(id);
+        if (entity == null) {
+            return null;
+        }
+        return converter.entityToDto(entity);
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
-                .list();
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int serviceId) {
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceId(serviceId);
+        return converter.entityListToDtoList(entities);
     }
 
     @Override
-    public ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname,
+    public ClusterServiceRoleInstanceDTO getOneServiceRole(String serviceRoleName, String hostname,
             Integer clusterId) {
-        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
-
+        ClusterServiceRoleInstanceEntity entity;
         if (hostname != null && !hostname.isEmpty()) {
-            query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+            entity = getMapper().selectByClusterIdAndServiceRoleNameAndHostname(clusterId, serviceRoleName, hostname);
+        } else {
+            entity = getMapper().selectByClusterIdAndServiceRoleName(clusterId, serviceRoleName);
         }
 
-        return query.one();
+        if (entity == null) {
+            return null;
+        }
+        return converter.entityToDto(entity);
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> listRoleIns(String hostname, String serviceName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName)
-                .list();
+    public List<ClusterServiceRoleInstanceDTO> listRoleIns(String hostname, String serviceName) {
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByHostnameAndServiceName(hostname,
+                serviceName);
+        return converter.entityListToDtoList(entities);
     }
 }

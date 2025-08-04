@@ -291,4 +291,27 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
 
         return query.list();
     }
+
+    /**
+     * 根据服务ID查询服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByServiceId(@Param("serviceId") Integer serviceId) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .list();
+    }
+
+    /**
+     * 根据集群ID、服务角色名称和主机名查询服务角色实例
+     */
+    default ClusterServiceRoleInstanceEntity selectByClusterIdAndServiceRoleNameAndHostname(
+            @Param("clusterId") Integer clusterId,
+            @Param("serviceRoleName") String serviceRoleName,
+            @Param("hostname") String hostname) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .one();
+    }
 }

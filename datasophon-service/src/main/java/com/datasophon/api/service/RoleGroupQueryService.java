@@ -17,19 +17,25 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.mybatisflex.core.service.IService;
 
 /**
  * 服务角色组查询服务
  * 这个接口专门用于查询服务角色组，避免循环依赖
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface RoleGroupQueryService {
+public interface RoleGroupQueryService extends IService<ClusterServiceInstanceRoleGroup> {
 
     /**
-     * 根据ID获取角色组
+     * 根据ID获取角色组DTO
      * 
      * @param id 角色组ID
-     * @return 角色组
+     * @return 角色组DTO
      */
-    ClusterServiceInstanceRoleGroup getById(Integer id);
+    ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Integer id);
 }
