@@ -17,80 +17,155 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.converter.FrameInfoConverter;
 import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.common.utils.CollectionUtils;
-
+import com.datasophon.common.dto.FrameInfoDTO;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
+import static com.datasophon.dao.entity.table.FrameInfoEntityTableDef.FRAME_INFO_ENTITY;
+
 /**
- * 集群框架表实现
+ * 集群框架表服务实现
+ * 继承ServiceImpl提供基础CRUD操作，使用Converter进行对象转换
+ * 按照架构重构规范，返回DTO对象，抛出业务异常
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
+@Slf4j
 @Service("frameInfoService")
-public class FrameInfoServiceImpl implements FrameInfoService {
+@RequiredArgsConstructor
+public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfoEntity> implements FrameInfoService {
 
-    @Autowired
-    private FrameInfoMapper frameInfoMapper;
-
-    @Autowired
-    private FrameServiceMapper frameServiceMapper;
+    private final FrameInfoConverter frameInfoConverter;
+    private final FrameServiceMapper frameServiceMapper;
 
     @Override
-    public List<FrameInfoEntity> getAllClusterFrame() {
-        List<FrameInfoEntity> frameInfoEntities = frameInfoMapper.selectAll();
-        if (CollectionUtils.isEmpty(frameInfoEntities)) {
-            return java.util.Collections.emptyList();
+    public List<FrameInfoDTO> getAllClusterFrame() {
+        // 使用QueryChain查询所有框架信息
+        List<FrameInfoEntity> frameInfoEntities = QueryChain.of(FrameInfoEntity.class)
+                .from(FRAME_INFO_ENTITY)
+                .list();
+
+        if (frameInfoEntities.isEmpty()) {
+            return List.of();
         }
 
-        java.util.Set<Integer> frameInfoIds = frameInfoEntities.stream()
+        // 获取框架ID集合，使用JDK21特性
+        var frameInfoIds = frameInfoEntities.stream()
                 .map(FrameInfoEntity::getId)
-                .collect(java.util.stream.Collectors.toSet());
+                .toList();
 
-        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper.selectByFrameIds(frameInfoIds)
+        // 查询关联的服务信息
+        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper
+                .selectByFrameIds(frameInfoIds)
                 .stream()
                 .collect(java.util.stream.Collectors.groupingBy(FrameServiceEntity::getFrameId));
 
-        frameInfoEntities.forEach(f -> f.setFrameServiceList(frameServiceGroupBys.get(f.getId())));
-
-        return frameInfoEntities;
-    }
-
-    // 标准CRUD方法实现
-    @Override
-    public FrameInfoEntity getById(Integer id) {
-        return frameInfoMapper.selectById(id);
-    }
-
-    @Override
-    public FrameInfoEntity save(FrameInfoEntity entity) {
-        frameInfoMapper.insert(entity);
-        return entity;
+        // 设置服务列表并转换为DTO
+        return frameInfoEntities.stream()
+                .map(frame -> {
+                    frame.setFrameServiceList(frameServiceGroupBys.get(frame.getId()));
+                    return frameInfoConverter.entityToDto(frame);
+                })
+                .toList();
     }
 
     @Override
-    public FrameInfoEntity updateById(FrameInfoEntity entity) {
-        frameInfoMapper.updateById(entity);
-        return entity;
+    public FrameInfoDTO getFrameInfoByFrameCode(String frameCode) {
+        if (StrUtil.isBlank(frameCode)) {
+            throw new BusinessException("框架代码不能为空");
+        }
+
+        FrameInfoEntity entity = getMapper().getFrameInfoByFrameCode(frameCode);
+        if (entity == null) {
+            throw new BusinessException("未找到框架代码为 " + frameCode + " 的框架信息");
+        }
+
+        return frameInfoConverter.entityToDto(entity);
     }
 
     @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return frameInfoMapper.deleteByIds(ids) > 0;
+    public FrameInfoDTO saveFrameInfo(FrameInfoDTO frameInfoDTO) {
+        if (frameInfoDTO == null) {
+            throw new BusinessException("框架信息不能为空");
+        }
+
+        FrameInfoEntity entity = frameInfoConverter.dtoToEntity(frameInfoDTO);
+        boolean result = save(entity);
+
+        if (!result) {
+            throw new BusinessException("保存框架信息失败");
+        }
+
+        return frameInfoConverter.entityToDto(entity);
     }
 
     @Override
-    public List<FrameInfoEntity> getAllFrameInfos() {
-        return frameInfoMapper.selectAll();
+    public FrameInfoDTO updateFrameInfo(FrameInfoDTO frameInfoDTO) {
+        if (frameInfoDTO == null || frameInfoDTO.id() == null) {
+            throw new BusinessException("框架信息或ID不能为空");
+        }
+
+        // 检查记录是否存在
+        FrameInfoEntity existingEntity = getById(frameInfoDTO.id());
+        if (existingEntity == null) {
+            throw new BusinessException("未找到ID为 " + frameInfoDTO.id() + " 的框架信息");
+        }
+
+        FrameInfoEntity entity = frameInfoConverter.dtoToEntity(frameInfoDTO);
+        boolean result = updateById(entity);
+
+        if (!result) {
+            throw new BusinessException("更新框架信息失败");
+        }
+
+        return frameInfoConverter.entityToDto(entity);
+    }
+
+    @Override
+    public FrameInfoDTO getFrameInfoById(Integer id) {
+        if (id == null) {
+            throw new BusinessException("框架ID不能为空");
+        }
+
+        FrameInfoEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException("未找到ID为 " + id + " 的框架信息");
+        }
+
+        return frameInfoConverter.entityToDto(entity);
+    }
+
+    @Override
+    public boolean removeFrameInfoByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException("删除的ID列表不能为空");
+        }
+
+        return removeByIds(ids);
+    }
+
+    @Override
+    public List<FrameInfoDTO> getAllFrameInfos() {
+        List<FrameInfoEntity> entities = QueryChain.of(FrameInfoEntity.class)
+                .from(FRAME_INFO_ENTITY)
+                .list();
+
+        return frameInfoConverter.entityListToDtoList(entities);
     }
 }

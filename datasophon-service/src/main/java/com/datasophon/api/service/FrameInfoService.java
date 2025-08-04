@@ -17,29 +17,55 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.FrameInfoDTO;
 import com.datasophon.dao.entity.FrameInfoEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群框架表
+ * 集群框架表服务接口
+ * 继承IService提供基础CRUD操作，返回DTO进行数据传输
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface FrameInfoService {
+public interface FrameInfoService extends IService<FrameInfoEntity> {
 
-    List<FrameInfoEntity> getAllClusterFrame();
+    /**
+     * 获取所有集群框架信息（包含服务列表）
+     */
+    List<FrameInfoDTO> getAllClusterFrame();
 
-    // 标准CRUD方法
-    FrameInfoEntity getById(Integer id);
+    /**
+     * 根据框架代码获取框架信息
+     */
+    FrameInfoDTO getFrameInfoByFrameCode(String frameCode);
 
-    FrameInfoEntity save(FrameInfoEntity entity);
+    /**
+     * 保存框架信息
+     */
+    FrameInfoDTO saveFrameInfo(FrameInfoDTO frameInfoDTO);
 
-    FrameInfoEntity updateById(FrameInfoEntity entity);
+    /**
+     * 更新框架信息
+     */
+    FrameInfoDTO updateFrameInfo(FrameInfoDTO frameInfoDTO);
 
-    boolean removeByIds(List<Integer> ids);
+    /**
+     * 根据ID获取框架信息
+     */
+    FrameInfoDTO getFrameInfoById(Integer id);
 
-    List<FrameInfoEntity> getAllFrameInfos();
+    /**
+     * 批量删除框架信息
+     */
+    boolean removeFrameInfoByIds(List<Integer> ids);
+
+    /**
+     * 获取所有框架信息（不包含服务列表）
+     */
+    List<FrameInfoDTO> getAllFrameInfos();
 }

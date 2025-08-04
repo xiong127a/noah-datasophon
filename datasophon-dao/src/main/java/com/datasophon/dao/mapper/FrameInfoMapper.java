@@ -52,42 +52,4 @@ public interface FrameInfoMapper extends BaseMapper<FrameInfoEntity> {
         return this.selectOneByQuery(queryWrapper);
     }
 
-    /**
-     * 根据ID查询单个实体
-     */
-    default FrameInfoEntity selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(FrameInfoEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(FrameInfoEntity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有框架信息
-     */
-    default List<FrameInfoEntity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
-    }
 }

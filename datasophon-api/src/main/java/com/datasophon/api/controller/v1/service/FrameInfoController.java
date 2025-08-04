@@ -17,70 +17,114 @@
 
 package com.datasophon.api.controller.v1.service;
 
+import com.datasophon.api.converter.FrameInfoConverter;
 import com.datasophon.api.service.FrameInfoService;
+import com.datasophon.common.dto.FrameInfoDTO;
+import com.datasophon.common.vo.FrameInfoVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.FrameInfoEntity;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 
 import java.util.Arrays;
+import java.util.List;
 
+/**
+ * 集群框架信息控制器
+ * 按照三层架构规范，使用DTO接收请求，VO返回响应
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+@Slf4j
+@Api(tags = "集群框架管理")
 @ApiVersion(path = "frame")
+@RequiredArgsConstructor
 public class FrameInfoController {
 
-    @Autowired
-    private FrameInfoService frameInfoService;
-
+    private final FrameInfoService frameInfoService;
+    private final FrameInfoConverter frameInfoConverter;
 
     /**
-     * 列表
+     * 获取集群框架列表（包含服务信息）
      */
-    @RequestMapping("/list")
-    public Result list() {
-        return frameInfoService.getAllClusterFrame();
+    @ApiOperation("获取集群框架列表")
+    @GetMapping("/list")
+    public Result<List<FrameInfoVO>> list() {
+        List<FrameInfoDTO> frameInfoDTOs = frameInfoService.getAllClusterFrame();
+        List<FrameInfoVO> frameInfoVOs = frameInfoConverter.dtoListToVoList(frameInfoDTOs);
+        return Result.success(frameInfoVOs);
     }
 
     /**
-     * 信息
+     * 根据ID获取框架信息
      */
-    @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        FrameInfoEntity frameInfo = frameInfoService.getById(id);
-
-        return Result.success().put("frameInfo", frameInfo);
+    @ApiOperation("根据ID获取框架信息")
+    @GetMapping("/info/{id}")
+    public Result<FrameInfoVO> info(@ApiParam(value = "框架ID", required = true) @PathVariable("id") Integer id) {
+        FrameInfoDTO frameInfoDTO = frameInfoService.getFrameInfoById(id);
+        FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(frameInfoDTO);
+        return Result.success(frameInfoVO);
     }
 
     /**
-     * 保存
+     * 保存框架信息
      */
-    @RequestMapping("/save")
-    public Result save(@RequestBody FrameInfoEntity frameInfo) {
-        frameInfoService.save(frameInfo);
-
-        return Result.success();
+    @ApiOperation("保存框架信息")
+    @PostMapping("/save")
+    public Result<FrameInfoVO> save(@ApiParam(value = "框架信息", required = true) @RequestBody FrameInfoDTO frameInfoDTO) {
+        FrameInfoDTO savedDTO = frameInfoService.saveFrameInfo(frameInfoDTO);
+        FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(savedDTO);
+        return Result.success(frameInfoVO);
     }
 
     /**
-     * 修改
+     * 更新框架信息
      */
-    @RequestMapping("/update")
-    public Result update(@RequestBody FrameInfoEntity frameInfo) {
-        frameInfoService.updateById(frameInfo);
-
-        return Result.success();
+    @ApiOperation("更新框架信息")
+    @PutMapping("/update")
+    public Result<FrameInfoVO> update(
+            @ApiParam(value = "框架信息", required = true) @RequestBody FrameInfoDTO frameInfoDTO) {
+        FrameInfoDTO updatedDTO = frameInfoService.updateFrameInfo(frameInfoDTO);
+        FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(updatedDTO);
+        return Result.success(frameInfoVO);
     }
 
     /**
-     * 删除
+     * 批量删除框架信息
      */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        frameInfoService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    @ApiOperation("批量删除框架信息")
+    @DeleteMapping("/delete")
+    public Result<Boolean> delete(@ApiParam(value = "框架ID数组", required = true) @RequestBody Integer[] ids) {
+        boolean result = frameInfoService.removeFrameInfoByIds(Arrays.asList(ids));
+        return Result.success(result);
     }
 
+    /**
+     * 获取所有框架信息（不包含服务列表）
+     */
+    @ApiOperation("获取所有框架信息")
+    @GetMapping("/all")
+    public Result<List<FrameInfoVO>> getAllFrameInfos() {
+        List<FrameInfoDTO> frameInfoDTOs = frameInfoService.getAllFrameInfos();
+        List<FrameInfoVO> frameInfoVOs = frameInfoConverter.dtoListToVoList(frameInfoDTOs);
+        return Result.success(frameInfoVOs);
+    }
+
+    /**
+     * 根据框架代码获取框架信息
+     */
+    @ApiOperation("根据框架代码获取框架信息")
+    @GetMapping("/code/{frameCode}")
+    public Result<FrameInfoVO> getByFrameCode(
+            @ApiParam(value = "框架代码", required = true) @PathVariable("frameCode") String frameCode) {
+        FrameInfoDTO frameInfoDTO = frameInfoService.getFrameInfoByFrameCode(frameCode);
+        FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(frameInfoDTO);
+        return Result.success(frameInfoVO);
+    }
 }
