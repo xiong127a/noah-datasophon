@@ -19,23 +19,26 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.datasophon.common.enums.Status;
+import com.datasophon.api.converter.ClusterYarnQueueConverter;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterYarnQueueService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ClusterYarnQueueDTO;
+import com.datasophon.common.enums.Status;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.model.PageResult;
-import com.datasophon.common.exception.BusinessException;
-import com.mybatisflex.core.paginate.Page;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterYarnQueue;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorSelection;
@@ -45,6 +48,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -53,12 +57,20 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 集群Yarn队列服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterYarnQueueService")
+@Transactional
 public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMapper, ClusterYarnQueue>
-        implements
-        ClusterYarnQueueService {
+        implements ClusterYarnQueueService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueServiceImpl.class);
 
@@ -68,35 +80,37 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     @Autowired
     private ClusterYarnQueueMapper clusterYarnQueueMapper;
 
+    @Autowired
+    private ClusterYarnQueueConverter clusterYarnQueueConverter;
+
     @Override
-    public PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize) {
+    public PageResult<ClusterYarnQueueDTO> listByPage(Integer clusterId, Integer page, Integer pageSize) {
         Page<ClusterYarnQueue> pageParam = Page.of(page, pageSize);
         Page<ClusterYarnQueue> pageResult = clusterYarnQueueMapper.selectPageByClusterId(pageParam, clusterId);
 
-        for (ClusterYarnQueue clusterYarnQueue : pageResult.getRecords()) {
-            String minResources = clusterYarnQueue.getMinCore() + "Core," + clusterYarnQueue.getMinMem() + "GB";
-            String maxResources = clusterYarnQueue.getMaxCore() + "Core," + clusterYarnQueue.getMaxMem() + "GB";
-            clusterYarnQueue.setMinResources(minResources);
-            clusterYarnQueue.setMaxResources(maxResources);
-        }
-        return PageResult.of(pageResult.getRecords(), pageResult.getTotalRow(), page, pageSize);
+        List<ClusterYarnQueueDTO> dtoList = clusterYarnQueueConverter.entityListToDtoList(pageResult.getRecords());
+        return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
     }
 
     @Override
-    public void saveQueue(ClusterYarnQueue clusterYarnQueue) throws BusinessException {
-        if (clusterYarnQueueMapper.existsByQueueName(clusterYarnQueue.getQueueName())) {
+    public ClusterYarnQueueDTO saveQueue(ClusterYarnQueueDTO clusterYarnQueueDTO) throws BusinessException {
+        if (clusterYarnQueueMapper.existsByQueueName(clusterYarnQueueDTO.queueName())) {
             throw new BusinessException(Status.QUEUE_NAME_ALREADY_EXISTS.getCode(),
                     Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
         }
-        clusterYarnQueue.setCreateTime(new Date());
-        this.save(clusterYarnQueue);
+
+        ClusterYarnQueue entity = clusterYarnQueueConverter.dtoToEntity(clusterYarnQueueDTO);
+        entity.setCreateTime(new Date());
+        this.save(entity);
+
+        return clusterYarnQueueConverter.entityToDto(entity);
     }
 
     @Override
     public void refreshQueues(Integer clusterId) throws BusinessException {
         List<ClusterYarnQueue> list = clusterYarnQueueMapper.selectByClusterId(clusterId);
         // 查询resourcemanager节点
-        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+        List<ClusterServiceRoleInstanceDTO> roleList = roleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
 
         // 构建configfilemap
@@ -127,14 +141,14 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
 
         configFileMap.put(generators, serviceConfigs);
         String hostname = "";
-        for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleList) {
+        for (ClusterServiceRoleInstanceDTO roleInstanceDto : roleList) {
             // 调用指令刷新yarn队列配置
             ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
             serviceRoleInfo.setName("ResourceManager");
             serviceRoleInfo.setParentName("YARN");
             serviceRoleInfo.setConfigFileMap(configFileMap);
             serviceRoleInfo.setDecompressPackageName("hadoop-3.3.3");
-            serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
+            serviceRoleInfo.setHostname(roleInstanceDto.hostname());
             ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
             ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
             if (!execResult.getExecResult()) {
@@ -142,7 +156,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
                         Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
             }
             if (StringUtils.isBlank(hostname)) {
-                hostname = roleInstanceEntity.getHostname();
+                hostname = roleInstanceDto.hostname();
             }
         }
         ActorSelection execCmdActor = ActorUtils.actorSystem
@@ -172,7 +186,34 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public ClusterYarnQueue getQueueByName(Integer clusterId, String queueName) {
-        return clusterYarnQueueMapper.selectByClusterIdAndQueueName(clusterId, queueName);
+    public ClusterYarnQueueDTO getQueueByName(Integer clusterId, String queueName) {
+        ClusterYarnQueue entity = clusterYarnQueueMapper.selectByClusterIdAndQueueName(clusterId, queueName);
+        return Objects.nonNull(entity) ? clusterYarnQueueConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public ClusterYarnQueueDTO getByIdAsDto(Integer id) {
+        ClusterYarnQueue entity = getById(id);
+        return Objects.nonNull(entity) ? clusterYarnQueueConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public List<ClusterYarnQueueDTO> getQueuesByClusterId(Integer clusterId) {
+        List<ClusterYarnQueue> entities = QueryChain.of(ClusterYarnQueue.class)
+                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
+                .list();
+        return clusterYarnQueueConverter.entityListToDtoList(entities);
+    }
+
+    @Override
+    public ClusterYarnQueueDTO updateQueue(ClusterYarnQueueDTO dto) throws BusinessException {
+        ClusterYarnQueue entity = clusterYarnQueueConverter.dtoToEntity(dto);
+        updateById(entity);
+        return clusterYarnQueueConverter.entityToDto(entity);
+    }
+
+    @Override
+    public boolean deleteQueue(Integer id) {
+        return removeById(id);
     }
 }

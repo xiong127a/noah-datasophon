@@ -17,22 +17,61 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.common.model.PageResult;
+import com.datasophon.common.dto.ClusterYarnQueueDTO;
 import com.datasophon.common.exception.BusinessException;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterYarnQueue;
+import com.mybatisflex.core.service.IService;
+
+import java.util.List;
 
 /**
- * 
+ * 集群Yarn队列服务接口
+ * 提供Yarn队列的业务逻辑处理
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface ClusterYarnQueueService {
+public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
 
-    PageResult<ClusterYarnQueue> listByPage(Integer clusterId, Integer page, Integer pageSize);
+    /**
+     * 分页查询队列列表
+     */
+    PageResult<ClusterYarnQueueDTO> listByPage(Integer clusterId, Integer page, Integer pageSize);
 
-    void saveQueue(ClusterYarnQueue clusterYarnQueue) throws BusinessException;
+    /**
+     * 保存队列
+     */
+    ClusterYarnQueueDTO saveQueue(ClusterYarnQueueDTO clusterYarnQueueDTO) throws BusinessException;
 
+    /**
+     * 刷新队列到Yarn
+     */
     void refreshQueues(Integer clusterId) throws BusinessException;
 
-    ClusterYarnQueue getQueueByName(Integer clusterId, String queueName);
+    /**
+     * 根据队列名称获取队列
+     */
+    ClusterYarnQueueDTO getQueueByName(Integer clusterId, String queueName);
+
+    /**
+     * 根据ID获取队列DTO
+     */
+    ClusterYarnQueueDTO getByIdAsDto(Integer id);
+
+    /**
+     * 根据集群ID获取所有队列
+     */
+    List<ClusterYarnQueueDTO> getQueuesByClusterId(Integer clusterId);
+
+    /**
+     * 更新队列
+     */
+    ClusterYarnQueueDTO updateQueue(ClusterYarnQueueDTO dto) throws BusinessException;
+
+    /**
+     * 删除队列
+     */
+    boolean deleteQueue(Integer id);
 }
