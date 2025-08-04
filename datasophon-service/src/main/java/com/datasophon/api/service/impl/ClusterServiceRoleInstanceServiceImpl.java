@@ -53,7 +53,7 @@ import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.kubernetes.actor.KubernetesLogActor;
 import com.datasophon.kubernetes.util.CommonUtil;
-import com.mybatisflex.core.query.QueryChain;
+// QueryChain已迁移到DAO层，不再在Service层使用
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
@@ -176,45 +176,40 @@ public class ClusterServiceRoleInstanceServiceImpl
             Integer roleGroupId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
 
-        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId);
+        // DAO层：使用Mapper统计数量
+        long count = getMapper().countByConditions(serviceInstanceId, hostname, serviceRoleState,
+                serviceRoleName, roleGroupId);
 
-        if (Objects.nonNull(serviceRoleState)) {
-            query.and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(serviceRoleState);
+        if (count == 0) {
+            return PageResult.empty(page, pageSize);
         }
 
-        if (StringUtils.isNotBlank(serviceRoleName)) {
-            query.and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
-        }
-
-        if (Objects.nonNull(roleGroupId)) {
-            query.and(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
-        }
-
-        if (StringUtils.isNotBlank(hostname)) {
-            query.and(ClusterServiceRoleInstanceEntity::getHostname).like("%" + hostname + "%");
-        }
-
-        long count = query.count();
-        List<ClusterServiceRoleInstanceEntity> cluServiceRoleInstList = query
-                .limit(offset, pageSize)
-                .list();
+        // DAO层：使用Mapper分页查询
+        List<ClusterServiceRoleInstanceEntity> cluServiceRoleInstList = getMapper()
+                .selectByConditionsWithPage(serviceInstanceId, hostname, serviceRoleState,
+                        serviceRoleName, roleGroupId, offset, pageSize);
 
         if (CollectionUtils.isEmpty(cluServiceRoleInstList)) {
             return PageResult.empty(page, pageSize);
         }
 
-        for (ClusterServiceRoleInstanceEntity roleInstanceEntity : cluServiceRoleInstList) {
-            ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService
-                    .getById(roleInstanceEntity.getRoleGroupId());
-            if (Objects.nonNull(roleGroup)) {
-                roleInstanceEntity.setRoleGroupName(roleGroup.getRoleGroupName());
-            }
-            roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
-        }
+        // Service层：业务逻辑处理 - 使用JDK21现代特性
+        List<ClusterServiceRoleInstanceEntity> processedList = cluServiceRoleInstList.stream()
+                .peek(roleInstanceEntity -> {
+                    // 设置角色组名称
+                    ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService
+                            .getById(roleInstanceEntity.getRoleGroupId());
+                    if (Objects.nonNull(roleGroup)) {
+                        roleInstanceEntity.setRoleGroupName(roleGroup.getRoleGroupName());
+                    }
+                    // 设置状态码
+                    roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
+                })
+                .toList();
 
+        // Service层：Entity → DTO转换
         List<ClusterServiceRoleInstanceDTO> dtoList = clusterServiceRoleInstanceConverter
-                .entityListToDtoList(cluServiceRoleInstList);
+                .entityListToDtoList(processedList);
         return PageResult.of(dtoList, count, page, pageSize);
     }
 

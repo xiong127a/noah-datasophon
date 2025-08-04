@@ -404,4 +404,84 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
                 return selectListByQuery(query);
         }
 
+        /**
+         * 根据多个条件分页查询服务角色实例
+         * 
+         * @param serviceInstanceId 服务实例ID
+         * @param hostname          主机名（模糊查询）
+         * @param serviceRoleState  服务角色状态
+         * @param serviceRoleName   服务角色名称
+         * @param roleGroupId       角色组ID
+         * @param offset            偏移量
+         * @param pageSize          页大小
+         * @return 服务角色实例列表
+         */
+        default List<ClusterServiceRoleInstanceEntity> selectByConditionsWithPage(
+                        @Param("serviceInstanceId") Integer serviceInstanceId,
+                        @Param("hostname") String hostname,
+                        @Param("serviceRoleState") Integer serviceRoleState,
+                        @Param("serviceRoleName") String serviceRoleName,
+                        @Param("roleGroupId") Integer roleGroupId,
+                        @Param("offset") int offset,
+                        @Param("pageSize") int pageSize) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId);
+
+                if (serviceRoleState != null) {
+                        query.and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(serviceRoleState);
+                }
+
+                if (serviceRoleName != null && !serviceRoleName.trim().isEmpty()) {
+                        query.and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+                }
+
+                if (roleGroupId != null) {
+                        query.and(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
+                }
+
+                if (hostname != null && !hostname.trim().isEmpty()) {
+                        query.and(ClusterServiceRoleInstanceEntity::getHostname).like("%" + hostname + "%");
+                }
+
+                return this.selectListByQuery(query.limit(offset, pageSize));
+        }
+
+        /**
+         * 根据多个条件统计服务角色实例数量
+         * 
+         * @param serviceInstanceId 服务实例ID
+         * @param hostname          主机名（模糊查询）
+         * @param serviceRoleState  服务角色状态
+         * @param serviceRoleName   服务角色名称
+         * @param roleGroupId       角色组ID
+         * @return 服务角色实例数量
+         */
+        default long countByConditions(
+                        @Param("serviceInstanceId") Integer serviceInstanceId,
+                        @Param("hostname") String hostname,
+                        @Param("serviceRoleState") Integer serviceRoleState,
+                        @Param("serviceRoleName") String serviceRoleName,
+                        @Param("roleGroupId") Integer roleGroupId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId);
+
+                if (serviceRoleState != null) {
+                        query.and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(serviceRoleState);
+                }
+
+                if (serviceRoleName != null && !serviceRoleName.trim().isEmpty()) {
+                        query.and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+                }
+
+                if (roleGroupId != null) {
+                        query.and(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
+                }
+
+                if (hostname != null && !hostname.trim().isEmpty()) {
+                        query.and(ClusterServiceRoleInstanceEntity::getHostname).like("%" + hostname + "%");
+                }
+
+                return this.selectCountByQuery(query);
+        }
+
 }
