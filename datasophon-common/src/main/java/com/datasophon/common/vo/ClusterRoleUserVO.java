@@ -18,22 +18,20 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
- * 集群用户视图对象
+ * 集群角色用户视图对象
  * 用于前端展示
  *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public record ClusterUserVO(
+public record ClusterRoleUserVO(
         Integer id,
         Integer clusterId,
-        String username,
-        String mainGroup,
-        String otherGroups,
-        Date createTime,
-        String createTimeFormatted) implements Serializable {
+        Integer userType,
+        String userTypeText,
+        Integer userId,
+        UserInfoVO userInfo) implements Serializable {
 }

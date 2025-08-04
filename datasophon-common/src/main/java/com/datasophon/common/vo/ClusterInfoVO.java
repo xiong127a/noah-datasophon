@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * 集群信息视图对象
- * 用于前端展示，使用JDK21 record类型
+ * 用于前端展示
  *
  * @author 任相鹏
  * @email 635887935@qq.com

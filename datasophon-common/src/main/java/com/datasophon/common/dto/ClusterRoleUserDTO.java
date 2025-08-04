@@ -15,25 +15,22 @@
  * limitations under the License.
  */
 
-package com.datasophon.common.vo;
+package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
- * 集群用户视图对象
- * 用于前端展示
+ * 集群角色用户数据传输对象
+ * 用于服务间数据传输
  *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public record ClusterUserVO(
+public record ClusterRoleUserDTO(
         Integer id,
         Integer clusterId,
-        String username,
-        String mainGroup,
-        String otherGroups,
-        Date createTime,
-        String createTimeFormatted) implements Serializable {
+        Integer userType,
+        Integer userId,
+        UserInfoDTO userInfo) implements Serializable {
 }

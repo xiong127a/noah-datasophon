@@ -22,7 +22,7 @@ import java.util.Date;
 
 /**
  * 集群用户数据传输对象
- * 用于服务间数据传输，使用JDK21 record类型
+ * 用于服务间数据传输
  *
  * @author 任相鹏
  * @email 635887935@qq.com

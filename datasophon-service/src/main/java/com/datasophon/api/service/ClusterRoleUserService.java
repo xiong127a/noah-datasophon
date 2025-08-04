@@ -17,34 +17,52 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterRoleUserDTO;
+import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
-import com.datasophon.dao.entity.UserInfoEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群角色用户中间表
+ * 集群角色用户服务
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-01
  */
-public interface ClusterRoleUserService {
+public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> {
 
+    /**
+     * 判断用户是否为集群管理员
+     *
+     * @param userId    用户ID
+     * @param clusterId 集群ID
+     * @return 是否为管理员
+     */
     boolean isClusterManager(Integer userId, String clusterId);
 
+    /**
+     * 保存集群管理员
+     *
+     * @param clusterId 集群ID
+     * @param userIds   用户ID列表（逗号分隔）
+     * @return 是否保存成功
+     */
     boolean saveClusterManager(Integer clusterId, String userIds);
 
-    List<UserInfoEntity> getAllClusterManagerByClusterId(Integer clusterId);
+    /**
+     * 获取集群下所有管理员
+     *
+     * @param clusterId 集群ID
+     * @return 管理员用户列表
+     */
+    List<UserInfoDTO> getAllClusterManagerByClusterId(Integer clusterId);
 
-    // 标准CRUD方法
-    ClusterRoleUserEntity getById(Integer id);
-
-    ClusterRoleUserEntity save(ClusterRoleUserEntity entity);
-
-    ClusterRoleUserEntity updateById(ClusterRoleUserEntity entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterRoleUserEntity> getAllClusterRoleUsers();
+    /**
+     * 获取所有集群角色用户
+     *
+     * @return 集群角色用户列表
+     */
+    List<ClusterRoleUserDTO> getAllClusterRoleUsers();
 }

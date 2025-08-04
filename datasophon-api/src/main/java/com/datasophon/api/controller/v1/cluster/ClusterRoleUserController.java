@@ -17,8 +17,11 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterRoleUserConverter;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
+import com.datasophon.common.dto.ClusterRoleUserDTO;
+import com.datasophon.common.vo.ClusterRoleUserVO;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,62 +31,73 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * 集群角色用户控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @ApiVersion(path = "cluster/user")
 public class ClusterRoleUserController {
 
     @Autowired
     private ClusterRoleUserService clusterRoleUserService;
 
+    @Autowired
+    private ClusterRoleUserConverter clusterRoleUserConverter;
 
     /**
      * 列表
      */
     @RequestMapping("/list")
-    public Result list(@RequestParam Map<String, Object> params) {
-
-        return Result.success();
+    public Result<List<ClusterRoleUserVO>> list(@RequestParam Map<String, Object> params) {
+        List<ClusterRoleUserDTO> dtoList = clusterRoleUserService.getAllClusterRoleUsers();
+        List<ClusterRoleUserVO> voList = clusterRoleUserConverter.dtoListToVoList(dtoList);
+        return Result.success(voList);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result<ClusterRoleUserVO> info(@PathVariable("id") Integer id) {
         ClusterRoleUserEntity clusterRoleUser = clusterRoleUserService.getById(id);
-
-        return Result.success().put("clusterRoleUser", clusterRoleUser);
+        ClusterRoleUserVO clusterRoleUserVO = clusterRoleUserConverter.entityToVo(clusterRoleUser);
+        return Result.success(clusterRoleUserVO);
     }
 
     /**
-     * 保存
+     * 保存集群管理员
      */
     @RequestMapping("/saveClusterManager")
     @UserPermission
-    public Result saveClusterManager(@RequestParam("clusterId") Integer clusterId, @RequestParam("userIds") String userIds) {
-        return clusterRoleUserService.saveClusterManager(clusterId, userIds);
+    public Result<String> saveClusterManager(@RequestParam("clusterId") Integer clusterId,
+            @RequestParam("userIds") String userIds) {
+        boolean success = clusterRoleUserService.saveClusterManager(clusterId, userIds);
+        return success ? Result.success("保存成功") : Result.error("保存失败");
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterRoleUserEntity clusterRoleUser) {
+    public Result<String> update(@RequestBody ClusterRoleUserDTO clusterRoleUserDTO) {
+        ClusterRoleUserEntity clusterRoleUser = clusterRoleUserConverter.dtoToEntity(clusterRoleUserDTO);
         clusterRoleUserService.updateById(clusterRoleUser);
-
-        return Result.success();
+        return Result.success("更新成功");
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterRoleUserService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        clusterRoleUserService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
     }
 
 }

@@ -31,11 +31,12 @@ import static com.datasophon.dao.entity.table.ClusterRoleUserEntityTableDef.CLUS
 import static com.datasophon.dao.entity.table.UserInfoEntityTableDef.USER_INFO_ENTITY;
 
 /**
- * 集群角色用户中间表
+ * 集群角色用户映射器
+ * 只保留业务特定的查询方法，标准CRUD使用IService提供
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity> {
@@ -90,42 +91,4 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
         return count;
     }
 
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterRoleUserEntity selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterRoleUserEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterRoleUserEntity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有角色用户关系
-     */
-    default List<ClusterRoleUserEntity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
-        return this.selectListByQuery(query);
-    }
 }
