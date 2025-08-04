@@ -82,8 +82,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     @Override
     public PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
         // 使用DAO层分页查询方法
-        com.mybatisflex.core.paginate.Page<ClusterTenant> flexPage = getMapper().selectPageByClusterId(clusterId, tenantName, page, size);
-        
+        com.mybatisflex.core.paginate.Page<ClusterTenant> flexPage = getMapper().selectPageByClusterId(clusterId,
+                tenantName, page, size);
+
         List<ClusterTenantDTO> dtoList = clusterTenantConverter.entityListToDtoList(flexPage.getRecords());
         return PageResult.of(dtoList, flexPage.getTotalRow(), flexPage.getPageNumber(), flexPage.getPageSize());
     }
