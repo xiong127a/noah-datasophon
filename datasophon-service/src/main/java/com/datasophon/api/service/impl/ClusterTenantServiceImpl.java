@@ -74,22 +74,11 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
-        int offset = (page - 1) * size;
-
-        QueryChain<ClusterTenant> query = QueryChain.of(ClusterTenant.class)
-                .where(ClusterTenant::getClusterId).eq(clusterId);
-
-        if (StrUtil.isNotBlank(tenantName)) {
-            query.and(ClusterTenant::getTenantName).like("%" + tenantName + "%");
-        }
-
-        List<ClusterTenant> list = query.limit(offset, size).list();
-        long total = QueryChain.of(ClusterTenant.class)
-                .where(ClusterTenant::getClusterId).eq(clusterId)
-                .count();
-
-        List<ClusterTenantDTO> dtoList = clusterTenantConverter.entityListToDtoList(list);
-        return PageResult.of(dtoList, total, page, size);
+        // 使用DAO层分页查询方法
+        com.mybatisflex.core.paginate.Page<ClusterTenant> flexPage = getMapper().selectPageByClusterId(clusterId, tenantName, page, size);
+        
+        List<ClusterTenantDTO> dtoList = clusterTenantConverter.entityListToDtoList(flexPage.getRecords());
+        return PageResult.of(dtoList, flexPage.getTotalRow(), flexPage.getPageNumber(), flexPage.getPageSize());
     }
 
     @Override
@@ -108,13 +97,13 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         BeanUtil.copyProperties(clusterTenant, resource);
         List<TenantFrameResource> allFrameResource = CollUtil.unionAll(
                 resource.getHdfsResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()),
+                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
                 resource.getHbaseResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()),
+                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
                 resource.getHiveResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()),
+                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
                 resource.getKafkaResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()),
+                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
                 resource.getYarnResourceList().stream().map(t -> (TenantFrameResource) t)
                         .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()));
 
@@ -160,7 +149,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
         if (CollUtil.isNotEmpty(userTenantList)) {
             List<Integer> userIds = userTenantList.stream().map(ClusterUserTenant::getUserId)
-                    .collect(Collectors.toList());
+                    .toList();
 
             List<String> usernames = QueryChain.of(ClusterUser.class)
                     .where(ClusterUser::getId).in(userIds)
@@ -193,18 +182,15 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public List<ClusterTenantDTO> getTenantsByClusterId(Integer clusterId) {
-        List<ClusterTenant> entities = QueryChain.of(ClusterTenant.class)
-                .where(ClusterTenant::getClusterId).eq(clusterId)
-                .list();
+        // 使用DAO层查询方法
+        List<ClusterTenant> entities = getMapper().selectByClusterId(clusterId);
         return clusterTenantConverter.entityListToDtoList(entities);
     }
 
     @Override
     public ClusterTenantDTO getTenantByName(Integer clusterId, String tenantName) {
-        ClusterTenant entity = QueryChain.of(ClusterTenant.class)
-                .where(ClusterTenant::getClusterId).eq(clusterId)
-                .and(ClusterTenant::getTenantName).eq(tenantName)
-                .one();
+        // 使用DAO层查询方法
+        ClusterTenant entity = getMapper().selectByClusterIdAndTenantName(clusterId, tenantName);
         return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
     }
 
@@ -226,7 +212,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         wordValidator.setNext(lengthValidator);
         notEmptyValidator.validate(clusterTenant.getTenantName());
 
-        List<String> exitsName = tenantList.stream().map(ClusterTenant::getTenantName).collect(Collectors.toList());
+        List<String> exitsName = tenantList.stream().map(ClusterTenant::getTenantName).toList();
         if (Objects.nonNull(clusterTenant.getId())) {
             exitsName.remove(clusterTenant.getTenantName());
         }
@@ -361,7 +347,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     public <T> List<LinkedHashMap<String, String>> convertToMap(List<T> list) {
-        return Convert.convert(new TypeReference<>() {
+        return Convert.convert(new TypeReference<List<LinkedHashMap<String, String>>>() {
         }, list);
     }
 
