@@ -154,7 +154,7 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
 
     @Override
     public List<ClusterUserTenant> getListByTenantId(Integer tenantId) {
-        return getMapper().selectByTenantId(tenantId);  
+        return getMapper().selectByTenantId(tenantId);
     }
 
 }
