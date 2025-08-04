@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.common.vo.Result;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.service.IService;
@@ -38,7 +38,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * 根据主机名和集群ID获取停止的服务角色列表
      */
     List<ClusterServiceRoleInstanceDTO> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
-                                                                                            Integer clusterId);
+            Integer clusterId);
 
     /**
      * 根据主机名和集群ID获取服务角色列表
@@ -49,7 +49,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * 根据服务ID和角色状态获取服务角色实例列表
      */
     List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Integer id,
-                                                                                             ServiceRoleState stop);
+            ServiceRoleState stop);
 
     /**
      * 获取单个服务角色
@@ -59,13 +59,14 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 分页列表查询
      */
-    Result listAll(Integer serviceInstanceId, String hostname, Integer serviceRoleState, String serviceRoleName,
-                   Integer roleGroupId, Integer page, Integer pageSize);
+    PageResult<ClusterServiceRoleInstanceDTO> listAll(Integer serviceInstanceId, String hostname,
+            Integer serviceRoleState, String serviceRoleName,
+            Integer roleGroupId, Integer page, Integer pageSize);
 
     /**
      * 获取日志
      */
-    Result getLog(Integer serviceRoleInstanceId) throws Exception;
+    String getLog(Integer serviceRoleInstanceId) throws Exception;
 
     /**
      * 根据服务ID获取服务角色实例列表
@@ -80,13 +81,13 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 删除服务角色
      */
-    Result deleteServiceRole(List<String> idList);
+    void deleteServiceRole(List<String> idList);
 
     /**
      * 根据集群ID和角色名称获取服务角色实例列表
      */
     List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
-                                                                                            String roleName);
+            String roleName);
 
     /**
      * 获取正在运行的服务角色实例列表
@@ -96,12 +97,12 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 重启过时服务
      */
-    Result restartObsoleteService(Integer roleGroupId);
+    void restartObsoleteService(Integer roleGroupId);
 
     /**
      * 退役节点
      */
-    Result decommissionNode(String serviceRoleInstanceIds, String serviceName) throws Exception;
+    String decommissionNode(String serviceRoleInstanceIds, String serviceName) throws Exception;
 
     /**
      * 更新为需要重启状态
@@ -127,7 +128,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * 获取主机上停止的角色实例
      */
     List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Integer clusterId, String hostname,
-                                                                        ServiceRoleState state);
+            ServiceRoleState state);
 
     /**
      * 移除角色实例
@@ -162,5 +163,6 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据集群ID、服务实例ID和角色名称获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId, Integer serviceInstanceId, String roleName);
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,
+            Integer serviceInstanceId, String roleName);
 }

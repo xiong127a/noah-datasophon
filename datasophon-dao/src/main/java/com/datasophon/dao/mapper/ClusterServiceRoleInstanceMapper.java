@@ -128,11 +128,167 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
     default List<ClusterServiceRoleInstanceEntity> selectRunningNonClientRolesByClusterIdAndHostname(
             @Param("clusterId") Integer clusterId,
             @Param("hostname") String hostname) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                 .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.RUNNING)
-                .and(ClusterServiceRoleInstanceEntity::getRoleType).ne(RoleType.CLIENT)
+                .and(ClusterServiceRoleInstanceEntity::getRoleType).ne(RoleType.CLIENT);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID和主机名查询已停止的服务角色实例
+     *
+     * @param clusterId 集群ID
+     * @param hostname  主机名
+     * @return 已停止的服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectStoppedServiceRolesByClusterIdAndHostname(
+            @Param("clusterId") Integer clusterId,
+            @Param("hostname") String hostname) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(ServiceRoleState.STOP);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID和主机名查询所有服务角色实例
+     *
+     * @param clusterId 集群ID
+     * @param hostname  主机名
+     * @return 服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndHostname(
+            @Param("clusterId") Integer clusterId,
+            @Param("hostname") String hostname) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务ID和服务角色状态查询服务角色实例
+     *
+     * @param serviceId 服务ID
+     * @param roleState 服务角色状态
+     * @return 服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndRoleState(
+            @Param("serviceId") Integer serviceId,
+            @Param("roleState") ServiceRoleState roleState) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(roleState);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务角色名称、集群ID和主机名查询服务角色实例（主机名可选）
+     *
+     * @param serviceRoleName 服务角色名称
+     * @param clusterId       集群ID
+     * @param hostname        主机名（可为null）
+     * @return 服务角色实例
+     */
+    default ClusterServiceRoleInstanceEntity selectByServiceRoleNameAndClusterIdAndHostname(
+            @Param("serviceRoleName") String serviceRoleName,
+            @Param("clusterId") Integer clusterId,
+            @Param("hostname") String hostname) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+
+        if (hostname != null && !hostname.trim().isEmpty()) {
+            query.and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+        }
+
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据服务ID和需要重启状态查询
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndNeedRestart(
+            @Param("serviceId") Integer serviceId, @Param("needRestart") NeedRestart needRestart) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .and(ClusterServiceRoleInstanceEntity::getNeedRestart).eq(needRestart)
                 .list();
+    }
+
+    /**
+     * 根据集群ID、主机名和状态查询
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndHostnameAndState(
+            @Param("clusterId") Integer clusterId, @Param("hostname") String hostname,
+            @Param("state") ServiceRoleState state) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state)
+                .list();
+    }
+
+    /**
+     * 根据集群ID和服务角色名称查询
+     */
+    default ClusterServiceRoleInstanceEntity selectByClusterIdAndServiceRoleName(@Param("clusterId") Integer clusterId,
+            @Param("serviceRoleName") String serviceRoleName) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .one();
+    }
+
+    /**
+     * 根据服务角色名称查询
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByServiceRoleName(
+            @Param("serviceRoleName") String serviceRoleName) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .list();
+    }
+
+    /**
+     * 根据主机名和服务角色名称查询
+     */
+    default ClusterServiceRoleInstanceEntity selectByHostnameAndServiceRoleName(@Param("hostname") String hostname,
+            @Param("serviceRoleName") String serviceRoleName) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
+                .one();
+    }
+
+    /**
+     * 根据主机名和服务名称查询
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByHostnameAndServiceName(@Param("hostname") String hostname,
+            @Param("serviceName") String serviceName) {
+        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
+                .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName)
+                .list();
+    }
+
+    /**
+     * 根据集群ID、服务ID和角色名称查询
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceIdAndRoleName(
+            @Param("clusterId") Integer clusterId, @Param("serviceId") Integer serviceId,
+            @Param("roleName") String roleName) {
+        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(roleName);
+
+        if (serviceId != null) {
+            query.and(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId);
+        }
+
+        return query.list();
     }
 }
