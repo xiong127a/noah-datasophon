@@ -17,42 +17,86 @@
 
 package com.datasophon.api.service;
 
-
+import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.RollingRestartInfo;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 集群服务操作指令表
+ * 集群服务命令服务接口
+ * 提供集群服务命令的业务逻辑处理
  *
- * @author dygao2
- * @email gaodayu2022@163.com
- * @date 2022-04-12 11:28:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface ClusterServiceCommandService {
+public interface ClusterServiceCommandService extends IService<ClusterServiceCommandEntity> {
 
-    Result generateCommand(Integer clusterId, CommandType commandType, List<String> serviceNames);
+    /**
+     * 生成命令
+     */
+    Result<String> generateCommand(Integer clusterId, CommandType commandType, List<String> serviceNames);
 
-    Result getServiceCommandlist(Integer clusterId, Integer page, Integer pageSize);
+    /**
+     * 获取服务命令列表（分页）
+     */
+    PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Integer clusterId, Integer page, Integer pageSize);
 
-    Result generateServiceCommand(Integer clusterId, CommandType command, List<String> ids);
+    /**
+     * 生成服务命令
+     */
+    Result<String> generateServiceCommand(Integer clusterId, CommandType command, List<String> ids);
 
-    Result generateServiceRoleCommands(Integer clusterId, CommandType commandType,
-                                       Map<Integer, List<String>> instanceIdMap);
+    /**
+     * 生成服务角色命令集合
+     */
+    Result<String> generateServiceRoleCommands(Integer clusterId, CommandType commandType,
+            Map<Integer, List<String>> instanceIdMap);
 
-    Result generateServiceRoleCommand(Integer clusterId, CommandType command, Integer serviceIntanceId,
-                                      List<String> ids, RollingRestartInfo rollingRestartInfo);
+    /**
+     * 生成服务角色命令
+     */
+    Result<String> generateServiceRoleCommand(Integer clusterId, CommandType command, Integer serviceIntanceId,
+            List<String> ids, RollingRestartInfo rollingRestartInfo);
 
-
+    /**
+     * 启动执行命令
+     */
     void startExecuteCommand(Integer clusterId, String commandType, String commandIds);
 
+    /**
+     * 取消命令
+     */
     void cancelCommand(String commandId);
 
-    ClusterServiceCommandEntity getLastRestartCommand(Integer id);
+    /**
+     * 获取最后重启命令
+     */
+    ClusterServiceCommandDTO getLastRestartCommand(Integer id);
 
-    ClusterServiceCommandEntity getCommandById(String commandId);
+    /**
+     * 根据命令ID获取命令
+     */
+    ClusterServiceCommandDTO getCommandById(String commandId);
+
+    /**
+     * 根据ID获取命令DTO
+     */
+    ClusterServiceCommandDTO getByIdAsDto(String id);
+
+    /**
+     * 保存命令DTO
+     */
+    ClusterServiceCommandDTO saveCommand(ClusterServiceCommandDTO dto);
+
+    /**
+     * 更新命令
+     */
+    void updateCommand(ClusterServiceCommandDTO dto);
 }

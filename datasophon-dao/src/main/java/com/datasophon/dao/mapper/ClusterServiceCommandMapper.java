@@ -24,11 +24,12 @@ import org.apache.ibatis.annotations.Mapper;
 import com.mybatisflex.core.BaseMapper;
 
 /**
- * 集群服务操作指令表
+ * 集群服务命令数据访问对象
+ * 提供集群服务命令的数据库操作
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-12 11:28:06
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCommandEntity> {

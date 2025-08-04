@@ -18,11 +18,15 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import cn.hutool.core.util.EnumUtil;
+import com.datasophon.api.converter.ClusterServiceCommandConverter;
+import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.RollingRestartInfo;
+import com.datasophon.common.vo.ClusterServiceCommandVO;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import org.apache.commons.lang3.StringUtils;
@@ -36,21 +40,38 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 集群服务命令控制器
+ * 提供集群服务命令的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @ApiVersion(path = "cluster/service/command")
 public class ClusterServiceCommandController {
 
     @Autowired
     private ClusterServiceCommandService clusterServiceCommandService;
 
+    @Autowired
+    private ClusterServiceCommandConverter converter;
 
     /**
      * 查询集群服务指令列表
      */
     @RequestMapping("/getServiceCommandlist")
-    public Result list(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterServiceCommandVO>> list(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
-        return clusterServiceCommandService.getServiceCommandlist(clusterId, page, pageSize);
+        PageResult<ClusterServiceCommandDTO> pageResult = clusterServiceCommandService
+                .getServiceCommandlist(clusterId, page, pageSize);
+
+        List<ClusterServiceCommandVO> voList = converter.dtoListToVoList(pageResult.getRecords());
+        PageResult<ClusterServiceCommandVO> voPageResult = PageResult.of(voList, pageResult.getTotal(),
+                pageResult.getPage(), pageResult.getSize());
+
+        return Result.success(voPageResult);
     }
 
     /**
@@ -58,7 +79,7 @@ public class ClusterServiceCommandController {
      */
     @UserPermission
     @RequestMapping("/generateCommand")
-    public Result generateCommand(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> generateCommand(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("commandType") String commandType,
             @RequestParam("serviceNames") String serviceNames) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
@@ -71,7 +92,7 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/generateServiceCommand")
     @UserPermission
-    public Result generateServiceCommand(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> generateServiceCommand(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("commandType") String commandType,
             @RequestParam("serviceInstanceIds") String serviceInstanceIds) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
@@ -81,7 +102,6 @@ public class ClusterServiceCommandController {
         } else {
             return Result.error(Status.NO_SERVICE_EXECUTE.getMsg());
         }
-
     }
 
     /**
@@ -89,20 +109,17 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/generateServiceRoleCommand")
     @UserPermission
-    public Result generateServiceRoleCommand(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> generateServiceRoleCommand(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("commandType") String commandType,
             @RequestParam("serviceInstanceId") Integer serviceInstanceId,
             @RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
-            @RequestParam(value = "rollingParam", required = false) String rollingParam
-
-    ) {
+            @RequestParam(value = "rollingParam", required = false) String rollingParam) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         List<String> ids = Arrays.asList(serviceRoleInstancesIds.split(","));
         RollingRestartInfo rollingRestartInfo = RollingRestartInfo.parse(rollingParam);
 
         return clusterServiceCommandService.generateServiceRoleCommand(clusterId, command, serviceInstanceId, ids,
                 rollingRestartInfo);
-
     }
 
     /**
@@ -110,57 +127,85 @@ public class ClusterServiceCommandController {
      */
     @RequestMapping("/startExecuteCommand")
     @UserPermission
-    public Result startExecuteCommand(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> startExecuteCommand(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("commandType") String commandType,
             @RequestParam("commandIds") String commandIds) {
         clusterServiceCommandService.startExecuteCommand(clusterId, commandType, commandIds);
-        return Result.success();
+        return Result.success("命令执行启动成功");
     }
 
     @RequestMapping("/cancelCommand")
-    public Result cancelCommand(@RequestParam("commandId") String commandId) {
+    public Result<String> cancelCommand(@RequestParam("commandId") String commandId) {
         clusterServiceCommandService.cancelCommand(commandId);
-        return Result.success();
+        return Result.success("命令取消成功");
     }
 
     /**
-     * 信息
+     * 获取命令信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        ClusterServiceCommandEntity clusterServiceCommand = clusterServiceCommandService.getById(id);
-
-        return Result.success().put("clusterServiceCommand", clusterServiceCommand);
+    public Result<ClusterServiceCommandVO> info(@PathVariable("id") String id) {
+        ClusterServiceCommandDTO dto = clusterServiceCommandService.getByIdAsDto(id);
+        if (dto == null) {
+            return Result.error("命令不存在");
+        }
+        ClusterServiceCommandVO vo = converter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
     /**
-     * 保存
+     * 保存命令
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterServiceCommandEntity clusterServiceCommand) {
-        clusterServiceCommandService.save(clusterServiceCommand);
-
-        return Result.success();
+    public Result<ClusterServiceCommandVO> save(@RequestBody ClusterServiceCommandDTO dto) {
+        ClusterServiceCommandDTO savedDto = clusterServiceCommandService.saveCommand(dto);
+        ClusterServiceCommandVO vo = converter.dtoToVo(savedDto);
+        return Result.success(vo);
     }
 
     /**
-     * 修改
+     * 更新命令
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterServiceCommandEntity clusterServiceCommand) {
-        clusterServiceCommandService.updateById(clusterServiceCommand);
-
-        return Result.success();
+    public Result<String> update(@RequestBody ClusterServiceCommandDTO dto) {
+        clusterServiceCommandService.updateCommand(dto);
+        return Result.success("更新成功");
     }
 
     /**
-     * 删除
+     * 删除命令
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterServiceCommandService.removeByIds(Arrays.asList(ids));
+    public Result<String> delete(@RequestBody String[] ids) {
+        clusterServiceCommandService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
+    }
 
-        return Result.success();
+    /**
+     * 获取最后重启命令
+     */
+    @RequestMapping("/lastRestart/{serviceInstanceId}")
+    public Result<ClusterServiceCommandVO> getLastRestartCommand(
+            @PathVariable("serviceInstanceId") Integer serviceInstanceId) {
+        ClusterServiceCommandDTO dto = clusterServiceCommandService.getLastRestartCommand(serviceInstanceId);
+        if (dto == null) {
+            return Result.error("未找到重启命令");
+        }
+        ClusterServiceCommandVO vo = converter.dtoToVo(dto);
+        return Result.success(vo);
+    }
+
+    /**
+     * 根据命令ID获取命令
+     */
+    @RequestMapping("/byCommandId/{commandId}")
+    public Result<ClusterServiceCommandVO> getCommandById(@PathVariable("commandId") String commandId) {
+        ClusterServiceCommandDTO dto = clusterServiceCommandService.getCommandById(commandId);
+        if (dto == null) {
+            return Result.error("命令不存在");
+        }
+        ClusterServiceCommandVO vo = converter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
 }
