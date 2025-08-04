@@ -17,8 +17,7 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.mybatisflex.core.service.IService;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 
 import java.util.ArrayList;
@@ -27,13 +26,13 @@ import java.util.List;
 /**
  * 集群服务角色对应web ui表 
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ClusterServiceRoleInstanceWebuisService {
+public interface ClusterServiceRoleInstanceWebuisService extends IService<ClusterServiceRoleInstanceWebuis> {
 
-    Result getWebUis(Integer serviceInstanceId);
+    List<ClusterServiceRoleInstanceWebuis> getWebUis(Integer serviceInstanceId);
 
     void removeByServiceInsId(Integer serviceInstanceId);
 

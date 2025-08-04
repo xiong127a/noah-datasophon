@@ -18,19 +18,65 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceWebuisTableDef.CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS;
 
 /**
  * 集群服务角色对应web ui表
  * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<ClusterServiceRoleInstanceWebuis> {
 
+    /**
+     * 根据服务实例ID查询WebUI列表
+     */
+    default List<ClusterServiceRoleInstanceWebuis> selectByServiceInstanceId(Integer serviceInstanceId) {
+        return selectListByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+    }
+
+    /**
+     * 根据服务实例ID删除WebUI记录
+     */
+    default int deleteByServiceInstanceId(Integer serviceInstanceId) {
+        return deleteByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+    }
+
+    /**
+     * 根据角色实例ID查询单个WebUI
+     */
+    default ClusterServiceRoleInstanceWebuis selectByServiceRoleInstanceId(Integer roleInstanceId) {
+        return selectOneByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+    }
+
+    /**
+     * 根据角色实例ID列表删除WebUI记录
+     */
+    default int deleteByServiceRoleInstanceIds(ArrayList<Integer> roleInstanceIds) {
+        if (roleInstanceIds == null || roleInstanceIds.isEmpty()) {
+            return 0;
+        }
+        return deleteByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.in(roleInstanceIds)));
+    }
+
+    /**
+     * 根据角色实例ID查询WebUI列表（用于状态更新）
+     */
+    default List<ClusterServiceRoleInstanceWebuis> selectListByServiceRoleInstanceId(Integer roleInstanceId) {
+        return selectListByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+    }
 }
