@@ -19,6 +19,8 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson2.JSONObject;
+import com.datasophon.api.converter.ClusterQueueCapacityConverter;
+import com.datasophon.common.dto.ClusterQueueCapacityDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -33,6 +35,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterQueueCapacityMapper;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 import com.datasophon.dao.model.Links;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,29 +47,38 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * 集群队列容量服务实现
+ * 集群队列容量服务实现类
+ * 提供集群队列容量的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Service("clusterQueueCapacityService")
-public class ClusterQueueCapacityServiceImpl implements ClusterQueueCapacityService {
+public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCapacityMapper, ClusterQueueCapacity>
+        implements ClusterQueueCapacityService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterQueueCapacityServiceImpl.class);
 
     @Autowired
-    private ClusterQueueCapacityMapper clusterQueueCapacityMapper;
+    private ClusterQueueCapacityConverter clusterQueueCapacityConverter;
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
     public boolean refreshToYarn(Integer clusterId) throws Exception {
-        List<ClusterQueueCapacity> list = clusterQueueCapacityMapper.selectByClusterId(clusterId);
+        List<ClusterQueueCapacity> list = getMapper().selectByClusterId(clusterId);
         ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        // 由于ClusterServiceRoleInstanceService已重构，需要进行DTO转换
         List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
-                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager").stream()
+                .map(dto -> {
+                    ClusterServiceRoleInstanceEntity entity = new ClusterServiceRoleInstanceEntity();
+                    entity.setHostname(dto.hostname());
+                    return entity;
+                })
+                .toList();
 
         // build configfilemap
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -123,18 +135,18 @@ public class ClusterQueueCapacityServiceImpl implements ClusterQueueCapacityServ
         queueCapacity.setNodeLabel("default");
         queueCapacity.setAclUsers("*");
         queueCapacity.setParent("root");
-        clusterQueueCapacityMapper.insert(queueCapacity);
+        this.save(queueCapacity);
     }
 
     @Override
     public ClusterQueueCapacityList listCapacityQueue(Integer clusterId) {
-        List<ClusterQueueCapacity> list = clusterQueueCapacityMapper.selectByClusterId(clusterId);
+        List<ClusterQueueCapacity> list = getMapper().selectByClusterId(clusterId);
 
         ClusterQueueCapacityList clusterQueueCapacityList = new ClusterQueueCapacityList();
         clusterQueueCapacityList.setRootId("root");
         clusterQueueCapacityList.setNodes(list);
 
-        ArrayList<Links> linksList = new ArrayList<>();
+        List<Links> linksList = new ArrayList<>();
         for (ClusterQueueCapacity clusterQueueCapacity : list) {
             Links links = new Links();
             links.setFrom(clusterQueueCapacity.getParent());
@@ -145,32 +157,24 @@ public class ClusterQueueCapacityServiceImpl implements ClusterQueueCapacityServ
         return clusterQueueCapacityList;
     }
 
-    // 标准CRUD方法实现
+    // 新增DTO方法实现
     @Override
-    public ClusterQueueCapacity getById(Integer id) {
-        return clusterQueueCapacityMapper.selectById(id);
+    public ClusterQueueCapacityDTO getByIdAsDto(Integer id) {
+        ClusterQueueCapacity entity = this.getById(id);
+        return clusterQueueCapacityConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterQueueCapacity save(ClusterQueueCapacity entity) {
-        clusterQueueCapacityMapper.insert(entity);
-        return entity;
+    public ClusterQueueCapacityDTO saveQueueCapacity(ClusterQueueCapacityDTO dto) {
+        ClusterQueueCapacity entity = clusterQueueCapacityConverter.dtoToEntity(dto);
+        this.save(entity);
+        return clusterQueueCapacityConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterQueueCapacity updateById(ClusterQueueCapacity entity) {
-        clusterQueueCapacityMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterQueueCapacityMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterQueueCapacity> getAllQueueCapacities() {
-        return clusterQueueCapacityMapper.selectAll();
+    public void updateQueueCapacity(ClusterQueueCapacityDTO dto) {
+        ClusterQueueCapacity entity = clusterQueueCapacityConverter.dtoToEntity(dto);
+        this.updateById(entity);
     }
 
 }

@@ -17,34 +17,48 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterQueueCapacityDTO;
 import com.datasophon.dao.entity.ClusterQueueCapacity;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
-
-import java.util.List;
+import com.mybatisflex.core.service.IService;
 
 /**
- * 集群队列容量服务
+ * 集群队列容量服务接口
+ * 提供集群队列容量的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface ClusterQueueCapacityService {
+public interface ClusterQueueCapacityService extends IService<ClusterQueueCapacity> {
 
+    /**
+     * 刷新队列配置到YARN
+     */
     boolean refreshToYarn(Integer clusterId) throws Exception;
 
+    /**
+     * 创建默认队列
+     */
     void createDefaultQueue(Integer clusterId);
 
+    /**
+     * 列表查询队列容量（返回树形结构）
+     */
     ClusterQueueCapacityList listCapacityQueue(Integer clusterId);
 
-    // 标准CRUD方法
-    ClusterQueueCapacity getById(Integer id);
+    /**
+     * 根据ID获取队列容量DTO
+     */
+    ClusterQueueCapacityDTO getByIdAsDto(Integer id);
 
-    ClusterQueueCapacity save(ClusterQueueCapacity entity);
+    /**
+     * 保存队列容量DTO
+     */
+    ClusterQueueCapacityDTO saveQueueCapacity(ClusterQueueCapacityDTO dto);
 
-    ClusterQueueCapacity updateById(ClusterQueueCapacity entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterQueueCapacity> getAllQueueCapacities();
+    /**
+     * 更新队列容量
+     */
+    void updateQueueCapacity(ClusterQueueCapacityDTO dto);
 }

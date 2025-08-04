@@ -25,11 +25,12 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群队列容量映射器
+ * 集群队列容量数据访问对象
+ * 提供集群队列容量的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapacity> {
@@ -40,45 +41,6 @@ public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapac
     default List<ClusterQueueCapacity> selectByClusterId(Integer clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterQueueCapacity::getClusterId).eq(clusterId);
-        return this.selectListByQuery(query);
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterQueueCapacity selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterQueueCapacity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterQueueCapacity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有队列容量
-     */
-    default List<ClusterQueueCapacity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
         return this.selectListByQuery(query);
     }
 }
