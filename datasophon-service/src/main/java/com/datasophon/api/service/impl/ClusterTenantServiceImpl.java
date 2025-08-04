@@ -28,6 +28,8 @@ import com.datasophon.api.master.TenantRangerActor;
 import com.datasophon.api.master.TenantResourceDispatcherActor;
 import com.datasophon.api.converter.ClusterTenantConverter;
 import com.datasophon.api.service.ClusterTenantService;
+import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.api.utils.string.validator.WordValidator;
@@ -38,10 +40,8 @@ import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.model.tenant.resource.TenantResource;
 import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserTenant;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pekko.actor.ActorRef;
@@ -59,10 +59,11 @@ import static com.datasophon.common.enums.RangerOpType.DELETE_TENANT;
 
 /**
  * 集群租户服务实现
+ * 按照架构重构规范，迁移QueryChain到Service层调用
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
 @Service("clusterTenantService")
 @Slf4j
@@ -71,6 +72,12 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Autowired
     private ClusterTenantConverter clusterTenantConverter;
+
+    @Autowired
+    private ClusterUserTenantService clusterUserTenantService;
+
+    @Autowired
+    private ClusterUserService clusterUserService;
 
     @Override
     public PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
@@ -142,21 +149,15 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public boolean deleteTenantById(Integer id) {
-        // 是否授权授权用户校验
-        List<ClusterUserTenant> userTenantList = QueryChain.of(ClusterUserTenant.class)
-                .where(ClusterUserTenant::getTenantId).eq(id)
-                .list();
+        // 检查是否有用户被授权到此租户
+        List<ClusterUserTenant> userTenantList = clusterUserTenantService.getListByTenantId(id);
 
         if (CollUtil.isNotEmpty(userTenantList)) {
-            List<Integer> userIds = userTenantList.stream().map(ClusterUserTenant::getUserId)
-                    .toList();
+            List<Integer> userIds = userTenantList.stream()
+                    .map(ClusterUserTenant::getUserId)
+                    .toList(); // JDK21现代特性
 
-            List<String> usernames = QueryChain.of(ClusterUser.class)
-                    .where(ClusterUser::getId).in(userIds)
-                    .list()
-                    .stream()
-                    .map(ClusterUser::getUsername)
-                    .toList();
+            List<String> usernames = clusterUserService.getUsernamesByIds(userIds);
 
             throw new RuntimeException("当前租户已经授权给用户：" + usernames + ", 请先取消授权");
         }

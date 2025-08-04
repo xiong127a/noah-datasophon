@@ -29,4 +29,9 @@ public interface ClusterUserTenantService extends IService<ClusterUserTenant> {
      * 获取授权列表
      */
     List<ClusterUserTenant> getListByUserId(Integer clusterId, Integer userId);
+
+    /**
+     * 根据租户ID获取用户租户关系列表
+     */
+    List<ClusterUserTenant> getListByTenantId(Integer tenantId);
 }
