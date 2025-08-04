@@ -18,10 +18,11 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceDashboard;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import static com.datasophon.dao.entity.table.ClusterServiceDashboardTableDef.CLUSTER_SERVICE_DASHBOARD;
 
 /**
  * 集群服务仪表盘数据访问对象
@@ -29,9 +30,19 @@ import com.mybatisflex.core.BaseMapper;
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceDashboardMapper extends BaseMapper<ClusterServiceDashboard> {
 
+    /**
+     * 根据服务名称查询仪表盘配置
+     *
+     * @param serviceName 服务名称
+     * @return 仪表盘配置
+     */
+    default ClusterServiceDashboard selectByServiceName(String serviceName) {
+        return selectOneByQuery(QueryWrapper.create()
+            .where(CLUSTER_SERVICE_DASHBOARD.SERVICE_NAME.eq(serviceName)));
+    }
 }

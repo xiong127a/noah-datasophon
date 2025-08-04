@@ -28,8 +28,9 @@ import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
 import com.datasophon.dao.mapper.ClusterServiceDashboardMapper;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.service.impl.ServiceImpl;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,18 +38,18 @@ import java.util.Map;
 
 /**
  * 集群服务仪表盘服务实现
- * 提供集群服务仪表盘的业务逻辑处理
+ * 按照架构重构规范，迁移QueryChain到DAO层
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
 @Service("clusterServiceDashboardService")
 public class ClusterServiceDashboardServiceImpl
-                extends
-                ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
-                implements
-                ClusterServiceDashboardService {
+                extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
+                implements ClusterServiceDashboardService {
+
+        private static final Logger logger = LoggerFactory.getLogger(ClusterServiceDashboardServiceImpl.class);
 
         @Autowired
         private ClusterServiceDashboardConverter converter;
@@ -65,9 +66,7 @@ public class ClusterServiceDashboardServiceImpl
                         serviceName = "KUBERNETES";
                 }
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
-                                .where(ClusterServiceDashboard::getServiceName).eq(serviceName)
-                                .one();
+                ClusterServiceDashboard dashboard = getMapper().selectByServiceName(serviceName);
 
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
@@ -77,9 +76,7 @@ public class ClusterServiceDashboardServiceImpl
         @Override
         public String getDatasophonDashboard(Integer clusterId) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = QueryChain.of(ClusterServiceDashboard.class)
-                                .where(ClusterServiceDashboard::getServiceName).eq("DATASOPHON")
-                                .one();
+                ClusterServiceDashboard dashboard = getMapper().selectByServiceName("DATASOPHON");
 
                 String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                                 Constants.REGEX_VARIABLE);
