@@ -17,39 +17,80 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.dao.entity.FrameServiceEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群框架版本服务表
+ * 集群框架版本服务表服务接口
+ * 继承IService提供基础CRUD操作，返回DTO进行数据传输
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface FrameServiceService {
+public interface FrameServiceService extends IService<FrameServiceEntity> {
 
-    List<FrameServiceEntity> getAllFrameService(Integer clusterId);
+    /**
+     * 获取指定集群的所有框架服务（包含安装状态）
+     */
+    List<FrameServiceDTO> getAllFrameService(Integer clusterId);
 
-    List<FrameServiceEntity> getAllFrameServiceWithRequired(Integer clusterId, String type);
+    /**
+     * 获取指定集群的所有框架服务，包含必选组件标识
+     */
+    List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, String type);
 
-    List<FrameServiceEntity> getServiceListByServiceIds(List<Integer> serviceIds);
+    /**
+     * 根据服务ID列表获取服务信息
+     */
+    List<FrameServiceDTO> getServiceListByServiceIds(List<Integer> serviceIds);
 
-    FrameServiceEntity getServiceByFrameIdAndServiceName(Integer id, String serviceName);
+    /**
+     * 根据框架ID和服务名称获取服务信息
+     */
+    FrameServiceDTO getServiceByFrameIdAndServiceName(Integer frameId, String serviceName);
 
-    FrameServiceEntity getServiceByFrameCodeAndServiceName(String clusterFrame, String serviceName);
+    /**
+     * 根据框架代码和服务名称获取服务信息
+     */
+    FrameServiceDTO getServiceByFrameCodeAndServiceName(String frameCode, String serviceName);
 
-    List<FrameServiceEntity> getAllFrameServiceByFrameCode(String clusterFrame);
+    /**
+     * 根据框架代码获取所有服务信息
+     */
+    List<FrameServiceDTO> getAllFrameServiceByFrameCode(String frameCode);
 
-    List<FrameServiceEntity> listServices(String serviceIds);
+    /**
+     * 根据服务ID字符串获取服务列表
+     */
+    List<FrameServiceDTO> listServices(String serviceIds);
 
-    // 标准CRUD方法
-    FrameServiceEntity getById(Integer id);
+    /**
+     * 根据ID获取服务信息
+     */
+    FrameServiceDTO getFrameServiceById(Integer id);
 
-    FrameServiceEntity save(FrameServiceEntity entity);
+    /**
+     * 保存服务信息
+     */
+    FrameServiceDTO saveFrameService(FrameServiceDTO frameServiceDTO);
 
-    FrameServiceEntity updateById(FrameServiceEntity entity);
+    /**
+     * 更新服务信息
+     */
+    FrameServiceDTO updateFrameService(FrameServiceDTO frameServiceDTO);
 
-    boolean removeByIds(List<Integer> ids);
+    /**
+     * 批量删除服务信息
+     */
+    boolean removeFrameServiceByIds(List<Integer> ids);
+
+    /**
+     * 删除单个服务（包含文件清理）
+     */
+    boolean removeFrameServiceById(Integer id);
 }

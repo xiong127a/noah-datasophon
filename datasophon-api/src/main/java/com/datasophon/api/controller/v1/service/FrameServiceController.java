@@ -18,123 +18,175 @@
 package com.datasophon.api.controller.v1.service;
 
 import cn.hutool.core.io.FileUtil;
+import com.datasophon.api.converter.FrameServiceConverter;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.vo.FrameServiceVO;
 import com.datasophon.common.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.mybatisflex.core.query.QueryChain;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 
 import java.io.File;
 import java.util.List;
 
+/**
+ * 集群框架版本服务控制器
+ * 按照三层架构规范，使用DTO接收请求，VO返回响应
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Slf4j
+@Api(tags = "集群框架服务管理")
 @ApiVersion(path = "frame/service")
+@RequiredArgsConstructor
 public class FrameServiceController {
 
-    @Autowired
-    private FrameServiceService frameVersionServiceService;
-
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
-
-
+    private final FrameServiceService frameServiceService;
+    private final FrameServiceConverter frameServiceConverter;
+    private final FrameServiceRoleService frameServiceRoleService;
 
     /**
-     * 列表
+     * 获取指定集群的框架服务列表
      */
-    @RequestMapping("/list")
-    public Result list(@RequestParam("clusterId") Integer clusterId) {
-        return frameVersionServiceService.getAllFrameService(clusterId);
+    @ApiOperation("获取指定集群的框架服务列表")
+    @GetMapping("/list")
+    public Result<List<FrameServiceVO>> list(
+            @ApiParam(value = "集群ID", required = true) @RequestParam("clusterId") Integer clusterId) {
+        List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameService(clusterId);
+        List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
+        return Result.success(frameServiceVOs);
     }
 
     /**
-     * 自定义模式列表和数据湖模式列表，包含必选组件
+     * 获取包含必选组件标识的框架服务列表
      */
-    @RequestMapping("/listWithRequired")
-    public Result listWithRequired(@RequestParam("clusterId") Integer clusterId, @RequestParam("type") String type) {
-        return frameVersionServiceService.getAllFrameServiceWithRequired(clusterId, type);
+    @ApiOperation("获取包含必选组件标识的框架服务列表")
+    @GetMapping("/listWithRequired")
+    public Result<List<FrameServiceVO>> listWithRequired(
+            @ApiParam(value = "集群ID", required = true) @RequestParam("clusterId") Integer clusterId,
+            @ApiParam(value = "集群类型", required = true) @RequestParam("type") String type) {
+        List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameServiceWithRequired(clusterId, type);
+        List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
+        return Result.success(frameServiceVOs);
     }
 
     /**
-     * 根据servce id列表查询服务
+     * 根据服务ID列表查询服务
      */
-    @RequestMapping("/getServiceListByServiceIds")
-    public Result getServiceListByServiceIds(@RequestParam("serviceIds") List<Integer> serviceIds) {
-        return frameVersionServiceService.getServiceListByServiceIds(serviceIds);
+    @ApiOperation("根据服务ID列表查询服务")
+    @GetMapping("/getServiceListByServiceIds")
+    public Result<List<FrameServiceVO>> getServiceListByServiceIds(
+            @ApiParam(value = "服务ID列表", required = true) @RequestParam("serviceIds") List<Integer> serviceIds) {
+        List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getServiceListByServiceIds(serviceIds);
+        List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
+        return Result.success(frameServiceVOs);
     }
 
     /**
-     * 信息
+     * 根据ID获取服务信息
      */
-    @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        FrameServiceEntity frameVersionService = frameVersionServiceService.getById(id);
-
-        return Result.success().put("frameVersionService", frameVersionService);
+    @ApiOperation("根据ID获取服务信息")
+    @GetMapping("/info/{id}")
+    public Result<FrameServiceVO> info(@ApiParam(value = "服务ID", required = true) @PathVariable("id") Integer id) {
+        FrameServiceDTO frameServiceDTO = frameServiceService.getFrameServiceById(id);
+        FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(frameServiceDTO);
+        return Result.success(frameServiceVO);
     }
 
     /**
-     * 保存
+     * 保存服务信息
      */
-    @RequestMapping("/save")
-    public Result save(@RequestBody FrameServiceEntity frameVersionService) {
-        frameVersionServiceService.save(frameVersionService);
-
-        return Result.success();
+    @ApiOperation("保存服务信息")
+    @PostMapping("/save")
+    public Result<FrameServiceVO> save(
+            @ApiParam(value = "服务信息", required = true) @RequestBody FrameServiceDTO frameServiceDTO) {
+        FrameServiceDTO savedDTO = frameServiceService.saveFrameService(frameServiceDTO);
+        FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(savedDTO);
+        return Result.success(frameServiceVO);
     }
 
     /**
-     * 修改
+     * 更新服务信息
      */
-    @RequestMapping("/update")
-    public Result update(@RequestBody FrameServiceEntity frameVersionService) {
-        frameVersionServiceService.updateById(frameVersionService);
-
-        return Result.success();
+    @ApiOperation("更新服务信息")
+    @PutMapping("/update")
+    public Result<FrameServiceVO> update(
+            @ApiParam(value = "服务信息", required = true) @RequestBody FrameServiceDTO frameServiceDTO) {
+        FrameServiceDTO updatedDTO = frameServiceService.updateFrameService(frameServiceDTO);
+        FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(updatedDTO);
+        return Result.success(frameServiceVO);
     }
 
     /**
-     * 删除服务组件
+     * 删除服务组件（包含文件清理和依赖检查）
      */
-    @RequestMapping("/delete/{id}")
-    public Result delete(@PathVariable("id") Integer id) {
-        final FrameServiceEntity serviceEntity = frameVersionServiceService.getById(id);
-        if (serviceEntity == null) {
-            return Result.error("Service 组件不存在。");
+    @ApiOperation("删除服务组件")
+    @DeleteMapping("/delete/{id}")
+    public Result<Boolean> delete(@ApiParam(value = "服务ID", required = true) @PathVariable("id") Integer id) {
+        try {
+            // 获取服务信息
+            FrameServiceDTO serviceDTO = frameServiceService.getFrameServiceById(id);
+            if (serviceDTO == null) {
+                return Result.error("Service 组件不存在。");
+            }
+
+            // 检查是否有集群正在使用此服务
+            List<ClusterServiceInstanceEntity> serviceInstances = QueryChain.of(ClusterServiceInstanceEntity.class)
+                    .where(ClusterServiceInstanceEntity::getFrameServiceId).eq(id)
+                    .list();
+
+            if (serviceInstances != null && !serviceInstances.isEmpty()) {
+                return Result.error("Service 组件正在使用中，无法删除。");
+            }
+
+            // 删除软件包文件
+            if (serviceDTO.packageName() != null) {
+                File targetPackageFile = new File(Constants.MASTER_MANAGE_PACKAGE_PATH, serviceDTO.packageName());
+                if (targetPackageFile.exists()) {
+                    FileUtil.del(targetPackageFile);
+                    log.info("已删除软件包文件: {}", targetPackageFile.getAbsolutePath());
+                }
+
+                // 删除MD5文件
+                File targetPackageFileMd5 = new File(Constants.MASTER_MANAGE_PACKAGE_PATH,
+                        serviceDTO.packageName() + ".md5");
+                if (targetPackageFileMd5.exists()) {
+                    FileUtil.del(targetPackageFileMd5);
+                    log.info("已删除软件包MD5文件: {}", targetPackageFileMd5.getAbsolutePath());
+                }
+            }
+
+            // 删除相关配置
+            boolean configDeleted = frameServiceRoleService.remove(QueryChain.of(FrameServiceRoleEntity.class)
+                    .where(FrameServiceRoleEntity::getServiceId).eq(id));
+            log.info("删除服务配置结果: {}", configDeleted);
+
+            // 删除主服务
+            boolean serviceDeleted = frameServiceService.removeFrameServiceById(id);
+            if (!serviceDeleted) {
+                return Result.error("删除服务失败。");
+            }
+
+            log.info("成功删除服务组件，ID: {}", id);
+            return Result.success(true);
+
+        } catch (Exception e) {
+            log.error("删除服务组件失败，ID: {}", id, e);
+            return Result.error("删除服务组件失败: " + e.getMessage());
         }
-        // 已经安装为服务，无法删除
-        final List<ClusterServiceInstanceEntity> roleEntities = QueryChain.of(ClusterServiceInstanceEntity.class)
-                .where(ClusterServiceInstanceEntity::getFrameServiceId).eq(serviceEntity.getId())
-                .list();
-        if (roleEntities != null && !roleEntities.isEmpty()) {
-            return Result.error("Service 组件正在使用中。");
-        }
-
-        // delete /DDP/packages 下的软件包
-        File targetPackageFile = new File(Constants.MASTER_MANAGE_PACKAGE_PATH, serviceEntity.getPackageName());
-        FileUtil.del(targetPackageFile);
-        log.info("delete package file to: {}", targetPackageFile.getAbsolutePath());
-        File targetPackageFileMd5 = new File(Constants.MASTER_MANAGE_PACKAGE_PATH,
-                serviceEntity.getPackageName() + ".md5");
-        FileUtil.del(targetPackageFileMd5);
-        log.info("delete package md5 file to: {}", targetPackageFileMd5.getAbsolutePath());
-
-        // 删除配置
-        frameServiceRoleService.remove(QueryChain.of(FrameServiceRoleEntity.class)
-                .where(FrameServiceRoleEntity::getServiceId).eq(id));
-        // 删除主服务
-        frameVersionServiceService.removeById(id);
-        return Result.success();
     }
 
 }
