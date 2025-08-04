@@ -17,95 +17,100 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 框架服务角色表
+ * 框架服务角色表服务接口
+ * 继承IService提供基础CRUD操作，返回DTO进行数据传输
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface FrameServiceRoleService {
+public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity> {
 
     /**
-     * 根据集群ID、服务ID列表和角色类型获取服务角色列表
+     * 根据集群ID、服务ID列表和角色类型获取服务角色列表（包含主机信息）
      * 
      * @param clusterId       集群ID
      * @param serviceIds      服务ID列表（逗号分隔）
      * @param serviceRoleType 服务角色类型
-     * @return 服务角色列表
+     * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleEntity> getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType);
+    List<FrameServiceRoleDTO> getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType);
 
     /**
      * 根据服务ID和服务角色名称获取服务角色
      * 
      * @param serviceId 服务ID
      * @param roleName  角色名称
-     * @return 服务角色实体
+     * @return 服务角色DTO
      */
-    FrameServiceRoleEntity getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
+    FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
 
     /**
      * 根据集群框架和服务角色名称获取服务角色
      * 
      * @param clusterFrame    集群框架
      * @param serviceRoleName 服务角色名称
-     * @return 服务角色实体
+     * @return 服务角色DTO
      */
-    FrameServiceRoleEntity getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame, String serviceRoleName);
+    FrameServiceRoleDTO getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame, String serviceRoleName);
 
     /**
-     * 获取非Master角色列表
+     * 获取非Master角色列表（包含主机信息）
      * 
      * @param clusterId  集群ID
      * @param serviceIds 服务ID列表（逗号分隔）
-     * @return 非Master角色列表
+     * @return 非Master角色DTO列表
      */
-    List<FrameServiceRoleEntity> getNonMasterRoleList(Integer clusterId, String serviceIds);
+    List<FrameServiceRoleDTO> getNonMasterRoleList(Integer clusterId, String serviceIds);
 
     /**
      * 根据服务名称获取服务角色列表
      * 
      * @param clusterId   集群ID
      * @param serviceName 服务名称
-     * @return 服务角色列表
+     * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleEntity> getServiceRoleByServiceName(Integer clusterId, String serviceName);
+    List<FrameServiceRoleDTO> getServiceRoleByServiceName(Integer clusterId, String serviceName);
 
     /**
      * 获取所有服务角色列表
      * 
      * @param frameServiceId 框架服务ID
-     * @return 服务角色列表
+     * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleEntity> getAllServiceRoleList(Integer frameServiceId);
-
-    // 基础CRUD方法
+    List<FrameServiceRoleDTO> getAllServiceRoleList(Integer frameServiceId);
 
     /**
-     * 根据ID获取服务角色
+     * 根据ID获取服务角色DTO
      * 
      * @param id 主键ID
-     * @return 服务角色实体
+     * @return 服务角色DTO
      */
-    FrameServiceRoleEntity getById(Integer id);
+    FrameServiceRoleDTO getFrameServiceRoleById(Integer id);
 
     /**
      * 保存服务角色
      * 
-     * @param entity 服务角色实体
-     * @return 是否保存成功
+     * @param frameServiceRoleDTO 服务角色DTO
+     * @return 保存后的服务角色DTO
      */
-    boolean save(FrameServiceRoleEntity entity);
+    FrameServiceRoleDTO saveFrameServiceRole(FrameServiceRoleDTO frameServiceRoleDTO);
 
     /**
-     * 根据ID更新服务角色
+     * 更新服务角色
      * 
-     * @param entity 服务角色实体
-     * @return 是否更新成功
+     * @param frameServiceRoleDTO 服务角色DTO
+     * @return 更新后的服务角色DTO
      */
-    boolean updateById(FrameServiceRoleEntity entity);
+    FrameServiceRoleDTO updateFrameServiceRole(FrameServiceRoleDTO frameServiceRoleDTO);
 
     /**
      * 根据ID列表批量删除服务角色
@@ -113,5 +118,5 @@ public interface FrameServiceRoleService {
      * @param ids ID列表
      * @return 是否删除成功
      */
-    boolean removeByIds(List<Integer> ids);
+    boolean removeFrameServiceRoleByIds(List<Integer> ids);
 }

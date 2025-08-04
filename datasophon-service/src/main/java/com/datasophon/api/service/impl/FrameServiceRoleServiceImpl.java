@@ -18,188 +18,276 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.dao.mapper.FrameServiceRoleMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+/**
+ * 框架服务角色表服务实现
+ * 继承ServiceImpl提供基础CRUD操作，使用Converter进行对象转换
+ * 保持复杂业务逻辑完整性，按照架构重构规范返回DTO对象
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+@Slf4j
 @Service("frameServiceRoleService")
-public class FrameServiceRoleServiceImpl implements FrameServiceRoleService {
+@RequiredArgsConstructor
+public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMapper, FrameServiceRoleEntity>
+        implements FrameServiceRoleService {
 
     // 定义常量
     private static final String SERVICE_NODE = "NODE";
     private static final String ROLE_NODE = "node";
     private static final String SERVICE_ROLE_CACHE_KEY_FORMAT = "%d_%s";
 
-    @Autowired
-    private FrameServiceRoleMapper frameServiceRoleMapper;
-
-    @Autowired
-    private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
+    // 依赖注入 - 使用构造器注入
+    private final FrameServiceRoleConverter frameServiceRoleConverter;
+    private final ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
 
     @Override
-    public List<FrameServiceRoleEntity> getServiceRoleList(Integer clusterId, String serviceIds,
+    public List<FrameServiceRoleDTO> getServiceRoleList(Integer clusterId, String serviceIds,
             Integer serviceRoleType) {
-        // 分割服务ID字符串为列表
-        List<String> ids = Arrays.asList(serviceIds.split(","));
-
-        // 调用Dao层方法查询服务角色
-        List<FrameServiceRoleEntity> roles = frameServiceRoleMapper.selectByServiceIdsAndRoleType(ids, serviceRoleType);
-
-        // 生成缓存键
-        String cacheKey = String.format(SERVICE_ROLE_CACHE_KEY_FORMAT, clusterId, Constants.SERVICE_ROLE_HOST_MAPPING);
-
-        // 为每个角色查询主机信息
-        for (FrameServiceRoleEntity role : roles) {
-            // 暂时跳过服务查询，因为需要重新设计这部分逻辑
-            // FrameServiceEntity service = frameService.getById(role.getServiceId());
-
-            // 查询已安装的角色实例 (这里需要通过专门的方法查询)
-            List<ClusterServiceRoleInstanceEntity> roleInstances = getClusterServiceRoleInstances(
-                    clusterId, "", role.getServiceRoleName());
-
-            // 如果有角色实例，从实例中获取主机列表
-            if (CollUtil.isNotEmpty(roleInstances)) {
-                List<String> hosts = roleInstances.stream()
-                        .map(ClusterServiceRoleInstanceEntity::getHostname)
-                        .collect(Collectors.toList());
-                role.setHosts(hosts);
-            }
-            // 否则，尝试从缓存中获取
-            else if (CacheOperateUtils.containsKey(cacheKey)) {
-                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getGeneric(
-                        cacheKey,
-                        TypeRefs.MAP_STRING_LIST_STRING);
-
-                if (roleToHostsMap.containsKey(role.getServiceRoleName())) {
-                    role.setHosts(roleToHostsMap.get(role.getServiceRoleName()));
-                }
-            }
+        if (clusterId == null) {
+            throw new RuntimeException("集群ID不能为空");
+        }
+        if (serviceIds == null || serviceIds.trim().isEmpty()) {
+            throw new RuntimeException("服务ID列表不能为空");
         }
 
-        return roles;
+        // 分割服务ID字符串为列表
+        List<String> ids = Arrays.stream(serviceIds.split(","))
+                .filter(id -> !id.trim().isEmpty())
+                .toList();
+
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        // 调用Dao层方法查询服务角色
+        List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(ids, serviceRoleType);
+
+        // 转换为DTO并填充主机信息
+        return roles.stream()
+                .map(role -> {
+                    FrameServiceRoleDTO dto = frameServiceRoleConverter.entityToDto(role);
+                    // 查询并设置主机信息
+                    List<String> hosts = getHostsForRole(clusterId, dto.serviceRoleName());
+                    return dto.withHosts(hosts);
+                })
+                .toList();
     }
 
     /**
-     * 辅助方法：获取集群服务角色实例
+     * 辅助方法：获取角色的主机列表（保持复杂业务逻辑完整性）
      */
-    private List<ClusterServiceRoleInstanceEntity> getClusterServiceRoleInstances(Integer clusterId,
-            String serviceName, String serviceRoleName) {
-        return clusterServiceRoleInstanceMapper.selectByClusterIdAndServiceNameAndServiceRoleName(
-                clusterId, serviceName, serviceRoleName);
-    }
-
-    @Override
-    public FrameServiceRoleEntity getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName) {
-        return frameServiceRoleMapper.selectByServiceIdAndRoleName(serviceId, roleName);
-    }
-
-    @Override
-    public FrameServiceRoleEntity getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame,
-            String serviceRoleName) {
-        return frameServiceRoleMapper.selectByFrameCodeAndRoleName(clusterFrame, serviceRoleName);
-    }
-
-    @Override
-    public List<FrameServiceRoleEntity> getNonMasterRoleList(Integer clusterId, String serviceIds) {
-        // 分割服务ID字符串为列表
-        List<String> ids = Arrays.asList(serviceIds.split(","));
-
-        // 调用Dao层方法查询非MASTER角色
-        List<FrameServiceRoleEntity> roles = frameServiceRoleMapper.selectNonMasterRoles(ids);
-
-        // 暂时使用clusterId作为缓存键的一部分，简化集群信息获取逻辑
-        // 生成缓存键
-        String cacheKey = String.format(SERVICE_ROLE_CACHE_KEY_FORMAT, clusterId,
-                Constants.SERVICE_ROLE_HOST_MAPPING);
-
-        // 为每个角色查询主机信息
-        for (FrameServiceRoleEntity role : roles) {
-            List<String> hosts = new ArrayList<>();
-            // 暂时跳过服务查询，因为需要重新设计这部分逻辑
-            // FrameServiceEntity service = frameService.getById(role.getServiceId());
-
+    private List<String> getHostsForRole(Integer clusterId, String serviceRoleName) {
+        try {
             // 查询已安装的角色实例
-            List<ClusterServiceRoleInstanceEntity> roleInstances = getClusterServiceRoleInstances(
-                    clusterId, "", role.getServiceRoleName());
+            List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceMapper
+                    .selectByClusterIdAndServiceNameAndServiceRoleName(clusterId, "", serviceRoleName);
 
             // 如果有角色实例，从实例中获取主机列表
             if (CollUtil.isNotEmpty(roleInstances)) {
-                hosts = roleInstances.stream()
+                return roleInstances.stream()
                         .map(ClusterServiceRoleInstanceEntity::getHostname)
-                        .collect(Collectors.toList());
+                        .toList();
             }
-            // 否则，尝试从缓存中获取
-            else if (CacheOperateUtils.containsKey(cacheKey)) {
-                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getGeneric(
-                        cacheKey,
-                        TypeRefs.MAP_STRING_LIST_STRING);
 
-                if (roleToHostsMap.containsKey(role.getServiceRoleName())) {
-                    hosts = roleToHostsMap.get(role.getServiceRoleName());
+            // 否则，尝试从缓存中获取
+            String cacheKey = String.format(SERVICE_ROLE_CACHE_KEY_FORMAT, clusterId,
+                    Constants.SERVICE_ROLE_HOST_MAPPING);
+            if (CacheOperateUtils.containsKey(cacheKey)) {
+                Map<String, List<String>> roleToHostsMap = CacheOperateUtils.getGeneric(
+                        cacheKey, TypeRefs.MAP_STRING_LIST_STRING);
+
+                if (roleToHostsMap.containsKey(serviceRoleName)) {
+                    return roleToHostsMap.get(serviceRoleName);
                 }
             }
 
-            role.setHosts(hosts);
+            return List.of();
+        } catch (Exception e) {
+            log.warn("获取角色 {} 的主机信息失败: {}", serviceRoleName, e.getMessage());
+            return List.of();
         }
-
-        return roles;
     }
 
     @Override
-    public List<FrameServiceRoleEntity> getServiceRoleByServiceName(Integer clusterId, String serviceName) {
+    public FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName) {
+        if (serviceId == null) {
+            throw new RuntimeException("服务ID不能为空");
+        }
+        if (roleName == null || roleName.trim().isEmpty()) {
+            throw new RuntimeException("角色名称不能为空");
+        }
+
+        FrameServiceRoleEntity entity = getMapper().selectByServiceIdAndRoleName(serviceId, roleName);
+        if (entity == null) {
+            throw new RuntimeException("未找到服务ID为 " + serviceId + " 且角色名称为 " + roleName + " 的服务角色");
+        }
+
+        return frameServiceRoleConverter.entityToDto(entity);
+    }
+
+    @Override
+    public FrameServiceRoleDTO getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame,
+            String serviceRoleName) {
+        if (clusterFrame == null || clusterFrame.trim().isEmpty()) {
+            throw new RuntimeException("框架代码不能为空");
+        }
+        if (serviceRoleName == null || serviceRoleName.trim().isEmpty()) {
+            throw new RuntimeException("服务角色名称不能为空");
+        }
+
+        FrameServiceRoleEntity entity = getMapper().selectByFrameCodeAndRoleName(clusterFrame, serviceRoleName);
+        if (entity == null) {
+            throw new RuntimeException("未找到框架代码为 " + clusterFrame + " 且角色名称为 " + serviceRoleName + " 的服务角色");
+        }
+
+        return frameServiceRoleConverter.entityToDto(entity);
+    }
+
+    @Override
+    public List<FrameServiceRoleDTO> getNonMasterRoleList(Integer clusterId, String serviceIds) {
+        if (clusterId == null) {
+            throw new RuntimeException("集群ID不能为空");
+        }
+        if (serviceIds == null || serviceIds.trim().isEmpty()) {
+            throw new RuntimeException("服务ID列表不能为空");
+        }
+
+        // 分割服务ID字符串为列表
+        List<String> ids = Arrays.stream(serviceIds.split(","))
+                .filter(id -> !id.trim().isEmpty())
+                .toList();
+
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        // 调用Dao层方法查询非MASTER角色
+        List<FrameServiceRoleEntity> roles = getMapper().selectNonMasterRoles(ids);
+
+        // 转换为DTO并填充主机信息
+        return roles.stream()
+                .map(role -> {
+                    FrameServiceRoleDTO dto = frameServiceRoleConverter.entityToDto(role);
+                    // 查询并设置主机信息
+                    List<String> hosts = getHostsForRole(clusterId, dto.serviceRoleName());
+                    return dto.withHosts(hosts);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<FrameServiceRoleDTO> getServiceRoleByServiceName(Integer clusterId, String serviceName) {
+        if (clusterId == null) {
+            throw new RuntimeException("集群ID不能为空");
+        }
+        if (serviceName == null || serviceName.trim().isEmpty()) {
+            throw new RuntimeException("服务名称不能为空");
+        }
+
         // 特殊处理NODE服务
         if (SERVICE_NODE.equals(serviceName)) {
-            FrameServiceRoleEntity nodeRole = new FrameServiceRoleEntity();
-            nodeRole.setServiceRoleName(ROLE_NODE);
+            FrameServiceRoleDTO nodeRole = FrameServiceRoleDTO.of(null, null, ROLE_NODE, 2, "1+", null);
             return Collections.singletonList(nodeRole);
         }
 
-        // 获取集群信息 - 暂时返回空列表，因为需要重新设计集群信息获取逻辑
-        // Result clusterResult = clusterInfoService.getClusterById(clusterId);
-
         // 由于集群信息获取逻辑需要重新设计，暂时返回空列表
         // 后续需要根据实际业务需求调整
-        return new ArrayList<>();
+        log.debug("getServiceRoleByServiceName: 集群ID={}, 服务名称={}", clusterId, serviceName);
+        return List.of();
     }
 
     @Override
-    public List<FrameServiceRoleEntity> getAllServiceRoleList(Integer frameServiceId) {
-        return frameServiceRoleMapper.selectByServiceId(frameServiceId);
+    public List<FrameServiceRoleDTO> getAllServiceRoleList(Integer frameServiceId) {
+        if (frameServiceId == null) {
+            throw new RuntimeException("框架服务ID不能为空");
+        }
+
+        List<FrameServiceRoleEntity> entities = getMapper().selectByServiceId(frameServiceId);
+        return frameServiceRoleConverter.entityListToDtoList(entities);
     }
 
     // 基础CRUD方法实现
 
     @Override
-    public FrameServiceRoleEntity getById(Integer id) {
-        return frameServiceRoleMapper.selectById(id);
+    public FrameServiceRoleDTO getFrameServiceRoleById(Integer id) {
+        if (id == null) {
+            throw new RuntimeException("服务角色ID不能为空");
+        }
+
+        FrameServiceRoleEntity entity = getById(id);
+        if (entity == null) {
+            throw new RuntimeException("未找到ID为 " + id + " 的服务角色");
+        }
+
+        return frameServiceRoleConverter.entityToDto(entity);
     }
 
     @Override
-    public boolean save(FrameServiceRoleEntity entity) {
-        return frameServiceRoleMapper.insertEntity(entity) > 0;
+    public FrameServiceRoleDTO saveFrameServiceRole(FrameServiceRoleDTO frameServiceRoleDTO) {
+        if (frameServiceRoleDTO == null) {
+            throw new RuntimeException("服务角色信息不能为空");
+        }
+
+        FrameServiceRoleEntity entity = frameServiceRoleConverter.dtoToEntity(frameServiceRoleDTO);
+        boolean result = save(entity);
+
+        if (!result) {
+            throw new RuntimeException("保存服务角色失败");
+        }
+
+        return frameServiceRoleConverter.entityToDto(entity);
     }
 
     @Override
-    public boolean updateById(FrameServiceRoleEntity entity) {
-        return frameServiceRoleMapper.updateByIdEntity(entity) > 0;
+    public FrameServiceRoleDTO updateFrameServiceRole(FrameServiceRoleDTO frameServiceRoleDTO) {
+        if (frameServiceRoleDTO == null || frameServiceRoleDTO.id() == null) {
+            throw new RuntimeException("服务角色信息或ID不能为空");
+        }
+
+        // 检查记录是否存在
+        FrameServiceRoleEntity existingEntity = getById(frameServiceRoleDTO.id());
+        if (existingEntity == null) {
+            throw new RuntimeException("未找到ID为 " + frameServiceRoleDTO.id() + " 的服务角色");
+        }
+
+        FrameServiceRoleEntity entity = frameServiceRoleConverter.dtoToEntity(frameServiceRoleDTO);
+        boolean result = updateById(entity);
+
+        if (!result) {
+            throw new RuntimeException("更新服务角色失败");
+        }
+
+        return frameServiceRoleConverter.entityToDto(entity);
     }
 
     @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return frameServiceRoleMapper.deleteByIds(ids) > 0;
+    public boolean removeFrameServiceRoleByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new RuntimeException("删除的ID列表不能为空");
+        }
+
+        return removeByIds(ids);
     }
 }

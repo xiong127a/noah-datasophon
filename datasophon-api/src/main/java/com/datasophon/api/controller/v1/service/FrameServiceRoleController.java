@@ -17,97 +17,145 @@
 
 package com.datasophon.api.controller.v1.service;
 
+import com.datasophon.api.converter.FrameServiceRoleConverter;
 import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
+import com.datasophon.common.vo.FrameServiceRoleVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 框架服务角色控制器
+ * 按照三层架构规范，使用DTO接收请求，VO返回响应
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+@Slf4j
 @ApiVersion(path = "frame/service/role")
+@RequiredArgsConstructor
 public class FrameServiceRoleController {
 
-    @Autowired
-    private FrameServiceRoleService frameServiceRoleService;
+    private final FrameServiceRoleService frameServiceRoleService;
+    private final FrameServiceRoleConverter frameServiceRoleConverter;
 
     /**
      * 查询服务对应的角色列表
      */
-    @RequestMapping("/getServiceRoleList")
-    public Result<List<FrameServiceRoleEntity>> getServiceRoleOfMaster(@RequestParam("clusterId") Integer clusterId,
-            @RequestParam("serviceIds") String serviceIds, @RequestParam("serviceRoleType") Integer serviceRoleType) {
-        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getServiceRoleList(clusterId, serviceIds,
-                serviceRoleType);
-        return Result.success(roleList);
+    @GetMapping("/getServiceRoleList")
+    public Result<List<FrameServiceRoleVO>> getServiceRoleOfMaster(
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("serviceIds") String serviceIds,
+            @RequestParam("serviceRoleType") Integer serviceRoleType) {
+        try {
+            List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getServiceRoleList(clusterId, serviceIds,
+                    serviceRoleType);
+            List<FrameServiceRoleVO> roleVOList = frameServiceRoleConverter.dtoListToVoList(roleList);
+            return Result.success(roleVOList);
+        } catch (Exception e) {
+            log.error("查询服务角色列表失败: {}", e.getMessage(), e);
+            return Result.error("查询服务角色列表失败: " + e.getMessage());
+        }
     }
 
-    @RequestMapping("/getNonMasterRoleList")
-    public Result<List<FrameServiceRoleEntity>> getNonMasterRoleList(@RequestParam("clusterId") Integer clusterId,
+    /**
+     * 获取非Master角色列表
+     */
+    @GetMapping("/getNonMasterRoleList")
+    public Result<List<FrameServiceRoleVO>> getNonMasterRoleList(
+            @RequestParam("clusterId") Integer clusterId,
             @RequestParam("serviceIds") String serviceIds) {
-        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
-        return Result.success(roleList);
+        try {
+            List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
+            List<FrameServiceRoleVO> roleVOList = frameServiceRoleConverter.dtoListToVoList(roleList);
+            return Result.success(roleVOList);
+        } catch (Exception e) {
+            log.error("查询非Master角色列表失败: {}", e.getMessage(), e);
+            return Result.error("查询非Master角色列表失败: " + e.getMessage());
+        }
     }
 
-    @RequestMapping("/getServiceRoleByServiceName")
-    public Result<List<FrameServiceRoleEntity>> getServiceRoleByServiceName(
+    /**
+     * 根据服务名称获取服务角色列表
+     */
+    @GetMapping("/getServiceRoleByServiceName")
+    public Result<List<FrameServiceRoleVO>> getServiceRoleByServiceName(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam("serviceName") String serviceName) {
-        List<FrameServiceRoleEntity> roleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId,
-                serviceName);
-        return Result.success(roleList);
-    }
-
-    /**
-     * 信息
-     */
-    @RequestMapping("/info/{id}")
-    public Result<FrameServiceRoleEntity> info(@PathVariable("id") Integer id) {
-        FrameServiceRoleEntity frameServiceRole = frameServiceRoleService.getById(id);
-        return Result.success(frameServiceRole);
-    }
-
-    /**
-     * 保存
-     */
-    @RequestMapping("/save")
-    public Result<Void> save(@RequestBody FrameServiceRoleEntity frameServiceRole) {
-        boolean saved = frameServiceRoleService.save(frameServiceRole);
-        if (saved) {
-            return Result.success();
-        } else {
-            return Result.error("保存失败");
+        try {
+            List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId,
+                    serviceName);
+            List<FrameServiceRoleVO> roleVOList = frameServiceRoleConverter.dtoListToVoList(roleList);
+            return Result.success(roleVOList);
+        } catch (Exception e) {
+            log.error("根据服务名称查询角色列表失败: {}", e.getMessage(), e);
+            return Result.error("根据服务名称查询角色列表失败: " + e.getMessage());
         }
     }
 
     /**
-     * 修改
+     * 根据ID获取服务角色信息
      */
-    @RequestMapping("/update")
-    public Result<Void> update(@RequestBody FrameServiceRoleEntity frameServiceRole) {
-        boolean updated = frameServiceRoleService.updateById(frameServiceRole);
-        if (updated) {
-            return Result.success();
-        } else {
-            return Result.error("更新失败");
+    @GetMapping("/info/{id}")
+    public Result<FrameServiceRoleVO> info(@PathVariable("id") Integer id) {
+        try {
+            FrameServiceRoleDTO frameServiceRoleDTO = frameServiceRoleService.getFrameServiceRoleById(id);
+            FrameServiceRoleVO frameServiceRoleVO = frameServiceRoleConverter.dtoToVo(frameServiceRoleDTO);
+            return Result.success(frameServiceRoleVO);
+        } catch (Exception e) {
+            log.error("获取服务角色信息失败: {}", e.getMessage(), e);
+            return Result.error("获取服务角色信息失败: " + e.getMessage());
         }
     }
 
     /**
-     * 删除
+     * 保存服务角色
      */
-    @RequestMapping("/delete")
-    public Result<Void> delete(@RequestBody Integer[] ids) {
-        boolean deleted = frameServiceRoleService.removeByIds(Arrays.asList(ids));
-        if (deleted) {
-            return Result.success();
-        } else {
-            return Result.error("删除失败");
+    @PostMapping("/save")
+    public Result<FrameServiceRoleVO> save(@RequestBody FrameServiceRoleDTO frameServiceRoleDTO) {
+        try {
+            FrameServiceRoleDTO savedDTO = frameServiceRoleService.saveFrameServiceRole(frameServiceRoleDTO);
+            FrameServiceRoleVO frameServiceRoleVO = frameServiceRoleConverter.dtoToVo(savedDTO);
+            return Result.success(frameServiceRoleVO);
+        } catch (Exception e) {
+            log.error("保存服务角色失败: {}", e.getMessage(), e);
+            return Result.error("保存服务角色失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新服务角色
+     */
+    @PutMapping("/update")
+    public Result<FrameServiceRoleVO> update(@RequestBody FrameServiceRoleDTO frameServiceRoleDTO) {
+        try {
+            FrameServiceRoleDTO updatedDTO = frameServiceRoleService.updateFrameServiceRole(frameServiceRoleDTO);
+            FrameServiceRoleVO frameServiceRoleVO = frameServiceRoleConverter.dtoToVo(updatedDTO);
+            return Result.success(frameServiceRoleVO);
+        } catch (Exception e) {
+            log.error("更新服务角色失败: {}", e.getMessage(), e);
+            return Result.error("更新服务角色失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除服务角色
+     */
+    @DeleteMapping("/delete")
+    public Result<Boolean> delete(@RequestBody Integer[] ids) {
+        try {
+            boolean deleted = frameServiceRoleService.removeFrameServiceRoleByIds(Arrays.asList(ids));
+            return Result.success(deleted);
+        } catch (Exception e) {
+            log.error("删除服务角色失败: {}", e.getMessage(), e);
+            return Result.error("删除服务角色失败: " + e.getMessage());
         }
     }
 
