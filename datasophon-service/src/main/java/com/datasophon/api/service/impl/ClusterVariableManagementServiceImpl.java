@@ -58,15 +58,13 @@ public class ClusterVariableManagementServiceImpl implements ClusterVariableMana
             logger.info("update variable {} value {} to {}", variableName, clusterVariableDTO.variableValue(), value);
             ClusterVariable clusterVariable = variableConverter.dtoToEntity(clusterVariableDTO);
             clusterVariable.setVariableValue(value);
-            ClusterVariableDTO updatedDTO = variableConverter.entityToDto(clusterVariable);
-            variableService.updateById(updatedDTO);
+            variableService.updateById(clusterVariable);
         } else {
             ClusterVariable newClusterVariable = new ClusterVariable();
             newClusterVariable.setClusterId(clusterId);
             newClusterVariable.setVariableName(variableName);
             newClusterVariable.setVariableValue(value);
-            ClusterVariableDTO newDTO = variableConverter.entityToDto(newClusterVariable);
-            variableService.save(newDTO);
+            variableService.save(newClusterVariable);
         }
         globalVariables.put(variableName, value);
         putRemoteVariableCache(variableName, value, clusterId);

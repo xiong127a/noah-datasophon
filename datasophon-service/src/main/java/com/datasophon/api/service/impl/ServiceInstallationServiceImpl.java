@@ -23,7 +23,7 @@ import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson2.JSON;
 import com.datasophon.api.converter.ClusterInfoConverter;
 import com.datasophon.api.converter.ClusterServiceInstanceConverter;
-import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
+
 import com.datasophon.api.kubernetes.handler.KubernetesDeploymentYamlHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesHostTagHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
@@ -111,7 +111,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
     @Override
     public void saveServiceInstallInfo(ServiceRoleInfo serviceRoleInfo) {
-        ClusterInfoDTO clusterInfoDTO = clusterInfoService.getById(serviceRoleInfo.getClusterId());
+        ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(serviceRoleInfo.getClusterId());
         ClusterInfoEntity clusterInfo = clusterInfoConverter.dtoToEntity(clusterInfoDTO);
 
         ClusterServiceInstanceDTO clusterServiceInstanceDTO = serviceInstanceService
@@ -201,7 +201,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         clusterHostDO.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostDO.setHostState(HostState.RUNNING);
         clusterHostDO.setManaged(MANAGED.YES);
-        clusterHostService.save(clusterHostDO);
+        clusterHostService.saveHost(clusterHostDO);
     }
 
     @Override
@@ -324,7 +324,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
      * 获取部署模式
      */
     private String getDepMode(Integer clusterId) {
-        ClusterInfoDTO clusterInfoDTO = clusterInfoService.getById(clusterId);
+        ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(clusterId);
         return clusterInfoDTO.depType();
     }
 

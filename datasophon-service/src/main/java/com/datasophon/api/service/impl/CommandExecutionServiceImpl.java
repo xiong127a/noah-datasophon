@@ -41,14 +41,14 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.enums.RoleType;
-import com.datasophon.dao.enums.ServiceRoleType;
+import com.datasophon.common.enums.ServiceRoleType;
 import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.util.Timeout;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import scala.concurrent.duration.Duration;
+
 import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Date;
@@ -91,9 +91,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
                     hostCommandEntity.setCommandState(CommandState.CANCEL);
                     hostCommandEntity.setCommandProgress(100);
-                    ClusterServiceCommandHostCommandDTO updatedDTO = hostCommandConverter
-                            .entityToDto(hostCommandEntity);
-                    hostCommandService.updateByHostCommandId(updatedDTO);
+                    hostCommandService.updateByHostCommandId(hostCommandEntity);
 
                     UpdateCommandHostMessage message = new UpdateCommandHostMessage();
                     message.setCommandId(commandId);
@@ -130,8 +128,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
             hostCommand.setResultMsg(execOut);
             logger.info("{} in {} failed", hostCommand.getCommandName(), hostCommand.getHostname());
         }
-        ClusterServiceCommandHostCommandDTO updatedDTO = hostCommandConverter.entityToDto(hostCommand);
-        hostCommandService.updateByHostCommandId(updatedDTO);
+        hostCommandService.updateByHostCommandId(hostCommand);
 
         // 更新command host进度
         // 更新command进度
