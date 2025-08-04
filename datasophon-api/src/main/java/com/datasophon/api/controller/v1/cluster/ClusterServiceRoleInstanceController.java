@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
@@ -39,8 +40,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-@RestController
-@RequestMapping("/api/v1/cluster/service/role/instance")
+@ApiVersion(path = "cluster/service/role/instance")
 public class ClusterServiceRoleInstanceController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceController.class);

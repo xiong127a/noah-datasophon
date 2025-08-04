@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterUserTenant;
@@ -33,8 +34,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-@RestController
-@RequestMapping("/api/v1/cluster/user/tenant")
+@ApiVersion(path = "cluster/user/tenant")
 public class ClusterUserTenantController {
 
     @Autowired

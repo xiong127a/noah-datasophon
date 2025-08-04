@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
@@ -41,8 +42,7 @@ import java.util.Map;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-@RestController
-@RequestMapping("/api/v1/cluster/service/command")
+@ApiVersion(path = "cluster/service/command")
 public class ClusterServiceCommandController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandController.class);

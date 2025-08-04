@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.service.ClusterYarnQueueService;
 import com.datasophon.api.converter.ClusterYarnQueueConverter;
 import com.datasophon.common.dto.ClusterYarnQueueDTO;
@@ -38,8 +39,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01 21:11:13
  */
-@RestController
-@RequestMapping("/api/v1/cluster/yarn/queue")
+@ApiVersion(path = "cluster/yarn/queue")
 public class ClusterYarnQueueController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueController.class);
