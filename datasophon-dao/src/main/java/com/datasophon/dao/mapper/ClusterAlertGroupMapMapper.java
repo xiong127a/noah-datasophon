@@ -25,11 +25,12 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群告警组映射表
+ * 集群告警组映射数据访问对象
+ * 提供集群告警组映射的数据库操作
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterAlertGroupMapMapper extends BaseMapper<ClusterAlertGroupMap> {

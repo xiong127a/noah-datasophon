@@ -17,19 +17,27 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.ClusterAlertGroupMapConverter;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
+import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
+import com.datasophon.common.vo.ClusterAlertGroupMapVO;
 import com.datasophon.common.vo.Result;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
+import java.util.List;
 
 /**
- * @author 63588
+ * 集群告警组映射控制器
+ * 提供集群告警组映射的REST API接口
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @ApiVersion(path = "cluster/alert/group/map")
 public class ClusterAlertGroupMapController {
@@ -37,56 +45,62 @@ public class ClusterAlertGroupMapController {
     @Autowired
     private ClusterAlertGroupMapService clusterAlertGroupMapService;
 
-
+    @Autowired
+    private ClusterAlertGroupMapConverter clusterAlertGroupMapConverter;
 
     /**
-     * 列表
+     * 根据集群ID获取告警组映射列表
      */
     @RequestMapping("/list")
-    public Result list() {
-
-        return Result.success();
+    public Result<List<ClusterAlertGroupMapVO>> list(@RequestParam("clusterId") Integer clusterId) {
+        // 调用Service层方法，获取DTO列表
+        List<ClusterAlertGroupMapDTO> dtoList = clusterAlertGroupMapService.getByClusterId(clusterId);
+        // Controller层：DTO → VO转换
+        List<ClusterAlertGroupMapVO> voList = dtoList.stream()
+                .map(clusterAlertGroupMapConverter::dtoToVo)
+                .toList();
+        return Result.success(voList);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        ClusterAlertGroupMap clusterAlertGroupMap = clusterAlertGroupMapService.getById(id);
-
-        return Result.success().put("clusterAlertGroupMap", clusterAlertGroupMap);
+    public Result<ClusterAlertGroupMapVO> info(@PathVariable("id") Integer id) {
+        // 调用Service层方法，获取DTO
+        ClusterAlertGroupMapDTO dto = clusterAlertGroupMapService.getByIdAsDto(id);
+        // Controller层：DTO → VO转换
+        ClusterAlertGroupMapVO vo = clusterAlertGroupMapConverter.dtoToVo(dto);
+        return Result.success(vo);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/save")
-    public Result save(@RequestBody ClusterAlertGroupMap clusterAlertGroupMap) {
-        clusterAlertGroupMapService.save(clusterAlertGroupMap);
-
-        return Result.success();
+    public Result<String> save(@RequestBody ClusterAlertGroupMapDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterAlertGroupMapService.saveAlertGroupMap(dto);
+        return Result.success("保存成功");
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterAlertGroupMap clusterAlertGroupMap) {
-
-        clusterAlertGroupMapService.updateById(clusterAlertGroupMap);
-
-        return Result.success();
+    public Result<String> update(@RequestBody ClusterAlertGroupMapDTO dto) {
+        // Controller层直接传递DTO给Service层
+        clusterAlertGroupMapService.updateAlertGroupMap(dto);
+        return Result.success("更新成功");
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterAlertGroupMapService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    public Result<String> delete(@RequestBody Integer[] ids) {
+        clusterAlertGroupMapService.removeByIds(List.of(ids));
+        return Result.success("删除成功");
     }
 
 }

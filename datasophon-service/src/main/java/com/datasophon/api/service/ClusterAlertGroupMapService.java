@@ -17,16 +17,49 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
 import com.datasophon.dao.entity.ClusterAlertGroupMap;
 import com.mybatisflex.core.service.IService;
 
+import java.util.List;
+
 /**
- * 集群告警组映射服务
+ * 集群告警组映射服务接口
+ * 提供集群告警组映射的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-04
  */
 public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupMap> {
 
+    /**
+     * 根据集群ID获取告警组映射列表
+     *
+     * @param clusterId 集群ID
+     * @return 告警组映射DTO列表
+     */
+    List<ClusterAlertGroupMapDTO> getByClusterId(Integer clusterId);
+
+    /**
+     * 根据ID获取告警组映射DTO
+     *
+     * @param id 告警组映射ID
+     * @return 告警组映射DTO
+     */
+    ClusterAlertGroupMapDTO getByIdAsDto(Integer id);
+
+    /**
+     * 保存告警组映射
+     *
+     * @param dto 告警组映射DTO
+     */
+    void saveAlertGroupMap(ClusterAlertGroupMapDTO dto);
+
+    /**
+     * 更新告警组映射
+     *
+     * @param dto 告警组映射DTO
+     */
+    void updateAlertGroupMap(ClusterAlertGroupMapDTO dto);
 }
