@@ -85,6 +85,24 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
         return this.selectListByQuery(query);
     }
 
+    /**
+     * 根据角色组类型和服务实例ID统计数量
+     * 用于ServiceInstallService中生成新角色组名称
+     * 
+     * @param roleGroupType 角色组类型
+     * @param serviceInstanceId 服务实例ID
+     * @return 数量
+     */
+    default long countByRoleGroupTypeAndServiceInstanceId(
+            @Param("roleGroupType") String roleGroupType,
+            @Param("serviceInstanceId") Integer serviceInstanceId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq(roleGroupType)
+                .and(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId);
+
+        return this.selectCountByQuery(query);
+    }
+
     // 基础CRUD方法已由BaseMapper提供，此处只保留业务特定查询方法
 
 }

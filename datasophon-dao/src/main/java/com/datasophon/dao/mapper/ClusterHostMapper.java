@@ -21,17 +21,23 @@ import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.enums.MANAGED;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.core.update.UpdateChain;
+import com.mybatisflex.core.query.QueryWrapper;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+// 使用lambda表达式方式，不依赖静态表定义
+
 /**
  * 集群主机表
+ * 按照架构重构规范，迁移QueryChain到DAO层
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
@@ -40,39 +46,39 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
      * 根据主机名查询主机
      */
     default ClusterHostDO selectByHostname(@Param("hostname") String hostname) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getHostname).eq(hostname)
-                .one();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getHostname).eq(hostname);
+        return this.selectOneByQuery(query);
     }
 
     /**
      * 根据IP查询主机
      */
     default ClusterHostDO selectByIp(@Param("ip") String ip) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getIp).eq(ip)
-                .one();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getIp).eq(ip);
+        return this.selectOneByQuery(query);
     }
 
     /**
      * 根据集群ID查询所有受管理的主机
      */
     default List<ClusterHostDO> selectByClusterId(@Param("clusterId") Integer clusterId) {
-        return QueryChain.of(ClusterHostDO.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
-                .list();
+                .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
+        return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID查询所有受管理的主机，按主机名排序
      */
     default List<ClusterHostDO> selectManagedHostsByClusterIdOrderByHostname(@Param("clusterId") Integer clusterId) {
-        return QueryChain.of(ClusterHostDO.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
                 .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
-                .orderBy(ClusterHostDO::getHostname).asc()
-                .list();
+                .orderBy(ClusterHostDO::getHostname, true);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -85,51 +91,47 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
             @Param("cpuArchitecture") String cpuArchitecture,
             @Param("hostState") Integer hostState,
             @Param("orderType") String orderType) {
-        QueryChain<ClusterHostDO> queryChain = QueryChain.of(ClusterHostDO.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
                 .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
 
         if (StringUtils.isNotBlank(cpuArchitecture)) {
-            queryChain.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);
+            query.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);
         }
 
         if (hostState != null) {
-            queryChain.and(ClusterHostDO::getHostState).eq(hostState);
+            query.and(ClusterHostDO::getHostState).eq(hostState);
         }
 
         if (StringUtils.isNotBlank(ip)) {
-            queryChain.and(ClusterHostDO::getIp).like("%" + ip + "%");
+            query.and(ClusterHostDO::getIp).like("%" + ip + "%");
         }
 
         if (StringUtils.isNotBlank(hostname)) {
-            queryChain.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
+            query.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
         }
 
-        if ("asc".equals(orderType)) {
-            queryChain.orderBy(ClusterHostDO::getHostname).asc();
-        } else {
-            queryChain.orderBy(ClusterHostDO::getHostname).desc();
-        }
+        query.orderBy(ClusterHostDO::getHostname, "asc".equals(orderType));
 
-        return queryChain.page(page);
+        return this.paginate(page, query);
     }
 
     /**
      * 根据ID列表查询主机
      */
     default List<ClusterHostDO> selectByIds(@Param("ids") List<String> ids) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getId).in(ids)
-                .list();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getId).in(ids);
+        return this.selectListByQuery(query);
     }
 
     /**
      * 根据主机名列表查询主机
      */
     default List<ClusterHostDO> selectByHostnames(@Param("hostnames") List<String> hostnames) {
-        return QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getHostname).in(hostnames)
-                .list();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getHostname).in(hostnames);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -137,18 +139,18 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
      */
     default List<ClusterHostDO> selectByClusterIdAndRack(@Param("clusterId") Integer clusterId,
             @Param("rack") String rack) {
-        return QueryChain.of(ClusterHostDO.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getRack).eq(rack)
-                .list();
+                .and(ClusterHostDO::getRack).eq(rack);
+        return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID删除主机
      */
     default void deleteByClusterId(@Param("clusterId") Integer clusterId) {
-        UpdateChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .remove();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getClusterId).eq(clusterId);
+        this.deleteByQuery(query);
     }
 }
