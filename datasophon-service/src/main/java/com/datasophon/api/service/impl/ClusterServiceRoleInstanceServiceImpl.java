@@ -358,7 +358,8 @@ public class ClusterServiceRoleInstanceServiceImpl
     public List<ClusterServiceRoleInstanceDTO> getRunningServiceRoleInstanceListByServiceId(
             Integer serviceInstanceId) {
         // SQL逻辑已迁移到DAO层
-        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceIdAndState(serviceInstanceId, ServiceRoleState.RUNNING);
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceIdAndState(serviceInstanceId,
+                ServiceRoleState.RUNNING);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
     }
 
@@ -366,7 +367,8 @@ public class ClusterServiceRoleInstanceServiceImpl
     public void restartObsoleteService(Integer roleGroupId) {
         ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService.getById(roleGroupId);
         // SQL逻辑已迁移到DAO层
-        List<ClusterServiceRoleInstanceEntity> list = getMapper().selectByServiceIdAndNeedRestart(roleGroup.getServiceInstanceId(), NeedRestart.YES);
+        List<ClusterServiceRoleInstanceEntity> list = getMapper()
+                .selectByServiceIdAndNeedRestart(roleGroup.getServiceInstanceId(), NeedRestart.YES);
 
         if (Objects.nonNull(list) && !list.isEmpty()) {
             List<String> ids = list.stream().map(e -> e.getId() + "").toList();
@@ -395,7 +397,8 @@ public class ClusterServiceRoleInstanceServiceImpl
             }
         }
         // 查询已退役节点，SQL逻辑已迁移到DAO层
-        List<ClusterServiceRoleInstanceEntity> list = getMapper().selectByStateAndIds(ServiceRoleState.DECOMMISSIONING, serviceRoleInstanceIds);
+        List<ClusterServiceRoleInstanceEntity> list = getMapper().selectByStateAndIds(ServiceRoleState.DECOMMISSIONING,
+                serviceRoleInstanceIds);
 
         // 添加已退役节点到黑名单
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
