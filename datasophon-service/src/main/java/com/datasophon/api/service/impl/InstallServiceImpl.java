@@ -26,9 +26,12 @@ import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
 import com.datasophon.api.master.WorkerStartActor;
+import com.datasophon.api.converter.InstallStepConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
+import com.datasophon.common.dto.InstallStepDTO;
+import com.datasophon.dao.mapper.InstallStepMapper;
 import com.datasophon.api.service.checker.common.CommandResult;
 
 import com.datasophon.api.service.host.ClusterHostService;
@@ -38,7 +41,6 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.dto.HostCheckStatusDto;
-import com.datasophon.common.dto.InstallStepDto;
 import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
@@ -60,13 +62,12 @@ import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
-import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.sshd.client.session.ClientSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -76,63 +77,131 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * 安装服务实现类
+ * 负责处理集群安装流程、主机检查、Agent分发等核心业务逻辑
+ * 支持传统和Kubernetes两种部署模式
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+@Slf4j
 @Service("installService")
-public class InstallServiceImpl implements InstallService {
-
-    private static final Logger logger = LoggerFactory.getLogger(InstallServiceImpl.class);
+@RequiredArgsConstructor
+public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallStepEntity> implements InstallService {
 
     // 添加一个原子计数器，用于控制日志打印频率
     private static final AtomicInteger logCounter = new AtomicInteger(0);
     private static final int LOG_PRINT_INTERVAL = 10;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+    // 依赖注入 - 使用构造器注入
+    private final ClusterInfoService clusterInfoService;
+    private final ClusterHostService hostService;
+    private final OsInfoService osInfoService;
+    private final K8sToClusterHostConverter k8sToClusterHostConverter;
+    private final InstallStepConverter installStepConverter;
 
-    @Autowired
-    private ClusterHostService hostService;
-
-    @Autowired
-    private OsInfoService osInfoService;
-
+    // 线程池需要特殊处理，因为有@Qualifier注解，使用字段注入
     @Qualifier("osInfoExecutor")
-    @Autowired
-    private ExecutorService osInfoExecutor;
+    private final ExecutorService osInfoExecutor;
 
     @Qualifier("hardwareInfoExecutor")
-    @Autowired
-    private ExecutorService hardwareInfoExecutor;
-
-    @Autowired
-    private K8sToClusterHostConverter k8sToClusterHostConverter;
+    private final ExecutorService hardwareInfoExecutor;
 
     @Override
-    public InstallStepDto getInstallStep(Integer type) {
+    public List<InstallStepDTO> getInstallStepsByType(Integer installType) {
         try {
-            List<InstallStepEntity> list = QueryChain.of(InstallStepEntity.class)
-                    .where(InstallStepEntity::getInstallType).eq(type)
-                    .list();
+            if (installType == null) {
+                throw new RuntimeException("安装类型不能为空");
+            }
 
-            // 转换为Map格式以保持兼容性
-            List<Map<String, Object>> steps = list.stream()
-                    .map(step -> {
-                        Map<String, Object> stepMap = new HashMap<>();
-                        stepMap.put("id", step.getId());
-                        stepMap.put("stepName", step.getStepName());
-                        stepMap.put("stepDesc", step.getStepDesc());
-//                        stepMap.put("stepOrder", step.getStepOrder());
-                        stepMap.put("installType", step.getInstallType());
-                        return stepMap;
-                    })
-                    .collect(Collectors.toList());
-
-            return InstallStepDto.builder()
-                    .steps(steps)
-                    .type(type)
-                    .currentStep(0)
-                    .build();
+            List<InstallStepEntity> entities = getMapper().selectByInstallType(installType);
+            return installStepConverter.entityListToDtoList(entities);
         } catch (Exception e) {
-            logger.error("获取安装步骤失败", e);
-            throw new ServiceException("获取安装步骤失败: " + e.getMessage());
+            log.error("根据类型获取安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("根据类型获取安装步骤失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public InstallStepDTO getInstallStepById(Integer id) {
+        try {
+            if (id == null) {
+                throw new RuntimeException("安装步骤ID不能为空");
+            }
+
+            InstallStepEntity entity = getById(id);
+            if (entity == null) {
+                throw new RuntimeException("未找到ID为 " + id + " 的安装步骤");
+            }
+
+            return installStepConverter.entityToDto(entity);
+        } catch (Exception e) {
+            log.error("根据ID获取安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("根据ID获取安装步骤失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public InstallStepDTO saveInstallStep(InstallStepDTO installStepDTO) {
+        try {
+            if (installStepDTO == null) {
+                throw new RuntimeException("安装步骤信息不能为空");
+            }
+
+            InstallStepEntity entity = installStepConverter.dtoToEntity(installStepDTO);
+            boolean result = save(entity);
+
+            if (!result) {
+                throw new RuntimeException("保存安装步骤失败");
+            }
+
+            return installStepConverter.entityToDto(entity);
+        } catch (Exception e) {
+            log.error("保存安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("保存安装步骤失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public InstallStepDTO updateInstallStep(InstallStepDTO installStepDTO) {
+        try {
+            if (installStepDTO == null || installStepDTO.id() == null) {
+                throw new RuntimeException("安装步骤信息或ID不能为空");
+            }
+
+            // 检查记录是否存在
+            InstallStepEntity existingEntity = getById(installStepDTO.id());
+            if (existingEntity == null) {
+                throw new RuntimeException("未找到ID为 " + installStepDTO.id() + " 的安装步骤");
+            }
+
+            InstallStepEntity entity = installStepConverter.dtoToEntity(installStepDTO);
+            boolean result = updateById(entity);
+
+            if (!result) {
+                throw new RuntimeException("更新安装步骤失败");
+            }
+
+            return installStepConverter.entityToDto(entity);
+        } catch (Exception e) {
+            log.error("更新安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("更新安装步骤失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean removeInstallStepByIds(List<Integer> ids) {
+        try {
+            if (ids == null || ids.isEmpty()) {
+                throw new RuntimeException("删除的ID列表不能为空");
+            }
+
+            return removeByIds(ids);
+        } catch (Exception e) {
+            log.error("批量删除安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("批量删除安装步骤失败: " + e.getMessage());
         }
     }
 
@@ -165,21 +234,21 @@ public class InstallServiceImpl implements InstallService {
             }
 
             String depType = clusterInfo.getDepType();
-            logger.info("集群ID: {}, 部署类型: {}", clusterId, depType);
+            log.info("集群ID: {}, 部署类型: {}", clusterId, depType);
 
             // 根据部署类型路由到不同的处理方法
             if ("Kubernetes".equals(depType)) {
-                logger.info("检测到Kubernetes集群，使用K8S API获取节点列表");
+                log.info("检测到Kubernetes集群，使用K8S API获取节点列表");
                 return analysisHostListForKubernetes(clusterId, kubeConfigContent, page, pageSize);
             } else {
-                logger.info("检测到传统集群，使用SSH方式获取主机列表");
+                log.info("检测到传统集群，使用SSH方式获取主机列表");
                 return analysisHostListForTraditional(clusterId, ips, sshUser, sshPort, sshPassword, page, pageSize);
             }
 
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
+            log.error("解析主机列表失败: {}", ExceptionUtil.getSimpleMessage(e));
             throw new ServiceException("解析主机列表失败: " + e.getMessage());
         }
     }
@@ -236,7 +305,7 @@ public class InstallServiceImpl implements InstallService {
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
+            log.error("传统集群主机列表解析失败: {}", ExceptionUtil.getSimpleMessage(e));
             throw new ServiceException("传统集群主机列表解析失败: " + e.getMessage());
         }
     }
@@ -381,7 +450,7 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
                 // 清除错误信息
                 hostInfo.setSshErrorMsg("");
-                logger.info("主机[{}]的SSH连接状态被纠正为SUCCESS，因为已成功获取主机信息", hostInfo.getIp());
+                log.info("主机[{}]的SSH连接状态被纠正为SUCCESS，因为已成功获取主机信息", hostInfo.getIp());
             }
         }
     }
@@ -409,54 +478,58 @@ public class InstallServiceImpl implements InstallService {
 
         // 1. 检查缓存中是否存在有效的主机列表
         if (isCacheValid(clusterId)) {
-            logger.debug("从缓存获取主机列表");
+            log.debug("从缓存获取主机列表");
             hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
             // 获取已收集主机集合，如果不存在则创建新的
             if (CacheUtils.constainsKey(collectedHostsKey)) {
-                collectedHosts = Collections.synchronizedSet((Set<String>) CacheUtils.get(collectedHostsKey));
-                logger.debug("从缓存获取已收集主机列表，已收集{}台主机", collectedHosts.size());
+                @SuppressWarnings("unchecked")
+                Set<String> cachedCollectedHosts = (Set<String>) CacheUtils.get(collectedHostsKey);
+                collectedHosts = Collections.synchronizedSet(cachedCollectedHosts);
+                log.debug("从缓存获取已收集主机列表，已收集{}台主机", collectedHosts.size());
             } else {
                 collectedHosts = Collections.synchronizedSet(new HashSet<>());
                 CacheUtils.put(collectedHostsKey, collectedHosts);
-                logger.debug("创建新的已收集主机列表缓存");
+                log.debug("创建新的已收集主机列表缓存");
             }
 
             // 获取正在收集的主机集合，如果不存在则创建新的
             if (CacheUtils.constainsKey(collectingHostsKey)) {
-                collectingHosts = Collections.synchronizedSet((Set<String>) CacheUtils.get(collectingHostsKey));
-                logger.debug("从缓存获取正在收集的主机列表，共{}台主机", collectingHosts.size());
+                @SuppressWarnings("unchecked")
+                Set<String> cachedCollectingHosts = (Set<String>) CacheUtils.get(collectingHostsKey);
+                collectingHosts = Collections.synchronizedSet(cachedCollectingHosts);
+                log.debug("从缓存获取正在收集的主机列表，共{}台主机", collectingHosts.size());
             } else {
                 collectingHosts = Collections.synchronizedSet(new HashSet<>());
                 CacheUtils.put(collectingHostsKey, collectingHosts);
-                logger.debug("创建新的正在收集主机列表缓存");
+                log.debug("创建新的正在收集主机列表缓存");
             }
         } else {
-            logger.info("处理主机列表: 集群ID={}, 主机数量={}, 用户={}, 端口={}",
+            log.info("处理主机列表: 集群ID={}, 主机数量={}, 用户={}, 端口={}",
                     clusterId, hosts.split(Constants.COMMA).length, sshUser, sshPort);
 
             hostMap = processHostList(clusterId, hosts, sshPort, sshUser, sshPassword);
 
             // 将结果存入缓存
             CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-            logger.info("主机列表已存入缓存，共{}台主机", hostMap.size());
+            log.info("主机列表已存入缓存，共{}台主机", hostMap.size());
 
             // 创建新的已收集主机集合 - 使用线程安全集合
             collectedHosts = Collections.synchronizedSet(new HashSet<>());
             CacheUtils.put(collectedHostsKey, collectedHosts);
-            logger.debug("创建新的已收集主机列表缓存");
+            log.debug("创建新的已收集主机列表缓存");
 
             // 创建新的正在收集主机集合 - 使用线程安全集合
             collectingHosts = Collections.synchronizedSet(new HashSet<>());
             CacheUtils.put(collectingHostsKey, collectingHosts);
-            logger.debug("创建新的正在收集主机列表缓存");
+            log.debug("创建新的正在收集主机列表缓存");
         }
 
         // 如果需要，触发当前分页主机的操作系统信息收集
         // 每10次请求只打印一次日志
         int currentCount = logCounter.incrementAndGet();
         if (currentCount % LOG_PRINT_INTERVAL == 1) {
-            logger.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
+            log.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
         }
         // 使用线程池进行主机信息收集，保证主接口立即返回
         osInfoExecutor.execute(() -> {
@@ -487,7 +560,7 @@ public class InstallServiceImpl implements InstallService {
                         sortedHosts = allSortedHosts.subList(offset, end);
                         // 每10次请求只打印一次日志
                         if (currentCount % LOG_PRINT_INTERVAL == 1) {
-                            logger.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
+                            log.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
                                     page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize),
                                     offset + 1,
                                     end,
@@ -496,12 +569,12 @@ public class InstallServiceImpl implements InstallService {
                     } else {
                         // 参数无效，使用所有主机
                         sortedHosts = allSortedHosts;
-                        logger.warn("分页参数无效(offset={}, size={}), 将收集所有主机信息", offset, allSortedHosts.size());
+                        log.warn("分页参数无效(offset={}, size={}), 将收集所有主机信息", offset, allSortedHosts.size());
                     }
                 } else {
                     // 未提供分页参数，使用所有主机
                     sortedHosts = allSortedHosts;
-                    logger.info("未提供分页参数，将收集所有{}台主机的信息", sortedHosts.size());
+                    log.info("未提供分页参数，将收集所有{}台主机的信息", sortedHosts.size());
                 }
 
                 // 过滤出未收集且当前不在收集过程中的主机
@@ -519,12 +592,12 @@ public class InstallServiceImpl implements InstallService {
                 if (pendingHosts.isEmpty()) {
                     // 每10次请求只打印一次日志
                     if (currentCount % LOG_PRINT_INTERVAL == 1) {
-                        logger.info("当前页所有主机均已收集过信息或正在收集中，无需再次收集");
+                        log.info("当前页所有主机均已收集过信息或正在收集中，无需再次收集");
                     }
                     return;
                 }
 
-                logger.info("当前页有{}台主机等待收集信息，开始收集: {}",
+                log.info("当前页有{}台主机等待收集信息，开始收集: {}",
                         pendingHosts.size(),
                         pendingHosts.stream().map(HostInfo::getIp).collect(Collectors.joining(", ")));
 
@@ -538,7 +611,7 @@ public class InstallServiceImpl implements InstallService {
                 }
 
                 // ==================== 第一阶段：并行收集所有主机的基本信息 ====================
-                logger.info("【第一阶段开始】首先为所有{}台主机并行收集基本信息（主机名和操作系统类型）", pendingHosts.size());
+                log.info("【第一阶段开始】首先为所有{}台主机并行收集基本信息（主机名和操作系统类型）", pendingHosts.size());
 
                 // 用于跟踪第一阶段成功的主机
                 List<HostInfo> firstPhaseSuccessHosts = Collections.synchronizedList(new ArrayList<>());
@@ -555,7 +628,7 @@ public class InstallServiceImpl implements InstallService {
                         thread.setName("os-info-executor-" + hostInfo.getIp());
 
                         try {
-                            logger.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
+                            log.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
                             boolean sshSuccess = validateSshConnection(hostInfo);
 
                             // 如果SSH连接失败，设置相关错误状态并跳过后续操作
@@ -579,7 +652,7 @@ public class InstallServiceImpl implements InstallService {
                                     CacheUtils.put(collectingHostsKey, collectingHosts);
                                 }
 
-                                logger.warn("主机[{}]SSH连接失败，标记为已处理", hostInfo.getIp());
+                                log.warn("主机[{}]SSH连接失败，标记为已处理", hostInfo.getIp());
                                 return;
                             }
 
@@ -590,12 +663,12 @@ public class InstallServiceImpl implements InstallService {
                             try {
                                 // 使用第一阶段收集方法
                                 osInfoService.collectPhaseOneInfo(hostInfo);
-                                logger.info("主机[{}]的基本信息收集完成", hostInfo.getIp());
+                                log.info("主机[{}]的基本信息收集完成", hostInfo.getIp());
 
                                 // 将成功的主机添加到列表，用于第二阶段处理
                                 firstPhaseSuccessHosts.add(hostInfo);
                             } catch (Exception e) {
-                                logger.error("收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                                log.error("收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
                                 // 异常情况仍然标记为已收集，避免重复尝试
                                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
                                 hostInfo.setOsErrorMsg("收集基本信息异常: " + e.getMessage());
@@ -614,7 +687,7 @@ public class InstallServiceImpl implements InstallService {
                                 }
                             }
                         } catch (Exception e) {
-                            logger.error("为主机[{}]执行基本信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
+                            log.error("为主机[{}]执行基本信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
                             // 设置错误状态和详细信息
                             hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
                             hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
@@ -649,14 +722,14 @@ public class InstallServiceImpl implements InstallService {
                 try {
                     CompletableFuture.allOf(firstPhaseFutures.toArray(new CompletableFuture[0])).get();
                 } catch (Exception e) {
-                    logger.error("等待第一阶段任务完成时发生异常: {}", e.getMessage(), e);
+                    log.error("等待第一阶段任务完成时发生异常: {}", e.getMessage(), e);
                 }
 
-                logger.info("【第一阶段完成】所有主机基本信息收集完毕，成功收集{}台主机的基本信息", firstPhaseSuccessHosts.size());
+                log.info("【第一阶段完成】所有主机基本信息收集完毕，成功收集{}台主机的基本信息", firstPhaseSuccessHosts.size());
 
                 // ==================== 第二阶段：并行收集详细信息 ====================
                 if (!firstPhaseSuccessHosts.isEmpty()) {
-                    logger.info("【第二阶段开始】开始并行收集{}台主机的详细硬件信息", firstPhaseSuccessHosts.size());
+                    log.info("【第二阶段开始】开始并行收集{}台主机的详细硬件信息", firstPhaseSuccessHosts.size());
 
                     // 创建第二阶段任务列表
                     List<CompletableFuture<Void>> secondPhaseFutures = new ArrayList<>();
@@ -670,11 +743,11 @@ public class InstallServiceImpl implements InstallService {
                             thread.setName("hardware-info-executor-" + hostInfo.getIp());
 
                             try {
-                                logger.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
+                                log.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
 
                                 // 使用第二阶段收集方法
                                 osInfoService.collectPhaseTwoInfo(hostInfo);
-                                logger.info("主机[{}]的详细信息收集完成", hostInfo.getIp());
+                                log.info("主机[{}]的详细信息收集完成", hostInfo.getIp());
 
                                 // 标记为已完全收集
                                 synchronized (collectedHosts) {
@@ -689,9 +762,9 @@ public class InstallServiceImpl implements InstallService {
                                     CacheUtils.put(collectingHostsKey, collectingHosts);
                                 }
 
-                                logger.info("主机[{}]所有信息收集完成，已更新收集状态", hostInfo.getIp());
+                                log.info("主机[{}]所有信息收集完成，已更新收集状态", hostInfo.getIp());
                             } catch (Exception e) {
-                                logger.error("收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                                log.error("收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
                                 // 即使第二阶段失败，也标记为已收集，因为基本信息已经收集完成
                                 synchronized (collectedHosts) {
                                     collectedHosts.add(hostInfo.getIp());
@@ -705,7 +778,7 @@ public class InstallServiceImpl implements InstallService {
                                     CacheUtils.put(collectingHostsKey, collectingHosts);
                                 }
 
-                                logger.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
+                                log.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
                             } finally {
                                 // 恢复线程原始名称
                                 thread.setName(threadOriginalName);
@@ -719,17 +792,17 @@ public class InstallServiceImpl implements InstallService {
                     try {
                         CompletableFuture.allOf(secondPhaseFutures.toArray(new CompletableFuture[0])).get();
                     } catch (Exception e) {
-                        logger.error("等待第二阶段任务完成时发生异常: {}", e.getMessage(), e);
+                        log.error("等待第二阶段任务完成时发生异常: {}", e.getMessage(), e);
                     }
 
-                    logger.info("【第二阶段完成】所有主机详细信息收集完毕");
+                    log.info("【第二阶段完成】所有主机详细信息收集完毕");
                 } else {
-                    logger.info("【第二阶段跳过】没有主机成功通过第一阶段，跳过详细信息收集");
+                    log.info("【第二阶段跳过】没有主机成功通过第一阶段，跳过详细信息收集");
                 }
 
-                logger.info("当前页所有主机的信息收集任务已全部完成，共处理{}台主机", pendingHosts.size());
+                log.info("当前页所有主机的信息收集任务已全部完成，共处理{}台主机", pendingHosts.size());
             } catch (Exception e) {
-                logger.error("主机信息收集线程异常: {}", e.getMessage(), e);
+                log.error("主机信息收集线程异常: {}", e.getMessage(), e);
             }
         });
 
@@ -857,7 +930,7 @@ public class InstallServiceImpl implements InstallService {
             hostInfo.setSshErrorMsg(formattedErrorMsg);
             hostInfo.setErrorMessage("SSH连接失败：" + formattedErrorMsg);
 
-            logger.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), formattedErrorMsg, e);
+            log.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), formattedErrorMsg, e);
             return false;
         } finally {
             // 安全关闭会话，避免关闭异常影响验证结果
@@ -866,7 +939,7 @@ public class InstallServiceImpl implements InstallService {
                     MinaUtils.closeConnection(session);
                 } catch (Exception e) {
                     // 仅记录关闭连接时的异常，不影响验证结果
-                    logger.warn("关闭主机[{}]的SSH连接时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                    log.warn("关闭主机[{}]的SSH连接时发生异常: {}", hostInfo.getIp(), e.getMessage());
                 }
             }
         }
@@ -886,7 +959,7 @@ public class InstallServiceImpl implements InstallService {
             String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
-        logger.info("解析主机列表");
+        log.info("解析主机列表");
         String[] hostArray = hosts.split(Constants.COMMA);
 
         // 2. 遍历处理每个主机，将结果存入临时Map
@@ -896,7 +969,7 @@ public class InstallServiceImpl implements InstallService {
             processHostWithoutOsInfo(host, sshPort, sshUser, sshPassword, clusterId, tempMap);
         }
 
-//        List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+        // List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
         List<CheckItem> checkItems = null;
         // 3. 将所有主机信息添加到返回结果中，以IP为键
         for (HostInfo hostInfo : tempMap.values()) {
@@ -1031,13 +1104,13 @@ public class InstallServiceImpl implements InstallService {
         // 使用host作为连接池的键
         String ip = hostInfo.getIp();
         // 创建新会话
-        logger.info("创建主机 {} 的新SSH连接", ip);
+        log.info("创建主机 {} 的新SSH连接", ip);
         ClientSession newSession = MinaUtils.openConnectionWithPassword(hostInfo);
         if (newSession != null) {
             // 将新会话添加到Map中
-            logger.info("成功创建主机 {} 的SSH连接", ip);
+            log.info("成功创建主机 {} 的SSH连接", ip);
         } else {
-            logger.warn("无法创建主机 {} 的SSH连接", ip);
+            log.warn("无法创建主机 {} 的SSH连接", ip);
         }
         return newSession;
     }
@@ -1073,7 +1146,7 @@ public class InstallServiceImpl implements InstallService {
             List<HostInfo> list = map.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(Map.Entry::getValue)
-                    .collect(Collectors.toList());
+                    .toList();
 
             // 统计检查状态
             int totalHosts = list.size();
@@ -1104,7 +1177,7 @@ public class InstallServiceImpl implements InstallService {
                     .successHosts(successHosts)
                     .build();
         } catch (Exception e) {
-            logger.error("获取主机检查状态失败", e);
+            log.error("获取主机检查状态失败", e);
             throw new ServiceException("获取主机检查状态失败: " + e.getMessage());
         }
     }
@@ -1116,12 +1189,13 @@ public class InstallServiceImpl implements InstallService {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             String clusterCode = clusterInfo.getClusterCode();
             String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
+            @SuppressWarnings("unchecked")
             Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
             List<HostInfo> list = map.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(Map.Entry::getValue)
                     .filter(e -> e.getCheckResult().getCode() == 10001)
-                    .collect(Collectors.toList());
+                    .toList();
 
             for (HostInfo hostInfo : list) {
                 if (hostInfo.isManaged()) {
@@ -1130,7 +1204,7 @@ public class InstallServiceImpl implements InstallService {
                     hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.success"));
                     hostInfo.setInstallState(InstallState.SUCCESS);
                 } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
-                    logger.info("start to dispatcher host agent to {}", hostInfo.getIp());
+                    log.info("start to dispatcher host agent to {}", hostInfo.getIp());
                     ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
                             "dispatcherWorkerActor-" + hostInfo.getIp());
                     hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
@@ -1163,7 +1237,7 @@ public class InstallServiceImpl implements InstallService {
             List<HostInfo> result = getListPage(list, offset, pageSize);
             return PageResult.of(result, list.size(), page, pageSize);
         } catch (Exception e) {
-            logger.error("获取主机代理分发列表失败", e);
+            log.error("获取主机代理分发列表失败", e);
             throw new ServiceException("获取主机代理分发列表失败: " + e.getMessage());
         }
     }
@@ -1210,7 +1284,7 @@ public class InstallServiceImpl implements InstallService {
             }
             return true;
         } catch (Exception e) {
-            logger.error("重启主机代理分发失败", e);
+            log.error("重启主机代理分发失败", e);
             throw new BusinessException(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(), "重启主机代理分发失败: " + e.getMessage());
         }
     }
@@ -1222,7 +1296,6 @@ public class InstallServiceImpl implements InstallService {
         // 收集未通过检查的主机信息
         List<Map<String, Object>> failedHosts = new ArrayList<>();
         Map<String, List<String>> hostToFailedItems = new HashMap<>();
-        int totalFailedItems = 0;
 
         // 检查是否存在未完成的主机
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
@@ -1242,9 +1315,8 @@ public class InstallServiceImpl implements InstallService {
                 List<String> failedItemsList = new ArrayList<>();
                 failedItemsList.add("检查未完成");
                 hostToFailedItems.put(hostInfo.getIp(), failedItemsList);
-                totalFailedItems++;
 
-                logger.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getIp());
+                log.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getIp());
                 return false;
             }
         }
@@ -1255,11 +1327,11 @@ public class InstallServiceImpl implements InstallService {
     public boolean cleanupHostCheckResources(Integer clusterId) {
         try {
             if (clusterId == null) {
-                logger.error("集群ID为空，无法清理主机检查资源");
+                log.error("集群ID为空，无法清理主机检查资源");
                 throw new BusinessException(Status.REQUEST_PARAMS_NOT_VALID_ERROR.getCode(), "集群ID不能为空");
             }
 
-            logger.info("开始清理集群[{}]的主机检查资源", clusterId);
+            log.info("开始清理集群[{}]的主机检查资源", clusterId);
 
             // 1. 删除缓存中当前集群ID的所有日志
             // 主要的日志前缀模式
@@ -1273,7 +1345,7 @@ public class InstallServiceImpl implements InstallService {
             // 获取所有的缓存键
             // 由于没有直接获取所有键的方法，我们需要基于前缀前缀模式清理
             for (String prefix : logPrefixes) {
-                logger.info("清理前缀为[{}]的日志缓存", prefix);
+                log.info("清理前缀为[{}]的日志缓存", prefix);
                 // 注意：这里无法遍历所有键，所以我们只能在后续操作中处理相关键
             }
 
@@ -1281,7 +1353,7 @@ public class InstallServiceImpl implements InstallService {
             String logCacheKey = clusterId + "_HOST_CHECK_LOG";
             if (CacheUtils.constainsKey(logCacheKey)) {
                 CacheUtils.removeKey(logCacheKey);
-                logger.info("已清理集群[{}]的主机检查日志缓存", clusterId);
+                log.info("已清理集群[{}]的主机检查日志缓存", clusterId);
             }
 
             // 2. 清理其他与检查相关的缓存
@@ -1301,7 +1373,7 @@ public class InstallServiceImpl implements InstallService {
                                 String itemLogKey = prefix + hostname + "_" + item.getId();
                                 if (CacheUtils.constainsKey(itemLogKey)) {
                                     CacheUtils.removeKey(itemLogKey);
-                                    logger.debug("已清理日志: {}", itemLogKey);
+                                    log.debug("已清理日志: {}", itemLogKey);
                                 }
                             }
                         }
@@ -1317,7 +1389,7 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public boolean cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode) {
         // 此方法虽然定义但实际未使用
-        logger.warn("cancelDispatcherHostAgent方法暂未实现具体逻辑");
+        log.warn("cancelDispatcherHostAgent方法暂未实现具体逻辑");
         return false;
     }
 
@@ -1328,7 +1400,7 @@ public class InstallServiceImpl implements InstallService {
             HostInfo hostInfo = hostInfoEntry.getValue();
             if (hostInfo.getProgress() == 75
                     && DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE) > 1) {
-                logger.info("dispatcher host agent timeout");
+                log.info("dispatcher host agent timeout");
                 hostInfo.setInstallState(InstallState.FAILED);
                 hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
                 hostInfo.setErrMsg("dispatcher host agent timeout");
@@ -1363,17 +1435,17 @@ public class InstallServiceImpl implements InstallService {
                 String commandResult = MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
                 result.put("success", true);
                 result.put("output", commandResult);
-                logger.info("hostAgent command executed successfully on {}: {}", clusterHostDO.getIp(), commandResult);
+                log.info("hostAgent command executed successfully on {}: {}", clusterHostDO.getIp(), commandResult);
             } catch (Exception e) {
                 result.put("success", false);
                 result.put("error", e.getMessage());
-                logger.error("Failed to execute hostAgent command on {}: {}", clusterHostDO.getIp(), e.getMessage());
+                log.error("Failed to execute hostAgent command on {}: {}", clusterHostDO.getIp(), e.getMessage());
             } finally {
                 if (session != null) {
                     try {
                         session.close();
                     } catch (Exception e) {
-                        logger.warn("Failed to close SSH session for {}: {}", clusterHostDO.getIp(), e.getMessage());
+                        log.warn("Failed to close SSH session for {}: {}", clusterHostDO.getIp(), e.getMessage());
                     }
                 }
             }
@@ -1412,10 +1484,10 @@ public class InstallServiceImpl implements InstallService {
                 actor.tell(serviceMessage, ActorRef.noSender());
                 result.put("success", true);
                 result.put("message", "服务命令已发送");
-                logger.info("Service command sent successfully to {}: {}", clusterHostDO.getHostname(),
+                log.info("Service command sent successfully to {}: {}", clusterHostDO.getHostname(),
                         serviceCommandType);
             } catch (Exception e) {
-                logger.error("launcher worker service error!", e);
+                log.error("launcher worker service error!", e);
                 result.put("success", false);
                 result.put("error", "启动服务异常，Cause: " + e.getMessage());
             }
@@ -1437,7 +1509,7 @@ public class InstallServiceImpl implements InstallService {
                 throw new ServiceException("Kubernetes配置不能为空，请先完成集群配置");
             }
 
-            logger.info("开始从Kubernetes API获取节点列表，集群ID: {}", clusterId);
+            log.info("开始从Kubernetes API获取节点列表，集群ID: {}", clusterId);
 
             // 从Kubernetes集群获取节点列表
             List<K8sNodeInfo> k8sNodeInfoList = KubeUtil.getHostListByConfig(kubeConfig);
@@ -1445,18 +1517,18 @@ public class InstallServiceImpl implements InstallService {
                     clusterId);
 
             if (kubernetesHosts.isEmpty()) {
-                logger.warn("未从Kubernetes集群获取到任何节点");
+                log.warn("未从Kubernetes集群获取到任何节点");
                 throw new ServiceException("未找到任何Kubernetes节点，请检查集群配置");
             }
 
-            logger.info("从Kubernetes API获取到 {} 个节点", kubernetesHosts.size());
+            log.info("从Kubernetes API获取到 {} 个节点", kubernetesHosts.size());
 
             // 转换为HostInfo格式
             List<HostInfo> hostInfoList = new ArrayList<>();
             String clusterCode = clusterInfo.getClusterCode();
 
             // 获取检查项列表（K8S模式下也需要检查项用于环境验证）
-//            List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+            // List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
             List<CheckItem> checkItems = null;
             // 保存从K8S API获取的完整节点信息，用于后续保存
             List<ClusterHostDO> kubernetesHostsForSave = new ArrayList<>();
@@ -1475,7 +1547,7 @@ public class InstallServiceImpl implements InstallService {
                 String cpuArchitecture = kubernetesHost.getCpuArchitecture();
                 hostInfo.setCpuArchitecture(cpuArchitecture);
 
-                logger.info("节点 {} (IP: {}) 的完整信息: 核心数={}, 总内存={}GB, 总磁盘={}GB, 架构={}",
+                log.info("节点 {} (IP: {}) 的完整信息: 核心数={}, 总内存={}GB, 总磁盘={}GB, 架构={}",
                         kubernetesHost.getHostname(), kubernetesHost.getIp(),
                         kubernetesHost.getCoreNum(), kubernetesHost.getTotalMem(),
                         kubernetesHost.getTotalDisk(), cpuArchitecture);
@@ -1496,7 +1568,7 @@ public class InstallServiceImpl implements InstallService {
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setMessage("主机已受管");
-                    logger.info("Host {} is already managed in current Kubernetes cluster {}",
+                    log.info("Host {} is already managed in current Kubernetes cluster {}",
                             kubernetesHost.getHostname(), clusterId);
                 } else if (existingHost != null) {
                     // 主机已在其他集群中受管
@@ -1508,7 +1580,7 @@ public class InstallServiceImpl implements InstallService {
                             new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setMessage("主机已在其他集群受管");
-                    logger.info("Host {} is already managed in another cluster {}",
+                    log.info("Host {} is already managed in another cluster {}",
                             kubernetesHost.getHostname(), existingHost.getClusterId());
                 } else {
                     // 主机未受管，Kubernetes模式下校验成功，可以添加
@@ -1520,7 +1592,7 @@ public class InstallServiceImpl implements InstallService {
                             new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
                     hostInfo.setMessage("K8S节点验证成功，可以添加");
-                    logger.info("Host {} is not managed in Kubernetes mode, can be added",
+                    log.info("Host {} is not managed in Kubernetes mode, can be added",
                             kubernetesHost.getHostname());
 
                     // 将可以添加的主机信息保存到列表中，用于后续保存
@@ -1567,8 +1639,8 @@ public class InstallServiceImpl implements InstallService {
             }
             CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
 
-            logger.info("已缓存K8S集群主机列表，共{}台主机", hostMap.size());
-            logger.info("已缓存K8S完整硬件信息，共{}台主机", kubernetesHostsForSave.size());
+            log.info("已缓存K8S集群主机列表，共{}台主机", hostMap.size());
+            log.info("已缓存K8S完整硬件信息，共{}台主机", kubernetesHostsForSave.size());
 
             // 分页处理
             int offset = (page - 1) * pageSize;
@@ -1580,7 +1652,7 @@ public class InstallServiceImpl implements InstallService {
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("获取Kubernetes节点列表失败", e);
+            log.error("获取Kubernetes节点列表失败", e);
             throw new ServiceException("获取Kubernetes节点列表失败: " + e.getMessage());
         }
     }
@@ -1600,12 +1672,12 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public boolean clearHostEnvCheckCache() {
         try {
-            logger.debug("删除主机检查项缓存");
+            log.debug("删除主机检查项缓存");
             CacheUtils.clear();
-            logger.info("主机环境校验缓存清理完成");
+            log.info("主机环境校验缓存清理完成");
             return true;
         } catch (Exception e) {
-            logger.error("清理主机环境校验缓存失败", e);
+            log.error("清理主机环境校验缓存失败", e);
             throw new ServiceException("清理主机环境校验缓存失败: " + e.getMessage());
         }
     }
@@ -1648,7 +1720,7 @@ public class InstallServiceImpl implements InstallService {
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            logger.error("获取主机日志失败", e);
+            log.error("获取主机日志失败", e);
             throw new ServiceException("获取主机日志失败: " + e.getMessage());
         }
     }

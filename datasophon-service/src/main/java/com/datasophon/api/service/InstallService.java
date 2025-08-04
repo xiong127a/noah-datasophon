@@ -18,37 +18,80 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.HostCheckStatusDto;
-import com.datasophon.common.dto.InstallStepDto;
+import com.datasophon.common.dto.InstallStepDTO;
 import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.dao.entity.InstallStepEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 import java.util.Map;
 
-public interface InstallService {
+/**
+ * 安装服务接口
+ * 继承IService提供基础CRUD操作，返回DTO进行数据传输
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+public interface InstallService extends IService<InstallStepEntity> {
 
     /**
-     * 获取安装步骤
+     * 根据安装类型获取安装步骤列表
      * 
-     * @param type 安装类型
-     * @return 安装步骤信息
+     * @param installType 安装类型
+     * @return 安装步骤DTO列表
      */
-    InstallStepDto getInstallStep(Integer type);
+    List<InstallStepDTO> getInstallStepsByType(Integer installType);
+
+    /**
+     * 根据ID获取安装步骤DTO
+     * 
+     * @param id 安装步骤ID
+     * @return 安装步骤DTO
+     */
+    InstallStepDTO getInstallStepById(Integer id);
+
+    /**
+     * 保存安装步骤
+     * 
+     * @param installStepDTO 安装步骤DTO
+     * @return 保存后的安装步骤DTO
+     */
+    InstallStepDTO saveInstallStep(InstallStepDTO installStepDTO);
+
+    /**
+     * 更新安装步骤
+     * 
+     * @param installStepDTO 安装步骤DTO
+     * @return 更新后的安装步骤DTO
+     */
+    InstallStepDTO updateInstallStep(InstallStepDTO installStepDTO);
+
+    /**
+     * 根据ID列表批量删除安装步骤
+     * 
+     * @param ids ID列表
+     * @return 是否删除成功
+     */
+    boolean removeInstallStepByIds(List<Integer> ids);
 
     /**
      * 解析主机列表
      * 
-     * @param clusterId        集群ID
-     * @param ips             主机IP列表
-     * @param sshUser         SSH用户
-     * @param sshPort         SSH端口
-     * @param sshPassword     SSH密码
+     * @param clusterId         集群ID
+     * @param ips               主机IP列表
+     * @param sshUser           SSH用户
+     * @param sshPort           SSH端口
+     * @param sshPassword       SSH密码
      * @param kubeConfigContent K8s配置内容
-     * @param page            页码
-     * @param pageSize        每页大小
+     * @param page              页码
+     * @param pageSize          每页大小
      * @return 解析后的主机列表分页结果
      */
-    PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, 
+    PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort,
             String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
 
     /**
@@ -66,17 +109,18 @@ public interface InstallService {
      * 
      * @param clusterId        集群ID
      * @param installStateCode 安装状态码
-     * @param page            页码
-     * @param pageSize        每页大小
+     * @param page             页码
+     * @param pageSize         每页大小
      * @return 主机代理分发列表分页结果
      */
-    PageResult<HostInfo> dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page, Integer pageSize);
+    PageResult<HostInfo> dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page,
+            Integer pageSize);
 
     /**
      * 重启主机代理分发
      * 
      * @param clusterId 集群ID
-     * @param ips      主机IP列表
+     * @param ips       主机IP列表
      * @return 操作是否成功
      */
     boolean reStartDispatcherHostAgent(Integer clusterId, String ips);
@@ -110,7 +154,7 @@ public interface InstallService {
      * 取消主机代理分发
      * 
      * @param clusterId        集群ID
-     * @param ip              主机IP
+     * @param ip               主机IP
      * @param installStateCode 安装状态码
      * @return 操作是否成功
      */

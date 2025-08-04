@@ -25,7 +25,8 @@ import com.datasophon.common.dto.InstallStepDto;
 import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.vo.Result;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
 import org.springframework.validation.annotation.Validated;
@@ -36,16 +37,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 主机安装控制器
+ * 负责处理主机安装相关的API接口
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
+@Slf4j
 @Validated
 @ApiVersion(path = "host/install")
+@RequiredArgsConstructor
 public class HostInstallController {
 
-    @Autowired
-    private InstallService installService;
-
-    @Autowired
-    private HostCheckService hostCheckService;
-
+    private final InstallService installService;
+    private final HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤
@@ -53,9 +60,14 @@ public class HostInstallController {
     @GetMapping("/getInstallStep")
     public Result<InstallStepDto> getInstallStep(@RequestParam("type") Integer type) {
         try {
+            if (type == null) {
+                return Result.error("安装类型不能为空");
+            }
+            log.debug("获取安装步骤，类型: {}", type);
             InstallStepDto installSteps = installService.getInstallStep(type);
             return Result.success(installSteps);
         } catch (Exception e) {
+            log.error("获取安装步骤失败，类型: {}, 错误: {}", type, e.getMessage(), e);
             return Result.error("获取安装步骤失败: " + e.getMessage());
         }
     }
@@ -74,10 +86,22 @@ public class HostInstallController {
             @RequestParam(name = "page") Integer page,
             @RequestParam(name = "pageSize") Integer pageSize) {
         try {
-            PageResult<HostInfo> pageResult = installService.analysisHostList(clusterId, hosts, sshUser, sshPort, 
+            if (clusterId == null) {
+                return Result.error("集群ID不能为空");
+            }
+            if (page == null || page < 1) {
+                return Result.error("页码必须大于0");
+            }
+            if (pageSize == null || pageSize < 1) {
+                return Result.error("每页大小必须大于0");
+            }
+
+            log.debug("解析主机列表，集群ID: {}, 页码: {}, 每页大小: {}", clusterId, page, pageSize);
+            PageResult<HostInfo> pageResult = installService.analysisHostList(clusterId, hosts, sshUser, sshPort,
                     sshPassword, kubeConfigContent, page, pageSize);
             return Result.success(pageResult);
         } catch (Exception e) {
+            log.error("解析主机列表失败，集群ID: {}, 错误: {}", clusterId, e.getMessage(), e);
             return Result.error("解析主机列表失败: " + e.getMessage());
         }
     }
@@ -87,11 +111,18 @@ public class HostInstallController {
      */
     @PostMapping("/getHostCheckStatus")
     @UserPermission
-    public Result<HostCheckStatusDto> getHostCheckStatus(@ClusterId Integer clusterId, @RequestParam("sshUser") String sshUser, @RequestParam("sshPort") Integer sshPort) {
+    public Result<HostCheckStatusDto> getHostCheckStatus(@ClusterId Integer clusterId,
+            @RequestParam("sshUser") String sshUser,
+            @RequestParam("sshPort") Integer sshPort) {
         try {
+            if (clusterId == null) {
+                return Result.error("集群ID不能为空");
+            }
+            log.debug("查询主机校验状态，集群ID: {}", clusterId);
             HostCheckStatusDto statusDto = installService.getHostCheckStatus(clusterId, sshUser, sshPort);
             return Result.success(statusDto);
         } catch (Exception e) {
+            log.error("查询主机校验状态失败，集群ID: {}, 错误: {}", clusterId, e.getMessage(), e);
             return Result.error("查询主机校验状态失败: " + e.getMessage());
         }
     }
@@ -158,9 +189,12 @@ public class HostInstallController {
      */
     @PostMapping("/dispatcherHostAgentList")
     @UserPermission
-    public Result<PageResult<HostInfo>> dispatcherHostAgentList(@ClusterId Integer clusterId, @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+    public Result<PageResult<HostInfo>> dispatcherHostAgentList(@ClusterId Integer clusterId,
+            @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page,
+            @RequestParam("pageSize") Integer pageSize) {
         try {
-            PageResult<HostInfo> pageResult = installService.dispatcherHostAgentList(clusterId, installStateCode, page, pageSize);
+            PageResult<HostInfo> pageResult = installService.dispatcherHostAgentList(clusterId, installStateCode, page,
+                    pageSize);
             return Result.success(pageResult);
         } catch (Exception e) {
             return Result.error("获取主机代理分发列表失败: " + e.getMessage());
@@ -181,7 +215,8 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result<Boolean> cancelDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ip") String ip, @RequestParam("installStateCode") Integer installStateCode) {
+    public Result<Boolean> cancelDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ip") String ip,
+            @RequestParam("installStateCode") Integer installStateCode) {
         try {
             boolean success = installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
             if (success) {

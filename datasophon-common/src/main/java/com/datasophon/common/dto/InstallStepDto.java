@@ -1,56 +1,68 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package com.datasophon.common.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 安装步骤数据传输对象
+ * 用于Service层数据传输
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class InstallStepDto implements Serializable {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record InstallStepDTO(
+        Integer id,
+        String stepName,
+        String stepDesc,
+        String installType) implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 安装步骤列表
+     * 创建基础InstallStepDTO
      */
-    private List<Map<String, Object>> steps;
+    public static InstallStepDTO of(Integer id, String stepName, String stepDesc, String installType) {
+        return new InstallStepDTO(id, stepName, stepDesc, installType);
+    }
 
     /**
-     * 当前步骤
+     * 获取安装类型整数值
      */
-    private Integer currentStep;
+    public Integer getInstallTypeValue() {
+        if (installType == null || installType.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(installType);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 
     /**
-     * 安装类型
+     * 检查是否为有效的安装步骤
      */
-    private Integer type;
+    public boolean isValid() {
+        return stepName != null && !stepName.trim().isEmpty() &&
+                installType != null && !installType.trim().isEmpty();
+    }
+
+    /**
+     * 获取步骤显示名称
+     */
+    public String getDisplayStepName() {
+        return stepName != null ? stepName : "未知步骤";
+    }
+
+    /**
+     * 获取步骤描述显示文本
+     */
+    public String getDisplayStepDesc() {
+        return stepDesc != null && !stepDesc.trim().isEmpty() ? stepDesc : "暂无描述";
+    }
 }

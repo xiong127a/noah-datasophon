@@ -22,15 +22,54 @@ import com.datasophon.dao.entity.InstallStepEntity;
 import org.apache.ibatis.annotations.Mapper;
 
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
+
+import java.util.List;
 
 /**
+ * 安装步骤数据访问层
  * 
- * 
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-11 10:18:18
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @Mapper
 public interface InstallStepMapper extends BaseMapper<InstallStepEntity> {
 
+    /**
+     * 根据安装类型查询安装步骤列表
+     *
+     * @param installType 安装类型
+     * @return 安装步骤列表
+     */
+    default List<InstallStepEntity> selectByInstallType(String installType) {
+        return this.selectListByQuery(
+                QueryWrapper.create()
+                        .where(InstallStepEntity::getInstallType).eq(installType));
+    }
+
+    /**
+     * 根据安装类型查询安装步骤列表（整数类型）
+     *
+     * @param installType 安装类型（整数）
+     * @return 安装步骤列表
+     */
+    default List<InstallStepEntity> selectByInstallType(Integer installType) {
+        if (installType == null) {
+            return List.of();
+        }
+        return selectByInstallType(installType.toString());
+    }
+
+    /**
+     * 根据安装类型查询安装步骤数量
+     *
+     * @param installType 安装类型
+     * @return 步骤数量
+     */
+    default long countByInstallType(String installType) {
+        return this.selectCountByQuery(
+                QueryWrapper.create()
+                        .where(InstallStepEntity::getInstallType).eq(installType));
+    }
 }
