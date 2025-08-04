@@ -26,16 +26,17 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.TenantRangerActor;
 import com.datasophon.api.master.TenantResourceDispatcherActor;
+import com.datasophon.api.converter.ClusterTenantConverter;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.api.utils.string.validator.WordValidator;
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.dto.ClusterTenantDTO;
 import com.datasophon.common.enums.TROperateType;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.model.tenant.resource.TenantResource;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterTenant;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserTenant;
@@ -52,16 +53,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import static com.datasophon.common.enums.RangerOpType.DELETE_TENANT;
 
+/**
+ * 集群租户服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterTenantService")
 @Slf4j
 public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, ClusterTenant>
         implements ClusterTenantService {
 
+    @Autowired
+    private ClusterTenantConverter clusterTenantConverter;
+
     @Override
-    public Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
+    public PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
         int offset = (page - 1) * size;
 
         QueryChain<ClusterTenant> query = QueryChain.of(ClusterTenant.class)
@@ -76,15 +88,18 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                 .where(ClusterTenant::getClusterId).eq(clusterId)
                 .count();
 
-        return Result.success(list,total);
+        List<ClusterTenantDTO> dtoList = clusterTenantConverter.entityListToDtoList(list);
+        return PageResult.of(dtoList, total, page, size);
     }
 
     @Override
-    public Result saveOrUpdateTenant(ClusterTenant clusterTenant) {
+    public ClusterTenantDTO saveOrUpdateTenant(ClusterTenantDTO clusterTenantDTO) {
+        ClusterTenant clusterTenant = clusterTenantConverter.dtoToEntity(clusterTenantDTO);
+
         try {
             checkTenant(clusterTenant);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
 
         filterDeleteResource(clusterTenant);
@@ -120,7 +135,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
         this.saveOrUpdate(clusterTenant);
 
-        return Result.success();
+        return clusterTenantConverter.entityToDto(clusterTenant);
     }
 
     private void filterDeleteResource(ClusterTenant clusterTenant) {
@@ -137,7 +152,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     @Override
-    public Result deleteTenantById(Integer id) {
+    public boolean deleteTenantById(Integer id) {
         // 是否授权授权用户校验
         List<ClusterUserTenant> userTenantList = QueryChain.of(ClusterUserTenant.class)
                 .where(ClusterUserTenant::getTenantId).eq(id)
@@ -154,7 +169,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(ClusterUser::getUsername)
                     .toList();
 
-            return Result.error("当前租户已经授权给用户：" + usernames + ", 请先取消授权");
+            throw new RuntimeException("当前租户已经授权给用户：" + usernames + ", 请先取消授权");
         }
 
         ClusterTenant tenant = this.getById(id);
@@ -167,10 +182,37 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         tenantRangerActor.tell(command, ActorRef.noSender());
 
-        if (this.removeById(id)) {
-            return Result.success();
-        }
-        return Result.error();
+        return this.removeById(id);
+    }
+
+    @Override
+    public ClusterTenantDTO getByIdAsDto(Integer id) {
+        ClusterTenant entity = getById(id);
+        return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public List<ClusterTenantDTO> getTenantsByClusterId(Integer clusterId) {
+        List<ClusterTenant> entities = QueryChain.of(ClusterTenant.class)
+                .where(ClusterTenant::getClusterId).eq(clusterId)
+                .list();
+        return clusterTenantConverter.entityListToDtoList(entities);
+    }
+
+    @Override
+    public ClusterTenantDTO getTenantByName(Integer clusterId, String tenantName) {
+        ClusterTenant entity = QueryChain.of(ClusterTenant.class)
+                .where(ClusterTenant::getClusterId).eq(clusterId)
+                .and(ClusterTenant::getTenantName).eq(tenantName)
+                .one();
+        return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public ClusterTenantDTO updateTenant(ClusterTenantDTO dto) {
+        ClusterTenant entity = clusterTenantConverter.dtoToEntity(dto);
+        updateById(entity);
+        return clusterTenantConverter.entityToDto(entity);
     }
 
     private void checkTenant(ClusterTenant clusterTenant) throws Exception {
