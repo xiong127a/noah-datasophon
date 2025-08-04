@@ -22,6 +22,9 @@ import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.vo.ClusterServiceDashboardVO;
 import com.datasophon.api.dto.Result;
+import com.datasophon.dao.entity.ClusterServiceDashboard;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,10 +40,12 @@ import java.util.List;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
 @ApiVersion(path = "cluster/service/dashboard")
 public class ClusterServiceDashboardController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceDashboardController.class);
 
     @Autowired
     private ClusterServiceDashboardService clusterServiceDashboardService;
@@ -118,8 +123,13 @@ public class ClusterServiceDashboardController {
      */
     @RequestMapping("/list")
     public Result<List<ClusterServiceDashboardVO>> getAllDashboards() {
-        List<ClusterServiceDashboard> entities = clusterServiceDashboardService.list();
-        List<ClusterServiceDashboardVO> vos = converter.entityListToVoList(entities);
-        return Result.success(vos);
+        try {
+            List<ClusterServiceDashboard> entities = clusterServiceDashboardService.list();
+            List<ClusterServiceDashboardVO> vos = converter.entityListToVoList(entities);
+            return Result.success(vos);
+        } catch (Exception e) {
+            logger.error("获取仪表盘列表失败", e);
+            return Result.error("获取仪表盘列表失败");
+        }
     }
 }
