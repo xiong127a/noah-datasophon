@@ -36,6 +36,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 
+/**
+ * 集群用户控制器
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @ApiVersion(path = "cluster/users")
 public class ClusterUserController {
 
@@ -49,7 +56,7 @@ public class ClusterUserController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<Object> list(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterUserVO>> list(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
@@ -57,25 +64,26 @@ public class ClusterUserController {
         PageResult<ClusterUserDTO> pageResult = clusterUserService.listPagedUsers(clusterId, username, page, pageSize);
         List<ClusterUserVO> voList = clusterUserConverter.dtoListToVoList(pageResult.getRecords());
         PageResult<ClusterUserVO> voPageResult = PageResult.of(voList, pageResult.getTotal(), page, pageSize);
-        return Result.success().put("page", voPageResult);
+        return Result.success(voPageResult);
     }
 
     /**
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<Object> info(@PathVariable("id") Integer id) {
+    public Result<ClusterUserVO> info(@PathVariable("id") Integer id) {
+        // 直接从Service获取Entity，然后转换为VO
         ClusterUser clusterUser = clusterUserService.getById(id);
         ClusterUserVO clusterUserVO = clusterUserConverter.entityToVo(clusterUser);
 
-        return Result.success().put("clusterUser", clusterUserVO);
+        return Result.success(clusterUserVO);
     }
 
     /**
      * 保存
      */
     @RequestMapping("/create")
-    public Result<Object> save(@RequestParam("clusterId") Integer clusterId,
+    public Result<ClusterUserVO> save(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("mainGroupId") Integer mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
@@ -83,30 +91,31 @@ public class ClusterUserController {
                 ? clusterUserService.createClusterUser(clusterId, username, mainGroupId, otherGroupIds)
                 : clusterUserService.createClusterUserOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
         ClusterUserVO clusterUserVO = clusterUserConverter.dtoToVo(clusterUserDTO);
-        return Result.success().put("clusterUser", clusterUserVO);
+        return Result.success(clusterUserVO);
     }
 
     /**
      * 修改
      */
     @RequestMapping("/update")
-    public Result<Object> update(@RequestBody ClusterUser clusterUser) {
-
+    public Result<String> update(@RequestBody ClusterUserDTO clusterUserDTO) {
+        // 使用Entity层面的更新，因为当前Service继承IService<Entity>
+        ClusterUser clusterUser = clusterUserConverter.dtoToEntity(clusterUserDTO);
         clusterUserService.updateById(clusterUser);
 
-        return Result.success();
+        return Result.success("更新成功");
     }
 
     /**
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<Object> delete(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> delete(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("id") Integer id) {
         boolean success = Constants.PVM_MODE.equals(getDepMode(clusterId))
                 ? clusterUserService.deleteClusterUser(id)
                 : clusterUserService.deleteClusterUserOnKubernetes(id);
-        return success ? Result.success() : Result.error("删除失败");
+        return success ? Result.success("删除成功") : Result.error("删除失败");
     }
 
 }

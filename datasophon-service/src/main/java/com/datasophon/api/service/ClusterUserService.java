@@ -89,13 +89,13 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param clusterId 集群ID
      * @return 用户列表
      */
-    List<ClusterUser> listAllUser(Integer clusterId);
+    List<ClusterUserDTO> listAllUser(Integer clusterId);
 
     /**
      * 在主机上创建Unix用户
      *
-     * @param clusterUser 集群用户
-     * @param hostname    主机名
+     * @param clusterUserDTO 集群用户
+     * @param hostname       主机名
      */
-    void createUnixUserOnHost(ClusterUser clusterUser, String hostname);
+    void createUnixUserOnHost(ClusterUserDTO clusterUserDTO, String hostname);
 }

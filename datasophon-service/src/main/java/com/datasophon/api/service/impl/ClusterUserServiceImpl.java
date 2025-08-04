@@ -69,7 +69,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
 
@@ -126,12 +125,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
             List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
-                    .collect(Collectors.toList());
+                    .toList();
             for (Integer id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
             }
             Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
+            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName)
+                    .collect(java.util.stream.Collectors.joining(","));
         }
 
         ClusterGroup mainGroup = groupService.getById(mainGroupId);
@@ -240,12 +240,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
             List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
-                    .collect(Collectors.toList());
+                    .toList();
             for (Integer id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
             }
             Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
+            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName)
+                    .collect(java.util.stream.Collectors.joining(","));
         }
         ClusterGroup mainGroup = groupService.getById(mainGroupId);
         Map<String, UserEnum> userNameMap = UserEnum.getUserNameMap();
@@ -363,7 +364,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
             if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
                 String otherGroups = otherGroupList.stream().map(ClusterGroup::getGroupName)
-                        .collect(Collectors.joining(","));
+                        .collect(java.util.stream.Collectors.joining(","));
                 clusterUser.setOtherGroups(otherGroups);
             }
             clusterUser.setMainGroup(mainGroup.getGroupName());
@@ -479,26 +480,29 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public List<ClusterUser> listAllUser(Integer clusterId) {
-        return QueryChain.of(ClusterUser.class)
+    public List<ClusterUserDTO> listAllUser(Integer clusterId) {
+        List<ClusterUser> entities = QueryChain.of(ClusterUser.class)
                 .where(ClusterUser::getClusterId).eq(clusterId)
                 .list();
+        return clusterUserConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public void createUnixUserOnHost(ClusterUser clusterUser, String hostname) {
-        String username = clusterUser.getUsername();
-        ClusterGroup mainGroup = userGroupService.queryMainGroup(clusterUser.getId());
-        List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
+    public void createUnixUserOnHost(ClusterUserDTO clusterUserDTO, String hostname) {
+        String username = clusterUserDTO.username();
+        ClusterGroup mainGroup = userGroupService.queryMainGroup(clusterUserDTO.id());
+        List<ClusterGroup> otherGroupList = userGroupService.listOtherGroups(clusterUserDTO.id());
         String otherGroup = "";
         if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
-            otherGroup = otherGroupList.stream().map(ClusterGroup::getGroupName).collect(Collectors.joining(","));
+            otherGroup = otherGroupList.stream()
+                    .map(ClusterGroup::getGroupName)
+                    .collect(java.util.stream.Collectors.joining(","));
         }
         ActorSelection unixUserActor = ActorUtils.actorSystem
                 .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/unixUserActor");
 
         CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
-        createUnixUserCommand.setUsername(clusterUser.getUsername());
+        createUnixUserCommand.setUsername(clusterUserDTO.username());
         createUnixUserCommand.setMainGroup(mainGroup.getGroupName());
         createUnixUserCommand.setOtherGroups(otherGroup);
 
