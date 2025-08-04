@@ -17,8 +17,15 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.converter.K8sResourceConverter;
 import com.datasophon.api.service.KubernetesDashboardService;
+import com.datasophon.common.dto.K8sNamespaceDTO;
+import com.datasophon.common.dto.K8sResourceStatsDTO;
+import com.datasophon.common.vo.K8sNamespaceVO;
+import com.datasophon.common.vo.K8sResourceStatsVO;
 import com.datasophon.common.vo.Result;
+
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
@@ -38,13 +45,25 @@ public class KubernetesDashboardController {
     @Autowired
     private KubernetesDashboardService kubernetesDashboardService;
 
+    private final K8sResourceConverter k8sResourceConverter = K8sResourceConverter.INSTANCE;
 
     /**
      * 获取Kubernetes命名空间列表
      */
-    @RequestMapping("/namespaces")
-    public Result getNamespaces(@RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getNamespaces(clusterId);
+    @GetMapping("/namespaces")
+    public Result<List<K8sNamespaceVO>> getNamespaces(@RequestParam("clusterId") Integer clusterId) {
+        try {
+            if (clusterId == null) {
+                return Result.error("集群ID不能为空");
+            }
+
+            List<K8sNamespaceDTO> namespaceDTOs = kubernetesDashboardService.getNamespaces(clusterId);
+            List<K8sNamespaceVO> namespaceVOs = k8sResourceConverter.namespaceListToVoList(namespaceDTOs);
+            return Result.success(namespaceVOs);
+        } catch (Exception e) {
+            log.error("获取Kubernetes命名空间列表失败: {}", e.getMessage(), e);
+            return Result.error("获取命名空间列表失败: " + e.getMessage());
+        }
     }
 
     /**

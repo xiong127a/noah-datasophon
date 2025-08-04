@@ -59,25 +59,27 @@ import java.util.stream.Collectors;
 
 /**
  * Kubernetes仪表盘服务实现类
+ * 
  * @author 63588
  */
 @Service("kubernetesDashboardService")
 @Slf4j
 public class KubernetesDashboardServiceImpl implements KubernetesDashboardService {
 
+    private final K8sResourceConverter k8sResourceConverter = K8sResourceConverter.INSTANCE;
+
     /**
      * 分页结果包装类，提供类型安全的分页结果
-     *
-     * @param <T> 资源类型
      */
-    private record PaginatedResult<T>(List<T> items, long total, int totalPages) {
+    private record PaginatedResult<T>(List<T> items,
+    long total,
+    int totalPages)
+    {
 
     }
 
     @Autowired
     private ClusterInfoService clusterInfoService;
-
-
 
     /**
      * 获取集群的kubeconfig配置
@@ -91,12 +93,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getNamespaces(Integer clusterId) {
+    public List<K8sNamespaceDTO> getNamespaces(Integer clusterId) {
         try {
+            if (clusterId == null) {
+                throw new RuntimeException("集群ID不能为空");
+            }
+
             // 获取kubeconfig
             String kubeConfig = getKubeConfig(clusterId);
             if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+                throw new RuntimeException("找不到集群Kubernetes配置");
             }
 
             // 使用kubeconfig创建Kubernetes客户端
@@ -105,32 +111,26 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 获取所有命名空间
             NamespaceList namespaceList = client.namespaces().list();
 
-            // 转换为前端需要的数据结构
-            List<Map<String, Object>> namespaces = namespaceList.getItems().stream()
+            // 转换为DTO列表
+            return namespaceList.getItems().stream()
                     .map(ns -> {
-                        Map<String, Object> item = new HashMap<>();
-                        item.put("name", ns.getMetadata().getName());
-                        item.put("status", ns.getStatus() != null ? ns.getStatus().getPhase() : "Unknown");
-                        item.put("creationTimestamp", ns.getMetadata().getCreationTimestamp());
-                        return item;
+                        String name = ns.getMetadata().getName();
+                        String phase = ns.getStatus() != null ? ns.getStatus().getPhase() : "Unknown";
+                        String creationTime = ns.getMetadata().getCreationTimestamp();
+                        Integer resourceVersion = ns.getMetadata().getResourceVersion() != null
+                                ? Integer.parseInt(ns.getMetadata().getResourceVersion())
+                                : null;
+                        return K8sNamespaceDTO.of(name, phase, creationTime, resourceVersion);
                     })
-                    .collect(Collectors.toList());
-
-            // 创建结果对象
-            Map<String, Object> result = new HashMap<>();
-            result.put("namespaces", namespaces); // 命名空间列表
-            result.put("defaultNamespace", "datasophon"); // 默认命名空间
-            result.put("showNamespaceSelector", true); // 是否显示命名空间选择器
-
-            return Result.success(result);
+                    .toList();
         } catch (Exception e) {
-            log.error("获取命名空间列表出错", e);
-            return Result.error("获取命名空间列表出错: " + e.getMessage());
+            log.error("获取命名空间列表失败: {}", e.getMessage(), e);
+            throw new RuntimeException("获取命名空间列表失败: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
+    public Object getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         // 目前serviceId暂时不使用，留作后期扩展使用
         try {
