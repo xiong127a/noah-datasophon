@@ -22,7 +22,6 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.BaseMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
 import org.apache.ibatis.annotations.Mapper;
@@ -213,10 +212,10 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
      */
     default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndNeedRestart(
             @Param("serviceId") Integer serviceId, @Param("needRestart") NeedRestart needRestart) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
-                .and(ClusterServiceRoleInstanceEntity::getNeedRestart).eq(needRestart)
-                .list();
+                .and(ClusterServiceRoleInstanceEntity::getNeedRestart).eq(needRestart);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -225,11 +224,11 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
     default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndHostnameAndState(
             @Param("clusterId") Integer clusterId, @Param("hostname") String hostname,
             @Param("state") ServiceRoleState state) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                 .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state)
-                .list();
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -237,10 +236,10 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
      */
     default ClusterServiceRoleInstanceEntity selectByClusterIdAndServiceRoleName(@Param("clusterId") Integer clusterId,
             @Param("serviceRoleName") String serviceRoleName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
-                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .one();
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+        return this.selectOneByQuery(query);
     }
 
     /**
@@ -248,9 +247,9 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
      */
     default List<ClusterServiceRoleInstanceEntity> selectByServiceRoleName(
             @Param("serviceRoleName") String serviceRoleName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .list();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -258,10 +257,10 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
      */
     default ClusterServiceRoleInstanceEntity selectByHostnameAndServiceRoleName(@Param("hostname") String hostname,
             @Param("serviceRoleName") String serviceRoleName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .one();
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName);
+        return this.selectOneByQuery(query);
     }
 
     /**
@@ -269,10 +268,10 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
      */
     default List<ClusterServiceRoleInstanceEntity> selectByHostnameAndServiceName(@Param("hostname") String hostname,
             @Param("serviceName") String serviceName) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName)
-                .list();
+                .and(ClusterServiceRoleInstanceEntity::getServiceName).eq(serviceName);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -281,7 +280,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
     default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceIdAndRoleName(
             @Param("clusterId") Integer clusterId, @Param("serviceId") Integer serviceId,
             @Param("roleName") String roleName) {
-        QueryChain<ClusterServiceRoleInstanceEntity> query = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(roleName);
 
@@ -289,16 +288,16 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
             query.and(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId);
         }
 
-        return query.list();
+        return this.selectListByQuery(query);
     }
 
     /**
      * 根据服务ID查询服务角色实例列表
      */
     default List<ClusterServiceRoleInstanceEntity> selectByServiceId(@Param("serviceId") Integer serviceId) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
-                .list();
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId);
+        return this.selectListByQuery(query);
     }
 
     /**
@@ -308,10 +307,71 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
             @Param("clusterId") Integer clusterId,
             @Param("serviceRoleName") String serviceRoleName,
             @Param("hostname") String hostname) {
-        return QueryChain.of(ClusterServiceRoleInstanceEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
-                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
-                .one();
+                .and(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname);
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据集群ID查询所有服务角色实例
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterId(@Param("clusterId") Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID和服务角色名称查询服务角色实例列表
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndRoleName(
+            @Param("clusterId") Integer clusterId, @Param("roleName") String roleName) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(roleName);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务ID和状态查询正在运行的服务角色实例
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndState(
+            @Param("serviceId") Integer serviceId, @Param("state") ServiceRoleState state) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据角色组ID查询服务角色实例
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据状态和ID列表查询服务角色实例
+     */
+    default List<ClusterServiceRoleInstanceEntity> selectByStateAndIds(
+            @Param("state") ServiceRoleState state, @Param("ids") String ids) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state)
+                .and(ClusterServiceRoleInstanceEntity::getId).in(ids.split(","));
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据服务ID和状态删除服务角色实例
+     */
+    default int deleteByServiceIdAndState(@Param("serviceId") Integer serviceId, @Param("state") ServiceRoleState state) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state);
+        return this.deleteByQuery(query);
     }
 }
