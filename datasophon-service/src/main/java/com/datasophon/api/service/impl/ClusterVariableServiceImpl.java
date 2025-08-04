@@ -23,7 +23,7 @@ import com.datasophon.api.service.ClusterVariableService;
 import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.dao.entity.ClusterVariable;
 import com.datasophon.dao.mapper.ClusterVariableMapper;
-import com.mybatisflex.core.query.QueryChain;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,10 +49,8 @@ public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMappe
 
     @Override
     public ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId) {
-        List<ClusterVariable> list = QueryChain.of(ClusterVariable.class)
-                .where(ClusterVariable::getVariableName).eq(variableName)
-                .and(ClusterVariable::getClusterId).eq(clusterId)
-                .list();
+        // SQL逻辑迁移到DAO层
+        List<ClusterVariable> list = getMapper().selectByVariableNameAndClusterId(variableName, clusterId);
 
         if (CollUtil.isNotEmpty(list)) {
             ClusterVariable entity = list.getFirst();
@@ -63,9 +61,8 @@ public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMappe
 
     @Override
     public List<ClusterVariableDTO> getVariablesByClusterId(Integer clusterId) {
-        List<ClusterVariable> entities = QueryChain.of(ClusterVariable.class)
-                .where(ClusterVariable::getClusterId).eq(clusterId)
-                .list();
+        // SQL逻辑迁移到DAO层
+        List<ClusterVariable> entities = getMapper().selectByClusterId(clusterId);
 
         return clusterVariableConverter.entityListToDtoList(entities);
     }
