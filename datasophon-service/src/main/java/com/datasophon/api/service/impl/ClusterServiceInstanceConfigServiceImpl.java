@@ -23,14 +23,15 @@ import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.api.utils.ConfigGroupUtils;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.api.vo.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import com.datasophon.dao.mapper.ClusterServiceInstanceConfigMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,69 +42,70 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 集群服务实例配置服务实现
+ * 按照架构重构规范，迁移QueryChain到DAO层，移除Result返回类型
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
-                extends
-                ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>
-                implements
-                ClusterServiceInstanceConfigService {
+                extends ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>
+                implements ClusterServiceInstanceConfigService {
 
-    @Autowired
-    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+        private static final Logger logger = LoggerFactory.getLogger(ClusterServiceInstanceConfigServiceImpl.class);
 
-    @Autowired
-    private ConfigVersionInfoService configVersionInfoService;
+        @Autowired
+        private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
+        @Autowired
+        private ConfigVersionInfoService configVersionInfoService;
 
-
-    @Override
-        public Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,
+        @Override
+        public Map<String, Object> getServiceInstanceConfig(Integer serviceInstanceId, Integer version,
+                        Integer roleGroupId,
                         Integer page, Integer pageSize) {
-                ClusterServiceRoleGroupConfig roleGroupConfig = roleGroupConfigService
+                ClusterServiceRoleGroupConfigDTO roleGroupConfigDTO = roleGroupConfigService
                                 .getConfigByRoleGroupIdAndVersion(roleGroupId, version);
-                if (Objects.nonNull(roleGroupConfig)) {
-                        List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfig.getConfigJson(),
-                                new TypeReference<>() {
-                                });
+                if (Objects.nonNull(roleGroupConfigDTO)) {
+                        List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfigDTO.configJson(),
+                                        new TypeReference<List<ServiceConfig>>() {
+                                        });
 
                         // 设置服务名称，用于排序
-                        String serviceName = roleGroupConfig.getServiceName();
+                        String serviceName = roleGroupConfigDTO.serviceName();
                         serviceConfigs.forEach(config -> config.setServiceName(serviceName));
 
                         // 使用服务名称进行分组排序
                         Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils
                                         .groupByConfigTargetRoleOrCommon(serviceConfigs);
-                        return Result.success(roleToConfigMap);
+
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("data", roleToConfigMap);
+                        return result;
                 }
-                return Result.success();
+                return new HashMap<>();
         }
 
         @Override
         public ClusterServiceInstanceConfigEntity getServiceConfigByServiceId(Integer id) {
-                return QueryChain.of(ClusterServiceInstanceConfigEntity.class)
-                                .where(ClusterServiceInstanceConfigEntity::getServiceId).eq(id)
-                                .orderBy(ClusterServiceInstanceConfigEntity::getConfigVersion).desc()
-                                .limit(1)
-                                .one();
+                return getMapper().selectLatestConfigByServiceId(id);
         }
 
         @Override
-        public Result getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
+        public List<Map<String, Object>> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
                 // 获取角色组的所有配置版本
-                List<ClusterServiceRoleGroupConfig> list = QueryChain.of(ClusterServiceRoleGroupConfig.class)
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
-                                .list();
+                List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
+                                .getConfigVersionsByRoleGroupId(roleGroupId);
 
                 // 如果没有配置版本，直接返回空列表
                 if (list == null || list.isEmpty()) {
-                        return Result.success(new ArrayList<>());
+                        return new ArrayList<>();
                 }
 
-                // 从角色组配置中提取版本号
-                List<Integer> versionNumbers = list.stream()
-                                .map(ClusterServiceRoleGroupConfig::getConfigVersion)
-                                .toList();
+                // JDK21现代特性：使用stream().toList()直接转换
 
                 // 获取配置版本详情信息
                 List<ConfigVersionInfoEntity> versionInfoList = configVersionInfoService
@@ -143,8 +145,6 @@ public class ClusterServiceInstanceConfigServiceImpl
                         versionDetailsList.add(versionDetail);
                 }
 
-                // 为了保持向后兼容，如果前端仍在使用旧格式，可以通过参数控制返回格式
-                // 这里默认返回新格式，包含详细信息
-                return Result.success(versionDetailsList);
+                return versionDetailsList;
         }
 }

@@ -18,16 +18,29 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
-
+import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import com.mybatisflex.core.BaseMapper;
+import static com.datasophon.dao.entity.table.ClusterServiceInstanceConfigEntityTableDef.CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY;
 
 /**
  * 集群服务角色实例配置表
  *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
 @Mapper
 public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterServiceInstanceConfigEntity> {
 
+    /**
+     * 根据服务ID获取最新版本的服务配置
+     */
+    default ClusterServiceInstanceConfigEntity selectLatestConfigByServiceId(Integer serviceId) {
+        return selectOneByQuery(QueryWrapper.create()
+                .where(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.SERVICE_ID.eq(serviceId))
+                .orderBy(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.CONFIG_VERSION.desc())
+                .limit(1));
+    }
 }

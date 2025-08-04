@@ -17,23 +17,26 @@
 
 package com.datasophon.api.service;
 
-
-import com.datasophon.api.vo.Result;
+import com.mybatisflex.core.service.IService;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 集群服务角色实例配置表
  *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-04-24 16:25:17
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
  */
-public interface ClusterServiceInstanceConfigService {
+public interface ClusterServiceInstanceConfigService extends IService<ClusterServiceInstanceConfigEntity> {
 
-    Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId, Integer page,
-                                    Integer pageSize);
+    Map<String, Object> getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,
+            Integer page,
+            Integer pageSize);
 
     ClusterServiceInstanceConfigEntity getServiceConfigByServiceId(Integer id);
 
-    Result getConfigVersion(Integer serviceInstanceId, Integer roleGroupId);
+    List<Map<String, Object>> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId);
 }
