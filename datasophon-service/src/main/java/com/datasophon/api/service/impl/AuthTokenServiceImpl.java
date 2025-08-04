@@ -29,7 +29,6 @@ import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.AuthTokenMapper;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -265,15 +264,10 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     @Override
     public PageResult<AuthTokenDTO> getUserTokenList(Integer userId, Integer page, Integer pageSize) {
         // 查询用户的令牌列表
-        List<AuthTokenEntity> tokenList = QueryChain.of(AuthTokenEntity.class)
-                .where(AuthTokenEntity::getUserId).eq(userId)
-                .orderBy(AuthTokenEntity::getIssuedAt, false)
-                .limit((page - 1) * pageSize, pageSize)
-                .list();
+        List<AuthTokenEntity> tokenList = getMapper().selectByUserIdWithPagination(userId, (page - 1) * pageSize,
+                pageSize);
 
-        long total = QueryChain.of(AuthTokenEntity.class)
-                .where(AuthTokenEntity::getUserId).eq(userId)
-                .count();
+        long total = getMapper().countByUserId(userId);
 
         if (CollectionUtils.isEmpty(tokenList)) {
             return PageResult.empty(page, pageSize);
@@ -310,12 +304,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
 
         try {
             // 查询用户的有效令牌（未撤销且未过期）
-            List<AuthTokenEntity> validTokens = QueryChain.of(AuthTokenEntity.class)
-                    .where(AuthTokenEntity::getUserId).eq(userId)
-                    .and(AuthTokenEntity::getIsRevoked).eq(false)
-                    .and(AuthTokenEntity::getExpiresAt).gt(new Date())
-                    .orderBy(AuthTokenEntity::getIssuedAt, false) // 按发布时间降序排列
-                    .list();
+            List<AuthTokenEntity> validTokens = getMapper().findValidTokensByUserId(userId);
 
             return authTokenConverter.entityListToDtoList(validTokens);
         } catch (Exception e) {

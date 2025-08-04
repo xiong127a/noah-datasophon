@@ -20,6 +20,7 @@ package com.datasophon.dao.mapper;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -40,18 +41,48 @@ import java.util.List;
 public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
 
     /**
+     * 根据用户ID分页查询令牌列表
+     * 
+     * @param userId   用户ID
+     * @param offset   偏移量
+     * @param pageSize 每页大小
+     * @return 令牌列表
+     */
+    default List<AuthTokenEntity> selectByUserIdWithPagination(@Param("userId") Integer userId,
+            @Param("offset") Integer offset,
+            @Param("pageSize") Integer pageSize) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(AuthTokenEntity::getUserId).eq(userId)
+                .orderBy(AuthTokenEntity::getIssuedAt, false)
+                .limit(offset, pageSize);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据用户ID统计令牌总数
+     * 
+     * @param userId 用户ID
+     * @return 令牌总数
+     */
+    default long countByUserId(@Param("userId") Integer userId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(AuthTokenEntity::getUserId).eq(userId);
+        return this.selectCountByQuery(query);
+    }
+
+    /**
      * 根据用户ID获取有效的令牌列表
      * 
      * @param userId 用户ID
      * @return 有效的令牌列表
      */
     default List<AuthTokenEntity> findValidTokensByUserId(@Param("userId") Integer userId) {
-        return QueryChain.of(AuthTokenEntity.class)
+        QueryWrapper query = QueryWrapper.create()
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
                 .and(AuthTokenEntity::getExpiresAt).gt(new Date())
-                .orderBy(AuthTokenEntity::getIssuedAt, false)
-                .list();
+                .orderBy(AuthTokenEntity::getIssuedAt, false);
+        return this.selectListByQuery(query);
     }
 
     /**
