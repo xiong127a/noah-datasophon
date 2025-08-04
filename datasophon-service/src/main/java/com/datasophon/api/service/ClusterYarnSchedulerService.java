@@ -17,19 +17,49 @@
 
 package com.datasophon.api.service;
 
-
+import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.mybatisflex.core.service.IService;
+
+import java.util.List;
 
 /**
- * 
+ * 集群Yarn调度器服务接口
+ * 提供Yarn调度器的业务逻辑处理
  *
- * @author dygao2
- * @email dygao2@datasophon.com
- * @date 2022-11-25 15:02:11
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
-public interface ClusterYarnSchedulerService {
+public interface ClusterYarnSchedulerService extends IService<ClusterYarnScheduler> {
 
-    ClusterYarnScheduler getScheduler(Integer clusterId);
+    /**
+     * 根据集群ID获取调度器
+     */
+    ClusterYarnSchedulerDTO getScheduler(Integer clusterId);
 
-    void createDefaultYarnScheduler(Integer clusterId);
+    /**
+     * 创建默认Yarn调度器
+     */
+    ClusterYarnSchedulerDTO createDefaultYarnScheduler(Integer clusterId);
+
+    /**
+     * 根据ID获取调度器DTO
+     */
+    ClusterYarnSchedulerDTO getByIdAsDto(Integer id);
+
+    /**
+     * 根据集群ID获取所有调度器
+     */
+    List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Integer clusterId);
+
+    /**
+     * 保存或更新调度器
+     */
+    ClusterYarnSchedulerDTO saveOrUpdateScheduler(ClusterYarnSchedulerDTO dto);
+
+    /**
+     * 删除调度器
+     */
+    boolean deleteScheduler(Integer id);
 }

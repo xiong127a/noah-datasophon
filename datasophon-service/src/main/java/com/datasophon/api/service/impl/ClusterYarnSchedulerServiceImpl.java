@@ -17,35 +17,80 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.converter.ClusterYarnSchedulerConverter;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
+import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
 import com.datasophon.dao.mapper.ClusterYarnSchedulerMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * 集群Yarn调度器服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterYarnSchedulerService")
+@Transactional
 public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSchedulerMapper, ClusterYarnScheduler>
-        implements
-        ClusterYarnSchedulerService {
+        implements ClusterYarnSchedulerService {
 
     // 定义常量
     private static final String CAPACITY_SCHEDULER = "capacity";
     private static final int SCHEDULER_IN_USE = 1;
 
+    @Autowired
+    private ClusterYarnSchedulerConverter clusterYarnSchedulerConverter;
+
     @Override
-    public ClusterYarnScheduler getScheduler(Integer clusterId) {
-        return QueryChain.of(ClusterYarnScheduler.class)
+    public ClusterYarnSchedulerDTO getScheduler(Integer clusterId) {
+        ClusterYarnScheduler entity = QueryChain.of(ClusterYarnScheduler.class)
                 .where(ClusterYarnScheduler::getClusterId).eq(clusterId)
                 .one();
+        return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
     }
 
     @Override
-    public void createDefaultYarnScheduler(Integer clusterId) {
+    public ClusterYarnSchedulerDTO createDefaultYarnScheduler(Integer clusterId) {
         ClusterYarnScheduler scheduler = new ClusterYarnScheduler();
         scheduler.setScheduler(CAPACITY_SCHEDULER);
         scheduler.setClusterId(clusterId);
         scheduler.setInUse(SCHEDULER_IN_USE);
         this.save(scheduler);
+        return clusterYarnSchedulerConverter.entityToDto(scheduler);
+    }
+
+    @Override
+    public ClusterYarnSchedulerDTO getByIdAsDto(Integer id) {
+        ClusterYarnScheduler entity = getById(id);
+        return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Integer clusterId) {
+        List<ClusterYarnScheduler> entities = QueryChain.of(ClusterYarnScheduler.class)
+                .where(ClusterYarnScheduler::getClusterId).eq(clusterId)
+                .list();
+        return clusterYarnSchedulerConverter.entityListToDtoList(entities);
+    }
+
+    @Override
+    public ClusterYarnSchedulerDTO saveOrUpdateScheduler(ClusterYarnSchedulerDTO dto) {
+        ClusterYarnScheduler entity = clusterYarnSchedulerConverter.dtoToEntity(dto);
+        saveOrUpdate(entity);
+        return clusterYarnSchedulerConverter.entityToDto(entity);
+    }
+
+    @Override
+    public boolean deleteScheduler(Integer id) {
+        return removeById(id);
     }
 }
