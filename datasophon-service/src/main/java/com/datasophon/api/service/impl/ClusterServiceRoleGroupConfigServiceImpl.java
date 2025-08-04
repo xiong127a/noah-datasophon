@@ -89,4 +89,9 @@ public class ClusterServiceRoleGroupConfigServiceImpl
         ClusterServiceRoleGroupConfig entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
         this.updateById(entity);
     }
+
+    @Override
+    public List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId) {
+        return getMapper().selectConfigVersionsByRoleGroupId(roleGroupId);
+    }
 }

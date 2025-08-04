@@ -91,4 +91,18 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
                 .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds);
         return this.selectListByQuery(query);
     }
+
+    /**
+     * 根据角色组ID获取配置版本列表（按版本号降序）
+     *
+     * @param roleGroupId 角色组ID
+     * @return 配置版本列表
+     */
+    default List<ClusterServiceRoleGroupConfig> selectConfigVersionsByRoleGroupId(
+            @Param("roleGroupId") Integer roleGroupId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
+                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc();
+        return this.selectListByQuery(query);
+    }
 }

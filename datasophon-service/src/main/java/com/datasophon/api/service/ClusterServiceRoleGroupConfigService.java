@@ -86,4 +86,12 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param dto 配置DTO
      */
     void updateConfig(ClusterServiceRoleGroupConfigDTO dto);
+
+    /**
+     * 根据角色组ID获取配置版本列表（按版本号降序）
+     *
+     * @param roleGroupId 角色组ID
+     * @return 配置列表
+     */
+    List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId);
 }
