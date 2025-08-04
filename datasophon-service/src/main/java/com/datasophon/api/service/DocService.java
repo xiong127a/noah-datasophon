@@ -17,11 +17,16 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.dto.ServiceDocDTO;
 import org.springframework.core.io.Resource;
 
 /**
  * 文档服务接口
+ * 按照架构重构规范，Service层不返回Result，抛出业务异常
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 public interface DocService {
 
@@ -30,16 +35,34 @@ public interface DocService {
      *
      * @param clusterId 集群ID
      * @param serviceId 服务ID
-     * @param type      文档类型 (component: 组件介绍, guide: 用户指南)
-     * @return 文档内容
+     * @param type      文档类型 (component: 组件介绍, guide: 用户指南, help: 帮助文档)
+     * @return 文档DTO对象
      */
-    Result getServiceDoc(Integer clusterId, Integer serviceId, String type);
+    ServiceDocDTO getServiceDoc(Integer clusterId, Integer serviceId, String type);
 
     /**
      * 获取文档中引用的图片资源
      *
      * @param imagePath 图片路径
-     * @return 图片资源
+     * @return 图片资源，不存在时抛出异常
      */
     Resource getImageResource(String imagePath);
+
+    /**
+     * 检查服务文档是否存在
+     *
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param type      文档类型
+     * @return 是否存在
+     */
+    boolean hasServiceDoc(Integer clusterId, Integer serviceId, String type);
+
+    /**
+     * 获取服务名称
+     *
+     * @param serviceId 服务ID
+     * @return 服务名称
+     */
+    String getServiceName(Integer serviceId);
 }

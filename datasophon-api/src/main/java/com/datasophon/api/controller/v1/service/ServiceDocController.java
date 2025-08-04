@@ -17,75 +17,150 @@
 
 package com.datasophon.api.controller.v1.service;
 
+import com.datasophon.api.converter.ServiceDocConverter;
 import com.datasophon.api.service.DocService;
+import com.datasophon.common.dto.ServiceDocDTO;
 import com.datasophon.common.vo.Result;
+import com.datasophon.common.vo.ServiceDocVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
 /**
- * 文档管理控制器
+ * 服务文档管理控制器
+ * 按照三层架构规范，使用DTO接收请求，VO返回响应
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @ApiVersion(path = "service/doc")
 @Slf4j
+@RequiredArgsConstructor
 public class ServiceDocController {
 
-        @Autowired
-        private DocService docService;
+    private final DocService docService;
+    private final ServiceDocConverter serviceDocConverter;
 
 
 
-        /**
-         * 获取服务文档
-         *
-         * @param params 参数包含：
-         *               - clusterId 集群ID
-         *               - serviceId 服务ID
-         *               - type 文档类型 (component: 组件介绍, guide: 用户指南, help: 帮助文档)
-         * @return 文档内容
-         */
-        @PostMapping("/getServiceDoc")
-        public Result getServiceDoc(@RequestBody Map<String, Object> params) {
-                log.info("获取服务文档, 参数: {}", params);
+    /**
+     * 获取服务文档
+     */
+    @PostMapping("/getServiceDoc")
+    public Result<ServiceDocVO> getServiceDoc(@RequestBody Map<String, Object> params) {
+        try {
+            log.debug("获取服务文档, 参数: {}", params);
 
-                Integer clusterId = params.get("clusterId") != null
-                                ? Integer.parseInt(params.get("clusterId").toString())
-                                : null;
-                Integer serviceId = params.get("serviceId") != null
-                                ? Integer.parseInt(params.get("serviceId").toString())
-                                : null;
-                String type = (String) params.get("type");
+            // 参数解析和验证
+            Integer clusterId = parseIntegerParam(params, "clusterId", "集群ID");
+            Integer serviceId = parseIntegerParam(params, "serviceId", "服务ID");
+            String type = parseStringParam(params, "type", "文档类型");
 
-                return docService.getServiceDoc(clusterId, serviceId, type);
+            // 获取文档DTO
+            ServiceDocDTO serviceDocDTO = docService.getServiceDoc(clusterId, serviceId, type);
+            
+            // 转换为VO
+            ServiceDocVO serviceDocVO = serviceDocConverter.dtoToVo(serviceDocDTO);
+            
+            return Result.success(serviceDocVO);
+            
+        } catch (Exception e) {
+            log.error("获取服务文档失败: {}", e.getMessage(), e);
+            return Result.error("获取服务文档失败: " + e.getMessage());
         }
+    }
 
-        /**
-         * 获取文档中引用的图片资源(查询参数方式)
-         *
-         * @param imagePath 图片路径
-         * @return 图片资源
-         */
-        @GetMapping(value = "/image")
-        public ResponseEntity<Resource> getImageByPath(@RequestParam(value = "imagePath") String imagePath) {
-
-                log.info("通过查询参数获取图片, 原始路径: {}", imagePath);
-
-                Resource resource = docService.getImageResource(imagePath);
-
-                return ResponseEntity
-                                .ok()
-                                .contentType(MediaTypeFactory.getMediaType(resource)
-                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
-                                .body(resource);
+    /**
+     * 检查服务文档是否存在
+     */
+    @GetMapping("/hasServiceDoc")
+    public Result<Boolean> hasServiceDoc(
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("serviceId") Integer serviceId,
+            @RequestParam("type") String type) {
+        try {
+            boolean exists = docService.hasServiceDoc(clusterId, serviceId, type);
+            return Result.success(exists);
+        } catch (Exception e) {
+            log.error("检查服务文档存在性失败: {}", e.getMessage(), e);
+            return Result.error("检查服务文档存在性失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 获取服务名称
+     */
+    @GetMapping("/serviceName/{serviceId}")
+    public Result<String> getServiceName(@PathVariable("serviceId") Integer serviceId) {
+        try {
+            String serviceName = docService.getServiceName(serviceId);
+            return Result.success(serviceName);
+        } catch (Exception e) {
+            log.error("获取服务名称失败: {}", e.getMessage(), e);
+            return Result.error("获取服务名称失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取文档中引用的图片资源
+     */
+    @GetMapping(value = "/image")
+    public ResponseEntity<Resource> getImageByPath(@RequestParam("imagePath") String imagePath) {
+        try {
+            log.debug("获取图片资源, 路径: {}", imagePath);
+
+            Resource resource = docService.getImageResource(imagePath);
+
+            return ResponseEntity
+                    .ok()
+                    .contentType(MediaTypeFactory.getMediaType(resource)
+                            .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                    .body(resource);
+                    
+        } catch (Exception e) {
+            log.error("获取图片资源失败: {}", e.getMessage(), e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * 解析整数参数
+     */
+    private Integer parseIntegerParam(Map<String, Object> params, String key, String paramName) {
+        Object value = params.get(key);
+        if (value == null) {
+            throw new IllegalArgumentException(paramName + "不能为空");
+        }
+        
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(paramName + "格式错误");
+        }
+    }
+
+    /**
+     * 解析字符串参数
+     */
+    private String parseStringParam(Map<String, Object> params, String key, String paramName) {
+        Object value = params.get(key);
+        if (value == null) {
+            throw new IllegalArgumentException(paramName + "不能为空");
+        }
+        
+        String strValue = value.toString().trim();
+        if (strValue.isEmpty()) {
+            throw new IllegalArgumentException(paramName + "不能为空");
+        }
+        
+        return strValue;
+    }
 }

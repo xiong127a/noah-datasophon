@@ -21,11 +21,11 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.DocService;
-import com.datasophon.api.vo.Result;
+import com.datasophon.common.dto.ServiceDocDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
@@ -35,25 +35,28 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * 文档服务实现类
+ * 按照架构重构规范，返回DTO对象，抛出业务异常
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class DocServiceImpl implements DocService {
 
-
     /**
-     * 文档类型枚举
+     * 文档类型枚举 - 使用JDK21现代特性
      */
     @Getter
-    private enum DocType {
+    public enum DocType {
         COMPONENT("components", "-introduce"),
         GUIDE("guides", "-user-guide"),
         HELP("help", "-help");
 
-
-    private String dirName;
-
-    private String suffix;
+        private final String dirName;
+        private final String suffix;
 
         DocType(String dirName, String suffix) {
             this.dirName = dirName;
@@ -66,12 +69,14 @@ public class DocServiceImpl implements DocService {
             }
 
             String type = typeStr.toLowerCase();
-            return switch (type) {
-                case "component" -> COMPONENT;
-                case "guide" -> GUIDE;
-                case "help" -> HELP;
-                default -> null;
-            };
+            if ("component".equals(type)) {
+                return COMPONENT;
+            } else if ("guide".equals(type)) {
+                return GUIDE;
+            } else if ("help".equals(type)) {
+                return HELP;
+            }
+            return null;
         }
     }
 
@@ -81,76 +86,106 @@ public class DocServiceImpl implements DocService {
     // 文档目录常量
     private static final String DOC_ROOT_DIR = "docs";
 
-    // 依赖注入
-
-    @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
-
-    @Autowired
-    private ResourceLoader resourceLoader;
+    // 依赖注入 - 使用构造器注入
+    private final ClusterServiceInstanceService serviceInstanceService;
+    private final ResourceLoader resourceLoader;
 
     @Override
-    public Result getServiceDoc(Integer clusterId, Integer serviceId, String typeStr) {
-        try {
-            // 检查基本参数
-            if (clusterId == null || serviceId == null || StrUtil.isBlank(typeStr)) {
-                return Result.error("参数错误，请检查参数");
-            }
-
-            // 获取文档类型
-            DocType docType = DocType.fromString(typeStr);
-            if (docType == null) {
-                return Result.error("文档类型错误");
-            }
-
-            // 获取服务名称
-            String serviceName = getServiceName(serviceId);
-            if (StrUtil.isBlank(serviceName)) {
-                return Result.error("服务名称不能为空");
-            }
-
-            // 读取文档内容
-            String docContent = readDocContent(serviceName.toLowerCase(), docType.getDirName(), docType.getSuffix());
-
-            if (docContent != null) {
-                return Result.success(docContent);
-            } else {
-                return Result.error("文档不存在");
-            }
-        } catch (Exception e) {
-            log.error("获取服务文档出错", e);
-            return Result.error("获取服务文档出错: " + e.getMessage());
+    public ServiceDocDTO getServiceDoc(Integer clusterId, Integer serviceId, String typeStr) {
+        // 检查基本参数
+        if (clusterId == null) {
+            throw new RuntimeException("集群ID不能为空");
         }
+        if (serviceId == null) {
+            throw new RuntimeException("服务ID不能为空");
+        }
+        if (StrUtil.isBlank(typeStr)) {
+            throw new RuntimeException("文档类型不能为空");
+        }
+
+        // 获取文档类型
+        DocType docType = DocType.fromString(typeStr);
+        if (docType == null) {
+            throw new RuntimeException("不支持的文档类型: " + typeStr);
+        }
+
+        // 获取服务名称
+        String serviceName = getServiceName(serviceId);
+        if (StrUtil.isBlank(serviceName)) {
+            throw new RuntimeException("未找到服务ID为 " + serviceId + " 的服务信息");
+        }
+
+        // 读取文档内容
+        String docContent = readDocContent(serviceName.toLowerCase(), docType.getDirName(), docType.getSuffix());
+        if (docContent == null) {
+            throw new RuntimeException("服务 " + serviceName + " 的 " + docType.getDirName() + " 文档不存在");
+        }
+
+        // 构建文档路径
+        String docFileName = serviceName.toLowerCase() + docType.getSuffix() + ".md";
+        String docPath = DOC_ROOT_DIR + "/" + docType.getDirName() + "/" + docFileName;
+
+        return ServiceDocDTO.withContent(clusterId, serviceId, serviceName, typeStr, docContent, docPath);
     }
 
-    /**
-     * 获取服务名称
-     * 
-     * @param serviceId 服务ID
-     * @return 服务名称
-     */
-    private String getServiceName(Integer serviceId) {
+    @Override
+    public String getServiceName(Integer serviceId) {
+        if (serviceId == null) {
+            throw new RuntimeException("服务ID不能为空");
+        }
+        
         // 特殊处理：告警管理
         if (serviceId.equals(ALARM_MANAGEMENT_SERVICE_ID)) {
-            log.info("获取告警管理帮助文档");
+            log.debug("获取告警管理帮助文档服务名称");
             return "alarm-management";
         }
 
         // 获取服务实例信息
         ClusterServiceInstanceEntity serviceInstance = getServiceInstance(serviceId);
         if (serviceInstance == null) {
-            return null;
+            throw new RuntimeException("未找到ID为 " + serviceId + " 的服务实例");
         }
 
         // 获取服务名称
         String serviceName = serviceInstance.getServiceName();
-
-        // 处理特殊服务名称
-        if (StrUtil.equals("DS", serviceName)) {
-            serviceName = "DolphinScheduler";
+        if (StrUtil.isBlank(serviceName)) {
+            throw new RuntimeException("服务实例的服务名称为空");
         }
 
+        // 处理特殊服务名称映射
+        if ("DS".equals(serviceName)) {
+            return "DolphinScheduler";
+        }
         return serviceName;
+    }
+
+    @Override
+    public boolean hasServiceDoc(Integer clusterId, Integer serviceId, String type) {
+        try {
+            // 基本参数检查
+            if (clusterId == null || serviceId == null || StrUtil.isBlank(type)) {
+                return false;
+            }
+
+            // 获取文档类型
+            DocType docType = DocType.fromString(type);
+            if (docType == null) {
+                return false;
+            }
+
+            // 获取服务名称
+            String serviceName = getServiceName(serviceId);
+            if (StrUtil.isBlank(serviceName)) {
+                return false;
+            }
+
+            // 检查文档是否存在
+            String docContent = readDocContent(serviceName.toLowerCase(), docType.getDirName(), docType.getSuffix());
+            return docContent != null;
+        } catch (Exception e) {
+            log.debug("检查服务文档存在性时出错: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -194,58 +229,80 @@ public class DocServiceImpl implements DocService {
 
     @Override
     public Resource getImageResource(String imagePath) {
-        log.info("获取图片资源: {}", imagePath);
+        log.debug("获取图片资源: {}", imagePath);
+
+        // 参数检查
+        if (StrUtil.isBlank(imagePath)) {
+            throw new RuntimeException("图片路径不能为空");
+        }
 
         try {
-            // 参数检查
-            if (StrUtil.isBlank(imagePath)) {
-                log.warn("图片路径为空");
-                return null;
-            }
-
             // 处理HTTP/HTTPS链接
             if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-                log.info("处理远程图片URL: {}", imagePath);
-                return resourceLoader.getResource(imagePath);
+                log.debug("处理远程图片URL: {}", imagePath);
+                Resource resource = resourceLoader.getResource(imagePath);
+                if (!resource.exists()) {
+                    throw new RuntimeException("远程图片资源不存在: " + imagePath);
+                }
+                return resource;
             }
 
             // 解码URL，处理多重编码情况
-            // 循环解码直到路径不再变化
-            String decodedPath = imagePath;
-            String previousPath = "";
-            while (!decodedPath.equals(previousPath)) {
-                previousPath = decodedPath;
-                try {
-                    decodedPath = java.net.URLDecoder.decode(previousPath, StandardCharsets.UTF_8);
-                } catch (Exception e) {
-                    // 如果解码出错，说明已经不需要再解码了或格式不正确
-                    log.debug("URL解码结束或出错: {}", e.getMessage());
-                    break;
-                }
-            }
-            log.info("解码后的图片路径: {}", decodedPath);
+            String decodedPath = decodeUrlPath(imagePath);
+            log.debug("解码后的图片路径: {}", decodedPath);
 
-            // 去除可能的../前缀
+            // 安全性检查：去除可能的../前缀，防止路径遍历攻击
             String normalizedPath = StrUtil.removePrefix(decodedPath, "../");
+            if (normalizedPath.contains("..")) {
+                throw new RuntimeException("图片路径包含非法字符");
+            }
 
             // 分离路径和文件名
             String fileName = FileUtil.getName(normalizedPath);
             String dirPath = StrUtil.removeSuffix(normalizedPath, fileName);
             dirPath = StrUtil.removeSuffix(dirPath, "/"); // 去除可能的尾部斜杠
 
-            // 构建目录路径
-            String fullDirPath = DOC_ROOT_DIR + "/" + dirPath;
-            log.debug("查找目录: {}, 文件名: {}", fullDirPath, fileName);
+            // 构建完整文件路径
+            String fullFilePath = DOC_ROOT_DIR + "/" + dirPath + "/" + fileName;
+            File file = FileUtil.file(fullFilePath);
 
-            // 列出目录下所有文件
-            File file = FileUtil.file(fullDirPath+"/"+fileName);
+            if (!file.exists()) {
+                throw new RuntimeException("图片文件不存在: " + normalizedPath);
+            }
+            if (!file.canRead()) {
+                throw new RuntimeException("图片文件无法读取: " + normalizedPath);
+            }
 
-            log.info("找到匹配的图片: {}", file.getAbsolutePath());
+            log.debug("找到图片文件: {}", file.getAbsolutePath());
             return resourceLoader.getResource("file:" + file.getAbsolutePath());
+            
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("获取图片资源出错: {}", e.getMessage(), e);
-            return null;
+            throw new RuntimeException("获取图片资源失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 解码URL路径，处理多重编码
+     */
+    private String decodeUrlPath(String path) {
+        String decodedPath = path;
+        String previousPath = "";
+        
+        // 循环解码直到路径不再变化
+        while (!decodedPath.equals(previousPath)) {
+            previousPath = decodedPath;
+            try {
+                decodedPath = java.net.URLDecoder.decode(previousPath, StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                log.debug("URL解码结束或出错: {}", e.getMessage());
+                break;
+            }
+        }
+        
+        return decodedPath;
     }
 
 }
