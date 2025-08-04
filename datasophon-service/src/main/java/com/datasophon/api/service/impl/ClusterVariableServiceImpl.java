@@ -18,30 +18,73 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import com.mybatisflex.core.query.QueryChain;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.converter.ClusterVariableConverter;
 import com.datasophon.api.service.ClusterVariableService;
+import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.dao.entity.ClusterVariable;
 import com.datasophon.dao.mapper.ClusterVariableMapper;
+import com.mybatisflex.core.query.QueryChain;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
+/**
+ * 集群变量服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-04
+ */
 @Service("clusterVariableService")
+@Transactional
 public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariable>
-        implements
-        ClusterVariableService {
+        implements ClusterVariableService {
+
+    @Autowired
+    private ClusterVariableConverter clusterVariableConverter;
 
     @Override
-    public ClusterVariable getVariableByVariableName(String variableName, Integer clusterId) {
+    public ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId) {
         List<ClusterVariable> list = QueryChain.of(ClusterVariable.class)
                 .where(ClusterVariable::getVariableName).eq(variableName)
                 .and(ClusterVariable::getClusterId).eq(clusterId)
                 .list();
 
         if (CollUtil.isNotEmpty(list)) {
-            return list.getFirst();
+            ClusterVariable entity = list.getFirst();
+            return clusterVariableConverter.entityToDto(entity);
         }
         return null;
+    }
+
+    @Override
+    public List<ClusterVariableDTO> getVariablesByClusterId(Integer clusterId) {
+        List<ClusterVariable> entities = QueryChain.of(ClusterVariable.class)
+                .where(ClusterVariable::getClusterId).eq(clusterId)
+                .list();
+
+        return clusterVariableConverter.entityListToDtoList(entities);
+    }
+
+    @Override
+    public ClusterVariableDTO saveOrUpdateVariable(ClusterVariableDTO dto) {
+        ClusterVariable entity = clusterVariableConverter.dtoToEntity(dto);
+        saveOrUpdate(entity);
+        return clusterVariableConverter.entityToDto(entity);
+    }
+
+    @Override
+    public ClusterVariableDTO getByIdAsDto(Integer id) {
+        ClusterVariable entity = getById(id);
+        return Objects.nonNull(entity) ? clusterVariableConverter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public boolean deleteVariable(Integer id) {
+        return removeById(id);
     }
 }
