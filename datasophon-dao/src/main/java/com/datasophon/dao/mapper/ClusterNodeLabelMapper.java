@@ -25,11 +25,12 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 集群节点标签映射器
+ * 集群节点标签数据访问对象
+ * 提供集群节点标签的数据库操作
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Mapper
 public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntity> {
@@ -50,52 +51,6 @@ public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntit
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId)
                 .and(ClusterNodeLabelEntity::getNodeLabel).eq(nodeLabel);
-        return this.selectListByQuery(query);
-    }
-
-    /**
-     * 根据ID查询单个实体
-     */
-    default ClusterNodeLabelEntity selectById(Integer id) {
-        return this.selectOneById(id);
-    }
-
-    /**
-     * 插入实体
-     */
-    default int insert(ClusterNodeLabelEntity entity) {
-        return this.insertSelective(entity);
-    }
-
-    /**
-     * 根据ID更新实体
-     */
-    default int updateById(ClusterNodeLabelEntity entity) {
-        return this.update(entity);
-    }
-
-    /**
-     * 根据ID删除
-     */
-    default int removeById(Integer id) {
-        return this.deleteById(id);
-    }
-
-    /**
-     * 根据ID列表删除
-     */
-    default int deleteByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        return this.deleteBatchByIds(ids);
-    }
-
-    /**
-     * 查询所有节点标签
-     */
-    default List<ClusterNodeLabelEntity> selectAll() {
-        QueryWrapper query = QueryWrapper.create();
         return this.selectListByQuery(query);
     }
 }

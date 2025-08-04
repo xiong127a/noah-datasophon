@@ -17,37 +17,59 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterNodeLabelDTO;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
- * 集群节点标签服务
+ * 集群节点标签服务接口
+ * 提供集群节点标签的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
-public interface ClusterNodeLabelService {
+public interface ClusterNodeLabelService extends IService<ClusterNodeLabelEntity> {
 
-    ClusterNodeLabelEntity saveNodeLabel(Integer clusterId, String nodeLabel);
+    /**
+     * 保存节点标签
+     */
+    ClusterNodeLabelDTO saveNodeLabel(Integer clusterId, String nodeLabel);
 
+    /**
+     * 删除节点标签
+     */
     boolean deleteNodeLabel(Integer nodeLabelId);
 
+    /**
+     * 分配节点标签
+     */
     boolean assignNodeLabel(Integer nodeLabelId, String hostIds);
 
-    List<ClusterNodeLabelEntity> queryClusterNodeLabel(Integer clusterId);
+    /**
+     * 查询集群节点标签
+     */
+    List<ClusterNodeLabelDTO> queryClusterNodeLabel(Integer clusterId);
 
+    /**
+     * 创建默认节点标签
+     */
     void createDefaultNodeLabel(Integer clusterId);
 
-    // 标准CRUD方法
-    ClusterNodeLabelEntity getById(Integer id);
+    /**
+     * 根据ID获取节点标签DTO
+     */
+    ClusterNodeLabelDTO getByIdAsDto(Integer id);
 
-    ClusterNodeLabelEntity save(ClusterNodeLabelEntity entity);
+    /**
+     * 保存节点标签DTO
+     */
+    ClusterNodeLabelDTO saveNodeLabelDto(ClusterNodeLabelDTO dto);
 
-    ClusterNodeLabelEntity updateById(ClusterNodeLabelEntity entity);
-
-    boolean removeByIds(List<Integer> ids);
-
-    List<ClusterNodeLabelEntity> getAllNodeLabels();
+    /**
+     * 更新节点标签
+     */
+    void updateNodeLabel(ClusterNodeLabelDTO dto);
 }

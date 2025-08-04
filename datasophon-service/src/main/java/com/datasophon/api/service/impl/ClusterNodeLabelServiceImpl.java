@@ -19,6 +19,8 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.converter.ClusterNodeLabelConverter;
+import com.datasophon.common.dto.ClusterNodeLabelDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
@@ -40,6 +42,7 @@ import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterNodeLabelMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
@@ -54,30 +57,30 @@ import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.kubernetes.util.KubernetesUtil.runCmd;
 
 /**
- * 集群节点标签服务实现
+ * 集群节点标签服务实现类
+ * 提供集群节点标签的业务逻辑处理
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2024-12-19
+ * @date 2025-08-04
  */
 @Service("clusterNodeLabelService")
 @Transactional
-public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
+public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMapper, ClusterNodeLabelEntity>
+        implements ClusterNodeLabelService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterNodeLabelServiceImpl.class);
 
     @Autowired
-    private ClusterNodeLabelMapper clusterNodeLabelMapper;
+    private ClusterNodeLabelConverter clusterNodeLabelConverter;
 
     @Autowired
     private ClusterHostService hostService;
@@ -89,7 +92,7 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
     private ClusterInfoService clusterInfoService;
 
     @Override
-    public ClusterNodeLabelEntity saveNodeLabel(Integer clusterId, String nodeLabel) {
+    public ClusterNodeLabelDTO saveNodeLabel(Integer clusterId, String nodeLabel) {
         // 标签名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         GeneralValidator generalValidator = new GeneralValidator();
@@ -108,19 +111,27 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
         ClusterNodeLabelEntity nodeLabelEntity = new ClusterNodeLabelEntity();
         nodeLabelEntity.setClusterId(clusterId);
         nodeLabelEntity.setNodeLabel(nodeLabel);
-        clusterNodeLabelMapper.insert(nodeLabelEntity);
+        this.save(nodeLabelEntity);
         // refresh to yarn
         if (!refreshToYarn(clusterId, "-addToClusterNodeLabels", nodeLabel)) {
             throw new BusinessException(
                     Status.ADD_YARN_NODE_LABEL_FAILED.getMsg() + " , 请检查yarn配置页面标签配置项(yarn.node-labels.enabled)是否开启");
         }
-        return nodeLabelEntity;
+        // Service层：Entity → DTO转换
+        return clusterNodeLabelConverter.entityToDto(nodeLabelEntity);
     }
 
     private boolean refreshToYarn(Integer clusterId, String type, String nodeLabel) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        // 由于ClusterServiceRoleInstanceService已重构，直接使用getMapper()查询Entity
         List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
-                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager").stream()
+                .map(dto -> {
+                    ClusterServiceRoleInstanceEntity entity = new ClusterServiceRoleInstanceEntity();
+                    entity.setHostname(dto.hostname());
+                    return entity;
+                })
+                .toList();
         String depMode = getDepMode(clusterId);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         String namespace = clusterInfo.getNamespace();
@@ -175,7 +186,7 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
 
     @Override
     public boolean deleteNodeLabel(Integer nodeLabelId) {
-        ClusterNodeLabelEntity nodeLabelEntity = clusterNodeLabelMapper.selectById(nodeLabelId);
+        ClusterNodeLabelEntity nodeLabelEntity = this.getById(nodeLabelId);
         if (nodeLabelEntity == null) {
             throw new RuntimeException("Node label not found with id: " + nodeLabelId);
         }
@@ -183,7 +194,7 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
         if (nodeLabelInUse(nodeLabelEntity.getNodeLabel())) {
             throw new RuntimeException(Status.NODE_LABEL_IS_USING.getMsg());
         }
-        clusterNodeLabelMapper.removeById(nodeLabelId);
+        this.removeById(nodeLabelId);
         if (!refreshToYarn(nodeLabelEntity.getClusterId(), "-removeFromClusterNodeLabels",
                 nodeLabelEntity.getNodeLabel())) {
             throw new BusinessException(Status.REMOVE_YARN_NODE_LABEL_FAILED.getMsg());
@@ -193,16 +204,16 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
 
     @Override
     public boolean assignNodeLabel(Integer nodeLabelId, String hostIds) {
-        ClusterNodeLabelEntity nodeLabelEntity = clusterNodeLabelMapper.selectById(nodeLabelId);
+        ClusterNodeLabelEntity nodeLabelEntity = this.getById(nodeLabelId);
         if (nodeLabelEntity == null) {
             throw new RuntimeException("Node label not found with id: " + nodeLabelId);
         }
-        List<String> ids = Arrays.asList(hostIds.split(","));
+        List<String> ids = List.of(hostIds.split(","));
         hostService.updateBatchNodeLabel(ids, nodeLabelEntity.getNodeLabel());
 
         List<ClusterHostDO> list = hostService.getHostListByIds(ids);
         String assignNodeLabel = list.stream().map(e -> e.getHostname() + "=" + nodeLabelEntity.getNodeLabel())
-                .collect(Collectors.joining(" "));
+                .collect(java.util.stream.Collectors.joining(" "));
         logger.info("assign node label {}", assignNodeLabel);
         // sync to yarn
         // refresh to yarn
@@ -213,8 +224,9 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
     }
 
     @Override
-    public List<ClusterNodeLabelEntity> queryClusterNodeLabel(Integer clusterId) {
-        return clusterNodeLabelMapper.selectByClusterId(clusterId);
+    public List<ClusterNodeLabelDTO> queryClusterNodeLabel(Integer clusterId) {
+        List<ClusterNodeLabelEntity> entities = getMapper().selectByClusterId(clusterId);
+        return clusterNodeLabelConverter.entityListToDtoList(entities);
     }
 
     @Override
@@ -222,7 +234,7 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
         ClusterNodeLabelEntity nodeLabelEntity = new ClusterNodeLabelEntity();
         nodeLabelEntity.setNodeLabel("default");
         nodeLabelEntity.setClusterId(clusterId);
-        clusterNodeLabelMapper.insert(nodeLabelEntity);
+        this.save(nodeLabelEntity);
     }
 
     private boolean nodeLabelInUse(String nodeLabel) {
@@ -233,35 +245,27 @@ public class ClusterNodeLabelServiceImpl implements ClusterNodeLabelService {
     }
 
     private boolean repeatNodeLable(Integer clusterId, String nodeLabel) {
-        List<ClusterNodeLabelEntity> list = clusterNodeLabelMapper.selectByClusterIdAndNodeLabel(clusterId, nodeLabel);
+        List<ClusterNodeLabelEntity> list = getMapper().selectByClusterIdAndNodeLabel(clusterId, nodeLabel);
         return CollUtil.isNotEmpty(list);
     }
 
-    // 标准CRUD方法实现
+    // 新增DTO方法实现
     @Override
-    public ClusterNodeLabelEntity getById(Integer id) {
-        return clusterNodeLabelMapper.selectById(id);
+    public ClusterNodeLabelDTO getByIdAsDto(Integer id) {
+        ClusterNodeLabelEntity entity = this.getById(id);
+        return clusterNodeLabelConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterNodeLabelEntity save(ClusterNodeLabelEntity entity) {
-        clusterNodeLabelMapper.insert(entity);
-        return entity;
+    public ClusterNodeLabelDTO saveNodeLabelDto(ClusterNodeLabelDTO dto) {
+        ClusterNodeLabelEntity entity = clusterNodeLabelConverter.dtoToEntity(dto);
+        this.save(entity);
+        return clusterNodeLabelConverter.entityToDto(entity);
     }
 
     @Override
-    public ClusterNodeLabelEntity updateById(ClusterNodeLabelEntity entity) {
-        clusterNodeLabelMapper.updateById(entity);
-        return entity;
-    }
-
-    @Override
-    public boolean removeByIds(List<Integer> ids) {
-        return clusterNodeLabelMapper.deleteByIds(ids) > 0;
-    }
-
-    @Override
-    public List<ClusterNodeLabelEntity> getAllNodeLabels() {
-        return clusterNodeLabelMapper.selectAll();
+    public void updateNodeLabel(ClusterNodeLabelDTO dto) {
+        ClusterNodeLabelEntity entity = clusterNodeLabelConverter.dtoToEntity(dto);
+        this.updateById(entity);
     }
 }
