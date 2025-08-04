@@ -33,7 +33,6 @@ import com.datasophon.dao.entity.AutoScaleTaskEntity;
 import com.datasophon.dao.mapper.AutoScaleTaskMapper;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,10 +46,11 @@ import java.util.Map;
 
 /**
  * 自动伸缩服务实现
+ * 按照架构重构规范，迁移QueryChain到DAO层
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-01-01
  */
 @Service
 public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoScaleTaskEntity>
@@ -181,10 +181,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     @Override
     public PageResult<AutoScaleTaskDTO> getAutoScaleTasks(Integer clusterId, Integer page, Integer pageSize) {
         try {
-            Page<AutoScaleTaskEntity> result = QueryChain.of(AutoScaleTaskEntity.class)
-                    .where(AutoScaleTaskEntity::getClusterId).eq(clusterId)
-                    .orderBy(AutoScaleTaskEntity::getCreatedAt, false)
-                    .page(Page.of(page, pageSize));
+            Page<AutoScaleTaskEntity> result = getMapper().selectPageByClusterId(clusterId, page, pageSize);
 
             List<AutoScaleTaskDTO> dtoList = autoScaleTaskConverter.entityListToDtoList(result.getRecords());
             return PageResult.of(dtoList, result.getTotalRow(), page, pageSize);
@@ -198,12 +195,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     @Override
     public List<AutoScaleTaskDTO> getEnabledTasksByClusterId(Integer clusterId) {
         try {
-            List<AutoScaleTaskEntity> entities = QueryChain.of(AutoScaleTaskEntity.class)
-                    .where(AutoScaleTaskEntity::getClusterId).eq(clusterId)
-                    .and(AutoScaleTaskEntity::getEnabled).eq(true)
-                    .orderBy(AutoScaleTaskEntity::getCreatedAt, false)
-                    .list();
-
+            List<AutoScaleTaskEntity> entities = getMapper().selectEnabledByClusterId(clusterId);
             return autoScaleTaskConverter.entityListToDtoList(entities);
 
         } catch (Exception e) {
