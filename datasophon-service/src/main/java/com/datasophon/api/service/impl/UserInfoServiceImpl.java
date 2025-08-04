@@ -33,8 +33,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 用户信息服务实现
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
 @Service("userInfoService")
 public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEntity> implements UserInfoService {
 
@@ -125,7 +131,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         // Entity列表转DTO列表
         List<UserInfoDTO> dtoList = pageResult.getRecords().stream()
                 .map(this::entityToDto)
-                .collect(Collectors.toList());
+                .toList();
 
         // 返回分页结果
         return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
