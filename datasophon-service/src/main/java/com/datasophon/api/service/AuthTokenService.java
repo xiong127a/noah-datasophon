@@ -32,7 +32,7 @@ import java.util.List;
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-01-01
  */
 public interface AuthTokenService extends IService<AuthTokenEntity> {
 
