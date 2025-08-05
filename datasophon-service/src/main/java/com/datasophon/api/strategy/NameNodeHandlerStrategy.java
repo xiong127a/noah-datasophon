@@ -19,20 +19,19 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
