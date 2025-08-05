@@ -17,8 +17,12 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
+import com.datasophon.api.converter.ClusterServiceInstanceConverter;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.master.ActorUtils;
@@ -28,9 +32,12 @@ import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ServiceInstallService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -44,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
@@ -57,22 +63,26 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         if (hosts.size() == 1) {
             String rangerAdminUrl = "http://" + hosts.getFirst() + ":6080";
             logger.info("rangerAdminUrl is {}", rangerAdminUrl);
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rangerAdminUrl}", rangerAdminUrl);
+            SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${rangerAdminUrl}", rangerAdminUrl);
         }
     }
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         boolean enableKerberos = false;
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+        Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
         ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         // enable ranger plugin
         for (ServiceConfig config : list) {
             if ("enableHDFSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHdfsPlugin");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHDFSPlugin}", "true");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableHDFSPlugin}", "true");
                 enableRangerPlugin(clusterId, "HDFS", "NameNode");
                 TenantRangerCommand hdfsRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HDFS")
@@ -82,7 +92,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             if ("enableYARNPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableYARNPlugin");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableYARNPlugin}", "true");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableYARNPlugin}", "true");
                 enableRangerPlugin(clusterId, "YARN", "ResourceManager");
                 TenantRangerCommand yarnRangerCommand = TenantRangerCommand.builder()
                         .serviceName("YARN")
@@ -92,7 +102,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             if ("enableHIVEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHivePlugin");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHIVEPlugin}", "true");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableHIVEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HIVE", "HiveServer2");
                 TenantRangerCommand hiveRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HIVE")
@@ -102,7 +112,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             if ("enableHBASEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHbasePlugin");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHBASEPlugin}", "true");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableHBASEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HBASE", "HbaseMaster");
                 TenantRangerCommand hbaseRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HBASE")
@@ -112,7 +122,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             if ("enableKMSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableKMSPlugin");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
                 // enableRangerPlugin(clusterId, "HDFS", "NameNode");
                 TenantRangerCommand kmsRangerCommand = TenantRangerCommand.builder()
                         .serviceName("KMS")
@@ -122,7 +132,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${" + configName + "}", "false");
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${" + configName + "}", "false");
             }
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "RANGER");
@@ -163,18 +173,26 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 .getBean(ServiceInstallService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+        ClusterServiceInstanceDTO serviceInstanceDto = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        ClusterServiceInstanceConverter serviceInstanceConverter = SpringUtil.getBean(ClusterServiceInstanceConverter.class);
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceConverter.dtoToEntity(serviceInstanceDto);
         // 判断是否存在es服务
         Boolean hasEs = serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
         // 查询角色组id
-        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+        List<ClusterServiceRoleInstanceDTO> roleListDto = roleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
+        ClusterServiceRoleInstanceConverter roleInstanceConverter = SpringUtil.getBean(ClusterServiceRoleInstanceConverter.class);
+        List<ClusterServiceRoleInstanceEntity> roleList = roleListDto.stream()
+                .map(roleInstanceConverter::dtoToEntity)
+                .toList();
 
-        if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
+        if (CollUtil.isNotEmpty(roleList)) {
             Integer roleGroupId = roleList.getFirst().getRoleGroupId();
 
-            ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+            ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+            ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+            ClusterServiceRoleGroupConfig config = configConverter.dtoToEntity(configDto);
             List<ServiceConfig> serviceConfigs = JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
             Map<String, ServiceConfig> map = serviceConfigs.stream()
                     .collect(Collectors.toMap(ServiceConfig::getName, serviceConfig -> serviceConfig, (v1, v2) -> v1));
