@@ -6,11 +6,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.TypeReference;
+import com.datasophon.api.converter.FrameServiceConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -106,8 +107,11 @@ public class ConfigGroupUtils {
                     .getBean(FrameServiceService.class);
 
             // 获取服务定义
-            FrameServiceEntity frameServiceEntity = frameServiceService.getServiceByFrameCodeAndServiceName(
+            FrameServiceConverter frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+            FrameServiceDTO frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(
                     frameCode, serviceName);
+            FrameServiceEntity frameServiceEntity = frameServiceDTO != null ? 
+                    frameServiceConverter.dtoToEntity(frameServiceDTO) : null;
 
             if (frameServiceEntity == null) {
                 logger.error("无法获取服务定义: {}", serviceName);
@@ -531,10 +535,13 @@ public class ConfigGroupUtils {
             // 从Spring上下文获取服务
             FrameServiceService frameServiceService = SpringUtil
                     .getBean(FrameServiceService.class);
+            FrameServiceConverter frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
 
             // 获取服务定义
-            FrameServiceEntity frameServiceEntity = frameServiceService.getServiceByFrameCodeAndServiceName(
+            FrameServiceDTO frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(
                     frameCode, serviceName);
+            FrameServiceEntity frameServiceEntity = frameServiceDTO != null ? 
+                    frameServiceConverter.dtoToEntity(frameServiceDTO) : null;
 
             if (frameServiceEntity == null) {
                 logger.error("无法获取服务定义: {}", serviceName);
@@ -747,7 +754,7 @@ public class ConfigGroupUtils {
                     String levelPrefix = configLevel.toLowerCase() + "_";
 
                     // 直接将configLevel和configGroup用下划线连接
-                    if (configGroup != null && configGroup.startsWith(levelPrefix)) {
+                    if (configGroup.startsWith(levelPrefix)) {
                         groupKey = configGroup;
                     }
 
@@ -902,7 +909,7 @@ public class ConfigGroupUtils {
     private static Map<JSONObject, JSONArray> parseConfigJson(String configFileJson) {
         return JSONObject.parseObject(configFileJson,
                 new TypeReference<>() {
-                }, JSONReader.Feature.SupportAutoType);
+                });
     }
 
     /**
