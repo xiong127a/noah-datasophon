@@ -15,24 +15,25 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.strategy;
+package com.datasophon.api.service;
 
-import com.datasophon.api.load.GlobalVariables;
-import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.service.SimpleClusterVariableService;
+/**
+ * 服务角色主机名查询服务
+ * 从ProcessUtils迁移而来的主机名查询功能
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
+public interface ServiceRoleHostnameService {
 
-import java.util.List;
-import java.util.Map;
-
-public class HistoryServerHandlerStrategy implements ServiceRoleStrategy {
-
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
-        if (hosts.size() == 1) {
-            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${historyserverHost}", hosts.getFirst());
-        }
-    }
-
+    /**
+     * 根据集群ID、服务名称和角色名称获取服务角色主机名
+     * 
+     * @param clusterId 集群ID
+     * @param serviceName 服务名称
+     * @param roleName 角色名称
+     * @return 主机名，如果未找到返回null
+     */
+    String getServiceRoleHostname(Integer clusterId, String serviceName, String roleName);
 }

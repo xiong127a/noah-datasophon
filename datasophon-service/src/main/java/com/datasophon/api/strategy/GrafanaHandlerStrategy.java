@@ -22,7 +22,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -39,8 +39,9 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() == 1) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaHost}",
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${grafanaHost}",
                     hosts.getFirst());
         }
     }
@@ -86,7 +87,8 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
             }
         }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
 
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaPort}", port);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${grafanaPort}", port);
     }
 }

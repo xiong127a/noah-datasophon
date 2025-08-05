@@ -28,6 +28,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
@@ -41,6 +42,7 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.TemplatePathUtils;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
@@ -156,12 +158,15 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
             // 获取服务相关信息
             ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
                     .getBean(ClusterServiceInstanceRoleGroupService.class);
-            ClusterServiceInstanceRoleGroup roleGroup = roleGroupService
+            ClusterServiceInstanceRoleGroupConverter roleGroupConverter = SpringUtil
+                    .getBean(ClusterServiceInstanceRoleGroupConverter.class);
+            ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService
                     .getRoleGroupByServiceInstanceId(serviceInstanceId);
-            if (roleGroup == null) {
+            if (roleGroupDTO == null) {
                 log.warn("未找到服务实例ID{}对应的角色组", serviceInstanceId);
                 return null;
             }
+            ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
 
             // 获取集群信息
             ClusterInfoService clusterInfoService = SpringUtil

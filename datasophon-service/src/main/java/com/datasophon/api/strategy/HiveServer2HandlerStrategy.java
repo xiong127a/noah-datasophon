@@ -22,7 +22,10 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.druid.util.JdbcUtils;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ServiceRoleHostnameService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ConnectionInfo;
@@ -42,11 +45,12 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         CacheUtils.put("enableHiveServer2HA", false);
         if (CollUtil.isNotEmpty(hosts)) {
             CacheUtils.put("enableHiveServer2HA", true);
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.getFirst());
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId,
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.getFirst());
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId,
                     "${masterHiveServer2Principal}", "hive/" + hosts.getFirst() + "@HADOOP.COM");
         }
     }
@@ -54,9 +58,11 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         boolean enableKerberos = false;
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+        Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
         for (ServiceConfig config : list) {
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "HIVE");
@@ -64,7 +70,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             if (StrUtil.equals("javax.jdo.option.ConnectionURL", config.getName())) {
                 String jdbcUrl = config.getValue().toString();
                 String dbType = JdbcUtils.getDbType(jdbcUrl, "");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${HiveMetaStore-dbType}",
+                SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${HiveMetaStore-dbType}",
                         dbType);
                 config.setValue(jdbcUrl);
             }
@@ -85,7 +92,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
         // if enabled hiveserver2 ha
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         List<ServiceConfig> serviceConfigs = ServiceConfigMap
                 .get(clusterInfo.getClusterFrame() + Constants.UNDERLINE + "HIVE" + Constants.CONFIG);
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -170,7 +178,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
                     hiveServer2Host = hiveServer2Hosts.getFirst();
                 } else {
-                    hiveServer2Host = ProcessUtils.getServiceRoleHostname(clusterId, "HIVE", "HiveServer2");
+                    ServiceRoleHostnameService serviceRoleHostnameService = SpringUtil.getBean(ServiceRoleHostnameService.class);
+                    hiveServer2Host = serviceRoleHostnameService.getServiceRoleHostname(clusterId, "HIVE", "HiveServer2");
                 }
             }
 
@@ -189,7 +198,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             // 获取HiveMetastore地址
             String metastoreUris = String.valueOf(configMap.getOrDefault("hive.metastore.uris", ""));
             if (StrUtil.isBlank(metastoreUris)) {
-                String hiveMetastoreHost = ProcessUtils.getServiceRoleHostname(clusterId, "HIVE", "HiveMetaStore");
+                ServiceRoleHostnameService serviceRoleHostnameService = SpringUtil.getBean(ServiceRoleHostnameService.class);
+                String hiveMetastoreHost = serviceRoleHostnameService.getServiceRoleHostname(clusterId, "HIVE", "HiveMetaStore");
                 if (StrUtil.isNotBlank(hiveMetastoreHost)) {
                     metastoreUris = "thrift://" + hiveMetastoreHost + ":9083";
                 }

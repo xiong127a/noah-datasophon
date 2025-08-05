@@ -19,12 +19,11 @@ package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +34,11 @@ public class FlinkHandlerStrategy extends ServiceHandlerAbstract implements Serv
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         boolean enableJM2HA = false;
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+        Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
         for (ServiceConfig config : list) {
             if ("enableJMHA".equals(config.getName())) {
                 enableJM2HA = isEnableHA(clusterId, globalVariables, enableJM2HA, config, "FLINK");

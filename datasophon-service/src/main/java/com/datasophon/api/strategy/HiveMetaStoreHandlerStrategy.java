@@ -20,7 +20,8 @@ package com.datasophon.api.strategy;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceRoleInfo;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,12 +37,13 @@ public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
             return;
         }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() == 1) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.getFirst());
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.getFirst());
         }
         String metastoreHosts = StrUtil.join(",",CollUtil.map(hosts,ip -> "thrift://" + ip + ":9083",false));
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.getFirst());
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.getFirst());
     }
 
     @Override

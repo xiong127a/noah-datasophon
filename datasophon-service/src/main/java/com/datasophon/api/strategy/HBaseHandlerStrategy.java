@@ -20,7 +20,8 @@ package com.datasophon.api.strategy;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
@@ -41,9 +42,11 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         boolean enableKerberos = false;
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+        Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
         for (ServiceConfig config : list) {
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "HBASE");

@@ -26,8 +26,8 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.api.utils.string.validator.WordValidator;
@@ -93,6 +93,9 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Autowired
     private ClusterUserGroupService userGroupService;
+
+    @Autowired
+    private SimpleClusterVariableService simpleClusterVariableService;
 
     @Autowired
     private ClusterUserConverter clusterUserConverter;
@@ -182,11 +185,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setUserPwd(globalVariables.get("${syncLdapBindPassword}"));
         String uid = globalVariables.get("${syncLdapUidNumber}");
         if (StringUtils.isBlank(uid)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
             ldapCommand.setUidNumber("2000");
         } else {
             String nextUid = NumberUtil.toStr(NumberUtil.add("2000", "1").longValue());
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", nextUid);
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", nextUid);
             ldapCommand.setUidNumber(nextUid);
         }
         ldapCommand.setGidNumber("55");

@@ -113,8 +113,9 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
         roleGroup.setNeedRestart(NeedRestart.NO);
         this.save(roleGroup);
 
-        ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
-        if (config != null) {
+        ClusterServiceRoleGroupConfigDTO configDTO = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+        if (configDTO != null) {
+            ClusterServiceRoleGroupConfig config = clusterServiceRoleGroupConfigConverter.dtoToEntity(configDTO);
             ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
             BeanUtils.copyProperties(config, roleGroupConfig);
             roleGroupConfig.setConfigVersion(1);
@@ -155,8 +156,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
                 .selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId, "default");
 
         if (instanceRoleGroup != null) {
-            ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(instanceRoleGroup.getId());
-            return clusterServiceRoleGroupConfigConverter.entityToDto(config);
+            return roleGroupConfigService.getConfigByRoleGroupId(instanceRoleGroup.getId());
         }
         return null;
     }

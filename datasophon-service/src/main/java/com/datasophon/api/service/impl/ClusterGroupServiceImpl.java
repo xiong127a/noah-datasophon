@@ -24,8 +24,8 @@ import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
+import com.datasophon.api.service.HostGroupSyncService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.api.utils.string.validator.WordValidator;
@@ -84,6 +84,9 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     @Autowired
     private ClusterGroupConverter clusterGroupConverter;
+
+    @Autowired
+    private HostGroupSyncService hostGroupSyncService;
 
     @Override
     public ClusterGroupDTO saveClusterGroup(Integer clusterId, String groupName) {
@@ -222,7 +225,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
         List<ClusterGroup> groupList = this.list();
         for (ClusterGroup clusterGroup : groupList) {
-            ProcessUtils.syncUserGroupToHosts(hostList, clusterGroup.getGroupName(), "groupadd");
+            hostGroupSyncService.syncUserGroupToHosts(hostList, clusterGroup.getGroupName(), "groupadd");
         }
     }
 

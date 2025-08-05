@@ -15,24 +15,28 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.strategy;
+package com.datasophon.api.service;
 
-import com.datasophon.api.load.GlobalVariables;
-import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.service.SimpleClusterVariableService;
+import com.datasophon.dao.entity.ClusterHostDO;
 
 import java.util.List;
-import java.util.Map;
 
-public class HistoryServerHandlerStrategy implements ServiceRoleStrategy {
+/**
+ * 主机用户组同步服务
+ * 负责将用户组信息同步到各个主机
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-01
+ */
+public interface HostGroupSyncService {
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
-        if (hosts.size() == 1) {
-            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${historyserverHost}", hosts.getFirst());
-        }
-    }
-
+    /**
+     * 同步用户组到主机列表
+     * 
+     * @param hostList 主机列表
+     * @param groupName 组名
+     * @param command 执行命令（如groupadd）
+     */
+    void syncUserGroupToHosts(List<ClusterHostDO> hostList, String groupName, String command);
 }
