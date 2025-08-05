@@ -20,7 +20,6 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterServiceCommandHostConverter;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
@@ -28,7 +27,7 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
 import com.datasophon.common.model.PageResult;
-import com.mybatisflex.core.service.impl.ServiceImpl;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,22 +62,32 @@ public class ClusterServiceCommandHostServiceImpl
     private ClusterServiceCommandHostCommandService hostCommandService;
 
     @Override
-    public PageResult<ClusterServiceCommandHostEntity> getCommandHostList(Integer clusterId, String commandId,
+    public PageResult<ClusterServiceCommandHostDTO> getCommandHostList(Integer clusterId, String commandId,
             Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
-        PageResult<ClusterServiceCommandHostEntity> pageResult = getMapper().selectPageByCommandId(commandId, page,
+        PageResult<ClusterServiceCommandHostEntity> entityPageResult = getMapper().selectPageByCommandId(commandId,
+                page,
                 pageSize);
-        List<ClusterServiceCommandHostEntity> list = pageResult.getRecords();
+        List<ClusterServiceCommandHostEntity> entityList = entityPageResult.getRecords();
 
         // 处理查询结果
-        for (ClusterServiceCommandHostEntity commandHostEntity : list) {
+        for (ClusterServiceCommandHostEntity commandHostEntity : entityList) {
             // 实时聚合主机命令进度和状态（只做内存聚合，不做数据库update）
             calculateHostCommandActualProgress(commandHostEntity, false);
             calculateRealTimeHostCommandState(commandHostEntity, false);
             commandHostEntity.setCommandStateCode(commandHostEntity.getCommandState().getValue());
         }
 
-        return pageResult;
+        // 转换Entity列表为DTO列表
+        List<ClusterServiceCommandHostDTO> dtoList = converter.entityListToDtoList(entityList);
+
+        // 构建DTO的分页结果
+        return PageResult.<ClusterServiceCommandHostDTO>builder()
+                .records(dtoList)
+                .total(entityPageResult.getTotal())
+                .current(entityPageResult.getCurrent())
+                .size(entityPageResult.getSize())
+                .build();
     }
 
     /**
@@ -94,7 +103,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (isTerminalState(currentState)) {
                 commandHostEntity.setCommandProgress(PROGRESS_COMPLETE);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_COMPLETE)) {
-                    hostMapper.updateById(commandHostEntity);
+                    updateById(commandHostEntity);
                     logProgressUpdate(commandHostEntity, currentState.toString());
                 }
                 return;
@@ -108,7 +117,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandHostEntity.setCommandProgress(PROGRESS_INITIAL);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_INITIAL)) {
-                    getMapper().updateById(commandHostEntity);
+                    updateById(commandHostEntity);
                     logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getCommandHostId());
                 }
                 return;
@@ -137,7 +146,7 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 如果需要更新数据库且进度有变化
             if (shouldUpdateProgress(updateDb, oldProgress, finalProgress)) {
-                getMapper().updateById(commandHostEntity);
+                updateById(commandHostEntity);
                 logger.info("主机命令 {} 进度更新为 {}% 并更新数据库",
                         commandHostEntity.getCommandHostId(), finalProgress);
             }
@@ -205,7 +214,7 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 如果需要更新数据库且状态发生了变化
             if (updateDb && stateChanged) {
-                getMapper().updateById(hostCommandEntity);
+                updateById(hostCommandEntity);
                 logger.info("主机命令 {} 状态从 {} 变为 {}，已更新数据库",
                         hostCommandEntity.getCommandHostId(), oldState, newState);
             }
