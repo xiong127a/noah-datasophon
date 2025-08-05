@@ -7,14 +7,15 @@ import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.converter.ClusterServiceInstanceConverter;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.HostState;
 import com.datasophon.dao.enums.ServiceRoleState;
-import com.datasophon.dao.enums.ServiceState;
+
 import com.datasophon.api.alert.gateway.AlertHistoryGateway;
 import com.datasophon.api.alert.model.AlertHistory;
 import com.datasophon.api.alert.model.AlertLabels;
@@ -25,6 +26,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 告警处理Actor
+ * 负责处理集群告警消息，更新主机和服务状态，记录告警历史
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class AlertActor extends AbstractActor {
 
     private static final String FIRING = "firing";
@@ -91,20 +100,26 @@ public class AlertActor extends AbstractActor {
                         }
                         hostService.updateById(clusterHost);
                     } else {
-                        ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                        ClusterServiceRoleInstanceDTO roleInstance = roleInstanceService
                                 .getOneServiceRole(serviceRoleName, hostname, clusterId);
                         if (Objects.nonNull(roleInstance)) {
-                            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
-                                    .getById(roleInstance.getServiceId());
-                            serviceInstance.setServiceState(ServiceState.EXISTS_ALARM);
-                            roleInstance.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
+                            ClusterServiceInstanceConverter serviceInstanceConverter = SpringUtil
+                                    .getBean(ClusterServiceInstanceConverter.class);
+                            ClusterServiceInstanceDTO serviceInstance = serviceInstanceConverter
+                                    .entityToDto(serviceInstanceService.getById(roleInstance.serviceId()));
+                            // 更新服务实例状态为告警
+                            serviceInstanceService.updateServiceInstanceState(serviceInstance.id(), 
+                                    com.datasophon.dao.enums.ServiceState.EXISTS_ALARM);
+                            // 更新服务角色实例状态为告警
+                            roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), 
+                                    ServiceRoleState.EXISTS_ALARM);
                             if (!hasEnabledAlertHistory) {
                                 ClusterAlertHistory clusterAlertHistory = ClusterAlertHistory.builder()
                                         .clusterId(clusterId)
                                         .alertGroupName(labels.getJob())
                                         .alertTargetName(alertname)
-                                        .serviceInstanceId(serviceInstance.getId())
-                                        .serviceRoleInstanceId(roleInstance.getId())
+                                        .serviceInstanceId(serviceInstance.id())
+                                        .serviceRoleInstanceId(roleInstance.id())
                                         .createTime(new Date())
                                         .updateTime(new Date())
                                         .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN
@@ -118,11 +133,12 @@ public class AlertActor extends AbstractActor {
                                 alertHistoryService.save(clusterAlertHistory);
                             }
                             if (EXCEPTION.equals(labels.getSeverity())) {
-                                serviceInstance.setServiceState(ServiceState.EXISTS_EXCEPTION);
-                                roleInstance.setServiceRoleState(ServiceRoleState.STOP);
+                                // 异常告警，更新为异常状态
+                                serviceInstanceService.updateServiceInstanceState(serviceInstance.id(), 
+                                        com.datasophon.dao.enums.ServiceState.EXISTS_EXCEPTION);
+                                roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), 
+                                        ServiceRoleState.STOP);
                             }
-                            serviceInstanceService.updateById(serviceInstance);
-                            roleInstanceService.updateById(roleInstance);
                         }
                     }
 
@@ -143,14 +159,13 @@ public class AlertActor extends AbstractActor {
                                 hostService.updateById(clusterHost);
                             } else {
                                 // 查询服务角色实例
-                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                                ClusterServiceRoleInstanceDTO roleInstance = roleInstanceService
                                         .getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
-                                if (roleInstance.getServiceRoleState() != ServiceRoleState.RUNNING) {
-                                    roleInstance.setServiceRoleState(ServiceRoleState.RUNNING);
-                                    if (nodeHasWarnAlertList) {
-                                        roleInstance.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
-                                    }
-                                    roleInstanceService.updateById(roleInstance);
+                                if (!Objects.equals(ServiceRoleState.RUNNING.getValue(), roleInstance.serviceRoleState())) {
+                                    // 恢复服务角色状态
+                                    ServiceRoleState newState = nodeHasWarnAlertList ? 
+                                            ServiceRoleState.EXISTS_ALARM : ServiceRoleState.RUNNING;
+                                    roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), newState);
                                 }
                             }
                         } else {
@@ -163,15 +178,13 @@ public class AlertActor extends AbstractActor {
                                 hostService.updateById(clusterHost);
                             } else {
                                 // 查询服务角色实例
-                                ClusterServiceRoleInstanceEntity roleInstance = roleInstanceService
+                                ClusterServiceRoleInstanceDTO roleInstance = roleInstanceService
                                         .getOneServiceRole(labels.getServiceRoleName(), hostname, clusterId);
-                                if (roleInstance.getServiceRoleState() != ServiceRoleState.RUNNING) {
-                                    if (nodeHasWarnAlertList) {
-                                        roleInstance.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
-                                    } else {
-                                        roleInstance.setServiceRoleState(ServiceRoleState.RUNNING);
-                                    }
-                                    roleInstanceService.updateById(roleInstance);
+                                if (!Objects.equals(ServiceRoleState.RUNNING.getValue(), roleInstance.serviceRoleState())) {
+                                    // 恢复服务角色状态（警告告警处理）
+                                    ServiceRoleState newState = nodeHasWarnAlertList ? 
+                                            ServiceRoleState.EXISTS_ALARM : ServiceRoleState.RUNNING;
+                                    roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), newState);
                                 }
                             }
                         }

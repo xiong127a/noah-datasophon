@@ -136,4 +136,12 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @return 所有服务实例列表
      */
     List<ClusterServiceInstanceDTO> getAllServiceInstances();
+
+    /**
+     * 更新服务实例状态
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @param serviceState 新的服务状态
+     */
+    void updateServiceInstanceState(Integer serviceInstanceId, com.datasophon.dao.enums.ServiceState serviceState);
 }

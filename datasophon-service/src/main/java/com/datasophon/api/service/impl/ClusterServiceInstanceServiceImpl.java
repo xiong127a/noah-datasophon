@@ -709,4 +709,13 @@ public class ClusterServiceInstanceServiceImpl
         List<ClusterServiceInstanceEntity> entities = list();
         return clusterServiceInstanceConverter.entityListToDtoList(entities);
     }
+
+    @Override
+    public void updateServiceInstanceState(Integer serviceInstanceId, ServiceState serviceState) {
+        ClusterServiceInstanceEntity entity = getById(serviceInstanceId);
+        if (entity != null) {
+            entity.setServiceState(serviceState);
+            updateById(entity);
+        }
+    }
 }

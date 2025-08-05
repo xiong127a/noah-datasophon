@@ -375,7 +375,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public String decommissionNode(String serviceRoleInstanceIds, String serviceName) throws Exception {
+    public String decommissionNode(String serviceRoleInstanceIds, String serviceName) {
         TreeSet<String> hosts = new TreeSet<>();
         Integer serviceInstanceId = null;
         String serviceRoleName = "";
@@ -487,5 +487,14 @@ public class ClusterServiceRoleInstanceServiceImpl
         List<ClusterServiceRoleInstanceEntity> entities = getMapper()
                 .selectByClusterIdAndServiceIdAndRoleName(clusterId, serviceInstanceId, roleName);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
+    }
+
+    @Override
+    public void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, ServiceRoleState serviceRoleState) {
+        ClusterServiceRoleInstanceEntity entity = getById(serviceRoleInstanceId);
+        if (entity != null) {
+            entity.setServiceRoleState(serviceRoleState);
+            updateById(entity);
+        }
     }
 }

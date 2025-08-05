@@ -165,4 +165,12 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      */
     List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,
             Integer serviceInstanceId, String roleName);
+
+    /**
+     * 更新服务角色实例状态
+     *
+     * @param serviceRoleInstanceId 服务角色实例ID
+     * @param serviceRoleState 新的服务角色状态
+     */
+    void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, com.datasophon.dao.enums.ServiceRoleState serviceRoleState);
 }
