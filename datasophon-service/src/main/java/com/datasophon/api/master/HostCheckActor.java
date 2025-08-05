@@ -18,6 +18,7 @@
 package com.datasophon.api.master;
 
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
@@ -35,8 +36,8 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PromInfoUtils;
 
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.HostState;
 import com.datasophon.dao.enums.MANAGED;
 import org.apache.commons.lang3.StringUtils;
@@ -83,24 +84,24 @@ public class HostCheckActor extends AbstractActor {
       final HostInfo hostInfo = hostCheckCommand.getHostInfo();
 
       // 获取当前安装并且正在运行的集群
-      List<ClusterInfoEntity> clusterList = clusterInfoService.runningClusterList();
+      List<ClusterInfoDTO> clusterList = clusterInfoService.runningClusterList();
 
-      for (ClusterInfoEntity clusterInfoEntity : clusterList) {
+      for (ClusterInfoDTO clusterInfoDto : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
-        Integer clusterId = clusterInfoEntity.getId();
-        String depType = clusterInfoEntity.getDepType();
+        Integer clusterId = clusterInfoDto.id();
+        String depType = clusterInfoDto.depType();
         String prometheusPort = "9090";
         if (Constants.KUBERNETES_MODE.equals(depType)) {
           prometheusPort = "30909";
         }
 
-        ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole("Prometheus", "",
+        ClusterServiceRoleInstanceDTO prometheusInstance = roleInstanceService.getOneServiceRole("Prometheus", "",
             clusterId);
         if (Objects.nonNull(prometheusInstance)) {
           // 集群正常安装了 Prometheus
           List<ClusterHostDO> list = clusterHostService.getHostListByClusterId(clusterId);
 
-          String promUrl = "http://" + prometheusInstance.getHostname() + ":" + prometheusPort + "/api/v1/query";
+          String promUrl = "http://" + prometheusInstance.hostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostDO clusterHostDO : list) {
             if (hostInfo != null && !StrUtil.equals(clusterHostDO.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
