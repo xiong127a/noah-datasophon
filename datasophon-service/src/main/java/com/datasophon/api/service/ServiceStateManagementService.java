@@ -17,8 +17,8 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.ServiceRoleState;
 
@@ -47,18 +47,18 @@ public interface ServiceStateManagementService {
     /**
      * 保存告警信息
      *
-     * @param roleInstanceEntity 角色实例实体
-     * @param alertTargetName    告警目标名称
-     * @param alertLevel         告警级别
-     * @param alertAdvice        告警建议
+     * @param roleInstanceDto 角色实例DTO
+     * @param alertTargetName 告警目标名称
+     * @param alertLevel      告警级别
+     * @param alertAdvice     告警建议
      */
-    void saveAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity, String alertTargetName,
+    void saveAlert(ClusterServiceRoleInstanceDTO roleInstanceDto, String alertTargetName,
             AlertLevel alertLevel, String alertAdvice);
 
     /**
      * 恢复告警
      *
-     * @param roleInstanceEntity 角色实例实体
+     * @param roleInstanceDto 角色实例DTO
      */
-    void recoverAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity);
+    void recoverAlert(ClusterServiceRoleInstanceDTO roleInstanceDto);
 }

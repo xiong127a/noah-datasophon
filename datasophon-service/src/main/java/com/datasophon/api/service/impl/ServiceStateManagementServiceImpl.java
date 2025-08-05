@@ -79,63 +79,61 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
     }
 
     @Override
-    public void saveAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity, String alertTargetName,
+    public void saveAlert(ClusterServiceRoleInstanceDTO roleInstanceDto, String alertTargetName,
             AlertLevel alertLevel, String alertAdvice) {
         // DAO层：使用Mapper查询告警历史
         ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
                 .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
-                        alertTargetName, roleInstanceEntity.getClusterId(),
-                        roleInstanceEntity.getHostname(), 1);
+                        alertTargetName, roleInstanceDto.clusterId(),
+                        roleInstanceDto.hostname(), 1);
 
         ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
-                .getById(roleInstanceEntity.getServiceId());
+                .getById(roleInstanceDto.serviceId());
         if (Objects.isNull(clusterAlertHistory)) {
             clusterAlertHistory = ClusterAlertHistory.builder()
-                    .clusterId(roleInstanceEntity.getClusterId())
-                    .alertGroupName(roleInstanceEntity.getServiceName().toLowerCase())
+                    .clusterId(roleInstanceDto.clusterId())
+                    .alertGroupName(roleInstanceDto.serviceName().toLowerCase())
                     .alertTargetName(alertTargetName)
                     .createTime(new Date())
                     .updateTime(new Date())
                     .alertLevel(alertLevel)
                     .alertInfo("")
                     .alertAdvice(alertAdvice)
-                    .hostname(roleInstanceEntity.getHostname())
-                    .serviceRoleInstanceId(roleInstanceEntity.getId())
-                    .serviceInstanceId(roleInstanceEntity.getServiceId())
+                    .hostname(roleInstanceDto.hostname())
+                    .serviceRoleInstanceId(roleInstanceDto.id())
+                    .serviceInstanceId(roleInstanceDto.serviceId())
                     .isEnabled(1)
-                    .serviceInstanceId(roleInstanceEntity.getServiceId())
                     .build();
 
             alertHistoryService.save(clusterAlertHistory);
         }
         // update service role instance state
         serviceInstanceEntity.setServiceState(ServiceState.EXISTS_EXCEPTION);
-        roleInstanceEntity.setServiceRoleState(ServiceRoleState.STOP);
+        ServiceRoleState newState = ServiceRoleState.STOP;
         if (alertLevel == AlertLevel.WARN) {
             serviceInstanceEntity.setServiceState(ServiceState.EXISTS_ALARM);
-            roleInstanceEntity.setServiceRoleState(ServiceRoleState.EXISTS_ALARM);
+            newState = ServiceRoleState.EXISTS_ALARM;
         }
         serviceInstanceService.updateById(serviceInstanceEntity);
-        serviceRoleInstanceService.updateById(roleInstanceEntity);
+        serviceRoleInstanceService.updateServiceRoleInstanceState(roleInstanceDto.id(), newState);
     }
 
     @Override
-    public void recoverAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
+    public void recoverAlert(ClusterServiceRoleInstanceDTO roleInstanceDto) {
         // DAO层：使用Mapper查询告警历史
         ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
                 .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
-                        roleInstanceEntity.getServiceRoleName() + " Survive",
-                        roleInstanceEntity.getClusterId(),
-                        roleInstanceEntity.getHostname(), 1);
+                        roleInstanceDto.serviceRoleName() + " Survive",
+                        roleInstanceDto.clusterId(),
+                        roleInstanceDto.hostname(), 1);
 
         if (Objects.nonNull(clusterAlertHistory)) {
             clusterAlertHistory.setIsEnabled(2);
             alertHistoryService.updateById(clusterAlertHistory);
         }
         // update service role instance state
-        if (roleInstanceEntity.getServiceRoleState() != ServiceRoleState.RUNNING) {
-            roleInstanceEntity.setServiceRoleState(ServiceRoleState.RUNNING);
-            serviceRoleInstanceService.updateById(roleInstanceEntity);
+        if (!Objects.equals(ServiceRoleState.RUNNING.getValue(), roleInstanceDto.serviceRoleState())) {
+            serviceRoleInstanceService.updateServiceRoleInstanceState(roleInstanceDto.id(), ServiceRoleState.RUNNING);
         }
     }
 }
