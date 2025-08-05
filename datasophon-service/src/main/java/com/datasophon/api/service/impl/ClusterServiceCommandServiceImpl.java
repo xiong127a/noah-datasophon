@@ -21,13 +21,14 @@ import cn.hutool.core.date.BetweenFormatter;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.EnumUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
 import com.datasophon.api.converter.ClusterServiceInstanceConverter;
 import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.common.enums.Status;
+
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DAGBuildActor;
 import com.datasophon.api.service.ClusterInfoService;
@@ -37,6 +38,8 @@ import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.api.service.CommandExecutionService;
+import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.api.utils.CacheOperateUtils;
 
 import com.datasophon.common.Constants;
@@ -53,6 +56,7 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.CommandState;
+import com.datasophon.dao.enums.RoleType;
 
 import com.datasophon.dao.mapper.ClusterServiceCommandMapper;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
@@ -147,44 +151,45 @@ public class ClusterServiceCommandServiceImpl
             String commandId = commandEntity.getCommandId();
             commandIds.add(commandId);
 
-            // TODO: 查询服务的服务角色 - 这里需要frameServiceRoleService重构后才能正确调用
-            // 暂时跳过这部分逻辑，因为frameServiceRoleService还返回Result，不符合架构规范
-            logger.warn("跳过服务角色查询，等待frameServiceRoleService重构完成: {}", serviceName);
-
-            /*
-             * // 以下代码被暂时注释，等待frameServiceRoleService重构
-             * HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
-             * for (FrameServiceRoleEntity serviceRole : serviceRoleList) {
-             * if (Objects.nonNull(serviceRoleHostMap)
-             * && serviceRoleHostMap.containsKey(serviceRole.getServiceRoleName())) {
-             * List<String> hosts =
-             * serviceRoleHostMap.get(serviceRole.getServiceRoleName());
-             * for (String hostname : hosts) {
-             * if (alreadyExistsServiceRole(serviceRole.getServiceRoleName(), hostname,
-             * clusterId)) {
-             * } else {
-             * ClusterServiceCommandHostEntity commandHost;
-             * if (map.containsKey(hostname)) {
-             * commandHost = map.get(hostname);
-             * } else {
-             * commandHost = commandExecutionService.generateCommandHostEntity(commandId, hostname);
-             * commandHostList.add(commandHost);
-             * map.put(hostname, commandHost);
-             * }
-             * // 4、生成主机操作指令
-             * ClusterServiceCommandHostCommandEntity hostCommand = ProcessUtils
-             * .generateCommandHostCommandEntity(commandType, commandId,
-             * serviceRole.getServiceRoleName(), serviceRole.getServiceRoleType(),
-             * commandHost);
-             * hostCommandList.add(hostCommand);
-             * }
-             * }
-             * }
-             * }
-             */
+            // 查询服务的服务角色
+            FrameServiceRoleService frameServiceRoleService = SpringUtil.getBean(FrameServiceRoleService.class);
+            List<FrameServiceRoleDTO> serviceRoleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId, serviceName);
+            
+            HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
+            for (FrameServiceRoleDTO serviceRole : serviceRoleList) {
+                if (Objects.nonNull(serviceRoleHostMap)
+                        && serviceRoleHostMap.containsKey(serviceRole.serviceRoleName())) {
+                    List<String> hosts = serviceRoleHostMap.get(serviceRole.serviceRoleName());
+                    for (String hostname : hosts) {
+                        if (alreadyExistsServiceRole(serviceRole.serviceRoleName(), hostname, clusterId)) {
+                            // 服务角色已存在，跳过
+                        } else {
+                            ClusterServiceCommandHostEntity commandHost;
+                            if (map.containsKey(hostname)) {
+                                commandHost = map.get(hostname);
+                            } else {
+                                commandHost = commandExecutionService.generateCommandHostEntity(commandId, hostname);
+                                commandHostList.add(commandHost);
+                                map.put(hostname, commandHost);
+                            }
+                            // 4、生成主机操作指令
+                            ClusterServiceCommandHostCommandEntity hostCommand = commandExecutionService
+                                    .generateCommandHostCommandEntity(commandType, commandId,
+                                            serviceRole.serviceRoleName(), integerToRoleType(serviceRole.serviceRoleType()),
+                                            commandHost);
+                            hostCommandList.add(hostCommand);
+                        }
+                    }
+                }
+            }
         }
-        logger.warn("No service role selected");
-        throw new RuntimeException(Status.NO_SERVICE_ROLE_SELECTED.getMsg());
+        
+        // 保存命令、命令主机、主机命令
+        saveBatch(list);
+        commandHostService.saveBatch(commandHostList); 
+        hostCommandService.saveBatch(hostCommandList);
+        
+        return String.join(",", commandIds);
     }
 
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
@@ -406,7 +411,7 @@ public class ClusterServiceCommandServiceImpl
             List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceDtoList.stream()
                     .map(roleInstanceConverter::dtoToEntity)
                     .toList();
-            if (Objects.isNull(roleInstanceList) || roleInstanceList.isEmpty()) {
+            if (roleInstanceList.isEmpty()) {
                 continue;
             }
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(id);
@@ -578,5 +583,18 @@ public class ClusterServiceCommandServiceImpl
     @Override
     public void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime) {
         getMapper().updateCommandStateAndEndTime(commandId, commandState, endTime);
+    }
+
+    // 枚举转换辅助方法（需要根据实际RoleType枚举调整）
+    private RoleType integerToRoleType(Integer value) {
+        if (value == null)
+            return null;
+        return switch (value) {
+            case 1 -> RoleType.MASTER;
+            case 2 -> RoleType.WORKER;
+            case 3 -> RoleType.CLIENT;
+            case 4 -> RoleType.SLAVE;
+            default -> null;
+        };
     }
 }
