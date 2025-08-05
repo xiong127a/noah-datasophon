@@ -17,12 +17,14 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.ClusterVariableService;
+import com.datasophon.api.service.ServiceStateManagementService;
 import com.datasophon.common.model.ProcInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.ServiceRoleState;
 import org.slf4j.Logger;
@@ -42,7 +44,8 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
         //Prevent FE Observer nodes from starting and FE Master nodes from changing
 //        if (!globalVariables.containsKey("${feMaster}") || ObjUtil.isNull(globalVariables.get("${feMaster}"))) {
         if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.getFirst());
+            ClusterVariableService clusterVariableService = SpringUtil.getBean(ClusterVariableService.class);
+            clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.getFirst());
         }
 //        }
     }
@@ -65,15 +68,15 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-        Map<String, String> globalVariables = GlobalVariables.get(roleInstanceEntity.getClusterId());
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                        Map<String, ClusterServiceRoleInstanceDTO> map) {
+        Map<String, String> globalVariables = GlobalVariables.get(roleInstanceDto.clusterId());
         String feMaster = globalVariables.get("${feMaster}");
-        if (roleInstanceEntity.getHostname().equals(feMaster)
-                && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
+        if (roleInstanceDto.hostname().equals(feMaster)
+                && ServiceRoleState.RUNNING.getValue() == roleInstanceDto.serviceRoleState()) {
             try {
                 List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
-                resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
+                resolveProcInfoAlert(roleInstanceDto.serviceRoleName(), frontends, map);
             } catch (Exception ignored) {
 
             }
@@ -83,16 +86,18 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
     }
 
     private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
-                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+                                      Map<String, ClusterServiceRoleInstanceDTO> map) {
+        ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
+        
         for (ProcInfo frontend : frontends) {
-            ClusterServiceRoleInstanceEntity roleInstanceEntity = map.get(frontend.getHostName() + serviceRoleName);
+            ClusterServiceRoleInstanceDTO roleInstanceDto = map.get(frontend.getHostName() + serviceRoleName);
             if (!frontend.getAlive()) {
                 String alertTargetName = serviceRoleName + " Not Add To Cluster";
                 logger.info("{} at host {} is not add to cluster", serviceRoleName, frontend.getHostName());
                 String alertAdvice = "The errmsg is " + frontend.getErrMsg();
-                ProcessUtils.saveAlert(roleInstanceEntity, alertTargetName, AlertLevel.WARN, alertAdvice);
+                serviceStateManagementService.saveAlert(roleInstanceDto, alertTargetName, AlertLevel.WARN, alertAdvice);
             } else {
-                ProcessUtils.recoverAlert(roleInstanceEntity);
+                serviceStateManagementService.recoverAlert(roleInstanceDto);
             }
         }
     }
