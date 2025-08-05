@@ -21,10 +21,12 @@ package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
@@ -42,8 +44,10 @@ public class KyuubiServerHandlerStrategy extends ServiceHandlerAbstract  impleme
 
     Map<String, String> globalVariables = GlobalVariables.get(clusterId);
     boolean enableKerberos = false;
-    Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
-    ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+    Map<String, ServiceConfig> map = list.stream()
+            .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
+            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
     // todo: 判断kerberos的逻辑应该抽取到公共方法中
     for (ServiceConfig config : list) {
       if (ENABLE_KERBEROS.equals(config.getName())) {
@@ -65,9 +69,9 @@ public class KyuubiServerHandlerStrategy extends ServiceHandlerAbstract  impleme
 
 
   @Override
-  public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
-      ServiceRoleStrategy.super.handlerServiceRoleCheck(roleInstanceEntity, map);
+  public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                      Map<String, ClusterServiceRoleInstanceDTO> map) {
+      ServiceRoleStrategy.super.handlerServiceRoleCheck(roleInstanceDto, map);
   }
 
 }

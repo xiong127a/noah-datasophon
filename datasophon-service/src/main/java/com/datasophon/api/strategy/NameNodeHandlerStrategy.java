@@ -21,7 +21,9 @@ package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ConnectionInfo;
@@ -29,6 +31,7 @@ import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,18 +53,21 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn1}", hosts.get(0));
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn2}", hosts.get(1));
+                        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${nn1}", hosts.get(0));
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${nn2}", hosts.get(1));
         }
 
         @Override
         public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
                 boolean enableRack = false;
                 boolean enableKerberos = false;
-                Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+                Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
 
                 String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "HDFS" + Constants.CONFIG;
                 List<ServiceConfig> configs = ServiceConfigMap.get(key);
@@ -106,20 +112,21 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         }
 
         @Override
-        public void handlerServiceRoleCheck(
-                        ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-                performServiceRoleCheck(roleInstanceEntity, "nMStateActor");
-        }
+        public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                     Map<String, ClusterServiceRoleInstanceDTO> map) {
+        // 调用通用方法，传递 executeCmdActor
+        performServiceRoleCheck(roleInstanceDto, "executeCmdActor");
+    }
 
-        @Override
-        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
-                performServiceRoleCheck(roleInstanceEntity, "");
-        }
+    @Override
+    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                                  Map<String, ClusterServiceRoleInstanceDTO> map) {
+        // 调用通用方法，传递空字符串
+        performServiceRoleCheck(roleInstanceDto, "");
+    }
 
-        @Override
-        public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
+    @Override
+    public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceDTO roleInstanceDto) {
                 Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
                 String nn2 = globalVariable.get("${nn2}");
                 String commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn1";
