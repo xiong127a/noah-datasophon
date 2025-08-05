@@ -109,7 +109,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
                 .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .and(ClusterAlertHistory::getAlertName).like("%停止%");
+                .and(ClusterAlertHistory::getAlertInfo).like("%停止%");
         return this.selectListByQuery(query);
     }
 
@@ -125,6 +125,26 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
                 .and(ClusterAlertHistory::getIsEnabled).eq(1)
                 .and(ClusterAlertHistory::getAlertLevel).in("WARNING", "ERROR", "CRITICAL");
         return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据告警目标名称、集群ID、主机名和启用状态查询告警历史
+     * 用于ServiceStateManagementService中的告警管理
+     * 
+     * @param alertTargetName 告警目标名称
+     * @param clusterId       集群ID
+     * @param hostname        主机名
+     * @param isEnabled       是否启用（1-启用，2-禁用）
+     * @return 告警历史
+     */
+    default ClusterAlertHistory selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
+            String alertTargetName, Integer clusterId, String hostname, Integer isEnabled) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterAlertHistory::getAlertTargetName).eq(alertTargetName)
+                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistory::getHostname).eq(hostname)
+                .and(ClusterAlertHistory::getIsEnabled).eq(isEnabled);
+        return this.selectOneByQuery(query);
     }
 
 }
