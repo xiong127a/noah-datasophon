@@ -65,7 +65,7 @@ public class PageResult<T> implements Serializable {
     /**
      * 总页数
      */
-    private long pages;
+    private long page;
 
     /**
      * 是否有下一页
@@ -88,7 +88,7 @@ public class PageResult<T> implements Serializable {
                 .total(total)
                 .current(current)
                 .size(size)
-                .pages(pages)
+                .page(pages)
                 .hasNext(current < pages)
                 .hasPrevious(current > 1)
                 .build();
@@ -103,7 +103,7 @@ public class PageResult<T> implements Serializable {
                 .total(0)
                 .current(current)
                 .size(size)
-                .pages(0)
+                .page(0)
                 .hasNext(false)
                 .hasPrevious(false)
                 .build();
