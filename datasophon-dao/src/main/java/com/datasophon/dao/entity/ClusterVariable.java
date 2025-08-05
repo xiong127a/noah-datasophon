@@ -17,13 +17,12 @@
 
 package com.datasophon.dao.entity;
 
-import java.io.Serial;
-import java.io.Serializable;
-
-import lombok.Data;
-
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_variable")
