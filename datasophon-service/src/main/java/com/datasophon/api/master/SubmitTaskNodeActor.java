@@ -19,9 +19,9 @@ package com.datasophon.api.master;
 
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.CommandExecutionService;
 import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
@@ -40,6 +40,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * 任务节点提交Actor
+ * 负责管理DAG任务节点的提交和调度，处理主从节点的任务执行流程
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class SubmitTaskNodeActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(SubmitTaskNodeActor.class);
@@ -92,7 +100,8 @@ public class SubmitTaskNodeActor extends AbstractActor {
                         logger.info("start to submit {} master roles", node);
                         ActorRef serviceActor = ActorUtils.getLocalActor(MasterServiceActor.class,
                                 submitActiveTaskNodeCommand.getClusterCode() + "-serviceActor-" + node);
-                        ProcessUtils.buildExecuteServiceRoleCommand(
+                        CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                        commandExecutionService.buildExecuteServiceRoleCommand(
                                 submitActiveTaskNodeCommand.getClusterId(),
                                 submitActiveTaskNodeCommand.getCommandType(),
                                 submitActiveTaskNodeCommand.getClusterCode(),
@@ -120,7 +129,8 @@ public class SubmitTaskNodeActor extends AbstractActor {
                                     submitActiveTaskNodeCommand.getClusterCode() + "-serviceActor-" + node + "-"
                                             + elseRole.getHostname());
 
-                            ProcessUtils.buildExecuteServiceRoleCommand(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.buildExecuteServiceRoleCommand(
                                     submitActiveTaskNodeCommand.getClusterId(),
                                     submitActiveTaskNodeCommand.getCommandType(),
                                     submitActiveTaskNodeCommand.getClusterCode(),
@@ -168,7 +178,6 @@ public class SubmitTaskNodeActor extends AbstractActor {
 
                         logger.info("----------------------{}", Thread.currentThread().getName());
 
-                    } else {
                     }
                 }
             }
