@@ -32,8 +32,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +42,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 机架配置Actor
+ * 负责生成HDFS集群的机架感知配置文件(rack.properties)
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class RackActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(RackActor.class);
@@ -67,7 +75,7 @@ public class RackActor extends AbstractActor {
      * 
      * @param command 生成机架属性命令
      */
-    private void generateRackProperties(GenerateRackPropCommand command) throws Exception {
+    private void generateRackProperties(GenerateRackPropCommand command) {
         // 获取所需服务
         ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
@@ -75,17 +83,18 @@ public class RackActor extends AbstractActor {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
         // 查询集群NameNode角色实例
-        List<ClusterServiceRoleInstanceEntity> nameNodes = roleInstanceService
+        List<ClusterServiceRoleInstanceDTO> nameNodes = roleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(command.getClusterId(), NAME_NODE_ROLE);
 
         // 获取集群信息
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
+        ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(command.getClusterId());
 
         // 构建配置文件映射
-        Map<Generators, List<ServiceConfig>> configFileMap = buildRackConfigFileMap(hostService.list());
+        Map<Generators, List<ServiceConfig>> configFileMap = buildRackConfigFileMap(
+                hostService.getHostListByClusterId(command.getClusterId()));
 
         // 为每个NameNode生成rack.properties文件
-        for (ClusterServiceRoleInstanceEntity nameNode : nameNodes) {
+        for (ClusterServiceRoleInstanceDTO nameNode : nameNodes) {
             generateRackPropertiesForNode(nameNode, configFileMap, clusterInfo);
         }
     }
@@ -126,17 +135,17 @@ public class RackActor extends AbstractActor {
      * @param configFileMap 配置文件映射
      * @param clusterInfo   集群信息
      */
-    private void generateRackPropertiesForNode(ClusterServiceRoleInstanceEntity nameNode,
+    private void generateRackPropertiesForNode(ClusterServiceRoleInstanceDTO nameNode,
             Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterInfoEntity clusterInfo) {
+            ClusterInfoDTO clusterInfo) {
         // 构建服务角色信息
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(NAME_NODE_ROLE);
         serviceRoleInfo.setParentName(HDFS_SERVICE);
         serviceRoleInfo.setConfigFileMap(configFileMap);
         serviceRoleInfo.setDecompressPackageName(
-                PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), HDFS_SERVICE));
-        serviceRoleInfo.setHostname(nameNode.getHostname());
+                PackageUtils.getServiceDcPackageName(clusterInfo.clusterFrame(), HDFS_SERVICE));
+        serviceRoleInfo.setHostname(nameNode.hostname());
 
         // 生成配置
         ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
