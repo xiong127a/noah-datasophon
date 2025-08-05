@@ -28,15 +28,17 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.PackageUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,40 +72,44 @@ public class AlertManagersActor extends AbstractActor {
             // 获取alertManager的所有实例
             ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
-            List<ClusterServiceRoleInstanceEntity> roleInstanceEntitys = roleInstanceService
+            List<ClusterServiceRoleInstanceDTO> roleInstanceEntitys = roleInstanceService
                     .listServiceRoleByName("AlertManager");
             if (CollectionUtils.isEmpty(roleInstanceEntitys)) {
                 return;
             }
 
             // 分集群更新
-            Map<Integer, List<ClusterServiceRoleInstanceEntity>> clusterRoules = roleInstanceEntitys.stream()
-                    .collect(Collectors.groupingBy(ClusterServiceRoleInstanceEntity::getClusterId));
+            Map<Integer, List<ClusterServiceRoleInstanceDTO>> clusterRoules = roleInstanceEntitys.stream()
+                    .collect(Collectors.groupingBy(ClusterServiceRoleInstanceDTO::clusterId));
             for (Integer clusterId : clusterRoules.keySet()) {
 
                 // 查询集群框架
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
-                ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-                String getServiceDcPackageName = PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(),
+                ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(clusterId);
+                String getServiceDcPackageName = PackageUtils.getServiceDcPackageName(clusterInfo.clusterFrame(),
                         SERVICENAME);
 
                 // 分服务实例更新，一般alertmanager只需要一个实例
-                for (ClusterServiceRoleInstanceEntity alertManager : roleInstanceEntitys) {
+                for (ClusterServiceRoleInstanceDTO alertManager : roleInstanceEntitys) {
 
                     // 通过实例的配置组id查询配置的详细信息，
                     ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
                             .getBean(ClusterServiceRoleGroupConfigService.class);
-                    ClusterServiceRoleGroupConfig roleGroupConfig = roleGroupConfigService
-                            .getConfigByRoleGroupId(alertManager.getRoleGroupId());
+                    ClusterServiceRoleGroupConfigDTO roleGroupConfigDto = roleGroupConfigService
+                            .getConfigByRoleGroupId(alertManager.roleGroupId());
+                    
+                    // 使用MapStruct Converter进行转换 - 符合架构规范
+                    ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+                    ClusterServiceRoleGroupConfig roleGroupConfig = converter.dtoToEntity(roleGroupConfigDto);
 
                     // 准备配置参数· ·
                     Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                    ProcessUtils.generateConfigFileMap(configFileMap, roleGroupConfig, clusterId);
+                    ConfigGroupUtils.generateConfigFileMap(configFileMap, roleGroupConfig, clusterId);
 
                     // 准备调用参数
                     ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                     serviceRoleInfo.setConfigFileMap(configFileMap);
-                    serviceRoleInfo.setHostname(alertManager.getHostname());
+                    serviceRoleInfo.setHostname(alertManager.hostname());
                     serviceRoleInfo.setDecompressPackageName(getServiceDcPackageName);
 
                     // 执行配置生成操作
@@ -114,7 +120,7 @@ public class AlertManagersActor extends AbstractActor {
                     if (execResult.getExecResult()) {
                         logger.info("Generate AlertManager config success , now start to reload AlertManager");
                         // 刷新配置
-                        HttpUtil.post("http://" + alertManager.getHostname() + ":9093/-/reload", "");
+                        HttpUtil.post("http://" + alertManager.hostname() + ":9093/-/reload", "");
                     } else {
                         logger.error("generate rack.properties failed");
                     }
