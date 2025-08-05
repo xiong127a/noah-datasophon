@@ -22,7 +22,9 @@ import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
@@ -44,20 +46,23 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         @Override
         public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
                 boolean enableKerberos = false;
                 boolean enableAcl = false;
                 boolean enableDistributed = false;
                 boolean enableJmxAcl = false;
                 boolean enableSasl;
-                Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+                Map<String, ServiceConfig> map = list.stream()
+                        .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
                 for (ServiceConfig config : list) {
                         if ("enableKerberos".equals(config.getName())) {
                                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config,
                                                 "KAFKA");
                         }
                         if ("zookeeper.connect".equals(config.getName())) {
-                                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kafkaZkAddr}",
+                                SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+                                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${kafkaZkAddr}",
                                                 Convert.toStr(config.getValue()));
                         }
                         if ("cluster1.zk.acl.enable".equals(config.getName())) {

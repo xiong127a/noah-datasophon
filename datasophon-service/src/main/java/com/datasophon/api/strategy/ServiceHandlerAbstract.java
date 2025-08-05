@@ -21,9 +21,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
+
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CommandLineItem;
@@ -31,6 +32,7 @@ import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import freemarker.template.Template;
@@ -128,9 +130,9 @@ public abstract class ServiceHandlerAbstract {
     public List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
-        List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceService
+        List<ClusterServiceRoleInstanceDTO> roleInstances = clusterServiceRoleInstanceService
                 .getServiceRoleInstanceListByServiceInstanceIdAndRoleName(clusterId, serviceInstanceId, roleName);
-        return CollUtil.map(roleInstances, ClusterServiceRoleInstanceEntity::getHostname, true);
+        return CollUtil.map(roleInstances, ClusterServiceRoleInstanceDTO::hostname, true);
     }
 
     public void removeConfigWithKerberos(List<ServiceConfig> list, Map<String, ServiceConfig> map,
@@ -227,12 +229,13 @@ public abstract class ServiceHandlerAbstract {
 
     public boolean isEnableKerberos(Integer clusterId, Map<String, String> globalVariables, boolean enableKerberos,
             ServiceConfig config, String serviceName) {
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if ((Boolean) config.getValue()) {
             enableKerberos = true;
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
                     "true");
         } else {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
                     "false");
         }
         return enableKerberos;
@@ -240,11 +243,12 @@ public abstract class ServiceHandlerAbstract {
 
     public boolean isEnableHA(Integer clusterId, Map<String, String> globalVariables, boolean enableHA,
             ServiceConfig config, String serviceName) {
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if ((Boolean) config.getValue()) {
             enableHA = true;
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "true");
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "true");
         } else {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "false");
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "false");
         }
         return enableHA;
     }
@@ -461,7 +465,7 @@ public abstract class ServiceHandlerAbstract {
                     dependencies != null ? dependencies.length() : 0,
                     dependencySummary);
         } catch (Exception e) {
-            log.error("生成Java代码失败: {}, 异常堆栈: {}", e.getMessage(), ProcessUtils.getExceptionMessage(e));
+            log.error("生成Java代码失败: {}", e.getMessage(), e);
         }
 
         return result;
@@ -513,7 +517,7 @@ public abstract class ServiceHandlerAbstract {
                     dependencies != null ? dependencies.length() : 0,
                     dependencySummary);
         } catch (Exception e) {
-            log.error("生成Python代码失败: {}, 异常堆栈: {}", e.getMessage(), ProcessUtils.getExceptionMessage(e));
+            log.error("生成Python代码失败: {}", e.getMessage(), e);
         }
 
         return result;

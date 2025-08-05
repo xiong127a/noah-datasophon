@@ -18,7 +18,8 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,11 +32,12 @@ public class JournalNodeHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() >= 3) {
             // 为保持向后兼容，仍单独设置前三个节点变量
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode1}", hosts.get(0));
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode2}", hosts.get(1));
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNode3}", hosts.get(2));
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${journalNode1}", hosts.get(0));
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${journalNode2}", hosts.get(1));
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${journalNode3}", hosts.get(2));
 
             // 生成包含所有JournalNode的URL
             StringBuilder journalNodesUrl = new StringBuilder("qjournal://");
@@ -49,7 +51,7 @@ public class JournalNodeHandlerStrategy implements ServiceRoleStrategy {
 
             // 设置完整的JournalNode URL变量
             String journalUrl = journalNodesUrl.toString();
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${journalNodesUrl}", journalUrl);
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${journalNodesUrl}", journalUrl);
             logger.info("Generated dynamic JournalNode URL: {}", journalUrl);
         }
     }

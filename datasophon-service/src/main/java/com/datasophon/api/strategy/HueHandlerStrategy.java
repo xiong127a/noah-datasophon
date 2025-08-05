@@ -2,28 +2,18 @@ package com.datasophon.api.strategy;
 
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.core.convert.Convert;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.concurrent.TimeUnit;
 
 public class HueHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -31,12 +21,13 @@ public class HueHandlerStrategy extends ServiceHandlerAbstract implements Servic
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         for (ServiceConfig serviceConfig : list) {
             if ("enableHueKerberos".equals(serviceConfig.getName())) {
                 if (Convert.toBool(serviceConfig.getValue())) {
-                    ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHUEKerberos}", "true");
+                    simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableHUEKerberos}", "true");
                 } else {
-                    ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHUEKerberos}", "false");
+                    simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableHUEKerberos}", "false");
                 }
             }
         }

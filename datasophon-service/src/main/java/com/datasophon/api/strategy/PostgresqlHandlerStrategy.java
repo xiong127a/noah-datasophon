@@ -1,7 +1,8 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceRoleInfo;
 
 import java.util.List;
@@ -12,8 +13,9 @@ public class PostgresqlHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() == 1) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${PostgresqlMaster}",
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${PostgresqlMaster}",
                     hosts.getFirst());
         }
     }

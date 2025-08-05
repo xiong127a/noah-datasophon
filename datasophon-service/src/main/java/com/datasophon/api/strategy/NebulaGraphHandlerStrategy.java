@@ -4,7 +4,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.ServiceConfig;
@@ -20,8 +20,9 @@ public class NebulaGraphHandlerStrategy extends ServiceHandlerAbstract implement
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nebulaGraphHost}", hosts.getFirst());
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${nebulaGraphHost}", hosts.getFirst());
         }
     }
 
