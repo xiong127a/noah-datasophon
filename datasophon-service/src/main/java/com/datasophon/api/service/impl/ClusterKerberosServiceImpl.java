@@ -28,7 +28,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.kubernetes.util.KubeUtil;
-import com.datasophon.kubernetes.util.KubernetesUtil;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -136,7 +136,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
 
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         String hostname =GetMasterHost().getFirst();
-        String namespace = KubernetesUtil.getKubernetesNamespace(clusterId);
+        String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             runCmd(namespace,
                     client,
