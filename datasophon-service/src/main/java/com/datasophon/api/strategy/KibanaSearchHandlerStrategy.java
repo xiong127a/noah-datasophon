@@ -5,10 +5,11 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ServiceStateManagementService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.AlertLevel;
 
 import java.util.List;
@@ -19,9 +20,10 @@ public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         for (ServiceConfig config : list) {
             if ("server.port".equals(config.getName())) {
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kibanaPort}", Convert.toStr(config.getValue()));
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${kibanaPort}", Convert.toStr(config.getValue()));
             }
         }
     }
@@ -36,7 +38,8 @@ public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
             esHosts = esHosts.stream()
                     .map(host -> "http://" + host + ":" + esHttpPort)
                     .collect(Collectors.toList());
-            Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+            Map<String, ServiceConfig> map = list.stream()
+                    .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
             ServiceConfig hosts = map.get("elasticsearch.hosts");
             hosts.setValue(esHosts);
             hosts.setDefaultValue(esHosts);
@@ -45,16 +48,17 @@ public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
 
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        String kibanaPort = GlobalVariables.get(roleInstanceEntity.getClusterId()).get("${kibanaPort}");
-        String url = "http://" + roleInstanceEntity.getHostname() + ":" + kibanaPort;
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto, Map<String, ClusterServiceRoleInstanceDTO> map) {
+        String kibanaPort = GlobalVariables.get(roleInstanceDto.clusterId()).get("${kibanaPort}");
+        String url = "http://" + roleInstanceDto.hostname() + ":" + kibanaPort;
+        ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
         try {
             HttpUtil.get(url);
-            ProcessUtils.recoverAlert(roleInstanceEntity);
+            serviceStateManagementService.recoverAlert(roleInstanceDto);
         } catch (Exception e) {
             // save alert
-            String alertTargetName = roleInstanceEntity.getServiceRoleName() + " Survive";
-            ProcessUtils.saveAlert(roleInstanceEntity, alertTargetName, AlertLevel.EXCEPTION, "restart");
+            String alertTargetName = roleInstanceDto.serviceRoleName() + " Survive";
+            serviceStateManagementService.saveAlert(roleInstanceDto, alertTargetName, AlertLevel.EXCEPTION, "restart");
         }
     }
 

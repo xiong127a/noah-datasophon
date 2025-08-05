@@ -17,7 +17,7 @@
 
 package com.datasophon.api.strategy;
 
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,17 +28,17 @@ public class KerberosHandlerStrategy implements ServiceRoleStrategy {
 
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                        Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用通用的检查方法，传递 executeCmdActor
-        performServiceRoleCheck(roleInstanceEntity, "executeCmdActor");
+        performServiceRoleCheck(roleInstanceDto, "executeCmdActor");
     }
 
     @Override
-    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                  Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                                  Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用通用的检查方法，传递空字符串
-        performServiceRoleCheck(roleInstanceEntity, "");
+        performServiceRoleCheck(roleInstanceDto, "");
     }
 
 }

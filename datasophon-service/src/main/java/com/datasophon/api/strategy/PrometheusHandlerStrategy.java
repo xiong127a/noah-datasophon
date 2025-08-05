@@ -17,46 +17,25 @@
 
 package com.datasophon.api.strategy;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import com.datasophon.api.load.ServiceInfoMap;
-import com.datasophon.api.load.ServiceRoleMap;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.Constants;
-import com.datasophon.common.command.ExecuteCmdCommand;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.AlertLevel;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class PrometheusHandlerStrategy implements ServiceRoleStrategy {
 
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                        Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用公共方法，指定 actorName 为 "executeCmdActor"
-        performServiceRoleCheck(roleInstanceEntity, "executeCmdActor");
+        performServiceRoleCheck(roleInstanceDto, "executeCmdActor");
     }
 
     @Override
-    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                  Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                                  Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用公共方法，指定 actorName 为空
-        performServiceRoleCheck(roleInstanceEntity, "");
+        performServiceRoleCheck(roleInstanceDto, "");
     }
 
 }

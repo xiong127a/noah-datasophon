@@ -19,8 +19,9 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,24 +34,25 @@ public class Krb5KdcHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (CollUtil.isNotEmpty(hosts)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kdcHost}", hosts.getFirst());
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${kdcHost}", hosts.getFirst());
         }
     }
 
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                        Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用公共方法，指定 actorName 为 "executeCmdActor"
-        performServiceRoleCheck(roleInstanceEntity, "executeCmdActor");
+        performServiceRoleCheck(roleInstanceDto, "executeCmdActor");
     }
 
     @Override
-    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                  Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                                  Map<String, ClusterServiceRoleInstanceDTO> map) {
         // 调用公共方法，指定 actorName 为空
-        performServiceRoleCheck(roleInstanceEntity, "");
+        performServiceRoleCheck(roleInstanceDto, "");
     }
 
 }
