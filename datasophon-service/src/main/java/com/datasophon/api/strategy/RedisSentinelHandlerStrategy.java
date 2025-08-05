@@ -4,7 +4,8 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.ConnectionInfo;
@@ -27,7 +28,8 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String redisSentinelMasterHost = globalVariables.get("${redisSentinelMasterHost}");
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+        Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
         ServiceConfig redisMasterHostConfig = map.get("redisSentinelMasterHost");
 
         if (Objects.nonNull(redisSentinelMasterHost)) {
@@ -35,7 +37,8 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
         }
 
         // 获取Redis Sentinel服务角色主机映射
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         Map<String, List<String>> hostMap = CacheOperateUtils.getGeneric(hostMapKey, TypeRefs.MAP_STRING_LIST_STRING);
 
