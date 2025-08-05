@@ -22,8 +22,8 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.TypeRefs;
@@ -51,30 +51,34 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         public void handler(Integer clusterId, List<String> hosts) {
                 // 保存zkUrls到全局变量
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
                 String join = String.join(":2181,", hosts);
                 String zkUrls = join + ":2181";
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${zkUrls}", zkUrls);
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${zkUrls}", zkUrls);
                 // 保存hbaseZkUrls到全局变量
                 String hbaseZkUrls = String.join(",", hosts);
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${zkHostsUrl}", hbaseZkUrls);
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${zkHostsUrl}", hbaseZkUrls);
         }
 
         @Override
         public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+                SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
                 boolean enableKerberos = false;
-                Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+                Map<String, ServiceConfig> map = list.stream()
+                        .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
 
                 for (ServiceConfig config : list) {
                         if ("enableKerberos".equals(config.getName())) {
                                 if ((Boolean) config.getValue()) {
                                         enableKerberos = true;
-                                        ProcessUtils.generateClusterVariable(globalVariables, clusterId,
+                                        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId,
                                                         "${enableZOOKEEPERKerberos}",
                                                         "true");
                                 } else {
-                                        ProcessUtils.generateClusterVariable(globalVariables, clusterId,
+                                        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId,
                                                         "${enableZOOKEEPERKerberos}",
                                                         "false");
                                 }
@@ -140,7 +144,8 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
 
 
 
-                        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+                        Map<String, ServiceConfig> map = list.stream()
+                                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
 
                         Integer myid = 1;
                         for (String server : zkServers) {

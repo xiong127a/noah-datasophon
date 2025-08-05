@@ -18,7 +18,8 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceRoleInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +35,9 @@ public class ZKFCHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 2) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${ZKFC1}", hosts.get(0));
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${ZKFC2}", hosts.get(1));
+            SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${ZKFC1}", hosts.get(0));
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${ZKFC2}", hosts.get(1));
         }
     }
 

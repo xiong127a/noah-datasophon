@@ -21,7 +21,8 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -41,7 +42,8 @@ public class TSHandlerStrategy implements ServiceRoleStrategy {
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if(CollUtil.isNotEmpty(hosts)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${yarn_timeline_server}", hosts.getFirst());
+            SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${yarn_timeline_server}", hosts.getFirst());
         }
     }
 
