@@ -19,15 +19,20 @@ package com.datasophon.api.utils;
 
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
+import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -40,14 +45,31 @@ public final class SpringTool  {
                 .getBean(ClusterServiceInstanceRoleGroupService.class);
         ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
                 .getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
-        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        ClusterServiceInstanceRoleGroupConverter roleGroupConverter = SpringUtil.getBean(ClusterServiceInstanceRoleGroupConverter.class);
+        ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+        
+        ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
+        ClusterServiceInstanceRoleGroup roleGroup = roleGroupDTO != null ? 
+                roleGroupConverter.dtoToEntity(roleGroupDTO) : null;
+        
+        if (roleGroup == null) {
+            return null;
+        }
+        
+        ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        ClusterServiceRoleGroupConfig config = configDTO != null ? 
+                configConverter.dtoToEntity(configDTO) : null;
 
         ServiceInfo serviceInfo = ServiceInfoMap.get("DDP-1.2.1_" + roleGroup.getServiceName());
         String serviceHome = "";
         if (serviceInfo != null) {
             serviceHome = serviceInfo.getDecompressPackageName();
         }
+        
+        if (config == null) {
+            return new AbstractMap.SimpleEntry<>(serviceHome, new ArrayList<>());
+        }
+        
         return new AbstractMap.SimpleEntry<>(serviceHome,
                 JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
     }
