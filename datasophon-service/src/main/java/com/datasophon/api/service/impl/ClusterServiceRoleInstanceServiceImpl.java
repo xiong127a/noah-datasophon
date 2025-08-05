@@ -497,4 +497,10 @@ public class ClusterServiceRoleInstanceServiceImpl
             updateById(entity);
         }
     }
+
+    @Override
+    public List<ClusterServiceRoleInstanceDTO> getServiceRolesByNames(List<String> serviceNames) {
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().getServiceRolesByNames(serviceNames);
+        return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
+    }
 }

@@ -413,4 +413,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         return getById(clusterId).getNamespace();
     }
 
+    @Override
+    public Map<Integer, String> getAllClusterIdAndType() {
+        return list().stream()
+                .collect(java.util.stream.Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
+    }
+
 }

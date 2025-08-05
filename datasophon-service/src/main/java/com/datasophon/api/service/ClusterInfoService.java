@@ -23,6 +23,7 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 集群信息服务接口
@@ -105,4 +106,11 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
      * 获取集群的Kubernetes命名空间
      */
     String getKubernetesNamespace(Integer clusterId);
+
+    /**
+     * 获取所有集群ID和类型的映射
+     *
+     * @return 集群ID和类型映射
+     */
+    Map<Integer, String> getAllClusterIdAndType();
 }

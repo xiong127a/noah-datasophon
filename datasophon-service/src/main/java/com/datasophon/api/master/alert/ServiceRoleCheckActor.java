@@ -19,13 +19,14 @@
 
 package com.datasophon.api.master.alert;
 
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.mybatisflex.core.query.QueryChain;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import org.apache.pekko.actor.AbstractActor;
 
 import java.util.List;
@@ -34,7 +35,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * 检查指定组件状态
+ * 服务角色状态检查Actor
+ * 负责定期检查指定组件的状态和处理相关告警
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-05
  */
 public class ServiceRoleCheckActor extends AbstractActor {
 
@@ -48,32 +54,33 @@ public class ServiceRoleCheckActor extends AbstractActor {
 
     private void handleServiceRoleCheckCommand(ServiceRoleCheckCommand msg) {
         try {
-            // 查询服务实例
-            List<ClusterServiceRoleInstanceEntity> list = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
-                    .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).in(Constants.STATUS_CHECK_SERVICES)
-                    .list();
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+            
+            // 查询需要状态检查的服务实例
+            List<ClusterServiceRoleInstanceDTO> list = roleInstanceService.getServiceRolesByNames(Constants.STATUS_CHECK_SERVICES);
 
-            // 集群类型map
-            Map<Integer, String> allClusterIdAndType = ProcessUtils.getAllClusterIdAndType();
+            // 获取所有集群信息
+            Map<Integer, String> allClusterIdAndType = clusterInfoService.getAllClusterIdAndType();
 
             if (!list.isEmpty()) {
-                Map<String, ClusterServiceRoleInstanceEntity> map = translateListToMap(list);
+                Map<String, ClusterServiceRoleInstanceDTO> map = translateListToMap(list);
 
-                for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
+                for (ClusterServiceRoleInstanceDTO roleInstanceDto : list) {
                     ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext
-                            .getServiceRoleHandler(roleInstanceEntity.getServiceRoleName());
+                            .getServiceRoleHandler(roleInstanceDto.serviceRoleName());
 
                     // 服务集群部署模式
-                    String depType = allClusterIdAndType.get(roleInstanceEntity.getClusterId());
+                    String depType = allClusterIdAndType.get(roleInstanceDto.clusterId());
                     switch (depType) {
                         case Constants.PVM_MODE:
                             Optional.ofNullable(serviceRoleHandler)
-                                    .ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
+                                    .ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceDto, map));
                             break;
                         case Constants.KUBERNETES_MODE:
-                            handlerKubernetesServiceRoleCheck(roleInstanceEntity);
+                            handlerKubernetesServiceRoleCheck(roleInstanceDto);
                             Optional.ofNullable(serviceRoleHandler).ifPresent(
-                                    handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
+                                    handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceDto, map));
                             break;
                         default:
                             break;
@@ -85,17 +92,17 @@ public class ServiceRoleCheckActor extends AbstractActor {
         }
     }
 
-    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
+    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto) {
         KubernetesServiceRoleStatusService kubernetesServiceRoleStatusService = new KubernetesServiceRoleStatusService();
-        kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceEntity);
+        kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceDto);
     }
 
-    private Map<String, ClusterServiceRoleInstanceEntity> translateListToMap(
-            List<ClusterServiceRoleInstanceEntity> list) {
+    private Map<String, ClusterServiceRoleInstanceDTO> translateListToMap(
+            List<ClusterServiceRoleInstanceDTO> list) {
         return list.stream()
                 .collect(
                         Collectors.toMap(
-                                e -> e.getHostname() + e.getServiceRoleName(),
+                                e -> e.hostname() + e.serviceRoleName(),
                                 e -> e,
                                 (v1, v2) -> v1));
     }
