@@ -62,4 +62,18 @@ public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
                 .where(ClusterVariable::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
+
+    /**
+     * 根据变量名和集群ID获取单个变量
+     *
+     * @param variableName 变量名
+     * @param clusterId 集群ID
+     * @return 集群变量，如果不存在返回null
+     */
+    default ClusterVariable getVariableByVariableName(String variableName, Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterVariable::getVariableName).eq(variableName)
+                .and(ClusterVariable::getClusterId).eq(clusterId);
+        return this.selectOneByQuery(query);
+    }
 }

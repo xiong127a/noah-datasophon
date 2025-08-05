@@ -17,19 +17,16 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.api.converter.ClusterVariableConverter;
-import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.mapper.ClusterVariableMapper;
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 /**
- * 集群变量服务实现
- * 继承ServiceImpl提供基础CRUD操作，使用Converter进行对象转换
+ * 简单集群变量生成服务实现
+ * 从ProcessUtils迁移而来的变量生成功能
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
@@ -37,15 +34,23 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariable>
-        implements ClusterVariableService {
-
-    @Autowired
-    private ClusterVariableConverter clusterVariableConverter;
+public class SimpleClusterVariableServiceImpl implements SimpleClusterVariableService {
 
     @Override
-    public ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId) {
-        ClusterVariable entity = getMapper().getVariableByVariableName(variableName, clusterId);
-        return entity != null ? clusterVariableConverter.entityToDto(entity) : null;
+    public void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId, String key, String value) {
+        if (globalVariables == null) {
+            log.warn("全局变量映射为空，无法设置变量 {} = {}", key, value);
+            return;
+        }
+        
+        if (key == null || key.trim().isEmpty()) {
+            log.warn("变量key为空，无法设置变量");
+            return;
+        }
+        
+        globalVariables.put(key, value);
+        GlobalVariables.put(clusterId, globalVariables);
+        
+        log.debug("成功设置集群 {} 的变量 {} = {}", clusterId, key, value);
     }
 }

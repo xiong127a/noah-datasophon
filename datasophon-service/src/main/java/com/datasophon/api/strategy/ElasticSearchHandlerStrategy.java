@@ -22,7 +22,7 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.ClusterVariableService;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
@@ -45,19 +45,19 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String depMode = getDepMode(clusterId);
         String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
-        ClusterVariableService clusterVariableService = SpringUtil.getBean(ClusterVariableService.class);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         
         if (!Constants.PVM_MODE.equals(depMode)) {
             hosts = generateDnsName(hosts, "elasticsearch-elasticsearch",namespace);
         }
-        clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}",
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}",
                                 String.join(",", hosts));
         String seedHosts = hosts.stream()
                 .map(host -> host + ":9300")
                 .collect(Collectors.joining(","));
-        clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${seedHosts}", seedHosts);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${seedHosts}", seedHosts);
         if (CollUtil.isNotEmpty(hosts)) {
-            clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${esSingleHost}",
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${esSingleHost}",
                                         hosts.getFirst());
         }
 
@@ -66,11 +66,11 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterVariableService clusterVariableService = SpringUtil.getBean(ClusterVariableService.class);
+        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         
         for (ServiceConfig config : list) {
             if ("http.port".equals(config.getName())) {
-                clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${esHttpPort}",
+                simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${esHttpPort}",
                                                 Convert.toStr(config.getValue()));
             }
         }

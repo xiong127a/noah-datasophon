@@ -17,26 +17,25 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.mybatisflex.core.service.IService;
+import java.util.Map;
 
 /**
- * 集群变量服务接口
- * 继承IService提供基础CRUD操作，使用DTO进行数据传输
+ * 简单集群变量生成服务
+ * 用于替代ProcessUtils中的变量生成功能
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface ClusterVariableService extends IService<ClusterVariable> {
+public interface SimpleClusterVariableService {
 
     /**
-     * 根据变量名和集群ID获取变量
+     * 生成集群变量
      * 
-     * @param variableName 变量名
+     * @param globalVariables 全局变量映射
      * @param clusterId 集群ID
-     * @return 变量DTO，如果不存在返回null
+     * @param key 变量key
+     * @param value 变量值
      */
-    ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId);
+    void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId, String key, String value);
 }
