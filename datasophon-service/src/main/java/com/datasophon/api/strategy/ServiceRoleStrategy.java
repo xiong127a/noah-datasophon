@@ -25,9 +25,10 @@ import com.datasophon.kubernetes.model.K8sServiceRoleInfo;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.ServiceStateManagementService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
@@ -38,6 +39,7 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.apache.pekko.actor.ActorRef;
@@ -93,8 +95,8 @@ public interface ServiceRoleStrategy {
     /**
      * 定期检查角色处理
      */
-    default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    default void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+            Map<String, ClusterServiceRoleInstanceDTO> map) {
     }
 
     /**
@@ -113,20 +115,21 @@ public interface ServiceRoleStrategy {
     /**
      * 定期检查角色处理（Kubernetes）
      */
-    default void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
-        handlerServiceRoleCheck(roleInstanceEntity, map);
+    default void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+            Map<String, ClusterServiceRoleInstanceDTO> map) {
+        handlerServiceRoleCheck(roleInstanceDto, map);
     }
 
-    default ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        Integer clusterId = roleInstanceEntity.getClusterId();
-        ClusterInfoEntity cluster = ProcessUtils.getClusterInfo(clusterId);
+    default ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceDTO roleInstanceDto) {
+        Integer clusterId = roleInstanceDto.clusterId();
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
         String frameCode = cluster.getClusterFrame();
-        String key = frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName() + Constants.UNDERLINE
-                + roleInstanceEntity.getServiceRoleName();
+        String key = frameCode + Constants.UNDERLINE + roleInstanceDto.serviceName() + Constants.UNDERLINE
+                + roleInstanceDto.serviceRoleName();
         ServiceRoleInfo serviceRoleInfo = ServiceRoleMap.get(key);
         ServiceInfo serviceInfo = ServiceInfoMap
-                .get(frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName());
+                .get(frameCode + Constants.UNDERLINE + roleInstanceDto.serviceName());
         ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
         ArrayList<String> commandList = new ArrayList<>();
         commandList.add(serviceInfo.getDecompressPackageName() + Constants.SLASH
@@ -137,48 +140,49 @@ public interface ServiceRoleStrategy {
     }
 
     // 提取的通用方法
-    default void performServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, String actorName) {
+    default void performServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto, String actorName) {
         // 获取命令
-        ExecuteCmdCommand cmdCommand = getCommand(roleInstanceEntity);
+        ExecuteCmdCommand cmdCommand = getCommand(roleInstanceDto);
 
         // 执行命令
-        ExecResult execResult = executeCommand(roleInstanceEntity, cmdCommand, actorName);
+        ExecResult execResult = executeCommand(roleInstanceDto, cmdCommand, actorName);
 
         // 处理执行结果
-        handleExecResult(roleInstanceEntity, execResult);
+        handleExecResult(roleInstanceDto, execResult);
     }
 
-    default void handleExecResult(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecResult execResult) {
-        if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
+    default void handleExecResult(ClusterServiceRoleInstanceDTO roleInstanceDto, ExecResult execResult) {
+        if (StrUtil.equalsAnyIgnoreCase(roleInstanceDto.serviceRoleName(),
                 "NameNode",
                 "ResourceManager")) {
             ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceWebuisService.class);
             if (execResult.getExecResult()) {
                 if (execResult.getExecOut().contains(ACTIVE)) {
-                    webuisService.updateWebUiToActive(roleInstanceEntity.getId());
+                    webuisService.updateWebUiToActive(roleInstanceDto.id());
                 } else {
-                    webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
+                    webuisService.updateWebUiToStandby(roleInstanceDto.id());
                 }
             } else {
-                webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
+                webuisService.updateWebUiToStandby(roleInstanceDto.id());
             }
         }
 
-        if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
+        if (StrUtil.equalsAnyIgnoreCase(roleInstanceDto.serviceRoleName(),
                 "Krb5Kdc",
                 "KAdmin",
                 "Prometheus")) {
+            ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
             if (execResult.getExecResult()) {
-                ProcessUtils.recoverAlert(roleInstanceEntity);
+                serviceStateManagementService.recoverAlert(roleInstanceDto);
             } else {
-                String alertTargetName = roleInstanceEntity.getServiceRoleName() + " Survive";
-                ProcessUtils.saveAlert(roleInstanceEntity, alertTargetName, AlertLevel.EXCEPTION, "restart");
+                String alertTargetName = roleInstanceDto.serviceRoleName() + " Survive";
+                serviceStateManagementService.saveAlert(roleInstanceDto, alertTargetName, AlertLevel.EXCEPTION, "restart");
             }
         }
     }
 
-    default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand,
+    default ExecResult executeCommand(ClusterServiceRoleInstanceDTO roleInstanceDto, ExecuteCmdCommand cmdCommand,
             String actorName) {
         ExecResult execResult = new ExecResult();
 
@@ -187,17 +191,20 @@ public interface ServiceRoleStrategy {
                 // 对于 Kubernetes 服务，使用 KubernetesUtil 执行命令
                 ServiceRoleToK8sConverter converter = SpringUtil.getBean(ServiceRoleToK8sConverter.class);
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
-                ClusterInfoEntity clusterInfo = clusterInfoService.getById(roleInstanceEntity.getClusterId());
+                ClusterServiceRoleInstanceConverter roleInstanceConverter = SpringUtil.getBean(ClusterServiceRoleInstanceConverter.class);
+                ClusterInfoEntity clusterInfo = clusterInfoService.getById(roleInstanceDto.clusterId());
 
+                // 需要转换DTO为Entity以匹配converter的期望参数类型
+                ClusterServiceRoleInstanceEntity roleInstanceEntity = roleInstanceConverter.dtoToEntity(roleInstanceDto);
                 K8sServiceRoleInfo k8sServiceRoleInfo = converter.convertToK8sServiceRoleInfo(roleInstanceEntity,
                         clusterInfo);
-                String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
+                String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstanceDto.clusterId());
 
                 execResult = KubernetesUtil.exec(k8sServiceRoleInfo, kubeConfig, cmdCommand);
             } else {
                 // 对于非 Kubernetes 服务，使用 Actor 系统执行命令
                 Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-                ActorRef actorRef = ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), actorName);
+                ActorRef actorRef = ActorUtils.getRemoteActor(roleInstanceDto.hostname(), actorName);
                 Future<Object> execFuture = Patterns.ask(actorRef, cmdCommand, timeout);
                 execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             }
