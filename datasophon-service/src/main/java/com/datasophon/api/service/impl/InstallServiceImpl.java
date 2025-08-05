@@ -31,6 +31,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.common.dto.InstallStepDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.mapper.InstallStepMapper;
 import com.datasophon.api.service.checker.common.CommandResult;
 
@@ -41,7 +42,6 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.dto.HostCheckStatusDto;
-import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
@@ -225,14 +225,13 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      */
     @Override
     public PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort,
-            String sshPassword, String kubeConfigContent, Integer page, Integer pageSize) {
+                                                 String sshPassword, String kubeConfigContent, Integer page, Integer pageSize) {
         try {
             // 获取集群信息以判断集群类型
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             if (clusterInfo == null) {
                 throw new ServiceException("集群不存在");
             }
-
             String depType = clusterInfo.getDepType();
             log.info("集群ID: {}, 部署类型: {}", clusterId, depType);
 

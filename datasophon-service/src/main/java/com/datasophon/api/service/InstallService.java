@@ -19,8 +19,8 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.dto.InstallStepDTO;
-import com.datasophon.common.dto.PageResult;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.mybatisflex.core.service.IService;
 
@@ -92,7 +92,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @return 解析后的主机列表分页结果
      */
     PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort,
-            String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
+                                          String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
 
     /**
      * 获取主机检查状态
