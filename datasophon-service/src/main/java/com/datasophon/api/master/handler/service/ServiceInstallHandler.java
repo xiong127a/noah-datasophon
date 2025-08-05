@@ -30,7 +30,7 @@ import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -49,7 +49,7 @@ public class ServiceInstallHandler extends ServiceHandler {
         ClusterServiceRoleInstanceService roleInstanceService =
                 SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
-        ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
+        ClusterServiceRoleInstanceDTO serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
                 serviceRoleInfo.getHostname(), serviceRoleInfo.getClusterId());
         ClusterHostDO hostEntity = clusterHostService.getClusterHostByHostname(serviceRoleInfo.getHostname());
         if (Objects.nonNull(serviceRole)) {
