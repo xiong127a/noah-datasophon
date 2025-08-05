@@ -21,11 +21,14 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.enums.MANAGED;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
@@ -233,5 +236,44 @@ public class ProcessUtils {
         logger.debug("Parameters: serviceInstanceId={}, hosts={}, type={}, roleName={}",
                 serviceInstanceId, hosts, type, roleName);
         // TODO: 实现HDFS EC逻辑或调用相应的Service
+    }
+
+    /**
+     * 为集群创建Service Actor
+     * 为每个集群创建对应的MasterServiceActor，用于处理集群内的服务角色执行命令
+     * 
+     * @param clusterInfo 集群信息实体
+     */
+    public static void createServiceActor(ClusterInfoEntity clusterInfo) {
+        try {
+            logger.info("开始为集群 {} 创建Service Actor", clusterInfo.getClusterCode());
+
+            // 获取集群主机列表，为每个主机创建对应的MasterServiceActor
+            ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
+
+            // 获取集群中所有管理的主机
+            List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterInfo.getId());
+
+            for (ClusterHostDO host : hostList) {
+                if (MANAGED.YES.equals(host.getManaged())) { // 只为受管理的主机创建Actor
+                    String actorName = clusterInfo.getClusterCode() + "-serviceActor-" + host.getHostname();
+
+                    try {
+                        // 使用ActorUtils直接创建MasterServiceActor
+                        com.datasophon.api.master.ActorUtils.getLocalActor(
+                                com.datasophon.api.master.MasterServiceActor.class,
+                                actorName);
+
+                        logger.info("成功创建MasterServiceActor: {}", actorName);
+                    } catch (Exception e) {
+                        logger.error("创建MasterServiceActor失败: {}", actorName, e);
+                    }
+                }
+            }
+
+            logger.info("集群 {} 的Service Actor创建完成", clusterInfo.getClusterCode());
+        } catch (Exception e) {
+            logger.error("为集群 {} 创建Service Actor时发生错误", clusterInfo.getClusterCode(), e);
+        }
     }
 }
