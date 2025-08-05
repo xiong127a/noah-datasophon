@@ -30,26 +30,32 @@ import com.datasophon.common.command.GenerateSRPromConfigCommand;
 import com.datasophon.common.command.HdfsEcCommand;
 import com.datasophon.common.model.UpdateCommandHostMessage;
 import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceCommandDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.enums.CommandState;
-import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Option;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 服务命令处理Actor
+ * 负责处理服务命令的执行状态更新、监控配置生成等操作
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class ServiceCommandActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceCommandActor.class);
@@ -73,12 +79,6 @@ public class ServiceCommandActor extends AbstractActor {
     private static final String NODE = "NODE";
 
     @Override
-    public void preRestart(Throwable reason, Option<Object> message) throws Exception {
-        logger.info("service command actor restart because {}", reason.getMessage());
-        super.preRestart(reason, message);
-    }
-
-    @Override
     public Receive createReceive() {
         return receiveBuilder()
                 .match(UpdateCommandHostMessage.class, this::handleUpdateCommandHostMessage)
@@ -97,87 +97,87 @@ public class ServiceCommandActor extends AbstractActor {
             ClusterServiceCommandService commandService = SpringUtil
                     .getBean(ClusterServiceCommandService.class);
 
-            ClusterServiceCommandHostEntity commandHost = QueryChain.of(ClusterServiceCommandHostEntity.class)
-                    .where(ClusterServiceCommandHostEntity::getCommandHostId).eq(message.getCommandHostId())
-                    .one();
+            // 获取命令主机信息（用于后续扩展功能）
+            ClusterServiceCommandHostDTO commandHost = commandHostService
+                    .getCommandHostByCommandHostId(message.getCommandHostId());
 
             long size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
             Integer totalProgress = service.getHostCommandTotalProgressByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
             long progress = totalProgress / size;
-            commandHost.setCommandProgress(progress);
+            
+            commandHostService.updateCommandHostProgress(message.getCommandHostId(), progress);
 
             if (progress == 100) {
-                List<ClusterServiceCommandHostCommandEntity> failedList = service
+                List<ClusterServiceCommandHostCommandDTO> failedList = service
                         .findFailedHostCommand(message.getHostname(), message.getCommandHostId());
-                List<ClusterServiceCommandHostCommandEntity> cancelList = service
+                List<ClusterServiceCommandHostCommandDTO> cancelList = service
                         .findCanceledHostCommand(message.getHostname(), message.getCommandHostId());
 
+                CommandState newState;
                 if (!failedList.isEmpty()) {
-                    commandHost.setCommandState(CommandState.FAILED);
+                    newState = CommandState.FAILED;
                     logger.info("主机命令 {} 包含失败子命令，状态设为失败", message.getCommandHostId());
                 } else if (!cancelList.isEmpty()) {
-                    commandHost.setCommandState(CommandState.CANCEL);
+                    newState = CommandState.CANCEL;
                     logger.info("主机命令 {} 包含取消子命令，状态设为取消", message.getCommandHostId());
                 } else {
-                    commandHost.setCommandState(CommandState.SUCCESS);
+                    newState = CommandState.SUCCESS;
                     logger.info("主机命令 {} 所有子命令成功，状态设为成功", message.getCommandHostId());
                 }
+                
+                commandHostService.updateCommandHostState(message.getCommandHostId(), newState);
             }
-
-            commandHostService.updateById(commandHost);
 
             Long size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
             Integer totalProgress1 = commandHostService.getCommandHostTotalProgressByCommandId(message.getCommandId());
             long progress1 = totalProgress1 / size1;
-            ClusterServiceCommandEntity command = QueryChain.of(ClusterServiceCommandEntity.class)
-                    .where(ClusterServiceCommandEntity::getCommandId).eq(message.getCommandId())
-                    .one();
+            ClusterServiceCommandDTO command = commandService.getCommandById(message.getCommandId());
 
-            command.setCommandProgress(progress1);
+            commandService.updateCommandProgress(message.getCommandId(), progress1);
 
             if (progress1 == 100) {
-                List<ClusterServiceCommandHostEntity> failedHosts = commandHostService
+                List<ClusterServiceCommandHostDTO> failedHosts = commandHostService
                         .findFailedCommandHost(message.getCommandId());
-                List<ClusterServiceCommandHostEntity> canceledHosts = commandHostService
+                List<ClusterServiceCommandHostDTO> canceledHosts = commandHostService
                         .findCanceledCommandHost(message.getCommandId());
 
+                CommandState newCommandState;
                 if (!failedHosts.isEmpty()) {
-                    command.setCommandState(CommandState.FAILED);
+                    newCommandState = CommandState.FAILED;
                     logger.info("命令 {} 包含失败主机命令，状态设为失败", message.getCommandId());
                 } else if (!canceledHosts.isEmpty()) {
-                    command.setCommandState(CommandState.CANCEL);
+                    newCommandState = CommandState.CANCEL;
                     logger.info("命令 {} 包含取消主机命令，状态设为取消", message.getCommandId());
                 } else {
-                    command.setCommandState(CommandState.SUCCESS);
+                    newCommandState = CommandState.SUCCESS;
                     logger.info("命令 {} 所有主机命令成功，状态设为成功", message.getCommandId());
                 }
 
-                command.setEndTime(new Date());
+                commandService.updateCommandStateAndEndTime(message.getCommandId(), newCommandState, new Date());
 
-                String serviceName = command.getServiceName();
-                ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
+                String serviceName = command.serviceName();
+                ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(command.clusterId());
 
                 // commandType : 1：安装服务 2：启动服务 3：停止服务 4：重启服务 5：更新配置后启动 6：更新配置后重启
-                if (command.getCommandType() == 4 && HDFS.equalsIgnoreCase(serviceName)) {
+                if (command.commandType() == 4 && HDFS.equalsIgnoreCase(serviceName)) {
                     // update web ui
-                    updateHDFSWebUi(clusterInfo.getId(), command.getServiceInstanceId());
+                    updateHDFSWebUi(clusterInfo.id(), command.serviceInstanceId());
                 }
 
                 // update cluster state
-                if (command.getCommandType() == 1) {
+                if (command.commandType() == 1) {
 
-                    if (ClusterState.NEED_CONFIG.equals(clusterInfo.getClusterState())) {
-                        clusterInfo.setClusterState(ClusterState.RUNNING);
-                        clusterInfoService.updateById(clusterInfo);
+                    if (ClusterState.NEED_CONFIG.getValue()==(clusterInfo.clusterState())) {
+                        clusterInfoService.updateClusterState(clusterInfo.id(), ClusterState.RUNNING.getValue());
                     }
 
                     if (HDFS.equalsIgnoreCase(serviceName)) {
                         ActorRef hdfsECActor = ActorUtils.getLocalActor(HdfsECActor.class,
                                 ActorUtils.getActorRefName(HdfsECActor.class));
                         HdfsEcCommand hdfsEcCommand = new HdfsEcCommand();
-                        hdfsEcCommand.setServiceInstanceId(command.getServiceInstanceId());
+                        hdfsEcCommand.setServiceInstanceId(command.serviceInstanceId());
                         hdfsECActor.tell(hdfsEcCommand, getSelf());
 
                     }
@@ -186,23 +186,23 @@ public class ServiceCommandActor extends AbstractActor {
                             ActorUtils.getActorRefName(PrometheusActor.class));
                     if (STARROCKS.equalsIgnoreCase(serviceName) || DORIS.equalsIgnoreCase(serviceName)) {
                         GenerateSRPromConfigCommand prometheusConfigCommand = new GenerateSRPromConfigCommand();
-                        prometheusConfigCommand.setServiceInstanceId(command.getServiceInstanceId());
-                        prometheusConfigCommand.setClusterFrame(clusterInfo.getClusterFrame());
-                        prometheusConfigCommand.setClusterId(clusterInfo.getId());
+                        prometheusConfigCommand.setServiceInstanceId(command.serviceInstanceId());
+                        prometheusConfigCommand.setClusterFrame(clusterInfo.clusterFrame());
+                        prometheusConfigCommand.setClusterId(clusterInfo.id());
                         prometheusConfigCommand.setFilename(serviceName.toLowerCase() + ".json");
                         prometheusActor.tell(prometheusConfigCommand, getSelf());
                     } else {
                         GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
-                        prometheusConfigCommand.setServiceInstanceId(command.getServiceInstanceId());
-                        prometheusConfigCommand.setClusterFrame(clusterInfo.getClusterFrame());
-                        prometheusConfigCommand.setClusterId(clusterInfo.getId());
+                        prometheusConfigCommand.setServiceInstanceId(command.serviceInstanceId());
+                        prometheusConfigCommand.setClusterFrame(clusterInfo.clusterFrame());
+                        prometheusConfigCommand.setClusterId(clusterInfo.id());
                         prometheusActor.tell(prometheusConfigCommand, getSelf());
-                        enableAlertConfig(NODE, clusterInfo.getId());
+                        enableAlertConfig(NODE, clusterInfo.id());
                     }
-                    enableAlertConfig(serviceName, clusterInfo.getId());
+                    enableAlertConfig(serviceName, clusterInfo.id());
                 }
             }
-            commandService.updateById(command);
+            // 命令已通过上面的方法更新，这里不需要重复更新
         } catch (Exception e) {
             logger.error("处理UpdateCommandHostMessage消息时出错", e);
         }

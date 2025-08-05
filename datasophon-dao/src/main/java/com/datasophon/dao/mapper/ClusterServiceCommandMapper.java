@@ -56,4 +56,27 @@ public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCo
                 .limit(1);
         return this.selectOneByQuery(query);
     }
+
+    /**
+     * 更新命令进度
+     */
+    default void updateCommandProgress(String commandId, long progress) {
+        ClusterServiceCommandEntity entity = selectByCommandId(commandId);
+        if (entity != null) {
+            entity.setCommandProgress(progress);
+            this.update(entity);
+        }
+    }
+
+    /**
+     * 更新命令状态和结束时间
+     */
+    default void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime) {
+        ClusterServiceCommandEntity entity = selectByCommandId(commandId);
+        if (entity != null) {
+            entity.setCommandState(commandState);
+            entity.setEndTime(endTime);
+            this.update(entity);
+        }
+    }
 }

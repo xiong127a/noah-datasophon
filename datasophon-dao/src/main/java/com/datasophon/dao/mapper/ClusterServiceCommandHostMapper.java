@@ -112,4 +112,35 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
         return this.selectListByQuery(query);
     }
+
+    /**
+     * 根据命令主机ID获取命令主机实体
+     */
+    default ClusterServiceCommandHostEntity getCommandHostByCommandHostId(String commandHostId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceCommandHostEntity::getCommandHostId).eq(commandHostId);
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 更新命令主机进度
+     */
+    default void updateCommandHostProgress(String commandHostId, long progress) {
+        ClusterServiceCommandHostEntity entity = getCommandHostByCommandHostId(commandHostId);
+        if (entity != null) {
+            entity.setCommandProgress(progress);
+            this.update(entity);
+        }
+    }
+
+    /**
+     * 更新命令主机状态
+     */
+    default void updateCommandHostState(String commandHostId, CommandState commandState) {
+        ClusterServiceCommandHostEntity entity = getCommandHostByCommandHostId(commandHostId);
+        if (entity != null) {
+            entity.setCommandState(commandState);
+            this.update(entity);
+        }
+    }
 }

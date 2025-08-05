@@ -20,8 +20,11 @@ package com.datasophon.api.master;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.ServiceInstallationService;
+import com.datasophon.api.service.ServiceStateManagementService;
+import com.datasophon.api.service.CommandExecutionService;
 import com.datasophon.api.utils.RollingRestartUtils;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.enums.CommandType;
@@ -30,11 +33,12 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.FI;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +48,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Worker服务处理Actor
+ * 负责处理各种服务操作命令，包括安装、启动、停止、重启等操作
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class WorkerServiceActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerServiceActor.class);
@@ -56,11 +68,13 @@ public class WorkerServiceActor extends AbstractActor {
                             .getBean(ClusterServiceRoleGroupConfigService.class);
                     ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                             .getBean(ClusterServiceRoleInstanceService.class);
+                    ClusterServiceRoleGroupConfigConverter roleGroupConfigConverter = SpringUtil
+                            .getBean(ClusterServiceRoleGroupConfigConverter.class);
 
                     ServiceRoleInfo serviceRoleInfo = executeServiceRoleCommand.getWorkerRole();
                     ExecResult execResult = new ExecResult();
                     Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
-                    ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.getOneServiceRole(
+                    ClusterServiceRoleInstanceDTO serviceRoleInstance = roleInstanceService.getOneServiceRole(
                             serviceRoleInfo.getName(),
                             serviceRoleInfo.getHostname(),
                             serviceRoleInfo.getClusterId());
@@ -68,77 +82,83 @@ public class WorkerServiceActor extends AbstractActor {
                     boolean needReConfig = false;
                     if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
                         Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
-                        ClusterServiceRoleGroupConfig config = roleGroupConfigService
+                        ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService
                                 .getConfigByRoleGroupId(roleGroupId);
-                        ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
-                    } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
-                        ClusterServiceRoleGroupConfig config = roleGroupConfigService
-                                .getConfigByRoleGroupId(serviceRoleInstance.getRoleGroupId());
-                        ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
+                        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDto);
+                        ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
+                    } else if (Objects.equals(NeedRestart.YES.getValue(), serviceRoleInstance.needRestart())) {
+                        ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService
+                                .getConfigByRoleGroupId(serviceRoleInstance.roleGroupId());
+                        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDto);
+                        ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                         needReConfig = true;
                     }
                     serviceRoleInfo.setConfigFileMap(configFileMap);
                     serviceRoleInfo.setEnableRangerPlugin(false);
+                    ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                    ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
+                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                    
                     switch (executeServiceRoleCommand.getCommandType()) {
                         case INSTALL_SERVICE:
                             try {
                                 logger.info("start to install {} int host {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                execResult = ProcessUtils.startInstallService(serviceRoleInfo);
+                                execResult = serviceInstallationService.startInstallService(serviceRoleInfo);
                                 if (Objects.nonNull(execResult) && execResult.getExecResult()) {
                                     // install success
-                                    ProcessUtils.saveServiceInstallInfo(serviceRoleInfo);
+                                    serviceInstallationService.saveServiceInstallInfo(serviceRoleInfo);
                                     logger.info("{} install success in {}", serviceRoleInfo.getName(),
                                             serviceRoleInfo.getHostname());
                                 }
                             } catch (Exception e) {
                                 logger.info("{} install failed in {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                logger.error(ProcessUtils.getExceptionMessage(e));
+                                logger.error("Error installing service: " + e.getMessage(), e);
                             }
                             break;
                         case START_SERVICE:
                             try {
                                 logger.info("start  {} in host {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                execResult = ProcessUtils.startService(serviceRoleInfo, needReConfig);
+                                execResult = serviceInstallationService.startService(serviceRoleInfo, needReConfig);
                                 if (Objects.nonNull(execResult) && execResult.getExecResult()) {
                                     // 更新角色实例状态为正在运行
-                                    ProcessUtils.updateServiceRoleState(CommandType.START_SERVICE,
+                                    serviceStateManagementService.updateServiceRoleState(CommandType.START_SERVICE,
                                             serviceRoleInfo.getName(),
                                             serviceRoleInfo.getHostname(),
                                             executeServiceRoleCommand.getClusterId(),
                                             ServiceRoleState.RUNNING);
                                 }
                             } catch (Exception e) {
-                                logger.error(ProcessUtils.getExceptionMessage(e));
+                                logger.error("Error starting service: " + e.getMessage(), e);
                             }
                             break;
                         case STOP_SERVICE:
                             try {
                                 logger.info("stop {} in host {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                execResult = ProcessUtils.stopService(serviceRoleInfo);
+                                execResult = serviceInstallationService.stopService(serviceRoleInfo);
                                 if (Objects.nonNull(execResult) && execResult.getExecResult()) {// 执行成功
                                     // 更新角色实例状态为停止
-                                    ProcessUtils.updateServiceRoleState(CommandType.STOP_SERVICE,
+                                    serviceStateManagementService.updateServiceRoleState(CommandType.STOP_SERVICE,
                                             serviceRoleInfo.getName(),
                                             serviceRoleInfo.getHostname(),
                                             executeServiceRoleCommand.getClusterId(),
                                             ServiceRoleState.STOP);
                                 }
                             } catch (Exception e) {
-                                logger.error(ProcessUtils.getExceptionMessage(e));
+                                logger.error("Error starting service: " + e.getMessage(), e);
                             }
                             break;
                         case RESTART_SERVICE:
                             try {
                                 logger.info("restart {} in host {}", serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname());
-                                execResult = ProcessUtils.restartService(serviceRoleInfo, needReConfig);
+                                execResult = serviceInstallationService.restartService(serviceRoleInfo, needReConfig);
                                 if (Objects.nonNull(execResult) && execResult.getExecResult()) {
                                     // 更新角色实例状态为正在运行
-                                    ProcessUtils.updateServiceRoleState(CommandType.RESTART_SERVICE,
+                                    serviceStateManagementService.updateServiceRoleState(CommandType.RESTART_SERVICE,
                                             serviceRoleInfo.getName(),
                                             serviceRoleInfo.getHostname(), executeServiceRoleCommand.getClusterId(),
                                             ServiceRoleState.RUNNING);
@@ -146,13 +166,13 @@ public class WorkerServiceActor extends AbstractActor {
                                 RollingRestartUtils.updateStatus(serviceRoleInfo.getHostname() + serviceInstanceId,
                                         execResult.getExecResult());
                             } catch (Exception e) {
-                                logger.error(ProcessUtils.getExceptionMessage(e));
+                                logger.error("Error starting service: " + e.getMessage(), e);
                             }
                             break;
                         default:
                             break;
                     }
-                    ProcessUtils.handleCommandResult(serviceRoleInfo.getHostCommandId(), execResult.getExecResult(),
+                    commandExecutionService.handleCommandResult(serviceRoleInfo.getHostCommandId(), execResult.getExecResult(),
                             execResult.getExecOut());
                 })
                 .matchAny(this::unhandled)

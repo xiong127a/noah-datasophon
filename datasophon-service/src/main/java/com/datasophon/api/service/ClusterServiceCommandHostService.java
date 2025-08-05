@@ -90,4 +90,19 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
      * 更新命令主机
      */
     void updateCommandHost(ClusterServiceCommandHostDTO dto);
+
+    /**
+     * 根据命令主机ID获取命令主机信息
+     */
+    ClusterServiceCommandHostDTO getCommandHostByCommandHostId(String commandHostId);
+
+    /**
+     * 更新命令主机进度
+     */
+    void updateCommandHostProgress(String commandHostId, long progress);
+
+    /**
+     * 更新命令主机状态
+     */
+    void updateCommandHostState(String commandHostId, com.datasophon.dao.enums.CommandState commandState);
 }

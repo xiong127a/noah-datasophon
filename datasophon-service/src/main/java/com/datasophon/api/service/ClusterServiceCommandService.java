@@ -99,4 +99,14 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
          * 更新命令
          */
         void updateCommand(ClusterServiceCommandDTO dto);
+
+        /**
+         * 更新命令进度
+         */
+        void updateCommandProgress(String commandId, long progress);
+
+        /**
+         * 更新命令状态和结束时间
+         */
+        void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime);
 }

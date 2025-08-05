@@ -355,4 +355,20 @@ public class ClusterServiceCommandHostServiceImpl
         ClusterServiceCommandHostEntity entity = converter.dtoToEntity(dto);
         updateById(entity);
     }
+
+    @Override
+    public ClusterServiceCommandHostDTO getCommandHostByCommandHostId(String commandHostId) {
+        ClusterServiceCommandHostEntity entity = getMapper().getCommandHostByCommandHostId(commandHostId);
+        return entity != null ? converter.entityToDto(entity) : null;
+    }
+
+    @Override
+    public void updateCommandHostProgress(String commandHostId, long progress) {
+        getMapper().updateCommandHostProgress(commandHostId, progress);
+    }
+
+    @Override
+    public void updateCommandHostState(String commandHostId, CommandState commandState) {
+        getMapper().updateCommandHostState(commandHostId, commandState);
+    }
 }
