@@ -126,30 +126,30 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
     @Override
     public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceDTO roleInstanceDto) {
-                Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
-                String nn2 = globalVariable.get("${nn2}");
-                String commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn1";
-                if (nn2.equals(roleInstanceEntity.getHostname())) {
-                        commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn2";
-                }
-                ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
-                cmdCommand.setCommandLine(commandLine);
-                return cmdCommand;
+        Map<String, String> globalVariable = GlobalVariables.get(roleInstanceDto.clusterId());
+        String nn2 = globalVariable.get("${nn2}");
+        String commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn1";
+        if (nn2.equals(roleInstanceDto.hostname())) {
+            commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn2";
         }
+        ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
+        cmdCommand.setCommandLine(commandLine);
+        return cmdCommand;
+    }
 
-        @Override
-        public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
-                        Map<String, String> configMap) {
-                // 直接调用父类的getConnectionInfo方法
-                return super.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
-        }
+    @Override
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+                    Map<String, String> configMap) {
+        // 直接调用父类的getConnectionInfo方法
+        return super.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
+    }
 
-        /**
-         * 获取HDFS服务特定的连接信息
-         */
-        @Override
-        protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+    /**
+     * 获取HDFS服务特定的连接信息
+     */
+    @Override
+    protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
+                    Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         // 1. 获取全局变量
                         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
