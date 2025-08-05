@@ -21,7 +21,8 @@ import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.CommandExecutionService;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
@@ -37,6 +38,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 服务执行结果处理Actor
+ * 负责处理服务执行结果，管理DAG任务流程和状态转换
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-05
+ */
 public class ServiceExecuteResultActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceExecuteResultActor.class);
@@ -73,7 +82,8 @@ public class ServiceExecuteResultActor extends AbstractActor {
                     List<String> commandIds = new ArrayList<>();
                     commandIds.add(servicNode.getCommandId());
                     listCancelCommand(dag, node, commandIds);
-                    ProcessUtils.updateCommandStateToFailed(commandIds);
+                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                    commandExecutionService.updateCommandStateToFailed(commandIds);
                 } else if (result.getServiceExecuteState().equals(ServiceExecuteState.SUCCESS)) {
                     // submit worker node
                     ServiceNode serviceNode = dag.getNode(node);
@@ -83,7 +93,8 @@ public class ServiceExecuteResultActor extends AbstractActor {
                         for (ServiceRoleInfo elseRole : serviceNode.getElseRoles()) {
                             ActorRef serviceActor = ActorUtils.getLocalActor(WorkerServiceActor.class,
                                     result.getClusterCode() + "-serviceActor-" + node + "-" + elseRole.getHostname());
-                            ProcessUtils.buildExecuteServiceRoleCommand(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.buildExecuteServiceRoleCommand(
                                     result.getClusterId(),
                                     result.getCommandType(),
                                     result.getClusterCode(),
