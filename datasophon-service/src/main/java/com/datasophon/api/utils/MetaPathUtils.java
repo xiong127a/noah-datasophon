@@ -2,6 +2,8 @@ package com.datasophon.api.utils;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.converter.FrameServiceConverter;
+import com.datasophon.common.dto.FrameServiceDTO;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -70,8 +72,11 @@ public class MetaPathUtils {
                 return null;
             }
 
-            FrameServiceEntity serviceEntity = frameServiceService.getServiceByFrameCodeAndServiceName(frameCode,
+            FrameServiceConverter frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+            FrameServiceDTO frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(frameCode,
                     serviceName);
+            FrameServiceEntity serviceEntity = frameServiceDTO != null ? 
+                    frameServiceConverter.dtoToEntity(frameServiceDTO) : null;
             if (serviceEntity == null) {
                 logger.error("未找到服务配置: frameCode={}, serviceName={}", frameCode, serviceName);
                 return null;
