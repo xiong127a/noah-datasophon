@@ -26,9 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +39,6 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Slf4j
-@Api(tags = "集群框架管理")
 @ApiVersion(path = "frame")
 @RequiredArgsConstructor
 public class FrameInfoController {
@@ -53,7 +49,7 @@ public class FrameInfoController {
     /**
      * 获取集群框架列表（包含服务信息）
      */
-    @ApiOperation("获取集群框架列表")
+
     @GetMapping("/list")
     public Result<List<FrameInfoVO>> list() {
         List<FrameInfoDTO> frameInfoDTOs = frameInfoService.getAllClusterFrame();
@@ -64,9 +60,8 @@ public class FrameInfoController {
     /**
      * 根据ID获取框架信息
      */
-    @ApiOperation("根据ID获取框架信息")
     @GetMapping("/info/{id}")
-    public Result<FrameInfoVO> info(@ApiParam(value = "框架ID", required = true) @PathVariable("id") Integer id) {
+    public Result<FrameInfoVO> info(@PathVariable("id") Integer id) {
         FrameInfoDTO frameInfoDTO = frameInfoService.getFrameInfoById(id);
         FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(frameInfoDTO);
         return Result.success(frameInfoVO);
@@ -75,9 +70,8 @@ public class FrameInfoController {
     /**
      * 保存框架信息
      */
-    @ApiOperation("保存框架信息")
     @PostMapping("/save")
-    public Result<FrameInfoVO> save(@ApiParam(value = "框架信息", required = true) @RequestBody FrameInfoDTO frameInfoDTO) {
+    public Result<FrameInfoVO> save(@RequestBody FrameInfoDTO frameInfoDTO) {
         FrameInfoDTO savedDTO = frameInfoService.saveFrameInfo(frameInfoDTO);
         FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(savedDTO);
         return Result.success(frameInfoVO);
@@ -86,10 +80,8 @@ public class FrameInfoController {
     /**
      * 更新框架信息
      */
-    @ApiOperation("更新框架信息")
     @PutMapping("/update")
-    public Result<FrameInfoVO> update(
-            @ApiParam(value = "框架信息", required = true) @RequestBody FrameInfoDTO frameInfoDTO) {
+    public Result<FrameInfoVO> update(@RequestBody FrameInfoDTO frameInfoDTO) {
         FrameInfoDTO updatedDTO = frameInfoService.updateFrameInfo(frameInfoDTO);
         FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(updatedDTO);
         return Result.success(frameInfoVO);
@@ -98,9 +90,8 @@ public class FrameInfoController {
     /**
      * 批量删除框架信息
      */
-    @ApiOperation("批量删除框架信息")
     @DeleteMapping("/delete")
-    public Result<Boolean> delete(@ApiParam(value = "框架ID数组", required = true) @RequestBody Integer[] ids) {
+    public Result<Boolean> delete(@RequestBody Integer[] ids) {
         boolean result = frameInfoService.removeFrameInfoByIds(Arrays.asList(ids));
         return Result.success(result);
     }
@@ -108,7 +99,7 @@ public class FrameInfoController {
     /**
      * 获取所有框架信息（不包含服务列表）
      */
-    @ApiOperation("获取所有框架信息")
+
     @GetMapping("/all")
     public Result<List<FrameInfoVO>> getAllFrameInfos() {
         List<FrameInfoDTO> frameInfoDTOs = frameInfoService.getAllFrameInfos();
@@ -119,10 +110,8 @@ public class FrameInfoController {
     /**
      * 根据框架代码获取框架信息
      */
-    @ApiOperation("根据框架代码获取框架信息")
     @GetMapping("/code/{frameCode}")
-    public Result<FrameInfoVO> getByFrameCode(
-            @ApiParam(value = "框架代码", required = true) @PathVariable("frameCode") String frameCode) {
+    public Result<FrameInfoVO> getByFrameCode(@PathVariable("frameCode") String frameCode) {
         FrameInfoDTO frameInfoDTO = frameInfoService.getFrameInfoByFrameCode(frameCode);
         FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(frameInfoDTO);
         return Result.success(frameInfoVO);
