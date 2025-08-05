@@ -180,4 +180,10 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
         this.updateById(entity);
     }
 
+    @Override
+    public ClusterQueueCapacity getByClusterIdAndQueueName(Integer clusterId, String queueName,
+            String parentQueueName) {
+        return getMapper().selectByClusterIdAndQueueName(clusterId, queueName, parentQueueName);
+    }
+
 }

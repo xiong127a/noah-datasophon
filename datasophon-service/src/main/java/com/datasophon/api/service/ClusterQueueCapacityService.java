@@ -61,4 +61,9 @@ public interface ClusterQueueCapacityService extends IService<ClusterQueueCapaci
      * 更新队列容量
      */
     void updateQueueCapacity(ClusterQueueCapacityDTO dto);
+
+    /**
+     * 根据集群ID、队列名称和父队列名称获取队列
+     */
+    ClusterQueueCapacity getByClusterIdAndQueueName(Integer clusterId, String queueName, String parentQueueName);
 }

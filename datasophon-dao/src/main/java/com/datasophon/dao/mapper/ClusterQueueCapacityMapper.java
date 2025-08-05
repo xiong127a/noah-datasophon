@@ -43,4 +43,16 @@ public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapac
                 .where(ClusterQueueCapacity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
+
+    /**
+     * 根据集群ID、队列名称和父队列名称查询队列
+     */
+    default ClusterQueueCapacity selectByClusterIdAndQueueName(Integer clusterId, String queueName,
+            String parentQueueName) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
+                .and(ClusterQueueCapacity::getQueueName).eq(queueName)
+                .and(ClusterQueueCapacity::getParent).eq(parentQueueName);
+        return this.selectOneByQuery(query);
+    }
 }
