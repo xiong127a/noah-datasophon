@@ -26,8 +26,8 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.service.ServiceInstallationService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
@@ -37,18 +37,16 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.api.vo.Result;
-import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.common.dto.ClusterGroupDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.MANAGED;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -108,8 +106,8 @@ public class WorkerStartActor extends AbstractActor {
             logger.info("收到来自主机 {} ({}) 的Worker启动消息,设置主机安装状态为100%", hostname, ip);
 
             if (CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)) {
-                HashMap<String, HostInfo> map = (HashMap<String, HostInfo>) CacheUtils
-                        .get(clusterId + Constants.HOST_MAP);
+                Map<String, HostInfo> map = CacheUtils
+                        .getHostMap(clusterId + Constants.HOST_MAP);
                 HostInfo hostInfo = map.get(ip);
                 if (Objects.nonNull(hostInfo)) {
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
@@ -122,7 +120,8 @@ public class WorkerStartActor extends AbstractActor {
             // 如果数据库中不存在该主机,则保存主机信息
             if (ObjectUtil.isNull(hostEntity)) {
                 // 保存主机安装信息到数据库
-                ProcessUtils.saveHostInstallInfo(msg, cluster.getClusterCode(), clusterHostService);
+                ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                serviceInstallationService.saveHostInstallInfo(msg, cluster.getClusterCode());
                 logger.info("Host install save to database");
                 // 同步集群用户和组
                 // syncClusterUserAndGroup(clusterId, hostname);
@@ -130,7 +129,7 @@ public class WorkerStartActor extends AbstractActor {
                 // 更新现有主机信息
                 hostEntity.setCpuArchitecture(msg.getCpuArchitecture());
                 hostEntity.setManaged(MANAGED.YES);
-                clusterHostService.updateById(hostEntity);
+                clusterHostService.saveHost(hostEntity);
             }
 
             // 添加到Prometheus监控
@@ -175,7 +174,7 @@ public class WorkerStartActor extends AbstractActor {
                 .getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
 
-        List<ClusterServiceRoleInstanceEntity> serviceRoleList = null;
+        List<ClusterServiceRoleInstanceDTO> serviceRoleList = null;
         // 启动服务
         if (CommandType.START_SERVICE.equals(commandType)) {
             serviceRoleList = roleInstanceService
@@ -188,8 +187,8 @@ public class WorkerStartActor extends AbstractActor {
         if (CommandType.STOP_SERVICE.equals(commandType)) {
             serviceRoleList = roleInstanceService
                     .getServiceRoleListByHostnameAndClusterId(hostname, clusterId).stream()
-                    .filter(roleInstance -> (!ServiceRoleState.STOP.equals(roleInstance.getServiceRoleState()) &&
-                            !ServiceRoleState.DECOMMISSIONED.equals(roleInstance.getServiceRoleState())))
+                    .filter(roleInstance -> (ServiceRoleState.STOP.getValue() != roleInstance.serviceRoleState() &&
+                            ServiceRoleState.DECOMMISSIONED.getValue() != roleInstance.serviceRoleState()))
                     .collect(toList());
         }
 
@@ -202,15 +201,11 @@ public class WorkerStartActor extends AbstractActor {
         Map<Integer, List<String>> serviceRoleMap = serviceRoleList.stream()
                 .collect(
                         groupingBy(
-                                ClusterServiceRoleInstanceEntity::getServiceId,
-                                mapping(i -> String.valueOf(i.getId()), toList())));
+                                ClusterServiceRoleInstanceDTO::serviceId,
+                                mapping(i -> String.valueOf(i.id()), toList())));
         // 生成并执行服务角色命令
-        Result result = serviceCommandService.generateServiceRoleCommands(clusterId, commandType, serviceRoleMap);
-        if (result.getCode() == 200) {
-            logger.info("Auto-start services successful");
-        } else {
-            logger.info("Some service auto-start failed, please check logs of the services that failed to start.");
-        }
+        serviceCommandService.generateServiceRoleCommands(clusterId, commandType, serviceRoleMap);
+        logger.info("Auto-start services command generated for host: {}", hostname);
     }
 
     /**
@@ -223,13 +218,13 @@ public class WorkerStartActor extends AbstractActor {
         ClusterGroupService clusterGroupService = SpringUtil.getBean(ClusterGroupService.class);
         ClusterUserService clusterUserService = SpringUtil.getBean(ClusterUserService.class);
 
-        List<ClusterGroup> userGroupList = clusterGroupService.listAllUserGroup(clusterId);
-        for (ClusterGroup clusterGroup : userGroupList) {
-            String groupName = clusterGroup.getGroupName();
+        List<ClusterGroupDTO> userGroupList = clusterGroupService.listAllUserGroup(clusterId);
+        for (ClusterGroupDTO clusterGroup : userGroupList) {
+            String groupName = clusterGroup.groupName();
             clusterGroupService.createUnixGroupOnHost(hostname, groupName);
         }
-        List<ClusterUser> userList = clusterUserService.listAllUser(clusterId);
-        for (ClusterUser clusterUser : userList) {
+        List<ClusterUserDTO> userList = clusterUserService.listAllUser(clusterId);
+        for (ClusterUserDTO clusterUser : userList) {
             clusterUserService.createUnixUserOnHost(clusterUser, hostname);
         }
     }
