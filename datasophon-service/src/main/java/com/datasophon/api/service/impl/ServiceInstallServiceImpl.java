@@ -39,12 +39,21 @@ import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.vo.Result;
+// Service层不返回Result，按照架构重构规范进行改造
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
+import com.datasophon.common.dto.ClusterVariableDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.enums.Status;
-// TypeRefs 现在位于 CacheUtils.TypeRefs 中
+// 添加必要的Converter依赖
+import com.datasophon.api.converter.*;
+
 import com.datasophon.common.model.DAG;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.HostServiceRoleMapping;
@@ -60,7 +69,9 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategy;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategyContext;
-import com.mybatisflex.core.query.QueryChain;
+// QueryChain已迁移到DAO层，不再在Service层使用
+import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
+import com.datasophon.dao.mapper.ClusterHostMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -122,6 +133,26 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
     private ConfigVersionInfoService configVersionInfoService;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupMapper roleGroupMapper;
+    @Autowired
+    private ClusterHostMapper clusterHostMapper;
+
+    // Converter依赖注入 - 按照架构重构规范
+    @Autowired
+    private ClusterServiceInstanceConverter clusterServiceInstanceConverter;
+    @Autowired
+    private FrameServiceConverter frameServiceConverter;
+    @Autowired
+    private ClusterServiceInstanceRoleGroupConverter roleGroupConverter;
+    @Autowired
+    private ClusterServiceRoleGroupConfigConverter roleGroupConfigConverter;
+    @Autowired
+    private ClusterServiceCommandHostCommandConverter hostCommandConverter;
+    @Autowired
+    private ClusterVariableConverter clusterVariableConverter;
+    @Autowired
+    private ClusterServiceRoleInstanceConverter roleInstanceConverter;
 
     /**
      * 处理配置列表，根据集群模式修改配置项的hidden和required属性
@@ -141,20 +172,27 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public Result getServiceConfigOption(Integer clusterId, String serviceName) {
+    public Map<String, List<ServiceConfig>> getServiceConfigOption(Integer clusterId, String serviceName) {
         List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
-        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+        // Service层：获取DTO后转换为Entity
+        ClusterServiceInstanceDTO serviceInstanceDTO = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
+        ClusterServiceInstanceEntity serviceInstance = null;
+        if (serviceInstanceDTO != null) {
+            serviceInstance = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
+        }
         if (Objects.nonNull(serviceInstance)) {
             list = listServiceConfigByServiceInstance(serviceInstance);
         } else {
-            FrameServiceEntity frameServiceEntity = this.frameService.getServiceByFrameCodeAndServiceName(
+            // Service层：获取DTO后转换为Entity
+            FrameServiceDTO frameServiceDTO = this.frameService.getServiceByFrameCodeAndServiceName(
                     clusterInfo.getClusterFrame(), serviceName);
+            FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO);
             String serviceConfig = frameServiceEntity.getServiceConfig();
             serviceConfig = PlaceholderUtils.replacePlaceholders(
                     serviceConfig, globalVariables, Constants.REGEX_VARIABLE);
@@ -188,13 +226,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
         }
 
-        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(
+        return ConfigGroupUtils.groupByConfigTargetRoleOrCommon(
                 list);
-        return Result.success(roleToConfigMap);
     }
 
     @Override
-    public Result saveServiceConfig(
+    public boolean saveServiceConfig(
             Integer clusterId, String serviceName, List<ServiceConfig> list,
             Integer roleGroupId, String description, Integer userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -211,9 +248,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceRoleHandler.handlerConfig(clusterId, list);
         }
 
-        // add variable
-        FrameServiceEntity frameServiceEntity = frameService.getServiceByFrameCodeAndServiceName(
+        // add variable - Service层：获取DTO后转换为Entity
+        FrameServiceDTO frameServiceDTO2 = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
+        FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO2);
 
         // TODO 检查是否为重复逻辑
         for (ServiceConfig serviceConfig : list) {
@@ -255,9 +293,14 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             addHostNodeToPrometheus(clusterId, configFileMap);
         }
 
-        ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
+        // Service层：获取DTO后转换为Entity
+        ClusterServiceInstanceDTO serviceInstanceDTO = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
+        ClusterServiceInstanceEntity serviceInstanceEntity = null;
+        if (serviceInstanceDTO != null) {
+            serviceInstanceEntity = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
+        }
 
         boolean versionCreated = false; // 标记是否创建了新版本
 
@@ -293,11 +336,17 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
             ClusterServiceRoleGroupConfig roleGroupConfig;
             if (Objects.isNull(roleGroupId)) {
-                ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(
+                // Service层：获取DTO后转换为Entity
+                ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(
                         serviceInstanceEntity.getId());
-                roleGroupConfig = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+                ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+                ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
+                        .getConfigByRoleGroupId(roleGroup.getId());
+                roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
             } else {
-                roleGroupConfig = groupConfigService.getConfigByRoleGroupId(roleGroupId);
+                // Service层：获取DTO后转换为Entity
+                ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroupId);
+                roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
             }
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
@@ -353,12 +402,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceInstanceService.updateById(serviceInstanceEntity);
         }
 
-        // 返回是否创建了新版本的信息
-        return Result.success().put("versionCreated", versionCreated);
+        // 返回是否创建了新版本
+        return versionCreated;
     }
 
     @Override
-    public Result saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list) {
+    public boolean saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list) {
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey = clusterInfo.getClusterCode()
@@ -366,7 +415,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 + SERVICE_ROLE_HOST_MAPPING;
         // 使用 getGeneric 自动返回空Map，避免空指针异常
         Map<String, List<String>> map = CacheOperateUtils.getGeneric(hostMapKey,
-                CacheUtils.TypeRefs.MAP_STRING_LIST_STRING);
+                TypeRefs.MAP_STRING_LIST_STRING);
 
         for (ServiceRoleHostMapping serviceRoleHostMapping : list) {
             serviceValidation(serviceRoleHostMapping);
@@ -383,8 +432,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // 缓存zookeeper节点数量
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
-        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = clusterServiceRoleInstanceService
+        // Service层：获取DTO列表后转换为Entity列表
+        List<ClusterServiceRoleInstanceDTO> zookeeperNodeDTOs = clusterServiceRoleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ZkServer");
+        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = roleInstanceConverter
+                .dtoListToEntityList(zookeeperNodeDTOs);
         int zkNodeCount = CollUtil.size(zookeeperNodes);
         String zkNodeCountKey = "zookeeper_node_count";
         CacheUtils.put(clusterId + UNDERLINE + zkNodeCountKey, zkNodeCount);
@@ -400,11 +452,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + UNDERLINE
                         + SERVICE_ROLE_HOST_MAPPING,
                 map);
-        return Result.success();
+        return true; // 成功完成操作
     }
 
     @Override
-    public Result saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list) {
+    public void saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map = new HashMap<>();
         for (HostServiceRoleMapping hostServiceRoleMapping : list) {
@@ -415,31 +467,33 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + UNDERLINE
                         + HOST_SERVICE_ROLE_MAPPING,
                 map);
-        return Result.success();
+        // 方法无返回值，操作完成
     }
 
     @Override
-    public Result getServiceRoleDeployOverview(Integer clusterId) {
+    public Map<String, List<String>> getServiceRoleDeployOverview(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         // 使用 getGeneric 自动返回空Map，避免空指针异常
-        Map<String, List<String>> map = CacheOperateUtils.getGeneric(
+        return CacheOperateUtils.getGeneric(
                 clusterInfo.getClusterCode()
                         + UNDERLINE
                         + SERVICE_ROLE_HOST_MAPPING,
-                CacheUtils.TypeRefs.MAP_STRING_LIST_STRING);
-        return Result.success(map);
+                TypeRefs.MAP_STRING_LIST_STRING);
     }
 
     /**
      */
     @Override
-    public Result startInstallService(Integer clusterId, List<String> commandIds) {
+    public Map<String, Object> startInstallService(Integer clusterId, List<String> commandIds) {
         Collection<ClusterServiceCommandEntity> commands = commandService.listByIds(commandIds);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         DAG<String, ServiceNode, ServiceNodeEdge> dag = new DAG<>();
         for (ClusterServiceCommandEntity command : commands) {
-            List<ClusterServiceCommandHostCommandEntity> commandHostList = hostCommandService
+            // Service层：获取DTO列表后转换为Entity列表
+            List<ClusterServiceCommandHostCommandDTO> commandHostDTOList = hostCommandService
                     .getHostCommandListByCommandId(command.getCommandId());
+            List<ClusterServiceCommandHostCommandEntity> commandHostList = hostCommandConverter
+                    .dtoListToEntityList(commandHostDTOList);
             List<ServiceRoleInfo> masterRoles = new ArrayList<>();
             List<ServiceRoleInfo> elseRoles = new ArrayList<>();
             ServiceNode serviceNode = new ServiceNode();
@@ -471,7 +525,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 }
             }
         }
-        return Result.success();
+        Map<String, Object> result = new HashMap<>();
+        result.put("dag", dag);
+        return result;
     }
 
     @Override
@@ -497,12 +553,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public Result getServiceRoleHostMapping(Integer clusterId) {
-        return null;
+    public void getServiceRoleHostMapping(Integer clusterId) {
+        // TODO 实现获取服务角色主机映射逻辑
+        // 方法无返回值，操作完成
     }
 
     @Override
-    public Result checkServiceDependency(Integer clusterId, String serviceIds) {
+    public void checkServiceDependency(Integer clusterId, String serviceIds) {
         // TODO 解除注释
         // //
         // List<ClusterServiceInstanceEntity> serviceInstanceList =
@@ -541,15 +598,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // "service install depends on prometheus ,please make sure you have selected it
         // or that prometheus is normal and running");
         // }
-        return Result.success();
+        // 方法无返回值，操作完成
     }
 
     private ClusterServiceInstanceRoleGroup saveNewRoleGroup(
             ClusterServiceInstanceEntity serviceInstanceEntity) {
-        long count = QueryChain.of(ClusterServiceInstanceRoleGroup.class)
-                .where(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq("auto")
-                .and(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceEntity.getId())
-                .count();
+        // DAO层：使用Mapper统计角色组数量
+        long count = roleGroupMapper.countByRoleGroupTypeAndServiceInstanceId("auto", serviceInstanceEntity.getId());
         ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
         long num = count + 1;
         roleGroup.setRoleGroupName("RoleGroup" + num);
@@ -656,10 +711,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     private void addHostNodeToPrometheus(
             Integer clusterId, HashMap<Generators, List<ServiceConfig>> configFileMap) {
-        List<ClusterHostDO> hostList = QueryChain.of(ClusterHostDO.class)
-                .where(ClusterHostDO::getManaged).eq(1)
-                .and(ClusterHostDO::getClusterId).eq(clusterId)
-                .list();
+        // DAO层：使用Mapper查询受管理的主机列表
+        List<ClusterHostDO> hostList = clusterHostMapper.selectByClusterId(clusterId);
 
         Generators workerGenerators = new Generators();
         workerGenerators.setFilename("worker.json");
@@ -697,8 +750,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             Map<String, ServiceConfig> existingConfigMap,
             Map<Generators, List<ServiceConfig>> resultConfigMap) {
 
-        final FrameServiceEntity frameService = this.frameService.getServiceByFrameCodeAndServiceName(
+        // Service层：获取DTO后转换为Entity
+        final FrameServiceDTO frameServiceDTO = this.frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
+        final FrameServiceEntity frameService = frameServiceConverter.dtoToEntity(frameServiceDTO);
 
         if (frameService == null || StringUtils.isBlank(frameService.getConfigFileJson())) {
             return;
@@ -718,7 +773,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      */
     private Map<Generators, List<ServiceConfig>> parseConfigJson(String configJson) {
         return JSON.parseObject(configJson,
-                new TypeReference<Map<Generators, List<ServiceConfig>>>() {
+                new TypeReference<>() {
                 });
     }
 
@@ -771,7 +826,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void addToGlobalVariable(Integer clusterId, String variableName, String value) {
-        ClusterVariable clusterVariable = variableService.getVariableByVariableName(variableName, clusterId);
+        // Service层：获取DTO后转换为Entity
+        ClusterVariableDTO clusterVariableDTO = variableService.getVariableByVariableName(variableName, clusterId);
+        ClusterVariable clusterVariable = null;
+        if (clusterVariableDTO != null) {
+            clusterVariable = clusterVariableConverter.dtoToEntity(clusterVariableDTO);
+        }
         if (Objects.nonNull(clusterVariable)) {
             if (!value.equals(clusterVariable.getVariableValue())) {
                 clusterVariable.setVariableValue(value);
@@ -858,9 +918,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     private List<ServiceConfig> listServiceConfigByServiceInstance(
             ClusterServiceInstanceEntity serviceInstance) {
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService
+        // Service层：获取DTO后转换为Entity
+        ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService
                 .getRoleGroupByServiceInstanceId(serviceInstance.getId());
-        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+        ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDTO);
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 
@@ -1040,7 +1103,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 // 映射子组名称为更友好的显示名称
                 List<String> friendlySubgroupNames = subgroups.stream()
                         .map(this::getFriendlySubgroupName)
-                        .collect(Collectors.toList());
+                        .toList();
 
                 for (int i = 0; i < friendlySubgroupNames.size(); i++) {
                     if (i > 0) {
