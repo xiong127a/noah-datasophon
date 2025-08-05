@@ -17,71 +17,40 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.converter.ClusterVariableConverter;
+import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.mapper.ClusterVariableMapper;
-
-import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 /**
- * 集群变量服务实现
- *
+ * 集群变量管理服务实现
+ * 从ProcessUtils迁移而来的变量管理功能
+ * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-01-01
  */
-@Service("clusterVariableService")
-@Transactional
-public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariable>
-        implements ClusterVariableService {
-
-    @Autowired
-    private ClusterVariableConverter clusterVariableConverter;
+@Slf4j
+@Service
+public class ClusterVariableServiceImpl implements ClusterVariableService {
 
     @Override
-    public ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId) {
-        // SQL逻辑迁移到DAO层
-        List<ClusterVariable> list = getMapper().selectByVariableNameAndClusterId(variableName, clusterId);
-
-        if (CollUtil.isNotEmpty(list)) {
-            ClusterVariable entity = list.getFirst();
-            return clusterVariableConverter.entityToDto(entity);
+    public void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId, String key, String value) {
+        if (globalVariables == null) {
+            log.warn("全局变量映射为空，无法设置变量 {} = {}", key, value);
+            return;
         }
-        return null;
-    }
-
-    @Override
-    public List<ClusterVariableDTO> getVariablesByClusterId(Integer clusterId) {
-        // SQL逻辑迁移到DAO层
-        List<ClusterVariable> entities = getMapper().selectByClusterId(clusterId);
-
-        return clusterVariableConverter.entityListToDtoList(entities);
-    }
-
-    @Override
-    public ClusterVariableDTO saveOrUpdateVariable(ClusterVariableDTO dto) {
-        ClusterVariable entity = clusterVariableConverter.dtoToEntity(dto);
-        saveOrUpdate(entity);
-        return clusterVariableConverter.entityToDto(entity);
-    }
-
-    @Override
-    public ClusterVariableDTO getByIdAsDto(Integer id) {
-        ClusterVariable entity = getById(id);
-        return Objects.nonNull(entity) ? clusterVariableConverter.entityToDto(entity) : null;
-    }
-
-    @Override
-    public boolean deleteVariable(Integer id) {
-        return removeById(id);
+        
+        if (key == null || key.trim().isEmpty()) {
+            log.warn("变量key为空，无法设置变量");
+            return;
+        }
+        
+        globalVariables.put(key, value);
+        GlobalVariables.put(clusterId, globalVariables);
+        
+        log.debug("成功设置集群 {} 的变量 {} = {}", clusterId, key, value);
     }
 }
