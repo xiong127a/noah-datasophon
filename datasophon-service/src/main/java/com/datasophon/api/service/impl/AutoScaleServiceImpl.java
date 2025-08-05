@@ -23,8 +23,8 @@ import com.datasophon.api.converter.AutoScaleTaskConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.AutoScaleService;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterVariableService;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.dto.AutoScaleTaskDTO;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.PageResult;
@@ -273,7 +273,8 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     private void saveAutoScaleConfig(Integer clusterId, String scaleType) {
         try {
             Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableAutoScale}", scaleType);
+            ClusterVariableService clusterVariableService = SpringUtil.getBean(ClusterVariableService.class);
+            clusterVariableService.generateClusterVariable(globalVariables, clusterId, "${enableAutoScale}", scaleType);
             logger.debug("更新集群 {} 的自动伸缩配置为: {}", clusterId, scaleType);
         } catch (Exception e) {
             logger.warn("更新集群自动伸缩配置失败: {}", e.getMessage());
