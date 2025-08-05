@@ -67,10 +67,10 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
-    
+
     @Autowired
     private ClusterInfoService clusterInfoService;
-    
+
     @Autowired
     private ClusterServiceRoleInstanceConverter roleInstanceConverter;
 
@@ -81,8 +81,7 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
         // Service层：获取DTO列表后使用Converter转换为Entity列表
         List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceConverter
                 .dtoListToEntityList(roleInstanceService
-                        .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager"))
-;
+                        .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager"));
 
         // build configfilemap
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
