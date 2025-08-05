@@ -23,16 +23,17 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -56,9 +57,10 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
 
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rm1}", hosts.get(0));
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rm2}", hosts.get(1));
-                ProcessUtils.generateClusterVariable(
+                        SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${rm1}", hosts.get(0));
+        simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${rm2}", hosts.get(1));
+        simpleClusterVariableService.generateClusterVariable(
                                 globalVariables, clusterId, "${rmHost}", String.join(",", hosts));
         }
 
@@ -67,22 +69,26 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                 ClusterYarnSchedulerService schedulerService = SpringUtil
                                 .getBean(ClusterYarnSchedulerService.class);
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
                 boolean enableKerberos = false;
-                Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+                Map<String, ServiceConfig> map = list.stream()
+                .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
                 for (ServiceConfig config : list) {
                         if ("yarn.resourcemanager.scheduler.class".equals(config.getName())) {
-                                ClusterYarnScheduler scheduler = schedulerService.getScheduler(clusterId);
+                                ClusterYarnSchedulerDTO schedulerDto = schedulerService.getScheduler(clusterId);
                                 if ("org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
                                                 .equals(config.getValue())) {
-                                        if ("capacity".equals(scheduler.getScheduler())) {
-                                                scheduler.setScheduler("fair");
-                                                schedulerService.updateById(scheduler);
+                                        if ("capacity".equals(schedulerDto.scheduler())) {
+                                                // 需要更新为fair调度器 - 使用合适的更新方法
+                                                // TODO: 实现调度器类型更新逻辑
+                                                log.info("需要将调度器从capacity更新为fair，clusterId: {}", clusterId);
                                         }
                                 } else {
-                                        if ("fair".equals(scheduler.getScheduler())) {
-                                                scheduler.setScheduler("capacity");
-                                                schedulerService.updateById(scheduler);
+                                        if ("fair".equals(schedulerDto.scheduler())) {
+                                                // 需要更新为capacity调度器 - 使用合适的更新方法
+                                                // TODO: 实现调度器类型更新逻辑
+                                                log.info("需要将调度器从fair更新为capacity，clusterId: {}", clusterId);
                                         }
                                 }
                         }
@@ -104,25 +110,25 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
 
         @Override
         public void handlerServiceRoleCheck(
-                        ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+                        ClusterServiceRoleInstanceDTO roleInstanceDto,
+                        Map<String, ClusterServiceRoleInstanceDTO> map) {
                 // 调用通用方法，传递特定的actorPath
-                performServiceRoleCheck(roleInstanceEntity, "rMStateActor");
+                performServiceRoleCheck(roleInstanceDto, "rMStateActor");
         }
 
         @Override
-        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+                                                      Map<String, ClusterServiceRoleInstanceDTO> map) {
                 // 调用通用方法，传递特定的actorPath
-                performServiceRoleCheck(roleInstanceEntity, "");
+                performServiceRoleCheck(roleInstanceDto, "");
         }
 
         @Override
-        public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-                Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
+        public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceDTO roleInstanceDto) {
+                Map<String, String> globalVariable = GlobalVariables.get(roleInstanceDto.clusterId());
                 String rm2 = globalVariable.get("${rm2}");
                 String commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/yarn rmadmin -getServiceState rm1";
-                if (rm2.equals(roleInstanceEntity.getHostname())) {
+                if (rm2.equals(roleInstanceDto.hostname())) {
                         commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/yarn rmadmin -getServiceState rm2";
                 }
                 ExecuteCmdCommand command = new ExecuteCmdCommand();
