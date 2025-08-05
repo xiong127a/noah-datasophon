@@ -18,10 +18,16 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.converter.K8sResourceConverter;
+import com.datasophon.api.converter.KubernetesResourceVOConverter;
 import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.dto.K8sNamespaceDTO;
+import com.datasophon.common.model.PageResult;
+import com.datasophon.common.dto.KubernetesResourceDTO;
+import com.datasophon.common.dto.K8sResourceStatsDTO;
 import com.datasophon.common.vo.K8sNamespaceVO;
+import com.datasophon.common.vo.KubernetesResourceVO;
 import com.datasophon.api.dto.Result;
+import java.util.Map;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +50,9 @@ public class KubernetesDashboardController {
     private KubernetesDashboardService kubernetesDashboardService;
 
     private final K8sResourceConverter k8sResourceConverter = K8sResourceConverter.INSTANCE;
+
+    @Autowired
+    private KubernetesResourceVOConverter kubernetesResourceVOConverter;
 
     /**
      * 获取Kubernetes命名空间列表
@@ -68,7 +77,7 @@ public class KubernetesDashboardController {
      * 获取Deployments列表
      */
     @RequestMapping("/deployments")
-    public Result getDeployments(
+    public Result<List<KubernetesResourceVO>> getDeployments(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
@@ -78,7 +87,20 @@ public class KubernetesDashboardController {
         log.info("获取Deployments列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
                 clusterId, serviceId, namespace, pageNum, pageSize);
 
-        return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> deploymentDTOs = kubernetesDashboardService.getDeployments(clusterId,
+                    serviceId, namespace, pageNum, pageSize);
+
+            // DTO转换为VO
+            List<KubernetesResourceVO> deploymentVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(deploymentDTOs.getRecords());
+
+            // 封装为Result分页结果
+            return Result.success(deploymentVOs);
+        } catch (Exception e) {
+            log.error("获取Deployments列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Deployments列表失败: " + e.getMessage());
+        }
 
     }
 
@@ -86,7 +108,7 @@ public class KubernetesDashboardController {
      * 获取Pods列表
      */
     @GetMapping("/pods")
-    public Result getPodsInfo(@RequestParam(name = "clusterId") Integer clusterId,
+    public Result<List<KubernetesResourceVO>> getPodsInfo(@RequestParam(name = "clusterId") Integer clusterId,
             @RequestParam(name = "serviceId", required = false) Integer serviceId,
             @RequestParam(name = "namespace", required = false) String namespace,
             @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
@@ -94,7 +116,19 @@ public class KubernetesDashboardController {
         try {
             log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
                     clusterId, serviceId, namespace, pageNum, pageSize);
-            return kubernetesDashboardService.getPods(clusterId, serviceId, namespace, pageNum, pageSize);
+            try {
+                PageResult<KubernetesResourceDTO> podDTOs = kubernetesDashboardService.getPods(clusterId, serviceId,
+                        namespace, pageNum, pageSize);
+
+                // DTO转换为VO
+                List<KubernetesResourceVO> podVOs = kubernetesResourceVOConverter.dtoListToVoList(podDTOs.getRecords());
+
+                // 封装为Result分页结果
+                return Result.success(podVOs);
+            } catch (Exception e) {
+                log.error("获取Pods列表失败: {}", e.getMessage(), e);
+                return Result.error("获取Pods列表失败: " + e.getMessage());
+            }
         } catch (Exception e) {
             log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());
@@ -105,70 +139,112 @@ public class KubernetesDashboardController {
      * 获取Services列表
      */
     @RequestMapping("/services")
-    public Result getServices(
+    public Result<List<KubernetesResourceVO>> getServices(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getServices(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> serviceDTOs = kubernetesDashboardService.getServices(clusterId, namespace,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> serviceVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(serviceDTOs.getRecords());
+            return Result.success(serviceVOs);
+        } catch (Exception e) {
+            log.error("获取Services列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Services列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取ConfigMaps列表
      */
     @RequestMapping("/configmaps")
-    public Result getConfigMaps(
+    public Result<List<KubernetesResourceVO>> getConfigMaps(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getConfigMaps(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> configMapDTOs = kubernetesDashboardService.getConfigMaps(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> configMapVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(configMapDTOs.getRecords());
+            return Result.success(configMapVOs);
+        } catch (Exception e) {
+            log.error("获取ConfigMaps列表失败: {}", e.getMessage(), e);
+            return Result.error("获取ConfigMaps列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Secrets列表
      */
     @RequestMapping("/secrets")
-    public Result getSecrets(
+    public Result<List<KubernetesResourceVO>> getSecrets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getSecrets(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> secretDTOs = kubernetesDashboardService.getSecrets(clusterId, namespace,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> secretVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(secretDTOs.getRecords());
+            return Result.success(secretVOs);
+        } catch (Exception e) {
+            log.error("获取Secrets列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Secrets列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取PersistentVolumes列表
      */
     @RequestMapping("/persistentvolumes")
-    public Result getPersistentVolumes(
+    public Result<List<KubernetesResourceVO>> getPersistentVolumes(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 
-        // 直接调用支持分页的服务方法
-        return kubernetesDashboardService.getPersistentVolumes(clusterId, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> pvDTOs = kubernetesDashboardService.getPersistentVolumes(clusterId,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> pvVOs = kubernetesResourceVOConverter.dtoListToVoList(pvDTOs.getRecords());
+            return Result.success(pvVOs);
+        } catch (Exception e) {
+            log.error("获取PersistentVolumes列表失败: {}", e.getMessage(), e);
+            return Result.error("获取PersistentVolumes列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取PersistentVolumeClaims列表
      */
     @RequestMapping("/pvcs")
-    public Result getPersistentVolumeClaims(
+    public Result<List<KubernetesResourceVO>> getPersistentVolumeClaims(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 
         // 直接调用支持分页的服务方法
-        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> pvcDTOs = kubernetesDashboardService.getPersistentVolumeClaims(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> pvcVOs = kubernetesResourceVOConverter.dtoListToVoList(pvcDTOs.getRecords());
+            return Result.success(pvcVOs);
+        } catch (Exception e) {
+            log.error("获取PersistentVolumeClaims列表失败: {}", e.getMessage(), e);
+            return Result.error("获取PersistentVolumeClaims列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取StorageClasses列表
      */
     @RequestMapping("/storageclasses")
-    public Result getStorageClasses(
+    public Result<List<KubernetesResourceVO>> getStorageClasses(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -177,43 +253,79 @@ public class KubernetesDashboardController {
                 clusterId, pageNum, pageSize);
 
         // 直接调用支持分页的服务方法
-        return kubernetesDashboardService.getStorageClasses(clusterId, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> storageDTOs = kubernetesDashboardService.getStorageClasses(clusterId,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> storageVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(storageDTOs.getRecords());
+            return Result.success(storageVOs);
+        } catch (Exception e) {
+            log.error("获取StorageClasses列表失败: {}", e.getMessage(), e);
+            return Result.error("获取StorageClasses列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Ingresses列表
      */
     @RequestMapping("/ingresses")
-    public Result getIngresses(
+    public Result<List<KubernetesResourceVO>> getIngresses(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getIngresses(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> ingressDTOs = kubernetesDashboardService.getIngresses(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> ingressVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(ingressDTOs.getRecords());
+            return Result.success(ingressVOs);
+        } catch (Exception e) {
+            log.error("获取Ingresses列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Ingresses列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取IngressClasses列表
      */
     @RequestMapping("/ingressclasses")
-    public Result getIngressClasses(
+    public Result<List<KubernetesResourceVO>> getIngressClasses(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getIngressClasses(clusterId, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> ingressClassDTOs = kubernetesDashboardService.getIngressClasses(clusterId,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> ingressClassVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(ingressClassDTOs.getRecords());
+            return Result.success(ingressClassVOs);
+        } catch (Exception e) {
+            log.error("获取IngressClasses列表失败: {}", e.getMessage(), e);
+            return Result.error("获取IngressClasses列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取DaemonSets列表
      */
     @RequestMapping("/daemonsets")
-    public Result getDaemonSets(
+    public Result<List<KubernetesResourceVO>> getDaemonSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> daemonSetDTOs = kubernetesDashboardService.getDaemonSets(clusterId,
+                    serviceId, namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> daemonSetVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(daemonSetDTOs.getRecords());
+            return Result.success(daemonSetVOs);
+        } catch (Exception e) {
+            log.error("获取DaemonSets列表失败: {}", e.getMessage(), e);
+            return Result.error("获取DaemonSets列表失败: " + e.getMessage());
+        }
 
     }
 
@@ -221,95 +333,160 @@ public class KubernetesDashboardController {
      * 获取StatefulSets列表
      */
     @RequestMapping("/statefulsets")
-    public Result getStatefulSets(
+    public Result<List<KubernetesResourceVO>> getStatefulSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getStatefulSets(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> statefulSetDTOs = kubernetesDashboardService.getStatefulSets(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> statefulSetVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(statefulSetDTOs.getRecords());
+            return Result.success(statefulSetVOs);
+        } catch (Exception e) {
+            log.error("获取StatefulSets列表失败: {}", e.getMessage(), e);
+            return Result.error("获取StatefulSets列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取ReplicaSets列表
      */
     @RequestMapping("/replicasets")
-    public Result getReplicaSets(
+    public Result<List<KubernetesResourceVO>> getReplicaSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getReplicaSets(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> replicaSetDTOs = kubernetesDashboardService.getReplicaSets(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> replicaSetVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(replicaSetDTOs.getRecords());
+            return Result.success(replicaSetVOs);
+        } catch (Exception e) {
+            log.error("获取ReplicaSets列表失败: {}", e.getMessage(), e);
+            return Result.error("获取ReplicaSets列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取ReplicationControllers列表（带分页）
      */
     @RequestMapping("/replicationcontrollers")
-    public Result getReplicationControllers(
+    public Result<List<KubernetesResourceVO>> getReplicationControllers(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> rcDTOs = kubernetesDashboardService.getReplicationControllers(clusterId,
+                    namespace, pageNum, pageSize);
+            List<KubernetesResourceVO> rcVOs = kubernetesResourceVOConverter.dtoListToVoList(rcDTOs.getRecords());
+            return Result.success(rcVOs);
+        } catch (Exception e) {
+            log.error("获取ReplicationControllers列表失败: {}", e.getMessage(), e);
+            return Result.error("获取ReplicationControllers列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Jobs列表
      */
     @RequestMapping("/jobs")
-    public Result getJobs(
+    public Result<List<KubernetesResourceVO>> getJobs(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getJobs(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> jobDTOs = kubernetesDashboardService.getJobs(clusterId, namespace,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> jobVOs = kubernetesResourceVOConverter.dtoListToVoList(jobDTOs.getRecords());
+            return Result.success(jobVOs);
+        } catch (Exception e) {
+            log.error("获取Jobs列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Jobs列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取CronJobs列表
      */
     @RequestMapping("/cronjobs")
-    public Result getCronJobs(
+    public Result<List<KubernetesResourceVO>> getCronJobs(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return kubernetesDashboardService.getCronJobs(clusterId, namespace, pageNum, pageSize);
+        try {
+            PageResult<KubernetesResourceDTO> cronJobDTOs = kubernetesDashboardService.getCronJobs(clusterId, namespace,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> cronJobVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(cronJobDTOs.getRecords());
+            return Result.success(cronJobVOs);
+        } catch (Exception e) {
+            log.error("获取CronJobs列表失败: {}", e.getMessage(), e);
+            return Result.error("获取CronJobs列表失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Deployment详情
      */
     @RequestMapping("/deployment/detail")
-    public Result getDeploymentDetail(
+    public Result<KubernetesResourceVO> getDeploymentDetail(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam("namespace") String namespace,
             @RequestParam("name") String name) {
-        return kubernetesDashboardService.getDeploymentDetail(clusterId, namespace, name);
+        try {
+            KubernetesResourceDTO deploymentDTO = kubernetesDashboardService.getDeploymentDetail(clusterId, namespace,
+                    name);
+            KubernetesResourceVO deploymentVO = kubernetesResourceVOConverter.dtoToVo(deploymentDTO);
+            return Result.success(deploymentVO);
+        } catch (Exception e) {
+            log.error("获取Deployment详情失败: {}", e.getMessage(), e);
+            return Result.error("获取Deployment详情失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取Deployment相关事件
      */
     @RequestMapping("/deployment/events")
-    public Result getDeploymentEvents(
+    public Result<List<Map<String, Object>>> getDeploymentEvents(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam("namespace") String namespace,
             @RequestParam("kind") String kind,
             @RequestParam("name") String name) {
-        return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
+        try {
+            List<Map<String, Object>> events = kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind,
+                    name);
+            return Result.success(events);
+        } catch (Exception e) {
+            log.error("获取资源事件失败: {}", e.getMessage(), e);
+            return Result.error("获取资源事件失败: " + e.getMessage());
+        }
     }
 
     /**
      * 获取资源相关事件
      */
     @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
-    public Result getResourceEvents(@RequestParam Integer clusterId,
+    public Result<List<Map<String, Object>>> getResourceEvents(@RequestParam Integer clusterId,
             @RequestParam String namespace,
             @RequestParam String kind,
             @RequestParam String name) {
-        return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
+        try {
+            List<Map<String, Object>> events = kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind,
+                    name);
+            return Result.success(events);
+        } catch (Exception e) {
+            log.error("获取资源事件失败: {}", e.getMessage(), e);
+            return Result.error("获取资源事件失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -317,7 +494,7 @@ public class KubernetesDashboardController {
      * 只统计各类资源的数量，不返回资源列表以提高性能
      */
     @RequestMapping("/resource-stats")
-    public Result getResourceStats(
+    public Result<K8sResourceStatsDTO> getResourceStats(
             @RequestParam(name = "clusterId", required = false) Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
@@ -332,12 +509,12 @@ public class KubernetesDashboardController {
             }
 
             // 调用优化后的Service方法，一次性获取所有资源统计数据
-            Result result = kubernetesDashboardService.getResourceStats(clusterId, serviceId, namespace);
+            K8sResourceStatsDTO stats = kubernetesDashboardService.getResourceStats(clusterId, serviceId, namespace);
 
             // 日志记录返回结果
-            log.info("resource-stats接口返回：code={}, data={}", result.getCode(), result.getData() != null ? "非空" : "空");
+            log.info("resource-stats接口返回统计数据: {}", stats != null ? "非空" : "空");
 
-            return result;
+            return Result.success(stats);
         } catch (Exception e) {
             log.error("获取Kubernetes资源统计失败", e);
             return Result.error("获取Kubernetes资源统计失败: " + e.getMessage());

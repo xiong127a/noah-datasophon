@@ -19,8 +19,11 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.K8sNamespaceDTO;
 import com.datasophon.common.dto.K8sResourceStatsDTO;
+import com.datasophon.common.dto.KubernetesResourceDTO;
+import com.datasophon.common.model.PageResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Kubernetes仪表盘服务接口
@@ -33,126 +36,144 @@ import java.util.List;
  */
 public interface KubernetesDashboardService {
 
-    /**
-     * 获取Kubernetes命名空间列表
-     * 
-     * @param clusterId 集群ID
-     * @return 命名空间DTO列表
-     */
-    List<K8sNamespaceDTO> getNamespaces(Integer clusterId);
+        /**
+         * 获取Kubernetes命名空间列表
+         * 
+         * @param clusterId 集群ID
+         * @return 命名空间DTO列表
+         */
+        List<K8sNamespaceDTO> getNamespaces(Integer clusterId);
 
-    /**
-     * 一次性获取所有Kubernetes资源统计数据
-     * 该方法旨在提高性能，通过一次客户端连接获取所有资源数量
-     *
-     * @param clusterId 集群ID
-     * @param serviceId 服务ID（可选）
-     * @param namespace 命名空间（可选）
-     * @return K8S资源统计DTO
-     */
-    K8sResourceStatsDTO getResourceStats(Integer clusterId, Integer serviceId, String namespace);
+        /**
+         * 一次性获取所有Kubernetes资源统计数据
+         * 该方法旨在提高性能，通过一次客户端连接获取所有资源数量
+         *
+         * @param clusterId 集群ID
+         * @param serviceId 服务ID（可选）
+         * @param namespace 命名空间（可选）
+         * @return K8S资源统计DTO
+         */
+        K8sResourceStatsDTO getResourceStats(Integer clusterId, Integer serviceId, String namespace);
 
-    /**
-     * 获取Deployments列表（返回通用对象，暂时保持兼容）
-     * 
-     * @param clusterId 集群ID
-     * @param serviceId 服务ID
-     * @param namespace 命名空间
-     * @param pageNum   当前页码
-     * @param pageSize  每页大小
-     * @return 通用分页结果对象
-     */
-    Object getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Deployments列表
+         * 
+         * @param clusterId 集群ID
+         * @param serviceId 服务ID
+         * @param namespace 命名空间
+         * @param pageNum   当前页码
+         * @param pageSize  每页大小
+         * @return Kubernetes资源分页结果
+         */
+        PageResult<KubernetesResourceDTO> getDeployments(Integer clusterId, Integer serviceId, String namespace,
+                        Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取Pods列表（返回通用对象，暂时保持兼容）
-     * 
-     * @param clusterId 集群ID
-     * @param serviceId 服务ID
-     * @param namespace 命名空间
-     * @param pageNum   当前页码
-     * @param pageSize  每页大小
-     * @return 通用分页结果对象
-     */
-    Object getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Pods列表
+         * 
+         * @param clusterId 集群ID
+         * @param serviceId 服务ID
+         * @param namespace 命名空间
+         * @param pageNum   当前页码
+         * @param pageSize  每页大小
+         * @return Kubernetes资源分页结果
+         */
+        PageResult<KubernetesResourceDTO> getPods(Integer clusterId, Integer serviceId, String namespace,
+                        Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取Services列表（返回通用对象，暂时保持兼容）
-     */
-    Object getServices(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Services列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getServices(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取ConfigMaps列表（返回通用对象，暂时保持兼容）
-     */
-    Object getConfigMaps(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取ConfigMaps列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getConfigMaps(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取Secrets列表（返回通用对象，暂时保持兼容）
-     */
-    Object getSecrets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Secrets列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getSecrets(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取PersistentVolumes列表（返回通用对象，暂时保持兼容）
-     */
-    Object getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize);
+        /**
+         * 获取PersistentVolumes列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize);
 
-    /**
-     * 获取PersistentVolumeClaims列表（返回通用对象，暂时保持兼容）
-     */
-    Object getPersistentVolumeClaims(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取PersistentVolumeClaims列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getPersistentVolumeClaims(Integer clusterId, String namespace,
+                        Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取StorageClasses列表（返回通用对象，暂时保持兼容）
-     */
-    Object getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize);
+        /**
+         * 获取StorageClasses列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize);
 
-    /**
-     * 获取Ingresses列表（返回通用对象，暂时保持兼容）
-     */
-    Object getIngresses(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Ingresses列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getIngresses(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取IngressClasses列表（返回通用对象，暂时保持兼容）
-     */
-    Object getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize);
+        /**
+         * 获取IngressClasses列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize);
 
-    /**
-     * 获取DaemonSets列表（返回通用对象，暂时保持兼容）
-     */
-    Object getDaemonSets(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取DaemonSets列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getDaemonSets(Integer clusterId, Integer serviceId, String namespace,
+                        Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取StatefulSets列表（返回通用对象，暂时保持兼容）
-     */
-    Object getStatefulSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取StatefulSets列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getStatefulSets(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取ReplicaSets列表（返回通用对象，暂时保持兼容）
-     */
-    Object getReplicaSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取ReplicaSets列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getReplicaSets(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取ReplicationControllers列表（返回通用对象，暂时保持兼容）
-     */
-    Object getReplicationControllers(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取ReplicationControllers列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getReplicationControllers(Integer clusterId, String namespace,
+                        Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取Jobs列表（返回通用对象，暂时保持兼容）
-     */
-    Object getJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取Jobs列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getJobs(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取CronJobs列表（返回通用对象，暂时保持兼容）
-     */
-    Object getCronJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+        /**
+         * 获取CronJobs列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getCronJobs(Integer clusterId, String namespace, Integer pageNum,
+                        Integer pageSize);
 
-    /**
-     * 获取Deployment详情（返回通用对象，暂时保持兼容）
-     */
-    Object getDeploymentDetail(Integer clusterId, String namespace, String name);
+        /**
+         * 获取Deployment详情（返回通用对象，暂时保持兼容）
+         */
+        KubernetesResourceDTO getDeploymentDetail(Integer clusterId, String namespace, String name);
 
-    /**
-     * 获取资源相关事件（返回通用对象，暂时保持兼容）
-     */
-    Object getResourceEvents(Integer clusterId, String namespace, String kind, String name);
+        /**
+         * 获取资源相关事件（返回通用对象，暂时保持兼容）
+         */
+        List<Map<String, Object>> getResourceEvents(Integer clusterId, String namespace, String kind, String name);
 }
