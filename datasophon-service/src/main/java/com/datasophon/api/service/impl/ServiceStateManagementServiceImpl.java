@@ -28,7 +28,8 @@ import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.ServiceState;
-import com.mybatisflex.core.query.QueryChain;
+// QueryChain已迁移到DAO层，不再在Service层使用
+import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,8 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
 
     @Autowired
     private ClusterServiceRoleInstanceService serviceRoleInstanceService;
+    @Autowired
+    private ClusterAlertHistoryMapper clusterAlertHistoryMapper;
 
     @Autowired
     private ClusterAlertHistoryService alertHistoryService;
@@ -78,12 +81,11 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
     @Override
     public void saveAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity, String alertTargetName,
             AlertLevel alertLevel, String alertAdvice) {
-        ClusterAlertHistory clusterAlertHistory = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getAlertTargetName).eq(alertTargetName)
-                .and(ClusterAlertHistory::getClusterId).eq(roleInstanceEntity.getClusterId())
-                .and(ClusterAlertHistory::getHostname).eq(roleInstanceEntity.getHostname())
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .one();
+        // DAO层：使用Mapper查询告警历史
+        ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
+                .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
+                        alertTargetName, roleInstanceEntity.getClusterId(),
+                        roleInstanceEntity.getHostname(), 1);
 
         ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
                 .getById(roleInstanceEntity.getServiceId());
@@ -119,12 +121,12 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
 
     @Override
     public void recoverAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterAlertHistory clusterAlertHistory = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getAlertTargetName).eq(roleInstanceEntity.getServiceRoleName() + " Survive")
-                .and(ClusterAlertHistory::getClusterId).eq(roleInstanceEntity.getClusterId())
-                .and(ClusterAlertHistory::getHostname).eq(roleInstanceEntity.getHostname())
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .one();
+        // DAO层：使用Mapper查询告警历史
+        ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
+                .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
+                        roleInstanceEntity.getServiceRoleName() + " Survive",
+                        roleInstanceEntity.getClusterId(),
+                        roleInstanceEntity.getHostname(), 1);
 
         if (Objects.nonNull(clusterAlertHistory)) {
             clusterAlertHistory.setIsEnabled(2);
