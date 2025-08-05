@@ -20,12 +20,18 @@
 package com.datasophon.api.master;
 
 import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
+
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.ServiceInstallationService;
+import com.datasophon.api.service.CommandExecutionService;
+import com.datasophon.api.service.ServiceStateManagementService;
+import com.datasophon.api.utils.ConfigGroupUtils;
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.enums.CommandType;
@@ -36,9 +42,10 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +94,7 @@ public class MasterServiceActor extends AbstractActor {
                 new ExecResult();
                 ExecResult execResult;
                 Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
-                ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.getOneServiceRole(
+                ClusterServiceRoleInstanceDTO serviceRoleInstance = roleInstanceService.getOneServiceRole(
                         serviceRoleInfo.getName(),
                         serviceRoleInfo.getHostname(),
                         serviceRoleInfo.getClusterId());
@@ -97,16 +104,22 @@ public class MasterServiceActor extends AbstractActor {
                 boolean needReConfig = false;
                 if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
                     Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
-                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    // 使用MapStruct Converter进行转换 - 符合架构规范
+                    ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+                    ClusterServiceRoleGroupConfig config = converter.dtoToEntity(configDto);
                     // TODO 获取角色组配置
-                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
-                } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
-                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(
-                            serviceRoleInstance.getRoleGroupId());
-                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
+                    ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
+                } else if (Objects.equals(NeedRestart.YES.getValue(), serviceRoleInstance.needRestart())) {
+                    ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(
+                            serviceRoleInstance.roleGroupId());
+                    // 使用MapStruct Converter进行转换 - 符合架构规范
+                    ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+                    ClusterServiceRoleGroupConfig config = converter.dtoToEntity(configDto);
+                    ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
-                logger.info("enable ranger plugin is {}", enableRangerPlugin);
+                logger.info("enable ranger plugin is {}, needReConfig is {}", enableRangerPlugin, needReConfig);
                 serviceRoleInfo.setConfigFileMap(configFileMap);
                 serviceRoleInfo.setEnableRangerPlugin(enableRangerPlugin);
 
@@ -118,14 +131,16 @@ public class MasterServiceActor extends AbstractActor {
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
 
-                            execResult = ProcessUtils.startInstallService(serviceRoleInfo);
+                            ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                            execResult = serviceInstallationService.startInstallService(serviceRoleInfo);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) {
-                                ProcessUtils.saveServiceInstallInfo(serviceRoleInfo);
+                                serviceInstallationService.saveServiceInstallInfo(serviceRoleInfo);
                                 successNum += 1;
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())
                                         && successNum == serviceRoleInfoList.size()) {
                                     logger.info("all master role has installed");
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.SUCCESS);
@@ -140,7 +155,8 @@ public class MasterServiceActor extends AbstractActor {
                                             "{} install failed in {}",
                                             serviceRoleInfo.getName(),
                                             serviceRoleInfo.getHostname());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.ERROR);
@@ -152,7 +168,8 @@ public class MasterServiceActor extends AbstractActor {
                                     "{} install failed in {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-                            ProcessUtils.tellCommandActorResult(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.tellCommandActorResult(
                                     serviceRoleInfo.getParentName(),
                                     executeServiceRoleCommand,
                                     ServiceExecuteState.ERROR);
@@ -165,20 +182,23 @@ public class MasterServiceActor extends AbstractActor {
                                     "start  {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-                            execResult = ProcessUtils.startService(serviceRoleInfo, needReConfig);
+                            ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                            execResult = serviceInstallationService.startService(serviceRoleInfo, needReConfig);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) {
                                 successNum += 1;
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())
                                         && successNum == serviceRoleInfoList.size()) {
                                     logger.info(
                                             "{} start success", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.SUCCESS);
                                 }
                                 // update service role state is running
-                                ProcessUtils.updateServiceRoleState(
+                                ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
+                                serviceStateManagementService.updateServiceRoleState(
                                         CommandType.START_SERVICE,
                                         serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname(),
@@ -187,14 +207,16 @@ public class MasterServiceActor extends AbstractActor {
                             } else {
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())) {
                                     logger.info("{} start failed", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.ERROR);
                                 }
                             }
                         } catch (Exception e) {
-                            ProcessUtils.tellCommandActorResult(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.tellCommandActorResult(
                                     serviceRoleInfo.getParentName(),
                                     executeServiceRoleCommand,
                                     ServiceExecuteState.ERROR);
@@ -207,19 +229,22 @@ public class MasterServiceActor extends AbstractActor {
                                     "stop {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-                            execResult = ProcessUtils.stopService(serviceRoleInfo);
+                            ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                            execResult = serviceInstallationService.stopService(serviceRoleInfo);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) { // 执行成功
                                 successNum += 1;
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())
                                         && successNum == serviceRoleInfoList.size()) {
                                     logger.info("{} stop success", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.SUCCESS);
                                 }
                                 // update service role state is stopped
-                                ProcessUtils.updateServiceRoleState(
+                                ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
+                                serviceStateManagementService.updateServiceRoleState(
                                         CommandType.STOP_SERVICE,
                                         serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname(),
@@ -229,14 +254,16 @@ public class MasterServiceActor extends AbstractActor {
 
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())) {
                                     logger.info("{} stop failed", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.ERROR);
                                 }
                             }
                         } catch (Exception e) {
-                            ProcessUtils.tellCommandActorResult(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.tellCommandActorResult(
                                     serviceRoleInfo.getParentName(),
                                     executeServiceRoleCommand,
                                     ServiceExecuteState.ERROR);
@@ -249,20 +276,23 @@ public class MasterServiceActor extends AbstractActor {
                                     "restart {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-                            execResult = ProcessUtils.restartService(serviceRoleInfo, needReConfig);
+                            ServiceInstallationService serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                            execResult = serviceInstallationService.restartService(serviceRoleInfo, needReConfig);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) {
                                 successNum += 1;
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())
                                         && successNum == serviceRoleInfoList.size()) {
                                     logger.info(
                                             "{} restart success", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.SUCCESS);
                                 }
                                 // update service role state is running
-                                ProcessUtils.updateServiceRoleState(
+                                ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
+                                serviceStateManagementService.updateServiceRoleState(
                                         CommandType.RESTART_SERVICE,
                                         serviceRoleInfo.getName(),
                                         serviceRoleInfo.getHostname(),
@@ -272,14 +302,16 @@ public class MasterServiceActor extends AbstractActor {
                                 if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())) {
                                     logger.info(
                                             "{} restart failed", serviceRoleInfo.getParentName());
-                                    ProcessUtils.tellCommandActorResult(
+                                    CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                                    commandExecutionService.tellCommandActorResult(
                                             serviceRoleInfo.getParentName(),
                                             executeServiceRoleCommand,
                                             ServiceExecuteState.ERROR);
                                 }
                             }
                         } catch (Exception e) {
-                            ProcessUtils.tellCommandActorResult(
+                            CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
+                            commandExecutionService.tellCommandActorResult(
                                     serviceRoleInfo.getParentName(),
                                     executeServiceRoleCommand,
                                     ServiceExecuteState.ERROR);
@@ -302,4 +334,6 @@ public class MasterServiceActor extends AbstractActor {
         }
         return false;
     }
+
+
 }

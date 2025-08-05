@@ -56,4 +56,33 @@ public interface ServiceInstallationService {
      * @throws Exception 安装过程中的异常
      */
     ExecResult startInstallService(ServiceRoleInfo serviceRoleInfo) throws Exception;
+
+    /**
+     * 启动服务
+     *
+     * @param serviceRoleInfo 服务角色信息
+     * @param needReConfig    是否需要重新配置
+     * @return 执行结果
+     * @throws Exception 启动过程中的异常
+     */
+    ExecResult startService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception;
+
+    /**
+     * 停止服务
+     *
+     * @param serviceRoleInfo 服务角色信息
+     * @return 执行结果
+     * @throws Exception 停止过程中的异常
+     */
+    ExecResult stopService(ServiceRoleInfo serviceRoleInfo) throws Exception;
+
+    /**
+     * 重启服务
+     *
+     * @param serviceRoleInfo 服务角色信息
+     * @param needReConfig    是否需要重新配置
+     * @return 执行结果
+     * @throws Exception 重启过程中的异常
+     */
+    ExecResult restartService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception;
 }

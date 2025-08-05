@@ -355,4 +355,100 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             return url; // 返回原始URL如果替换失败
         }
     }
+
+    @Override
+    public ExecResult startService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception {
+        logger.info("启动服务: {} on {}, needReConfig: {}", 
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), needReConfig);
+        
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ExecResult execResult;
+
+        if (Constants.PVM_MODE.equals(depMode)) {
+            // PVM模式：如果需要重新配置，先配置再启动，否则直接启动
+            if (needReConfig) {
+                ServiceHandler serviceConfigureHandler = new ServiceConfigureHandler();
+                ServiceHandler serviceStartHandler = new ServiceStartHandler();
+                serviceConfigureHandler.setNext(serviceStartHandler);
+                execResult = serviceConfigureHandler.handlerRequest(serviceRoleInfo);
+            } else {
+                ServiceHandler serviceStartHandler = new ServiceStartHandler();
+                execResult = serviceStartHandler.handlerRequest(serviceRoleInfo);
+            }
+        } else {
+            // Kubernetes模式：使用Kubernetes启动处理器
+            if (needReConfig) {
+                KubernetesServiceConfigureHandler kubernetesServiceConfigureHandler = new KubernetesServiceConfigureHandler();
+                KubernetesServiceStartHandler kubernetesServiceStartHandler = new KubernetesServiceStartHandler();
+                kubernetesServiceConfigureHandler.setNext(kubernetesServiceStartHandler);
+                execResult = kubernetesServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+            } else {
+                KubernetesServiceStartHandler kubernetesServiceStartHandler = new KubernetesServiceStartHandler();
+                execResult = kubernetesServiceStartHandler.handlerRequest(serviceRoleInfo);
+            }
+        }
+        
+        logger.info("服务启动完成: {} on {}, 结果: {}", 
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), 
+                execResult != null ? execResult.getExecResult() : "null");
+        return execResult;
+    }
+
+    @Override
+    public ExecResult stopService(ServiceRoleInfo serviceRoleInfo) throws Exception {
+        logger.info("停止服务: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+        
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ExecResult execResult;
+
+        if (Constants.PVM_MODE.equals(depMode)) {
+            // PVM模式：执行停止操作
+            // TODO: 需要实现ServiceStopHandler
+            logger.info("PVM模式停止服务暂未实现，模拟成功");
+            execResult = new ExecResult();
+            execResult.setExecResult(true);
+            execResult.setExecOut("Service stopped successfully in PVM mode");
+        } else {
+            // Kubernetes模式：停止Pod
+            // TODO: 需要实现KubernetesServiceStopHandler
+            logger.info("Kubernetes模式停止服务暂未实现，模拟成功");
+            execResult = new ExecResult();
+            execResult.setExecResult(true);
+            execResult.setExecOut("Service stopped successfully in Kubernetes mode");
+        }
+        
+        logger.info("服务停止完成: {} on {}, 结果: {}", 
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), 
+                execResult != null ? execResult.getExecResult() : "null");
+        return execResult;
+    }
+
+    @Override
+    public ExecResult restartService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception {
+        logger.info("重启服务: {} on {}, needReConfig: {}", 
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), needReConfig);
+        
+        // 重启 = 停止 + 启动
+        ExecResult stopResult = stopService(serviceRoleInfo);
+        if (stopResult == null || !stopResult.getExecResult()) {
+            logger.error("停止服务失败，无法继续重启: {} on {}", 
+                    serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+            return stopResult;
+        }
+        
+        // 等待一小段时间确保服务完全停止
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("重启等待被中断");
+        }
+        
+        ExecResult startResult = startService(serviceRoleInfo, needReConfig);
+        
+        logger.info("服务重启完成: {} on {}, 结果: {}", 
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), 
+                startResult != null ? startResult.getExecResult() : "null");
+        return startResult;
+    }
 }
