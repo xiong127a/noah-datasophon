@@ -18,7 +18,13 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.converter.ClusterInfoConverter;
+import com.datasophon.api.converter.ClusterServiceInstanceConverter;
+import com.datasophon.api.converter.FrameServiceConverter;
+import com.datasophon.api.converter.UserInfoConverter;
 import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.load.GlobalVariables;
@@ -28,6 +34,7 @@ import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
+
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -75,6 +82,15 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Autowired
     private ClusterInfoConverter clusterInfoConverter;
+
+    @Autowired
+    private ClusterServiceInstanceConverter serviceInstanceConverter;
+
+    @Autowired
+    private FrameServiceConverter frameServiceConverter;
+
+    @Autowired
+    private UserInfoConverter userInfoConverter;
 
     @Autowired
     private ClusterRoleUserService clusterUserService;
@@ -154,8 +170,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     private void putClusterVariable(ClusterInfoEntity clusterInfo) {
         HashMap<String, String> globalVariables = new HashMap<>();
-        List<FrameServiceEntity> frameServiceList = frameServiceService
+        // Service层：获取DTO列表后转换为Entity列表
+        List<FrameServiceDTO> frameServiceDTOList = frameServiceService
                 .getAllFrameServiceByFrameCode(clusterInfo.getClusterFrame());
+        List<FrameServiceEntity> frameServiceList = frameServiceConverter.dtoListToEntityList(frameServiceDTOList);
         for (FrameServiceEntity frameServiceEntity : frameServiceList) {
             globalVariables.put("${" + frameServiceEntity.getServiceName() + "_HOME}",
                     Constants.INSTALL_PATH + Constants.SLASH + frameServiceEntity.getDecompressPackageName());
@@ -174,8 +192,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         List<ClusterInfoEntity> entities = getMapper().selectAll();
         return entities.stream()
                 .map(entity -> {
-                    List<UserInfoEntity> userList = clusterUserService
+                    // Service层：获取DTO列表后转换为Entity列表
+                    List<UserInfoDTO> userDTOList = clusterUserService
                             .getAllClusterManagerByClusterId(entity.getId());
+                    List<UserInfoEntity> userList = userInfoConverter.dtoListToEntityList(userDTOList);
                     entity.setClusterManagerList(userList);
                     entity.setClusterStateCode(entity.getClusterState().getValue());
                     return clusterInfoConverter.entityToDto(entity);
@@ -235,7 +255,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         ClusterInfoEntity clusterInfo = getById(id);
 
         if (ClusterState.STOP.equals(clusterInfo.getClusterState())) {
-            List<ClusterServiceInstanceEntity> serviceInstanceList = clusterServiceInstanceService.listAll(id);
+            // Service层：获取DTO列表后转换为Entity列表
+            List<ClusterServiceInstanceDTO> serviceInstanceDTOList = clusterServiceInstanceService.listAll(id);
+            List<ClusterServiceInstanceEntity> serviceInstanceList = serviceInstanceConverter
+                    .dtoListToEntityList(serviceInstanceDTOList);
             if (serviceInstanceList.stream()
                     .noneMatch(instance -> clusterServiceInstanceService.hasRunningRoleInstance(instance.getId()))) {
                 ActorUtils.getLocalActor(
