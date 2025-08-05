@@ -3,7 +3,8 @@ package com.datasophon.api.strategy;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.model.ConnectionInfo;
@@ -35,7 +36,8 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 // 直接从 Map 中提取 masterPort 和 slavePort
                 String masterPort = (String) portConfigValues.get("redisMasterPort");
                 String slavePort = (String) portConfigValues.get("redisSlavePort");
-                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+                ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
                 String hostMapKey =
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE

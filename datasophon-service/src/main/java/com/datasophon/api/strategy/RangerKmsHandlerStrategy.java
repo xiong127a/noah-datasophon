@@ -18,7 +18,8 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.utils.ProcessUtils;
+import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.service.SimpleClusterVariableService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,8 @@ public class RangerKmsHandlerStrategy extends ServiceHandlerAbstract implements 
         if (hosts.size() == 1) {
             String rangerKmsHost = hosts.getFirst();
             logger.info("rangerKmsHost is {}", rangerKmsHost);
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${rangerKmsHost}", rangerKmsHost);
+            SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
+            simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${rangerKmsHost}", rangerKmsHost);
         }
     }
 
