@@ -24,6 +24,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -46,13 +47,21 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
+
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterVariable;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.datasophon.api.converter.FrameServiceConverter;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
+
+import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -122,7 +131,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         File[] ddps = FileUtil.ls(PATH);
         // load global variable, 加载 frame
-        List<ClusterInfoEntity> clusters = clusterInfoService.list();
+        List<ClusterInfoDTO> clusters = clusterInfoService.getClusterList();
         loadGlobalVariables(clusters);
 
         for (File path : ddps) {
@@ -151,7 +160,7 @@ public class LoadServiceMeta implements ApplicationRunner {
      *
      */
     public void parseServiceDdl(final String frameCode,
-            List<ClusterInfoEntity> clusters,
+            List<ClusterInfoDTO> clusters,
             FrameInfoEntity frameInfo,
             final String serviceName,
             final String serviceDdl) {
@@ -190,10 +199,10 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private void putServiceHomeToVariable(
-            List<ClusterInfoEntity> clusters, String serviceName,
+            List<ClusterInfoDTO> clusters, String serviceName,
             String decompressPackageName) {
-        for (ClusterInfoEntity cluster : clusters) {
-            Map<String, String> globalVariables = GlobalVariables.get(cluster.getId());
+        for (ClusterInfoDTO cluster : clusters) {
+            Map<String, String> globalVariables = GlobalVariables.get(cluster.id());
             if (HDFS.equals(serviceName)) {
                 serviceName = HADOOP;
             }
@@ -233,8 +242,10 @@ public class LoadServiceMeta implements ApplicationRunner {
             String serviceRoleJson = JSONObject.toJSONString(serviceRole);
             String serviceRoleJsonMd5 = SecureUtil.md5(serviceRoleJson);
             // 持久化服务角色元信息至数据库
-            FrameServiceRoleEntity role = roleService.getServiceRoleByServiceIdAndServiceRoleName(
+            FrameServiceRoleDTO roleDto = roleService.getServiceRoleByServiceIdAndServiceRoleName(
                     serviceEntity.getId(), serviceRole.getName());
+            FrameServiceRoleConverter roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
+            FrameServiceRoleEntity role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
             if (Objects.isNull(role)) {
                 role = new FrameServiceRoleEntity();
                 buildFrameServiceRole(
@@ -269,8 +280,10 @@ public class LoadServiceMeta implements ApplicationRunner {
             String serviceInfoMd5,
             List<ServiceConfig> allParameters,
             Map<Generators, List<ServiceConfig>> configFileMap) {
-        FrameServiceEntity serviceEntity = frameServiceService.getServiceByFrameIdAndServiceName(
+        FrameServiceDTO serviceDto = frameServiceService.getServiceByFrameIdAndServiceName(
                 frameInfo.getId(), serviceName);
+        FrameServiceConverter serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+        FrameServiceEntity serviceEntity = serviceDto != null ? serviceConverter.dtoToEntity(serviceDto) : null;
         List<ServiceConfig> parameters = serviceInfo.getParameters();
         Map<String, String> nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(configFileMap);
 
@@ -365,12 +378,13 @@ public class LoadServiceMeta implements ApplicationRunner {
         return frameInfo;
     }
 
-    public void loadGlobalVariables(List<ClusterInfoEntity> clusters) throws UnknownHostException {
+    public void loadGlobalVariables(List<ClusterInfoDTO> clusters) throws UnknownHostException {
         if (CollUtil.isNotEmpty(clusters)) {
-            for (ClusterInfoEntity cluster : clusters) {
+            for (ClusterInfoDTO cluster : clusters) {
                 HashMap<String, String> globalVariables = new HashMap<>();
+                // TODO: 需要创建ClusterVariableService来替代直接QueryChain调用
                 List<ClusterVariable> variables = QueryChain.of(ClusterVariable.class)
-                        .where(ClusterVariable::getClusterId).eq(cluster.getId())
+                        .where(ClusterVariable::getClusterId).eq(cluster.id())
                         .list();
                 for (ClusterVariable variable : variables) {
                     globalVariables.put(variable.getVariableName(), variable.getVariableValue());
@@ -383,9 +397,10 @@ public class LoadServiceMeta implements ApplicationRunner {
                         NetUtil.getIpByHost(InetAddress.getLocalHost().getHostName()));
                 globalVariables.put("${priority_networks}", priorityNetworks);
 
-                GlobalVariables.put(cluster.getId(), globalVariables);
+                GlobalVariables.put(cluster.id(), globalVariables);
 
-                ProcessUtils.createServiceActor(cluster);
+                // TODO: ProcessUtils.createServiceActor需要ClusterInfoEntity，暂时跳过
+                // ProcessUtils.createServiceActor(cluster);
             }
         }
     }
@@ -393,15 +408,17 @@ public class LoadServiceMeta implements ApplicationRunner {
     private void updateServiceInstanceConfig(
             String frameCode, String serviceName, List<ServiceConfig> parameters) {
         // 查询frameCode相同的集群
-        List<ClusterInfoEntity> clusters = clusterInfoService.getClusterByFrameCode(frameCode);
+        List<ClusterInfoDTO> clusters = clusterInfoService.getClusterByFrameCode(frameCode);
         // 查询集群的服务实例
-        for (ClusterInfoEntity cluster : clusters) {
-            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+        for (ClusterInfoDTO cluster : clusters) {
+            ClusterServiceInstanceDTO serviceInstanceDto = serviceInstanceService
                     .getServiceInstanceByClusterIdAndServiceName(
-                            cluster.getId(), serviceName);
-            if (Objects.nonNull(serviceInstance)) {
-                ClusterServiceRoleGroupConfig config = roleGroupService
-                        .getRoleGroupConfigByServiceId(serviceInstance.getId());
+                            cluster.id(), serviceName);
+            if (Objects.nonNull(serviceInstanceDto)) {
+                ClusterServiceRoleGroupConfigDTO configDto = roleGroupService
+                        .getRoleGroupConfigByServiceId(serviceInstanceDto.id());
+                ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
+                ClusterServiceRoleGroupConfig config = configConverter.dtoToEntity(configDto);
                 String configJson = config.getConfigJson();
                 List<ServiceConfig> serviceConfigs = JSONArray.parseArray(configJson, ServiceConfig.class);
                 ProcessUtils.addAll(serviceConfigs, parameters);
