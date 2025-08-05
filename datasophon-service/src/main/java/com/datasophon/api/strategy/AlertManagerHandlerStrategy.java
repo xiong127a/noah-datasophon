@@ -22,9 +22,9 @@ import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.http.HttpUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.datasophon.api.service.NoticeGroupService;
-import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.service.ServiceStateManagementService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.enums.AlertLevel;
@@ -35,6 +35,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * AlertManager处理策略
+ * 负责AlertManager服务的配置处理和状态检查
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-05
+ */
 public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
@@ -44,7 +52,7 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
         MPage<NoticeGroupEntity> page = new MPage<>();
         page.setPageSize(1000); // 使用MPage的setPageSize方法
-        Page<NoticeGroupEntity> noticeGroupEntityPage = noticeGroupService.pageNoticeGroup(page);
+        Page<NoticeGroupEntity> noticeGroupEntityPage = noticeGroupService.page(page);
 
         // 去掉之前的
         list.removeIf(serviceConfig -> StringUtils.isEmpty(serviceConfig.getConfigType())
@@ -74,16 +82,17 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
-        String url = "http://" + roleInstanceEntity.getHostname() + ":9093";
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceDTO roleInstanceDto,
+            Map<String, ClusterServiceRoleInstanceDTO> map) {
+        String url = "http://" + roleInstanceDto.hostname() + ":9093";
+        ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
         try {
             HttpUtil.get(url);
-            ProcessUtils.recoverAlert(roleInstanceEntity);
+            serviceStateManagementService.recoverAlert(roleInstanceDto);
         } catch (Exception e) {
             // save alert
-            String alertTargetName = roleInstanceEntity.getServiceRoleName() + " Survive";
-            ProcessUtils.saveAlert(roleInstanceEntity, alertTargetName, AlertLevel.EXCEPTION, "restart");
+            String alertTargetName = roleInstanceDto.serviceRoleName() + " Survive";
+            serviceStateManagementService.saveAlert(roleInstanceDto, alertTargetName, AlertLevel.EXCEPTION, "restart");
         }
     }
 

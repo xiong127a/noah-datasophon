@@ -484,4 +484,23 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
                 return this.selectCountByQuery(query);
         }
 
+        /**
+         * 根据服务名列表获取服务角色实例
+         *
+         * @param serviceNames 服务名列表
+         * @return 服务角色实例列表
+         */
+        default List<ClusterServiceRoleInstanceEntity> getServiceRolesByNames(List<String> serviceNames) {
+                if (serviceNames == null || serviceNames.isEmpty()) {
+                        return List.of();
+                }
+                
+                QueryWrapper query = QueryWrapper.create()
+                        .select()
+                        .from(ClusterServiceRoleInstanceEntity.class)
+                        .where(ClusterServiceRoleInstanceEntity::getServiceName).in(serviceNames);
+                
+                return this.selectListByQuery(query);
+        }
+
 }
