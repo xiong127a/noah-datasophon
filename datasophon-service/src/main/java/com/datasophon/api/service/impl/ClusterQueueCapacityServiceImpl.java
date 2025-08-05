@@ -20,12 +20,14 @@ package com.datasophon.api.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.converter.ClusterQueueCapacityConverter;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.common.dto.ClusterQueueCapacityDTO;
 import com.datasophon.common.enums.Status;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.HadoopUtils;
-import com.datasophon.api.utils.ProcessUtils;
+
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
@@ -65,20 +67,22 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
+    
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+    
+    @Autowired
+    private ClusterServiceRoleInstanceConverter roleInstanceConverter;
 
     @Override
     public boolean refreshToYarn(Integer clusterId) throws Exception {
         List<ClusterQueueCapacity> list = getMapper().selectByClusterId(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
-        // 由于ClusterServiceRoleInstanceService已重构，需要进行DTO转换
-        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
-                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager").stream()
-                .map(dto -> {
-                    ClusterServiceRoleInstanceEntity entity = new ClusterServiceRoleInstanceEntity();
-                    entity.setHostname(dto.hostname());
-                    return entity;
-                })
-                .toList();
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        // Service层：获取DTO列表后使用Converter转换为Entity列表
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceConverter
+                .dtoListToEntityList(roleInstanceService
+                        .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager"))
+;
 
         // build configfilemap
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
