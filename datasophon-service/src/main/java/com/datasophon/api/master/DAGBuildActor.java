@@ -35,12 +35,16 @@ import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceCommandDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
+import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import com.mybatisflex.core.query.QueryChain;
+import com.datasophon.api.converter.FrameServiceConverter;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
+import com.datasophon.api.service.ClusterServiceCommandService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.actor.ActorRef;
@@ -85,50 +89,60 @@ public class DAGBuildActor extends AbstractActor {
             FrameServiceService frameService = SpringUtil.getBean(FrameServiceService.class);
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(executeCommandCommand.getClusterId());
-            // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装
-            // HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]
-            List<ClusterServiceCommandEntity> commandList = QueryChain.of(ClusterServiceCommandEntity.class)
-                    .where(ClusterServiceCommandEntity::getCommandId).in(executeCommandCommand.getCommandIds())
-                    .list();
+            ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(executeCommandCommand.getClusterId());
+            // 获取命令列表
+            ClusterServiceCommandService clusterServiceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
+            List<ClusterServiceCommandDTO> commandList = new ArrayList<>();
+            for (String commandId : executeCommandCommand.getCommandIds()) {
+                ClusterServiceCommandDTO command = clusterServiceCommandService.getCommandById(commandId);
+                if (command != null) {
+                    commandList.add(command);
+                }
+            }
 
             ArrayList<FrameServiceEntity> frameServiceList = new ArrayList<>();
             if (ArrayUtil.isNotEmpty(commandList)) {
-                for (ClusterServiceCommandEntity command : commandList) {
+                for (ClusterServiceCommandDTO command : commandList) {
                     // build dag
                     List<ServiceRoleInfo> masterRoles = new ArrayList<>();
                     List<ServiceRoleInfo> elseRoles = new ArrayList<>();
                     ServiceNode serviceNode = new ServiceNode();
 
-                    List<ClusterServiceCommandHostCommandEntity> hostCommandList = hostCommandService
-                            .getHostCommandListByCommandId(command.getCommandId());
+                    List<ClusterServiceCommandHostCommandDTO> hostCommandList = hostCommandService
+                            .getHostCommandListByCommandId(command.commandId());
 
-                    FrameServiceEntity serviceEntity = frameService.getServiceByFrameCodeAndServiceName(
-                            clusterInfo.getClusterFrame(), command.getServiceName());
+                    FrameServiceDTO serviceDto = frameService.getServiceByFrameCodeAndServiceName(
+                            clusterInfo.clusterFrame(), command.serviceName());
+                    // 使用MapStruct Converter进行转换
+                    FrameServiceConverter serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+                    FrameServiceEntity serviceEntity = serviceConverter.dtoToEntity(serviceDto);
                     frameServiceList.add(serviceEntity);
 
-                    serviceNode.setCommandId(command.getCommandId());
-                    for (ClusterServiceCommandHostCommandEntity hostCommand : hostCommandList) {
-                        logger.info("service role is {}", hostCommand.getServiceRoleName());
-                        FrameServiceRoleEntity frameServiceRoleEntity = frameServiceRoleService
+                    serviceNode.setCommandId(command.commandId());
+                    for (ClusterServiceCommandHostCommandDTO hostCommand : hostCommandList) {
+                        logger.info("service role is {}", hostCommand.serviceRoleName());
+                        FrameServiceRoleDTO frameServiceRoleDto = frameServiceRoleService
                                 .getServiceRoleByFrameCodeAndServiceRoleName(
-                                        clusterInfo.getClusterFrame(), hostCommand.getServiceRoleName());
+                                        clusterInfo.clusterFrame(), hostCommand.serviceRoleName());
+                        // 使用MapStruct Converter进行转换
+                        FrameServiceRoleConverter roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
+                        FrameServiceRoleEntity frameServiceRoleEntity = roleConverter.dtoToEntity(frameServiceRoleDto);
 
                         ServiceRoleInfo serviceRoleInfo = JSONObject
                                 .parseObject(frameServiceRoleEntity.getServiceRoleJson(), ServiceRoleInfo.class);
-                        serviceRoleInfo.setHostname(hostCommand.getHostname());
-                        serviceRoleInfo.setHostCommandId(hostCommand.getHostCommandId());
-                        serviceRoleInfo.setClusterId(clusterInfo.getId());
-                        serviceRoleInfo.setParentName(command.getServiceName());
+                        serviceRoleInfo.setHostname(hostCommand.hostname());
+                        serviceRoleInfo.setHostCommandId(hostCommand.hostCommandId());
+                        serviceRoleInfo.setClusterId(clusterInfo.id());
+                        serviceRoleInfo.setParentName(command.serviceName());
                         serviceRoleInfo.setPackageName(serviceEntity.getPackageName());
                         serviceRoleInfo.setDecompressPackageName(serviceEntity.getDecompressPackageName());
                         serviceRoleInfo.setCommandType(commandType);
-                        serviceRoleInfo.setServiceInstanceId(command.getServiceInstanceId());
+                        serviceRoleInfo.setServiceInstanceId(command.serviceInstanceId());
 
                         ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext
                                 .getServiceRoleHandler(serviceRoleInfo.getName());
                         if (Objects.nonNull(serviceRoleHandler)) {
-                            serviceRoleHandler.handlerServiceRoleInfo(serviceRoleInfo, hostCommand.getHostname());
+                            serviceRoleHandler.handlerServiceRoleInfo(serviceRoleInfo, hostCommand.hostname());
                         }
 
                         if (ServiceRoleType.MASTER.equals(serviceRoleInfo.getRoleType())) {
@@ -139,7 +153,7 @@ public class DAGBuildActor extends AbstractActor {
                     }
                     serviceNode.setMasterRoles(masterRoles);
                     serviceNode.setElseRoles(elseRoles);
-                    dag.addNode(command.getServiceName(), serviceNode);
+                    dag.addNode(command.serviceName(), serviceNode);
                 }
                 // build edge
                 for (FrameServiceEntity serviceEntity : frameServiceList) {
@@ -172,12 +186,12 @@ public class DAGBuildActor extends AbstractActor {
             SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand = new SubmitActiveTaskNodeCommand();
             submitActiveTaskNodeCommand.setCommandType(executeCommandCommand.getCommandType());
             submitActiveTaskNodeCommand.setDag(dag);
-            submitActiveTaskNodeCommand.setClusterId(clusterInfo.getId());
+            submitActiveTaskNodeCommand.setClusterId(clusterInfo.id());
             submitActiveTaskNodeCommand.setActiveTaskList(activeTaskList);
             submitActiveTaskNodeCommand.setErrorTaskList(errorTaskList);
             submitActiveTaskNodeCommand.setReadyToSubmitTaskList(readyToSubmitTaskList);
             submitActiveTaskNodeCommand.setCompleteTaskList(completeTaskList);
-            submitActiveTaskNodeCommand.setClusterCode(clusterInfo.getClusterCode());
+            submitActiveTaskNodeCommand.setClusterCode(clusterInfo.clusterCode());
             submitActiveTaskNodeCommand.setRollingRestartInfo(executeCommandCommand.getRollingRestartInfo());
 
             ActorRef submitTaskNodeActor = ActorUtils.getLocalActor(SubmitTaskNodeActor.class,
