@@ -14,7 +14,7 @@ import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.kubernetes.actor.KubernetesInstallServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +37,7 @@ public class KubernetesServiceInstallHandler extends ServiceHandler {
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         ClusterServiceRoleInstanceService roleInstanceService =
                 SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
+        ClusterServiceRoleInstanceDTO serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
                 serviceRoleInfo.getHostname(), serviceRoleInfo.getClusterId());
         Map<Generators, List<ServiceConfig>> configFileMap = serviceRoleInfo.getConfigFileMap();
         if (Objects.nonNull(serviceRole)) {
