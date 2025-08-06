@@ -17,7 +17,6 @@
 
 package com.datasophon.api.converter;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterTenantDTO;
@@ -26,11 +25,12 @@ import com.datasophon.common.vo.ClusterTenantVO;
 import com.datasophon.dao.entity.ClusterTenant;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 集群租户转换器
@@ -40,43 +40,69 @@ import java.util.Map;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, ClusterTenantDTO, ClusterTenantVO> {
 
+    /**
+     * Entity转DTO，忽略资源列表映射
+     */
     @Override
-    @Named("entityToDto")
-    @Mapping(target = "hdfsResourceList", source = "hdfsResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "yarnResourceList", source = "yarnResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "hiveResourceList", source = "hiveResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "hbaseResourceList", source = "hbaseResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "kafkaResourceList", source = "kafkaResourceList", qualifiedByName = "convertResourceToMap")
+    @Mapping(target = "hdfsResourceList", ignore = true)
+    @Mapping(target = "yarnResourceList", ignore = true)
+    @Mapping(target = "hiveResourceList", ignore = true)
+    @Mapping(target = "hbaseResourceList", ignore = true)
+    @Mapping(target = "kafkaResourceList", ignore = true)
     ClusterTenantDTO entityToDto(ClusterTenant entity);
 
+    /**
+     * DTO转Entity，忽略资源列表映射
+     */
     @Override
-    @Named("dtoToEntity")
-    @Mapping(target = "hdfsResourceList", source = "hdfsResourceList", qualifiedByName = "convertMapToResource")
-    @Mapping(target = "yarnResourceList", source = "yarnResourceList", qualifiedByName = "convertMapToResource")
-    @Mapping(target = "hiveResourceList", source = "hiveResourceList", qualifiedByName = "convertMapToResource")
-    @Mapping(target = "hbaseResourceList", source = "hbaseResourceList", qualifiedByName = "convertMapToResource")
-    @Mapping(target = "kafkaResourceList", source = "kafkaResourceList", qualifiedByName = "convertMapToResource")
+    @Mapping(target = "hdfsResourceList", ignore = true)
+    @Mapping(target = "yarnResourceList", ignore = true)
+    @Mapping(target = "hiveResourceList", ignore = true)
+    @Mapping(target = "hbaseResourceList", ignore = true)
+    @Mapping(target = "kafkaResourceList", ignore = true)
     ClusterTenant dtoToEntity(ClusterTenantDTO dto);
 
+    /**
+     * Entity转VO，忽略资源列表映射，添加统计信息
+     */
     @Override
-    @Named("entityToVo")
-    @Mapping(target = "hdfsResourceList", source = "hdfsResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "yarnResourceList", source = "yarnResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "hiveResourceList", source = "hiveResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "hbaseResourceList", source = "hbaseResourceList", qualifiedByName = "convertResourceToMap")
-    @Mapping(target = "kafkaResourceList", source = "kafkaResourceList", qualifiedByName = "convertResourceToMap")
+    @Mapping(target = "hdfsResourceList", ignore = true)
+    @Mapping(target = "yarnResourceList", ignore = true)
+    @Mapping(target = "hiveResourceList", ignore = true)
+    @Mapping(target = "hbaseResourceList", ignore = true)
+    @Mapping(target = "kafkaResourceList", ignore = true)
     @Mapping(target = "totalResourceCount", source = ".", qualifiedByName = "calculateTotalResourceCount")
     @Mapping(target = "resourceSummary", source = ".", qualifiedByName = "generateResourceSummary")
     ClusterTenantVO entityToVo(ClusterTenant entity);
 
+    /**
+     * DTO转VO，忽略资源列表映射，添加统计信息
+     */
     @Override
-    @Named("dtoToVo")
-    @Mapping(target = "totalResourceCount", source = ".", qualifiedByName = "calculateTotalResourceCountFromDto")
-    @Mapping(target = "resourceSummary", source = ".", qualifiedByName = "generateResourceSummaryFromDto")
+    @Mapping(target = "hdfsResourceList", ignore = true)
+    @Mapping(target = "yarnResourceList", ignore = true)
+    @Mapping(target = "hiveResourceList", ignore = true)
+    @Mapping(target = "hbaseResourceList", ignore = true)
+    @Mapping(target = "kafkaResourceList", ignore = true)
+    @Mapping(target = "totalResourceCount", ignore = true)
+    @Mapping(target = "resourceSummary", ignore = true)
     ClusterTenantVO dtoToVo(ClusterTenantDTO dto);
+
+    /**
+     * 更新Entity从DTO，忽略资源列表映射
+     */
+    @Override
+    @Mapping(target = "hdfsResourceList", ignore = true)
+    @Mapping(target = "yarnResourceList", ignore = true)
+    @Mapping(target = "hiveResourceList", ignore = true)
+    @Mapping(target = "hbaseResourceList", ignore = true)
+    @Mapping(target = "kafkaResourceList", ignore = true)
+    void updateEntityFromDto(ClusterTenantDTO dto, @MappingTarget ClusterTenant entity);
 
     /**
      * 计算总资源数量（基于Entity）
@@ -92,28 +118,6 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
         count += CollUtil.size(entity.getHiveResourceList());
         count += CollUtil.size(entity.getHbaseResourceList());
         count += CollUtil.size(entity.getKafkaResourceList());
-        return count;
-    }
-
-    /**
-     * 计算总资源数量（基于DTO）
-     */
-    @Named("calculateTotalResourceCountFromDto")
-    default Integer calculateTotalResourceCountFromDto(ClusterTenantDTO dto) {
-        if (dto == null) {
-            return 0;
-        }
-        int count = 0;
-        if (dto.hdfsResourceList() != null)
-            count += dto.hdfsResourceList().size();
-        if (dto.yarnResourceList() != null)
-            count += dto.yarnResourceList().size();
-        if (dto.hiveResourceList() != null)
-            count += dto.hiveResourceList().size();
-        if (dto.hbaseResourceList() != null)
-            count += dto.hbaseResourceList().size();
-        if (dto.kafkaResourceList() != null)
-            count += dto.kafkaResourceList().size();
         return count;
     }
 
@@ -144,50 +148,5 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
         }
 
         return summaryParts.isEmpty() ? "无资源" : String.join(", ", summaryParts);
-    }
-
-    /**
-     * 生成资源摘要（基于DTO）
-     */
-    @Named("generateResourceSummaryFromDto")
-    default String generateResourceSummaryFromDto(ClusterTenantDTO dto) {
-        if (dto == null) {
-            return "无资源";
-        }
-
-        List<String> summaryParts = new ArrayList<>();
-        if (dto.hdfsResourceList() != null && !dto.hdfsResourceList().isEmpty()) {
-            summaryParts.add("HDFS:" + dto.hdfsResourceList().size());
-        }
-        if (dto.yarnResourceList() != null && !dto.yarnResourceList().isEmpty()) {
-            summaryParts.add("Yarn:" + dto.yarnResourceList().size());
-        }
-        if (dto.hiveResourceList() != null && !dto.hiveResourceList().isEmpty()) {
-            summaryParts.add("Hive:" + dto.hiveResourceList().size());
-        }
-        if (dto.hbaseResourceList() != null && !dto.hbaseResourceList().isEmpty()) {
-            summaryParts.add("HBase:" + dto.hbaseResourceList().size());
-        }
-        if (dto.kafkaResourceList() != null && !dto.kafkaResourceList().isEmpty()) {
-            summaryParts.add("Kafka:" + dto.kafkaResourceList().size());
-        }
-
-        return summaryParts.isEmpty() ? "无资源" : String.join(", ", summaryParts);
-    }
-
-    /**
-     * 将资源列表转换为Map（简化转换）
-     */
-    @Named("convertResourceToMap")
-    default Map<String, Object> convertResourceToMap(Object resourceList) {
-        return BeanUtil.beanToMap(resourceList);
-    }
-
-    /**
-     * 将Map转换为资源列表（简化转换）
-     */
-    @Named("convertMapToResource")
-    default Object convertMapToResource(Map<String, Object> resourceMap) {
-        return resourceMap;
     }
 }
