@@ -23,7 +23,9 @@ import com.datasophon.common.vo.FrameInfoVO;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * 集群框架信息转换器
@@ -33,8 +35,24 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface FrameInfoConverter extends BaseConverter<FrameInfoEntity, FrameInfoDTO, FrameInfoVO> {
+
+    /**
+     * DTO转Entity，忽略frameServiceList映射
+     */
+    @Override
+    @Mapping(target = "frameServiceList", ignore = true)
+    FrameInfoEntity dtoToEntity(FrameInfoDTO dto);
+
+    /**
+     * 更新Entity从DTO，忽略frameServiceList映射
+     */
+    @Override
+    @Mapping(target = "frameServiceList", ignore = true)
+    void updateEntityFromDto(FrameInfoDTO dto, @MappingTarget FrameInfoEntity entity);
 
     /**
      * Entity转换为VO时，生成显示名称
