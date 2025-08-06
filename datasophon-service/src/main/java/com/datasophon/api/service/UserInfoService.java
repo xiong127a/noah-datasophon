@@ -20,6 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.common.model.PageResult;
+import com.mybatisflex.core.service.IService;
 
 /**
  * 用户信息服务接口
@@ -29,7 +30,7 @@ import com.datasophon.common.model.PageResult;
  * @email gaodayu2022@163.com
  * @date 2022-03-15 17:36:08
  */
-public interface UserInfoService {
+public interface UserInfoService extends IService<UserInfoEntity> {
 
     /**
      * 创建用户
