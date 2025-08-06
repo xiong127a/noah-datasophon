@@ -24,6 +24,7 @@ import com.datasophon.dao.enums.RoleType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
@@ -36,7 +37,9 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface FrameServiceRoleConverter {
 
     /**
