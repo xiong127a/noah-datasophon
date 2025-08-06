@@ -48,4 +48,10 @@ public interface ClusterUserConverter extends BaseConverter<ClusterUser, Cluster
     @Override
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     ClusterUserVO dtoToVo(ClusterUserDTO dto);
+
+    @Override
+    java.util.List<ClusterUserVO> entityListToVoList(java.util.List<ClusterUser> entityList);
+
+    @Override
+    java.util.List<ClusterUserVO> dtoListToVoList(java.util.List<ClusterUserDTO> dtoList);
 }

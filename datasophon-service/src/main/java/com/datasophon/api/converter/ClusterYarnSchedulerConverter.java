@@ -22,6 +22,7 @@ import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterYarnSchedulerVO;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
+import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -57,9 +58,11 @@ public interface ClusterYarnSchedulerConverter
     ClusterYarnSchedulerVO dtoToVo(ClusterYarnSchedulerDTO dto);
 
     @Override
+    @IterableMapping(qualifiedByName = "entityToVo")
     java.util.List<ClusterYarnSchedulerVO> entityListToVoList(java.util.List<ClusterYarnScheduler> entityList);
 
     @Override
+    @IterableMapping(qualifiedByName = "dtoToVo")
     java.util.List<ClusterYarnSchedulerVO> dtoListToVoList(java.util.List<ClusterYarnSchedulerDTO> dtoList);
 
     /**
