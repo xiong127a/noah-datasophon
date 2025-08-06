@@ -25,11 +25,8 @@ import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 
-import java.io.File;
-import java.net.URI;
+
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,8 +49,9 @@ public class TezServerHandlerStrategy extends AbstractHandlerStrategy implements
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             final String hadoopHome = PropertyUtils.getString("HADOOP_HOME");
             final String tezLibPath = Optional.ofNullable(StringUtils.trimToNull(createEnvPath(workPath))).orElse("hdfs:///user/tez/tez.tar.gz");
-            final String tezLibParentDir = new Path(URI.create(tezLibPath).getPath()).getParent().toString();
-            logger.info("Start to execute hdfs dfs -mkdir {}", tezLibParentDir);
+//            final String tezLibParentDir = new Path(URI.create(tezLibPath).getPath()).getParent().toString();
+//            logger.info("Start to execute hdfs dfs -mkdir {}", tezLibParentDir);
+            String tezLibParentDir="";
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sudo");
             commands.add("-u");
@@ -106,18 +104,18 @@ public class TezServerHandlerStrategy extends AbstractHandlerStrategy implements
      *
      */
     String createEnvPath(final String workPath) {
-        Configuration conf = new Configuration();
-        try {
-            final File tezSiteFile = new File(workPath, "conf/tez-site.xml");
-            if (tezSiteFile.exists()) {
-                conf.addResource(tezSiteFile.toURL());
-                logger.info("add tez-site file: {}", tezSiteFile.getAbsolutePath());
-            }
-
-            // tez lib uri 启动清理
-            return conf.get("tez.lib.uris");
-        } catch (Exception ignored) {
-        }
+//        Configuration conf = new Configuration();
+//        try {
+//            final File tezSiteFile = new File(workPath, "conf/tez-site.xml");
+//            if (tezSiteFile.exists()) {
+//                conf.addResource(tezSiteFile.toURL());
+//                logger.info("add tez-site file: {}", tezSiteFile.getAbsolutePath());
+//            }
+//
+//            // tez lib uri 启动清理
+//            return conf.get("tez.lib.uris");
+//        } catch (Exception ignored) {
+//        }
         return null;
     }
 }
