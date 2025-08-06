@@ -24,6 +24,8 @@ import com.datasophon.common.vo.ClusterUserVO;
 import com.datasophon.dao.entity.ClusterUser;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * 集群用户转换器
@@ -32,7 +34,9 @@ import org.mapstruct.Mapping;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ClusterUserConverter extends BaseConverter<ClusterUser, ClusterUserDTO, ClusterUserVO> {
 
     @Override
@@ -42,7 +46,7 @@ public interface ClusterUserConverter extends BaseConverter<ClusterUser, Cluster
     ClusterUser dtoToEntity(ClusterUserDTO dto);
 
     @Override
-    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTimeFormatted", ignore = true)
     ClusterUserVO entityToVo(ClusterUser entity);
 
     @Override
@@ -54,4 +58,7 @@ public interface ClusterUserConverter extends BaseConverter<ClusterUser, Cluster
 
     @Override
     java.util.List<ClusterUserVO> dtoListToVoList(java.util.List<ClusterUserDTO> dtoList);
+
+    @Override
+    void updateEntityFromDto(ClusterUserDTO dto, @MappingTarget ClusterUser entity);
 }
