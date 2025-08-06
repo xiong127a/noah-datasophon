@@ -66,7 +66,9 @@ public class HostCheckActivitiesImpl implements HostCheckActivities {
                     .fullName("Linux")
                     .version("20.04")
                     .kernelVersion("5.4.0")
-                    .architecture("x86_64")  // 使用architecture字段，去掉不存在的bits字段
+                    .architecture("x86_64")
+                    .hostname(hostInfo.getHostname())
+                    .bits("64")
                     .build();
             
             log.info("操作系统检测完成: {} - {}", hostInfo.getIp(), osInfo.getFullDescription());

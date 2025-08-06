@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Data
 @Builder
-public class HostCheckContext {
+public class HostCheckContext implements AutoCloseable {
     
     /**
      * 主机信息
@@ -102,5 +102,20 @@ public class HostCheckContext {
      */
     public long getRemainingTime() {
         return Math.max(0, timeout - getElapsedTime());
+    }
+    
+    /**
+     * 关闭上下文资源，主要是SSH连接
+     */
+    @Override
+    public void close() throws Exception {
+        if (sshSession != null && sshSession.isOpen()) {
+            try {
+                sshSession.close();
+            } catch (Exception e) {
+                // 忽略关闭异常，记录警告日志
+                System.err.println("关闭SSH连接时发生异常: " + e.getMessage());
+            }
+        }
     }
 }
