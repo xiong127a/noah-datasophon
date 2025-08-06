@@ -16,13 +16,19 @@
 
     <properties>
         <plugin.id>ssh-connector</plugin.id>
-        <plugin.class>com.datasophon.plugins.impl.ssh.SshConnectorPlugin</plugin.class>
+        <plugin.class>com.datasophon.plugins.impl.ssh.SshConnectorPluginMain</plugin.class>
         <plugin.version>${project.version}</plugin.version>
         <plugin.provider>DataSophon Team</plugin.provider>
         <plugin.dependencies></plugin.dependencies>
     </properties>
 
     <dependencies>
+        <!-- 插件API -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-api</artifactId>
+        </dependency>
+        
         <!-- Apache Commons Pool2 连接池 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
