@@ -146,9 +146,9 @@ public class OsInfoServiceImpl implements OsInfoService {
         
         // TODO: 使用交换空间检查插件
         log.warn("插件系统暂未完全集成，跳过交换空间信息收集");
-    }
-    
-    @Override
+            }
+
+            @Override
     public void collectPhaseOneInfo(HostInfo hostInfo) {
         log.info("开始第一阶段信息收集（基础信息）: {}", hostInfo.getIp());
         
@@ -177,8 +177,8 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 收集系统配置信息
         collectDnsInfo(hostInfo);
         collectHostsFileInfo(hostInfo);
-        
-        // 更新缓存
+
+            // 更新缓存
         updateHostInfoCache(hostInfo);
         
         log.info("第二阶段信息收集完成: {}", hostInfo.getIp());
@@ -186,14 +186,14 @@ public class OsInfoServiceImpl implements OsInfoService {
     
     @Override
     public void updateHostInfoCache(HostInfo hostInfo) {
-        if (hostInfo == null) {
-            return;
-        }
+            if (hostInfo == null) {
+                return;
+            }
         
         try {
             CacheUtils.putHostInfo(hostInfo.getClusterId(), hostInfo.getIp(), hostInfo);
             log.debug("已更新主机缓存: {}", hostInfo.getIp());
-        } catch (Exception e) {
+                    } catch (Exception e) {
             log.error("更新主机缓存失败: {}, 原因: {}", hostInfo.getIp(), e.getMessage(), e);
         }
     }
@@ -225,21 +225,21 @@ public class OsInfoServiceImpl implements OsInfoService {
                         .build();
                 // TODO: 等Lombok生成setter方法后设置主机名
                 // osInfo.setHostname(hostInfo.getHostname());
-                hostInfo.setOsInfo(osInfo);
-            }
-            
+                    hostInfo.setOsInfo(osInfo);
+                }
+
             // 设置基本信息
             hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.SUCCESS);
             
-        } catch (Exception e) {
+            } catch (Exception e) {
             log.error("使用SSH连接池收集主机名失败: {}", hostInfo.getIp(), e);
             if (hostInfo.getOsInfo() != null) {
                 hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.ERROR);
             }
+            }
         }
-    }
-    
-    /**
+
+        /**
      * 使用SSH连接池收集操作系统基础信息（临时实现）
      */
     private void collectOsBasicInfoWithSshPool(HostInfo hostInfo) {
@@ -255,13 +255,13 @@ public class OsInfoServiceImpl implements OsInfoService {
                         .architecture("Unknown")
                         .osInfoStatus(OsInfoStatusEnum.COLLECTING)
                         .build();
-                hostInfo.setOsInfo(osInfo);
-            }
-            
+                    hostInfo.setOsInfo(osInfo);
+                }
+
             // 设置基本信息收集状态
             hostInfo.getOsInfo().setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
             
-        } catch (Exception e) {
+            } catch (Exception e) {
             log.error("使用SSH连接池收集操作系统基础信息失败: {}", hostInfo.getIp(), e);
             if (hostInfo.getOsInfo() != null) {
                 hostInfo.getOsInfo().setOsInfoStatus(OsInfoStatusEnum.ERROR);
@@ -290,8 +290,8 @@ public class OsInfoServiceImpl implements OsInfoService {
                     .sharedData(new java.util.concurrent.ConcurrentHashMap<>())
                     .build();
                     
-        } catch (Exception e) {
-            if (session != null) {
+                    } catch (Exception e) {
+                            if (session != null) {
                 try {
                     sshConnectionService.returnConnection(
                         HostCheckContext.builder().hostInfo(hostInfo).build(), 
@@ -302,17 +302,17 @@ public class OsInfoServiceImpl implements OsInfoService {
                 }
             }
             throw new RuntimeException("创建主机检查上下文失败: " + e.getMessage(), e);
+            }
         }
-    }
-    
-    /**
+
+        /**
      * 从检查结果更新主机名信息
      * 
     private void updateHostnameFromResult(HostInfo hostInfo, CheckResult result) {
         if (result.getData() != null && result.getData().containsKey("hostname")) {
             String hostname = (String) result.getData().get("hostname");
-            hostInfo.setHostname(hostname);
-            if (hostInfo.getOsInfo() != null) {
+                hostInfo.setHostname(hostname);
+                if (hostInfo.getOsInfo() != null) {
                 hostInfo.getOsInfo().setHostname(hostname);
                 hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.SUCCESS);
             }
