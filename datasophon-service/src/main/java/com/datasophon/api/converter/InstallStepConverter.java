@@ -17,7 +17,7 @@ import org.mapstruct.factory.Mappers;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper
+@Mapper(componentModel = "spring")
 public interface InstallStepConverter extends BaseConverter<InstallStepEntity, InstallStepDTO, InstallStepVO> {
 
     InstallStepConverter INSTANCE = Mappers.getMapper(InstallStepConverter.class);
