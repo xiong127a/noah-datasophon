@@ -2,6 +2,7 @@ package com.datasophon.plugins.manager;
 
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import lombok.extern.slf4j.Slf4j;
+import org.pf4j.PluginDependency;
 import org.pf4j.PluginWrapper;
 import org.springframework.stereotype.Component;
 
@@ -80,8 +81,7 @@ public class PluginManagerExtensions {
             }
             
             // 启用插件
-            org.pf4j.PluginState enableState = pluginManager.getPf4jManager().enablePlugin(pluginId);
-            boolean success = enableState == org.pf4j.PluginState.STARTED || enableState == org.pf4j.PluginState.CREATED;
+            boolean success = pluginManager.getPf4jManager().enablePlugin(pluginId);
             
             if (success) {
                 // 启动插件
@@ -132,8 +132,7 @@ public class PluginManagerExtensions {
             
             if (success) {
                 // 禁用插件
-                org.pf4j.PluginState disableState = pluginManager.getPf4jManager().disablePlugin(pluginId);
-                success = disableState == org.pf4j.PluginState.DISABLED;
+                success = pluginManager.getPf4jManager().disablePlugin(pluginId);
                 
                 if (success) {
                     // 更新状态
@@ -194,23 +193,13 @@ public class PluginManagerExtensions {
         
         for (String pluginId : pluginIds) {
             try {
-                boolean success = false;
-                
-                switch (operation) {
-                    case ENABLE:
-                        success = enablePlugin(pluginId);
-                        break;
-                    case DISABLE:
-                        success = disablePlugin(pluginId);
-                        break;
-                    case RELOAD:
-                        success = reloadPlugin(pluginId);
-                        break;
-                    case UNLOAD:
-                        success = pluginManager.unloadPlugin(pluginId);
-                        break;
-                }
-                
+                boolean success = switch (operation) {
+                    case ENABLE -> enablePlugin(pluginId);
+                    case DISABLE -> disablePlugin(pluginId);
+                    case RELOAD -> reloadPlugin(pluginId);
+                    case UNLOAD -> pluginManager.unloadPlugin(pluginId);
+                };
+
                 if (success) {
                     result.addSuccess(pluginId);
                 } else {
@@ -238,7 +227,7 @@ public class PluginManagerExtensions {
                 String pluginId = plugin.getPluginId();
                 List<String> dependencies = plugin.getDescriptor().getDependencies()
                         .stream()
-                        .map(dep -> dep.getPluginId())
+                        .map(PluginDependency::getPluginId)
                         .toList();
                 
                 graph.addPlugin(pluginId, dependencies);
