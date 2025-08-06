@@ -186,14 +186,8 @@ public class ClusterServiceCommandServiceImpl
              * }
              */
         }
-        if (commandHostList.isEmpty()) {
-            logger.warn("No service role selected");
-            throw new RuntimeException(Status.NO_SERVICE_ROLE_SELECTED.getMsg());
-        }
-        commandService.saveBatch(list);
-        commandHostService.saveBatch(commandHostList);
-        hostCommandService.saveBatch(hostCommandList);
-        return String.join(",", commandIds);
+        logger.warn("No service role selected");
+        throw new RuntimeException(Status.NO_SERVICE_ROLE_SELECTED.getMsg());
     }
 
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
