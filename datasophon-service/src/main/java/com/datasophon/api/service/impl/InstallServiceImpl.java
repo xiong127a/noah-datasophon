@@ -99,7 +99,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
-    @Autowired
+
     private  OsInfoService osInfoService;
     @Autowired
     private  K8sToClusterHostConverter k8sToClusterHostConverter;
