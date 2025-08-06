@@ -1,6 +1,6 @@
 package com.datasophon.api.service.impl.osinfo;
 
-import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.plugins.api.model.CommandResult;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
@@ -479,7 +479,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             try {
                 CommandResult commandResult = MinaUtils.execCmdWithResultObject(session, command);
                 if (commandResult.isSuccess()) {
-                    String commandOutput = commandResult.getOutput();
+                    String commandOutput = commandResult.output();
                     if (resultProcessor != null && commandOutput != null) {
                         T processedResult = resultProcessor.apply(commandOutput);
                         if (fieldStatus != null) {
@@ -487,7 +487,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         }
                     }
                 } else {
-                    logger.error("命令执行失败: {}, 错误: {}", command, commandResult.getError());
+                    logger.error("命令执行失败: {}, 错误: {}", command, commandResult.error());
                 }
             } catch (Exception e) {
                 logger.error("执行命令时出错: {}", command, e);
@@ -519,8 +519,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 方法1: 先尝试使用free命令获取交换分区信息
             CommandResult swapResult = MinaUtils.execCmdWithResultObject(session, "free -b 2>/dev/null | grep -i Swap");
-            if (swapResult.isSuccess() && swapResult.getOutput() != null && !swapResult.getOutput().isEmpty()) {
-                successWithAnyMethod = processSwapFromFree(swapResult.getOutput(), swapInfo);
+            if (swapResult.isSuccess() && swapResult.output() != null && !swapResult.output().isEmpty()) {
+                successWithAnyMethod = processSwapFromFree(swapResult.output(), swapInfo);
             }
 
             // 方法2: 如果free命令失败，尝试读取/proc/swaps
@@ -528,9 +528,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 logger.info("使用free命令获取交换分区信息失败，尝试从/proc/swaps读取");
                 CommandResult procSwapsResult = MinaUtils.execCmdWithResultObject(session,
                         "cat /proc/swaps 2>/dev/null | grep -v Filename");
-                if (procSwapsResult.isSuccess() && procSwapsResult.getOutput() != null
-                        && !procSwapsResult.getOutput().isEmpty()) {
-                    successWithAnyMethod = processSwapFromProcSwaps(procSwapsResult.getOutput(), swapInfo);
+                if (procSwapsResult.isSuccess() && procSwapsResult.output() != null
+                        && !procSwapsResult.output().isEmpty()) {
+                    successWithAnyMethod = processSwapFromProcSwaps(procSwapsResult.output(), swapInfo);
                 }
             }
 
@@ -539,9 +539,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 logger.info("尝试使用swapon -s命令获取交换分区信息");
                 CommandResult swaponResult = MinaUtils.execCmdWithResultObject(session,
                         "swapon -s 2>/dev/null | grep -v Filename");
-                if (swaponResult.isSuccess() && swaponResult.getOutput() != null
-                        && !swaponResult.getOutput().isEmpty()) {
-                    successWithAnyMethod = processSwapFromSwapon(swaponResult.getOutput(), swapInfo);
+                if (swaponResult.isSuccess() && swaponResult.output() != null
+                        && !swaponResult.output().isEmpty()) {
+                    successWithAnyMethod = processSwapFromSwapon(swaponResult.output(), swapInfo);
                 }
             }
 
@@ -550,9 +550,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 logger.info("尝试使用vmstat命令获取交换分区信息");
                 CommandResult vmstatResult = MinaUtils.execCmdWithResultObject(session,
                         "vmstat -s 2>/dev/null | grep -i swap");
-                if (vmstatResult.isSuccess() && vmstatResult.getOutput() != null
-                        && !vmstatResult.getOutput().isEmpty()) {
-                    successWithAnyMethod = processSwapFromVmstat(vmstatResult.getOutput(), swapInfo);
+                if (vmstatResult.isSuccess() && vmstatResult.output() != null
+                        && !vmstatResult.output().isEmpty()) {
+                    successWithAnyMethod = processSwapFromVmstat(vmstatResult.output(), swapInfo);
                 }
             }
 
@@ -896,9 +896,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             try {
                                 CommandResult nprocResult = MinaUtils.execCmdWithResultObject(session, "nproc");
                                 if (nprocResult.isSuccess()) {
-                                    cpuCores = nprocResult.getOutput().trim();
+                                    cpuCores = nprocResult.output().trim();
                                 } else {
-                                    logger.warn("获取CPU核心数失败: {}", nprocResult.getError());
+                                    logger.warn("获取CPU核心数失败: {}", nprocResult.error());
                                 }
                             } catch (Exception e) {
                                 logger.warn("获取CPU核心数失败", e);
@@ -1312,8 +1312,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 CommandResult lshwResult = MinaUtils.execCmdWithResultObject(session,
                                         "which lshw >/dev/null 2>&1 && lshw -C memory 2>/dev/null || echo 'lshw not found'");
 
-                                if (lshwResult.isSuccess() && !lshwResult.getOutput().contains("lshw not found")) {
-                                    String lshwOutput = lshwResult.getOutput();
+                                if (lshwResult.isSuccess() && !lshwResult.output().contains("lshw not found")) {
+                                    String lshwOutput = lshwResult.output();
 
                                     // 尝试从lshw输出中提取内存类型
                                     Pattern lshwTypePattern = Pattern.compile("(DDR\\d+)");
@@ -1651,11 +1651,11 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             CommandResult nvidiaSmiResult = MinaUtils.execCmdWithResultObject(session,
                     "which nvidia-smi >/dev/null 2>&1 && nvidia-smi -L || echo 'No NVIDIA GPU found'");
 
-            if (nvidiaSmiResult.isSuccess() && !nvidiaSmiResult.getOutput().contains("No NVIDIA GPU found")
-                    && !nvidiaSmiResult.getOutput().isEmpty()) {
+            if (nvidiaSmiResult.isSuccess() && !nvidiaSmiResult.output().contains("No NVIDIA GPU found")
+                    && !nvidiaSmiResult.output().isEmpty()) {
                 // 检测到NVIDIA GPU
                 gpuDetected = true;
-                String nvidiaSmiOutput = nvidiaSmiResult.getOutput().trim();
+                String nvidiaSmiOutput = nvidiaSmiResult.output().trim();
                 gpuInfo.setInfo(nvidiaSmiOutput);
                 gpuInfo.setVendor("NVIDIA");
                 gpuInfo.setType("独立显卡");
@@ -1680,8 +1680,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 CommandResult nvidiaSmiDetailedResult = MinaUtils.execCmdWithResultObject(session,
                         "which nvidia-smi >/dev/null 2>&1 && nvidia-smi --query-gpu=name,memory.total,memory.used,temperature.gpu,utilization.gpu --format=csv,noheader,nounits || echo ''");
 
-                if (nvidiaSmiDetailedResult.isSuccess() && !nvidiaSmiDetailedResult.getOutput().isEmpty()) {
-                    String detailedOutput = nvidiaSmiDetailedResult.getOutput().trim();
+                if (nvidiaSmiDetailedResult.isSuccess() && !nvidiaSmiDetailedResult.output().isEmpty()) {
+                    String detailedOutput = nvidiaSmiDetailedResult.output().trim();
                     String[] parts = detailedOutput.split(",");
 
                     // 解析GPU型号
@@ -1754,8 +1754,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 CommandResult rocmSmiResult = MinaUtils.execCmdWithResultObject(session,
                         "which rocm-smi >/dev/null 2>&1 && rocm-smi -l || echo 'No AMD GPU found'");
 
-                if (rocmSmiResult.isSuccess() && !rocmSmiResult.getOutput().contains("No AMD GPU found")
-                        && !rocmSmiResult.getOutput().isEmpty()) {
+                if (rocmSmiResult.isSuccess() && !rocmSmiResult.output().contains("No AMD GPU found")
+                        && !rocmSmiResult.output().isEmpty()) {
                     // 检测到AMD GPU
                     gpuDetected = true;
                     gpuInfo.setVendor("AMD");
@@ -1765,8 +1765,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     CommandResult gpuOutputResult = MinaUtils.execCmdWithResultObject(session,
                             "which rocm-smi >/dev/null 2>&1 && rocm-smi --showmeminfo vram || echo ''");
 
-                    if (gpuOutputResult.isSuccess() && !gpuOutputResult.getOutput().isEmpty()) {
-                        String gpuOutput = gpuOutputResult.getOutput().trim();
+                    if (gpuOutputResult.isSuccess() && !gpuOutputResult.output().isEmpty()) {
+                        String gpuOutput = gpuOutputResult.output().trim();
                         gpuInfo.setInfo(gpuOutput);
 
                         // 尝试从rocm-smi输出中解析型号和显存信息
@@ -1800,8 +1800,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         // 获取型号信息
                         CommandResult amdModelResult = MinaUtils.execCmdWithResultObject(session,
                                 "which rocm-smi >/dev/null 2>&1 && rocm-smi -i || echo ''");
-                        if (amdModelResult.isSuccess() && !amdModelResult.getOutput().isEmpty()) {
-                            String modelOutput = amdModelResult.getOutput().trim();
+                        if (amdModelResult.isSuccess() && !amdModelResult.output().isEmpty()) {
+                            String modelOutput = amdModelResult.output().trim();
                             Pattern modelPattern = Pattern.compile("GPU\\[\\d+\\]\\s*:\\s*(.+)");
                             Matcher modelMatcher = modelPattern.matcher(modelOutput);
                             if (modelMatcher.find()) {
@@ -1817,16 +1817,16 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         // 获取GPU数量
                         CommandResult gpuCountResult = MinaUtils.execCmdWithResultObject(session,
                                 "which rocm-smi >/dev/null 2>&1 && rocm-smi -i | grep -c 'GPU\\[' || echo '1'");
-                        if (gpuCountResult.isSuccess() && !gpuCountResult.getOutput().isEmpty()) {
+                        if (gpuCountResult.isSuccess() && !gpuCountResult.output().isEmpty()) {
                             try {
-                                int count = Integer.parseInt(gpuCountResult.getOutput().trim());
+                                int count = Integer.parseInt(gpuCountResult.output().trim());
                                 gpuInfo.setDeviceCount(count);
                             } catch (NumberFormatException e) {
                                 logger.warn("解析AMD GPU数量失败: {}", e.getMessage());
                                 gpuInfo.setDeviceCount(1); // 默认值
                             }
                         } else {
-                            logger.error("获取AMD GPU数量失败: {}", gpuCountResult.getError());
+                            logger.error("获取AMD GPU数量失败: {}", gpuCountResult.error());
                             gpuInfo.setDeviceCount(1); // 默认值
                         }
 
@@ -1836,7 +1836,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         }
                     } else {
                         logger.error("获取AMD GPU信息失败: {}",
-                                gpuOutputResult.isSuccess() ? "无输出" : gpuOutputResult.getError());
+                                gpuOutputResult.isSuccess() ? "无输出" : gpuOutputResult.error());
                     }
                 }
             }
@@ -1848,9 +1848,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 CommandResult alpineResult = MinaUtils.execCmdWithResultObject(session,
                         "if command -v lspci >/dev/null 2>&1; then lspci | grep -i 'vga\\|3d\\|display'; else echo 'lspci not found'; fi");
 
-                if (alpineResult.isSuccess() && !alpineResult.getOutput().trim().isEmpty()
-                        && !alpineResult.getOutput().contains("lspci not found")) {
-                    String lspciOutput = alpineResult.getOutput().trim();
+                if (alpineResult.isSuccess() && !alpineResult.output().trim().isEmpty()
+                        && !alpineResult.output().contains("lspci not found")) {
+                    String lspciOutput = alpineResult.output().trim();
                     gpuInfo.setInfo(lspciOutput);
                     gpuDetected = true;
 
@@ -1905,8 +1905,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             CommandResult lspciDetailResult = MinaUtils.execCmdWithResultObject(session,
                                     "lspci -v -s " + firstDeviceId);
 
-                            if (lspciDetailResult.isSuccess() && !lspciDetailResult.getOutput().isEmpty()) {
-                                String detailOutput = lspciDetailResult.getOutput().trim();
+                            if (lspciDetailResult.isSuccess() && !lspciDetailResult.output().isEmpty()) {
+                                String detailOutput = lspciDetailResult.output().trim();
 
                                 // 尝试从输出中解析显存信息
                                 Pattern memoryPattern = Pattern.compile("Memory.+?([0-9]+)([MGT])B",
@@ -1949,8 +1949,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         CommandResult lshwResult = MinaUtils.execCmdWithResultObject(session,
                                 "command -v lshw >/dev/null 2>&1 && lshw -C display 2>/dev/null || echo 'lshw not available'");
 
-                        if (lshwResult.isSuccess() && !lshwResult.getOutput().contains("lshw not available")) {
-                            String lshwOutput = lshwResult.getOutput().trim();
+                        if (lshwResult.isSuccess() && !lshwResult.output().contains("lshw not available")) {
+                            String lshwOutput = lshwResult.output().trim();
 
                             // 尝试解析显存信息
                             Pattern sizePattern = Pattern.compile("size:\\s*([0-9]+)([KMGT]?i?B)",
@@ -1998,8 +1998,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 CommandResult hwinfoResult = MinaUtils.execCmdWithResultObject(session,
                         "command -v hwinfo >/dev/null 2>&1 && hwinfo --gfxcard 2>/dev/null | grep 'Memory Range\\|Memory Size' || echo 'hwinfo not available'");
 
-                if (hwinfoResult.isSuccess() && !hwinfoResult.getOutput().contains("hwinfo not available")) {
-                    String hwinfoOutput = hwinfoResult.getOutput().trim();
+                if (hwinfoResult.isSuccess() && !hwinfoResult.output().contains("hwinfo not available")) {
+                    String hwinfoOutput = hwinfoResult.output().trim();
 
                     // 尝试解析显存信息
                     Pattern memPattern = Pattern.compile("Memory Size:\\s*([0-9]+)\\s*([KMGT]?B)",
@@ -2123,15 +2123,15 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             String ipInfo;
 
             if (ipInfoResult.isSuccess()) {
-                ipInfo = ipInfoResult.getOutput().trim();
+                ipInfo = ipInfoResult.output().trim();
             } else {
                 // 备用：尝试使用ifconfig
                 logger.warn("使用ip addr show命令获取网络信息失败，尝试ifconfig命令");
                 CommandResult ifconfigResult = MinaUtils.execCmdWithResultObject(session, "ifconfig -a");
                 if (ifconfigResult.isSuccess()) {
-                    ipInfo = ifconfigResult.getOutput().trim();
+                    ipInfo = ifconfigResult.output().trim();
                 } else {
-                    logger.error("获取网络信息失败: {}", ifconfigResult.getError());
+                    logger.error("获取网络信息失败: {}", ifconfigResult.error());
                     osInfo.setNetworkStatus(OsInfoStatusEnum.ERROR);
                     networkInfo.setStatus(OsInfoStatusEnum.ERROR);
                     if (cacheUpdater != null && hostInfo != null) {
@@ -2143,7 +2143,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 获取网络接口状态和流量
             CommandResult ifstatResult = MinaUtils.execCmdWithResultObject(session, "ip -s link");
-            String ifstatInfo = ifstatResult.isSuccess() ? ifstatResult.getOutput().trim() : "";
+            String ifstatInfo = ifstatResult.isSuccess() ? ifstatResult.output().trim() : "";
 
             // 如果ip -s link失败，尝试其他命令
             if (ifstatInfo.isEmpty()) {
@@ -2154,15 +2154,15 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             // 获取路由信息
             CommandResult routeInfoResult = MinaUtils.execCmdWithResultObject(session, "ip route");
             if (!routeInfoResult.isSuccess()) {
-                logger.error("获取路由信息失败: {}", routeInfoResult.getError());
+                logger.error("获取路由信息失败: {}", routeInfoResult.error());
                 // 不返回，继续收集其他信息
             }
-            String routeInfo = routeInfoResult.isSuccess() ? routeInfoResult.getOutput().trim() : "";
+            String routeInfo = routeInfoResult.isSuccess() ? routeInfoResult.output().trim() : "";
 
             // 获取DNS信息
             CommandResult dnsInfoResult = MinaUtils.execCmdWithResultObject(session,
                     "cat /etc/resolv.conf | grep nameserver");
-            String dnsInfo = dnsInfoResult.isSuccess() ? dnsInfoResult.getOutput().trim() : "";
+            String dnsInfo = dnsInfoResult.isSuccess() ? dnsInfoResult.output().trim() : "";
 
             // 获取活动连接信息
             CommandResult connectionsResult = MinaUtils.execCmdWithResultObject(session,
@@ -2170,12 +2170,12 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             int connections = 0;
             if (connectionsResult.isSuccess()) {
                 try {
-                    connections = Integer.parseInt(connectionsResult.getOutput().trim());
+                    connections = Integer.parseInt(connectionsResult.output().trim());
                 } catch (NumberFormatException e) {
-                    logger.warn("解析活动连接数失败: {}", connectionsResult.getOutput());
+                    logger.warn("解析活动连接数失败: {}", connectionsResult.output());
                 }
             } else {
-                logger.error("获取活动连接数失败: {}", connectionsResult.getError());
+                logger.error("获取活动连接数失败: {}", connectionsResult.error());
             }
 
             // 解析IP地址信息，提取网络接口名称和IP地址
@@ -2245,7 +2245,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 // 备用命令：获取网络流量统计
                 CommandResult netDevResult = MinaUtils.execCmdWithResultObject(session, "cat /proc/net/dev");
                 if (netDevResult.isSuccess()) {
-                    String netDevInfo = netDevResult.getOutput().trim();
+                    String netDevInfo = netDevResult.output().trim();
                     // 解析 /proc/net/dev 输出
                     Pattern netDevPattern = Pattern.compile(
                             "(\\w+):\\s*(\\d+)\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+(\\d+)");
@@ -2368,7 +2368,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 if (interfaces.get(ifaceName).getRxBytes() == null || interfaces.get(ifaceName).getTxBytes() == null) {
                     CommandResult ifconfigResult = MinaUtils.execCmdWithResultObject(session, "ifconfig " + ifaceName);
                     if (ifconfigResult.isSuccess()) {
-                        String ifconfigOutput = ifconfigResult.getOutput().trim();
+                        String ifconfigOutput = ifconfigResult.output().trim();
                         // 匹配 RX bytes 和 TX bytes
                         Pattern rxBytesPattern = Pattern.compile("RX\\s+bytes[:\\s]+(\\d+)");
                         Pattern txBytesPattern = Pattern.compile("TX\\s+bytes[:\\s]+(\\d+)");
@@ -2465,11 +2465,11 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             String resolvConf = "";
 
             if (resolvConfResult.isSuccess()) {
-                resolvConf = resolvConfResult.getOutput().trim();
+                resolvConf = resolvConfResult.output().trim();
                 logger.info("成功获取resolv.conf文件内容");
                 dnsInfo.setResolvConfContent(resolvConf);
             } else {
-                logger.error("获取DNS配置失败: {}", resolvConfResult.getError());
+                logger.error("获取DNS配置失败: {}", resolvConfResult.error());
             }
 
             // 提取DNS服务器地址
@@ -2486,11 +2486,11 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             // 获取/etc/hosts文件内容
             CommandResult hostsResult = MinaUtils.execCmdWithResultObject(session, "cat /etc/hosts");
             if (hostsResult.isSuccess()) {
-                String hostsContent = hostsResult.getOutput().trim();
+                String hostsContent = hostsResult.output().trim();
                 logger.info("成功获取hosts文件内容");
                 dnsInfo.setHostsFileContent(hostsContent);
             } else {
-                logger.error("获取hosts文件内容失败: {}", hostsResult.getError());
+                logger.error("获取hosts文件内容失败: {}", hostsResult.error());
             }
 
             // 检查DNS是否工作正常
@@ -2525,7 +2525,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         try {
             CommandResult resolvConfResult = MinaUtils.execCmdWithResultObject(session,
                     "grep nameserver /etc/resolv.conf");
-            if (resolvConfResult.isSuccess() && !resolvConfResult.getOutput().trim().isEmpty()) {
+            if (resolvConfResult.isSuccess() && !resolvConfResult.output().trim().isEmpty()) {
                 logger.info("DNS检测(/etc/resolv.conf): 包含nameserver条目");
                 return true;
             }
@@ -2536,7 +2536,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         // 方法2: 尝试查看是否安装了nslookup或ping命令
         try {
             CommandResult whichResult = MinaUtils.execCmdWithResultObject(session, "which nslookup ping 2>/dev/null");
-            if (whichResult.isSuccess() && !whichResult.getOutput().trim().isEmpty()) {
+            if (whichResult.isSuccess() && !whichResult.output().trim().isEmpty()) {
                 logger.info("DNS检测: 系统安装了DNS查询工具");
                 return true;
             }
@@ -2548,7 +2548,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         try {
             CommandResult netConfResult = MinaUtils.execCmdWithResultObject(session,
                     "grep -i dns /etc/sysconfig/network-scripts/ifcfg-* 2>/dev/null || grep -i dns /etc/network/interfaces* 2>/dev/null");
-            if (netConfResult.isSuccess() && !netConfResult.getOutput().trim().isEmpty()) {
+            if (netConfResult.isSuccess() && !netConfResult.output().trim().isEmpty()) {
                 logger.info("DNS检测(network-config): 网络配置中包含DNS设置");
                 return true;
             }
@@ -2560,7 +2560,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         try {
             CommandResult nmcliResult = MinaUtils.execCmdWithResultObject(session,
                     "nmcli con show 2>/dev/null | grep -i dns || cat /etc/NetworkManager/system-connections/* 2>/dev/null | grep -i dns");
-            if (nmcliResult.isSuccess() && !nmcliResult.getOutput().trim().isEmpty()) {
+            if (nmcliResult.isSuccess() && !nmcliResult.output().trim().isEmpty()) {
                 logger.info("DNS检测(NetworkManager): 发现DNS配置");
                 return true;
             }
@@ -2573,7 +2573,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             // 使用主机自身作为目标
             CommandResult localPingResult = MinaUtils.execCmdWithResultObject(session,
                     "ping -c 1 -W 1 localhost 2>/dev/null");
-            if (localPingResult.isSuccess() && !localPingResult.getOutput().contains("unknown host")) {
+            if (localPingResult.isSuccess() && !localPingResult.output().contains("unknown host")) {
                 logger.info("DNS检测(localhost): 本地解析正常");
                 return true;
             }
@@ -2612,14 +2612,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             CommandResult hostsResult = MinaUtils.execCmdWithResultObject(session, "cat /etc/hosts");
 
             if (hostsResult.isSuccess()) {
-                String hostsContent = hostsResult.getOutput().trim();
+                String hostsContent = hostsResult.output().trim();
                 // 保存到DnsInfo中而不是hostInfo
                 osInfo.getDnsInfo().setHostsFileContent(hostsContent);
                 osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
                 osInfo.getDnsInfo().setStatus(OsInfoStatusEnum.SUCCESS);
                 logger.info("成功获取hosts文件信息: {}", hostInfo.getIp());
             } else {
-                logger.error("读取hosts文件失败: {}", hostsResult.getError());
+                logger.error("读取hosts文件失败: {}", hostsResult.error());
                 osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
                 osInfo.getDnsInfo().setStatus(OsInfoStatusEnum.ERROR);
             }

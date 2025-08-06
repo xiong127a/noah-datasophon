@@ -1,14 +1,13 @@
 package com.datasophon.api.workflow.activity.impl;
 
 import com.datasophon.api.workflow.activity.HostCheckActivities;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.CheckStatus;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.api.model.OsInfo;
 import com.datasophon.plugins.manager.PluginManager;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.enums.OsType;
 import io.temporal.activity.Activity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * 主机检查活动实现类
@@ -64,15 +62,11 @@ public class HostCheckActivitiesImpl implements HostCheckActivities {
             // 模拟OS检测逻辑
             // 实际应该通过SSH执行命令来检测
             OsInfo osInfo = OsInfo.builder()
-                    .osType(OsType.LINUX)
-                    .osName("Linux")
-                    .version("Ubuntu 20.04")
+                    .distribution("Ubuntu")  // 使用distribution字段
+                    .fullName("Linux")
+                    .version("20.04")
                     .kernelVersion("5.4.0")
-                    .architecture("x86_64")
-                    .distribution("ubuntu")
-                    .distributionVersion("20.04")
-                    .bits("64")
-                    .hostname(hostInfo.getHostname())
+                    .architecture("x86_64")  // 使用architecture字段，去掉不存在的bits字段
                     .build();
             
             log.info("操作系统检测完成: {} - {}", hostInfo.getIp(), osInfo.getFullDescription());

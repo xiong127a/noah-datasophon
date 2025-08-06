@@ -2,6 +2,7 @@ package com.datasophon.common.model;
 
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
+import com.datasophon.common.enums.OsType;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.DiskInfo;
 import com.datasophon.common.model.hardware.DnsInfo;
@@ -86,6 +87,16 @@ public class OsInfo implements Serializable {
     private String architecture;
 
     /**
+     * 主机名
+     */
+    private String hostname;
+
+    /**
+     * 系统位数 (32/64)
+     */
+    private String bits;
+
+    /**
      * 操作系统信息收集状态
      */
     private OsInfoStatusEnum osInfoStatus;
@@ -165,6 +176,53 @@ public class OsInfo implements Serializable {
      */
     private DnsInfo dnsInfo;
 
+    /**
+     * 获取操作系统类型
+     * 基于发行版信息返回对应的OsType
+     */
+    public OsType getOsType() {
+        if (osDistribution == null) {
+            return OsType.LINUX; // 默认返回Linux
+        }
+        
+        return switch (osDistribution) {
+            case CENTOS -> OsType.CENTOS;
+            case UBUNTU -> OsType.UBUNTU;
+            case DEBIAN -> OsType.DEBIAN;
+            case REDHAT -> OsType.RHEL;  // RedHat映射到RHEL
+            case FEDORA, KYLIN, UOS -> OsType.OTHER;  // 这些发行版映射到OTHER
+            default -> OsType.LINUX;
+        };
+    }
+    
+    /**
+     * 获取操作系统完整描述
+     */
+    public String getFullDescription() {
+        StringBuilder desc = new StringBuilder();
+        
+        if (distribution != null && !distribution.trim().isEmpty()) {
+            desc.append(distribution);
+        }
+        
+        if (version != null && !version.trim().isEmpty()) {
+            if (!desc.isEmpty()) {
+                desc.append(" ");
+            }
+            desc.append(version);
+        }
+        
+        if (kernelVersion != null && !kernelVersion.trim().isEmpty()) {
+            if (!desc.isEmpty()) {
+                desc.append(" (kernel ");
+                desc.append(kernelVersion);
+                desc.append(")");
+            }
+        }
+        
+        return desc.isEmpty() ? "Unknown OS" : desc.toString();
+    }
+    
     /**
      * 获取版本ID（与version保持一致）
      */

@@ -1,12 +1,11 @@
 package com.datasophon.plugins.impl.cpu;
 
 import com.datasophon.common.enums.OsType;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.client.session.ClientSession;
 import org.pf4j.Extension;
-import org.pf4j.Plugin;
 
 import java.util.HashMap;
 import java.util.List;
