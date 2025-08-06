@@ -127,17 +127,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- 插件生态系统依赖 -->
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-plugin-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-plugin-manager</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+        <!-- 插件生态系统依赖已在前面声明，此处移除重复依赖 -->
 
         <!-- Temporal工作流引擎 -->
         <dependency>

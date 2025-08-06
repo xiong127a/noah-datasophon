@@ -17,11 +17,7 @@
 
     <modules>
         <module>ssh-connector-plugin</module>
-        <module>system-info-plugin</module>
         <module>cpu-checker-plugin</module>
-        <module>memory-checker-plugin</module>
-        <module>disk-checker-plugin</module>
-        <module>network-checker-plugin</module>
     </modules>
 
 </project>

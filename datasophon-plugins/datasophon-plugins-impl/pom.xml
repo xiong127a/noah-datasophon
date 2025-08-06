@@ -17,8 +17,6 @@
 
     <modules>
         <module>core-plugins</module>
-        <module>os-plugins</module>
-        <module>business-plugins</module>
     </modules>
 
     <dependencies>
