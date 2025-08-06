@@ -68,6 +68,8 @@
         <spotless.ratchetFrom>origin/dev</spotless.ratchetFrom>
         <spotless.version>2.27.1</spotless.version>
         <spring.boot.version>3.4.7</spring.boot.version>
+        <!-- 启用虚拟线程支持 -->
+        <spring.threads.virtual.enabled>true</spring.threads.virtual.enabled>
         <spring.version>6.2.8</spring.version>
         <spotless.version>2.27.2</spotless.version>
         <versions-maven-plugin.version>2.14.2</versions-maven-plugin.version>
