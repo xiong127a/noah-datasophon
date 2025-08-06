@@ -1,6 +1,7 @@
 package com.datasophon.plugins.api.model;
 
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.OsInfo;
 import lombok.Builder;
 import lombok.Data;
 import org.apache.sshd.client.session.ClientSession;
