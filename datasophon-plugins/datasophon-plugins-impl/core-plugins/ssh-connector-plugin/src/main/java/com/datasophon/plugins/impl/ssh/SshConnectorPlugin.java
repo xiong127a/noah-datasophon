@@ -5,7 +5,7 @@ import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.session.ClientSession;
-import org.pf4j.Extension;
+
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
