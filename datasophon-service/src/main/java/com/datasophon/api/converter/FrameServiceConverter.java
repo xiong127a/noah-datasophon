@@ -24,6 +24,7 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * 集群框架版本服务转换器
@@ -34,7 +35,9 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface FrameServiceConverter extends BaseConverter<FrameServiceEntity, FrameServiceDTO, FrameServiceVO> {
 
     /**
