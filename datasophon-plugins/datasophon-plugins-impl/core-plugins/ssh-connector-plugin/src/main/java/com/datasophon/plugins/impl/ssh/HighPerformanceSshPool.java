@@ -1,15 +1,24 @@
 package com.datasophon.plugins.impl.ssh;
 
-import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.plugins.api.model.CommandResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.apache.sshd.client.SshClient;
+import org.apache.sshd.client.channel.ChannelExec;
+import org.apache.sshd.client.future.AuthFuture;
+import org.apache.sshd.client.future.ConnectFuture;
 import org.apache.sshd.client.session.ClientSession;
 
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -125,13 +134,13 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
     /**
      * 预热连接池
      */
-    private void preparePool() throws Exception {
+    public void preparePool() throws Exception {
         int minIdle = config.getMinIdle();
         if (minIdle > 0) {
             log.info("预热SSH连接池: {}, 预创建 {} 个连接", 
                     config.getHostInfo().getIp(), minIdle);
             
-            preparePool(minIdle);
+            preparePool();
         }
     }
     
@@ -145,7 +154,7 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
         poolConfig.setMaxTotal(config.getMaxTotal());
         poolConfig.setMaxIdle(config.getMaxIdle());
         poolConfig.setMinIdle(config.getMinIdle());
-        poolConfig.setMaxWaitMillis(config.getMaxWaitMillis());
+        poolConfig.setMaxWait(java.time.Duration.ofMillis(config.getMaxWaitMillis()));
         
         // 测试配置
         poolConfig.setTestOnBorrow(config.isTestOnBorrow());
@@ -153,9 +162,9 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
         poolConfig.setTestWhileIdle(config.isTestWhileIdle());
         
         // 清理配置
-        poolConfig.setTimeBetweenEvictionRunsMillis(config.getTimeBetweenEvictionRunsMillis());
-        poolConfig.setMinEvictableIdleTimeMillis(config.getMinEvictableIdleTimeMillis());
-        poolConfig.setSoftMinEvictableIdleTimeMillis(config.getSoftMinEvictableIdleTimeMillis());
+        poolConfig.setTimeBetweenEvictionRuns(java.time.Duration.ofMillis(config.getTimeBetweenEvictionRunsMillis()));
+        poolConfig.setMinEvictableIdleTime(java.time.Duration.ofMillis(config.getMinEvictableIdleTimeMillis()));
+        poolConfig.setSoftMinEvictableIdleTime(java.time.Duration.ofMillis(config.getSoftMinEvictableIdleTimeMillis()));
         
         // 阻塞配置
         poolConfig.setBlockWhenExhausted(true);
@@ -183,7 +192,7 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
             long startTime = System.currentTimeMillis();
             
             try {
-                ClientSession session = MinaUtils.openConnectionWithPassword(config.getHostInfo());
+                ClientSession session = createSshConnection(config.getHostInfo());
                 
                 if (session == null || !session.isOpen()) {
                     throw new RuntimeException("SSH连接创建失败");
@@ -221,8 +230,10 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
                 
                 // 发送心跳测试连接
                 try {
-                    String testResult = MinaUtils.execCommand(session, "echo connection_test").getOutput();
-                    boolean isValid = testResult != null && testResult.trim().contains("connection_test");
+                    CommandResult testResult = executeCommand(session, "echo connection_test");
+                    boolean isValid = testResult.exitCode() == 0 && 
+                                     testResult.output() != null && 
+                                     testResult.output().trim().contains("connection_test");
                     
                     if (!isValid) {
                         log.debug("SSH连接心跳测试失败: {}", config.getHostInfo().getIp());
@@ -265,6 +276,83 @@ public class HighPerformanceSshPool extends GenericObjectPool<ClientSession> {
         public void activateObject(PooledObject<ClientSession> pooledObject) throws Exception {
             // 激活连接时的处理（可选）
             log.trace("激活SSH连接: {}", config.getHostInfo().getIp());
+        }
+        
+        /**
+         * 创建SSH连接
+         */
+        private ClientSession createSshConnection(HostInfo hostInfo) throws IOException {
+            if (hostInfo == null) {
+                throw new IllegalArgumentException("主机信息不能为空");
+            }
+
+            String ip = hostInfo.getIp();
+            Integer port = hostInfo.getSshPort();
+            String username = hostInfo.getSshUser();
+            String password = hostInfo.getSshPassword();
+
+            if (ip == null || port == null || username == null || password == null) {
+                throw new IllegalArgumentException("SSH连接信息不完整");
+            }
+
+            SshClient client = SshClient.setUpDefaultClient();
+            client.start();
+
+            try {
+                ConnectFuture connectFuture = client.connect(username, ip, port);
+                ClientSession session = connectFuture.verify(config.getConnectTimeout()).getSession();
+
+                AuthFuture authFuture = session.auth();
+                session.addPasswordIdentity(password);
+                
+                authFuture.verify(config.getAuthTimeout());
+
+                if (session.isAuthenticated()) {
+                    return session;
+                } else {
+                    session.close();
+                    throw new IOException("SSH认证失败");
+                }
+            } catch (Exception e) {
+                client.stop();
+                throw new IOException("SSH连接失败: " + e.getMessage(), e);
+            }
+        }
+        
+        /**
+         * 执行SSH命令
+         */
+        private CommandResult executeCommand(ClientSession session, String command) throws IOException {
+            if (session == null || !session.isOpen()) {
+                return new CommandResult(command, -1, "", "SSH会话无效");
+            }
+
+            try (ChannelExec channel = session.createExecChannel(command)) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                ByteArrayOutputStream err = new ByteArrayOutputStream();
+                
+                channel.setOut(out);
+                channel.setErr(err);
+                
+                channel.open();
+                
+                // 等待命令执行完成
+                channel.waitFor(java.util.EnumSet.of(
+                    org.apache.sshd.client.channel.ClientChannelEvent.CLOSED), 
+                    TimeUnit.SECONDS.toMillis(30));
+                
+                Integer exitCode = channel.getExitStatus();
+                String output = out.toString(StandardCharsets.UTF_8);
+                String error = err.toString(StandardCharsets.UTF_8);
+                
+                return new CommandResult(command, 
+                    exitCode != null ? exitCode : -1, 
+                    output != null ? output : "", 
+                    error != null ? error : "");
+                    
+            } catch (Exception e) {
+                return new CommandResult(command, -1, "", "命令执行异常: " + e.getMessage());
+            }
         }
     }
 }
