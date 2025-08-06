@@ -18,7 +18,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -205,8 +204,9 @@ public class MinaUtils {
             }
         } catch (IOException e) {
             LOG.error("关闭命令通道异常", e);
+            return new CommandResult(command, -1, "", "关闭命令通道异常: " + e.getMessage());
         }
-        return null;
+        // 不应该到达这里，但为了安全起见返回失败结果
     }
 
     /**
@@ -258,18 +258,9 @@ public class MinaUtils {
             }
         } catch (IOException e) {
             LOG.error("关闭命令通道异常", e);
+            return new CommandResult(command, -1, "", "关闭命令通道异常: " + e.getMessage());
         }
-        return null;
-    }
-
-    public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
-        CommandResult result = execCmdWithResultObject(session, command);
-        if (result.isSuccess()) {
-            return result.output();
-        } else {
-            throw new IOException(
-                    "Command execution failed with exit code " + result.exitCode() + ": " + result.error());
-        }
+        // 不应该到达这里，但为了安全起见返回失败结果
     }
 
     /**
@@ -606,77 +597,6 @@ public class MinaUtils {
     public static String execCmdWithResult(ClientSession session, String command) {
         CommandResult result = execCmdWithResultObject(session, command);
         return result.isSuccess() ? result.output() : "EXIT_CODE_" + result.exitCode() + ": " + result.error();
-    }
-
-    /**
-     * 执行命令
-     * 
-     * @param session SSH会话
-     * @param command 要执行的命令
-     * @return 命令执行结果
-     */
-    public static CommandResult execCommand(ClientSession session, String command) {
-        if (session == null) {
-            LOG.error("会话为空，无法执行命令");
-            return new CommandResult(command, -1, "", "SSH会话为空");
-        }
-
-        if (!session.isOpen()) {
-            LOG.error("会话已关闭，无法执行命令");
-            return new CommandResult("", -1, "", "SSH会话已关闭");
-        }
-
-        // 获取当前线程名称，用于日志
-        String currentThreadName = Thread.currentThread().getName();
-        String hostAddress;
-        try {
-            // 尝试从会话中提取远程地址信息
-            hostAddress = session.getIoSession().getRemoteAddress().toString();
-            // 简化地址信息，通常是/IP:端口格式
-            if (hostAddress.startsWith("/")) {
-                hostAddress = hostAddress.substring(1);
-            }
-            if (hostAddress.contains(":")) {
-                hostAddress = hostAddress.substring(0, hostAddress.indexOf(":"));
-            }
-        } catch (Exception e) {
-            // 忽略异常，使用默认值
-            hostAddress = "unknown";
-        }
-
-        LOG.info("执行命令: {}, 主机: {}, 线程: {}", command, hostAddress, currentThreadName);
-
-        try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
-
-            ChannelExec channel = session.createExecChannel(command);
-            channel.setOut(outputStream);
-            channel.setErr(errorStream);
-            channel.open().verify(30000); // 30秒超时
-
-            Set<ClientChannelEvent> events = channel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), 30000); // 30秒超时
-
-            // 检查是否在超时时间内关闭
-            if (!events.contains(ClientChannelEvent.CLOSED)) {
-                LOG.warn("命令执行超时，强制关闭通道: {}", command);
-                channel.close(true);
-            }
-
-            int exitStatus = channel.getExitStatus();
-            String output = outputStream.toString(StandardCharsets.UTF_8);
-            String error = errorStream.toString(StandardCharsets.UTF_8);
-
-            if (exitStatus != 0) {
-                LOG.error("命令执行失败 [exit={}]: {}\n错误信息: {}", exitStatus, command, error);
-                return new CommandResult("", exitStatus, output, error);
-            }
-
-            return new CommandResult("", exitStatus, output, error);
-        } catch (Exception e) {
-            LOG.error("执行命令时异常 {}: {}", command, e.getMessage());
-            return new CommandResult("", -1, "", "执行异常: " + e.getMessage());
-        }
     }
 
     /**
