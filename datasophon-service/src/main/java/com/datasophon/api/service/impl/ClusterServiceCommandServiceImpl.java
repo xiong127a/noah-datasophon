@@ -22,6 +22,7 @@ import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.EnumUtil;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
+import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
@@ -99,6 +100,9 @@ public class ClusterServiceCommandServiceImpl
 
     @Autowired
     private ClusterInfoService clusterInfoService;
+
+    @Autowired
+    private ClusterServiceCommandHostCommandConverter clusterServiceCommandHostCommandConverter;
 
     @Autowired
     private ClusterServiceCommandHostService commandHostService;
@@ -612,7 +616,7 @@ public class ClusterServiceCommandServiceImpl
         entity.setHostname(dto.hostname());
         entity.setServiceRoleName(dto.serviceRoleName());
         // 假设RoleType是枚举，需要从Integer转换
-        entity.setRoleType(integerToRoleType(dto.roleType()));
+        entity.setRoleType(clusterServiceCommandHostCommandConverter.integerToRoleType(dto.roleType()));
         return entity;
     }
 
@@ -621,19 +625,6 @@ public class ClusterServiceCommandServiceImpl
         if (dtoList == null)
             return null;
         return dtoList.stream().map(this::convertServiceRoleInstanceToEntity).toList();
-    }
-
-    // 枚举转换辅助方法（需要根据实际RoleType枚举调整）
-    private com.datasophon.dao.enums.RoleType integerToRoleType(Integer value) {
-        if (value == null)
-            return null;
-        return switch (value) {
-            case 1 -> com.datasophon.dao.enums.RoleType.MASTER;
-            case 2 -> com.datasophon.dao.enums.RoleType.WORKER;
-            case 3 -> com.datasophon.dao.enums.RoleType.CLIENT;
-            case 4 -> com.datasophon.dao.enums.RoleType.SLAVE;
-            default -> null;
-        };
     }
 
     @Override
