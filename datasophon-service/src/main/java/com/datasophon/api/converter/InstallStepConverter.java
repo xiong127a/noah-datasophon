@@ -6,6 +6,7 @@ import com.datasophon.common.vo.InstallStepVO;
 import com.datasophon.dao.entity.InstallStepEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
 /**
@@ -22,17 +23,27 @@ public interface InstallStepConverter extends BaseConverter<InstallStepEntity, I
     InstallStepConverter INSTANCE = Mappers.getMapper(InstallStepConverter.class);
 
     @Override
+    @Mapping(target = "displayStepName", source = "stepName")
+    @Mapping(target = "displayStepDesc", source = "stepDesc")
+    @Mapping(target = "installTypeValue", source = "installType")
+    @Mapping(target = "installTypeText", source = "installType", qualifiedByName = "getInstallTypeDisplayText")
+    @Mapping(target = "isValid", constant = "true")
+    @Mapping(target = "stepOrder", ignore = true)
+    InstallStepVO entityToVo(InstallStepEntity entity);
+
+    @Override
     @Mapping(target = "displayStepName", expression = "java(dto.getDisplayStepName())")
     @Mapping(target = "displayStepDesc", expression = "java(dto.getDisplayStepDesc())")
     @Mapping(target = "installTypeValue", expression = "java(dto.getInstallTypeValue())")
     @Mapping(target = "installTypeText", expression = "java(getInstallTypeDisplayText(dto.getInstallTypeValue()))")
     @Mapping(target = "isValid", expression = "java(dto.isValid())")
-    @Mapping(target = "stepOrder", constant = "null")
+    @Mapping(target = "stepOrder", ignore = true)
     InstallStepVO dtoToVo(InstallStepDTO dto);
 
     /**
      * 获取安装类型显示文本
      */
+    @Named("getInstallTypeDisplayText")
     default String getInstallTypeDisplayText(Integer installTypeValue) {
         if (installTypeValue == null) {
             return "未知类型";

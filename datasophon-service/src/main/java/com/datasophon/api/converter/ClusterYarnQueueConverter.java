@@ -62,6 +62,12 @@ public interface ClusterYarnQueueConverter
     @Mapping(target = "createTimeFormatted", expression = "java(com.datasophon.common.utils.FormatterUtils.formatDateTime(dto.createTime()))")
     ClusterYarnQueueVO dtoToVo(ClusterYarnQueueDTO dto);
 
+    @Override
+    java.util.List<ClusterYarnQueueVO> entityListToVoList(java.util.List<ClusterYarnQueue> entityList);
+
+    @Override
+    java.util.List<ClusterYarnQueueVO> dtoListToVoList(java.util.List<ClusterYarnQueueDTO> dtoList);
+
     /**
      * 格式化最小资源
      */
