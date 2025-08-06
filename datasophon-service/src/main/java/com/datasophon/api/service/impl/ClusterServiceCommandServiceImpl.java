@@ -28,7 +28,9 @@ import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
+
 import java.util.UUID;
+
 import com.datasophon.api.master.DAGBuildActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
@@ -51,6 +53,10 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.entity.FrameServiceRoleEntity;
+import com.datasophon.common.dto.FrameServiceRoleDTO;
+import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandMapper;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
@@ -103,6 +109,11 @@ public class ClusterServiceCommandServiceImpl
     @Autowired
     private FrameServiceService frameServiceService;
 
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
+
+    @Autowired
+    private FrameServiceRoleConverter frameServiceRoleConverter;
 
 
     @Autowired
@@ -149,45 +160,54 @@ public class ClusterServiceCommandServiceImpl
                 continue;
             }
 
-            // 这里需要修改frameServiceRoleService接口，使其不返回Result
-            // 暂时跳过处理，或抛出异常
-            throw new RuntimeException("frameServiceRoleService需要重构，不应返回Result");
+            // 获取服务角色列表
+            HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
+            List<FrameServiceRoleDTO> serviceRoleDTOs = frameServiceRoleService.getAllServiceRoleList(frameServiceDTO.id());
+            List<FrameServiceRoleEntity> serviceRoleList = serviceRoleDTOs.stream()
+                    .map(dto -> frameServiceRoleConverter.dtoToEntity(dto))
+                    .toList();
+            for (FrameServiceRoleEntity serviceRole : serviceRoleList) {
+                if (Objects.nonNull(serviceRoleHostMap)
+                        && serviceRoleHostMap.containsKey(serviceRole.getServiceRoleName())) {
+                    List<String> hosts =
+                            serviceRoleHostMap.get(serviceRole.getServiceRoleName());
+                    for (String hostname : hosts) {
+                        if (alreadyExistsServiceRole(serviceRole.getServiceRoleName(), hostname,
+                                clusterId)) {
+                        } else {
+                            ClusterServiceCommandHostEntity commandHost;
+                            if (map.containsKey(hostname)) {
+                                commandHost = map.get(hostname);
+                            } else {
+                                commandHost = generateCommandHostEntity(commandId, hostname);
+                                commandHostList.add(commandHost);
+                                map.put(hostname, commandHost);
+                            }
+                            // 4、生成主机操作指令
+                            ClusterServiceCommandHostCommandEntity hostCommand = generateCommandHostCommandEntity(
+                                    commandType, commandId,
+                                    serviceRole.getServiceRoleName(), serviceRole.getServiceRoleType(),
+                                    commandHost);
+                            hostCommandList.add(hostCommand);
+                        }
+                    }
+                }
+            }
 
-            /*
-             * // 以下代码被注释掉，因为frameServiceRoleService接口需要重构
-             * HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
-             * List<FrameServiceRoleEntity> serviceRoleList = null; // 这里需要从重构后的Service获取
-             * for (FrameServiceRoleEntity serviceRole : serviceRoleList) {
-             * if (Objects.nonNull(serviceRoleHostMap)
-             * && serviceRoleHostMap.containsKey(serviceRole.getServiceRoleName())) {
-             * List<String> hosts =
-             * serviceRoleHostMap.get(serviceRole.getServiceRoleName());
-             * for (String hostname : hosts) {
-             * if (alreadyExistsServiceRole(serviceRole.getServiceRoleName(), hostname,
-             * clusterId)) {
-             * } else {
-             * ClusterServiceCommandHostEntity commandHost;
-             * if (map.containsKey(hostname)) {
-             * commandHost = map.get(hostname);
-             * } else {
-             * commandHost = ProcessUtils.generateCommandHostEntity(commandId, hostname);
-             * commandHostList.add(commandHost);
-             * map.put(hostname, commandHost);
-             * }
-             * // 4、生成主机操作指令
-             * ClusterServiceCommandHostCommandEntity hostCommand = ProcessUtils
-             * .generateCommandHostCommandEntity(commandType, commandId,
-             * serviceRole.getServiceRoleName(), serviceRole.getServiceRoleType(),
-             * commandHost);
-             * hostCommandList.add(hostCommand);
-             * }
-             * }
-             * }
-             * }
-             */
         }
-        logger.warn("No service role selected");
-        throw new RuntimeException(Status.NO_SERVICE_ROLE_SELECTED.getMsg());
+
+        // 检查是否有命令主机
+        if (commandHostList.isEmpty()) {
+            logger.warn("No service role selected");
+            throw new RuntimeException(Status.NO_SERVICE_ROLE_SELECTED.getMsg());
+        }
+
+        // 保存命令数据
+        commandService.saveBatch(list);
+        commandHostService.saveBatch(commandHostList);
+        hostCommandService.saveBatch(hostCommandList);
+
+        return String.join(",", commandIds);
     }
 
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
@@ -199,7 +219,7 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Integer clusterId, Integer page,
-            Integer pageSize) {
+                                                                      Integer pageSize) {
         // 使用分页对象
         Page<ClusterServiceCommandEntity> flexPage = new Page<>(
                 page, pageSize);
@@ -394,11 +414,10 @@ public class ClusterServiceCommandServiceImpl
      * 1、生成指令
      * 2、生成主机指令
      * 3、生产主机上操作指令
-     *
      */
     @Override
     public String generateServiceCommand(Integer clusterId, CommandType commandType,
-            List<String> serviceInstanceIds) {
+                                         List<String> serviceInstanceIds) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
@@ -430,7 +449,7 @@ public class ClusterServiceCommandServiceImpl
                     commandHost = generateCommandHostEntity(commandId, roleInstance.getHostname());
                     commandHostList.add(commandHost);
                 }
-                                        ClusterServiceCommandHostCommandEntity hostCommand = generateCommandHostCommandEntity(
+                ClusterServiceCommandHostCommandEntity hostCommand = generateCommandHostCommandEntity(
                         commandType, commandId,
                         roleInstance.getServiceRoleName(), roleInstance.getRoleType(), commandHost);
                 hostCommandList.add(hostCommand);
@@ -452,7 +471,7 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public String generateServiceRoleCommands(Integer clusterId, CommandType commandType,
-            Map<Integer, List<String>> instanceIdMap) {
+                                              Map<Integer, List<String>> instanceIdMap) {
         String result = null;
         for (Map.Entry<Integer, List<String>> entry : instanceIdMap.entrySet()) {
             result = generateServiceRoleCommand(clusterId, commandType, entry.getKey(), entry.getValue(), null);
@@ -462,8 +481,8 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public String generateServiceRoleCommand(Integer clusterId, CommandType commandType,
-            Integer serviceInstanceId,
-            List<String> serviceRoleInstanceIds, RollingRestartInfo rollingRestartInfo) {
+                                             Integer serviceInstanceId,
+                                             List<String> serviceRoleInstanceIds, RollingRestartInfo rollingRestartInfo) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
@@ -490,7 +509,7 @@ public class ClusterServiceCommandServiceImpl
                 commandHost = generateCommandHostEntity(commandId, roleInstance.getHostname());
                 commandHostList.add(commandHost);
             }
-                                    ClusterServiceCommandHostCommandEntity hostCommand = generateCommandHostCommandEntity(
+            ClusterServiceCommandHostCommandEntity hostCommand = generateCommandHostCommandEntity(
                     commandType, commandId, roleInstance.getServiceRoleName(), roleInstance.getRoleType(), commandHost);
             hostCommandList.add(hostCommand);
             map.put(roleInstance.getHostname(), commandHost);
@@ -674,7 +693,7 @@ public class ClusterServiceCommandServiceImpl
             String serviceRoleName,
             com.datasophon.dao.enums.RoleType roleType,
             ClusterServiceCommandHostEntity commandHost) {
-        
+
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
         hostCommand.setCommandHostId(commandHost.getCommandHostId());
         hostCommand.setCommandName(commandName);
