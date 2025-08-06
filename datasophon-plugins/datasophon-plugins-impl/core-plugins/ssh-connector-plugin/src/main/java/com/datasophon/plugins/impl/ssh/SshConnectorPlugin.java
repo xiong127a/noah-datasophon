@@ -6,7 +6,6 @@ import com.datasophon.plugins.api.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.session.ClientSession;
 import org.pf4j.Extension;
-import org.pf4j.Plugin;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author DataSophon Team
  */
 @Slf4j
-@Extension
 public class SshConnectorPlugin implements HostCheckerPlugin {
     
     private static final String PLUGIN_ID = "ssh-connector";
@@ -44,7 +42,6 @@ public class SshConnectorPlugin implements HostCheckerPlugin {
             try {
                 log.info("执行SSH连接池检查，主机: {}", context.getHostInfo().getIp());
                 
-                String hostKey = generateHostKey(context.getHostInfo());
                 HighPerformanceSshPool pool = getOrCreatePool(context.getHostInfo());
                 
                 // 测试连接池
@@ -148,7 +145,22 @@ public class SshConnectorPlugin implements HostCheckerPlugin {
     public SshPoolStatistics getPoolStatistics(HostCheckContext context) {
         String hostKey = generateHostKey(context.getHostInfo());
         HighPerformanceSshPool pool = connectionPools.get(hostKey);
-        return pool != null ? pool.getStatistics() : new SshPoolStatistics();
+        return pool != null ? pool.getStatistics() : SshPoolStatistics.builder()
+                .hostIp(context.getHostInfo().getIp())
+                .maxTotal(0)
+                .maxIdle(0)
+                .minIdle(0)
+                .activeCount(0)
+                .idleCount(0)
+                .totalCount(0L)
+                .borrowCount(0L)
+                .returnCount(0L)
+                .createCount(0L)
+                .destroyCount(0L)
+                .hitCount(0L)
+                .missCount(0L)
+                .hitRate(0.0)
+                .build();
     }
     
     /**
