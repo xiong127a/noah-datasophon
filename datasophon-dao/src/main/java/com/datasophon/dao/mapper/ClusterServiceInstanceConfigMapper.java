@@ -19,17 +19,21 @@ package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.mybatisflex.core.BaseMapper;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryChain;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
 import static com.datasophon.dao.entity.table.ClusterServiceInstanceConfigEntityTableDef.CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY;
 
 /**
- * 集群服务角色实例配置表
+ * 集群服务实例配置Mapper
+ * 按照架构重构规范，复杂SQL逻辑在DAO层处理
+ * 使用MyBatis-Flex QueryChain Lambda写法
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-01
+ * @date 2025-08-06
  */
 @Mapper
 public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterServiceInstanceConfigEntity> {
@@ -42,5 +46,27 @@ public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterSe
                 .where(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.SERVICE_ID.eq(serviceId))
                 .orderBy(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.CONFIG_VERSION.desc())
                 .limit(1));
+    }
+    
+    /**
+     * 分页查询服务实例配置列表
+     * 支持按集群ID和服务ID过滤
+     */
+    default Page<ClusterServiceInstanceConfigEntity> selectConfigPageByConditions(
+            Integer clusterId, Integer serviceId, Integer page, Integer pageSize) {
+        var queryChain = QueryChain.of(ClusterServiceInstanceConfigEntity.class)
+                .from(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY);
+        
+        // 条件查询
+        if (clusterId != null) {
+            queryChain.where(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.CLUSTER_ID.eq(clusterId));
+        }
+        if (serviceId != null) {
+            queryChain.where(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.SERVICE_ID.eq(serviceId));
+        }
+        
+        // 分页查询，按更新时间降序
+        return queryChain.orderBy(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.UPDATE_TIME.desc())
+                .page(Page.of(page, pageSize));
     }
 }

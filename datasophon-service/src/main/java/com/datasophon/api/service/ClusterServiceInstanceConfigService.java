@@ -17,26 +17,91 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+import com.datasophon.common.dto.ClusterServiceInstanceConfigDTO;
+import com.datasophon.common.dto.ConfigVersionDTO;
+import com.datasophon.common.dto.ServiceInstanceConfigResultDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
+import com.mybatisflex.core.service.IService;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * 集群服务角色实例配置表
+ * 集群服务实例配置服务接口
+ * 继承IService<ClusterServiceInstanceConfigEntity>，提供标准CRUD操作
+ * 按照架构重构规范，Service层返回DTO，不返回Result
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-01
+ * @date 2025-08-06
  */
 public interface ClusterServiceInstanceConfigService extends IService<ClusterServiceInstanceConfigEntity> {
 
-    Map<String, Object> getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,
-            Integer page,
-            Integer pageSize);
+    /**
+     * 获取服务实例配置
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @param version           配置版本
+     * @param roleGroupId       角色组ID
+     * @param page             页码
+     * @param pageSize         每页大小
+     * @return 服务实例配置结果DTO
+     */
+    ServiceInstanceConfigResultDTO getServiceInstanceConfig(
+            Integer serviceInstanceId, Integer version, Integer roleGroupId,
+            Integer page, Integer pageSize);
 
-    ClusterServiceInstanceConfigEntity getServiceConfigByServiceId(Integer id);
+    /**
+     * 根据服务ID获取服务配置
+     * 
+     * @param serviceId 服务ID
+     * @return 服务实例配置DTO
+     */
+    ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Integer serviceId);
 
-    List<Map<String, Object>> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId);
+    /**
+     * 获取配置版本列表
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @param roleGroupId       角色组ID
+     * @return 配置版本DTO列表
+     */
+    List<ConfigVersionDTO> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId);
+    
+    /**
+     * 创建服务实例配置
+     * 
+     * @param configDTO 配置DTO
+     * @return 创建的配置DTO
+     */
+    ClusterServiceInstanceConfigDTO createServiceInstanceConfig(ClusterServiceInstanceConfigDTO configDTO);
+    
+    /**
+     * 更新服务实例配置
+     * 
+     * @param configDTO 配置DTO
+     * @return 更新的配置DTO
+     */
+    ClusterServiceInstanceConfigDTO updateServiceInstanceConfig(ClusterServiceInstanceConfigDTO configDTO);
+    
+    /**
+     * 根据ID获取服务实例配置
+     * 
+     * @param id 配置ID
+     * @return 配置DTO
+     * @throws com.datasophon.common.exception.BusinessException 配置不存在
+     */
+    ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Integer id);
+    
+    /**
+     * 分页查询服务实例配置列表
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID（可选）
+     * @param page      页码
+     * @param pageSize  每页大小
+     * @return 分页结果
+     */
+    PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
+            Integer clusterId, Integer serviceId, Integer page, Integer pageSize);
 }

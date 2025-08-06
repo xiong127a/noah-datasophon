@@ -19,43 +19,51 @@ package com.datasophon.api.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
+import com.datasophon.api.converter.ClusterServiceInstanceConfigConverter;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.api.utils.ConfigGroupUtils;
-import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.dto.ClusterServiceInstanceConfigDTO;
+
+import com.datasophon.common.dto.ConfigVersionDTO;
+import com.datasophon.common.dto.ServiceInstanceConfigResultDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+
 import com.datasophon.dao.entity.ConfigVersionInfoEntity;
 import com.datasophon.dao.mapper.ClusterServiceInstanceConfigMapper;
+
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+
+
 
 /**
  * 集群服务实例配置服务实现
- * 按照架构重构规范，迁移QueryChain到DAO层，移除Result返回类型
- *
+ * 继承ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>，获得标准CRUD能力
+ * 按照架构重构规范，ServiceImpl返回DTO，不返回Result，使用JDK21现代特性
+ * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-01
+ * @date 2025-08-06
  */
+@Slf4j
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
                 extends ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>
                 implements ClusterServiceInstanceConfigService {
 
-        private static final Logger logger = LoggerFactory.getLogger(ClusterServiceInstanceConfigServiceImpl.class);
+        @Autowired
+        private ClusterServiceInstanceConfigConverter configConverter;
 
         @Autowired
         private ClusterServiceRoleGroupConfigService roleGroupConfigService;
@@ -64,87 +72,143 @@ public class ClusterServiceInstanceConfigServiceImpl
         private ConfigVersionInfoService configVersionInfoService;
 
         @Override
-        public Map<String, Object> getServiceInstanceConfig(Integer serviceInstanceId, Integer version,
-                        Integer roleGroupId,
-                        Integer page, Integer pageSize) {
-                ClusterServiceRoleGroupConfigDTO roleGroupConfigDTO = roleGroupConfigService
+        public ServiceInstanceConfigResultDTO getServiceInstanceConfig(Integer serviceInstanceId, Integer version,
+                        Integer roleGroupId, Integer page, Integer pageSize) {
+                log.debug("获取服务实例配置: serviceInstanceId={}, version={}, roleGroupId={}", 
+                         serviceInstanceId, version, roleGroupId);
+                
+                var roleGroupConfigDTO = roleGroupConfigService
                                 .getConfigByRoleGroupIdAndVersion(roleGroupId, version);
+                
                 if (Objects.nonNull(roleGroupConfigDTO)) {
-                        List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfigDTO.configJson(),
-                                        new TypeReference<List<ServiceConfig>>() {
-                                        });
+                        var serviceConfigs = JSON.parseObject(roleGroupConfigDTO.configJson(),
+                                        new TypeReference<List<ServiceConfig>>() {});
 
                         // 设置服务名称，用于排序
-                        String serviceName = roleGroupConfigDTO.serviceName();
+                        var serviceName = roleGroupConfigDTO.serviceName();
                         serviceConfigs.forEach(config -> config.setServiceName(serviceName));
 
-                        // 使用服务名称进行分组排序
-                        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils
+                        // 使用服务名称进行分组排序 - JDK21特性
+                        var roleToConfigMap = ConfigGroupUtils
                                         .groupByConfigTargetRoleOrCommon(serviceConfigs);
 
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("data", roleToConfigMap);
-                        return result;
+                        return ServiceInstanceConfigResultDTO.create(roleToConfigMap);
                 }
-                return new HashMap<>();
+                
+                return ServiceInstanceConfigResultDTO.empty();
         }
 
         @Override
-        public ClusterServiceInstanceConfigEntity getServiceConfigByServiceId(Integer id) {
-                return getMapper().selectLatestConfigByServiceId(id);
+        public ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Integer serviceId) {
+                log.debug("根据服务ID获取服务配置: {}", serviceId);
+                
+                var configEntity = getMapper().selectLatestConfigByServiceId(serviceId);
+                return configEntity != null ? configConverter.entityToDto(configEntity) : null;
         }
 
         @Override
-        public List<Map<String, Object>> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
+        public List<ConfigVersionDTO> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
+                log.debug("获取配置版本列表: serviceInstanceId={}, roleGroupId={}", serviceInstanceId, roleGroupId);
+                
                 // 获取角色组的所有配置版本
-                List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
-                                .getConfigVersionsByRoleGroupId(roleGroupId);
+                var configList = roleGroupConfigService.getConfigVersionsByRoleGroupId(roleGroupId);
 
-                // 如果没有配置版本，直接返回空列表
-                if (list == null || list.isEmpty()) {
-                        return new ArrayList<>();
+                // 如果没有配置版本，直接返回空列表 - JDK21特性
+                if (configList == null || configList.isEmpty()) {
+                        return List.of();
                 }
-
-                // JDK21现代特性：使用stream().toList()直接转换
 
                 // 获取配置版本详情信息
-                List<ConfigVersionInfoEntity> versionInfoList = configVersionInfoService
-                                .getVersionInfoList("ROLE_GROUP", roleGroupId);
+                var versionInfoList = configVersionInfoService.getVersionInfoList("ROLE_GROUP", roleGroupId);
 
-                // 创建版本详情Map (版本号 -> 版本详情)
-                Map<Integer, ConfigVersionInfoEntity> versionInfoMap = new HashMap<>();
-                if (versionInfoList != null && !versionInfoList.isEmpty()) {
-                        versionInfoMap = versionInfoList.stream()
-                                        .collect(Collectors.toMap(
-                                                        ConfigVersionInfoEntity::getVersion,
-                                                        versionInfo -> versionInfo,
-                                                        (v1, v2) -> v1));
+                // 创建版本详情Map (版本号 -> 版本详情) - JDK21特性
+                var versionInfoMap = versionInfoList != null && !versionInfoList.isEmpty() ?
+                        versionInfoList.stream()
+                                .collect(java.util.stream.Collectors.toMap(
+                                        ConfigVersionInfoEntity::getVersion,
+                                        versionInfo -> versionInfo,
+                                        (v1, v2) -> v1)) : Map.<Integer, ConfigVersionInfoEntity>of();
+
+                // 构建返回DTO列表 - 使用JDK21特性
+                return configList.stream()
+                        .map(config -> {
+                                var version = config.getConfigVersion();
+                                var versionInfo = versionInfoMap.get(version);
+                                
+                                return new ConfigVersionDTO(
+                                        version,
+                                        versionInfo != null ? versionInfo.getDescription() : null,
+                                        versionInfo != null ? versionInfo.getEditor() : null,
+                                        versionInfo != null && versionInfo.getEditTime() != null ? 
+                                                LocalDateTime.ofInstant(versionInfo.getEditTime().toInstant(), 
+                                                        java.time.ZoneId.systemDefault()) : null,
+                                        versionInfo != null && versionInfo.getIsCurrent() != null ? 
+                                                versionInfo.getIsCurrent() : false
+                                );
+                        })
+                        .toList(); // JDK21特性
+        }
+        
+        @Override
+        public ClusterServiceInstanceConfigDTO createServiceInstanceConfig(ClusterServiceInstanceConfigDTO configDTO) {
+                log.debug("创建服务实例配置: serviceId={}", configDTO.serviceId());
+                
+                // DTO转Entity
+                var configEntity = configConverter.dtoToEntity(configDTO);
+                
+                // 保存到数据库
+                save(configEntity);
+                
+                // Entity转DTO返回
+                return configConverter.entityToDto(configEntity);
+        }
+        
+        @Override
+        public ClusterServiceInstanceConfigDTO updateServiceInstanceConfig(ClusterServiceInstanceConfigDTO configDTO) {
+                log.debug("更新服务实例配置: {}", configDTO.id());
+                
+                // 检查配置是否存在
+                var existingEntity = getById(configDTO.id());
+                if (existingEntity == null) {
+                        throw new com.datasophon.common.exception.BusinessException("服务实例配置不存在: " + configDTO.id());
                 }
-
-                // 构建返回对象，将版本号和版本详情组合在一起
-                List<Map<String, Object>> versionDetailsList = new ArrayList<>();
-                for (ClusterServiceRoleGroupConfig config : list) {
-                        Map<String, Object> versionDetail = new HashMap<>();
-                        Integer version = config.getConfigVersion();
-                        versionDetail.put("version", version);
-
-                        // 添加版本详情信息（如果存在）
-                        ConfigVersionInfoEntity versionInfo = versionInfoMap.get(version);
-                        if (versionInfo != null) {
-                                versionDetail.put("description", versionInfo.getDescription());
-                                versionDetail.put("editor", versionInfo.getEditor());
-                                versionDetail.put("editTime", versionInfo.getEditTime());
-                                versionDetail.put("isCurrent", versionInfo.getIsCurrent());
-                        } else {
-                                versionDetail.put("description", null);
-                                versionDetail.put("editor", null);
-                                versionDetail.put("editTime", null);
-                                versionDetail.put("isCurrent", false);
-                        }
-
-                        versionDetailsList.add(versionDetail);
+                
+                // DTO转Entity
+                var configEntity = configConverter.dtoToEntity(configDTO);
+                
+                // 更新数据库
+                updateById(configEntity);
+                
+                // Entity转DTO返回
+                return configConverter.entityToDto(configEntity);
+        }
+        
+        @Override
+        public ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Integer id) {
+                log.debug("根据ID获取服务实例配置: {}", id);
+                
+                var configEntity = getById(id);
+                if (configEntity == null) {
+                        throw new com.datasophon.common.exception.BusinessException("服务实例配置不存在: " + id);
                 }
-
-                return versionDetailsList;
+                
+                return configConverter.entityToDto(configEntity);
+        }
+        
+        @Override
+        public PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
+                        Integer clusterId, Integer serviceId, Integer page, Integer pageSize) {
+                log.debug("分页查询服务实例配置列表: clusterId={}, serviceId={}, page={}, pageSize={}", 
+                         clusterId, serviceId, page, pageSize);
+                
+                // 调用DAO层方法，SQL逻辑在Mapper中处理
+                var pageResult = getMapper().selectConfigPageByConditions(clusterId, serviceId, page, pageSize);
+                
+                // Entity列表转DTO列表 - JDK21特性
+                var dtoList = pageResult.getRecords().stream()
+                        .map(configConverter::entityToDto)
+                        .toList();
+                
+                return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
         }
 }
