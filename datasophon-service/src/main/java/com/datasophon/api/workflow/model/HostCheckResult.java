@@ -1,7 +1,7 @@
 package com.datasophon.api.workflow.model;
 
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.model.CheckResult;
-import com.datasophon.plugins.api.model.OsInfo;
 import com.datasophon.common.model.HostInfo;
 import lombok.Builder;
 import lombok.Data;
@@ -116,7 +116,7 @@ public class HostCheckResult {
      */
     public boolean hasCriticalIssues() {
         return checkResults.stream()
-                .anyMatch(result -> result.isCritical());
+                .anyMatch(CheckResult::isCritical);
     }
     
     /**

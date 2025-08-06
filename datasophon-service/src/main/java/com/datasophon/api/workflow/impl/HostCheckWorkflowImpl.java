@@ -3,10 +3,10 @@ package com.datasophon.api.workflow.impl;
 import com.datasophon.api.workflow.HostCheckWorkflow;
 import com.datasophon.api.workflow.activity.HostCheckActivities;
 import com.datasophon.api.workflow.model.*;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.CheckConfiguration;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.api.model.OsInfo;
 import com.datasophon.common.model.HostInfo;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -18,9 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -34,8 +32,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     // 工作流状态
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
     private boolean isPaused = false;
-    private boolean isStopped = false;
-    
+
     // 进度跟踪
     private CheckProgress progress = CheckProgress.builder()
             .currentStatus(WorkflowStatus.PENDING)
@@ -145,25 +142,14 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
         LocalDateTime startTime = LocalDateTime.now();
         
         try {
-            List<HostCheckResult> hostResults = new ArrayList<>();
-            
-            switch (request.getBatchMode()) {
-                case ALL_PARALLEL:
-                    hostResults = executeAllParallel(request);
-                    break;
-                case BATCH_PARALLEL:
-                    hostResults = executeBatchParallel(request);
-                    break;
-                case SEQUENTIAL:
-                    hostResults = executeSequential(request);
-                    break;
-                case ROLLING:
-                    hostResults = executeRolling(request);
-                    break;
-                default:
-                    hostResults = executeAllParallel(request);
-            }
-            
+            List<HostCheckResult> hostResults = switch (request.getBatchMode()) {
+                case ALL_PARALLEL -> executeAllParallel(request);
+                case BATCH_PARALLEL -> executeBatchParallel(request);
+                case SEQUENTIAL -> executeSequential(request);
+                case ROLLING -> executeRolling(request);
+                default -> executeAllParallel(request);
+            };
+
             // 构建批量结果
             BatchCheckResult result = buildBatchCheckResult(request, hostResults, startTime);
             
@@ -208,7 +194,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     @Override
     public void stopCheck() {
         log.info("停止检查工作流");
-        isStopped = true;
+        boolean isStopped = true;
         currentStatus = WorkflowStatus.CANCELLED;
         progress.setCurrentStatus(WorkflowStatus.CANCELLED);
     }
@@ -255,23 +241,16 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
                         .concurrency(request.getConcurrency())
                         .build())
                 .build();
-        
-        switch (request.getStrategy()) {
-            case SERIAL:
-                return executeSerial(pluginIds, context);
-            case PARALLEL:
-                return executeParallel(pluginIds, context);
-            case PRIORITY_BASED:
-                return executePriorityBased(pluginIds, context);
-            case PIPELINE:
-                return executePipeline(pluginIds, context);
-            case FAST_CHECK:
-                return executeFastCheck(pluginIds, context);
-            case COMPREHENSIVE_CHECK:
-                return executeComprehensive(pluginIds, context);
-            default:
-                return executeParallel(pluginIds, context);
-        }
+
+        return switch (request.getStrategy()) {
+            case SERIAL -> executeSerial(pluginIds, context);
+            case PARALLEL -> executeParallel(pluginIds, context);
+            case PRIORITY_BASED -> executePriorityBased(pluginIds, context);
+            case PIPELINE -> executePipeline(pluginIds, context);
+            case FAST_CHECK -> executeFastCheck(pluginIds, context);
+            case COMPREHENSIVE_CHECK -> executeComprehensive(pluginIds, context);
+            default -> executeParallel(pluginIds, context);
+        };
     }
     
     /**
@@ -290,7 +269,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
         
         List<Promise<CheckResult>> promises = pluginIds.stream()
                 .map(pluginId -> Async.function(activities::executePlugin, pluginId, context))
-                .collect(Collectors.toList());
+                .toList();
         
         return promises.stream()
                 .map(Promise::get)
@@ -371,7 +350,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
                     
                     return Async.function(this::executeHostCheck, singleRequest);
                 })
-                .collect(Collectors.toList());
+                .toList();
         
         return promises.stream()
                 .map(Promise::get)
@@ -404,11 +383,11 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
                         
                         return Async.function(this::executeHostCheck, singleRequest);
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             
             List<HostCheckResult> batchResults = promises.stream()
                     .map(Promise::get)
-                    .collect(Collectors.toList());
+                    .toList();
             
             allResults.addAll(batchResults);
         }

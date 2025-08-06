@@ -1,8 +1,8 @@
 package com.datasophon.api.workflow.activity;
 
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.api.model.OsInfo;
 import com.datasophon.common.model.HostInfo;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
