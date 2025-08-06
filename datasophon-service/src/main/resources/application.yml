@@ -1,0 +1,66 @@
+# DataSophon主配置文件
+spring:
+  application:
+    name: datasophon-service
+  profiles:
+    active: temporal
+    include: temporal
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /datasophon
+
+# 数据库配置
+datasource:
+  url: jdbc:mysql://localhost:3306/datasophon?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+  username: datasophon
+  password: datasophon123
+  driver-class-name: com.mysql.cj.jdbc.Driver
+
+# 插件配置
+datasophon:
+  plugins:
+    # 插件目录
+    directory: ${user.dir}/plugins
+    
+    # 插件加载配置
+    loading:
+      enabled: true
+      lazy: true
+      hot-reload: true
+      
+    # SSH连接池配置
+    ssh-connection-pool:
+      # 全局默认配置
+      default:
+        max-total: 10
+        max-idle: 5
+        min-idle: 2
+        max-wait-millis: 30000
+        test-on-borrow: true
+        test-on-return: true
+        test-while-idle: true
+        time-between-eviction-runs-millis: 30000
+        min-evictable-idle-time-millis: 300000
+        
+      # 主机特定配置（可选）
+      hosts:
+        "192.168.1.100":
+          max-total: 20
+          max-idle: 10
+        "192.168.1.101":
+          max-total: 15
+          max-idle: 8
+
+# 日志配置
+logging:
+  level:
+    com.datasophon: INFO
+    com.datasophon.plugins: DEBUG
+    org.apache.commons.pool2: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

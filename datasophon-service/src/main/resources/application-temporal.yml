@@ -1,0 +1,90 @@
+# Temporal工作流配置
+datasophon:
+  temporal:
+    # Temporal服务配置
+    server:
+      host: localhost
+      port: 7233
+    
+    # 命名空间
+    namespace: datasophon
+    
+    # 任务队列名称
+    task-queue: host-check-task-queue
+    
+    # Worker配置
+    worker:
+      max-concurrent-workflow-task-pollers: 5
+      max-concurrent-activity-task-pollers: 10
+      
+    # 活动配置
+    activity:
+      default-timeout: 10m
+      heartbeat-timeout: 30s
+      schedule-to-close-timeout: 10m
+      schedule-to-start-timeout: 1m
+      start-to-close-timeout: 10m
+      
+    # 重试配置
+    retry:
+      initial-interval: 1s
+      backoff-coefficient: 2.0
+      maximum-interval: 1m
+      maximum-attempts: 3
+
+  # 插件配置
+  plugins:
+    # 插件目录
+    directory: ${user.dir}/plugins
+    
+    # 插件加载配置
+    loading:
+      enabled: true
+      lazy: true
+      hot-reload: true
+      
+    # 检查器配置
+    checkers:
+      # 全局配置
+      global:
+        timeout: 5m
+        retry-count: 3
+        fail-fast: false
+        
+      # 操作系统特定配置
+      os-specific:
+        linux:
+          enabled-plugins:
+            - cpu-checker
+            - memory-checker
+            - disk-checker
+            - network-checker
+          execution-mode: parallel
+          
+        windows:
+          enabled-plugins:
+            - cpu-checker
+            - memory-checker
+          execution-mode: serial
+
+# Spring Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,temporal,plugins
+        
+  endpoint:
+    health:
+      show-details: always
+      
+  health:
+    temporal:
+      enabled: true
+      
+# 日志配置
+logging:
+  level:
+    com.datasophon.api.workflow: DEBUG
+    com.datasophon.plugins: DEBUG
+    io.temporal: INFO
