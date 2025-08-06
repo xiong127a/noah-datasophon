@@ -52,7 +52,7 @@ import java.util.Map;
 public class HostInstallController {
 
     private final InstallService installService;
-    private final HostCheckService hostCheckService;
+    private HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤

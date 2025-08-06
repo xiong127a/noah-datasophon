@@ -6,8 +6,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.session.ClientSession;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -73,7 +71,7 @@ public class SshConnectionPoolManager {
     private ScheduledFuture<?> connectionCleanupTask;
 
     // 检查执行器 - 用于异步执行清理任务
-    @Autowired
+//    @Autowired
     private ExecutorService checkExecutor;
     // 添加连接超时监控
 
@@ -85,14 +83,6 @@ public class SshConnectionPoolManager {
     private static final long MAX_RETRY_WAIT_TIME = TimeUnit.MINUTES.toMillis(10);
     // 基础重试等待时间（5秒）
     private static final long BASE_RETRY_WAIT_TIME = TimeUnit.SECONDS.toMillis(5);
-
-    /**
-     * 默认构造方法
-     */
-    public SshConnectionPoolManager(@Qualifier("checkExecutor") ExecutorService checkExecutor) {
-        // 无参构造函数，依赖通过@Autowired注入
-        this.checkExecutor = checkExecutor;
-    }
 
     @PostConstruct
     public void init() {
