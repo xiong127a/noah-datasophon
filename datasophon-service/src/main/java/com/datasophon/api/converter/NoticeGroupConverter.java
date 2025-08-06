@@ -23,7 +23,6 @@ import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.NoticeGroupVO;
 import com.datasophon.common.vo.UserInfoVO;
 import com.datasophon.dao.entity.NoticeGroupEntity;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
