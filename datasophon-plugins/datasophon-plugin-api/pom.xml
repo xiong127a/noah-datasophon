@@ -28,11 +28,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- SSH客户端 -->
-        <dependency>
-            <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-core</artifactId>
-        </dependency>
         
         <!-- JSON处理 -->
         <dependency>
