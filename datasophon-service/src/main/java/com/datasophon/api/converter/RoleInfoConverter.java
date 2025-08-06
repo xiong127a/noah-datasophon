@@ -58,6 +58,16 @@ public interface RoleInfoConverter extends BaseConverter<RoleInfoEntity, RoleInf
     RoleInfoEntity dtoToEntity(RoleInfoDTO dto);
     
     /**
+     * Entity转VO
+     * 添加格式化时间和管理员角色标识
+     */
+    @Override
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTimeFromDate")
+    @Mapping(target = "isAdminRole", source = ".", qualifiedByName = "checkAdminRoleFromEntity")
+    @Mapping(target = "status", constant = "ACTIVE")
+    RoleInfoVO entityToVo(RoleInfoEntity entity);
+
+    /**
      * DTO转VO
      * 添加格式化时间和管理员角色标识
      */
@@ -95,10 +105,29 @@ public interface RoleInfoConverter extends BaseConverter<RoleInfoEntity, RoleInf
     }
     
     /**
-     * 检查是否为管理员角色
+     * 检查是否为管理员角色（从DTO）
      */
     @Named("checkAdminRole")
     default boolean checkAdminRole(RoleInfoDTO dto) {
         return dto.isAdminRole();
+    }
+    
+    /**
+     * 检查是否为管理员角色（从Entity）
+     */
+    @Named("checkAdminRoleFromEntity")
+    default boolean checkAdminRoleFromEntity(RoleInfoEntity entity) {
+        // 根据角色编码判断是否为管理员角色
+        return entity.getRoleCode() != null && "ADMIN".equals(entity.getRoleCode());
+    }
+    
+    /**
+     * 格式化时间显示（从Date）
+     */
+    @Named("formatDateTimeFromDate")
+    default String formatDateTimeFromDate(Date date) {
+        if (date == null) return null;
+        LocalDateTime dateTime = dateToLocalDateTime(date);
+        return formatDateTime(dateTime);
     }
 }

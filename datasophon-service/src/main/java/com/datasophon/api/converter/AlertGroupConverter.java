@@ -22,6 +22,7 @@ import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.AlertGroupVO;
 import com.datasophon.dao.entity.AlertGroupEntity;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -90,6 +91,7 @@ public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, Ale
      * 更新Entity对象
      */
     @Override
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withAlertQuotaNum"})
     void updateEntityFromDto(AlertGroupDTO dto, AlertGroupEntity entity);
 
     /**

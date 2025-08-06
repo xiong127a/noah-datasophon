@@ -46,6 +46,7 @@ public interface ClusterUserConverter extends BaseConverter<ClusterUser, Cluster
     ClusterUserVO entityToVo(ClusterUser entity);
 
     @Override
+    @Mapping(target = "createTime", ignore = true)
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     ClusterUserVO dtoToVo(ClusterUserDTO dto);
 }
