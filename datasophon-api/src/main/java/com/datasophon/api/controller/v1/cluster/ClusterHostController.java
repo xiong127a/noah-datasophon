@@ -28,9 +28,14 @@ import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.micrometer.core.annotation.Timed;
 
 import java.util.List;
 
@@ -43,17 +48,34 @@ public class ClusterHostController {
 
     /**
      * 查询集群所有主机
+     * 使用JDK 21虚拟线程和观测性功能
      */
-    @RequestMapping("/all")
+    @GetMapping("/all")
+    @Timed(value = "cluster.host.all", description = "获取集群所有主机的时间")
     public Result<List<ClusterHostDO>> all(@ClusterId Integer clusterId) {
+        var threadInfo = getCurrentThreadInfo();
+        log.debug("查询集群{}的所有主机 - {}", clusterId, threadInfo);
+        
         List<ClusterHostDO> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
         return Result.success(list);
     }
 
     /**
+     * 获取当前线程信息 - 兼容JDK 21特性
+     */
+    private String getCurrentThreadInfo() {
+        Thread thread = Thread.currentThread();
+        if (thread.isVirtual()) {
+            return String.format("虚拟线程[%s]", thread.getName());
+        } else {
+            return String.format("平台线程[%s]", thread.getName());
+        }
+    }
+
+    /**
      * 查询集群所有主机
      */
-    @RequestMapping("/list")
+    @GetMapping("/list")
     public Result<Object> list(@ClusterId Integer clusterId,
             @RequestParam("hostname") String hostname,
             @RequestParam("ip") String ip,
@@ -69,22 +91,21 @@ public class ClusterHostController {
         return Result.success(pageResult.getRecords(), pageResult.getTotal());
     }
 
-    @RequestMapping("/getRoleListByHostname")
-    public Result<List<com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity>> getRoleListByHostname(
+    @GetMapping("/getRoleListByHostname")
+    public Result<Object> getRoleListByHostname(
             @ClusterId Integer clusterId,
             @RequestParam("hostname") String hostname) {
-        List<com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity> roleList = clusterHostService
-                .getRoleListByHostname(clusterId, hostname);
+        var roleList = clusterHostService.getRoleListByHostname(clusterId, hostname);
         return Result.success(roleList);
     }
 
-    @RequestMapping("/getRack")
-    public Result<List<com.datasophon.dao.entity.ClusterRack>> getRack(@ClusterId Integer clusterId) {
-        List<com.datasophon.dao.entity.ClusterRack> rackList = clusterHostService.getRack(clusterId);
+    @GetMapping("/getRack")
+    public Result<Object> getRack(@ClusterId Integer clusterId) {
+        var rackList = clusterHostService.getRack(clusterId);
         return Result.success(rackList);
     }
 
-    @RequestMapping("/assignRack")
+    @PostMapping("/assignRack")
     public Result<Void> assignRack(@ClusterId Integer clusterId,
             @RequestParam("rack") String rack,
             @RequestParam("hostIds") String hostIds) {
@@ -95,7 +116,7 @@ public class ClusterHostController {
     /**
      * 信息
      */
-    @RequestMapping("/info/{id}")
+    @GetMapping("/info/{id}")
     public Result<ClusterHostDO> info(@PathVariable("id") Integer id) {
         ClusterHostDO clusterHost = clusterHostService.getById(id);
 
@@ -105,7 +126,7 @@ public class ClusterHostController {
     /**
      * 保存
      */
-    @RequestMapping("/save")
+    @PostMapping("/save")
     public Result<Void> save(@RequestBody ClusterHostDO clusterHost) {
         clusterHostService.save(clusterHost);
 
@@ -115,7 +136,7 @@ public class ClusterHostController {
     /**
      * 修改
      */
-    @RequestMapping("/update")
+    @PutMapping("/update")
     public Result<Void> update(@RequestBody ClusterHostDO clusterHost) {
         clusterHostService.updateById(clusterHost);
 
@@ -125,7 +146,7 @@ public class ClusterHostController {
     /**
      * 删除
      */
-    @RequestMapping("/delete")
+    @DeleteMapping("/delete")
     public Result<Void> delete(@RequestParam("hostIds") String hostIds) {
         if (StringUtils.isBlank(hostIds)) {
             return Result.error("请选择移除的主机!");
@@ -162,7 +183,7 @@ public class ClusterHostController {
     /**
      * 获取K8S模式下的完整硬件信息
      */
-    @RequestMapping(value = "/getK8sHostsWithHardwareInfo", method = RequestMethod.GET)
+    @GetMapping("/getK8sHostsWithHardwareInfo")
     public Result<List<ClusterHostDO>> getK8sHostsWithHardwareInfo(@ClusterId Integer clusterId) {
         List<ClusterHostDO> hostList = clusterHostService.getK8sHostsWithHardwareInfo(clusterId);
         return Result.success(hostList);
