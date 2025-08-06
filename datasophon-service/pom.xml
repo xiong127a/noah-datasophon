@@ -70,6 +70,18 @@
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-sftp</artifactId>
         </dependency>
+        <!-- 插件生态系统依赖 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
         <!-- K8s业务模块：被service层调用，处理K8s相关业务 -->
         <dependency>
             <groupId>com.datasophon</groupId>

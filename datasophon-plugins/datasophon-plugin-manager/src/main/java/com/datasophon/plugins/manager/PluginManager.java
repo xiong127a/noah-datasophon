@@ -158,13 +158,20 @@ public class PluginManager {
             String pluginId = pf4jManager.loadPlugin(path);
             
             if (pluginId != null) {
-                pf4jManager.startPlugin(pluginId);
+                org.pf4j.PluginState startState = pf4jManager.startPlugin(pluginId);
+                boolean started = startState == org.pf4j.PluginState.STARTED;
                 
-                // 重新注册插件
-                registerHostCheckerPlugins();
-                
-                log.info("成功加载插件: {}", pluginId);
-                return true;
+                if (started) {
+                    // 重新注册插件
+                    registerHostCheckerPlugins();
+                    
+                    log.info("成功加载插件: {}", pluginId);
+                    return true;
+                } else {
+                    log.error("启动插件失败: {}, state: {}", pluginId, startState);
+                    pf4jManager.unloadPlugin(pluginId);
+                    return false;
+                }
             } else {
                 log.error("插件加载失败，返回的pluginId为null: {}", pluginPath);
                 return false;
@@ -191,8 +198,13 @@ public class PluginManager {
             }
             
             // 停止并卸载插件
-            boolean stopped = pf4jManager.stopPlugin(pluginId);
-            boolean unloaded = pf4jManager.unloadPlugin(pluginId);
+            org.pf4j.PluginState stopState = pf4jManager.stopPlugin(pluginId);
+            boolean stopped = stopState == org.pf4j.PluginState.STOPPED || stopState == org.pf4j.PluginState.DISABLED;
+            
+            boolean unloaded = false;
+            if (stopped) {
+                unloaded = pf4jManager.unloadPlugin(pluginId);
+            }
             
             if (stopped && unloaded) {
                 pluginStatus.remove(pluginId);
