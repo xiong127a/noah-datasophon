@@ -17,74 +17,161 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
-import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
-import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter;
+import com.datasophon.api.dto.Result;
+import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
+import com.datasophon.common.vo.ClusterServiceRoleInstanceWebuisVO;
+import io.micrometer.core.annotation.Timed;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Arrays;
+import java.util.List;
 
+/**
+ * 集群服务角色实例WebUI控制器
+ * 按照架构重构规范，使用Result<VO>返回，调用Converter转换
+ * 应用JDK21现代特性和Spring Boot 3.5观测性功能
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-06
+ */
+@Slf4j
 @ApiVersion(path = "cluster/webuis")
 public class ClusterServiceRoleInstanceWebuisController {
 
     @Autowired
     private ClusterServiceRoleInstanceWebuisService clusterServiceRoleInstanceWebuisService;
-
+    
+    @Autowired
+    private ClusterServiceRoleInstanceWebuisConverter webuisConverter;
 
     /**
-     * 列表
+     * 根据服务实例ID获取WebUI列表
+     * 使用JDK21虚拟线程和观测性功能
      */
-    @RequestMapping("/getWebUis")
-    public Result getWebUis(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
-
-        return clusterServiceRoleInstanceWebuisService.getWebUis(serviceInstanceId);
+    @GetMapping("/getWebUis")
+    @Timed(value = "webuis.list", description = "获取WebUI列表的时间")
+    public Result<List<ClusterServiceRoleInstanceWebuisVO>> getWebUis(
+            @RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+        
+        var threadInfo = getCurrentThreadInfo();
+        log.debug("获取服务实例WebUI列表: serviceInstanceId={} - {}", serviceInstanceId, threadInfo);
+        
+        // 调用Service获取DTO列表
+        var webuisDTOList = clusterServiceRoleInstanceWebuisService.getWebUis(serviceInstanceId);
+        
+        // DTO转VO列表 - 使用JDK21特性
+        var webuisVOList = webuisDTOList.stream()
+                .map(webuisConverter::dtoToVo)
+                .toList();
+        
+        return Result.success(webuisVOList);
     }
 
     /**
-     * 信息
+     * 根据ID获取WebUI信息
      */
-    @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
-        ClusterServiceRoleInstanceWebuis clusterServiceRoleInstanceWebuis =
-                clusterServiceRoleInstanceWebuisService.getById(id);
-
-        return Result.success().put("clusterServiceRoleInstanceWebuis", clusterServiceRoleInstanceWebuis);
+    @GetMapping("/info/{id}")
+    @Timed(value = "webuis.info", description = "获取WebUI信息的时间")
+    public Result<ClusterServiceRoleInstanceWebuisVO> info(@PathVariable("id") Integer id) {
+        log.debug("获取WebUI信息: {}", id);
+        
+        var webuisDTO = clusterServiceRoleInstanceWebuisService.getWebUIById(id);
+        var webuisVO = webuisConverter.dtoToVo(webuisDTO);
+        
+        return Result.success(webuisVO);
     }
 
     /**
-     * 保存
+     * 创建WebUI
      */
-    @RequestMapping("/save")
-    public Result save(@RequestBody ClusterServiceRoleInstanceWebuis clusterServiceRoleInstanceWebuis) {
-        clusterServiceRoleInstanceWebuisService.save(clusterServiceRoleInstanceWebuis);
-
-        return Result.success();
+    @PostMapping("/save")
+    @Timed(value = "webuis.save", description = "创建WebUI的时间")
+    public Result<ClusterServiceRoleInstanceWebuisVO> save(
+            @RequestBody ClusterServiceRoleInstanceWebuisDTO webuisDTO) {
+        log.debug("创建WebUI: {}", webuisDTO.name());
+        
+        var createdWebUI = clusterServiceRoleInstanceWebuisService.createWebUI(webuisDTO);
+        var webuisVO = webuisConverter.dtoToVo(createdWebUI);
+        
+        return Result.success(webuisVO);
     }
 
     /**
-     * 修改
+     * 更新WebUI
      */
-    @RequestMapping("/update")
-    public Result update(@RequestBody ClusterServiceRoleInstanceWebuis clusterServiceRoleInstanceWebuis) {
-
-        clusterServiceRoleInstanceWebuisService.updateById(clusterServiceRoleInstanceWebuis);
-
-        return Result.success();
+    @PutMapping("/update")
+    @Timed(value = "webuis.update", description = "更新WebUI的时间")
+    public Result<ClusterServiceRoleInstanceWebuisVO> update(
+            @RequestBody ClusterServiceRoleInstanceWebuisDTO webuisDTO) {
+        log.debug("更新WebUI: {}", webuisDTO.id());
+        
+        var updatedWebUI = clusterServiceRoleInstanceWebuisService.updateWebUI(webuisDTO);
+        var webuisVO = webuisConverter.dtoToVo(updatedWebUI);
+        
+        return Result.success(webuisVO);
     }
 
     /**
-     * 删除
+     * 删除WebUI
      */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
-        clusterServiceRoleInstanceWebuisService.removeByIds(Arrays.asList(ids));
-
-        return Result.success();
+    @DeleteMapping("/delete/{id}")
+    @Timed(value = "webuis.delete", description = "删除WebUI的时间")
+    public Result<Object> delete(@PathVariable("id") Integer id) {
+        log.debug("删除WebUI: {}", id);
+        
+        clusterServiceRoleInstanceWebuisService.removeById(id);
+        
+        return Result.success("WebUI删除成功");
     }
 
+    /**
+     * 批量删除WebUI
+     */
+    @DeleteMapping("/delete/batch")
+    @Timed(value = "webuis.delete.batch", description = "批量删除WebUI的时间")
+    public Result<Object> deleteBatch(@RequestBody Integer[] ids) {
+        log.debug("批量删除WebUI: {}", List.of(ids)); // JDK21特性
+        
+        // 使用JDK21 switch表达式处理批量删除
+        var deleteCount = switch (ids.length) {
+            case 0 -> {
+                log.warn("批量删除WebUI：没有提供要删除的WebUI ID");
+                yield 0;
+            }
+            case 1 -> {
+                clusterServiceRoleInstanceWebuisService.removeById(ids[0]);
+                yield 1;
+            }
+            default -> {
+                // 批量删除
+                clusterServiceRoleInstanceWebuisService.removeByIds(List.of(ids)); // JDK21特性
+                yield ids.length;
+            }
+        };
+        
+        return Result.success("成功删除 " + deleteCount + " 个WebUI");
+    }
+    
+    /**
+     * 获取当前线程信息 - 兼容JDK 21特性
+     */
+    private String getCurrentThreadInfo() {
+        var thread = Thread.currentThread();
+        if (thread.isVirtual()) {
+            return String.format("虚拟线程[%s]", thread.getName());
+        } else {
+            return String.format("平台线程[%s]", thread.getName());
+        }
+    }
 }

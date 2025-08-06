@@ -17,39 +17,51 @@
 
 package com.datasophon.api.service.impl;
 
-import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceWebuisMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 集群服务角色实例WebUI服务实现
- * 按照架构重构规范，ServiceImpl返回DTO/Entity，不返回Result
+ * 继承ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>，获得标准CRUD能力
+ * 按照架构重构规范，ServiceImpl返回DTO，不返回Result，使用JDK21现代特性
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-01
+ * @date 2025-08-06
  */
+@Slf4j
 @Service("clusterServiceRoleInstanceWebuisService")
 public class ClusterServiceRoleInstanceWebuisServiceImpl
         extends ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>
         implements ClusterServiceRoleInstanceWebuisService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceWebuisServiceImpl.class);
+    @Autowired
+    private ClusterServiceRoleInstanceWebuisConverter webuisConverter;
 
     private static final String ACTIVE = "(Active)";
 
     private static final String STANDBY = "(Standby)";
 
     @Override
-    public List<ClusterServiceRoleInstanceWebuis> getWebUis(Integer serviceInstanceId) {
-        return getMapper().selectByServiceInstanceId(serviceInstanceId);
+    public List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Integer serviceInstanceId) {
+        log.debug("根据服务实例ID获取WebUI列表: {}", serviceInstanceId);
+        
+        // 调用DAO层方法，获取Entity列表
+        var webuisEntities = getMapper().selectByServiceInstanceId(serviceInstanceId);
+        
+        // Entity列表转DTO列表 - 使用JDK21特性
+        return webuisEntities.stream()
+                .map(webuisConverter::entityToDto)
+                .toList();
     }
 
     @Override
@@ -63,13 +75,17 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleInstanceWebuis getRoleInstanceWebUi(Integer roleInstanceId) {
-        return getMapper().selectByServiceRoleInstanceId(roleInstanceId);
+    public ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Integer roleInstanceId) {
+        log.debug("根据角色实例ID获取WebUI: {}", roleInstanceId);
+        
+        var webuisEntity = getMapper().selectByServiceRoleInstanceId(roleInstanceId);
+        return webuisEntity != null ? webuisConverter.entityToDto(webuisEntity) : null;
     }
 
     @Override
-    public void removeByRoleInsIds(ArrayList<Integer> needRemoveList) {
-        getMapper().deleteByServiceRoleInstanceIds(needRemoveList);
+    public void removeByRoleInsIds(List<Integer> roleInstanceIds) {
+        log.debug("批量删除角色实例WebUI: {}", roleInstanceIds);
+        getMapper().deleteByServiceRoleInstanceIds(new java.util.ArrayList<>(roleInstanceIds));
     }
 
     @Override
@@ -78,8 +94,11 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceWebuis> listWebUisByServiceInstanceId(Integer serviceInstanceId) {
-        return getMapper().selectByServiceInstanceId(serviceInstanceId);
+    public List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Integer serviceInstanceId) {
+        log.debug("根据服务实例ID获取WebUI列表（别名方法）: {}", serviceInstanceId);
+        
+        // 复用getWebUis方法
+        return getWebUis(serviceInstanceId);
     }
 
     private void updateWebUiName(Integer roleInstanceId, String state) {
@@ -115,5 +134,51 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
                 this.updateById(webuis);
             }
         }
+    }
+    
+    @Override
+    public ClusterServiceRoleInstanceWebuisDTO createWebUI(ClusterServiceRoleInstanceWebuisDTO webuisDTO) {
+        log.debug("创建WebUI: {}", webuisDTO.name());
+        
+        // DTO转Entity
+        var webuisEntity = webuisConverter.dtoToEntity(webuisDTO);
+        
+        // 保存到数据库
+        save(webuisEntity);
+        
+        // Entity转DTO返回
+        return webuisConverter.entityToDto(webuisEntity);
+    }
+    
+    @Override
+    public ClusterServiceRoleInstanceWebuisDTO updateWebUI(ClusterServiceRoleInstanceWebuisDTO webuisDTO) {
+        log.debug("更新WebUI: {}", webuisDTO.id());
+        
+        // 检查WebUI是否存在
+        var existingEntity = getById(webuisDTO.id());
+        if (existingEntity == null) {
+            throw new com.datasophon.common.exception.BusinessException("WebUI不存在: " + webuisDTO.id());
+        }
+        
+        // DTO转Entity
+        var webuisEntity = webuisConverter.dtoToEntity(webuisDTO);
+        
+        // 更新数据库
+        updateById(webuisEntity);
+        
+        // Entity转DTO返回
+        return webuisConverter.entityToDto(webuisEntity);
+    }
+    
+    @Override
+    public ClusterServiceRoleInstanceWebuisDTO getWebUIById(Integer id) {
+        log.debug("根据ID获取WebUI: {}", id);
+        
+        var webuisEntity = getById(id);
+        if (webuisEntity == null) {
+            throw new com.datasophon.common.exception.BusinessException("WebUI不存在: " + id);
+        }
+        
+        return webuisConverter.entityToDto(webuisEntity);
     }
 }

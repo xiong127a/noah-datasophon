@@ -17,32 +17,97 @@
 
 package com.datasophon.api.service;
 
-import com.mybatisflex.core.service.IService;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.mybatisflex.core.service.IService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 集群服务角色对应web ui表
+ * 集群服务角色实例WebUI服务接口
+ * 继承IService<ClusterServiceRoleInstanceWebuis>，提供标准CRUD操作
+ * 按照架构重构规范，Service层返回DTO，不返回Result
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-01
+ * @date 2025-08-06
  */
 public interface ClusterServiceRoleInstanceWebuisService extends IService<ClusterServiceRoleInstanceWebuis> {
 
-    List<ClusterServiceRoleInstanceWebuis> getWebUis(Integer serviceInstanceId);
+    /**
+     * 根据服务实例ID获取WebUI列表
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return WebUI DTO列表
+     */
+    List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Integer serviceInstanceId);
 
+    /**
+     * 根据服务实例ID删除WebUI
+     * 
+     * @param serviceInstanceId 服务实例ID
+     */
     void removeByServiceInsId(Integer serviceInstanceId);
 
-    void updateWebUiToActive(Integer id);
+    /**
+     * 更新WebUI状态为活跃
+     * 
+     * @param roleInstanceId 角色实例ID
+     */
+    void updateWebUiToActive(Integer roleInstanceId);
 
-    ClusterServiceRoleInstanceWebuis getRoleInstanceWebUi(Integer roleInstanceId);
+    /**
+     * 根据角色实例ID获取WebUI
+     * 
+     * @param roleInstanceId 角色实例ID
+     * @return WebUI DTO
+     */
+    ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Integer roleInstanceId);
 
-    void removeByRoleInsIds(ArrayList<Integer> needRemoveList);
+    /**
+     * 批量删除角色实例WebUI
+     * 
+     * @param roleInstanceIds 角色实例ID列表
+     */
+    void removeByRoleInsIds(List<Integer> roleInstanceIds);
 
-    void updateWebUiToStandby(Integer id);
+    /**
+     * 更新WebUI状态为待机
+     * 
+     * @param roleInstanceId 角色实例ID
+     */
+    void updateWebUiToStandby(Integer roleInstanceId);
 
-    List<ClusterServiceRoleInstanceWebuis> listWebUisByServiceInstanceId(Integer serviceInstanceId);
+    /**
+     * 根据服务实例ID获取WebUI列表（别名方法）
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return WebUI DTO列表
+     */
+    List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Integer serviceInstanceId);
+    
+    /**
+     * 创建WebUI
+     * 
+     * @param webuisDTO WebUI DTO
+     * @return 创建的WebUI DTO
+     */
+    ClusterServiceRoleInstanceWebuisDTO createWebUI(ClusterServiceRoleInstanceWebuisDTO webuisDTO);
+    
+    /**
+     * 更新WebUI
+     * 
+     * @param webuisDTO WebUI DTO
+     * @return 更新的WebUI DTO
+     */
+    ClusterServiceRoleInstanceWebuisDTO updateWebUI(ClusterServiceRoleInstanceWebuisDTO webuisDTO);
+    
+    /**
+     * 根据ID获取WebUI
+     * 
+     * @param id WebUI ID
+     * @return WebUI DTO
+     * @throws com.datasophon.common.exception.BusinessException WebUI不存在
+     */
+    ClusterServiceRoleInstanceWebuisDTO getWebUIById(Integer id);
 }
