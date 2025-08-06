@@ -26,7 +26,9 @@ import com.datasophon.dao.entity.NoticeGroupEntity;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
@@ -37,17 +39,17 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, NoticeGroupDTO, NoticeGroupVO> {
 
     @Override
     @Mapping(target = "userIds", ignore = true)
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupDTO entityToDto(NoticeGroupEntity entity);
 
     @Override
     @Mapping(target = "userIds", ignore = true)
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupEntity dtoToEntity(NoticeGroupDTO dto);
 
     @Override
@@ -55,7 +57,6 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Mapping(target = "userCount", source = "userIds", qualifiedByName = "calculateUserCountFromIds")
     @Mapping(target = "userCountFormatted", source = "userIds", qualifiedByName = "formatUserCountFromIds")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupVO dtoToVo(NoticeGroupDTO dto);
 
     @Override
@@ -76,8 +77,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
 
     @Override
     @Mapping(target = "userIds", ignore = true)
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
-    void updateEntityFromDto(NoticeGroupDTO dto, NoticeGroupEntity entity);
+    void updateEntityFromDto(NoticeGroupDTO dto, @MappingTarget NoticeGroupEntity entity);
 
     /**
      * 创建包含用户信息的VO
@@ -86,7 +86,6 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Mapping(target = "userCountFormatted", source = "users", qualifiedByName = "formatUserCountFromList")
     @Mapping(target = "userCount", source = "users", qualifiedByName = "calculateUserCount")
     @Mapping(target = "createTimeFormatted", source = "dto.createTime", qualifiedByName = "formatDateTime")
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupVO dtoToVoWithUsers(NoticeGroupDTO dto, List<UserInfoVO> users);
 
     @Named("formatUserCount")
