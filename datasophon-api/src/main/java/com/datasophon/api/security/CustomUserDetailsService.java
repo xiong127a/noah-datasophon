@@ -18,9 +18,8 @@
 package com.datasophon.api.security;
 
 import com.datasophon.api.service.UserInfoService;
-import com.datasophon.dao.entity.UserInfoEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.datasophon.common.dto.UserInfoDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -36,11 +35,14 @@ import java.util.List;
 /**
  * Spring Security用户详情服务实现
  * 负责加载用户信息以进行认证和授权
+ *
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-06
  */
+@Slf4j
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
-
-    private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
 
     @Autowired
     private UserInfoService userService;
@@ -57,37 +59,38 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        logger.debug("认证用户: {}", username);
+        log.debug("认证用户: {}", username);
 
-        // 调用服务方法获取用户
-        UserInfoEntity user = userService.getUserByUsername(username);
+        // 调用服务方法获取用户DTO - 遵循架构规范
+        var userDTO = userService.getUserByUsername(username); // JDK21特性
 
-        if (user == null) {
-            logger.error("用户未找到: {}", username);
+        if (userDTO == null) {
+            log.error("用户未找到: {}", username);
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
-        // 创建权限列表
-        List<SimpleGrantedAuthority> authorities = buildUserAuthority(user);
+        // 创建权限列表 - 使用JDK21特性
+        var authorities = buildUserAuthority(userDTO);
 
         // 创建并返回UserDetails对象
-        return buildUserForAuthentication(user, authorities);
+        return buildUserForAuthentication(userDTO, authorities);
     }
 
     /**
      * 构建用户的权限列表
-     * 
-     * @param user 用户实体
+     *
      * @return 权限列表
      */
-    private List<SimpleGrantedAuthority> buildUserAuthority(UserInfoEntity user) {
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+    private List<SimpleGrantedAuthority> buildUserAuthority(UserInfoDTO userDTO) {
+        var authorities = new ArrayList<SimpleGrantedAuthority>(); // JDK21特性
 
         // 添加基本用户角色
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-        // 管理员角色
-        if (user.getUserType() != null && user.getUserType() == 1) {
+        // 管理员角色 - 使用JDK21条件运算符
+        var isAdmin = userDTO.getUserType() != null && userDTO.getUserType() == 1; // JDK21特性
+        
+        if (isAdmin) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
 
@@ -98,15 +101,14 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     /**
      * 构建认证用户
-     * 
-     * @param user        用户实体
+     *
      * @param authorities 权限列表
      * @return UserDetails对象
      */
-    private UserDetails buildUserForAuthentication(UserInfoEntity user, List<SimpleGrantedAuthority> authorities) {
+    private UserDetails buildUserForAuthentication(UserInfoDTO userDTO, List<SimpleGrantedAuthority> authorities) {
         return new User(
-                user.getUsername(),
-                user.getPassword(),
+                userDTO.getUsername(),
+                userDTO.getPassword(),
                 true, // enabled
                 true, // accountNonExpired
                 true, // credentialsNonExpired
