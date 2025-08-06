@@ -55,6 +55,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Mapping(target = "userCount", source = "userIds", qualifiedByName = "calculateUserCountFromIds")
     @Mapping(target = "userCountFormatted", source = "userIds", qualifiedByName = "formatUserCountFromIds")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupVO dtoToVo(NoticeGroupDTO dto);
 
     @Override
@@ -85,6 +86,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Mapping(target = "userCountFormatted", source = "users", qualifiedByName = "formatUserCountFromList")
     @Mapping(target = "userCount", source = "users", qualifiedByName = "calculateUserCount")
     @Mapping(target = "createTimeFormatted", source = "dto.createTime", qualifiedByName = "formatDateTime")
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupVO dtoToVoWithUsers(NoticeGroupDTO dto, List<UserInfoVO> users);
 
     @Named("formatUserCount")
