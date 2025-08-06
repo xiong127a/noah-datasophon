@@ -23,6 +23,10 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,17 +43,17 @@ public class ClusterServiceRoleInstanceConfigController {
     /**
      * 列表
      */
-    @RequestMapping("/list")
-    public Result list(@RequestParam Map<String, Object> params) {
-
+    @GetMapping("/list")
+    public Result<Object> list(@RequestParam Map<String, Object> params) {
+        // 实现具体的列表查询逻辑
         return Result.success();
     }
 
     /**
      * 信息
      */
-    @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    @GetMapping("/info/{id}")
+    public Result<Object> info(@PathVariable("id") Integer id) {
         ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig =
                 clusterServiceRoleInstanceConfigService.getById(id);
 
@@ -59,8 +63,8 @@ public class ClusterServiceRoleInstanceConfigController {
     /**
      * 保存
      */
-    @RequestMapping("/save")
-    public Result save(@RequestBody ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig) {
+    @PostMapping("/save")
+    public Result<Object> save(@RequestBody ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig) {
         clusterServiceRoleInstanceConfigService.save(clusterServiceRoleInstanceConfig);
 
         return Result.success();
@@ -69,8 +73,8 @@ public class ClusterServiceRoleInstanceConfigController {
     /**
      * 修改
      */
-    @RequestMapping("/update")
-    public Result update(@RequestBody ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig) {
+    @PutMapping("/update")
+    public Result<Object> update(@RequestBody ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig) {
         clusterServiceRoleInstanceConfigService.updateById(clusterServiceRoleInstanceConfig);
 
         return Result.success();
@@ -79,8 +83,8 @@ public class ClusterServiceRoleInstanceConfigController {
     /**
      * 删除
      */
-    @RequestMapping("/delete")
-    public Result delete(@RequestBody Integer[] ids) {
+    @DeleteMapping("/delete")
+    public Result<Object> delete(@RequestBody Integer[] ids) {
         clusterServiceRoleInstanceConfigService.removeByIds(Arrays.asList(ids));
 
         return Result.success();
