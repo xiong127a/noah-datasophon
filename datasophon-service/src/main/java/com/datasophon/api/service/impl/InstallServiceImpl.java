@@ -71,6 +71,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1125,7 +1126,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      *
      * @return SSH会话
      */
-    private ClientSession getOrCreateSession(HostInfo hostInfo) {
+    private ClientSession getOrCreateSession(HostInfo hostInfo) throws IOException {
         // 使用host作为连接池的键
         String ip = hostInfo.getIp();
         // 创建新会话

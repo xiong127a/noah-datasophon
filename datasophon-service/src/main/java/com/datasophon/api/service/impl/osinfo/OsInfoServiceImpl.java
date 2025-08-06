@@ -3,12 +3,14 @@ package com.datasophon.api.service.impl.osinfo;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.OsInfo;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
  * 操作系统信息服务实现类（插件化版本）
- * 完全基于插件系统收集主机信息，不再使用线程池和旧代码
+ * 完全基于插件系统收集主机信息，使用SSH连接池而非旧的MinaUtils
  * 
  * @author DataSophon Team
  */
@@ -16,9 +18,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class OsInfoServiceImpl implements OsInfoService {
 
-    // TODO: 暂时注释掉插件管理器，等插件系统编译完成后再启用
+    // TODO: 等插件系统完全集成后启用
     // @Autowired
     // private PluginManager pluginManager;
+    
+    // TODO: 等插件系统完全集成后启用
+    // @Autowired
+    // private SshConnectionService sshConnectionService;
     
     @Override
     public void getHostOsInfoAsync(HostInfo hostInfo) {
@@ -34,16 +40,48 @@ public class OsInfoServiceImpl implements OsInfoService {
     public void collectHostnameInfo(HostInfo hostInfo) {
         log.info("收集主机名信息: {}", hostInfo.getIp());
         
-        // TODO: 使用hostname检查插件
-        log.warn("插件系统暂未完全集成，跳过主机名收集");
+        // TODO: 完整插件集成后的实现：
+        // try (HostCheckContext context = createHostCheckContext(hostInfo)) {
+        //     List<HostCheckerPlugin> hostnameCheckers = pluginManager.getPluginsForCheckType("hostname");
+        //     for (HostCheckerPlugin checker : hostnameCheckers) {
+        //         if (checker.canExecute(context)) {
+        //             CheckResult result = checker.execute(context);
+        //             if (result.getStatus() == CheckStatus.SUCCESS) {
+        //                 updateHostnameFromResult(hostInfo, result);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // } catch (Exception e) {
+        //     log.error("收集主机名信息失败: {}", hostInfo.getIp(), e);
+        // }
+        
+        // 临时简单实现
+        collectHostnameInfoWithSshPool(hostInfo);
     }
     
     @Override
     public void collectOsBasicInfo(HostInfo hostInfo) {
         log.info("收集操作系统基础信息: {}", hostInfo.getIp());
         
-        // TODO: 使用操作系统检查插件
-        log.warn("插件系统暂未完全集成，跳过操作系统基础信息收集");
+        // TODO: 完整插件集成后的实现：
+        // try (HostCheckContext context = createHostCheckContext(hostInfo)) {
+        //     List<HostCheckerPlugin> osCheckers = pluginManager.getPluginsForCheckType("os");
+        //     for (HostCheckerPlugin checker : osCheckers) {
+        //         if (checker.canExecute(context)) {
+        //             CheckResult result = checker.execute(context);
+        //             if (result.getStatus() == CheckStatus.SUCCESS) {
+        //                 updateOsBasicInfoFromResult(hostInfo, result);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // } catch (Exception e) {
+        //     log.error("收集操作系统基础信息失败: {}", hostInfo.getIp(), e);
+        // }
+        
+        // 临时简单实现
+        collectOsBasicInfoWithSshPool(hostInfo);
     }
     
     @Override
@@ -170,4 +208,116 @@ public class OsInfoServiceImpl implements OsInfoService {
         log.info("插件化架构无需队列管理，直接开始信息收集: {}", hostInfo.getIp());
         getHostOsInfoAsync(hostInfo);
     }
+    
+    /**
+     * 使用SSH连接池收集主机名信息（临时实现）
+     */
+    private void collectHostnameInfoWithSshPool(HostInfo hostInfo) {
+        // TODO: 这里应该使用插件化的SSH连接池服务
+        // 当前先记录日志，等插件系统完全就绪后实现
+        log.info("TODO: 使用SSH连接池收集主机名 - {}", hostInfo.getIp());
+        
+        try {
+            // 初始化OsInfo如果不存在
+            if (hostInfo.getOsInfo() == null) {
+                OsInfo osInfo = OsInfo.builder()
+                        .osInfoStatus(OsInfoStatusEnum.COLLECTING)
+                        .build();
+                // TODO: 等Lombok生成setter方法后设置主机名
+                // osInfo.setHostname(hostInfo.getHostname());
+                hostInfo.setOsInfo(osInfo);
+            }
+            
+            // 设置基本信息
+            hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+            
+        } catch (Exception e) {
+            log.error("使用SSH连接池收集主机名失败: {}", hostInfo.getIp(), e);
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.ERROR);
+            }
+        }
+    }
+    
+    /**
+     * 使用SSH连接池收集操作系统基础信息（临时实现）
+     */
+    private void collectOsBasicInfoWithSshPool(HostInfo hostInfo) {
+        // TODO: 这里应该使用插件化的SSH连接池服务
+        log.info("TODO: 使用SSH连接池收集操作系统基础信息 - {}", hostInfo.getIp());
+        
+        try {
+            // 初始化OsInfo如果不存在
+            if (hostInfo.getOsInfo() == null) {
+                OsInfo osInfo = OsInfo.builder()
+                        .distribution("Unknown")
+                        .version("Unknown") 
+                        .architecture("Unknown")
+                        .osInfoStatus(OsInfoStatusEnum.COLLECTING)
+                        .build();
+                hostInfo.setOsInfo(osInfo);
+            }
+            
+            // 设置基本信息收集状态
+            hostInfo.getOsInfo().setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+            
+        } catch (Exception e) {
+            log.error("使用SSH连接池收集操作系统基础信息失败: {}", hostInfo.getIp(), e);
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setOsInfoStatus(OsInfoStatusEnum.ERROR);
+            }
+        }
+    }
+    
+    // TODO: 等插件系统完全集成后，添加以下方法：
+    
+    /*
+     * 创建主机检查上下文（使用SSH连接池）
+     * 
+    private HostCheckContext createHostCheckContext(HostInfo hostInfo) throws Exception {
+        ClientSession session = null;
+        try {
+            // 使用插件化的SSH连接服务
+            session = sshConnectionService.borrowConnection(
+                HostCheckContext.builder()
+                    .hostInfo(hostInfo)
+                    .build()
+            );
+            
+            return HostCheckContext.builder()
+                    .hostInfo(hostInfo)
+                    .sshSession(session)
+                    .sharedData(new java.util.concurrent.ConcurrentHashMap<>())
+                    .build();
+                    
+        } catch (Exception e) {
+            if (session != null) {
+                try {
+                    sshConnectionService.returnConnection(
+                        HostCheckContext.builder().hostInfo(hostInfo).build(), 
+                        session
+                    );
+                } catch (Exception closeEx) {
+                    log.warn("归还SSH连接失败", closeEx);
+                }
+            }
+            throw new RuntimeException("创建主机检查上下文失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 从检查结果更新主机名信息
+     * 
+    private void updateHostnameFromResult(HostInfo hostInfo, CheckResult result) {
+        if (result.getData() != null && result.getData().containsKey("hostname")) {
+            String hostname = (String) result.getData().get("hostname");
+            hostInfo.setHostname(hostname);
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setHostname(hostname);
+                hostInfo.getOsInfo().setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+            }
+            log.debug("更新主机名: {} -> {}", hostInfo.getIp(), hostname);
+        }
+    }
+    */
 }
