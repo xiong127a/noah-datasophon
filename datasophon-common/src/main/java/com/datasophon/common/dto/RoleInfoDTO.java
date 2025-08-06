@@ -15,19 +15,36 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.service;
+package com.datasophon.common.dto;
 
-
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
-import com.mybatisflex.core.service.IService;
+import java.time.LocalDateTime;
 
 /**
- * 集群服务角色实例配置表
- *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * 角色信息DTO - 服务间传输对象
+ * 使用JDK21 Record特性，不可变数据载体
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-06
  */
-public interface ClusterServiceRoleInstanceConfigService extends IService<ClusterServiceRoleInstanceConfigEntity> {
-
+public record RoleInfoDTO(
+    Integer id,
+    String roleName,
+    String roleCode,
+    LocalDateTime createTime
+) {
+    
+    /**
+     * 创建新角色DTO的静态工厂方法
+     */
+    public static RoleInfoDTO create(String roleName, String roleCode) {
+        return new RoleInfoDTO(null, roleName, roleCode, LocalDateTime.now());
+    }
+    
+    /**
+     * 检查角色是否为管理员角色
+     */
+    public boolean isAdminRole() {
+        return "ADMIN".equals(roleCode) || "admin".equalsIgnoreCase(roleName);
+    }
 }

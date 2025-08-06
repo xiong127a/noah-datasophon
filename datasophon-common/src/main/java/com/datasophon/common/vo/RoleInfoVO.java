@@ -15,19 +15,42 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.service;
+package com.datasophon.common.vo;
 
-
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceConfigEntity;
-import com.mybatisflex.core.service.IService;
+import lombok.Getter;
 
 /**
- * 集群服务角色实例配置表
- *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
+ * 角色信息VO - 视图展示对象
+ * 使用JDK21 Record特性，专为前端展示优化
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-06
  */
-public interface ClusterServiceRoleInstanceConfigService extends IService<ClusterServiceRoleInstanceConfigEntity> {
+public record RoleInfoVO(
+    Integer id,
+    String roleName,
+    String roleCode,
+    String createTimeFormatted,
+    boolean isAdminRole,
+    RoleStatus status
+) {
+    
+    /**
+     * 角色状态枚举 - JDK21嵌套特性
+     */
+    @Getter
+    public enum RoleStatus {
+        ACTIVE("激活"),
+        INACTIVE("停用"),
+        DELETED("已删除");
+        
+        private final String description;
+        
+        RoleStatus(String description) {
+            this.description = description;
+        }
+
+    }
 
 }
