@@ -43,6 +43,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.common.model.ExternalLink;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
@@ -120,33 +121,36 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         ClusterServiceInstanceEntity clusterServiceInstance;
 
         if (Objects.isNull(clusterServiceInstanceDTO)) {
+            // 创建新的服务实例Entity - JDK21特性
             clusterServiceInstance = new ClusterServiceInstanceEntity();
             clusterServiceInstance.setClusterId(serviceRoleInfo.getClusterId());
             clusterServiceInstance.setServiceName(serviceRoleInfo.getParentName());
             clusterServiceInstance.setServiceState(ServiceState.RUNNING);
+            clusterServiceInstance.setServiceStateCode(ServiceState.RUNNING.getValue());
             clusterServiceInstance.setCreateTime(new Date());
             clusterServiceInstance.setUpdateTime(new Date());
-
-            // 直接保存Entity
             serviceInstanceService.save(clusterServiceInstance);
 
-            // save config
-            List<ServiceConfig> list = ServiceConfigMap.get(clusterInfo.getClusterCode() + Constants.UNDERLINE
-                    + serviceRoleInfo.getParentName() + Constants.CONFIG);
-            String config = JSON.toJSONString(list);
-            ClusterServiceInstanceConfigEntity clusterServiceInstanceConfig = new ClusterServiceInstanceConfigEntity();
-            clusterServiceInstanceConfig.setClusterId(serviceRoleInfo.getClusterId());
-            clusterServiceInstanceConfig.setServiceId(clusterServiceInstance.getId());
-            clusterServiceInstanceConfig.setConfigJson(config);
-            clusterServiceInstanceConfig.setConfigJsonMd5(SecureUtil.md5(config));
-            clusterServiceInstanceConfig.setConfigVersion(1);
-            clusterServiceInstanceConfig.setCreateTime(new Date());
-            clusterServiceInstanceConfig.setUpdateTime(new Date());
-            serviceInstanceConfigService.save(clusterServiceInstanceConfig);
+            // save config - 使用Entity方式
+            var configList = ServiceConfigMap.get(clusterInfo.getClusterCode() + Constants.UNDERLINE
+                    + serviceRoleInfo.getParentName() + Constants.CONFIG); // JDK21特性
+            var config = JSON.toJSONString(configList);
+            
+            var configEntity = new ClusterServiceInstanceConfigEntity();
+            configEntity.setClusterId(serviceRoleInfo.getClusterId());
+            configEntity.setServiceId(clusterServiceInstance.getId());
+            configEntity.setConfigJson(config);
+            configEntity.setConfigJsonMd5(SecureUtil.md5(config));
+            configEntity.setConfigVersion(1);
+            configEntity.setCreateTime(new Date());
+            configEntity.setUpdateTime(new Date());
+            serviceInstanceConfigService.save(configEntity);
         } else {
+            // 更新现有服务实例 - 使用MapStruct转换器
             clusterServiceInstance = serviceInstanceConverter.dtoToEntity(clusterServiceInstanceDTO);
             clusterServiceInstance.setServiceState(ServiceState.RUNNING);
             clusterServiceInstance.setServiceStateCode(ServiceState.RUNNING.getValue());
+            clusterServiceInstance.setUpdateTime(new Date()); // JDK21特性
             serviceInstanceService.updateById(clusterServiceInstance);
         }
 
@@ -249,8 +253,8 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
                     Constants.REGEX_VARIABLE);
             Integer port = extractPortFromUrl(url);
 
-            ClusterServiceRoleInstanceWebuis webui = webuisService.getRoleInstanceWebUi(roleInstance.getId());
-            List<ClusterServiceRoleInstanceWebuis> clusterServiceRoleInstanceWebuis = webuisService
+            var webui = webuisService.getRoleInstanceWebUi(roleInstance.getId()); // JDK21特性
+            var clusterServiceRoleInstanceWebuis = webuisService
                     .listWebUisByServiceInstanceId(clusterServiceInstance.getId());
             if (Objects.nonNull(webui)) {
                 logger.info("web ui already exists");
@@ -279,24 +283,23 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
                             }
 
                             for (String mappedPort : mappedPorts.split(",")) {
-                                for (ClusterServiceRoleInstanceWebuis clusterServiceRoleInstanceWebui : clusterServiceRoleInstanceWebuis) {
-                                    if (clusterServiceRoleInstanceWebui.getWebUrl().contains(mappedPort)) {
+                                for (var clusterServiceRoleInstanceWebui : clusterServiceRoleInstanceWebuis) {
+                                    if (clusterServiceRoleInstanceWebui.webUrl().contains(mappedPort)) {
                                         logger.info("web ui already exists");
                                         return;
                                     }
                                 }
-                                ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
+                                
+                                // 创建WebUI DTO - JDK21 Record特性
+                                var webuisDTO = new ClusterServiceRoleInstanceWebuisDTO(
+                                    null, // id为空，由数据库生成
+                                    roleInstance.getId(),
+                                    replacePortInUrl(url, mappedPort),
+                                    clusterServiceInstance.getId(),
+                                    String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname())
+                                );
 
-                                // 替换URL端口
-                                webuis.setWebUrl(replacePortInUrl(url, mappedPort));
-
-                                webuis.setServiceInstanceId(clusterServiceInstance.getId());
-                                webuis.setServiceRoleInstanceId(roleInstance.getId());
-                                webuis.setName(String.format("%s(%s)",
-                                        externalLink.getName(),
-                                        serviceRoleInfo.getHostname()));
-
-                                webuisService.save(webuis);
+                                webuisService.createWebUI(webuisDTO);
                             }
                         }
                         foundPortMapping = true;
@@ -305,14 +308,15 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
                 // 如果没有找到端口映射，保存原始URL
                 if (!foundPortMapping) {
-                    ClusterServiceRoleInstanceWebuis webuis = new ClusterServiceRoleInstanceWebuis();
-                    webuis.setWebUrl(url);
-                    webuis.setServiceInstanceId(clusterServiceInstance.getId());
-                    webuis.setServiceRoleInstanceId(roleInstance.getId());
-                    webuis.setName(String.format("%s(%s)",
-                            externalLink.getName(),
-                            serviceRoleInfo.getHostname()));
-                    webuisService.save(webuis);
+                    // 创建WebUI DTO - JDK21 Record特性
+                    var webuisDTO = new ClusterServiceRoleInstanceWebuisDTO(
+                        null, // id为空，由数据库生成
+                        roleInstance.getId(),
+                        url,
+                        clusterServiceInstance.getId(),
+                        String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname())
+                    );
+                    webuisService.createWebUI(webuisDTO);
                 }
 
                 globalVariables.remove("${hostname}");
@@ -395,7 +399,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
     }
 
     @Override
-    public ExecResult stopService(ServiceRoleInfo serviceRoleInfo) throws Exception {
+    public ExecResult stopService(ServiceRoleInfo serviceRoleInfo) {
         logger.info("停止服务: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
         
         String depMode = getDepMode(serviceRoleInfo.getClusterId());
@@ -418,8 +422,8 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         }
         
         logger.info("服务停止完成: {} on {}, 结果: {}", 
-                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), 
-                execResult != null ? execResult.getExecResult() : "null");
+                serviceRoleInfo.getName(), serviceRoleInfo.getHostname(),
+                execResult.getExecResult());
         return execResult;
     }
 

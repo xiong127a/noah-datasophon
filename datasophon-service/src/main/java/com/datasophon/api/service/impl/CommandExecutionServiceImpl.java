@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
+// 移除未使用的import
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.CancelCommandMap;
 import com.datasophon.api.master.ServiceCommandActor;
@@ -71,8 +71,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     @Autowired
     private ClusterServiceCommandHostCommandService hostCommandService;
 
-    @Autowired
-    private ClusterServiceCommandHostCommandConverter hostCommandConverter;
+    // hostCommandConverter已移除，因为现在直接使用DTO操作
 
     @Override
     public void updateCommandStateToFailed(List<String> commandIds) {
@@ -83,21 +82,33 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
             List<ClusterServiceCommandHostCommandDTO> hostCommandList = hostCommandService
                     .getHostCommandListByCommandId(commandId);
             for (ClusterServiceCommandHostCommandDTO hostCommandDTO : hostCommandList) {
-                ClusterServiceCommandHostCommandEntity hostCommandEntity = hostCommandConverter
-                        .dtoToEntity(hostCommandDTO);
-                if (hostCommandEntity.getCommandState() == CommandState.RUNNING) {
-                    logger.info("{} host command  set to cancel", hostCommandEntity.getCommandName());
-                    CancelCommandMap.put(hostCommandEntity.getHostCommandId(), hostCommandEntity.getCommandName());
+                if (hostCommandDTO.commandState() == CommandState.RUNNING.getValue()) {
+                    logger.info("{} host command  set to cancel", hostCommandDTO.commandName());
+                    CancelCommandMap.put(hostCommandDTO.hostCommandId(), hostCommandDTO.commandName());
 
-                    hostCommandEntity.setCommandState(CommandState.CANCEL);
-                    hostCommandEntity.setCommandProgress(100);
-                    hostCommandService.updateByHostCommandId(hostCommandEntity);
+                    // 创建更新后的DTO - JDK21 Record特性
+                    var updatedDTO = new ClusterServiceCommandHostCommandDTO(
+                        hostCommandDTO.hostCommandId(),
+                        hostCommandDTO.commandName(),
+                        CommandState.CANCEL.getValue(), // 设置为取消状态
+                        CommandState.CANCEL.getValue(),
+                        100, // 设置进度为100
+                        hostCommandDTO.commandHostId(),
+                        hostCommandDTO.commandId(),
+                        hostCommandDTO.hostname(),
+                        hostCommandDTO.serviceRoleName(),
+                        hostCommandDTO.serviceRoleType(),
+                        hostCommandDTO.resultMsg(),
+                        hostCommandDTO.createTime(),
+                        hostCommandDTO.commandType()
+                    );
+                    hostCommandService.updateByHostCommandId(updatedDTO); // 传递DTO而不是Entity
 
-                    UpdateCommandHostMessage message = new UpdateCommandHostMessage();
+                    var message = new UpdateCommandHostMessage(); // JDK21特性
                     message.setCommandId(commandId);
-                    message.setCommandHostId(hostCommandEntity.getCommandHostId());
-                    message.setHostname(hostCommandEntity.getHostname());
-                    if (hostCommandEntity.getServiceRoleType() == RoleType.MASTER) {
+                    message.setCommandHostId(hostCommandDTO.hostCommandId());
+                    message.setHostname(hostCommandDTO.hostname());
+                    if (hostCommandDTO.serviceRoleType() == RoleType.MASTER.getValue()) {
                         message.setServiceRoleType(ServiceRoleType.MASTER);
                     } else {
                         message.setServiceRoleType(ServiceRoleType.WORKER);
@@ -115,29 +126,41 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
     @Override
     public void handleCommandResult(String hostCommandId, Boolean execResult, String execOut) {
-        ClusterServiceCommandHostCommandDTO hostCommandDTO = hostCommandService.getByHostCommandId(hostCommandId);
-        ClusterServiceCommandHostCommandEntity hostCommand = hostCommandConverter.dtoToEntity(hostCommandDTO);
+        var hostCommandDTO = hostCommandService.getByHostCommandId(hostCommandId); // JDK21特性
 
-        hostCommand.setCommandProgress(100);
+        // 创建更新后的DTO - JDK21 Record特性
+        var updatedDTO = new ClusterServiceCommandHostCommandDTO(
+            hostCommandDTO.hostCommandId(),
+            hostCommandDTO.commandName(),
+            execResult ? CommandState.SUCCESS.getValue() : CommandState.FAILED.getValue(),
+            execResult ? CommandState.SUCCESS.getValue() : CommandState.FAILED.getValue(),
+            100, // 设置进度为100
+            hostCommandDTO.commandHostId(),
+            hostCommandDTO.commandId(),
+            hostCommandDTO.hostname(),
+            hostCommandDTO.serviceRoleName(),
+            hostCommandDTO.serviceRoleType(),
+            execResult ? "success" : execOut, // 设置结果消息
+            hostCommandDTO.createTime(),
+            hostCommandDTO.commandType()
+        );
+        
         if (execResult) {
-            hostCommand.setCommandState(CommandState.SUCCESS);
-            hostCommand.setResultMsg("success");
-            logger.info("{} in {} success", hostCommand.getCommandName(), hostCommand.getHostname());
+            logger.info("{} in {} success", updatedDTO.commandName(), updatedDTO.hostname());
         } else {
-            hostCommand.setCommandState(CommandState.FAILED);
-            hostCommand.setResultMsg(execOut);
-            logger.info("{} in {} failed", hostCommand.getCommandName(), hostCommand.getHostname());
+            logger.info("{} in {} failed", updatedDTO.commandName(), updatedDTO.hostname());
         }
-        hostCommandService.updateByHostCommandId(hostCommand);
+        
+        hostCommandService.updateByHostCommandId(updatedDTO); // 传递DTO而不是Entity
 
         // 更新command host进度
         // 更新command进度
-        UpdateCommandHostMessage message = new UpdateCommandHostMessage();
+        var message = new UpdateCommandHostMessage(); // JDK21特性
         message.setExecResult(execResult);
-        message.setCommandId(hostCommand.getCommandId());
-        message.setCommandHostId(hostCommand.getCommandHostId());
-        message.setHostname(hostCommand.getHostname());
-        if (hostCommand.getServiceRoleType() == RoleType.MASTER) {
+        message.setCommandId(updatedDTO.commandId());
+        message.setCommandHostId(updatedDTO.commandHostId());
+        message.setHostname(updatedDTO.hostname());
+        if (updatedDTO.serviceRoleType() == RoleType.MASTER.getValue()) {
             message.setServiceRoleType(ServiceRoleType.MASTER);
         } else {
             message.setServiceRoleType(ServiceRoleType.WORKER);

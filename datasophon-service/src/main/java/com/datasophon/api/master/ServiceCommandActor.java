@@ -34,7 +34,7 @@ import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.enums.CommandState;
 import org.apache.commons.lang3.StringUtils;
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+// 移除未使用的import，因为已使用JDK21的toList()方法
 
 /**
  * 服务命令处理Actor
@@ -212,7 +212,7 @@ public class ServiceCommandActor extends AbstractActor {
         ClusterAlertQuotaService alertQuotaService = SpringUtil
                 .getBean(ClusterAlertQuotaService.class);
         List<ClusterAlertQuota> list = alertQuotaService.listAlertQuotaByServiceName(serviceName);
-        List<Integer> ids = list.stream().map(ClusterAlertQuota::getId).collect(Collectors.toList());
+        var ids = list.stream().map(ClusterAlertQuota::getId).toList(); // JDK21特性
         String alertQuotaIds = StringUtils.join(ids, ",");
         alertQuotaService.start(clusterId, alertQuotaIds);
     }
@@ -222,18 +222,31 @@ public class ServiceCommandActor extends AbstractActor {
         if (variables.containsKey(ENABLE_HDFS_KERBEROS)) {
             ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceWebuisService.class);
-            List<ClusterServiceRoleInstanceWebuis> webUis = webuisService
-                    .listWebUisByServiceInstanceId(serviceInstanceId);
-            for (ClusterServiceRoleInstanceWebuis webUi : webUis) {
-                if (TRUE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUi.getWebUrl().contains("9870")) {
-                    String newWebUi = webUi.getWebUrl().replace(HTTP, HTTPS).replace("9870", "9871");
-                    webUi.setWebUrl(newWebUi);
-                    webuisService.updateById(webUi);
+            var webUiDTOs = webuisService.listWebUisByServiceInstanceId(serviceInstanceId); // JDK21特性
+            for (var webUiDTO : webUiDTOs) {
+                if (TRUE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUiDTO.webUrl().contains("9870")) {
+                    var newWebUi = webUiDTO.webUrl().replace(HTTP, HTTPS).replace("9870", "9871");
+                    // 创建更新后的DTO - JDK21 Record特性
+                    var updatedDTO = new ClusterServiceRoleInstanceWebuisDTO(
+                        webUiDTO.id(),
+                        webUiDTO.serviceRoleInstanceId(),
+                        newWebUi,
+                        webUiDTO.serviceInstanceId(),
+                        webUiDTO.name()
+                    );
+                    webuisService.updateWebUI(updatedDTO);
                 }
-                if (FALSE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUi.getWebUrl().contains("9871")) {
-                    String newWebUi = webUi.getWebUrl().replace(HTTPS, HTTP).replace("9871", "9870");
-                    webUi.setWebUrl(newWebUi);
-                    webuisService.updateById(webUi);
+                if (FALSE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUiDTO.webUrl().contains("9871")) {
+                    var newWebUi = webUiDTO.webUrl().replace(HTTPS, HTTP).replace("9871", "9870");
+                    // 创建更新后的DTO - JDK21 Record特性
+                    var updatedDTO = new ClusterServiceRoleInstanceWebuisDTO(
+                        webUiDTO.id(),
+                        webUiDTO.serviceRoleInstanceId(),
+                        newWebUi,
+                        webUiDTO.serviceInstanceId(),
+                        webUiDTO.name()
+                    );
+                    webuisService.updateWebUI(updatedDTO);
                 }
             }
         }
