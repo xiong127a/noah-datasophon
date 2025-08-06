@@ -22,10 +22,11 @@ import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.AlertGroupVO;
 import com.datasophon.dao.entity.AlertGroupEntity;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
@@ -36,7 +37,9 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-14
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class, 
+        unmappedTargetPolicy = ReportingPolicy.IGNORE, 
+        unmappedSourcePolicy = ReportingPolicy.IGNORE)
 public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, AlertGroupDTO, AlertGroupVO> {
 
     /**
@@ -88,11 +91,16 @@ public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, Ale
     List<AlertGroupVO> entityListToVoList(List<AlertGroupEntity> entityList);
 
     /**
+     * DTO列表转Entity列表
+     */
+    @Override
+    List<AlertGroupEntity> dtoListToEntityList(List<AlertGroupDTO> dtoList);
+
+    /**
      * 更新Entity对象
      */
     @Override
-    @BeanMapping(ignoreUnmappedSourceProperties = {"withAlertQuotaNum"})
-    void updateEntityFromDto(AlertGroupDTO dto, AlertGroupEntity entity);
+    void updateEntityFromDto(AlertGroupDTO dto, @MappingTarget AlertGroupEntity entity);
 
     /**
      * 格式化告警指标数量

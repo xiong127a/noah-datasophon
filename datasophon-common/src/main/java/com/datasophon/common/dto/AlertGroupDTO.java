@@ -47,16 +47,4 @@ public record AlertGroupDTO(
                 new Date());
     }
 
-    /**
-     * 更新告警指标数量
-     */
-    public AlertGroupDTO withAlertQuotaNum(Integer alertQuotaNum) {
-        return new AlertGroupDTO(
-                this.id,
-                this.alertGroupName,
-                this.alertGroupCategory,
-                this.clusterId,
-                alertQuotaNum,
-                this.createTime);
-    }
 }
