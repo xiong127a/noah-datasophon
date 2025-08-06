@@ -21,6 +21,7 @@ import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.converter.LoginConverter;
 import com.datasophon.api.security.PersistentTokenManager;
 import com.datasophon.api.service.AuthTokenService;
+import com.datasophon.api.service.UserInfoService;
 import com.datasophon.common.dto.LoginRequestDTO;
 import com.datasophon.common.dto.RefreshTokenRequestDTO;
 import com.datasophon.common.enums.Status;
@@ -72,6 +73,9 @@ public class LoginController {
     private AuthTokenService authTokenService;
 
     @Autowired
+    private UserInfoService userInfoService;
+
+    @Autowired
     private LoginConverter loginConverter;
 
     /**
@@ -120,13 +124,17 @@ public class LoginController {
             // 设置认证信息到上下文
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // 获取用户详情 - 暂时简化处理
-            // TODO: 需要根据实际的UserInfoService方法调整
+            // 获取用户详情 - 从数据库查询真实用户信息
             logger.debug("用户登录成功: {}", username);
 
-            // 简化处理：创建基本的用户实体
-            UserInfoEntity user = new UserInfoEntity();
-            user.setUsername(username);
+            // 从数据库查询完整的用户实体
+            UserInfoEntity user = userInfoService.getUserEntityByUsername(username);
+            if (user == null) {
+                logger.error("登录成功但未找到用户信息: {}", username);
+                return Result.error(Status.USER_NOT_EXIST.getCode(), Status.USER_NOT_EXIST.getMsg());
+            }
+            
+            // 更新最后登录时间
             user.setLastLoginTime(new Date());
 
             // 更新登录时间记录 - JDK21简化写法

@@ -18,6 +18,7 @@
 package com.datasophon.api.security;
 
 import com.datasophon.api.service.AuthTokenService;
+import com.datasophon.api.service.UserInfoService;
 import com.datasophon.common.security.JwtTokenProviderBase;
 import com.datasophon.dao.entity.AuthTokenEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -51,6 +52,9 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
     @Autowired
     private AuthTokenService authTokenService;
 
+    @Autowired
+    private UserInfoService userInfoService;
+
     /**
      * 创建令牌并保存到数据库
      * 
@@ -83,13 +87,15 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
 
         // 保存令牌到数据库
         try {
-            // 根据用户名查询用户信息 - 暂时简化处理
-            // TODO: 需要根据实际的UserInfoService方法签名调整
+            // 从数据库查询真实用户信息
             logger.debug("尝试保存令牌到数据库，用户: {}", username);
 
-            // 简化处理：直接创建基本的User entity
-            UserInfoEntity user = new UserInfoEntity();
-            user.setUsername(username);
+            // 从数据库获取完整的用户实体
+            UserInfoEntity user = userInfoService.getUserEntityByUsername(username);
+            if (user == null) {
+                logger.error("保存令牌失败: 未找到用户信息: {}", username);
+                return token; // 返回token但不保存到数据库
+            }
 
             createTokenRecord(user, token, refreshToken, request, validity);
         } catch (Exception e) {
