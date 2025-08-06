@@ -22,6 +22,7 @@ import com.datasophon.common.dto.AuthTokenDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.AuthTokenVO;
 import com.datasophon.dao.entity.AuthTokenEntity;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -39,6 +40,7 @@ import java.util.List;
 public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthTokenDTO, AuthTokenVO> {
 
     @Override
+    @BeanMapping(ignoreUnmappedSourceProperties = {"revoke"})
     AuthTokenDTO entityToDto(AuthTokenEntity entity);
 
     @Override

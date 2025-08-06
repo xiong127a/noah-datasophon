@@ -56,6 +56,14 @@ public interface ClusterYarnSchedulerConverter
     @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
     ClusterYarnSchedulerVO dtoToVo(ClusterYarnSchedulerDTO dto);
 
+    @Override
+    @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
+    java.util.List<ClusterYarnSchedulerVO> entityListToVoList(java.util.List<ClusterYarnScheduler> entityList);
+
+    @Override
+    @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
+    java.util.List<ClusterYarnSchedulerVO> dtoListToVoList(java.util.List<ClusterYarnSchedulerDTO> dtoList);
+
     /**
      * 格式化使用状态文本
      * 1: 使用中, 其他: 未使用

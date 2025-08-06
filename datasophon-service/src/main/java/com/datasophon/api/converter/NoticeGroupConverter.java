@@ -47,6 +47,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
 
     @Override
     @Mapping(target = "userIds", ignore = true)
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupEntity dtoToEntity(NoticeGroupDTO dto);
 
     @Override
@@ -74,6 +75,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
 
     @Override
     @Mapping(target = "userIds", ignore = true)
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     void updateEntityFromDto(NoticeGroupDTO dto, NoticeGroupEntity entity);
 
     /**

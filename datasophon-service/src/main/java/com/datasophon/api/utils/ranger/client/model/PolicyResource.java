@@ -13,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PolicyResource {
+    @Builder.Default
     private List<String> values = Lists.newArrayList();
     private Boolean isExcludes;
     private Boolean isRecursive;
