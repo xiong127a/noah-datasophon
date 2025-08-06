@@ -25,18 +25,14 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.vo.FrameServiceVO;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import com.mybatisflex.core.query.QueryChain;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -48,7 +44,6 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Slf4j
-@Api(tags = "集群框架服务管理")
 @ApiVersion(path = "frame/service")
 @RequiredArgsConstructor
 public class FrameServiceController {
@@ -60,10 +55,8 @@ public class FrameServiceController {
     /**
      * 获取指定集群的框架服务列表
      */
-    @ApiOperation("获取指定集群的框架服务列表")
     @GetMapping("/list")
-    public Result<List<FrameServiceVO>> list(
-            @ApiParam(value = "集群ID", required = true) @RequestParam("clusterId") Integer clusterId) {
+    public Result<List<FrameServiceVO>> list(@RequestParam("clusterId") Integer clusterId) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameService(clusterId);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);
@@ -72,11 +65,11 @@ public class FrameServiceController {
     /**
      * 获取包含必选组件标识的框架服务列表
      */
-    @ApiOperation("获取包含必选组件标识的框架服务列表")
+
     @GetMapping("/listWithRequired")
     public Result<List<FrameServiceVO>> listWithRequired(
-            @ApiParam(value = "集群ID", required = true) @RequestParam("clusterId") Integer clusterId,
-            @ApiParam(value = "集群类型", required = true) @RequestParam("type") String type) {
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("type") String type) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameServiceWithRequired(clusterId, type);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);
@@ -85,10 +78,10 @@ public class FrameServiceController {
     /**
      * 根据服务ID列表查询服务
      */
-    @ApiOperation("根据服务ID列表查询服务")
+
     @GetMapping("/getServiceListByServiceIds")
     public Result<List<FrameServiceVO>> getServiceListByServiceIds(
-            @ApiParam(value = "服务ID列表", required = true) @RequestParam("serviceIds") List<Integer> serviceIds) {
+            @RequestParam("serviceIds") List<Integer> serviceIds) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getServiceListByServiceIds(serviceIds);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);
@@ -97,9 +90,9 @@ public class FrameServiceController {
     /**
      * 根据ID获取服务信息
      */
-    @ApiOperation("根据ID获取服务信息")
+
     @GetMapping("/info/{id}")
-    public Result<FrameServiceVO> info(@ApiParam(value = "服务ID", required = true) @PathVariable("id") Integer id) {
+    public Result<FrameServiceVO> info(@PathVariable("id") Integer id) {
         FrameServiceDTO frameServiceDTO = frameServiceService.getFrameServiceById(id);
         FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(frameServiceDTO);
         return Result.success(frameServiceVO);
@@ -108,10 +101,9 @@ public class FrameServiceController {
     /**
      * 保存服务信息
      */
-    @ApiOperation("保存服务信息")
+
     @PostMapping("/save")
-    public Result<FrameServiceVO> save(
-            @ApiParam(value = "服务信息", required = true) @RequestBody FrameServiceDTO frameServiceDTO) {
+    public Result<FrameServiceVO> save(@RequestBody FrameServiceDTO frameServiceDTO) {
         FrameServiceDTO savedDTO = frameServiceService.saveFrameService(frameServiceDTO);
         FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(savedDTO);
         return Result.success(frameServiceVO);
@@ -120,10 +112,9 @@ public class FrameServiceController {
     /**
      * 更新服务信息
      */
-    @ApiOperation("更新服务信息")
+
     @PutMapping("/update")
-    public Result<FrameServiceVO> update(
-            @ApiParam(value = "服务信息", required = true) @RequestBody FrameServiceDTO frameServiceDTO) {
+    public Result<FrameServiceVO> update(@RequestBody FrameServiceDTO frameServiceDTO) {
         FrameServiceDTO updatedDTO = frameServiceService.updateFrameService(frameServiceDTO);
         FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(updatedDTO);
         return Result.success(frameServiceVO);
@@ -132,9 +123,9 @@ public class FrameServiceController {
     /**
      * 删除服务组件（包含文件清理和依赖检查）
      */
-    @ApiOperation("删除服务组件")
+
     @DeleteMapping("/delete/{id}")
-    public Result<Boolean> delete(@ApiParam(value = "服务ID", required = true) @PathVariable("id") Integer id) {
+    public Result<Boolean> delete(@PathVariable("id") Integer id) {
         try {
             // 获取服务信息
             FrameServiceDTO serviceDTO = frameServiceService.getFrameServiceById(id);
@@ -143,34 +134,52 @@ public class FrameServiceController {
             }
 
             // 检查是否有集群正在使用此服务
-            List<ClusterServiceInstanceEntity> serviceInstances = QueryChain.of(ClusterServiceInstanceEntity.class)
-                    .where(ClusterServiceInstanceEntity::getFrameServiceId).eq(id)
-                    .list();
-
-            if (serviceInstances != null && !serviceInstances.isEmpty()) {
+            if (frameServiceService.isServiceInUse(id)) {
                 return Result.error("Service 组件正在使用中，无法删除。");
             }
 
             // 删除软件包文件
             if (serviceDTO.packageName() != null) {
-                File targetPackageFile = new File(Constants.MASTER_MANAGE_PACKAGE_PATH, serviceDTO.packageName());
-                if (targetPackageFile.exists()) {
-                    FileUtil.del(targetPackageFile);
-                    log.info("已删除软件包文件: {}", targetPackageFile.getAbsolutePath());
-                }
+                String packageName = serviceDTO.packageName();
+                
+                // 使用Java NIO进行安全的路径处理
+                try {
+                    Path basePath = Paths.get(Constants.MASTER_MANAGE_PACKAGE_PATH).toRealPath();
+                    Path targetPath = basePath.resolve(packageName).normalize();
+                    
+                    // 验证路径是否在允许的目录范围内
+                    if (!targetPath.startsWith(basePath)) {
+                        log.warn("检测到路径遍历攻击尝试: {}", targetPath);
+                        return Result.error("文件路径不在允许的目录范围内，删除操作已取消。");
+                    }
+                    
+                    File targetPackageFile = targetPath.toFile();
+                    if (targetPackageFile.exists()) {
+                        FileUtil.del(targetPackageFile);
+                        log.info("已删除软件包文件: {}", targetPackageFile.getAbsolutePath());
+                    }
 
-                // 删除MD5文件
-                File targetPackageFileMd5 = new File(Constants.MASTER_MANAGE_PACKAGE_PATH,
-                        serviceDTO.packageName() + ".md5");
-                if (targetPackageFileMd5.exists()) {
-                    FileUtil.del(targetPackageFileMd5);
-                    log.info("已删除软件包MD5文件: {}", targetPackageFileMd5.getAbsolutePath());
+                    // 删除MD5文件，使用相同的安全验证
+                    Path md5Path = basePath.resolve(packageName + ".md5").normalize();
+                    if (!md5Path.startsWith(basePath)) {
+                        log.warn("检测到MD5文件路径遍历攻击尝试: {}", md5Path);
+                        return Result.error("MD5文件路径不在允许的目录范围内，删除操作已取消。");
+                    }
+                    
+                    File targetPackageFileMd5 = md5Path.toFile();
+                    if (targetPackageFileMd5.exists()) {
+                        FileUtil.del(targetPackageFileMd5);
+                        log.info("已删除软件包MD5文件: {}", targetPackageFileMd5.getAbsolutePath());
+                    }
+                    
+                } catch (Exception e) {
+                    log.error("处理文件路径时发生错误: {}", e.getMessage());
+                    return Result.error("文件路径处理失败: " + e.getMessage());
                 }
             }
 
             // 删除相关配置
-            boolean configDeleted = frameServiceRoleService.remove(QueryChain.of(FrameServiceRoleEntity.class)
-                    .where(FrameServiceRoleEntity::getServiceId).eq(id));
+            boolean configDeleted = frameServiceRoleService.removeByServiceId(id);
             log.info("删除服务配置结果: {}", configDeleted);
 
             // 删除主服务
@@ -187,5 +196,7 @@ public class FrameServiceController {
             return Result.error("删除服务组件失败: " + e.getMessage());
         }
     }
+
+
 
 }
