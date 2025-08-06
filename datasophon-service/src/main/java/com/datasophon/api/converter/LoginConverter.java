@@ -25,6 +25,7 @@ import com.datasophon.common.utils.FormatterUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * 登录相关对象转换器
@@ -33,7 +34,9 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface LoginConverter {
 
     /**
@@ -49,7 +52,7 @@ public interface LoginConverter {
     @Mapping(target = "refreshToken", source = "refreshToken")
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "username", source = "user.username")
-    @Mapping(target = "nickName", source = "user.nickName")
+    @Mapping(target = "nickName", source = "user.username")
     @Mapping(target = "email", source = "user.email")
     @Mapping(target = "phone", source = "user.phone")
     @Mapping(target = "lastLoginTime", source = "user.lastLoginTime")

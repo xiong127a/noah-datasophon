@@ -22,10 +22,11 @@ import com.datasophon.common.dto.AuthTokenDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.AuthTokenVO;
 import com.datasophon.dao.entity.AuthTokenEntity;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
@@ -36,11 +37,12 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthTokenDTO, AuthTokenVO> {
 
     @Override
-    @BeanMapping(ignoreUnmappedSourceProperties = {"revoke"})
     AuthTokenDTO entityToDto(AuthTokenEntity entity);
 
     @Override
@@ -78,7 +80,7 @@ public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthT
     List<AuthTokenVO> entityListToVoList(List<AuthTokenEntity> entityList);
 
     @Override
-    void updateEntityFromDto(AuthTokenDTO dto, AuthTokenEntity entity);
+    void updateEntityFromDto(AuthTokenDTO dto, @MappingTarget AuthTokenEntity entity);
 
     /**
      * 创建包含用户名的VO

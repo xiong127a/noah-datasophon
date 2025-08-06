@@ -6,6 +6,7 @@ import com.datasophon.common.vo.K8sNamespaceVO;
 import com.datasophon.common.vo.K8sResourceStatsVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -18,7 +19,8 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper
+@Mapper(unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface K8sResourceConverter {
 
     K8sResourceConverter INSTANCE = Mappers.getMapper(K8sResourceConverter.class);
@@ -26,6 +28,9 @@ public interface K8sResourceConverter {
     /**
      * K8sNamespaceDTO转换为K8sNamespaceVO
      */
+    @Mapping(target = "name", source = "name")
+    @Mapping(target = "phase", source = "phase")
+    @Mapping(target = "creationTime", source = "creationTime")
     @Mapping(target = "displayName", expression = "java(dto.getDisplayName())")
     @Mapping(target = "phaseText", expression = "java(getPhaseText(dto.phase()))")
     @Mapping(target = "isActive", expression = "java(dto.isActive())")
