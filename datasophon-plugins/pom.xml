@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>datasophon</artifactId>
+        <groupId>com.datasophon</groupId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>datasophon-plugins</artifactId>
+    <packaging>pom</packaging>
+    <name>DataSophon Plugins Ecosystem</name>
+    <description>DataSophon插件化生态系统根模块</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <pf4j.version>3.10.0</pf4j.version>
+        <temporal.version>1.20.1</temporal.version>
+    </properties>
+
+    <modules>
+        <module>datasophon-plugin-api</module>
+        <module>datasophon-plugin-manager</module>
+        <module>datasophon-plugins-impl</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- PF4J插件框架 -->
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j</artifactId>
+                <version>${pf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j-spring</artifactId>
+                <version>0.8.0</version>
+            </dependency>
+            
+            <!-- Temporal工作流引擎 -->
+            <dependency>
+                <groupId>io.temporal</groupId>
+                <artifactId>temporal-sdk</artifactId>
+                <version>${temporal.version}</version>
+            </dependency>
+            
+            <!-- 插件API -->
+            <dependency>
+                <groupId>com.datasophon</groupId>
+                <artifactId>datasophon-plugin-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 插件管理器 -->
+            <dependency>
+                <groupId>com.datasophon</groupId>
+                <artifactId>datasophon-plugin-manager</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- 公共依赖 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

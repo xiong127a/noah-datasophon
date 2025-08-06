@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>datasophon-plugins-impl</artifactId>
+        <groupId>com.datasophon</groupId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>core-plugins</artifactId>
+    <packaging>pom</packaging>
+    <name>DataSophon Core Plugins</name>
+    <description>DataSophon核心插件组</description>
+
+    <modules>
+        <module>ssh-connector-plugin</module>
+        <module>system-info-plugin</module>
+        <module>cpu-checker-plugin</module>
+        <module>memory-checker-plugin</module>
+        <module>disk-checker-plugin</module>
+        <module>network-checker-plugin</module>
+    </modules>
+
+</project>

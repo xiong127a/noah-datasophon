@@ -33,6 +33,9 @@
         <module>datasophon-service</module>
         <module>datasophon-api</module>
         
+        <!-- 插件化模块 -->
+        <module>datasophon-plugins</module>        <!-- 插件生态系统 -->
+        
         <!-- 独立模块 -->
         <module>datasophon-worker</module>
         <module>datasophon-kubernetes</module>
@@ -98,6 +101,9 @@
         <commons-pool2.version>2.11.1</commons-pool2.version>
         <jsch-old.version>0.1.55</jsch-old.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <!-- 插件化框架版本 -->
+        <pf4j.version>3.10.0</pf4j.version>
+        <temporal.version>1.20.1</temporal.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -322,11 +328,48 @@
                 <version>${commons-pool2.version}</version>
             </dependency>
             
+            <!-- Micrometer监控 -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-core</artifactId>
+                <version>1.12.1</version>
+            </dependency>
+            
             <!-- 达梦数据库驱动 -->
             <dependency>
                 <groupId>com.dameng</groupId>
                 <artifactId>DmJdbcDriver18</artifactId>
                 <version>${dameng-jdbc.version}</version>
+            </dependency>
+            
+            <!-- PF4J插件框架 -->
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j</artifactId>
+                <version>${pf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.pf4j</groupId>
+                <artifactId>pf4j-spring</artifactId>
+                <version>0.8.0</version>
+            </dependency>
+            
+            <!-- Temporal工作流引擎 -->
+            <dependency>
+                <groupId>io.temporal</groupId>
+                <artifactId>temporal-sdk</artifactId>
+                <version>${temporal.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.temporal</groupId>
+                <artifactId>temporal-spring-boot-starter-alpha</artifactId>
+                <version>${temporal.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.temporal</groupId>
+                <artifactId>temporal-testing</artifactId>
+                <version>${temporal.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

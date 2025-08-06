@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>datasophon-plugins</artifactId>
+        <groupId>com.datasophon</groupId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>datasophon-plugin-api</artifactId>
+    <name>DataSophon Plugin API</name>
+    <description>DataSophon插件开发API，定义所有插件必须遵循的接口契约</description>
+
+    <dependencies>
+        <!-- PF4J核心 -->
+        <dependency>
+            <groupId>org.pf4j</groupId>
+            <artifactId>pf4j</artifactId>
+        </dependency>
+        
+        <!-- DataSophon公共模块 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- SSH客户端 -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+        </dependency>
+        
+        <!-- JSON处理 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
