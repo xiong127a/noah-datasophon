@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Extension
-public class SshConnectorPlugin extends Plugin implements HostCheckerPlugin {
+public class SshConnectorPlugin implements HostCheckerPlugin {
     
     private static final String PLUGIN_ID = "ssh-connector";
     private static final String PLUGIN_VERSION = "1.0.0";

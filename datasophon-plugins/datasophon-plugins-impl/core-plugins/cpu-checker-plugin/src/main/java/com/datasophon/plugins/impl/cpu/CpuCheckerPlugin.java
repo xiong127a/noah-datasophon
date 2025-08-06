@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Extension
-public class CpuCheckerPlugin extends Plugin implements HostCheckerPlugin {
+public class CpuCheckerPlugin implements HostCheckerPlugin {
     
     private static final String PLUGIN_ID = "cpu-checker";
     private static final String PLUGIN_VERSION = "1.0.0";

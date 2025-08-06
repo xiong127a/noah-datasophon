@@ -4,7 +4,7 @@ import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.PluginMetadata;
 import com.datasophon.common.enums.OsType;
-import org.pf4j.Plugin;
+import org.pf4j.ExtensionPoint;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * 
  * @author DataSophon Team
  */
-public interface HostCheckerPlugin extends Plugin {
+public interface HostCheckerPlugin extends ExtensionPoint {
     
     /**
      * 支持的操作系统类型
