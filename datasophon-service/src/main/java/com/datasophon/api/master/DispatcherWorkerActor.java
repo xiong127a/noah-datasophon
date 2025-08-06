@@ -34,7 +34,7 @@ import com.datasophon.common.model.HostInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Option;
+import java.util.Optional;
 
 import java.util.Objects;
 
@@ -43,7 +43,7 @@ public class DispatcherWorkerActor extends AbstractActor {
     private static final Logger logger = LoggerFactory.getLogger(DispatcherWorkerActor.class);
 
     @Override
-    public void preRestart(Throwable reason, Option<Object> message) throws Exception {
+    public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
         logger.info("host actor restart because {}", reason.getMessage());
         super.preRestart(reason, message);
     }

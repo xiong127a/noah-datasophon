@@ -36,14 +36,14 @@ import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Option;
+import java.util.Optional;
 
 public class HostConnectActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(HostConnectActor.class);
 
     @Override
-    public void preRestart(Throwable reason, Option<Object> message) throws Exception {
+    public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
         logger.info("or restart because {}", reason.getMessage());
         super.preRestart(reason, message);
     }

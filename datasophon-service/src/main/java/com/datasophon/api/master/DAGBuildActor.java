@@ -51,13 +51,13 @@ import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Option;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DAGBuildActor extends AbstractActor {
@@ -65,7 +65,7 @@ public class DAGBuildActor extends AbstractActor {
     private static final Logger logger = LoggerFactory.getLogger(DAGBuildActor.class);
 
     @Override
-    public void preRestart(Throwable reason, Option<Object> message) throws Exception {
+    public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
         logger.info("restart actor {}", reason.getMessage());
         super.preRestart(reason, message);
     }
