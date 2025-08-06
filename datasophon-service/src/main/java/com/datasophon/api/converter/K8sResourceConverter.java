@@ -6,6 +6,7 @@ import com.datasophon.common.vo.K8sNamespaceVO;
 import com.datasophon.common.vo.K8sResourceStatsVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 import org.mapstruct.factory.Mappers;
 
@@ -32,9 +33,9 @@ public interface K8sResourceConverter {
     @Mapping(target = "phase", source = "phase")
     @Mapping(target = "creationTime", source = "creationTime")
     @Mapping(target = "displayName", expression = "java(dto.getDisplayName())")
-    @Mapping(target = "phaseText", expression = "java(getPhaseText(dto.phase()))")
+    @Mapping(target = "phaseText", source = "phase", qualifiedByName = "getPhaseText")
     @Mapping(target = "isActive", expression = "java(dto.isActive())")
-    @Mapping(target = "statusColor", expression = "java(getStatusColor(dto.phase()))")
+    @Mapping(target = "statusColor", source = "phase", qualifiedByName = "getStatusColor")
     K8sNamespaceVO namespaceToVo(K8sNamespaceDTO dto);
 
     /**
@@ -55,6 +56,7 @@ public interface K8sResourceConverter {
     /**
      * 获取状态显示文本
      */
+    @Named("getPhaseText")
     default String getPhaseText(String phase) {
         if (phase == null) {
             return "未知";
@@ -71,6 +73,7 @@ public interface K8sResourceConverter {
     /**
      * 获取状态颜色
      */
+    @Named("getStatusColor")
     default String getStatusColor(String phase) {
         if (phase == null) {
             return "gray";
