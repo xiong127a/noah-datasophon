@@ -1,6 +1,7 @@
 package com.datasophon.plugins.api.service;
 
 import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.model.CommandResult;
 import org.apache.sshd.client.session.ClientSession;
 
 /**
@@ -60,24 +61,4 @@ public interface SshConnectionService {
      * @return 是否健康
      */
     boolean isPoolHealthy(HostCheckContext context);
-}
-
-/**
- * 命令执行结果
- */
-class CommandResult {
-    private final String output;
-    private final String error;
-    private final int exitCode;
-    
-    public CommandResult(String output, String error, int exitCode) {
-        this.output = output;
-        this.error = error;
-        this.exitCode = exitCode;
-    }
-    
-    public String getOutput() { return output; }
-    public String getError() { return error; }
-    public int getExitCode() { return exitCode; }
-    public boolean isSuccess() { return exitCode == 0; }
 }

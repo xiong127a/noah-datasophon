@@ -33,7 +33,7 @@ import com.datasophon.api.service.OsInfoService;
 import com.datasophon.common.dto.InstallStepDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.mapper.InstallStepMapper;
-import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.plugins.api.model.CommandResult;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
@@ -931,8 +931,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             // 连接成功，执行测试命令
             CommandResult connectionTestResult = MinaUtils.execCmdWithResultObject(session,
                     "echo connection_test");
-            String result = connectionTestResult.isSuccess() ? connectionTestResult.getOutput()
-                    : "EXIT_CODE_" + connectionTestResult.getExitCode() + ": " + connectionTestResult.getError();
+            String result = connectionTestResult.isSuccess() ? connectionTestResult.output()
+                    : "EXIT_CODE_" + connectionTestResult.exitCode() + ": " + connectionTestResult.error();
 
             boolean success = result != null && result.contains("connection_test");
 
