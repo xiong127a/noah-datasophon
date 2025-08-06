@@ -15,11 +15,17 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Policy {
     Map<String, PolicyResource> resources;
+    @Builder.Default
     List<PolicyItem> policyItems = Lists.newArrayList();
+    @Builder.Default
     List<PolicyItem> denyPolicyItems = Lists.newArrayList();
+    @Builder.Default
     List<PolicyItem> allowExceptions = Lists.newArrayList();
+    @Builder.Default
     List<PolicyItem> denyExceptions = Lists.newArrayList();
+    @Builder.Default
     List<Object> dataMaskPolicyItems = Lists.newArrayList();
+    @Builder.Default
     List<Object> rowFilterPolicyItems = Lists.newArrayList();
     private Integer id;
     private String guid;

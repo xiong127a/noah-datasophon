@@ -23,6 +23,7 @@ import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.NoticeGroupVO;
 import com.datasophon.common.vo.UserInfoVO;
 import com.datasophon.dao.entity.NoticeGroupEntity;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -41,6 +42,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
 
     @Override
     @Mapping(target = "userIds", ignore = true)
+    @BeanMapping(ignoreUnmappedSourceProperties = {"withUserIds", "withClusterId"})
     NoticeGroupDTO entityToDto(NoticeGroupEntity entity);
 
     @Override
@@ -49,8 +51,8 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
 
     @Override
     @Mapping(target = "users", ignore = true)
-    @Mapping(target = "userCount", ignore = true)
-    @Mapping(target = "userCountFormatted", source = "userCount", qualifiedByName = "formatUserCount")
+    @Mapping(target = "userCount", source = "userIds", qualifiedByName = "calculateUserCountFromIds")
+    @Mapping(target = "userCountFormatted", source = "userIds", qualifiedByName = "formatUserCountFromIds")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     NoticeGroupVO dtoToVo(NoticeGroupDTO dto);
 
@@ -63,7 +65,7 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Override
     @Mapping(target = "users", ignore = true)
     @Mapping(target = "userCount", ignore = true)
-    @Mapping(target = "userCountFormatted", source = "userCount", qualifiedByName = "formatUserCount")
+    @Mapping(target = "userCountFormatted", ignore = true)
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     NoticeGroupVO entityToVo(NoticeGroupEntity entity);
 
@@ -77,9 +79,10 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     /**
      * 创建包含用户信息的VO
      */
+    @Mapping(target = "users", source = "users")
     @Mapping(target = "userCountFormatted", source = "users", qualifiedByName = "formatUserCountFromList")
     @Mapping(target = "userCount", source = "users", qualifiedByName = "calculateUserCount")
-    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTimeFormatted", source = "dto.createTime", qualifiedByName = "formatDateTime")
     NoticeGroupVO dtoToVoWithUsers(NoticeGroupDTO dto, List<UserInfoVO> users);
 
     @Named("formatUserCount")
@@ -103,5 +106,16 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     @Named("calculateUserCount")
     default Integer calculateUserCount(List<UserInfoVO> users) {
         return users != null ? users.size() : 0;
+    }
+
+    @Named("calculateUserCountFromIds")
+    default Integer calculateUserCountFromIds(List<Integer> userIds) {
+        return userIds != null ? userIds.size() : 0;
+    }
+
+    @Named("formatUserCountFromIds")
+    default String formatUserCountFromIds(List<Integer> userIds) {
+        int count = userIds != null ? userIds.size() : 0;
+        return formatUserCount(count);
     }
 }

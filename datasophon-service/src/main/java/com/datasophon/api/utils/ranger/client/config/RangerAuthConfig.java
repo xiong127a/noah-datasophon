@@ -10,7 +10,9 @@ import lombok.*;
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RangerAuthConfig {
+    @Builder.Default
     private String username = "admin";
+    @Builder.Default
     private String password = "admin";
 
     @Override
