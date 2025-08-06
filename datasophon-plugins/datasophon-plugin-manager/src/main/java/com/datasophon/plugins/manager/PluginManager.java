@@ -2,6 +2,7 @@ package com.datasophon.plugins.manager;
 
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.PluginMetadata;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.DefaultPluginManager;
 import org.pf4j.PluginWrapper;
@@ -25,8 +26,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PluginManager {
     
+    @Getter
     private final org.pf4j.PluginManager pf4jManager;
+    
+    @Getter
     private final Map<String, HostCheckerPlugin> activePlugins = new ConcurrentHashMap<>();
+    
+    @Getter
     private final Map<String, PluginStatus> pluginStatus = new ConcurrentHashMap<>();
     
     public PluginManager() {

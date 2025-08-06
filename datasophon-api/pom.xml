@@ -47,6 +47,18 @@
             <version>${revision}</version>
         </dependency>
         
+        <!-- 插件生态系统依赖 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-manager</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
         <!-- Spring Boot Web相关 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
