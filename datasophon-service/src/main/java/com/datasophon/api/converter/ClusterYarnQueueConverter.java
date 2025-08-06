@@ -25,6 +25,7 @@ import com.datasophon.dao.entity.ClusterYarnQueue;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * 集群Yarn队列转换器
@@ -34,7 +35,9 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-@Mapper(componentModel = "spring", uses = FormatterUtils.class)
+@Mapper(componentModel = "spring", uses = FormatterUtils.class,
+        unmappedSourcePolicy = ReportingPolicy.IGNORE,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ClusterYarnQueueConverter
         extends BaseConverter<ClusterYarnQueue, ClusterYarnQueueDTO, ClusterYarnQueueVO> {
 
