@@ -36,6 +36,7 @@ import com.datasophon.dao.mapper.FrameServiceMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -57,10 +58,14 @@ import java.util.Objects;
 public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, FrameServiceEntity>
         implements FrameServiceService {
 
-    private final FrameServiceConverter frameServiceConverter;
-    private final ClusterInfoService clusterInfoService;
-    private final FrameInfoMapper frameInfoMapper;
-    private final ClusterServiceInstanceService serviceInstanceService;
+    @Autowired
+    private  FrameServiceConverter frameServiceConverter;
+    @Autowired
+    private  ClusterInfoService clusterInfoService;
+    @Autowired
+    private  FrameInfoMapper frameInfoMapper;
+    @Autowired
+    private  ClusterServiceInstanceService serviceInstanceService;
 
     private static final List<String> CUSTOM_REQUIRED_SERVICE = List.of(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER");

@@ -68,6 +68,7 @@ import org.apache.pekko.actor.ActorRef;
 import org.apache.sshd.client.session.ClientSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -96,11 +97,16 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private static final int LOG_PRINT_INTERVAL = 10;
 
     // 依赖注入 - 使用构造器注入
-    private final ClusterInfoService clusterInfoService;
-    private final ClusterHostService hostService;
-    private final OsInfoService osInfoService;
-    private final K8sToClusterHostConverter k8sToClusterHostConverter;
-    private final InstallStepConverter installStepConverter;
+    @Autowired
+    private  ClusterInfoService clusterInfoService;
+    @Autowired
+    private  ClusterHostService hostService;
+    @Autowired
+    private  OsInfoService osInfoService;
+    @Autowired
+    private  K8sToClusterHostConverter k8sToClusterHostConverter;
+    @Autowired
+    private  InstallStepConverter installStepConverter;
 
     // 线程池需要特殊处理，因为有@Qualifier注解，使用字段注入
     @Qualifier("osInfoExecutor")
