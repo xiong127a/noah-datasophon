@@ -5,7 +5,7 @@ package com.datasophon.plugins.api.model;
  *
  * @author DataSophon Team
  */
-public record CommandResult(String output, String error, int exitCode) {
+public record CommandResult(String command, int exitCode, String output, String error) {
 
     public boolean isSuccess() {
         return exitCode == 0;

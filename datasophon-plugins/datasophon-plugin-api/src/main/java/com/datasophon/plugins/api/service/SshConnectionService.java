@@ -38,9 +38,9 @@ public interface SshConnectionService {
         try {
             session = borrowConnection(context);
             // 这里需要具体的命令执行逻辑
-            return new CommandResult("", "", 0); // 临时返回值
+            return new CommandResult("", 0, "", ""); // 临时返回值
         } catch (Exception e) {
-            return new CommandResult("", e.getMessage(), -1);
+            return new CommandResult("", -1, "", e.getMessage());
         } finally {
             if (session != null) {
                 returnConnection(context, session);

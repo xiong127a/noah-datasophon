@@ -1,7 +1,8 @@
 package com.datasophon.api.utils;
 
-import com.datasophon.api.service.checker.common.CommandResult;
+
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.plugins.api.model.CommandResult;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelExec;
 import org.apache.sshd.client.channel.ClientChannelEvent;
@@ -33,70 +34,71 @@ public class MinaUtils {
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(MinaUtils.class);
 
     /** 打开远程会话 */
-    public static ClientSession openConnection(HostInfo hostInfo) {
+    public static ClientSession openConnection(HostInfo hostInfo) throws IOException {
         String sshIp = hostInfo.getIp();
         Integer sshPort = hostInfo.getSshPort();
         String sshUser = hostInfo.getSshUser();
-        SshClient sshClient = SshClient.setUpDefaultClient();
-
-        // 配置自动接受未知主机密钥
-        sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
-
-        sshClient.start();
         ClientSession session;
+        try (SshClient sshClient = SshClient.setUpDefaultClient()) {
 
-        // 获取两种格式的私钥路径
-        String privateKeyPathRSA = System.getProperty("user.home") + "/.ssh/id_rsa";
-        String privateKeyPathED25519 = System.getProperty("user.home") + "/.ssh/id_ed25519";
+            // 配置自动接受未知主机密钥
+            sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
 
-        try {
-            // 创建会话连接
-            session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
-            boolean authAdded = false;
+            sshClient.start();
 
-            // 尝试使用ED25519密钥（先尝试更安全的密钥）
-            File ed25519KeyFile = new File(privateKeyPathED25519);
-            if (ed25519KeyFile.exists()) {
-                try {
-                    String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPathED25519)));
-                    session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
-                    LOG.info("已添加ED25519密钥认证");
-                    authAdded = true;
-                } catch (Exception e) {
-                    LOG.warn("ED25519密钥加载失败: {}", e.getMessage());
+            // 获取两种格式的私钥路径
+            String privateKeyPathRSA = System.getProperty("user.home") + "/.ssh/id_rsa";
+            String privateKeyPathED25519 = System.getProperty("user.home") + "/.ssh/id_ed25519";
+
+            try {
+                // 创建会话连接
+                session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
+                boolean authAdded = false;
+
+                // 尝试使用ED25519密钥（先尝试更安全的密钥）
+                File ed25519KeyFile = new File(privateKeyPathED25519);
+                if (ed25519KeyFile.exists()) {
+                    try {
+                        String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPathED25519)));
+                        session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
+                        LOG.info("已添加ED25519密钥认证");
+                        authAdded = true;
+                    } catch (Exception e) {
+                        LOG.warn("ED25519密钥加载失败: {}", e.getMessage());
+                    }
                 }
-            }
 
-            // 尝试使用RSA密钥
-            File rsaKeyFile = new File(privateKeyPathRSA);
-            if (rsaKeyFile.exists()) {
-                try {
-                    String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPathRSA)));
-                    session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
-                    LOG.info("已添加RSA密钥认证");
-                    authAdded = true;
-                } catch (Exception e) {
-                    LOG.warn("RSA密钥加载失败: {}", e.getMessage());
+                // 尝试使用RSA密钥
+                File rsaKeyFile = new File(privateKeyPathRSA);
+                if (rsaKeyFile.exists()) {
+                    try {
+                        String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPathRSA)));
+                        session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
+                        LOG.info("已添加RSA密钥认证");
+                        authAdded = true;
+                    } catch (Exception e) {
+                        LOG.warn("RSA密钥加载失败: {}", e.getMessage());
+                    }
                 }
-            }
 
-            // 如果没有添加任何认证方式，则失败
-            if (!authAdded) {
-                LOG.error("没有可用的SSH密钥");
+                // 如果没有添加任何认证方式，则失败
+                if (!authAdded) {
+                    LOG.error("没有可用的SSH密钥");
+                    return null;
+                }
+
+                // 执行认证
+                if (session.auth().verify().isFailure()) {
+                    LOG.error("SSH密钥认证失败");
+                    return null;
+                }
+            } catch (IOException e) {
+                LOG.error("免密登录失败: {}", e.getMessage());
+                return null;
+            } catch (Exception e) {
+                LOG.error("连接异常: {}", e.getMessage());
                 return null;
             }
-
-            // 执行认证
-            if (session.auth().verify().isFailure()) {
-                LOG.error("SSH密钥认证失败");
-                return null;
-            }
-        } catch (IOException e) {
-            LOG.error("免密登录失败: {}", e.getMessage());
-            return null;
-        } catch (Exception e) {
-            LOG.error("连接异常: {}", e.getMessage());
-            return null;
         }
 
         LOG.info("{} 连接成功", sshIp);
@@ -166,7 +168,7 @@ public class MinaUtils {
 
                 if (events.contains(ClientChannelEvent.TIMEOUT)) {
                     LOG.error("命令执行超时: {}", command);
-                    return new CommandResult(command, 124, "", "命令执行超时");
+                    return new CommandResult(command, 124,"命令执行超时", "");
                 }
 
                 int exitStatus = ce.getExitStatus();
@@ -263,10 +265,10 @@ public class MinaUtils {
     public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
         CommandResult result = execCmdWithResultObject(session, command);
         if (result.isSuccess()) {
-            return result.getOutput();
+            return result.output();
         } else {
             throw new IOException(
-                    "Command execution failed with exit code " + result.getExitCode() + ": " + result.getError());
+                    "Command execution failed with exit code " + result.exitCode() + ": " + result.error());
         }
     }
 
@@ -303,7 +305,7 @@ public class MinaUtils {
     }
 
     /** 使用密码进行连接 */
-    public static ClientSession openConnectionWithPassword(HostInfo hostInfo) {
+    public static ClientSession openConnectionWithPassword(HostInfo hostInfo) throws IOException {
         if (hostInfo == null) {
             LOG.error("主机信息为空，无法建立连接");
             return null;
@@ -322,64 +324,65 @@ public class MinaUtils {
             return null;
         }
 
-        SshClient sshClient = SshClient.setUpDefaultClient();
-
-        // 设置连接超时为10秒，减少对慢主机的等待时间
-        long connectTimeout = 10000; // 10秒
-
-        // 使用正确的字符串常量设置连接超时
-        sshClient.getProperties().put("ssh.connectTimeout", String.valueOf(connectTimeout));
-        sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
-
-        sshClient.start();
         ClientSession session;
-        try {
-            session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
-            session.addPasswordIdentity(sshPassword);
-            if (session.auth().verify().isFailure()) {
-                String errorMsg = "用户名或密码验证失败";
-                LOG.error("{}: {}", sshIp, errorMsg);
+        try (SshClient sshClient = SshClient.setUpDefaultClient()) {
+
+            // 设置连接超时为10秒，减少对慢主机的等待时间
+            long connectTimeout = 10000; // 10秒
+
+            // 使用正确的字符串常量设置连接超时
+            sshClient.getProperties().put("ssh.connectTimeout", String.valueOf(connectTimeout));
+            sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
+
+            sshClient.start();
+            try {
+                session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
+                session.addPasswordIdentity(sshPassword);
+                if (session.auth().verify().isFailure()) {
+                    String errorMsg = "用户名或密码验证失败";
+                    LOG.error("{}: {}", sshIp, errorMsg);
+                    // 设置具体的错误信息
+                    hostInfo.setSshErrorMsg(errorMsg);
+                    hostInfo.setErrorMessage("SSH连接失败: " + errorMsg);
+                    return null;
+                }
+            } catch (IOException e) {
+                String errorMsg = "密码连接失败: " + e.getMessage();
+                LOG.error("{}: {}", sshIp, errorMsg, e);
                 // 设置具体的错误信息
                 hostInfo.setSshErrorMsg(errorMsg);
-                hostInfo.setErrorMessage("SSH连接失败: " + errorMsg);
+                hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
+                // 保存异常类型信息
+                if (e.getMessage() != null) {
+                    if (e.getMessage().contains("Auth fail") || e.getMessage().contains("authentication failed")) {
+                        hostInfo.setSshErrorMsg("用户名或密码错误: " + e.getMessage());
+                    } else if (e.getMessage().contains("Connection refused")) {
+                        hostInfo.setSshErrorMsg("SSH服务未启动或端口未开放: " + e.getMessage());
+                    } else if (e.getMessage().contains("connect timed out")) {
+                        hostInfo.setSshErrorMsg("连接超时，网络不通或防火墙阻止: " + e.getMessage());
+                    } else if (e.getMessage().contains("UnknownHostException")) {
+                        hostInfo.setSshErrorMsg("无法解析主机名: " + e.getMessage());
+                    } else if (e.getMessage().contains("No route to host")) {
+                        hostInfo.setSshErrorMsg("无法访问主机: " + e.getMessage());
+                    }
+                }
+                return null;
+            } catch (Exception e) {
+                String errorMsg = "连接异常: " + e.getMessage();
+                LOG.error("{}: {}", sshIp, errorMsg, e);
+                // 设置具体的错误信息
+                hostInfo.setSshErrorMsg(errorMsg);
+                hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
+                // 保存完整的异常堆栈信息
+                if (e.getStackTrace() != null && e.getStackTrace().length > 0) {
+                    StringBuilder stackInfo = new StringBuilder();
+                    for (int i = 0; i < Math.min(3, e.getStackTrace().length); i++) {
+                        stackInfo.append(e.getStackTrace()[i].toString()).append("\n");
+                    }
+                    hostInfo.setOsErrorMsg("连接异常堆栈: " + stackInfo);
+                }
                 return null;
             }
-        } catch (IOException e) {
-            String errorMsg = "密码连接失败: " + e.getMessage();
-            LOG.error("{}: {}", sshIp, errorMsg, e);
-            // 设置具体的错误信息
-            hostInfo.setSshErrorMsg(errorMsg);
-            hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
-            // 保存异常类型信息
-            if (e.getMessage() != null) {
-                if (e.getMessage().contains("Auth fail") || e.getMessage().contains("authentication failed")) {
-                    hostInfo.setSshErrorMsg("用户名或密码错误: " + e.getMessage());
-                } else if (e.getMessage().contains("Connection refused")) {
-                    hostInfo.setSshErrorMsg("SSH服务未启动或端口未开放: " + e.getMessage());
-                } else if (e.getMessage().contains("connect timed out")) {
-                    hostInfo.setSshErrorMsg("连接超时，网络不通或防火墙阻止: " + e.getMessage());
-                } else if (e.getMessage().contains("UnknownHostException")) {
-                    hostInfo.setSshErrorMsg("无法解析主机名: " + e.getMessage());
-                } else if (e.getMessage().contains("No route to host")) {
-                    hostInfo.setSshErrorMsg("无法访问主机: " + e.getMessage());
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            String errorMsg = "连接异常: " + e.getMessage();
-            LOG.error("{}: {}", sshIp, errorMsg, e);
-            // 设置具体的错误信息
-            hostInfo.setSshErrorMsg(errorMsg);
-            hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
-            // 保存完整的异常堆栈信息
-            if (e.getStackTrace() != null && e.getStackTrace().length > 0) {
-                StringBuilder stackInfo = new StringBuilder();
-                for (int i = 0; i < Math.min(3, e.getStackTrace().length); i++) {
-                    stackInfo.append(e.getStackTrace()[i].toString()).append("\n");
-                }
-                hostInfo.setOsErrorMsg("连接异常堆栈: " + stackInfo);
-            }
-            return null;
         }
         LOG.info("{} 密码连接成功", sshIp);
         return session;
@@ -402,8 +405,8 @@ public class MinaUtils {
 
         for (String cmd : commands) {
             CommandResult result = execCmdWithResultObject(session, cmd);
-            if (result.isSuccess() && !result.getOutput().isEmpty()) {
-                return result.getOutput().trim();
+            if (result.isSuccess() && !result.output().isEmpty()) {
+                return result.output().trim();
             }
         }
 
@@ -447,7 +450,7 @@ public class MinaUtils {
                 String checkDir = "[ -d /etc/rc.d/init.d/ ] && echo 'exists' || echo 'not exists'";
                 CommandResult dirCheckResult = execCmdWithResultObject(session, checkDir);
 
-                if (!dirCheckResult.isSuccess() || "not exists".equals(dirCheckResult.getOutput().trim())) {
+                if (!dirCheckResult.isSuccess() || "not exists".equals(dirCheckResult.output().trim())) {
                     // 如果目录不存在，调整为systemctl命令
                     if (command.contains("on")) {
                         adaptedCommand = command.replace("chkconfig", "systemctl enable");
@@ -506,11 +509,11 @@ public class MinaUtils {
         if (!result.isSuccess() && !adaptedCommand.startsWith("sudo")) {
             LOG.warn("命令执行失败，尝试使用sudo: {}", adaptedCommand);
             CommandResult sudoResult = execCmdWithResultObject(session, "sudo " + adaptedCommand);
-            return sudoResult.isSuccess() ? sudoResult.getOutput()
-                    : "EXIT_CODE_" + sudoResult.getExitCode() + ": " + sudoResult.getError();
+            return sudoResult.isSuccess() ? sudoResult.output()
+                    : "EXIT_CODE_" + sudoResult.exitCode() + ": " + sudoResult.error();
         }
 
-        return result.isSuccess() ? result.getOutput() : "EXIT_CODE_" + result.getExitCode() + ": " + result.getError();
+        return result.isSuccess() ? result.output() : "EXIT_CODE_" + result.exitCode() + ": " + result.error();
     }
 
     /**
@@ -527,7 +530,7 @@ public class MinaUtils {
         // 1. 检查脚本是否存在
         String checkScript = "[ -f " + scriptPath + " ] && echo 'exists' || echo 'not exists'";
         CommandResult scriptExistsResult = execCmdWithResultObject(session, checkScript);
-        if (!scriptExistsResult.isSuccess() || !"exists".equals(scriptExistsResult.getOutput().trim())) {
+        if (!scriptExistsResult.isSuccess() || !"exists".equals(scriptExistsResult.output().trim())) {
             LOG.error("找不到启动脚本: {}", scriptPath);
             return false;
         }
@@ -541,7 +544,7 @@ public class MinaUtils {
         String checkSystemd = "[ -d " + systemdDir + " ] && echo 'exists' || echo 'not exists'";
         CommandResult systemdExistsResult = execCmdWithResultObject(session, checkSystemd);
 
-        if (systemdExistsResult.isSuccess() && "exists".equals(systemdExistsResult.getOutput().trim())) {
+        if (systemdExistsResult.isSuccess() && "exists".equals(systemdExistsResult.output().trim())) {
             LOG.info("创建systemd服务单元文件");
 
             // 创建服务单元文件内容
@@ -602,7 +605,7 @@ public class MinaUtils {
      */
     public static String execCmdWithResult(ClientSession session, String command) {
         CommandResult result = execCmdWithResultObject(session, command);
-        return result.isSuccess() ? result.getOutput() : "EXIT_CODE_" + result.getExitCode() + ": " + result.getError();
+        return result.isSuccess() ? result.output() : "EXIT_CODE_" + result.exitCode() + ": " + result.error();
     }
 
     /**
@@ -615,12 +618,12 @@ public class MinaUtils {
     public static CommandResult execCommand(ClientSession session, String command) {
         if (session == null) {
             LOG.error("会话为空，无法执行命令");
-            return new CommandResult("", "SSH会话为空", -1);
+            return new CommandResult(command, -1, "", "SSH会话为空");
         }
 
         if (!session.isOpen()) {
             LOG.error("会话已关闭，无法执行命令");
-            return new CommandResult("", "SSH会话已关闭", -1);
+            return new CommandResult("", -1, "", "SSH会话已关闭");
         }
 
         // 获取当前线程名称，用于日志
@@ -666,13 +669,13 @@ public class MinaUtils {
 
             if (exitStatus != 0) {
                 LOG.error("命令执行失败 [exit={}]: {}\n错误信息: {}", exitStatus, command, error);
-                return new CommandResult(output, error, exitStatus);
+                return new CommandResult("", exitStatus, output, error);
             }
 
-            return new CommandResult(output, error, exitStatus);
+            return new CommandResult("", exitStatus, output, error);
         } catch (Exception e) {
             LOG.error("执行命令时异常 {}: {}", command, e.getMessage());
-            return new CommandResult("", "执行异常: " + e.getMessage(), -1);
+            return new CommandResult("", -1, "", "执行异常: " + e.getMessage());
         }
     }
 
@@ -689,7 +692,7 @@ public class MinaUtils {
         try {
             // 使用简单的命令来验证连接可用性，设置3秒超时
             CommandResult result = execCmdWithResultObject(session, "echo 'connection_test'", 3);
-            return result.isSuccess() && "connection_test".equals(result.getOutput().trim());
+            return result.isSuccess() && "connection_test".equals(result.output().trim());
         } catch (Exception e) {
             LOG.warn("SSH连接验证失败: {}", e.getMessage());
             return false;
