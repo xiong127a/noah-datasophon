@@ -32,9 +32,6 @@ public class ServiceException extends RuntimeException {
      */
     private Integer code;
 
-    public ServiceException() {
-    }
-
     public ServiceException(Status status) {
         super(status.getMsg());
         this.code = status.getCode();
