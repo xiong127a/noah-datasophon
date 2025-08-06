@@ -52,7 +52,7 @@ public class OsInfoServiceImpl implements OsInfoService {
     // 线程池配置
     private ExecutorService hostInfoExecutor;
 
-    @Autowired
+//    @Autowired
     private ExecutorService hardwareInfoExecutor;
 
     // 队列管理器
