@@ -285,4 +285,14 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
         return removeById(id);
     }
 
+    @Override
+    public boolean isServiceInUse(Integer serviceId) {
+        if (serviceId == null) {
+            return false;
+        }
+
+        // 检查是否有集群服务实例在使用此服务
+        return serviceInstanceService.existsByFrameServiceId(serviceId);
+    }
+
 }

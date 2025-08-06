@@ -290,4 +290,13 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
 
         return removeByIds(ids);
     }
+
+    @Override
+    public boolean removeByServiceId(Integer serviceId) {
+        if (serviceId == null) {
+            return false;
+        }
+
+        return getMapper().removeByServiceId(serviceId);
+    }
 }

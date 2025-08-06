@@ -55,6 +55,14 @@ public interface InstallService extends IService<InstallStepEntity> {
     InstallStepDTO getInstallStepById(Integer id);
 
     /**
+     * 根据安装类型获取安装步骤
+     * 
+     * @param type 安装类型
+     * @return 安装步骤DTO
+     */
+    InstallStepDTO getInstallStep(Integer type);
+
+    /**
      * 保存安装步骤
      * 
      * @param installStepDTO 安装步骤DTO

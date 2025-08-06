@@ -93,4 +93,12 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
      * 删除单个服务（包含文件清理）
      */
     boolean removeFrameServiceById(Integer id);
+
+    /**
+     * 检查服务是否被集群实例使用
+     * 
+     * @param serviceId 服务ID
+     * @return 如果被使用返回true，否则返回false
+     */
+    boolean isServiceInUse(Integer serviceId);
 }

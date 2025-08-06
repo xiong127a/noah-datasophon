@@ -21,8 +21,8 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.dto.HostCheckStatusDto;
-import com.datasophon.common.dto.InstallStepDto;
-import com.datasophon.common.dto.PageResult;
+import com.datasophon.common.dto.InstallStepDTO;
+import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.api.dto.Result;
 import lombok.RequiredArgsConstructor;
@@ -58,13 +58,13 @@ public class HostInstallController {
      * 获取安装步骤
      */
     @GetMapping("/getInstallStep")
-    public Result<InstallStepDto> getInstallStep(@RequestParam("type") Integer type) {
+    public Result<InstallStepDTO> getInstallStep(@RequestParam("type") Integer type) {
         try {
             if (type == null) {
                 return Result.error("安装类型不能为空");
             }
             log.debug("获取安装步骤，类型: {}", type);
-            InstallStepDto installSteps = installService.getInstallStep(type);
+            InstallStepDTO installSteps = installService.getInstallStep(type);
             return Result.success(installSteps);
         } catch (Exception e) {
             log.error("获取安装步骤失败，类型: {}, 错误: {}", type, e.getMessage(), e);

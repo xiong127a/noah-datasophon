@@ -144,6 +144,26 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
+    public InstallStepDTO getInstallStep(Integer type) {
+        try {
+            if (type == null) {
+                throw new RuntimeException("安装类型不能为空");
+            }
+
+            List<InstallStepDTO> steps = getInstallStepsByType(type);
+            if (steps == null || steps.isEmpty()) {
+                throw new RuntimeException("未找到类型为 " + type + " 的安装步骤");
+            }
+
+            // 返回第一个匹配的安装步骤
+            return steps.getFirst();
+        } catch (Exception e) {
+            log.error("根据类型获取安装步骤失败: {}", e.getMessage(), e);
+            throw new RuntimeException("根据类型获取安装步骤失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public InstallStepDTO saveInstallStep(InstallStepDTO installStepDTO) {
         try {
             if (installStepDTO == null) {
@@ -1428,9 +1448,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             result.put("ip", clusterHostDO.getIp());
             result.put("command", "service datasophon-worker " + commandType);
 
-            ClientSession session = null;
-            try {
-                session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
+            try (ClientSession session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT))) {
                 String commandResult = MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
                 result.put("success", true);
                 result.put("output", commandResult);
@@ -1439,14 +1457,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 result.put("success", false);
                 result.put("error", e.getMessage());
                 log.error("Failed to execute hostAgent command on {}: {}", clusterHostDO.getIp(), e.getMessage());
-            } finally {
-                if (session != null) {
-                    try {
-                        session.close();
-                    } catch (Exception e) {
-                        log.warn("Failed to close SSH session for {}: {}", clusterHostDO.getIp(), e.getMessage());
-                    }
-                }
             }
             results.add(result);
         }

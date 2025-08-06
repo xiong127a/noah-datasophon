@@ -144,4 +144,12 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceState 新的服务状态
      */
     void updateServiceInstanceState(Integer serviceInstanceId, com.datasophon.dao.enums.ServiceState serviceState);
+
+    /**
+     * 检查是否存在使用指定框架服务的集群服务实例
+     *
+     * @param frameServiceId 框架服务ID
+     * @return 如果存在返回true，否则返回false
+     */
+    boolean existsByFrameServiceId(Integer frameServiceId);
 }

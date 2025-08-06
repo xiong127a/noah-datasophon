@@ -718,4 +718,13 @@ public class ClusterServiceInstanceServiceImpl
             updateById(entity);
         }
     }
+
+    @Override
+    public boolean existsByFrameServiceId(Integer frameServiceId) {
+        if (frameServiceId == null) {
+            return false;
+        }
+        
+        return getMapper().existsByFrameServiceId(frameServiceId);
+    }
 }

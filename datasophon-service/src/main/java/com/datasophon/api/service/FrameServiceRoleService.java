@@ -119,4 +119,12 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @return 是否删除成功
      */
     boolean removeFrameServiceRoleByIds(List<Integer> ids);
+
+    /**
+     * 根据服务ID删除相关的服务角色配置
+     * 
+     * @param serviceId 服务ID
+     * @return 是否删除成功
+     */
+    boolean removeByServiceId(Integer serviceId);
 }

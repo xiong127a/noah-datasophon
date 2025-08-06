@@ -90,4 +90,13 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
                 return this.selectListByQuery(query);
         }
 
+        /**
+         * 检查是否存在使用指定框架服务的集群服务实例
+         */
+        default boolean existsByFrameServiceId(Integer frameServiceId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(ClusterServiceInstanceEntity::getFrameServiceId).eq(frameServiceId);
+                return this.selectCountByQuery(query) > 0;
+        }
+
 }

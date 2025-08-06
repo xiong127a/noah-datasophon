@@ -112,4 +112,16 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
                 return this.selectListByQuery(query);
         }
 
+        /**
+         * 根据服务ID删除相关的服务角色配置
+         * 
+         * @param serviceId 服务ID
+         * @return 是否删除成功
+         */
+        default boolean removeByServiceId(Integer serviceId) {
+                QueryWrapper query = QueryWrapper.create()
+                                .where(FrameServiceRoleEntity::getServiceId).eq(serviceId);
+                return this.deleteByQuery(query) > 0;
+        }
+
 }
