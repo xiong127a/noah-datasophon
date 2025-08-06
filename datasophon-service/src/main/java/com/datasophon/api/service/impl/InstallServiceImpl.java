@@ -69,12 +69,10 @@ import org.apache.sshd.client.session.ClientSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -109,11 +107,12 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  InstallStepConverter installStepConverter;
 
     // 线程池需要特殊处理，因为有@Qualifier注解，使用字段注入
-    @Qualifier("osInfoExecutor")
-    private final ExecutorService osInfoExecutor;
+    // 临时注释掉executor依赖，避免Spring启动失败
+    // @Qualifier("osInfoExecutor")
+    // private final ExecutorService osInfoExecutor;
 
-    @Qualifier("hardwareInfoExecutor")
-    private final ExecutorService hardwareInfoExecutor;
+    // @Qualifier("hardwareInfoExecutor")
+    // private final ExecutorService hardwareInfoExecutor;
 
     @Override
     public List<InstallStepDTO> getInstallStepsByType(Integer installType) {
@@ -556,8 +555,9 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         if (currentCount % LOG_PRINT_INTERVAL == 1) {
             log.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
         }
-        // 使用线程池进行主机信息收集，保证主接口立即返回
-        osInfoExecutor.execute(() -> {
+        // 临时改为直接执行，避免依赖executor
+        // TODO: 后续需要重新设计线程池配置
+        CompletableFuture.runAsync(() -> {
             try {
                 // 使用与返回给前端相同的排序逻辑，确保一致性
                 List<HostInfo> tempList = new ArrayList<>(hostMap.values());
@@ -738,7 +738,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                             // 恢复线程原始名称
                             thread.setName(threadOriginalName);
                         }
-                    }, osInfoExecutor);
+                    });
 
                     firstPhaseFutures.add(future);
                 }
@@ -808,7 +808,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                                 // 恢复线程原始名称
                                 thread.setName(threadOriginalName);
                             }
-                        }, hardwareInfoExecutor);
+                        });
 
                         secondPhaseFutures.add(future);
                     }

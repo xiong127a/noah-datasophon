@@ -14,69 +14,75 @@ import org.springframework.context.annotation.Configuration;
 /**
  * 执行器配置
  * 定义各种线程池执行器
+ * 
+ * 注意：临时注释掉所有executor bean，避免Spring启动时的多bean冲突问题
+ * 这些线程池后续需要重新设计和实现
  */
 @Configuration
 public class ExecutorConfiguration {
+
+    // 临时注释掉所有executor bean以解决启动冲突问题
+    // 后续需要重新设计这些线程池的依赖注入方式
 
     /**
      * 创建检查任务执行器
      * 
      * @return 检查任务执行器
      */
-    @Bean(name = "checkExecutor")
-    public ExecutorService checkExecutor() {
-        return createThreadPool("check-executor", 20);
-    }
+    // @Bean(name = "checkExecutor")
+    // public ExecutorService checkExecutor() {
+    //     return createThreadPool("check-executor", 20);
+    // }
 
     /**
      * 创建修复任务执行器
      * 
      * @return 修复任务执行器
      */
-    @Bean(name = "fixExecutor")
-    public ExecutorService fixExecutor() {
-        return createThreadPool("fix-executor", 10);
-    }
+    // @Bean(name = "fixExecutor")
+    // public ExecutorService fixExecutor() {
+    //     return createThreadPool("fix-executor", 10);
+    // }
 
     /**
      * 创建操作系统信息执行器
      * 
      * @return 操作系统信息执行器
      */
-    @Bean(name = "osInfoExecutor")
-    public ExecutorService osInfoExecutor() {
-        return createThreadPool("os-info-executor", 20);
-    }
+    // @Bean(name = "osInfoExecutor")
+    // public ExecutorService osInfoExecutor() {
+    //     return createThreadPool("os-info-executor", 20);
+    // }
 
     /**
      * 创建硬件信息执行器
      * 
      * @return 硬件信息执行器
      */
-    @Bean(name = "hardwareInfoExecutor")
-    public ExecutorService hardwareInfoExecutor() {
-        return createThreadPool("hardware-info-executor", 10);
-    }
+    // @Bean(name = "hardwareInfoExecutor")
+    // public ExecutorService hardwareInfoExecutor() {
+    //     return createThreadPool("hardware-info-executor", 10);
+    // }
 
     /**
      * 创建hosts文件执行器
      * 
      * @return hosts文件执行器
      */
-    @Bean(name = "hostsFileExecutor")
-    public ExecutorService hostsFileExecutor() {
-        return createThreadPool("hosts-file-executor", 5);
-    }
+    // @Bean(name = "hostsFileExecutor")
+    // public ExecutorService hostsFileExecutor() {
+    //     return createThreadPool("hosts-file-executor", 5);
+    // }
 
     /**
      * 创建主机名执行器
      * 
      * @return 主机名执行器
      */
-    @Bean(name = "hostnameExecutor")
-    public ExecutorService hostnameExecutor() {
-        return createThreadPool("hostname-executor", 5);
-    }
+    // @Bean(name = "hostnameExecutor")
+    // public ExecutorService hostnameExecutor() {
+    //     return createThreadPool("hostname-executor", 5);
+    // }
 
     /**
      * 创建指定名称和大小的线程池
