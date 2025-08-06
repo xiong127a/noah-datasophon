@@ -1,8 +1,9 @@
 package com.datasophon.api.workflow.config;
 
-import com.datasophon.api.workflow.HostCheckWorkflow;
+
 import com.datasophon.api.workflow.activity.HostCheckActivities;
-import com.datasophon.api.workflow.impl.HostCheckWorkflowImpl;
+import com.datasophon.api.workflow.impl.SingleHostCheckWorkflowImpl;
+import com.datasophon.api.workflow.impl.BatchHostCheckWorkflowImpl;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -103,8 +104,11 @@ public class TemporalConfiguration {
         // 创建Worker
         Worker worker = workerFactory.newWorker(taskQueue, workerOptions);
         
-        // 注册工作流实现
-        worker.registerWorkflowImplementationTypes(HostCheckWorkflowImpl.class);
+        // 注册工作流实现 - 拆分为两个独立的工作流
+        worker.registerWorkflowImplementationTypes(
+                SingleHostCheckWorkflowImpl.class,
+                BatchHostCheckWorkflowImpl.class
+        );
         
         // 注册活动实现
         worker.registerActivitiesImplementations(hostCheckActivities);

@@ -7,13 +7,13 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
 /**
- * 主机检查工作流接口
- * 定义主机检查的工作流方法
+ * 单个主机检查工作流接口
+ * 定义单个主机检查的工作流方法
  * 
  * @author DataSophon Team
  */
 @WorkflowInterface
-public interface HostCheckWorkflow {
+public interface SingleHostCheckWorkflow {
     
     /**
      * 执行单个主机检查工作流
@@ -22,14 +22,6 @@ public interface HostCheckWorkflow {
      */
     @WorkflowMethod
     HostCheckResult executeHostCheck(HostCheckRequest request);
-    
-    /**
-     * 执行批量主机检查工作流
-     * @param request 批量检查请求
-     * @return 批量检查结果
-     */
-    @WorkflowMethod(name = "BatchHostCheck")
-    BatchCheckResult executeBatchCheck(BatchCheckRequest request);
     
     /**
      * 暂停检查工作流

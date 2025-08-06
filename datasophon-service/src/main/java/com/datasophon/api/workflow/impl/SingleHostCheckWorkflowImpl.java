@@ -1,6 +1,6 @@
 package com.datasophon.api.workflow.impl;
 
-import com.datasophon.api.workflow.HostCheckWorkflow;
+import com.datasophon.api.workflow.SingleHostCheckWorkflow;
 import com.datasophon.api.workflow.activity.HostCheckActivities;
 import com.datasophon.api.workflow.model.*;
 import com.datasophon.common.model.OsInfo;
@@ -22,16 +22,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 主机检查工作流实现类
+ * 单个主机检查工作流实现类
  * 
  * @author DataSophon Team
  */
 @Slf4j
-public class HostCheckWorkflowImpl implements HostCheckWorkflow {
+public class SingleHostCheckWorkflowImpl implements SingleHostCheckWorkflow {
     
     // 工作流状态
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
-    private boolean isPaused = false;
 
     // 进度跟踪
     private CheckProgress progress = CheckProgress.builder()
@@ -56,7 +55,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     
     @Override
     public HostCheckResult executeHostCheck(HostCheckRequest request) {
-        log.info("开始执行主机检查工作流: {} -> {}", 
+        log.info("开始执行单个主机检查工作流: {} -> {}", 
                 request.getRequestId(), request.getHostInfo().getIp());
         
         // 初始化工作流状态
@@ -111,7 +110,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
                 currentStatus = result.isAllSuccess() ? WorkflowStatus.COMPLETED : WorkflowStatus.PARTIAL_SUCCESS;
                 progress.setCurrentStatus(currentStatus);
                 
-                log.info("主机检查工作流执行完成: {} -> {}, 状态: {}", 
+                log.info("单个主机检查工作流执行完成: {} -> {}, 状态: {}", 
                         request.getRequestId(), hostInfo.getIp(), currentStatus);
                 
                 return result;
@@ -122,7 +121,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
             }
             
         } catch (Exception e) {
-            log.error("主机检查工作流执行失败: {} -> {}", 
+            log.error("单个主机检查工作流执行失败: {} -> {}", 
                     request.getRequestId(), request.getHostInfo().getIp(), e);
                     
             currentStatus = WorkflowStatus.FAILED;
@@ -134,51 +133,9 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     }
     
     @Override
-    public BatchCheckResult executeBatchCheck(BatchCheckRequest request) {
-        log.info("开始执行批量主机检查工作流: {}, 主机数量: {}", 
-                request.getBatchRequestId(), request.getHostInfos().size());
-        
-        currentStatus = WorkflowStatus.RUNNING;
-        LocalDateTime startTime = LocalDateTime.now();
-        
-        try {
-            List<HostCheckResult> hostResults = switch (request.getBatchMode()) {
-                case ALL_PARALLEL -> executeAllParallel(request);
-                case BATCH_PARALLEL -> executeBatchParallel(request);
-                case SEQUENTIAL -> executeSequential(request);
-                case ROLLING -> executeRolling(request);
-                default -> executeAllParallel(request);
-            };
-
-            // 构建批量结果
-            BatchCheckResult result = buildBatchCheckResult(request, hostResults, startTime);
-            
-            currentStatus = result.isAllHostsSuccess() ? WorkflowStatus.COMPLETED : WorkflowStatus.PARTIAL_SUCCESS;
-            
-            log.info("批量主机检查工作流执行完成: {}, 成功率: {:.1f}%", 
-                    request.getBatchRequestId(), result.getHostSuccessRate());
-            
-            return result;
-            
-        } catch (Exception e) {
-            log.error("批量主机检查工作流执行失败: {}", request.getBatchRequestId(), e);
-            
-            currentStatus = WorkflowStatus.FAILED;
-            
-            return BatchCheckResult.builder()
-                    .batchRequestId(request.getBatchRequestId())
-                    .overallStatus(WorkflowStatus.FAILED)
-                    .startTime(startTime)
-                    .endTime(LocalDateTime.now())
-                    .summary("批量检查执行异常: " + e.getMessage())
-                    .build();
-        }
-    }
-    
-    @Override
     public void pauseCheck() {
         log.info("暂停检查工作流");
-        isPaused = true;
+
         currentStatus = WorkflowStatus.PAUSED;
         progress.setCurrentStatus(WorkflowStatus.PAUSED);
     }
@@ -186,7 +143,7 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     @Override
     public void resumeCheck() {
         log.info("恢复检查工作流");
-        isPaused = false;
+
         currentStatus = WorkflowStatus.RUNNING;
         progress.setCurrentStatus(WorkflowStatus.RUNNING);
     }
@@ -194,7 +151,6 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     @Override
     public void stopCheck() {
         log.info("停止检查工作流");
-        boolean isStopped = true;
         currentStatus = WorkflowStatus.CANCELLED;
         progress.setCurrentStatus(WorkflowStatus.CANCELLED);
     }
@@ -333,98 +289,6 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
     }
     
     /**
-     * 全并行批量执行
-     */
-    private List<HostCheckResult> executeAllParallel(BatchCheckRequest request) {
-        List<Promise<HostCheckResult>> promises = request.getHostInfos().stream()
-                .map(hostInfo -> {
-                    HostCheckRequest singleRequest = HostCheckRequest.builder()
-                            .requestId(request.getBatchRequestId() + "_" + hostInfo.getIp())
-                            .hostInfo(hostInfo)
-                            .pluginIds(request.getPluginIds())
-                            .strategy(request.getStrategy())
-                            .timeoutMs(request.getTimeoutMs())
-                            .retryCount(request.getRetryCount())
-                            .failFast(request.isFailFast())
-                            .build();
-                    
-                    return Async.function(this::executeHostCheck, singleRequest);
-                })
-                .toList();
-        
-        return promises.stream()
-                .map(Promise::get)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 分批并行执行
-     */
-    private List<HostCheckResult> executeBatchParallel(BatchCheckRequest request) {
-        List<HostCheckResult> allResults = new ArrayList<>();
-        List<HostInfo> hosts = request.getHostInfos();
-        int batchSize = request.getMaxConcurrentHosts();
-        
-        for (int i = 0; i < hosts.size(); i += batchSize) {
-            int endIndex = Math.min(i + batchSize, hosts.size());
-            List<HostInfo> batch = hosts.subList(i, endIndex);
-            
-            List<Promise<HostCheckResult>> promises = batch.stream()
-                    .map(hostInfo -> {
-                        HostCheckRequest singleRequest = HostCheckRequest.builder()
-                                .requestId(request.getBatchRequestId() + "_" + hostInfo.getIp())
-                                .hostInfo(hostInfo)
-                                .pluginIds(request.getPluginIds())
-                                .strategy(request.getStrategy())
-                                .timeoutMs(request.getTimeoutMs())
-                                .retryCount(request.getRetryCount())
-                                .failFast(request.isFailFast())
-                                .build();
-                        
-                        return Async.function(this::executeHostCheck, singleRequest);
-                    })
-                    .toList();
-            
-            List<HostCheckResult> batchResults = promises.stream()
-                    .map(Promise::get)
-                    .toList();
-            
-            allResults.addAll(batchResults);
-        }
-        
-        return allResults;
-    }
-    
-    /**
-     * 串行执行
-     */
-    private List<HostCheckResult> executeSequential(BatchCheckRequest request) {
-        return request.getHostInfos().stream()
-                .map(hostInfo -> {
-                    HostCheckRequest singleRequest = HostCheckRequest.builder()
-                            .requestId(request.getBatchRequestId() + "_" + hostInfo.getIp())
-                            .hostInfo(hostInfo)
-                            .pluginIds(request.getPluginIds())
-                            .strategy(request.getStrategy())
-                            .timeoutMs(request.getTimeoutMs())
-                            .retryCount(request.getRetryCount())
-                            .failFast(request.isFailFast())
-                            .build();
-                    
-                    return executeHostCheck(singleRequest);
-                })
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 滚动执行
-     */
-    private List<HostCheckResult> executeRolling(BatchCheckRequest request) {
-        // 滚动执行类似于分批并行，但每批之间有间隔
-        return executeBatchParallel(request);
-    }
-    
-    /**
      * 构建主机检查结果
      */
     private HostCheckResult buildHostCheckResult(HostCheckRequest request, HostInfo hostInfo, 
@@ -456,37 +320,6 @@ public class HostCheckWorkflowImpl implements HostCheckWorkflow {
                 .errorCount((int) errorCount)
                 .skippedCount((int) skippedCount)
                 .totalCount(results.size())
-                .summary(summary)
-                .build();
-    }
-    
-    /**
-     * 构建批量检查结果
-     */
-    private BatchCheckResult buildBatchCheckResult(BatchCheckRequest request, 
-                                                 List<HostCheckResult> hostResults, 
-                                                 LocalDateTime startTime) {
-        
-        LocalDateTime endTime = LocalDateTime.now();
-        long executionTime = java.time.Duration.between(startTime, endTime).toMillis();
-        
-        long successCount = hostResults.stream().mapToLong(r -> r.isAllSuccess() ? 1 : 0).sum();
-        long failedCount = hostResults.stream().mapToLong(r -> !r.isAllSuccess() ? 1 : 0).sum();
-        
-        String summary = String.format(
-                "批量检查完成: 总计 %d 台主机，成功 %d 台，失败 %d 台",
-                hostResults.size(), successCount, failedCount);
-        
-        return BatchCheckResult.builder()
-                .batchRequestId(request.getBatchRequestId())
-                .hostResults(hostResults)
-                .overallStatus(successCount == hostResults.size() ? WorkflowStatus.COMPLETED : WorkflowStatus.PARTIAL_SUCCESS)
-                .startTime(startTime)
-                .endTime(endTime)
-                .totalExecutionTimeMs(executionTime)
-                .totalHostCount(hostResults.size())
-                .successHostCount((int) successCount)
-                .failedHostCount((int) failedCount)
                 .summary(summary)
                 .build();
     }
