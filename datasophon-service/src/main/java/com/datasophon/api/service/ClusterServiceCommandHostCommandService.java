@@ -36,8 +36,9 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
 
     /**
      * 获取主机命令列表（分页）
+     * 按照架构重构规范，返回DTO分页结果
      */
-    PageResult<ClusterServiceCommandHostCommandEntity> getHostCommandList(String hostname, String commandHostId,
+    PageResult<ClusterServiceCommandHostCommandDTO> getHostCommandList(String hostname, String commandHostId,
             Integer page, Integer pageSize);
 
     /**
@@ -52,8 +53,9 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
 
     /**
      * 根据主机命令ID更新命令
+     * 按照架构重构规范，接收DTO而不是Entity
      */
-    void updateByHostCommandId(ClusterServiceCommandHostCommandEntity hostCommand);
+    void updateByHostCommandId(ClusterServiceCommandHostCommandDTO hostCommandDTO);
 
     /**
      * 获取主机命令大小

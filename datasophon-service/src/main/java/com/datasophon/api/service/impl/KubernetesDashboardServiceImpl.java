@@ -57,8 +57,8 @@ import java.util.HashMap;
 public class KubernetesDashboardServiceImpl implements KubernetesDashboardService {
 
     /**
-         * 分页结果包装类，提供类型安全的分页结果
-         */
+     * 分页结果包装类，提供类型安全的分页结果
+     */
         public record PaginatedResult<T>(List<T> items, long total, int totalPages) {
     }
 
@@ -250,13 +250,13 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 使用通用分页方法获取ConfigMap列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.ConfigMap> paginationResult = paginateResources(
-                    client,
-                    io.fabric8.kubernetes.api.model.ConfigMap.class,
-                    namespace,
-                    pageNum,
-                    pageSize);
+                    // 使用通用分页方法获取ConfigMap列表
+                    PaginatedResult<io.fabric8.kubernetes.api.model.ConfigMap> paginationResult = paginateResources(
+                            client,
+                            io.fabric8.kubernetes.api.model.ConfigMap.class,
+                            namespace,
+                            pageNum,
+                            pageSize);
 
             // 使用通用createPageResult方法
             return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
@@ -273,13 +273,13 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 使用通用分页方法获取Secret列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.Secret> paginationResult = paginateResources(
-                    client,
-                    io.fabric8.kubernetes.api.model.Secret.class,
-                    namespace,
-                    pageNum,
-                    pageSize);
+                    // 使用通用分页方法获取Secret列表
+                    PaginatedResult<io.fabric8.kubernetes.api.model.Secret> paginationResult = paginateResources(
+                            client,
+                            io.fabric8.kubernetes.api.model.Secret.class,
+                            namespace,
+                            pageNum,
+                            pageSize);
 
             // 使用通用createPageResult方法
             return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
@@ -387,12 +387,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 使用通用分页方法获取IngressClass列表
-            PaginatedResult<IngressClass> paginationResult = paginateResources(
-                    client,
-                    IngressClass.class,
+                    PaginatedResult<IngressClass> paginationResult = paginateResources(
+                            client,
+                            IngressClass.class,
                     null, // IngressClass不是命名空间资源
-                    pageNum,
-                    pageSize);
+                            pageNum,
+                            pageSize);
 
             // 使用通用createPageResult方法
             return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);

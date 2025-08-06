@@ -77,20 +77,23 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     private ClusterServiceCommandService commandService;
 
     @Override
-    public PageResult<ClusterServiceCommandHostCommandEntity> getHostCommandList(String hostname, String commandHostId,
+    public PageResult<ClusterServiceCommandHostCommandDTO> getHostCommandList(String hostname, String commandHostId,
             Integer page, Integer pageSize) {
         // 使用MyBatis-Flex分页查询 
-        PageResult<ClusterServiceCommandHostCommandEntity> pageResult = 
+        PageResult<ClusterServiceCommandHostCommandEntity> entityPageResult = 
                 getMapper().selectPageByCommandHostId(commandHostId, page, pageSize);
         
         // 处理结果，确保状态和进度一致
-        List<ClusterServiceCommandHostCommandEntity> records = pageResult.getRecords();
-        records.forEach(this::updateCommandProgress);
+        List<ClusterServiceCommandHostCommandEntity> entityRecords = entityPageResult.getRecords();
+        entityRecords.forEach(this::updateCommandProgress);
         
-        PageResult<ClusterServiceCommandHostCommandEntity> result = new PageResult<>();
-        result.setRecords(records);
-        result.setTotal(pageResult.getTotal());
-        return result;
+        // Entity列表转DTO列表 - JDK21特性
+        var dtoList = entityRecords.stream()
+                .map(converter::entityToDto)
+                .toList();
+        
+        // 返回DTO分页结果
+        return PageResult.of(dtoList, entityPageResult.getTotal(), page, pageSize);
     }
 
     /**
@@ -230,8 +233,11 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public void updateByHostCommandId(ClusterServiceCommandHostCommandEntity hostCommand) {
+    public void updateByHostCommandId(ClusterServiceCommandHostCommandDTO hostCommandDTO) {
+        // DTO转Entity
+        var hostCommandEntity = converter.dtoToEntity(hostCommandDTO);
+        
         // 调用Mapper方法更新
-        getMapper().updateByHostCommandId(hostCommand);
+        getMapper().updateByHostCommandId(hostCommandEntity);
     }
 }
