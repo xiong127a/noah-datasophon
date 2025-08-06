@@ -197,13 +197,50 @@ public class PluginManager {
                 activePlugins.remove(pluginId);
             }
             
-            // 停止并卸载插件
-            org.pf4j.PluginState stopState = pf4jManager.stopPlugin(pluginId);
-            boolean stopped = stopState == org.pf4j.PluginState.STOPPED || stopState == org.pf4j.PluginState.DISABLED;
+            // 获取当前插件状态
+            org.pf4j.PluginWrapper pluginWrapper = pf4jManager.getPlugin(pluginId);
+            if (pluginWrapper == null) {
+                log.warn("插件不存在或已被卸载: {}", pluginId);
+                pluginStatus.remove(pluginId);
+                return true; // 插件已不存在，视为卸载成功
+            }
             
+            org.pf4j.PluginState currentState = pluginWrapper.getPluginState();
+            log.info("开始卸载插件: {}, 当前状态: {}", pluginId, currentState);
+            
+            // 先停止插件（如果还在运行）
+            boolean stopped = true;
+            if (currentState == org.pf4j.PluginState.STARTED) {
+                org.pf4j.PluginState stopState = pf4jManager.stopPlugin(pluginId);
+                stopped = stopState == org.pf4j.PluginState.STOPPED;
+                log.info("插件停止操作结果: {}, stopped={}, newState={}", pluginId, stopped, stopState);
+            } else if (currentState == org.pf4j.PluginState.STOPPED || currentState == org.pf4j.PluginState.DISABLED) {
+                log.info("插件已处于停止状态: {}, state={}", pluginId, currentState);
+            }
+            
+            // 然后卸载插件
             boolean unloaded = false;
             if (stopped) {
-                unloaded = pf4jManager.unloadPlugin(pluginId);
+                try {
+                    unloaded = pf4jManager.unloadPlugin(pluginId);
+                    log.info("插件卸载操作结果: {}, unloaded={}", pluginId, unloaded);
+                    
+                    // 验证插件是否真的被卸载了
+                    if (unloaded) {
+                        org.pf4j.PluginWrapper afterUnload = pf4jManager.getPlugin(pluginId);
+                        if (afterUnload == null) {
+                            log.info("插件确认已完全卸载: {}", pluginId);
+                        } else {
+                            log.warn("插件卸载后仍存在: {}, state={}", pluginId, afterUnload.getPluginState());
+                            unloaded = false;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("执行插件卸载操作失败: {}", pluginId, e);
+                    unloaded = false;
+                }
+            } else {
+                log.error("插件停止失败，无法继续卸载: {}", pluginId);
             }
             
             if (stopped && unloaded) {
