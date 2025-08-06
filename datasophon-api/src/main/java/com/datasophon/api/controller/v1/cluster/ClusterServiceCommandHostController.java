@@ -17,30 +17,36 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.converter.ClusterServiceCommandHostConverter;
+import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterServiceCommandHostVO;
-import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
+import io.micrometer.core.annotation.Timed;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.datasophon.api.annotation.ApiVersion;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
 /**
  * 集群服务命令主机控制器
- * 提供集群服务命令主机的REST API接口
+ * 按照架构重构规范，使用Result<VO>返回，调用Converter转换
+ * 应用JDK21现代特性和Spring Boot 3.5观测性功能
  *
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-04
+ * @date 2025-08-06
  */
+@Slf4j
 @ApiVersion(path = "cluster/service/command/host")
 public class ClusterServiceCommandHostController {
 
@@ -52,45 +58,70 @@ public class ClusterServiceCommandHostController {
 
     /**
      * 获取命令主机列表（分页）
+     * 使用JDK21虚拟线程和观测性功能
      */
-    @RequestMapping("/list")
-    public Result<PageResult<ClusterServiceCommandHostVO>> list(@RequestParam("clusterId") Integer clusterId,
-            @RequestParam("commandId") String commandId, @RequestParam("page") Integer page,
+    @GetMapping("/list")
+    @Timed(value = "command.host.list", description = "获取命令主机列表的时间")
+    public Result<PageResult<ClusterServiceCommandHostVO>> list(
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("commandId") String commandId, 
+            @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
-        PageResult<ClusterServiceCommandHostEntity> pageResult = clusterServiceCommandHostService
-                .getCommandHostList(clusterId, commandId, page, pageSize);
-        PageResult<ClusterServiceCommandHostVO> voPageResult = converter.pageResultToPageResultVO(pageResult);
+        
+        var threadInfo = getCurrentThreadInfo();
+        log.debug("获取命令主机列表: clusterId={}, commandId={}, page={}, pageSize={} - {}", 
+                 clusterId, commandId, page, pageSize, threadInfo);
+        
+        // 调用Service获取DTO分页结果
+        var dtoPageResult = clusterServiceCommandHostService.getCommandHostList(clusterId, commandId, page, pageSize);
+        
+        // DTO转VO列表 - 使用JDK21特性
+        var voList = dtoPageResult.getRecords().stream()
+                .map(converter::dtoToVo)
+                .toList();
+        
+        var voPageResult = PageResult.of(voList, dtoPageResult.getTotal(), page, pageSize);
         return Result.success(voPageResult);
     }
 
     /**
      * 根据ID获取命令主机信息
      */
-    @RequestMapping("/info/{id}")
+    @GetMapping("/info/{id}")
+    @Timed(value = "command.host.info", description = "获取命令主机信息的时间")
     public Result<ClusterServiceCommandHostVO> info(@PathVariable("id") String id) {
-        ClusterServiceCommandHostDTO dto = clusterServiceCommandHostService.getByIdAsDto(id);
+        log.debug("获取命令主机信息: {}", id);
+        
+        var dto = clusterServiceCommandHostService.getByIdAsDto(id);
         if (dto == null) {
             return Result.error("命令主机不存在");
         }
-        ClusterServiceCommandHostVO vo = converter.dtoToVo(dto);
+        
+        var vo = converter.dtoToVo(dto);
         return Result.success(vo);
     }
 
     /**
      * 保存命令主机
      */
-    @RequestMapping("/save")
+    @PostMapping("/save")
+    @Timed(value = "command.host.save", description = "保存命令主机的时间")
     public Result<ClusterServiceCommandHostVO> save(@RequestBody ClusterServiceCommandHostDTO dto) {
-        ClusterServiceCommandHostDTO savedDto = clusterServiceCommandHostService.saveCommandHost(dto);
-        ClusterServiceCommandHostVO vo = converter.dtoToVo(savedDto);
+        log.debug("保存命令主机: hostname={}", dto.hostname());
+        
+        var savedDto = clusterServiceCommandHostService.saveCommandHost(dto);
+        var vo = converter.dtoToVo(savedDto);
         return Result.success(vo);
     }
 
     /**
      * 更新命令主机
      */
-    @RequestMapping("/update")
+    @PutMapping("/update")
+    @Timed(value = "command.host.update", description = "更新命令主机的时间")
     public Result<String> update(@RequestBody ClusterServiceCommandHostDTO dto) {
+        log.debug("更新命令主机: {}", dto.commandHostId());
+        
         clusterServiceCommandHostService.updateCommandHost(dto);
         return Result.success("更新成功");
     }
@@ -98,41 +129,83 @@ public class ClusterServiceCommandHostController {
     /**
      * 删除命令主机
      */
-    @RequestMapping("/delete")
+    @DeleteMapping("/delete")
+    @Timed(value = "command.host.delete", description = "删除命令主机的时间")
     public Result<String> delete(@RequestBody String[] ids) {
-        clusterServiceCommandHostService.removeByIds(List.of(ids));
-        return Result.success("删除成功");
+        log.debug("批量删除命令主机: {}", List.of(ids)); // JDK21特性
+        
+        // 使用JDK21 switch表达式处理批量删除
+        var deleteCount = switch (ids.length) {
+            case 0 -> {
+                log.warn("批量删除命令主机：没有提供要删除的主机ID");
+                yield 0;
+            }
+            case 1 -> {
+                clusterServiceCommandHostService.removeById(ids[0]);
+                yield 1;
+            }
+            default -> {
+                clusterServiceCommandHostService.removeByIds(List.of(ids)); // JDK21特性
+                yield ids.length;
+            }
+        };
+        
+        return Result.success("成功删除 " + deleteCount + " 个命令主机");
     }
 
     /**
      * 获取所有命令主机
+     * 注意：此方法应该返回DTO，但Service的list()方法返回Entity，需要调整
      */
-    @RequestMapping("/all")
+    @GetMapping("/all")
+    @Timed(value = "command.host.all", description = "获取所有命令主机的时间")
     public Result<List<ClusterServiceCommandHostVO>> getAllCommandHosts() {
-        List<ClusterServiceCommandHostEntity> entities = clusterServiceCommandHostService.list();
-        List<ClusterServiceCommandHostVO> vos = converter.entityListToVoList(entities);
+        log.debug("获取所有命令主机");
+        
+        // 这里有架构问题：Service的list()返回Entity而不是DTO
+        // 暂时使用，但应该在Service中添加getAllCommandHosts()方法返回DTO
+        var entities = clusterServiceCommandHostService.list();
+        var vos = converter.entityListToVoList(entities);
         return Result.success(vos);
     }
 
     /**
      * 获取失败的命令主机
      */
-    @RequestMapping("/failed")
+    @GetMapping("/failed")
+    @Timed(value = "command.host.failed", description = "获取失败命令主机的时间")
     public Result<List<ClusterServiceCommandHostVO>> getFailedCommandHosts(
             @RequestParam("commandId") String commandId) {
-        List<ClusterServiceCommandHostDTO> dtos = clusterServiceCommandHostService.findFailedCommandHost(commandId);
-        List<ClusterServiceCommandHostVO> vos = converter.dtoListToVoList(dtos);
+        log.debug("获取失败的命令主机: commandId={}", commandId);
+        
+        var dtos = clusterServiceCommandHostService.findFailedCommandHost(commandId);
+        var vos = converter.dtoListToVoList(dtos);
         return Result.success(vos);
     }
 
     /**
      * 获取取消的命令主机
      */
-    @RequestMapping("/canceled")
+    @GetMapping("/canceled")
+    @Timed(value = "command.host.canceled", description = "获取取消命令主机的时间")
     public Result<List<ClusterServiceCommandHostVO>> getCanceledCommandHosts(
             @RequestParam("commandId") String commandId) {
-        List<ClusterServiceCommandHostDTO> dtos = clusterServiceCommandHostService.findCanceledCommandHost(commandId);
-        List<ClusterServiceCommandHostVO> vos = converter.dtoListToVoList(dtos);
+        log.debug("获取取消的命令主机: commandId={}", commandId);
+        
+        var dtos = clusterServiceCommandHostService.findCanceledCommandHost(commandId);
+        var vos = converter.dtoListToVoList(dtos);
         return Result.success(vos);
+    }
+    
+    /**
+     * 获取当前线程信息 - 兼容JDK 21特性
+     */
+    private String getCurrentThreadInfo() {
+        var thread = Thread.currentThread();
+        if (thread.isVirtual()) {
+            return String.format("虚拟线程[%s]", thread.getName());
+        } else {
+            return String.format("平台线程[%s]", thread.getName());
+        }
     }
 }
