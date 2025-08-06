@@ -22,6 +22,8 @@ import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 /**
  * 集群服务实例角色组转换器
@@ -36,7 +38,40 @@ public interface ClusterServiceInstanceRoleGroupConverter
         extends
         BaseConverter<ClusterServiceInstanceRoleGroup, ClusterServiceInstanceRoleGroupDTO, ClusterServiceInstanceRoleGroupVO> {
 
-    // 继承BaseConverter提供的所有基础转换方法
-    // entityToDto, dtoToEntity, entityToVo, dtoToVo
-    // entityListToDtoList, dtoListToVoList 等
+    @Override
+    @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromEnum")
+    ClusterServiceInstanceRoleGroupVO entityToVo(ClusterServiceInstanceRoleGroup entity);
+
+    @Override
+    @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromInteger")
+    ClusterServiceInstanceRoleGroupVO dtoToVo(ClusterServiceInstanceRoleGroupDTO dto);
+
+    /**
+     * 格式化重启需求文本（从枚举）
+     */
+    @Named("formatNeedRestartFromEnum")
+    default String formatNeedRestartFromEnum(com.datasophon.dao.enums.NeedRestart needRestart) {
+        if (needRestart == null) {
+            return "未知";
+        }
+        return switch (needRestart) {
+            case YES -> "需要重启";
+            case NO -> "无需重启";
+        };
+    }
+
+    /**
+     * 格式化重启需求文本（从整数）
+     */
+    @Named("formatNeedRestartFromInteger")
+    default String formatNeedRestartFromInteger(Integer needRestart) {
+        if (needRestart == null) {
+            return "未知";
+        }
+        return switch (needRestart) {
+            case 1 -> "需要重启";
+            case 0 -> "无需重启";
+            default -> "未知";
+        };
+    }
 }
