@@ -36,7 +36,12 @@ public record HostDiscoveryResultDTO(
     /*
       发现耗时（毫秒）
      */
-    Long discoveryTime
+    Long discoveryTime,
+    
+    /*
+      筛选选项
+     */
+    FilterOptionsDTO filterOptions
 ) {
     /**
      * 成功结果的构造器
@@ -44,14 +49,15 @@ public record HostDiscoveryResultDTO(
     public static HostDiscoveryResultDTO success(List<HostInfoDTO> hosts, 
                                                 Integer totalCount,
                                                 Map<String, Object> metadata, 
-                                                Long discoveryTime) {
-        return new HostDiscoveryResultDTO(hosts, totalCount, true, null, metadata, discoveryTime);
+                                                Long discoveryTime,
+                                                FilterOptionsDTO filterOptions) {
+        return new HostDiscoveryResultDTO(hosts, totalCount, true, null, metadata, discoveryTime, filterOptions);
     }
     
     /**
      * 失败结果的构造器
      */
     public static HostDiscoveryResultDTO error(String errorMessage) {
-        return new HostDiscoveryResultDTO(List.of(), 0, false, errorMessage, Map.of(), 0L);
+        return new HostDiscoveryResultDTO(List.of(), 0, false, errorMessage, Map.of(), 0L, new FilterOptionsDTO(List.of(), List.of()));
     }
 }

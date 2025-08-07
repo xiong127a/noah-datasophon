@@ -26,6 +26,7 @@ import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
 import com.datasophon.common.dto.HostDiscoveryResultDTO;
 import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
+import com.datasophon.common.dto.FilterOptionsDTO;
 import com.datasophon.common.enums.ClusterType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +57,7 @@ public class UnifiedHostController {
     /**
      * Step1配置完成后的主机发现接口
      * 根据Step1的配置信息发现主机列表
-     * 
+     * <p>
      * 支持两种模式：
      * 1. PVM模式：解析IP范围，返回主机列表
      * 2. K8S模式：调用K8S API获取节点列表
@@ -240,8 +241,40 @@ public class UnifiedHostController {
             "strategyType", clusterType.getCode()
         );
         
+        // 计算筛选选项 - 后端统一提供
+        var filterOptions = calculateFilterOptions(hostDtos);
+        
         return result.getSuccess() 
-            ? HostDiscoveryResultDTO.success(hostDtos, result.getTotalCount(), metadata, result.getDiscoveryTime())
+            ? HostDiscoveryResultDTO.success(hostDtos, result.getTotalCount(), metadata, result.getDiscoveryTime(), filterOptions)
             : HostDiscoveryResultDTO.error(result.getErrorMessage());
+    }
+    
+    /**
+     * 计算筛选选项 - 从主机数据中提取所有可能的状态和角色
+     */
+    private FilterOptionsDTO calculateFilterOptions(List<HostInfoDTO> hosts) {
+        var statuses = hosts.stream()
+            .map(host -> host.getStatus() != null ? host.getStatus() : "Ready")
+            .distinct()
+            .sorted()
+            .toList();
+            
+        var roles = hosts.stream()
+            .map(host -> host.getRoles() != null ? host.getRoles() : "<none>")
+            .flatMap(roleStr -> {
+                // 处理多角色情况，如 "control-plane,worker"
+                if (roleStr.contains(",")) {
+                    return java.util.Arrays.stream(roleStr.split(","))
+                        .map(String::trim)
+                        .filter(role -> !role.isEmpty());
+                } else {
+                    return java.util.stream.Stream.of(roleStr);
+                }
+            })
+            .distinct()
+            .sorted()
+            .toList();
+            
+        return new FilterOptionsDTO(statuses, roles);
     }
 }
