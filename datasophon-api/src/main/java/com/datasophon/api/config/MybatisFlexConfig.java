@@ -17,12 +17,17 @@
 
 package com.datasophon.api.config;
 
+import com.datasophon.common.enums.handler.ClusterTypeHandler;
 import com.mybatisflex.core.FlexGlobalConfig;
 import com.mybatisflex.core.keygen.KeyGeneratorFactory;
 import com.mybatisflex.core.keygen.impl.SnowFlakeIDKeyGenerator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import javax.annotation.PostConstruct;
 
 /**
   MyBatisFlex配置类
@@ -31,7 +36,8 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class MybatisFlexConfig {
     
-
+    @Autowired(required = false)
+    private SqlSessionFactory sqlSessionFactory;
     
     // 使用静态代码块确保在类加载时就注册ID生成器，不依赖于Spring生命周期
     static {
@@ -43,6 +49,25 @@ public class MybatisFlexConfig {
         } catch (Exception e) {
             System.err.println("注册雪花算法ID生成器失败: " + e.getMessage());
             log.error("注册雪花算法ID生成器失败", e);
+        }
+    }
+    
+    /**
+     * 注册自定义类型处理器
+     */
+    @PostConstruct
+    public void registerTypeHandlers() {
+        if (sqlSessionFactory != null) {
+            try {
+                // 注册ClusterType枚举的类型处理器
+                sqlSessionFactory.getConfiguration().getTypeHandlerRegistry()
+                    .register(ClusterTypeHandler.class);
+                log.info("成功注册ClusterType类型处理器");
+            } catch (Exception e) {
+                log.error("注册ClusterType类型处理器失败", e);
+            }
+        } else {
+            log.warn("SqlSessionFactory为null，无法注册类型处理器");
         }
     }
 
