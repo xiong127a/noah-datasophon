@@ -19,6 +19,11 @@
 
 package com.datasophon.api.load;
 
+// JDK 21新特性导入
+import com.datasophon.api.load.model.LoadContext;
+import com.datasophon.api.load.model.ParseResult;
+import com.datasophon.api.load.model.ServiceMetaConfig;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileReader;
@@ -78,12 +83,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
 import static com.datasophon.common.Constants.GENERAL;
@@ -129,73 +132,159 @@ public class LoadServiceMeta implements ApplicationRunner {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(ApplicationArguments args) throws Exception {
-        File[] ddps = FileUtil.ls(PATH);
-        // load global variable, 加载 frame
-        List<ClusterInfoDTO> clusters = clusterInfoService.getClusterList();
-        loadGlobalVariables(clusters);
+        // 使用JDK 21的text blocks和现代化方法
+        logger.info("""
+                ============================================================
+                  开始加载服务元数据 (DataSophon Service Meta Loader)
+                ============================================================
+                """);
 
-        for (File path : ddps) {
-            List<File> files = FileUtil.loopFiles(path);
-            String frameCode = path.getName();
-            FrameInfoEntity frameInfo = saveClusterFrame(frameCode);
-            // analysis file
-            for (File file : files) {
-                if (file.getName().endsWith(Constants.JSON_EXTENSION)) {
-                    String serviceName = file.getParentFile().getName();
-                    String serviceDdl = FileReader.create(file).readString();
-                    try {
-                        parseServiceDdl(frameCode, clusters, frameInfo, serviceName, serviceDdl);
-                    } catch (Exception e) {
-                        logger.error("invalid service ddl file: " + serviceName, e);
-                    }
-                }
-            }
-        }
+        var ddps = Optional.ofNullable(FileUtil.ls(PATH))
+                .orElse(new File[0]);
+        
+        // 加载全局变量和集群信息
+        var clusters = clusterInfoService.getClusterList();
+        var loadContext = createLoadContext(clusters);
+        
+        logger.info("发现 {} 个框架目录，{} 个集群", ddps.length, loadContext.clusterCount());
+        
+        // 使用现代化流式处理加载框架
+        Arrays.stream(ddps)
+                .parallel() // 并行处理框架目录
+                .forEach(framePath -> processFrameDirectory(framePath, loadContext));
+        
+        // 启动服务缓存同步Actor
         ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
                 getActorRefName(serviceCacheSyncActor.class));
+        
+        logger.info("服务元数据加载完成");
     }
 
     /**
-     * 解析 DDL 并存储到 frame 库
-     *
+     * 使用JDK 21现代化方法创建加载上下文
      */
+    private LoadContext createLoadContext(List<ClusterInfoDTO> clusters) throws UnknownHostException {
+        loadGlobalVariables(clusters);
+        
+        var hostName = InetAddress.getLocalHost().getHostName();
+        var priorityNetworks = getPriorityNetworks(
+                NetUtil.getIpByHost(hostName));
+        
+        return LoadContext.of(clusters, hostName, configBean.getServerPort(), priorityNetworks);
+    }
+
+    /**
+     * 处理单个框架目录 - 使用JDK 21新特性
+     */
+    private void processFrameDirectory(File framePath, LoadContext loadContext) {
+        var frameCode = framePath.getName();
+        var frameInfo = saveClusterFrame(frameCode);
+        
+        logger.info("处理框架: {}", frameCode);
+        
+        var files = FileUtil.loopFiles(framePath);
+        var serviceFiles = files.stream()
+                .filter(file -> file.getName().endsWith(Constants.JSON_EXTENSION))
+                .toList();
+        
+        logger.info("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
+        
+        // 使用并行流处理服务文件
+        var parseResults = serviceFiles.parallelStream()
+                .map(file -> parseServiceFile(frameCode, frameInfo, file, loadContext))
+                .toList();
+        
+        // 统计处理结果
+        var successCount = parseResults.stream()
+                .mapToLong(result -> result.isSuccess() ? 1 : 0)
+                .sum();
+        
+        var failureCount = parseResults.size() - successCount;
+        
+        // 记录失败的服务
+        parseResults.stream()
+                .filter(ParseResult::isFailure)
+                .map(result -> (ParseResult.Failure) result)
+                .forEach(failure -> logger.error("""
+                        服务 {} 解析失败:
+                        错误信息: {}
+                        """, failure.serviceName(), failure.fullErrorMessage()));
+        
+        logger.info("框架 {} 处理完成: 成功 {}, 失败 {}", frameCode, successCount, failureCount);
+    }
+
+    /**
+     * 解析单个服务文件 - 使用密封类返回结果
+     */
+    private ParseResult parseServiceFile(String frameCode, FrameInfoEntity frameInfo, 
+                                       File file, LoadContext loadContext) {
+        var serviceName = file.getParentFile().getName();
+        
+        try {
+            var serviceDdl = FileReader.create(file).readString();
+            var serviceInfo = JSONObject.parseObject(serviceDdl, ServiceInfo.class);
+            var serviceInfoMd5 = SecureUtil.md5(serviceDdl);
+            
+            // 构建配置文件映射
+            var configFileMap = buildConfigFileMap(serviceInfo);
+            
+            // 创建配置对象
+            var config = ServiceMetaConfig.of(frameCode, frameInfo, serviceName, 
+                    serviceDdl, serviceInfo, serviceInfoMd5, configFileMap);
+            
+            // 处理服务元数据
+            processServiceMetadata(config, loadContext);
+            
+            return new ParseResult.Success(config);
+            
+        } catch (Exception e) {
+            return ParseResult.Failure.of(serviceName, "服务DDL解析失败", e);
+        }
+    }
+
+    /**
+     * 处理服务元数据 - 重构使用JDK 21新特性
+     */
+    private void processServiceMetadata(ServiceMetaConfig config, LoadContext loadContext) {
+        putServicePackageToMap(config);
+        putServiceHomeToVariable(loadContext.clusters(), config.serviceName(), config.decompressPackageName());
+        
+        // 保存服务和服务配置
+        var serviceEntity = saveFrameService(config);
+        // 保存框架服务角色
+        saveFrameServiceRole(config, serviceEntity);
+    }
+
+    /**
+     * 将服务包信息放入映射表
+     */
+    private void putServicePackageToMap(ServiceMetaConfig config) {
+        PackageUtils.putServicePackageName(
+                config.frameCode(), 
+                config.serviceName(), 
+                config.decompressPackageName());
+    }
+
+    /**
+     * 原始方法保持兼容性 - 但内部使用新的Record结构
+     * @deprecated 使用processServiceMetadata(ServiceMetaConfig, LoadContext)替代
+     */
+    @Deprecated(since = "3.0.0", forRemoval = true)
     public void parseServiceDdl(final String frameCode,
             List<ClusterInfoDTO> clusters,
             FrameInfoEntity frameInfo,
             final String serviceName,
             final String serviceDdl) {
-        ServiceInfo serviceInfo = JSONObject.parseObject(serviceDdl, ServiceInfo.class);
-        String serviceInfoMd5 = SecureUtil.md5(serviceDdl);
-
-        // save service config
-        List<ServiceConfig> allParameters = serviceInfo.getParameters();
-        Map<String, ServiceConfig> map = allParameters.stream()
-                .collect(
-                        Collectors.toMap(
-                                ServiceConfig::getName,
-                                serviceConfig -> serviceConfig,
-                                (v1, v2) -> v1));
-        Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-
-        buildConfigFileMap(serviceInfo, map, configFileMap);
-
-        PackageUtils.putServicePackageName(
-                frameCode, serviceName, serviceInfo.getDecompressPackageName());
-
-        putServiceHomeToVariable(
-                clusters, serviceName, serviceInfo.getDecompressPackageName());
-        // save service and service config
-        FrameServiceEntity serviceEntity = saveFrameService(
-                frameCode,
-                frameInfo,
-                serviceName,
-                serviceDdl,
-                serviceInfo,
-                serviceInfoMd5,
-                allParameters,
-                configFileMap);
-        // save frame service role
-        saveFrameServiceRole(frameCode, serviceName, serviceInfo, serviceEntity);
+        // 转换为新的Record结构并处理
+        var serviceInfo = JSONObject.parseObject(serviceDdl, ServiceInfo.class);
+        var serviceInfoMd5 = SecureUtil.md5(serviceDdl);
+        var configFileMap = buildConfigFileMap(serviceInfo);
+        
+        var config = ServiceMetaConfig.of(frameCode, frameInfo, serviceName, 
+                serviceDdl, serviceInfo, serviceInfoMd5, configFileMap);
+        var loadContext = LoadContext.of(clusters, "", "", "");
+        
+        processServiceMetadata(config, loadContext);
     }
 
     private void putServiceHomeToVariable(
@@ -212,6 +301,82 @@ public class LoadServiceMeta implements ApplicationRunner {
         }
     }
 
+    /**
+     * 保存框架服务角色 - 重构使用JDK 21新特性
+     */
+    private void saveFrameServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
+        var serviceRoles = config.serviceRoles();
+        
+        serviceRoles.parallelStream().forEach(serviceRole -> 
+                processServiceRole(config, serviceEntity, serviceRole));
+        
+        logger.debug("put {} {} service info into cache", config.frameCode(), config.serviceName());
+        ServiceInfoMap.put(config.frameCode() + Constants.UNDERLINE + config.serviceName(), config.serviceInfo());
+    }
+
+    /**
+     * 处理单个服务角色
+     */
+    private void processServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity, 
+                                  ServiceRoleInfo serviceRole) {
+        var roleKey = config.frameCode() + Constants.UNDERLINE + 
+                      config.serviceInfo().getName() + Constants.UNDERLINE + 
+                      serviceRole.getName();
+        
+        logger.debug("put {} {} {} service role info into cache",
+                config.frameCode(), config.serviceName(), serviceRole.getName());
+        
+        // 处理JMX端口
+        Optional.ofNullable(serviceRole.getJmxPort())
+                .filter(StringUtils::isNotBlank)
+                .ifPresent(jmxPort -> {
+                    logger.debug("{} jmx port is :{} and the jmx key is: {}",
+                            serviceRole.getName(), jmxPort, roleKey);
+                    ServiceRoleJmxMap.put(roleKey, jmxPort);
+                });
+        
+        ServiceRoleMap.put(roleKey, serviceRole);
+        
+        var serviceRoleJson = JSONObject.toJSONString(serviceRole);
+        var serviceRoleJsonMd5 = SecureUtil.md5(serviceRoleJson);
+        
+        saveOrUpdateServiceRole(config, serviceEntity, serviceRole, serviceRoleJson, serviceRoleJsonMd5);
+    }
+
+    /**
+     * 保存或更新服务角色实体
+     */
+    private void saveOrUpdateServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity,
+                                       ServiceRoleInfo serviceRole, String serviceRoleJson, 
+                                       String serviceRoleJsonMd5) {
+        var roleDto = roleService.getServiceRoleByServiceIdAndServiceRoleName(
+                serviceEntity.getId(), serviceRole.getName());
+        var roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
+        var role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
+        
+        // 使用JDK 21 switch表达式处理角色实体状态
+        switch (role) {
+            case null -> {
+                var newRole = new FrameServiceRoleEntity();
+                buildFrameServiceRole(config, serviceEntity, serviceRole, 
+                        serviceRoleJson, serviceRoleJsonMd5, newRole);
+                roleService.save(newRole);
+            }
+            default -> {
+                if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
+                    buildFrameServiceRole(config, serviceEntity, serviceRole, 
+                            serviceRoleJson, serviceRoleJsonMd5, role);
+                    roleService.updateById(role);
+                }
+            }
+        }
+    }
+
+    /**
+     * 原始方法保持兼容性
+     * @deprecated 使用saveFrameServiceRole(ServiceMetaConfig, FrameServiceEntity)替代
+     */
+    @Deprecated(since = "3.0.0", forRemoval = true)
     private void saveFrameServiceRole(
             String frameCode,
             String serviceName,
@@ -248,8 +413,11 @@ public class LoadServiceMeta implements ApplicationRunner {
             FrameServiceRoleEntity role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
             if (Objects.isNull(role)) {
                 role = new FrameServiceRoleEntity();
+                // 创建临时配置对象以兼容新方法签名
+                var tempConfig = ServiceMetaConfig.of(frameCode, null, serviceName, 
+                        "", serviceInfo, "", new HashMap<>());
                 buildFrameServiceRole(
-                        frameCode,
+                        tempConfig,
                         serviceEntity,
                         serviceRole,
                         serviceRoleJson,
@@ -257,8 +425,10 @@ public class LoadServiceMeta implements ApplicationRunner {
                         role);
                 roleService.save(role);
             } else if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
+                var tempConfig = ServiceMetaConfig.of(frameCode, null, serviceName, 
+                        "", serviceInfo, "", new HashMap<>());
                 buildFrameServiceRole(
-                        frameCode,
+                        tempConfig,
                         serviceEntity,
                         serviceRole,
                         serviceRoleJson,
@@ -271,99 +441,103 @@ public class LoadServiceMeta implements ApplicationRunner {
         ServiceInfoMap.put(frameCode + Constants.UNDERLINE + serviceName, serviceInfo);
     }
 
-    private FrameServiceEntity saveFrameService(
-            String frameCode,
-            FrameInfoEntity frameInfo,
-            String serviceName,
-            String serviceDdl,
-            ServiceInfo serviceInfo,
-            String serviceInfoMd5,
-            List<ServiceConfig> allParameters,
-            Map<Generators, List<ServiceConfig>> configFileMap) {
-        FrameServiceDTO serviceDto = frameServiceService.getServiceByFrameIdAndServiceName(
-                frameInfo.getId(), serviceName);
-        FrameServiceConverter serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
-        FrameServiceEntity serviceEntity = serviceDto != null ? serviceConverter.dtoToEntity(serviceDto) : null;
-        List<ServiceConfig> parameters = serviceInfo.getParameters();
-        Map<String, String> nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(configFileMap);
+    /**
+     * 保存框架服务 - 重构使用JDK 21新特性和新的查找方法
+     */
+    private FrameServiceEntity saveFrameService(ServiceMetaConfig config) {
+        // 使用新的非异常方法查找服务
+        var serviceDto = frameServiceService.findServiceByFrameIdAndServiceName(
+                config.frameInfo().getId(), config.serviceName()).orElse(null);
+        
+        var serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+        var serviceEntity = serviceDto != null ? serviceConverter.dtoToEntity(serviceDto) : null;
+        var parameters = config.parameters();
+        var nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(config.configFileMap());
 
+        // 使用现代化流式API处理配置目标角色
         parameters.stream()
-                .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles())) // 只处理
-                                                                                                    // configTargetRoles
-                                                                                                    // 为空的情况
+                .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles()))
                 .forEach(serviceConfig -> {
-                    String configTargetRoles = nameToRoleMap.getOrDefault(serviceConfig.getName(), GENERAL);
+                    var configTargetRoles = nameToRoleMap.getOrDefault(serviceConfig.getName(), GENERAL);
                     serviceConfig.setConfigTargetRoles(configTargetRoles);
                 });
 
-        if (Objects.isNull(serviceEntity)) {
-            serviceEntity = new FrameServiceEntity();
-            buildServiceEntity(
-                    frameCode,
-                    frameInfo.getId(),
-                    serviceName,
-                    serviceDdl,
-                    serviceInfo,
-                    serviceInfoMd5,
-                    serviceEntity,
-                    configFileMap,
-                    serviceInfo.getDecompressPackageName());
-
-            frameServiceService.save(serviceEntity);
-        } else if (!serviceEntity.getServiceJsonMd5().equals(serviceInfoMd5)) {
-            String configMapStr = JSONObject.toJSONString(configFileMap);
-            String configFileMapStrMd5 = SecureUtil.md5(configMapStr);
-            if (!configFileMapStrMd5.equals(serviceEntity.getConfigFileJsonMd5())) {
-                // update config
-                updateServiceInstanceConfig(
-                        frameCode, serviceInfo.getName(), serviceInfo.getParameters());
+        // 使用JDK 21的switch表达式处理服务实体状态
+        serviceEntity = switch (serviceEntity) {
+            case null -> {
+                var newEntity = new FrameServiceEntity();
+                buildServiceEntity(config, newEntity);
+                frameServiceService.save(newEntity);
+                yield newEntity;
             }
-            buildServiceEntity(
-                    frameCode,
-                    frameInfo.getId(),
-                    serviceName,
-                    serviceDdl,
-                    serviceInfo,
-                    serviceInfoMd5,
-                    serviceEntity,
-                    configFileMap,
-                    serviceInfo.getDecompressPackageName());
-            frameServiceService.updateById(serviceEntity);
-        }
+            default -> {
+                if (!serviceEntity.getServiceJsonMd5().equals(config.serviceInfoMd5())) {
+                    var configMapStr = JSONObject.toJSONString(config.configFileMap());
+                    var configFileMapStrMd5 = SecureUtil.md5(configMapStr);
+                    
+                    if (!configFileMapStrMd5.equals(serviceEntity.getConfigFileJsonMd5())) {
+                        updateServiceInstanceConfig(config.frameCode(), 
+                                config.serviceInfo().getName(), 
+                                config.serviceInfo().getParameters());
+                    }
+                    buildServiceEntity(config, serviceEntity);
+                    frameServiceService.updateById(serviceEntity);
+                }
+                yield serviceEntity;
+            }
+        };
 
-        ServiceConfigMap.put(
-                frameCode + Constants.UNDERLINE + serviceInfo.getName() + Constants.CONFIG,
-                allParameters);
-        ServiceConfigFileMap.put(
-                frameCode + Constants.UNDERLINE + serviceInfo.getName() + Constants.CONFIG_FILE,
-                configFileMap);
+        // 更新缓存映射
+        var cacheKey = config.frameCode() + Constants.UNDERLINE + config.serviceInfo().getName();
+        ServiceConfigMap.put(cacheKey + Constants.CONFIG, parameters);
+        ServiceConfigFileMap.put(cacheKey + Constants.CONFIG_FILE, config.configFileMap());
 
         return serviceEntity;
     }
 
-    private void buildConfigFileMap(
+    /**
+     * 构建配置文件映射 - 重构使用JDK 21新特性
+     */
+    private Map<Generators, List<ServiceConfig>> buildConfigFileMap(ServiceInfo serviceInfo) {
+        var allParameters = serviceInfo.getParameters();
+        var parameterMap = allParameters.stream()
+                .collect(Collectors.toMap(
+                        ServiceConfig::getName,
+                        Function.identity(),
+                        (v1, v2) -> v1));
+        
+        return buildConfigFileMap(serviceInfo, parameterMap);
+    }
+
+    /**
+     * 重载方法保持兼容性
+     */
+    private Map<Generators, List<ServiceConfig>> buildConfigFileMap(
             ServiceInfo serviceInfo,
-            Map<String, ServiceConfig> map,
-            Map<Generators, List<ServiceConfig>> configFileMap) {
-        ConfigWriter configWriter = serviceInfo.getConfigWriter();
-        List<Generators> generators = configWriter.getGenerators();
-        for (Generators generator : generators) {
-            List<ServiceConfig> list = new ArrayList<>();
-            List<String> includeParams = generator.getIncludeParams();
-            for (String includeParam : includeParams) {
-                if (map.containsKey(includeParam)) {
-                    ServiceConfig serviceConfig = map.get(includeParam);
-                    ServiceConfig newConfig = new ServiceConfig();
-                    BeanUtils.copyProperties(serviceConfig, newConfig);
-                    list.add(newConfig);
-                }
-            }
-            if (configFileMap.containsKey(generator)) {
-                configFileMap.get(generator).addAll(list);
-            } else {
-                configFileMap.put(generator, list);
-            }
-        }
+            Map<String, ServiceConfig> parameterMap) {
+        var configFileMap = new HashMap<Generators, List<ServiceConfig>>();
+        var configWriter = serviceInfo.getConfigWriter();
+        var generators = configWriter.getGenerators();
+        
+        // 使用现代化流式API处理配置生成器
+        generators.forEach(generator -> {
+            var configList = generator.getIncludeParams().stream()
+                    .filter(parameterMap::containsKey)
+                    .map(paramName -> {
+                        var sourceConfig = parameterMap.get(paramName);
+                        var newConfig = new ServiceConfig();
+                        BeanUtils.copyProperties(sourceConfig, newConfig);
+                        return newConfig;
+                    })
+                    .collect(Collectors.toList());
+            
+            configFileMap.merge(generator, configList, (existing, newList) -> {
+                existing.addAll(newList);
+                return existing;
+            });
+        });
+        
+        return configFileMap;
     }
 
     private FrameInfoEntity saveClusterFrame(String frameCode) {
@@ -429,8 +603,11 @@ public class LoadServiceMeta implements ApplicationRunner {
         }
     }
 
+    /**
+     * 构建框架服务角色实体 - 重构使用JDK 21新特性
+     */
     private void buildFrameServiceRole(
-            String frameCode,
+            ServiceMetaConfig config,
             FrameServiceEntity serviceEntity,
             ServiceRoleInfo serviceRole,
             String serviceRoleJson,
@@ -439,7 +616,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         role.setServiceId(serviceEntity.getId());
         role.setServiceRoleName(serviceRole.getName());
         role.setCardinality(serviceRole.getCardinality());
-        role.setFrameCode(frameCode);
+        role.setFrameCode(config.frameCode());
         role.setServiceRoleJson(serviceRoleJson);
         role.setServiceRoleType(CommonUtils.convertRoleType(serviceRole.getRoleType().getName()));
         role.setJmxPort(serviceRole.getJmxPort());
@@ -447,29 +624,24 @@ public class LoadServiceMeta implements ApplicationRunner {
         role.setLogFile(serviceRole.getLogFile());
     }
 
-    private void buildServiceEntity(
-            String frameCode,
-            Integer frameInfoId,
-            String serviceName,
-            String serviceDdl,
-            ServiceInfo serviceInfo,
-            String serviceInfoMd5,
-            FrameServiceEntity serviceEntity,
-            Map<Generators, List<ServiceConfig>> configFileMap,
-            String decompressPackageName) {
-        serviceEntity.setServiceName(serviceName);
+    /**
+     * 构建服务实体 - 重构使用JDK 21新特性
+     */
+    private void buildServiceEntity(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
+        var serviceInfo = config.serviceInfo();
+        serviceEntity.setServiceName(config.serviceName());
         serviceEntity.setLabel(serviceInfo.getLabel());
-        serviceEntity.setFrameId(frameInfoId);
+        serviceEntity.setFrameId(config.frameInfo().getId());
         serviceEntity.setServiceDesc(serviceInfo.getDescription());
         serviceEntity.setServiceVersion(serviceInfo.getVersion());
         serviceEntity.setPackageName(serviceInfo.getPackageName());
         serviceEntity.setDependencies(StringUtils.join(serviceInfo.getDependencies(), ","));
-        serviceEntity.setFrameCode(frameCode);
+        serviceEntity.setFrameCode(config.frameCode());
         serviceEntity.setServiceConfig(JSON.toJSONString(serviceInfo.getParameters()));
-        serviceEntity.setServiceJson(serviceDdl);
-        serviceEntity.setServiceJsonMd5(serviceInfoMd5);
-        serviceEntity.setDecompressPackageName(decompressPackageName);
-        serviceEntity.setConfigFileJson(JSONObject.toJSONString(configFileMap));
+        serviceEntity.setServiceJson(config.serviceDdl());
+        serviceEntity.setServiceJsonMd5(config.serviceInfoMd5());
+        serviceEntity.setDecompressPackageName(config.decompressPackageName());
+        serviceEntity.setConfigFileJson(JSONObject.toJSONString(config.configFileMap()));
         serviceEntity.setConfigFileJsonMd5(SecureUtil.md5(serviceEntity.getConfigFileJson()));
         serviceEntity.setSortNum(serviceInfo.getSortNum());
     }

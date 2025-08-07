@@ -55,6 +55,14 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
     FrameServiceDTO getServiceByFrameIdAndServiceName(Integer frameId, String serviceName);
 
     /**
+     * 根据框架ID和服务名称查找服务信息（用于服务发现，不抛出异常）
+     * @param frameId 框架ID
+     * @param serviceName 服务名称
+     * @return Optional包装的服务信息，如果不存在则返回空Optional
+     */
+    java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Integer frameId, String serviceName);
+
+    /**
      * 根据框架代码和服务名称获取服务信息
      */
     FrameServiceDTO getServiceByFrameCodeAndServiceName(String frameCode, String serviceName);

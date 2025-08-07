@@ -176,6 +176,24 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
+    public java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Integer frameId, String serviceName) {
+        // 使用JDK 21的现代化参数验证
+        if (frameId == null) {
+            log.warn("服务查找参数验证失败: 框架ID不能为空");
+            return java.util.Optional.empty();
+        }
+        
+        if (StrUtil.isBlank(serviceName)) {
+            log.warn("服务查找参数验证失败: 服务名称不能为空");
+            return java.util.Optional.empty();
+        }
+
+        var entity = getMapper().selectByFrameIdAndServiceName(frameId, serviceName);
+        return java.util.Optional.ofNullable(entity)
+                .map(frameServiceConverter::entityToDto);
+    }
+
+    @Override
     public FrameServiceDTO getServiceByFrameCodeAndServiceName(String frameCode, String serviceName) {
         if (StrUtil.isBlank(frameCode)) {
             throw new BusinessException("框架代码不能为空");
