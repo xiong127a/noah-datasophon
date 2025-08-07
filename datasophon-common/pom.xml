@@ -341,6 +341,10 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <!-- 启用参数名保留，支持Spring参数名反射 -->
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.mapstruct</groupId>
