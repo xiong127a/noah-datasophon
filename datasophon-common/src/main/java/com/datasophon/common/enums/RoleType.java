@@ -15,30 +15,38 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.enums;
+package com.datasophon.common.enums;
 
 import com.mybatisflex.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
-
-/**
- * @author 63588
- */
-
 @Getter
-public enum MANAGED {
+public enum RoleType {
 
-    YES(1, true),
-    NO(2, false);
+    MASTER(1, "master"),
+    WORKER(2, "worker"),
+    CLIENT(3, "client"),
+    SLAVE(4, "slave");
 
+    @Getter
     @EnumValue
     private final int value;
 
-    private final boolean desc;
+    private final String desc;
 
-    MANAGED(int value, boolean desc) {
+    RoleType(int value, String desc) {
         this.value = value;
         this.desc = desc;
     }
 
+    @JsonValue
+    public String getDesc() {
+        return desc;
+    }
+
+    @Override
+    public String toString() {
+        return this.desc;
+    }
 }

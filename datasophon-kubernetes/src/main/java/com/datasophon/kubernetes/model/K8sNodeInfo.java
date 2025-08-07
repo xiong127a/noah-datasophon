@@ -99,4 +99,19 @@ public class K8sNodeInfo {
      * 可分配的存储资源
      */
     private String allocatableStorage;
+
+    /**
+     * 节点角色（control-plane, master, <none>）
+     */
+    private String roles;
+
+    /**
+     * Kubernetes版本
+     */
+    private String kubeVersion;
+
+    /**
+     * 节点年龄
+     */
+    private String age;
 }

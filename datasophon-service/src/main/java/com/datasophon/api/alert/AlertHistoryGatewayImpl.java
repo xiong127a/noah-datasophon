@@ -3,7 +3,7 @@ package com.datasophon.api.alert;
 import com.datasophon.api.alert.gateway.AlertHistoryGateway;
 import com.datasophon.api.alert.model.AlertHistory;
 import com.datasophon.dao.entity.ClusterAlertHistory;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import com.mybatisflex.core.query.QueryChain;
 import org.springframework.beans.BeanUtils;

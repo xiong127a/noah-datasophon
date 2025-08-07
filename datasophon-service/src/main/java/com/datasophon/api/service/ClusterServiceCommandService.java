@@ -18,6 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.RollingRestartInfo;
@@ -108,5 +109,5 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 更新命令状态和结束时间
          */
-        void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime);
+        void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime);
 }

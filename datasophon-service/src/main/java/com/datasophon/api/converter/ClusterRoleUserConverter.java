@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterRoleUserDTO;
 import com.datasophon.common.vo.ClusterRoleUserVO;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
-import com.datasophon.dao.enums.UserType;
+import com.datasophon.common.enums.UserType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

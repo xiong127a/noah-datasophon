@@ -27,7 +27,7 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.datasophon.dao.enums.RoleType;
+import com.datasophon.common.enums.RoleType;
 import org.apache.pekko.actor.ActorRef;
 
 import java.util.List;

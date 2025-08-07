@@ -1,7 +1,7 @@
 package com.datasophon.dao.model;
 
 
-import com.datasophon.dao.enums.HostState;
+import com.datasophon.common.enums.HostState;
 import lombok.Data;
 
 import java.util.Date;

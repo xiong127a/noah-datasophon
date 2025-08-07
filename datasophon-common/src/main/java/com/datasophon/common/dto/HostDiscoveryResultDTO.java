@@ -15,50 +15,59 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.entity;
+package com.datasophon.common.dto;
 
-import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
-import com.mybatisflex.annotation.Table;
-import com.datasophon.common.enums.CommandState;
+import lombok.Builder;
 import lombok.Data;
 
-import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
-@Table("t_ddh_cluster_service_command_host")
+/**
+ * 主机发现结果DTO
+ * 用于前端展示，包含HostInfoDTO列表而不是ClusterHostDO
+ */
 @Data
-public class ClusterServiceCommandHostEntity implements Serializable {
-
-    @Serial
-    private static final long serialVersionUID = 1L;
-
+@Builder
+public class HostDiscoveryResultDTO {
+    
     /**
-     * 主键
+     * 发现的主机列表（DTO格式）
      */
-    @Id
-    private String commandHostId;
+    private List<HostInfoDTO> hosts;
+    
     /**
-     * 主机
+     * 发现总数
      */
-    private String hostname;
+    private Integer totalCount;
+    
     /**
-     * 命令状态 1：正在运行2：成功3：失败
+     * 是否成功
      */
-    private CommandState commandState;
-
-    @Column(ignore = true)
-    private Integer commandStateCode;
+    private Boolean success;
+    
     /**
-     * 命令进度
+     * 错误信息
      */
-    private Long commandProgress;
+    private String errorMessage;
+    
     /**
-     * 操作指令id
+     * 额外的元数据信息
      */
-    private String commandId;
-
-    private Date createTime;
-
+    private Map<String, Object> metadata;
+    
+    /**
+     * 发现耗时（毫秒）
+     */
+    private Long discoveryTime;
+    
+    /**
+     * 策略类型
+     */
+    private String strategyType;
+    
+    /**
+     * 发现数量
+     */
+    private Integer discoveredCount;
 }

@@ -18,7 +18,7 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.datasophon.dao.enums.CommandState;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryChain;

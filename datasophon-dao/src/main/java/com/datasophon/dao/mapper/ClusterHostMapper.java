@@ -19,7 +19,7 @@ package com.datasophon.dao.mapper;
 
 import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.enums.MANAGED;
+import com.datasophon.common.enums.MANAGED;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 

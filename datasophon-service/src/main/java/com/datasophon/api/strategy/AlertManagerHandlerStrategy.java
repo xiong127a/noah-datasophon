@@ -27,7 +27,7 @@ import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.dao.model.MPage;
 import org.apache.commons.lang3.StringUtils;
 

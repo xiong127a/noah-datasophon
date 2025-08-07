@@ -42,8 +42,8 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.dto.ClusterUserDTO;
-import com.datasophon.dao.enums.ServiceRoleState;
-import com.datasophon.dao.enums.MANAGED;
+import com.datasophon.common.enums.ServiceRoleState;
+import com.datasophon.common.enums.MANAGED;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -23,7 +23,7 @@ import com.datasophon.common.dto.ClusterRoleUserDTO;
 import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 
-import com.datasophon.dao.enums.UserType;
+import com.datasophon.common.enums.UserType;
 import com.datasophon.dao.mapper.ClusterRoleUserMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;

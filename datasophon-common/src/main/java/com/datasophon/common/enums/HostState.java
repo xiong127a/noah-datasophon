@@ -15,19 +15,18 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.enums;
+package com.datasophon.common.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-public enum QuotaState {
+public enum HostState {
 
-    RUNNING(1, "启用"),
-    STOPPED(2, "未启用"),
-    WAIT_TO_UPDATE(3, "待更新");
+    RUNNING(1, "正在运行"),
+    OFFLINE(2, "掉线"),
+    EXISTS_ALARM(3, "存在告警");
 
     @Getter
     @EnumValue
@@ -35,7 +34,7 @@ public enum QuotaState {
 
     private final String desc;
 
-    QuotaState(int value, String desc) {
+    HostState(int value, String desc) {
         this.value = value;
         this.desc = desc;
     }

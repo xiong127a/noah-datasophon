@@ -22,7 +22,7 @@ import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterAlertHistoryVO;
 import com.datasophon.dao.entity.ClusterAlertHistory;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

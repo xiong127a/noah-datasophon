@@ -18,9 +18,9 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.enums.ServiceRoleState;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -172,7 +172,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * @param serviceRoleInstanceId 服务角色实例ID
      * @param serviceRoleState 新的服务角色状态
      */
-    void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, com.datasophon.dao.enums.ServiceRoleState serviceRoleState);
+    void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, ServiceRoleState serviceRoleState);
 
     /**
      * 根据服务名列表获取服务角色实例

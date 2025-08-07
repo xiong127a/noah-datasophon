@@ -20,8 +20,8 @@ package com.datasophon.dao.entity;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.ServiceState;
 import lombok.Data;
 
 import java.io.Serial;

@@ -10,7 +10,7 @@ import com.datasophon.api.service.ServiceStateManagementService;
 import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 
 import java.util.List;
 import java.util.Map;

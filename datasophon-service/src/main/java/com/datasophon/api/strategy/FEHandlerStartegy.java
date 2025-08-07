@@ -25,8 +25,8 @@ import com.datasophon.common.model.ProcInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.AlertLevel;
+import com.datasophon.common.enums.ServiceRoleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

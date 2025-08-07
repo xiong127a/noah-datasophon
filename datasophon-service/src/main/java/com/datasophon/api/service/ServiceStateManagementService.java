@@ -19,8 +19,8 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.AlertLevel;
+import com.datasophon.common.enums.ServiceRoleState;
 
 /**
  * 服务状态管理服务

@@ -1,4 +1,4 @@
-package com.datasophon.api.dto;
+package com.datasophon.common.dto;
 
 import com.datasophon.common.enums.ClusterType;
 import lombok.Data;

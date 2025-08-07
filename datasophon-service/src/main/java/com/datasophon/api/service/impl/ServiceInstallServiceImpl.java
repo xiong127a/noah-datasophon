@@ -66,8 +66,8 @@ import com.datasophon.common.model.ServiceRoleHostMapping;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.*;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.ServiceState;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategy;
 import com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategyContext;
 // QueryChain已迁移到DAO层，不再在Service层使用

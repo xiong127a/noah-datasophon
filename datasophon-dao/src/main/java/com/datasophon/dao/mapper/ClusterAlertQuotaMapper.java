@@ -18,7 +18,7 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.datasophon.dao.enums.QuotaState;
+import com.datasophon.common.enums.QuotaState;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;

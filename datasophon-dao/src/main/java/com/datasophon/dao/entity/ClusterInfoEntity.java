@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.ClusterState;
+import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.enums.ClusterType;
 
 import java.io.Serial;

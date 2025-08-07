@@ -19,7 +19,7 @@ package com.datasophon.dao.entity;
 
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

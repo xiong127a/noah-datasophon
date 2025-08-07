@@ -1,5 +1,6 @@
 package com.datasophon.api.master.alert;
 
+import com.datasophon.common.enums.ServiceState;
 import org.apache.pekko.actor.AbstractActor;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONObject;
@@ -12,9 +13,9 @@ import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.HostState;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.AlertLevel;
+import com.datasophon.common.enums.HostState;
+import com.datasophon.common.enums.ServiceRoleState;
 
 import com.datasophon.api.alert.gateway.AlertHistoryGateway;
 import com.datasophon.api.alert.model.AlertHistory;
@@ -109,7 +110,7 @@ public class AlertActor extends AbstractActor {
                                     .entityToDto(serviceInstanceService.getById(roleInstance.serviceId()));
                             // 更新服务实例状态为告警
                             serviceInstanceService.updateServiceInstanceState(serviceInstance.id(), 
-                                    com.datasophon.dao.enums.ServiceState.EXISTS_ALARM);
+                                    ServiceState.EXISTS_ALARM);
                             // 更新服务角色实例状态为告警
                             roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), 
                                     ServiceRoleState.EXISTS_ALARM);
@@ -135,7 +136,7 @@ public class AlertActor extends AbstractActor {
                             if (EXCEPTION.equals(labels.getSeverity())) {
                                 // 异常告警，更新为异常状态
                                 serviceInstanceService.updateServiceInstanceState(serviceInstance.id(), 
-                                        com.datasophon.dao.enums.ServiceState.EXISTS_EXCEPTION);
+                                        ServiceState.EXISTS_EXCEPTION);
                                 roleInstanceService.updateServiceRoleInstanceState(roleInstance.id(), 
                                         ServiceRoleState.STOP);
                             }

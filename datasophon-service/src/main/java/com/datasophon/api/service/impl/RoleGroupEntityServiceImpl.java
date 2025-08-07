@@ -24,7 +24,7 @@ import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import org.slf4j.Logger;

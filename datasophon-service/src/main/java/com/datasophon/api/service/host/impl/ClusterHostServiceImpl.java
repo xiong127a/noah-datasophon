@@ -19,7 +19,6 @@ package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
 import org.apache.pekko.actor.ActorRef;
-import cn.hutool.core.util.ObjectUtil;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.common.enums.Status;
@@ -45,9 +44,7 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
-import com.datasophon.dao.enums.HostState;
-import com.datasophon.dao.enums.MANAGED;
-import org.apache.commons.lang3.StringUtils;
+import com.datasophon.common.enums.HostState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

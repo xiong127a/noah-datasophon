@@ -39,8 +39,8 @@ import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-import com.datasophon.dao.enums.CommandState;
-import com.datasophon.dao.enums.RoleType;
+import com.datasophon.common.enums.CommandState;
+import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.ServiceRoleType;
 import org.apache.pekko.actor.ActorRef;
 

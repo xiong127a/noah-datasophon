@@ -22,7 +22,7 @@ import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterServiceCommandHostVO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-import com.datasophon.dao.enums.CommandState;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.model.PageResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

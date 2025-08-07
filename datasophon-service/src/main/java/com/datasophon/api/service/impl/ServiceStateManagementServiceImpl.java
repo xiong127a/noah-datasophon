@@ -24,10 +24,10 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.dao.entity.ClusterAlertHistory;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceRoleState;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.common.enums.AlertLevel;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.ServiceRoleState;
+import com.datasophon.common.enums.ServiceState;
 // QueryChain已迁移到DAO层，不再在Service层使用
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import org.slf4j.Logger;

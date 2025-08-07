@@ -40,7 +40,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.enums.AlertLevel;
+import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.pattern.Patterns;

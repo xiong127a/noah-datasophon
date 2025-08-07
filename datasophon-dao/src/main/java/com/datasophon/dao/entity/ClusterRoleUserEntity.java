@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.UserType;
+import com.datasophon.common.enums.UserType;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.RelationManyToOne;
 import com.mybatisflex.annotation.Table;

@@ -107,6 +107,17 @@ public class KubeUtil {
             long usedMem = totalMemory > allowMemory ? totalMemory - allowMemory : 0L;
             long usedDisk = totalDisk > allowDisk ? totalDisk - allowDisk : 0L;
 
+            // 提取节点角色信息
+            String roles = getNodeRoles(node);
+
+            // 提取Kubernetes版本
+            String kubeVersion = node.getStatus() != null && node.getStatus().getNodeInfo() != null
+                    ? node.getStatus().getNodeInfo().getKubeletVersion()
+                    : "unknown";
+
+            // 计算节点年龄
+            String age = calculateNodeAge(node);
+
             // 构建并返回K8sNodeInfo对象
             return K8sNodeInfo.builder()
                     .ip(ip)
@@ -122,6 +133,9 @@ public class KubeUtil {
                     .allocatableCpu(String.valueOf(coreNum))
                     .allocatableMemory(ByteConverter.convertKBToGB(allowMemory) + "GB")
                     .allocatableStorage(ByteConverter.convertKBToGB(allowDisk) + "GB")
+                    .roles(roles)
+                    .kubeVersion(kubeVersion)
+                    .age(age)
                     .build();
         } catch (Exception e) {
             log.error("提取节点信息时发生异常", e);
@@ -227,6 +241,76 @@ public class KubeUtil {
      */
     public static String getKubernetesYaml(HasMetadata obj) {
         return Serialization.asYaml(obj);
+    }
+
+    /**
+     * 获取节点角色信息
+     * 
+     * @param node K8S节点对象
+     * @return 节点角色字符串
+     */
+    private static String getNodeRoles(Node node) {
+        if (node == null || node.getMetadata() == null || node.getMetadata().getLabels() == null) {
+            return "<none>";
+        }
+
+        Map<String, String> labels = node.getMetadata().getLabels();
+        
+        // 检查控制平面节点标签
+        if (labels.containsKey("node-role.kubernetes.io/control-plane") ||
+            labels.containsKey("node-role.kubernetes.io/master")) {
+            return "control-plane";
+        }
+        
+        // 检查其他角色标签（node-role.kubernetes.io/xxx）
+        List<String> roles = labels.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("node-role.kubernetes.io/"))
+                .map(entry -> entry.getKey().substring("node-role.kubernetes.io/".length()))
+                .filter(role -> !role.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
+        
+        if (!roles.isEmpty()) {
+            return String.join(",", roles);
+        }
+        
+        return "<none>";
+    }
+
+    /**
+     * 计算节点年龄
+     * 
+     * @param node K8S节点对象
+     * @return 节点年龄字符串（如：43d, 2h30m）
+     */
+    private static String calculateNodeAge(Node node) {
+        if (node == null || node.getMetadata() == null || node.getMetadata().getCreationTimestamp() == null) {
+            return "unknown";
+        }
+
+        try {
+            java.time.Instant creationTime = node.getMetadata().getCreationTimestamp().toInstant();
+            java.time.Instant now = java.time.Instant.now();
+            java.time.Duration duration = java.time.Duration.between(creationTime, now);
+
+            long days = duration.toDays();
+            long hours = duration.toHours() % 24;
+            long minutes = duration.toMinutes() % 60;
+
+            if (days > 0) {
+                return days + "d";
+            } else if (hours > 0) {
+                if (minutes > 0) {
+                    return hours + "h" + minutes + "m";
+                } else {
+                    return hours + "h";
+                }
+            } else {
+                return minutes + "m";
+            }
+        } catch (Exception e) {
+            log.warn("计算节点年龄时出错", e);
+            return "unknown";
+        }
     }
 
 }

@@ -17,9 +17,9 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.RoleType;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.RoleType;
+import com.datasophon.common.enums.ServiceRoleState;
 
 import java.io.Serial;
 import java.io.Serializable;

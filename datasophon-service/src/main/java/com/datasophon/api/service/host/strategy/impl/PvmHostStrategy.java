@@ -23,7 +23,7 @@ import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.api.service.impl.InstallServiceImpl;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.enums.MANAGED;
+import com.datasophon.common.enums.MANAGED;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

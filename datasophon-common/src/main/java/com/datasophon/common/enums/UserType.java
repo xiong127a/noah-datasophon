@@ -15,18 +15,17 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.enums;
+package com.datasophon.common.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 @Getter
-public enum HostState {
+public enum UserType {
 
-    RUNNING(1, "正在运行"),
-    OFFLINE(2, "掉线"),
-    EXISTS_ALARM(3, "存在告警");
+    ADMIN(1, "管理员"),
+    NORMAL(2, "普通用户");
 
     @Getter
     @EnumValue
@@ -34,7 +33,7 @@ public enum HostState {
 
     private final String desc;
 
-    HostState(int value, String desc) {
+    UserType(int value, String desc) {
         this.value = value;
         this.desc = desc;
     }

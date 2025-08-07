@@ -29,7 +29,7 @@ import com.datasophon.common.exception.BusinessException;
 
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.common.enums.ServiceState;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
 

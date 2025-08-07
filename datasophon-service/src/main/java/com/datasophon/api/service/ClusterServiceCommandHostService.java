@@ -18,6 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.service.IService;
@@ -104,5 +105,5 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
     /**
      * 更新命令主机状态
      */
-    void updateCommandHostState(String commandHostId, com.datasophon.dao.enums.CommandState commandState);
+    void updateCommandHostState(String commandHostId, CommandState commandState);
 }

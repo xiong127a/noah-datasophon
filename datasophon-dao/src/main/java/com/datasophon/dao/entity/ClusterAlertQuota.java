@@ -17,8 +17,8 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.dao.enums.QuotaState;
+import com.datasophon.common.enums.AlertLevel;
+import com.datasophon.common.enums.QuotaState;
 
 import java.io.Serial;
 import java.io.Serializable;

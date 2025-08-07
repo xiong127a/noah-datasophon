@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.common.vo.FrameServiceRoleVO;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import com.datasophon.dao.enums.RoleType;
+import com.datasophon.common.enums.RoleType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

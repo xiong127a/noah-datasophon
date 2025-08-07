@@ -15,14 +15,11 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.entity;
+package com.datasophon.common.dto;
+
 
 import com.datasophon.common.enums.HostState;
 import com.datasophon.common.enums.MANAGED;
-import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
-import com.mybatisflex.annotation.Table;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,12 +29,17 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.Date;
 
-@Table("t_ddh_cluster_host")
+/**
+ * 主机信息数据传输对象
+ * 用于系统内部各模块之间的主机信息传输，包含K8S扩展字段
+ *
+ * @author DataSophon Team
+ */
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class ClusterHostDO implements Serializable {
+@AllArgsConstructor
+public class HostInfoDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -45,70 +47,122 @@ public class ClusterHostDO implements Serializable {
     /**
      * 主键
      */
-    @Id
     private Integer id;
+
     /**
      * 创建时间
      */
     private Date createTime;
+
     /**
      * 主机名
      */
     private String hostname;
+
     /**
-     * IP
+     * IP地址
      */
     private String ip;
+
     /**
      * 机架
      */
     private String rack;
+
     /**
      * 核数
      */
     private Integer coreNum;
+
     /**
-     * 总内存
+     * 总内存(GB)
      */
     private Integer totalMem;
+
     /**
-     * 总磁盘
+     * 总磁盘(GB)
      */
     private Integer totalDisk;
+
     /**
-     * 已用内存
+     * 已用内存(GB)
      */
     private Integer usedMem;
+
     /**
-     * 已用磁盘
+     * 已用磁盘(GB)
      */
     private Integer usedDisk;
+
     /**
      * 平均负载
      */
     private String averageLoad;
+
     /**
      * 检测时间
      */
     private Date checkTime;
+
     /**
-     * 集群id
+     * 集群ID
      */
     private Integer clusterId;
+
     /**
-     * 1:正常运行 2：断线 3、存在告警
+     * 主机状态枚举
      */
     private HostState hostState;
+
     /**
-     * 1:受管 2：断线
+     * 管理状态枚举
      */
     private MANAGED managed;
 
+    /**
+     * CPU架构
+     */
     private String cpuArchitecture;
 
+    /**
+     * 节点标签
+     */
     private String nodeLabel;
 
-    @Column(ignore = true)
+    /**
+     * 服务角色数量
+     */
     private Integer serviceRoleNum;
 
+    // =============== K8S扩展字段 ===============
+    /**
+     * 节点角色（control-plane, master, <none>）
+     */
+    private String roles;
+
+    /**
+     * Kubernetes版本
+     */
+    private String version;
+
+    /**
+     * 节点年龄（如：43d, 2h30m）
+     */
+    private String age;
+
+    /**
+     * 节点状态字符串（Ready, NotReady）
+     */
+    private String status;
+
+    // =============== 辅助方法 ===============
+    /**
+     * 前端兼容性方法：managed字段的字符串表示
+     */
+    public String getManagedString() {
+        if (managed == null) {
+            return "NO";
+        }
+        return managed == MANAGED.YES ? "YES" : "NO";
+    }
 }

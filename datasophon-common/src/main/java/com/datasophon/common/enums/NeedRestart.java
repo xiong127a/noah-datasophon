@@ -15,37 +15,32 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.enums;
+package com.datasophon.common.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-public enum AlertLevel {
+public enum NeedRestart {
 
-    WARN(1, "warning"),
-    EXCEPTION(2, "exception");
+    NO(1, false),
+    YES(2, true);
 
     @Getter
     @EnumValue
     private final int value;
 
-    private final String desc;
+    private final boolean desc;
 
-    AlertLevel(int value, String desc) {
+    NeedRestart(int value, boolean desc) {
         this.value = value;
         this.desc = desc;
     }
 
     @JsonValue
-    public String getDesc() {
+    public boolean isDesc() {
         return desc;
     }
 
-    @Override
-    public String toString() {
-        return this.desc;
-    }
 }

@@ -18,9 +18,9 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.RoleType;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.RoleType;
+import com.datasophon.common.enums.ServiceRoleState;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;

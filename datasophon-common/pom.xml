@@ -320,6 +320,12 @@
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.mybatis-flex</groupId>
+            <artifactId>mybatis-flex-annotation</artifactId>
+            <version>1.11.1</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

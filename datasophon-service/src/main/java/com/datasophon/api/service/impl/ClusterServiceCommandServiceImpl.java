@@ -27,6 +27,7 @@ import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 
@@ -58,7 +59,7 @@ import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.converter.FrameServiceRoleConverter;
-import com.datasophon.dao.enums.CommandState;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandMapper;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
 import com.mybatisflex.core.paginate.Page;
@@ -637,7 +638,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime) {
+    public void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime) {
         ClusterServiceCommandEntity entity = getById(commandId);
         if (entity != null) {
             entity.setCommandState(commandState);
@@ -655,7 +656,7 @@ public class ClusterServiceCommandServiceImpl
         command.setClusterId(clusterId);
         command.setCommandType(commandType.getValue());
         command.setCommandName(commandName);
-        command.setCommandState(com.datasophon.dao.enums.CommandState.WAIT);
+        command.setCommandState(CommandState.WAIT);
         command.setCreateTime(new java.util.Date());
         command.setCommandProgress(0L);
         return command;
@@ -669,7 +670,7 @@ public class ClusterServiceCommandServiceImpl
         commandHost.setCommandHostId(UUID.randomUUID().toString());
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
-        commandHost.setCommandState(com.datasophon.dao.enums.CommandState.WAIT);
+        commandHost.setCommandState(CommandState.WAIT);
         commandHost.setCreateTime(new java.util.Date());
         commandHost.setCommandProgress(0L);
         return commandHost;
@@ -682,7 +683,7 @@ public class ClusterServiceCommandServiceImpl
             CommandType commandType,
             String commandName,
             String serviceRoleName,
-            com.datasophon.dao.enums.RoleType roleType,
+            RoleType roleType,
             ClusterServiceCommandHostEntity commandHost) {
 
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
@@ -691,7 +692,7 @@ public class ClusterServiceCommandServiceImpl
         hostCommand.setCommandType(commandType.getValue());
         hostCommand.setServiceRoleName(serviceRoleName);
         hostCommand.setServiceRoleType(roleType);
-        hostCommand.setCommandState(com.datasophon.dao.enums.CommandState.WAIT);
+        hostCommand.setCommandState(CommandState.WAIT);
         hostCommand.setCreateTime(new java.util.Date());
         hostCommand.setCommandProgress(0);
         return hostCommand;

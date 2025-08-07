@@ -18,7 +18,6 @@
 package com.datasophon.api.service;
 
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.NeedRestart;
 
 import java.util.List;
 

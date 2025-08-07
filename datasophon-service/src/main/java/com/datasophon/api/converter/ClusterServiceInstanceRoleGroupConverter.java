@@ -19,6 +19,7 @@ package com.datasophon.api.converter;
 
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
+import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import org.mapstruct.Mapper;
@@ -50,7 +51,7 @@ public interface ClusterServiceInstanceRoleGroupConverter
      * 格式化重启需求文本（从枚举）
      */
     @Named("formatNeedRestartFromEnum")
-    default String formatNeedRestartFromEnum(com.datasophon.dao.enums.NeedRestart needRestart) {
+    default String formatNeedRestartFromEnum(NeedRestart needRestart) {
         if (needRestart == null) {
             return "未知";
         }

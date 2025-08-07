@@ -24,7 +24,7 @@ import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-import com.datasophon.dao.enums.CommandState;
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostMapper;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.spring.service.impl.ServiceImpl;

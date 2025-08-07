@@ -31,7 +31,7 @@ import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;

@@ -18,6 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
+import com.datasophon.common.enums.ServiceState;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.common.model.ConnectionInfo;
@@ -143,7 +144,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @param serviceState 新的服务状态
      */
-    void updateServiceInstanceState(Integer serviceInstanceId, com.datasophon.dao.enums.ServiceState serviceState);
+    void updateServiceInstanceState(Integer serviceInstanceId, ServiceState serviceState);
 
     /**
      * 检查是否存在使用指定框架服务的集群服务实例

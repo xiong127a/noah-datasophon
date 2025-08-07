@@ -18,7 +18,7 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.common.enums.ServiceState;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;

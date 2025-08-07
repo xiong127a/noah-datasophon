@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
+import com.datasophon.common.enums.CommandState;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -71,7 +72,7 @@ public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCo
     /**
      * 更新命令状态和结束时间
      */
-    default void updateCommandStateAndEndTime(String commandId, com.datasophon.dao.enums.CommandState commandState, java.util.Date endTime) {
+    default void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime) {
         ClusterServiceCommandEntity entity = selectByCommandId(commandId);
         if (entity != null) {
             entity.setCommandState(commandState);

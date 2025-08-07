@@ -19,7 +19,7 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 
 import org.slf4j.Logger;

@@ -20,9 +20,8 @@ package com.datasophon.api.service.host.strategy.impl;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
+import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.enums.HostState;
-import com.datasophon.dao.enums.MANAGED;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -44,8 +43,14 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     @Autowired
     private ClusterHostService clusterHostService;
 
+    @Autowired
+    private K8sToClusterHostConverter k8sToClusterHostConverter;
+
     // K8S主机临时存储，替代缓存
     private final Map<Integer, List<ClusterHostDO>> k8sHostsStorage = new HashMap<>();
+
+    // K8S节点信息临时存储
+    private final Map<Integer, List<K8sNodeInfo>> k8sNodeInfoStorage = new HashMap<>();
 
     @Override
     public StrategyType getStrategyType() {
@@ -86,10 +91,15 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
             // 从K8S API获取节点信息
             List<K8sNodeInfo> k8sNodes = KubeUtil.getHostListByConfig(kubeConfigContent);
             
-            // 转换为ClusterHostDO对象
-            List<ClusterHostDO> hosts = k8sNodes.stream()
+            // 过滤并存储原始K8S节点信息
+            List<K8sNodeInfo> validK8sNodes = k8sNodes.stream()
                     .filter(Objects::nonNull)
-                    .map(this::convertK8sNodeToClusterHost)
+                    .collect(Collectors.toList());
+            k8sNodeInfoStorage.put(request.getClusterId(), validK8sNodes);
+            
+            // 转换为ClusterHostDO对象（用于传统流程兼容）
+            List<ClusterHostDO> hosts = validK8sNodes.stream()
+                    .map(k8sNode -> k8sToClusterHostConverter.convertToClusterHost(k8sNode, request.getClusterId()))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             
@@ -103,6 +113,13 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
             log.error("从K8S集群发现主机失败", e);
             throw new RuntimeException("从K8S集群发现主机失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 获取K8S节点信息（用于前端展示）
+     */
+    public List<K8sNodeInfo> getK8sNodeInfoList(Integer clusterId) {
+        return k8sNodeInfoStorage.get(clusterId);
     }
 
     @Override
@@ -252,41 +269,11 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     public void cleanup(Integer clusterId) {
         // 清理临时存储
         k8sHostsStorage.remove(clusterId);
+        k8sNodeInfoStorage.remove(clusterId);
         log.info("已清理集群{}的K8S主机临时数据", clusterId);
     }
 
-    /**
-     * 将K8sNodeInfo转换为ClusterHostDO
-     */
-    private ClusterHostDO convertK8sNodeToClusterHost(K8sNodeInfo k8sNode) {
-        try {
-            ClusterHostDO host = new ClusterHostDO();
-            
-            // 基本信息
-            host.setHostname(k8sNode.getHostname());
-            host.setIp(k8sNode.getIp());
-            host.setCpuArchitecture(k8sNode.getCpuArchitecture());
-            host.setCoreNum(k8sNode.getCoreNum());
-            host.setTotalMem(k8sNode.getTotalMem());
-            host.setTotalDisk(k8sNode.getTotalDisk());
-            host.setUsedMem(k8sNode.getUsedMem());
-            host.setUsedDisk(k8sNode.getUsedDisk());
-            
-            // K8S特有信息
-            host.setHostState("Ready".equals(k8sNode.getStatus()) ? HostState.RUNNING : HostState.OFFLINE);
-            host.setManaged(MANAGED.NO); // 初始状态为未受管
-            host.setCreateTime(k8sNode.getCreateTime());
-            
-            // 设置节点类型
-            host.setNodeLabel("kubernetes-node");
-            
-            return host;
-            
-        } catch (Exception e) {
-            log.error("转换K8S节点信息失败: {}", k8sNode, e);
-            return null;
-        }
-    }
+
 
     /**
      * 应用筛选条件

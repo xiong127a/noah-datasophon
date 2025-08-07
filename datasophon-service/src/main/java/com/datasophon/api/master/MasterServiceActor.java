@@ -43,8 +43,8 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.enums.ServiceRoleState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

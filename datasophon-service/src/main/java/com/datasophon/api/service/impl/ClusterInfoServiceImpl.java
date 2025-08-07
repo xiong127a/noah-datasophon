@@ -48,7 +48,7 @@ import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
-import com.datasophon.dao.enums.ClusterState;
+import com.datasophon.common.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
 import com.datasophon.kubernetes.util.KubeUtil;
 import com.mybatisflex.spring.service.impl.ServiceImpl;

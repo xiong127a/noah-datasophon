@@ -19,6 +19,7 @@ package com.datasophon.api.converter;
 
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.model.ClusterInfoDO;
 import com.datasophon.common.vo.ClusterInfoVO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -73,7 +74,7 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
      * 映射集群状态文本（用于Entity）
      */
     @Named("mapEntityClusterStateText")
-    default String mapEntityClusterStateText(com.datasophon.dao.enums.ClusterState clusterState) {
+    default String mapEntityClusterStateText(ClusterState clusterState) {
         if (clusterState == null)
             return null;
         return clusterState.getDesc();
@@ -90,7 +91,7 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
      * 将枚举的ClusterState转换为Integer
      */
     @Named("mapClusterStateToInteger")
-    default Integer mapClusterStateToInteger(com.datasophon.dao.enums.ClusterState clusterState) {
+    default Integer mapClusterStateToInteger(ClusterState clusterState) {
         return clusterState != null ? clusterState.getValue() : null;
     }
 }

@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.RoleType;
+import com.datasophon.common.enums.RoleType;
 
 import java.io.Serial;
 import java.io.Serializable;

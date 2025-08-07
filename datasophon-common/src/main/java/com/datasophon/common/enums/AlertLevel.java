@@ -15,20 +15,17 @@
  *  limitations under the License.
  */
 
-package com.datasophon.dao.enums;
+package com.datasophon.common.enums;
 
 import com.mybatisflex.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-public enum RoleType {
+public enum AlertLevel {
 
-    MASTER(1, "master"),
-    WORKER(2, "worker"),
-    CLIENT(3, "client"),
-    SLAVE(4, "slave");
+    WARN(1, "warning"),
+    EXCEPTION(2, "exception");
 
     @Getter
     @EnumValue
@@ -36,7 +33,7 @@ public enum RoleType {
 
     private final String desc;
 
-    RoleType(int value, String desc) {
+    AlertLevel(int value, String desc) {
         this.value = value;
         this.desc = desc;
     }

@@ -29,10 +29,9 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.enums.MANAGED;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ServiceRoleState;
 import com.mybatisflex.core.query.QueryChain;
-import io.fabric8.kubernetes.api.model.Cluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

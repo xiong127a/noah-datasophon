@@ -32,7 +32,7 @@ import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
 import com.datasophon.dao.entity.NoticeGroupEntity;
-import com.datasophon.dao.enums.QuotaState;
+import com.datasophon.common.enums.QuotaState;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
