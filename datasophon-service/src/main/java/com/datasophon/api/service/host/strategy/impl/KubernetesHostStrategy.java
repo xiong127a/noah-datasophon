@@ -21,11 +21,12 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.enums.HostState;
+import com.datasophon.dao.enums.MANAGED;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -139,8 +140,8 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         try {
             log.info("开始导入{}台K8S主机到数据库", hosts.size());
             
-            // 调用现有的保存方法
-            clusterHostService.saveKubernetesHostDirect(hosts, request.getClusterId());
+            // 使用MyBatis-Flex的批量保存方法
+            clusterHostService.saveBatch(hosts);
             
             // 清理临时存储
             k8sHostsStorage.remove(request.getClusterId());
@@ -272,8 +273,8 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
             host.setUsedDisk(k8sNode.getUsedDisk());
             
             // K8S特有信息
-            host.setHostState("Ready".equals(k8sNode.getStatus()) ? 1 : 0);
-            host.setManaged(false); // 初始状态为未受管
+            host.setHostState("Ready".equals(k8sNode.getStatus()) ? HostState.RUNNING : HostState.OFFLINE);
+            host.setManaged(MANAGED.NO); // 初始状态为未受管
             host.setCreateTime(k8sNode.getCreateTime());
             
             // 设置节点类型

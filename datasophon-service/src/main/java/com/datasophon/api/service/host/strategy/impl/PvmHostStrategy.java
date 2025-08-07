@@ -23,6 +23,7 @@ import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.api.service.impl.InstallServiceImpl;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.enums.MANAGED;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -95,6 +96,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
                 sshUser,
                 Integer.parseInt(sshPort),
                 sshPassword,
+                null, // kubeConfigContent - PVM模式不需要
                 1, // page
                 100 // pageSize - 获取所有主机
             );
@@ -150,7 +152,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             // PVM模式的主机通常已经在分析阶段保存，这里可能需要更新状态
             for (ClusterHostDO host : hosts) {
                 // 更新主机为受管状态
-                host.setManaged(true);
+                host.setManaged(MANAGED.YES);
                 clusterHostService.updateById(host);
             }
             
@@ -182,9 +184,10 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     @Override
     public Map<String, Object> checkConnection(Map<String, Object> connectionParams) {
         String hosts = (String) connectionParams.get("hosts");
-        String sshUser = (String) connectionParams.get("sshUser");
-        String sshPort = (String) connectionParams.get("sshPort");
-        String sshPassword = (String) connectionParams.get("sshPassword");
+        // TODO: 可以在未来实现SSH连接参数验证
+        // String sshUser = (String) connectionParams.get("sshUser");
+        // String sshPort = (String) connectionParams.get("sshPort");
+        // String sshPassword = (String) connectionParams.get("sshPassword");
         
         Map<String, Object> result = new HashMap<>();
         
@@ -219,9 +222,8 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             String sshPort = (String) connectionParams.get("sshPort");
             
             // 调用现有的主机环境检查方法
-            installService.hostCheck(
+            installService.getHostCheckStatus(
                 clusterId,
-                String.join(",", hostnames),
                 sshUser,
                 Integer.parseInt(sshPort)
             );
@@ -247,10 +249,10 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         
         try {
             // 调用现有的检查完成状态方法
-            Map<String, Object> checkResult = installService.hostCheckCompleted();
+            boolean completed = installService.hostCheckCompleted(clusterId);
             
-            result.put("completed", checkResult.get("hostCheckCompleted"));
-            result.put("data", checkResult.get("data"));
+            result.put("completed", completed);
+            result.put("data", Collections.emptyList());
             result.put("queueStatus", getQueueStatus(clusterId));
             
         } catch (Exception e) {
@@ -267,7 +269,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     public void cleanup(Integer clusterId) {
         try {
             // 调用现有的清理方法
-            installService.cleanupHostCheckResources();
+            installService.cleanupHostCheckResources(clusterId);
             log.info("已清理集群{}的PVM主机检查资源", clusterId);
             
         } catch (Exception e) {

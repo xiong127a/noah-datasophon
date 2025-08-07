@@ -19,6 +19,7 @@ package com.datasophon.api.converter;
 
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.model.ClusterInfoDO;
 import com.datasophon.common.vo.ClusterInfoVO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.mapstruct.Mapper;
@@ -76,5 +77,20 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
         if (clusterState == null)
             return null;
         return clusterState.getDesc();
+    }
+
+    /**
+     * Entity 转换为 DO（业务对象）
+     * 用于业务逻辑层处理
+     */
+    @Mapping(target = "clusterState", source = "clusterState", qualifiedByName = "mapClusterStateToInteger")
+    ClusterInfoDO entityToDo(ClusterInfoEntity entity);
+
+    /**
+     * 将枚举的ClusterState转换为Integer
+     */
+    @Named("mapClusterStateToInteger")
+    default Integer mapClusterStateToInteger(com.datasophon.dao.enums.ClusterState clusterState) {
+        return clusterState != null ? clusterState.getValue() : null;
     }
 }

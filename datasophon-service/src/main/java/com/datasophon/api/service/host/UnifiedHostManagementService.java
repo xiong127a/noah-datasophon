@@ -21,8 +21,10 @@ import com.datasophon.api.service.host.strategy.HostManagementStrategy;
 import com.datasophon.api.service.host.strategy.HostManagementStrategyFactory;
 import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoDO;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
+import com.datasophon.common.model.ClusterInfoDO;
+import com.datasophon.api.converter.ClusterInfoConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,9 @@ public class UnifiedHostManagementService {
 
     @Autowired
     private ClusterInfoMapper clusterInfoMapper;
+    
+    @Autowired
+    private ClusterInfoConverter clusterInfoConverter;
 
     /**
      * 发现主机
@@ -365,11 +370,12 @@ public class UnifiedHostManagementService {
             throw new IllegalArgumentException("集群ID不能为空");
         }
         
-        ClusterInfoDO cluster = clusterInfoMapper.selectById(clusterId);
-        if (cluster == null) {
+        ClusterInfoEntity entity = clusterInfoMapper.selectOneById(clusterId);
+        if (entity == null) {
             throw new IllegalArgumentException("集群不存在: " + clusterId);
         }
         
-        return cluster;
+        // 使用MapStruct转换器
+        return clusterInfoConverter.entityToDo(entity);
     }
 }
