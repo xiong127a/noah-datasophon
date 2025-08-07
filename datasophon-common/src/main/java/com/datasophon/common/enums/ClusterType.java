@@ -1,5 +1,6 @@
 package com.datasophon.common.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
@@ -37,6 +38,7 @@ public enum ClusterType {
     /**
      * 根据代码获取枚举
      */
+    @JsonCreator
     public static ClusterType fromCode(String code) {
         if (code == null || code.trim().isEmpty()) {
             return null;
