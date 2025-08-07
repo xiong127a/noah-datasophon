@@ -110,7 +110,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       
       // 构造Step1配置数据
       const step1Config = {
-        clusterType: depType === DepType.KUBERNETES ? 'KUBERNETES' : 'PVM',
+        clusterType: depType === DepType.KUBERNETES ? 'Kubernetes' : 'PVM',
         // PVM配置参数
         hosts: step1Data.hosts,
         sshUser: step1Data.sshUser,
