@@ -148,6 +148,24 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
+    public java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName) {
+        // JDK 21现代化参数验证
+        if (serviceId == null) {
+            log.warn("服务角色查找参数验证失败: 服务ID不能为空");
+            return java.util.Optional.empty();
+        }
+        
+        if (roleName == null || roleName.trim().isEmpty()) {
+            log.warn("服务角色查找参数验证失败: 角色名称不能为空");
+            return java.util.Optional.empty();
+        }
+
+        var entity = getMapper().selectByServiceIdAndRoleName(serviceId, roleName);
+        return java.util.Optional.ofNullable(entity)
+                .map(frameServiceRoleConverter::entityToDto);
+    }
+
+    @Override
     public FrameServiceRoleDTO getServiceRoleByFrameCodeAndServiceRoleName(String clusterFrame,
             String serviceRoleName) {
         if (clusterFrame == null || clusterFrame.trim().isEmpty()) {

@@ -54,7 +54,6 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
-import com.datasophon.common.dto.FrameServiceRoleDTO;
 
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterVariable;
@@ -63,7 +62,6 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.api.converter.FrameServiceConverter;
 import com.datasophon.api.converter.FrameServiceRoleConverter;
-
 import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang3.StringUtils;
@@ -262,27 +260,7 @@ public class LoadServiceMeta implements ApplicationRunner {
                 config.decompressPackageName());
     }
 
-    /**
-     * 原始方法保持兼容性 - 但内部使用新的Record结构
-     * @deprecated 使用processServiceMetadata(ServiceMetaConfig, LoadContext)替代
-     */
-    @Deprecated(since = "3.0.0", forRemoval = true)
-    public void parseServiceDdl(final String frameCode,
-            List<ClusterInfoDTO> clusters,
-            FrameInfoEntity frameInfo,
-            final String serviceName,
-            final String serviceDdl) {
-        // 转换为新的Record结构并处理
-        var serviceInfo = JSONObject.parseObject(serviceDdl, ServiceInfo.class);
-        var serviceInfoMd5 = SecureUtil.md5(serviceDdl);
-        var configFileMap = buildConfigFileMap(serviceInfo);
-        
-        var config = ServiceMetaConfig.of(frameCode, frameInfo, serviceName, 
-                serviceDdl, serviceInfo, serviceInfoMd5, configFileMap);
-        var loadContext = LoadContext.of(clusters, "", "", "");
-        
-        processServiceMetadata(config, loadContext);
-    }
+
 
     private void putServiceHomeToVariable(
             List<ClusterInfoDTO> clusters, String serviceName,
@@ -346,97 +324,26 @@ public class LoadServiceMeta implements ApplicationRunner {
     private void saveOrUpdateServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity,
                                        ServiceRoleInfo serviceRole, String serviceRoleJson, 
                                        String serviceRoleJsonMd5) {
-        var roleDto = roleService.getServiceRoleByServiceIdAndServiceRoleName(
-                serviceEntity.getId(), serviceRole.getName());
+        // 使用新的非异常方法查找服务角色
+        var roleDto = roleService.findServiceRoleByServiceIdAndServiceRoleName(
+                serviceEntity.getId(), serviceRole.getName()).orElse(null);
         var roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
         var role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
         
-        // 使用JDK 21 switch表达式处理角色实体状态
-        switch (role) {
-            case null -> {
-                var newRole = new FrameServiceRoleEntity();
-                buildFrameServiceRole(config, serviceEntity, serviceRole, 
-                        serviceRoleJson, serviceRoleJsonMd5, newRole);
-                roleService.save(newRole);
-            }
-            default -> {
-                if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
-                    buildFrameServiceRole(config, serviceEntity, serviceRole, 
-                            serviceRoleJson, serviceRoleJsonMd5, role);
-                    roleService.updateById(role);
-                }
-            }
+        // JDK 21现代化处理 - 使用简洁的条件处理
+        if (role == null) {
+            var newRole = new FrameServiceRoleEntity();
+            buildFrameServiceRole(config, serviceEntity, serviceRole, 
+                    serviceRoleJson, serviceRoleJsonMd5, newRole);
+            roleService.save(newRole);
+        } else if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
+            buildFrameServiceRole(config, serviceEntity, serviceRole, 
+                    serviceRoleJson, serviceRoleJsonMd5, role);
+            roleService.updateById(role);
         }
     }
 
-    /**
-     * 原始方法保持兼容性
-     * @deprecated 使用saveFrameServiceRole(ServiceMetaConfig, FrameServiceEntity)替代
-     */
-    @Deprecated(since = "3.0.0", forRemoval = true)
-    private void saveFrameServiceRole(
-            String frameCode,
-            String serviceName,
-            ServiceInfo serviceInfo,
-            FrameServiceEntity serviceEntity) {
-        List<ServiceRoleInfo> serviceRoles = serviceInfo.getRoles();
 
-        for (ServiceRoleInfo serviceRole : serviceRoles) {
-            String key = frameCode
-                    + Constants.UNDERLINE
-                    + serviceInfo.getName()
-                    + Constants.UNDERLINE
-                    + serviceRole.getName();
-            logger.debug(
-                    "put {} {} {} service role info into cache",
-                    frameCode,
-                    serviceName,
-                    serviceRole.getName());
-            if (StringUtils.isNotBlank(serviceRole.getJmxPort())) {
-                logger.debug(
-                        "{} jmx port is :{} and the jmx key is: {}",
-                        serviceRole.getName(),
-                        serviceRole.getJmxPort(),
-                        key);
-                ServiceRoleJmxMap.put(key, serviceRole.getJmxPort());
-            }
-            ServiceRoleMap.put(key, serviceRole);
-            String serviceRoleJson = JSONObject.toJSONString(serviceRole);
-            String serviceRoleJsonMd5 = SecureUtil.md5(serviceRoleJson);
-            // 持久化服务角色元信息至数据库
-            FrameServiceRoleDTO roleDto = roleService.getServiceRoleByServiceIdAndServiceRoleName(
-                    serviceEntity.getId(), serviceRole.getName());
-            FrameServiceRoleConverter roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
-            FrameServiceRoleEntity role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
-            if (Objects.isNull(role)) {
-                role = new FrameServiceRoleEntity();
-                // 创建临时配置对象以兼容新方法签名
-                var tempConfig = ServiceMetaConfig.of(frameCode, null, serviceName, 
-                        "", serviceInfo, "", new HashMap<>());
-                buildFrameServiceRole(
-                        tempConfig,
-                        serviceEntity,
-                        serviceRole,
-                        serviceRoleJson,
-                        serviceRoleJsonMd5,
-                        role);
-                roleService.save(role);
-            } else if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
-                var tempConfig = ServiceMetaConfig.of(frameCode, null, serviceName, 
-                        "", serviceInfo, "", new HashMap<>());
-                buildFrameServiceRole(
-                        tempConfig,
-                        serviceEntity,
-                        serviceRole,
-                        serviceRoleJson,
-                        serviceRoleJsonMd5,
-                        role);
-                roleService.updateById(role);
-            }
-        }
-        logger.debug("put {} {} service info into cache", frameCode, serviceName);
-        ServiceInfoMap.put(frameCode + Constants.UNDERLINE + serviceName, serviceInfo);
-    }
 
     /**
      * 保存框架服务 - 重构使用JDK 21新特性和新的查找方法
@@ -459,30 +366,23 @@ public class LoadServiceMeta implements ApplicationRunner {
                     serviceConfig.setConfigTargetRoles(configTargetRoles);
                 });
 
-        // 使用JDK 21的switch表达式处理服务实体状态
-        serviceEntity = switch (serviceEntity) {
-            case null -> {
-                var newEntity = new FrameServiceEntity();
-                buildServiceEntity(config, newEntity);
-                frameServiceService.save(newEntity);
-                yield newEntity;
+        // JDK 21现代化处理服务实体状态
+        if (serviceEntity == null) {
+            serviceEntity = new FrameServiceEntity();
+            buildServiceEntity(config, serviceEntity);
+            frameServiceService.save(serviceEntity);
+        } else if (!serviceEntity.getServiceJsonMd5().equals(config.serviceInfoMd5())) {
+            var configMapStr = JSONObject.toJSONString(config.configFileMap());
+            var configFileMapStrMd5 = SecureUtil.md5(configMapStr);
+            
+            if (!configFileMapStrMd5.equals(serviceEntity.getConfigFileJsonMd5())) {
+                updateServiceInstanceConfig(config.frameCode(), 
+                        config.serviceInfo().getName(), 
+                        config.serviceInfo().getParameters());
             }
-            default -> {
-                if (!serviceEntity.getServiceJsonMd5().equals(config.serviceInfoMd5())) {
-                    var configMapStr = JSONObject.toJSONString(config.configFileMap());
-                    var configFileMapStrMd5 = SecureUtil.md5(configMapStr);
-                    
-                    if (!configFileMapStrMd5.equals(serviceEntity.getConfigFileJsonMd5())) {
-                        updateServiceInstanceConfig(config.frameCode(), 
-                                config.serviceInfo().getName(), 
-                                config.serviceInfo().getParameters());
-                    }
-                    buildServiceEntity(config, serviceEntity);
-                    frameServiceService.updateById(serviceEntity);
-                }
-                yield serviceEntity;
-            }
-        };
+            buildServiceEntity(config, serviceEntity);
+            frameServiceService.updateById(serviceEntity);
+        }
 
         // 更新缓存映射
         var cacheKey = config.frameCode() + Constants.UNDERLINE + config.serviceInfo().getName();
@@ -507,7 +407,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     /**
-     * 重载方法保持兼容性
+     * 构建配置文件映射的核心实现
      */
     private Map<Generators, List<ServiceConfig>> buildConfigFileMap(
             ServiceInfo serviceInfo,

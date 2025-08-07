@@ -54,6 +54,15 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
     FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
 
     /**
+     * 根据服务ID和服务角色名称查找服务角色（用于角色发现，不抛出异常）
+     * 
+     * @param serviceId 服务ID
+     * @param roleName  角色名称
+     * @return Optional包装的服务角色DTO，如果不存在则返回空Optional
+     */
+    java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
+
+    /**
      * 根据集群框架和服务角色名称获取服务角色
      * 
      * @param clusterFrame    集群框架
