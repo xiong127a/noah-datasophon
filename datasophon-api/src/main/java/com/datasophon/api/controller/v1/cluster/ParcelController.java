@@ -40,6 +40,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.DisposableBean;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.converter.ClusterInfoConverter;
+import com.datasophon.common.dto.ClusterInfoDTO;
 import io.micrometer.core.annotation.Timed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -355,7 +356,9 @@ public class ParcelController implements DisposableBean {
                 var serviceDdl = FileUtils.readTargzTextFile(targetPackageFile, tempFileName,
                         StandardCharsets.UTF_8); // JDK21特性
                 var serviceName = vo.getName(); // JDK21特性
-                loadServiceMeta.parseServiceDdl(frameCode, clusters, frameInfo, serviceName, serviceDdl);
+                
+                // 使用新的重构方法处理服务元数据
+                processServiceMetadata(frameCode, clusters, frameInfo, serviceName, serviceDdl);
                 // 成功，安装结束
                 vo.setProcess(1.0f);
                 vo.setStep("install");
@@ -418,6 +421,80 @@ public class ParcelController implements DisposableBean {
         URI newUrl = "/".equals(urlParentPath.toString()) ? URI.create(prefix + urlParentPath + resourceName)
                 : URI.create(prefix + urlParentPath + "/" + resourceName);
         return newUrl.toString();
+    }
+
+    /**
+     * 处理服务元数据 - 适配新的LoadServiceMeta架构
+     */
+    private void processServiceMetadata(String frameCode, List<ClusterInfoDTO> clusters, 
+                                      FrameInfoEntity frameInfo, String serviceName, String serviceDdl) {
+        try {
+            // 使用LoadServiceMeta的新架构处理单个服务
+            var serviceInfo = JSONObject.parseObject(serviceDdl, com.datasophon.common.model.ServiceInfo.class);
+            var serviceInfoMd5 = cn.hutool.crypto.SecureUtil.md5(serviceDdl);
+            
+            // 构建配置文件映射
+            var allParameters = serviceInfo.getParameters();
+            var parameterMap = allParameters.stream()
+                    .collect(Collectors.toMap(
+                            com.datasophon.common.model.ServiceConfig::getName,
+                            java.util.function.Function.identity(),
+                            (v1, v2) -> v1));
+            
+            var configFileMap = buildConfigFileMap(serviceInfo, parameterMap);
+            
+            // 创建配置对象
+            var config = com.datasophon.api.load.model.ServiceMetaConfig.of(
+                    frameCode, frameInfo, serviceName, 
+                    serviceDdl, serviceInfo, serviceInfoMd5, configFileMap);
+            
+            // 创建加载上下文
+            var loadContext = com.datasophon.api.load.model.LoadContext.of(
+                    clusters, "localhost", "8080", "");
+            
+            // 处理服务元数据 - 使用反射调用private方法
+            var method = loadServiceMeta.getClass().getDeclaredMethod(
+                    "processServiceMetadata", 
+                    com.datasophon.api.load.model.ServiceMetaConfig.class, 
+                    com.datasophon.api.load.model.LoadContext.class);
+            method.setAccessible(true);
+            method.invoke(loadServiceMeta, config, loadContext);
+            
+            log.info("Parcel服务元数据处理完成: {}", serviceName);
+        } catch (Exception e) {
+            log.error("处理Parcel服务元数据失败: {}", serviceName, e);
+            throw new RuntimeException("处理服务元数据失败", e);
+        }
+    }
+
+    /**
+     * 构建配置文件映射 - 复制LoadServiceMeta的逻辑
+     */
+    private Map<com.datasophon.common.model.Generators, List<com.datasophon.common.model.ServiceConfig>> buildConfigFileMap(
+            com.datasophon.common.model.ServiceInfo serviceInfo,
+            Map<String, com.datasophon.common.model.ServiceConfig> parameterMap) {
+        var configFileMap = new ConcurrentHashMap<com.datasophon.common.model.Generators, List<com.datasophon.common.model.ServiceConfig>>();
+        var configWriter = serviceInfo.getConfigWriter();
+        var generators = configWriter.getGenerators();
+        
+        generators.forEach(generator -> {
+            var configList = generator.getIncludeParams().stream()
+                    .filter(parameterMap::containsKey)
+                    .map(paramName -> {
+                        var sourceConfig = parameterMap.get(paramName);
+                        var newConfig = new com.datasophon.common.model.ServiceConfig();
+                        org.springframework.beans.BeanUtils.copyProperties(sourceConfig, newConfig);
+                        return newConfig;
+                    })
+                    .collect(Collectors.toList());
+            
+            configFileMap.merge(generator, configList, (existing, newList) -> {
+                existing.addAll(newList);
+                return existing;
+            });
+        });
+        
+        return configFileMap;
     }
 
     /**
