@@ -75,12 +75,7 @@ public final class Constants {
         public static final String PATH = "path";
 
         public static final String MV_PATH = "mv_path";
-        public static final String SERVICE_INSTANCE_ID = "service_instance_id";
-        public static final String IS_ENABLED = "is_enabled";
         public static final String CN = "chinese";
-        public static final String SERVICE_ROLE_INSTANCE_ID = "service_role_instance_id";
-        public static final String X86JDK = "jdk-8u333-linux-x64.tar.gz";
-        public static final String ARMJDK = "jdk-8u333-linux-aarch64.tar.gz";
         public static final String FAILED = "failed";
 
         public static final String KUBERNETES_CONFIG_SERVICES = "kubernetes.config.services";
