@@ -30,7 +30,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   onOpenChange,
   cluster,
   step1Data,
-  onSuccess
+  onSuccess,
+  onPrevious
 }) => {
   const depType = cluster?.depType?.toLowerCase() === 'kubernetes' ? DepType.KUBERNETES : DepType.PVM
   
@@ -91,13 +92,60 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         throw new Error('集群ID不能为空')
       }
 
-      const params = {
-        pageSize: pagination.pageSize,
-        page: pagination.current
+      let response, res
+      
+      // K8S模式和PVM模式使用不同的API
+      if (depType === 'Kubernetes') {
+        // K8S模式：先分析主机列表设置缓存，再获取硬件信息
+        try {
+          // 第一步：分析主机列表（设置缓存）
+          // 注意：K8S模式下，ips参数实际上是kubeConfig内容
+          const kubeConfig = localStorage.getItem('kubeConfig') || '';
+          if (!kubeConfig) {
+            throw new Error('Kubernetes配置不能为空，请先完成集群配置');
+          }
+          
+          await clusterApi.host.analysisHostList({
+            ips: kubeConfig,
+            sshUser: '',
+            sshPort: '22',
+            sshPassword: '',
+            page: 1,
+            pageSize: 100
+          });
+          
+          // 第二步：获取K8S硬件信息（从缓存获取）
+          response = await clusterApi.hostCheck.getK8sHostsWithHardwareInfo(clusterId)
+          res = response.data
+          
+          // 转换K8S API响应格式以适配现有逻辑
+          if (res.code === 200) {
+            res = {
+              ...res,
+              data: res.data || [],
+              total: res.data?.length || 0,
+              queueStatus: null // K8S模式不需要队列状态
+            }
+          }
+        } catch (analysisError) {
+          console.error('K8S主机分析失败:', analysisError);
+          // 如果分析失败，返回空数据但不阻塞UI
+          res = {
+            code: 200,
+            data: [],
+            total: 0,
+            queueStatus: null
+          };
+        }
+      } else {
+        // PVM模式：使用原有的分页API
+        const params = {
+          pageSize: pagination.pageSize,
+          page: pagination.current
+        }
+        response = await clusterApi.host.list(params)
+        res = response.data as HostListResponse
       }
-
-      const response = await clusterApi.host.list(params)
-      const res = response.data as HostListResponse
 
       if (res.code === 200) {
         // 检查是否有主机已完成检查
@@ -114,10 +162,14 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         }
 
         setDataSource(res.data)
-        setPagination(prev => ({ ...prev, total: res.total }))
+        
+        // 只在PVM模式下更新分页信息
+        if (depType !== 'Kubernetes') {
+          setPagination(prev => ({ ...prev, total: res.total }))
+        }
 
-        // 保存队列状态信息
-        if (res.queueStatus) {
+        // 保存队列状态信息（只在PVM模式下）
+        if (depType !== 'Kubernetes' && res.queueStatus) {
           setQueueStatus(res.queueStatus)
         }
 
@@ -756,9 +808,17 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                 <div className="flex items-center space-x-3">
                   <Button
                     variant="outline"
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => {
+                      if (onPrevious) {
+                        onPrevious()
+                      } else {
+                        // 如果没有提供onPrevious回调，则关闭对话框
+                        onOpenChange(false)
+                      }
+                    }}
                   >
-                    取消
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    上一步
                   </Button>
                   <Button
                     onClick={handleNext}

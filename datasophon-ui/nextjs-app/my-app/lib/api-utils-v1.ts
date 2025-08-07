@@ -167,15 +167,27 @@ export const clusterApiV1 = {
     
     // K8S模式：保存Kubernetes主机
     saveK8sHosts: (clusterId: number, hostInfoList: any[]) =>
-      apiV1.post(`${API_PATHS_V1.SAVE_KUBERNETES_HOST}?clusterId=${clusterId}`, hostInfoList),
+      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST, hostInfoList, {
+        headers: {
+          'x-cluster-id': clusterId.toString()
+        }
+      }),
     
     // K8S模式：直接保存Kubernetes主机（完整硬件信息）
     saveK8sHostsDirect: (clusterId: number, kubernetesHosts: any[]) =>
-      apiV1.post(`${API_PATHS_V1.SAVE_KUBERNETES_HOST_DIRECT}?clusterId=${clusterId}`, kubernetesHosts),
+      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST_DIRECT, kubernetesHosts, {
+        headers: {
+          'x-cluster-id': clusterId.toString()
+        }
+      }),
     
     // K8S模式：获取完整硬件信息
     getK8sHostsWithHardwareInfo: (clusterId: number) =>
-      apiV1.get(`${API_PATHS_V1.GET_K8S_HOSTS_WITH_HARDWARE_INFO}?clusterId=${clusterId}`),
+      apiV1.get(API_PATHS_V1.GET_K8S_HOSTS_WITH_HARDWARE_INFO, undefined, {
+        headers: {
+          'x-cluster-id': clusterId.toString()
+        }
+      }),
   }
 }
 

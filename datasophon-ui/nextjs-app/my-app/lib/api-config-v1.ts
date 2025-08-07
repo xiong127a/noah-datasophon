@@ -152,17 +152,21 @@ apiClientV1.interceptors.response.use(
 
 // 导出版本化的API请求函数
 export const apiV1 = {
-  get: (url: string, params?: any) => apiClientV1.get(url, { params }),
-  post: (url: string, data: any) => {
+  get: (url: string, params?: any, config?: any) => 
+    apiClientV1.get(url, { params, ...config }),
+  post: (url: string, data: any, config?: any) => {
     console.log('API V1 POST请求:', url, '数据:', data)
     return apiClientV1.post(url, data, {
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      ...config
     })
   },
-  put: (url: string, data: any) => apiClientV1.put(url, data),
-  delete: (url: string, params?: any) => apiClientV1.delete(url, { params }),
+  put: (url: string, data: any, config?: any) => 
+    apiClientV1.put(url, data, config),
+  delete: (url: string, params?: any, config?: any) => 
+    apiClientV1.delete(url, { params, ...config }),
 };
 
 // 版本管理工具
