@@ -25,6 +25,8 @@ import type {
   HostCheckCompletedResponse
 } from '@/types/step2'
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   open,
   onOpenChange,
@@ -50,20 +52,20 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     processorThreadAlive: true
   })
 
-  // 分页状态 - 默认每页50条，充分利用紧凑设计
+  // 分页状态 - 默认每页20条，合理的分页选项
   const [pagination, setPagination] = useState<Pagination>({
     current: 1,
-    pageSize: 50,
+    pageSize: 20,
     total: 0,
     showSizeChanger: true,
-    pageSizeOptions: ['20', '50', '100', '200'],
+    pageSizeOptions: ['10', '20', '50', '100'],
     showTotal: (total) => `共 ${total} 条`
   })
 
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [roleFilter, setRoleFilter] = useState('all')
   
   // 后端筛选选项
   const [backendFilterOptions, setBackendFilterOptions] = useState<{
@@ -73,6 +75,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     statuses: [],
     roles: []
   })
+
+
 
   // 轮询定时器
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -100,15 +104,49 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         host.ip?.toLowerCase().includes(searchTerm.toLowerCase())
       
       // 状态筛选
-      const statusMatch = statusFilter === '' || ((host as any).status || 'Ready') === statusFilter
+      const statusMatch = statusFilter === 'all' || ((host as any).status || 'Ready') === statusFilter
       
       // 角色筛选
-      const roleMatch = roleFilter === '' || 
+      const roleMatch = roleFilter === 'all' || 
         ((host as any).roles || (host as any).nodeRoles || '<none>').includes(roleFilter)
       
       return searchMatch && statusMatch && roleMatch
     })
   }, [dataSource, searchTerm, statusFilter, roleFilter])
+
+  // 全选功能
+  const handleSelectAll = () => {
+    if (depType === 'Kubernetes') {
+      // K8S模式：选择所有未受管主机
+      const unmanagedHostIps = filteredData
+        .filter(host => {
+          const hostAny = host as any
+          return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
+                 (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
+        })
+        .map(host => host.ip)
+      setSelectedRowKeys(unmanagedHostIps)
+    } else {
+      // PVM模式：选择所有主机
+      const allHostIps = filteredData.map(host => host.ip)
+      setSelectedRowKeys(allHostIps)
+    }
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedRowKeys([])
+  }
+
+  // 计算可选择的主机数量和状态
+  const selectableCount = depType === 'Kubernetes' 
+    ? filteredData.filter(host => {
+        const hostAny = host as any
+        return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
+               (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
+      }).length
+    : filteredData.length
+
+  const isAllSelected = selectedRowKeys.length === selectableCount && selectableCount > 0
 
   // 计算统计信息 - 基于筛选后的数据
   const managedCount = filteredData.filter(host => {
@@ -216,17 +254,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
             }
           }
 
-          // K8S模式下自动选中所有未受管主机
-          if (depType === 'Kubernetes' && resData?.hosts) {
-            const allUnmanagedHostIps = resData.hosts
-              .filter((host: Host) => {
-                const hostAny = host as any
-                return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
-                       (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
-              })
-              .map((host: Host) => host.ip)
-            setSelectedRowKeys(allUnmanagedHostIps)
-          }
+          // K8S模式下不自动选中主机，让用户手动选择
         } else {
           console.error('获取主机列表失败:', res.msg || '未知错误')
           setDataSource([])
@@ -638,62 +666,87 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                         </Button>
                       </div>
                             
-                            {/* 搜索和筛选栏 - 移到右侧 */}
-                            <div className="flex items-center space-x-2">
+                            {/* 全选按钮和搜索筛选栏 */}
+                            <div className="flex items-center space-x-3">
+                              {/* 全选按钮 */}
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={isAllSelected ? handleDeselectAll : handleSelectAll}
+                                  disabled={selectableCount === 0}
+                                  className={`group relative overflow-hidden h-9 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    isAllSelected
+                                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border border-blue-500'
+                                      : 'bg-white/90 text-gray-700 hover:bg-blue-50 border border-gray-200/80 hover:border-blue-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center space-x-1.5">
+                                    <div className={`w-3.5 h-3.5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                                      isAllSelected 
+                                        ? 'border-white bg-white/20' 
+                                        : 'border-gray-400 group-hover:border-blue-500'
+                                    }`}>
+                                      {isAllSelected && (
+                                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span>{isAllSelected ? '取消全选' : '全选'}</span>
+                                    {selectableCount > 0 && (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                        isAllSelected 
+                                          ? 'bg-white/20 text-white' 
+                                          : 'bg-gray-100 text-gray-600'
+                                      }`}>
+                                        {selectableCount}
+                        </span>
+                                    )}
+                      </div>
+                                </button>
+                              </div>
+                              
                               <div className="relative group">
                                 <input
                                   type="text"
                                   placeholder="搜索主机名或IP..."
-                                  className="w-52 pl-9 pr-4 py-2 text-sm font-medium border border-gray-200/80 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 hover:border-gray-300 focus:bg-white placeholder:text-gray-400 transition-all duration-300"
+                                  className="h-9 w-56 pl-10 pr-4 py-2 text-sm font-medium border-2 border-gray-200/60 rounded-2xl bg-white/95 backdrop-blur-md shadow-sm hover:shadow-xl focus:outline-none focus:ring-3 focus:ring-blue-400/25 focus:border-blue-400 hover:border-gray-300/80 focus:bg-white placeholder:text-gray-400 transition-all duration-300 ease-out group-hover:bg-white group-hover:border-gray-300 group-hover:shadow-lg"
                                   value={searchTerm}
                                   onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                  <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                <div className="absolute left-3.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-4.5 h-4.5 text-gray-400 group-hover:text-gray-600 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                   </svg>
                                 </div>
                               </div>
-                              <div className="relative group">
-                                <select
-                                  value={statusFilter}
-                                  onChange={(e) => setStatusFilter(e.target.value)}
-                                  className="appearance-none pl-3 pr-8 py-2 text-sm font-medium border border-gray-200/80 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 hover:border-gray-300 focus:bg-white transition-all duration-300 cursor-pointer min-w-[85px] group-hover:bg-white"
-                                >
-                                  <option value="" className="text-gray-600">全部状态</option>
+                              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="h-9 min-w-[90px] border-2 border-gray-200/60 rounded-2xl bg-white/95 backdrop-blur-md shadow-sm hover:shadow-xl focus:ring-3 focus:ring-blue-400/25 focus:border-blue-400 hover:border-gray-300/80 transition-all duration-300 ease-out">
+                                  <SelectValue placeholder="全部状态" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-2xl border-2 border-gray-200/60 bg-white/95 backdrop-blur-md shadow-xl p-2 min-w-[120px]">
+                                  <SelectItem value="all" className="rounded-xl mx-1 my-0.5 hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200 cursor-pointer">全部状态</SelectItem>
                                   {backendFilterOptions.statuses?.map((status) => (
-                                    <option key={status} value={status} className="text-gray-800 py-1">
+                                    <SelectItem key={status} value={status} className="rounded-xl mx-1 my-0.5 hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200 cursor-pointer">
                                       {status}
-                                    </option>
+                                    </SelectItem>
                                   ))}
-                                </select>
-                                <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                  <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
-                              <div className="relative group">
-                                <select
-                                  value={roleFilter}
-                                  onChange={(e) => setRoleFilter(e.target.value)}
-                                  className="appearance-none pl-3 pr-8 py-2 text-sm font-medium border border-gray-200/80 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 hover:border-gray-300 focus:bg-white transition-all duration-300 cursor-pointer min-w-[85px] group-hover:bg-white"
-                                >
-                                  <option value="" className="text-gray-600">全部角色</option>
+                                </SelectContent>
+                              </Select>
+                              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                                <SelectTrigger className="h-9 min-w-[90px] border-2 border-gray-200/60 rounded-2xl bg-white/95 backdrop-blur-md shadow-sm hover:shadow-xl focus:ring-3 focus:ring-blue-400/25 focus:border-blue-400 hover:border-gray-300/80 transition-all duration-300 ease-out">
+                                  <SelectValue placeholder="全部角色" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-2xl border-2 border-gray-200/60 bg-white/95 backdrop-blur-md shadow-xl p-2 min-w-[140px]">
+                                  <SelectItem value="all" className="rounded-xl mx-1 my-0.5 hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200 cursor-pointer">全部角色</SelectItem>
                                   {backendFilterOptions.roles?.map((role) => (
-                                    <option key={role} value={role} className="text-gray-800 py-1">
+                                    <SelectItem key={role} value={role} className="rounded-xl mx-1 my-0.5 hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200 cursor-pointer">
                                       {role === '<none>' ? '无角色' : 
                                        role === 'control-plane' ? 'Control Plane' :
                                        role === 'worker' ? 'Worker' : role}
-                                    </option>
+                                    </SelectItem>
                                   ))}
-                                </select>
-                                <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                  <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
                         </CardHeader>
@@ -975,10 +1028,10 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                                 }}
                                                 className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 cursor-pointer transition-all duration-200"
                                               >
+                                                <option value="10">10</option>
                                                 <option value="20">20</option>
                                                 <option value="50">50</option>
                                                 <option value="100">100</option>
-                                                <option value="200">200</option>
                                               </select>
                                               <svg className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
