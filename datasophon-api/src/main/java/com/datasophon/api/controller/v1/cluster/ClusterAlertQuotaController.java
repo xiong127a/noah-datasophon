@@ -21,7 +21,7 @@ import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.datasophon.dao.enums.QuotaState;
+import com.datasophon.common.enums.QuotaState;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.RequestBody;

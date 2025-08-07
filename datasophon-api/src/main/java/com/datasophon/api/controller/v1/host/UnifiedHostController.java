@@ -19,11 +19,14 @@ package com.datasophon.api.controller.v1.host;
 
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.converter.K8sToClusterHostConverter;
+
 import com.datasophon.api.dto.Result;
-import com.datasophon.api.dto.Step1ConfigurationDto;
-import com.datasophon.common.enums.ClusterType;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
+import com.datasophon.api.service.host.strategy.impl.KubernetesHostStrategy;
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
+import com.datasophon.common.dto.Step1ConfigurationDto;
+import com.datasophon.common.enums.ClusterType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +48,12 @@ public class UnifiedHostController {
 
     @Autowired
     private UnifiedHostManagementService hostManagementService;
+
+    @Autowired
+    private K8sToClusterHostConverter k8sToClusterHostConverter;
+
+    @Autowired
+    private KubernetesHostStrategy kubernetesHostStrategy;
 
     /**
      * Step1配置完成后的主机发现接口

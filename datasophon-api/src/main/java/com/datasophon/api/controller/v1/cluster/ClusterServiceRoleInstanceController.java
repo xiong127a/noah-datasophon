@@ -24,7 +24,7 @@ import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.vo.ClusterServiceRoleInstanceVO;
 import com.datasophon.api.dto.Result;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.enums.ServiceRoleState;
+import com.datasophon.common.enums.ServiceRoleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
