@@ -97,6 +97,17 @@ export const API_PATHS_V1 = {
   // 主机检查相关 - v1
   REHOST_CHECK: `${API_BASE}/host/check/rehostCheck`,
   
+  // 统一主机管理相关 - v1 (新架构)
+  HOST_DISCOVER: `${API_BASE}/host/discover`,
+  HOST_LIST: `${API_BASE}/host/list`,
+  HOST_IMPORT: `${API_BASE}/host/import`,
+  HOST_REFRESH: `${API_BASE}/host/refresh`,
+  HOST_CHECK_CONNECTION: `${API_BASE}/host/check-connection`,
+  HOST_PERFORM_CHECK: `${API_BASE}/host/check`,
+  HOST_CHECK_STATUS: `${API_BASE}/host/check-status`,
+  HOST_CLEANUP: `${API_BASE}/host/cleanup`,
+  HOST_STRATEGIES: `${API_BASE}/host/strategies`,
+  
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,

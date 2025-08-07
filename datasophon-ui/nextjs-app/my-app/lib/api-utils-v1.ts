@@ -188,6 +188,58 @@ export const clusterApiV1 = {
           'x-cluster-id': clusterId.toString()
         }
       }),
+  },
+
+  // 统一主机管理相关 - 新架构
+  unifiedHost: {
+    // 发现主机（自动选择PVM或K8S策略）
+    discover: (connectionParams: any) =>
+      apiV1.post(API_PATHS_V1.HOST_DISCOVER, connectionParams),
+    
+    // 获取主机列表（支持分页和筛选）
+    list: (params: {
+      page?: number
+      pageSize?: number
+      hostname?: string
+      ip?: string
+      cpuArchitecture?: string
+      hostState?: number
+      orderField?: string
+      orderType?: string
+    }) => apiV1.get(API_PATHS_V1.HOST_LIST, params),
+    
+    // 导入主机
+    import: (data: {
+      selectedHosts: any[]
+      connectionParams?: any
+      importOptions?: any
+    }) => apiV1.post(API_PATHS_V1.HOST_IMPORT, data),
+    
+    // 刷新主机信息
+    refresh: (connectionParams: any) =>
+      apiV1.post(API_PATHS_V1.HOST_REFRESH, connectionParams),
+    
+    // 检查连接状态
+    checkConnection: (connectionParams: any) =>
+      apiV1.post(API_PATHS_V1.HOST_CHECK_CONNECTION, connectionParams),
+    
+    // 执行主机环境检查
+    performCheck: (data: {
+      hostnames: string[]
+      connectionParams: any
+    }) => apiV1.post(API_PATHS_V1.HOST_PERFORM_CHECK, data),
+    
+    // 获取主机检查状态
+    getCheckStatus: () =>
+      apiV1.get(API_PATHS_V1.HOST_CHECK_STATUS),
+    
+    // 清理资源
+    cleanup: () =>
+      apiV1.post(API_PATHS_V1.HOST_CLEANUP, {}),
+    
+    // 获取支持的策略类型
+    getStrategies: () =>
+      apiV1.get(API_PATHS_V1.HOST_STRATEGIES),
   }
 }
 

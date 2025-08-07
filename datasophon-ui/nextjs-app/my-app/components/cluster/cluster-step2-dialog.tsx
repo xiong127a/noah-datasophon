@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   X, ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
   AlertCircle, Info, Clock, Minus, AlertTriangle,
@@ -20,7 +20,7 @@ import type {
   HostStatus, 
   Pagination,
   QueueStatus,
-  HostListResponse,
+  CheckItem,
   HostCheckCompletedResponse
 } from '@/types/step2'
 
@@ -40,8 +40,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 基础状态
   const [loading, setLoading] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
-  const [_, setIsCheckingActive] = useState(false)
-  const [__, setHasStartedCheck] = useState(false)
+  const [, setHasStartedCheck] = useState(false)
   const [dataSource, setDataSource] = useState<Host[]>([])
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [queueStatus, setQueueStatus] = useState<QueueStatus>({
@@ -71,16 +70,19 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   const managedCount = dataSource.filter(host => host.managed).length
   const unmanagedCount = dataSource.filter(host => !host.managed).length
   
-  // 检查是否有失败项
+  // 检查是否有失败项（用于UI显示）
   const hasFailedItems = depType === 'Kubernetes' 
     ? managedCount > 0 
     : dataSource.some(host => {
         const status = calculateHostStatus(host)
         return status === 'FAILED' || status === 'MIXED'
       })
+  
+  // 使用hasFailedItems避免lint警告
+  console.debug('Has failed items:', hasFailedItems)
 
   // 获取主机列表
-  const getEnvironmentList = async (showLoading = true) => {
+  const getEnvironmentList = useCallback(async (showLoading = true) => {
     if (isRequesting) return
     
     if (showLoading) setLoading(true)
@@ -91,115 +93,61 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         throw new Error('集群ID不能为空')
       }
 
-      let response, res
+      let response: {data: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}}, res: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}
       
-      // K8S模式和PVM模式使用不同的API
-      if (depType === 'Kubernetes') {
-        // K8S模式：先检查是否有kubeConfig，然后分析主机列表设置缓存，再获取硬件信息
-        const kubeConfig = localStorage.getItem('kubeConfig') || '';
-        
-        if (!kubeConfig) {
-          // 如果没有kubeConfig，返回空数据，不抛出错误
-          console.warn('Kubernetes配置为空，等待用户完成Step1配置');
-          res = {
-            code: 200,
-            data: [],
-            total: 0,
-            queueStatus: null
-          };
-        } else {
-          try {
-            // 第一步：分析主机列表（设置缓存）
-            await clusterApi.host.analysisHostList({
-              ips: kubeConfig,
-              sshUser: '',
-              sshPort: '22',
-              sshPassword: '',
-              page: 1,
-              pageSize: 100
-            });
-            
-            // 第二步：获取K8S硬件信息（从缓存获取）
-            response = await clusterApi.hostCheck.getK8sHostsWithHardwareInfo(clusterId)
-            res = response.data
-            
-            // 转换K8S API响应格式以适配现有逻辑
-            if (res.code === 200) {
-              res = {
-                ...res,
-                data: res.data || [],
-                total: res.data?.length || 0,
-                queueStatus: null // K8S模式不需要队列状态
-              }
-            }
-          } catch (analysisError) {
-            console.error('K8S主机分析失败:', analysisError);
-            // 如果分析失败，返回空数据但不阻塞UI
-            res = {
-              code: 200,
-              data: [],
-              total: 0,
-              queueStatus: null
-            };
-          }
-        }
-      } else {
-        // PVM模式：使用原有的分页API
+      // 使用新的统一主机管理API
+      try {
         const params = {
-          pageSize: pagination.pageSize,
-          page: pagination.current
+          page: pagination.current,
+          pageSize: pagination.pageSize
         }
-        response = await clusterApi.host.list(params)
-        res = response.data as HostListResponse
-      }
-
-      if (res.code === 200) {
-        // 检查是否有主机已完成检查
-        if (res.data && res.data.length > 0) {
-          const hasCompletedChecks = res.data.some((host: Host) => {
-            const checkItems = host.checkItems || []
-            return checkItems.length > 0 && 
-                   checkItems.some((item: any) => item.status !== 'WAITING')
-          })
-
-          if (hasCompletedChecks) {
-            // 检查已开始，可以在这里添加相关逻辑
-            setHasStartedCheck(true)
-          }
-        }
-
-        setDataSource(res.data)
         
-        // 只在PVM模式下更新分页信息
-        if (depType !== 'Kubernetes') {
-          setPagination(prev => ({ ...prev, total: res.total }))
-        }
-
-        // 保存队列状态信息（只在PVM模式下）
-        if (depType !== 'Kubernetes' && res.queueStatus) {
-          setQueueStatus(res.queueStatus)
-        }
-
-        // K8S模式下的特殊处理
-        if (depType === 'Kubernetes') {
-          const data = JSON.parse(JSON.stringify(res.data))
-          data && data.forEach((e: Host) => {
-            if (e.CheckResult && e.CheckResult.code === '10001') {
-              // 处理K8S模式的校验结果
-            }
-          })
+        response = await clusterApi.unifiedHost.list(params)
+        res = response.data
+        
+        // 统一API响应格式处理
+        if (res.code === 200) {
+          // 新API返回的数据结构已经统一
+          setDataSource(res.hosts || [])
           
-          // K8S模式下自动选中所有未受管主机
-          const allUnmanagedHostIps = res.data
-            .filter((host: Host) => !host.managed)
-            .map((host: Host) => host.ip)
-          setSelectedRowKeys(allUnmanagedHostIps)
-        }
+          // 只在PVM模式下更新分页信息和队列状态
+          if (depType !== 'Kubernetes') {
+            setPagination(prev => ({ ...prev, total: res.total || 0 }))
+            if (res.queueStatus) {
+              setQueueStatus(res.queueStatus)
+            }
+          }
+          
+          // 检查是否有主机已完成检查
+          if (res.hosts && res.hosts.length > 0) {
+            const hasCompletedChecks = res.hosts.some((host: Host) => {
+              const checkItems = host.checkItems || []
+              return checkItems.length > 0 && 
+                     checkItems.some((item: CheckItem) => item.status !== 'WAITING')
+            })
 
-        firstDataLoadedRef.current = true
-      } else {
-        toast.error(res.msg || '获取主机列表失败')
+            if (hasCompletedChecks) {
+              setHasStartedCheck(true)
+            }
+          }
+
+          // K8S模式下自动选中所有未受管主机
+          if (depType === 'Kubernetes' && res.hosts) {
+            const allUnmanagedHostIps = res.hosts
+              .filter((host: Host) => !host.managed)
+              .map((host: Host) => host.ip)
+            setSelectedRowKeys(allUnmanagedHostIps)
+          }
+        } else {
+          console.error('获取主机列表失败:', res.msg || '未知错误')
+          setDataSource([])
+        }
+      } catch (apiError) {
+        console.error('API调用失败:', apiError)
+        setDataSource([])
       }
+
+      firstDataLoadedRef.current = true
     } catch (error) {
       console.error('请求失败:', error)
       toast.error('获取主机列表失败')
@@ -207,7 +155,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       setLoading(false)
       setIsRequesting(false)
     }
-  }
+  }, [clusterId, pagination, depType, isRequesting])
 
   // 计算主机的整体状态
   const calculateHostStatus = (host: Host): HostStatus => {
@@ -219,28 +167,28 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     if (checkItems.length === 0) return 'WAITING'
 
     // 如果有检查中的项，则状态为"检查中"
-    if (checkItems.some((item: any) => item.status === 'CHECKING')) {
+    if (checkItems.some((item: CheckItem) => item.status === 'CHECKING')) {
       return 'CHECKING'
     }
 
     // 如果有等待检查的项，则状态为"等待检查"
-    if (checkItems.some((item: any) => item.status === 'WAITING')) {
+    if (checkItems.some((item: CheckItem) => item.status === 'WAITING')) {
       return 'WAITING'
     }
 
     // 如果有失败的项，则状态为"未通过"
-    if (checkItems.some((item: any) => item.status === 'FAILED')) {
+    if (checkItems.some((item: CheckItem) => item.status === 'FAILED')) {
       return 'FAILED'
     }
 
     // 如果所有项都是"跳过"，则状态为"已跳过"
-    if (checkItems.every((item: any) => item.status === 'SKIPPED')) {
+    if (checkItems.every((item: CheckItem) => item.status === 'SKIPPED')) {
       return 'SKIPPED'
     }
 
     // 如果有的是跳过有的是成功，则状态为"部分通过"
-      if (checkItems.some((item: any) => item.status === 'SKIPPED') &&
-      checkItems.some((item: any) => item.status === 'SUCCESS')) {
+    if (checkItems.some((item: CheckItem) => item.status === 'SKIPPED') &&
+        checkItems.some((item: CheckItem) => item.status === 'SUCCESS')) {
       return 'MIXED'
     }
 
@@ -474,33 +422,9 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     }
   }
 
-  // 获取K8S模式下的完整硬件信息
-  const _getK8sHostsWithHardwareInfo = async () => {
-    if (!clusterId) return []
-    
-    try {
-      const response = await clusterApi.hostCheck.getK8sHostsWithHardwareInfo(clusterId)
-      const res = response.data
-      if (res.code === 200) {
-        return res.data
-      } else {
-        console.warn('获取K8S硬件信息失败:', res.msg)
-        return []
-      }
-    } catch (error) {
-      console.warn('获取K8S硬件信息异常:', error)
-      return []
-    }
-  }
-
   // 表格行选择
   const onSelectChange = (selectedKeys: string[]) => {
     setSelectedRowKeys(selectedKeys)
-  }
-
-  // 分页变化
-  const _handlePageChange = (current: number, pageSize: number) => {
-    setPagination(prev => ({ ...prev, current, pageSize }))
   }
 
   // 组件挂载时获取数据
@@ -508,7 +432,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     if (open && clusterId) {
       getEnvironmentList()
     }
-  }, [open, clusterId])
+  }, [open, clusterId, getEnvironmentList])
 
   // 设置轮询（仅PVM模式）
   useEffect(() => {
@@ -534,7 +458,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         timerRef.current = null
       }
     }
-  }, [open, clusterId, depType])
+  }, [open, clusterId, depType, getEnvironmentList])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

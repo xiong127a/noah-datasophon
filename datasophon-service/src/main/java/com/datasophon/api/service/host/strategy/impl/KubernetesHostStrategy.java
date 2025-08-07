@@ -1,0 +1,325 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package com.datasophon.api.service.host.strategy.impl;
+
+import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
+import com.datasophon.api.service.host.strategy.model.*;
+import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.kubernetes.model.K8sNodeInfo;
+import com.datasophon.kubernetes.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Kubernetes主机管理策略实现
+ * 专门处理K8S模式下的主机发现、管理和导入
+ */
+@Slf4j
+@Component
+public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
+
+    @Autowired
+    private ClusterHostService clusterHostService;
+
+    // K8S主机临时存储，替代缓存
+    private final Map<Integer, List<ClusterHostDO>> k8sHostsStorage = new HashMap<>();
+
+    @Override
+    public StrategyType getStrategyType() {
+        return StrategyType.KUBERNETES;
+    }
+
+    @Override
+    protected void validateDiscoveryRequest(HostDiscoveryRequest request) {
+        super.validateDiscoveryRequest(request);
+        
+        String kubeConfigContent = (String) request.getConnectionParams().get("kubeConfigContent");
+        if (kubeConfigContent == null || kubeConfigContent.trim().isEmpty()) {
+            throw new IllegalArgumentException("K8S配置内容不能为空");
+        }
+    }
+
+    @Override
+    protected void prepareConnection(Map<String, Object> connectionParams) {
+        String kubeConfigContent = (String) connectionParams.get("kubeConfigContent");
+        
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfigContent)) {
+            // 测试连接
+            KubeUtil.testConnect(client);
+            log.info("K8S连接测试成功");
+        } catch (Exception e) {
+            throw new RuntimeException("K8S连接测试失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected List<ClusterHostDO> doDiscoverHosts(HostDiscoveryRequest request) {
+        String kubeConfigContent = (String) request.getConnectionParams().get("kubeConfigContent");
+        String namespace = (String) request.getConnectionParams().get("namespace");
+        
+        log.info("开始从K8S集群发现主机，namespace: {}", namespace);
+        
+        try {
+            // 从K8S API获取节点信息
+            List<K8sNodeInfo> k8sNodes = KubeUtil.getHostListByConfig(kubeConfigContent);
+            
+            // 转换为ClusterHostDO对象
+            List<ClusterHostDO> hosts = k8sNodes.stream()
+                    .filter(Objects::nonNull)
+                    .map(this::convertK8sNodeToClusterHost)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            
+            // 存储到临时存储中
+            k8sHostsStorage.put(request.getClusterId(), hosts);
+            
+            log.info("成功从K8S集群发现{}台主机", hosts.size());
+            return hosts;
+            
+        } catch (Exception e) {
+            log.error("从K8S集群发现主机失败", e);
+            throw new RuntimeException("从K8S集群发现主机失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected HostListResult doGetHostList(HostListRequest request) {
+        Integer clusterId = request.getClusterId();
+        
+        // 优先从临时存储获取
+        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        
+        if (hosts == null || hosts.isEmpty()) {
+            // 如果临时存储没有，尝试从数据库获取已导入的主机
+            hosts = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+        }
+        
+        if (hosts == null) {
+            hosts = new ArrayList<>();
+        }
+        
+        // 应用筛选条件
+        List<ClusterHostDO> filteredHosts = applyFilters(hosts, request);
+        
+        // K8S模式不支持分页，返回所有结果
+        return HostListResult.builder()
+                .hosts(filteredHosts)
+                .total((long) filteredHosts.size())
+                .page(1)
+                .pageSize(filteredHosts.size())
+                .hasMore(false)
+                .queueStatus(null) // K8S模式不需要队列状态
+                .build();
+    }
+
+    @Override
+    protected void doImportHosts(List<ClusterHostDO> hosts, HostImportRequest request) {
+        try {
+            log.info("开始导入{}台K8S主机到数据库", hosts.size());
+            
+            // 调用现有的保存方法
+            clusterHostService.saveKubernetesHostDirect(hosts, request.getClusterId());
+            
+            // 清理临时存储
+            k8sHostsStorage.remove(request.getClusterId());
+            
+            log.info("成功导入{}台K8S主机", hosts.size());
+            
+        } catch (Exception e) {
+            log.error("导入K8S主机失败", e);
+            throw new RuntimeException("导入K8S主机失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<ClusterHostDO> refreshHosts(Integer clusterId, Map<String, Object> connectionParams) {
+        HostDiscoveryRequest request = HostDiscoveryRequest.builder()
+                .clusterId(clusterId)
+                .connectionParams(connectionParams)
+                .forceRefresh(true)
+                .build();
+        
+        HostDiscoveryResult result = discoverHosts(request);
+        if (result.getSuccess()) {
+            return result.getHosts();
+        } else {
+            throw new RuntimeException("刷新K8S主机失败: " + result.getErrorMessage());
+        }
+    }
+
+    @Override
+    public Map<String, Object> checkConnection(Map<String, Object> connectionParams) {
+        String kubeConfigContent = (String) connectionParams.get("kubeConfigContent");
+        Map<String, Object> result = new HashMap<>();
+        
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfigContent)) {
+            // 测试连接并获取集群信息
+            KubeUtil.testConnect(client);
+            
+            String masterUrl = client.getMasterUrl().toString();
+            String version = client.getKubernetesVersion().getGitVersion();
+            
+            result.put("connected", true);
+            result.put("masterUrl", masterUrl);
+            result.put("version", version);
+            result.put("message", "K8S连接成功");
+            
+            log.info("K8S连接检查成功，集群地址: {}, 版本: {}", masterUrl, version);
+            
+        } catch (Exception e) {
+            result.put("connected", false);
+            result.put("error", e.getMessage());
+            result.put("message", "K8S连接失败: " + e.getMessage());
+            
+            log.error("K8S连接检查失败", e);
+        }
+        
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> performHostCheck(Integer clusterId, List<String> hostnames, 
+                                              Map<String, Object> connectionParams) {
+        // K8S模式下的主机检查逻辑
+        Map<String, Object> result = new HashMap<>();
+        
+        // K8S节点通常不需要传统的SSH检查，主要检查节点状态
+        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        if (hosts != null) {
+            long readyHosts = hosts.stream()
+                    .filter(host -> hostnames.contains(host.getHostname()))
+                    .filter(host -> "Ready".equals(host.getHostState()))
+                    .count();
+            
+            result.put("checkedHosts", hostnames.size());
+            result.put("readyHosts", readyHosts);
+            result.put("completed", true);
+            result.put("message", String.format("检查完成，%d/%d 台主机就绪", readyHosts, hostnames.size()));
+        } else {
+            result.put("completed", false);
+            result.put("message", "未找到主机信息，请先发现主机");
+        }
+        
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getHostCheckStatus(Integer clusterId) {
+        Map<String, Object> result = new HashMap<>();
+        
+        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        if (hosts != null && !hosts.isEmpty()) {
+            long readyHosts = hosts.stream()
+                    .filter(host -> "Ready".equals(host.getHostState()))
+                    .count();
+            
+            result.put("totalHosts", hosts.size());
+            result.put("readyHosts", readyHosts);
+            result.put("completed", true);
+            result.put("progress", (double) readyHosts / hosts.size());
+        } else {
+            result.put("completed", false);
+            result.put("progress", 0.0);
+        }
+        
+        return result;
+    }
+
+    @Override
+    public void cleanup(Integer clusterId) {
+        // 清理临时存储
+        k8sHostsStorage.remove(clusterId);
+        log.info("已清理集群{}的K8S主机临时数据", clusterId);
+    }
+
+    /**
+     * 将K8sNodeInfo转换为ClusterHostDO
+     */
+    private ClusterHostDO convertK8sNodeToClusterHost(K8sNodeInfo k8sNode) {
+        try {
+            ClusterHostDO host = new ClusterHostDO();
+            
+            // 基本信息
+            host.setHostname(k8sNode.getHostname());
+            host.setIp(k8sNode.getIp());
+            host.setCpuArchitecture(k8sNode.getCpuArchitecture());
+            host.setCoreNum(k8sNode.getCoreNum());
+            host.setTotalMem(k8sNode.getTotalMem());
+            host.setTotalDisk(k8sNode.getTotalDisk());
+            host.setUsedMem(k8sNode.getUsedMem());
+            host.setUsedDisk(k8sNode.getUsedDisk());
+            
+            // K8S特有信息
+            host.setHostState("Ready".equals(k8sNode.getStatus()) ? 1 : 0);
+            host.setManaged(false); // 初始状态为未受管
+            host.setCreateTime(k8sNode.getCreateTime());
+            
+            // 设置节点类型
+            host.setNodeLabel("kubernetes-node");
+            
+            return host;
+            
+        } catch (Exception e) {
+            log.error("转换K8S节点信息失败: {}", k8sNode, e);
+            return null;
+        }
+    }
+
+    /**
+     * 应用筛选条件
+     */
+    private List<ClusterHostDO> applyFilters(List<ClusterHostDO> hosts, HostListRequest request) {
+        return hosts.stream()
+                .filter(host -> {
+                    // 主机名筛选
+                    if (request.getHostname() != null && !request.getHostname().trim().isEmpty()) {
+                        return host.getHostname().contains(request.getHostname());
+                    }
+                    return true;
+                })
+                .filter(host -> {
+                    // IP筛选
+                    if (request.getIp() != null && !request.getIp().trim().isEmpty()) {
+                        return host.getIp().contains(request.getIp());
+                    }
+                    return true;
+                })
+                .filter(host -> {
+                    // CPU架构筛选
+                    if (request.getCpuArchitecture() != null && !request.getCpuArchitecture().trim().isEmpty()) {
+                        return request.getCpuArchitecture().equals(host.getCpuArchitecture());
+                    }
+                    return true;
+                })
+                .filter(host -> {
+                    // 主机状态筛选
+                    if (request.getHostState() != null) {
+                        return request.getHostState().equals(host.getHostState());
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+}
