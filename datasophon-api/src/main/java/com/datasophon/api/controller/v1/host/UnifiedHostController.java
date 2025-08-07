@@ -54,7 +54,7 @@ public class UnifiedHostController {
      * 1. PVM模式：解析IP范围，返回主机列表
      * 2. K8S模式：调用K8S API获取节点列表
      */
-    @PostMapping("/host/discover-from-step1")
+    @PostMapping("discover-from-step1")
     public Result<HostDiscoveryResult> discoverHostsFromStep1Configuration(
             @RequestBody Step1ConfigurationDto step1Config,
             @ClusterId Integer clusterId) {
