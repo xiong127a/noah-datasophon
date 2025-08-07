@@ -136,20 +136,26 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         
         // 统一API响应格式处理
         if (res.code === 200) {
-          // 新API返回的数据结构已经统一
-          setDataSource(res.hosts || [])
+          // 新API返回的数据结构：res.data.hosts
+          console.log('API返回的完整数据:', res)
+          console.log('主机数据:', res.data?.hosts)
+          setDataSource(res.data?.hosts || [])
           
-          // 只在PVM模式下更新分页信息和队列状态
+          // 更新分页信息和队列状态
           if (depType !== 'Kubernetes') {
+            // PVM模式使用传统的分页数据
             setPagination(prev => ({ ...prev, total: res.total || 0 }))
             if (res.queueStatus) {
               setQueueStatus(res.queueStatus)
             }
+          } else {
+            // K8S模式使用新API返回的totalCount
+            setPagination(prev => ({ ...prev, total: res.data?.totalCount || 0 }))
           }
           
           // 检查是否有主机已完成检查
-          if (res.hosts && res.hosts.length > 0) {
-            const hasCompletedChecks = res.hosts.some((host: Host) => {
+          if (res.data?.hosts && res.data.hosts.length > 0) {
+            const hasCompletedChecks = res.data.hosts.some((host: Host) => {
               const checkItems = host.checkItems || []
               return checkItems.length > 0 && 
                      checkItems.some((item: CheckItem) => item.status !== 'WAITING')
@@ -161,10 +167,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
           }
 
           // K8S模式下自动选中所有未受管主机
-          if (depType === 'Kubernetes' && res.hosts) {
-            const allUnmanagedHostIps = res.hosts
-              .filter((host: Host) => !host.managed)
+          if (depType === 'Kubernetes' && res.data?.hosts) {
+            const allUnmanagedHostIps = res.data.hosts
+              .filter((host: Host) => host.managed === 'NO')
               .map((host: Host) => host.ip)
+            console.log('K8S模式自动选中的主机IP:', allUnmanagedHostIps)
             setSelectedRowKeys(allUnmanagedHostIps)
           }
         } else {
