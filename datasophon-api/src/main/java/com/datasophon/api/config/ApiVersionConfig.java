@@ -64,15 +64,16 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     }
     
 
-    
     /**
      * 添加自定义参数解析器
      * 注册集群ID参数解析器，支持@ClusterId注解
      */
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(new ClusterIdArgumentResolver());
+        resolvers.add(0, new ClusterIdArgumentResolver());
+        System.out.println("=== ClusterIdArgumentResolver已注册 ===");
     }
+
     
     /**
      * 配置资源处理器

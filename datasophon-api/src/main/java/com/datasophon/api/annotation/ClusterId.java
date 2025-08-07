@@ -25,14 +25,20 @@ import java.lang.annotation.*;
 public @interface ClusterId {
     
     /**
-     * 当请求头中没有集群ID时的默认值
-     * @return 默认集群ID，-1表示无效集群
+     * 请求头名称，默认为"x-cluster-id"
+     * @return 请求头名称
      */
-    int defaultValue() default -1;
+    String value() default "x-cluster-id";
     
     /**
      * 是否必需，如果为true且请求头中没有集群ID，会抛出异常
      * @return 是否必需
      */
     boolean required() default true;
+    
+    /**
+     * 当请求头中没有集群ID时的默认值
+     * @return 默认集群ID，空字符串表示无默认值
+     */
+    String defaultValue() default "";
 }
