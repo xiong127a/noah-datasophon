@@ -35,14 +35,49 @@ public class PluginManager {
     @Getter
     private final Map<String, PluginStatus> pluginStatus = new ConcurrentHashMap<>();
     
+    /**
+     * 插件管理器是否已初始化
+     */
+    private volatile boolean initialized = false;
+    
+    /**
+     * 延迟加载配置，通过构造函数或setter注入
+     */
+    private boolean lazyLoading = false;
+    
     public PluginManager() {
         // 初始化PF4J插件管理器
         this.pf4jManager = new DefaultPluginManager();
     }
     
+    /**
+     * 设置延迟加载配置
+     */
+    public void setLazyLoading(boolean lazyLoading) {
+        this.lazyLoading = lazyLoading;
+    }
+    
     @PostConstruct
     public void init() {
-        log.info("初始化插件管理器...");
+        if (!lazyLoading) {
+            log.info("立即模式：初始化插件管理器...");
+            initializePlugins();
+        } else {
+            log.info("延迟模式：插件管理器已就绪，等待手动初始化");
+        }
+    }
+    
+    /**
+     * 手动初始化插件管理器
+     * 支持延迟加载模式下的按需初始化
+     */
+    public synchronized void initializePlugins() {
+        if (initialized) {
+            log.warn("插件管理器已经初始化，跳过重复初始化");
+            return;
+        }
+        
+        log.info("开始初始化插件管理器...");
         
         try {
             // 加载插件
@@ -54,6 +89,7 @@ public class PluginManager {
             // 注册检查器插件
             registerHostCheckerPlugins();
             
+            initialized = true;
             log.info("插件管理器初始化完成，加载了 {} 个插件", activePlugins.size());
             
         } catch (Exception e) {
@@ -262,6 +298,7 @@ public class PluginManager {
      * 获取插件
      */
     public HostCheckerPlugin getPlugin(String pluginId) {
+        ensureInitialized();
         return activePlugins.get(pluginId);
     }
     
@@ -269,6 +306,7 @@ public class PluginManager {
      * 获取所有可用插件
      */
     public List<HostCheckerPlugin> getAllPlugins() {
+        ensureInitialized();
         return new ArrayList<>(activePlugins.values());
     }
     
@@ -276,6 +314,7 @@ public class PluginManager {
      * 获取插件按优先级排序
      */
     public List<HostCheckerPlugin> getPluginsSortedByPriority() {
+        ensureInitialized();
         return activePlugins.values().stream()
                 .sorted(Comparator.comparingInt(HostCheckerPlugin::getPriority))
                 .collect(Collectors.toList());
@@ -285,6 +324,7 @@ public class PluginManager {
      * 根据操作系统类型获取支持的插件
      */
     public List<HostCheckerPlugin> getPluginsForOs(String osType) {
+        ensureInitialized();
         return activePlugins.values().stream()
                 .filter(plugin -> plugin.getSupportedOperatingSystems().stream()
                         .anyMatch(os -> os.name().equalsIgnoreCase(osType)))
@@ -327,5 +367,30 @@ public class PluginManager {
      */
     public int getPluginCount() {
         return activePlugins.size();
+    }
+    
+    /**
+     * 检查插件管理器是否已初始化
+     */
+    public boolean isInitialized() {
+        return initialized;
+    }
+    
+    /**
+     * 检查是否启用延迟加载
+     */
+    public boolean isLazyLoading() {
+        return lazyLoading;
+    }
+    
+    /**
+     * 确保插件管理器已初始化
+     * 在延迟加载模式下自动初始化
+     */
+    private void ensureInitialized() {
+        if (!initialized && lazyLoading) {
+            log.info("延迟加载模式：首次使用时自动初始化插件管理器");
+            initializePlugins();
+        }
     }
 }

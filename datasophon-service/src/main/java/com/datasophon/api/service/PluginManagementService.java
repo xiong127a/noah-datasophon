@@ -38,9 +38,21 @@ public class PluginManagementService {
     private PluginManagerExtensions pluginExtensions;
     
     /**
+     * 确保插件管理器已初始化
+     * 在延迟加载模式下，如果管理器未初始化则自动初始化
+     */
+    private void ensurePluginManagerInitialized() {
+        if (!pluginManager.isInitialized() && pluginManager.isLazyLoading()) {
+            log.info("延迟加载模式：首次使用插件服务，正在初始化插件管理器...");
+            pluginManager.initializePlugins();
+        }
+    }
+    
+    /**
      * 获取所有插件列表
      */
     public Map<String, Object> listAllPlugins() {
+        ensurePluginManagerInitialized();
         List<HostCheckerPlugin> plugins = pluginManager.getAllPlugins();
         Map<String, PluginStatus> statusMap = pluginManager.getAllPluginStatus();
         
@@ -79,6 +91,7 @@ public class PluginManagementService {
      * 获取插件详细信息
      */
     public Map<String, Object> getPluginInfo(String pluginId) {
+        ensurePluginManagerInitialized();
         HostCheckerPlugin plugin = pluginManager.getPlugin(pluginId);
         
         if (plugin == null) {
@@ -307,6 +320,7 @@ public class PluginManagementService {
      * 获取插件统计信息
      */
     public Map<String, Object> getPluginStatistics() {
+        ensurePluginManagerInitialized();
         Map<String, PluginStatus> statusMap = pluginManager.getAllPluginStatus();
         
         long totalCount = statusMap.size();
@@ -333,12 +347,72 @@ public class PluginManagementService {
      * 获取插件健康检查
      */
     public Map<String, Object> getPluginHealth(String pluginId) {
+        ensurePluginManagerInitialized();
         PluginHealthInfo health = pluginExtensions.getPluginHealth(pluginId);
         
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("data", health);
         result.put("message", "获取插件健康状态成功");
+        
+        return result;
+    }
+    
+    /**
+     * 手动初始化插件管理器
+     * 用于延迟加载模式下的显式初始化
+     */
+    public Map<String, Object> initializePluginManager() {
+        try {
+            if (pluginManager.isInitialized()) {
+                return Map.of(
+                        "success", true,
+                        "message", "插件管理器已经初始化，无需重复操作",
+                        "initialized", true
+                );
+            }
+            
+            log.info("手动初始化插件管理器...");
+            pluginManager.initializePlugins();
+            
+            return Map.of(
+                    "success", true,
+                    "message", "插件管理器初始化成功",
+                    "initialized", true,
+                    "pluginCount", pluginManager.getPluginCount()
+            );
+            
+        } catch (Exception e) {
+            log.error("手动初始化插件管理器失败", e);
+            return Map.of(
+                    "success", false,
+                    "message", "插件管理器初始化失败: " + e.getMessage(),
+                    "initialized", false
+            );
+        }
+    }
+    
+    /**
+     * 获取插件管理器状态
+     */
+    public Map<String, Object> getPluginManagerStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("initialized", pluginManager.isInitialized());
+        status.put("lazyLoading", pluginManager.isLazyLoading());
+        status.put("pluginCount", pluginManager.getPluginCount());
+        
+        if (pluginManager.isInitialized()) {
+            status.put("activePluginsCount", pluginManager.getAllPlugins().size());
+            status.put("statusMap", pluginManager.getAllPluginStatus());
+        } else {
+            status.put("activePluginsCount", 0);
+            status.put("statusMap", Map.of());
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("data", status);
+        result.put("message", "获取插件管理器状态成功");
         
         return result;
     }
