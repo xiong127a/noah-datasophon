@@ -12,8 +12,10 @@ import io.fabric8.kubernetes.client.utils.Serialization;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -263,9 +265,9 @@ public class KubeUtil {
         }
         
         // 检查其他角色标签（node-role.kubernetes.io/xxx）
-        List<String> roles = labels.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith("node-role.kubernetes.io/"))
-                .map(entry -> entry.getKey().substring("node-role.kubernetes.io/".length()))
+        List<String> roles = labels.keySet().stream()
+                .filter(s -> s.startsWith("node-role.kubernetes.io/"))
+                .map(s -> s.substring("node-role.kubernetes.io/".length()))
                 .filter(role -> !role.isEmpty())
                 .collect(java.util.stream.Collectors.toList());
         
@@ -288,8 +290,10 @@ public class KubeUtil {
         }
 
         try {
-            java.time.Instant creationTime = node.getMetadata().getCreationTimestamp().toInstant();
-            java.time.Instant now = java.time.Instant.now();
+            // Kubernetes时间戳通常是ISO 8601格式的字符串，需要解析
+            String timestampStr = node.getMetadata().getCreationTimestamp();
+            Instant creationTime = Instant.parse(timestampStr);
+            Instant now = Instant.now();
             java.time.Duration duration = java.time.Duration.between(creationTime, now);
 
             long days = duration.toDays();
