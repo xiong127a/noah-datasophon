@@ -588,40 +588,159 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                               <div className="text-sm">请检查Kubernetes集群配置或点击重新校验</div>
                             </div>
                           ) : (
-                            <div className="space-y-3 flex-1 overflow-y-auto max-h-[650px]">
-                              {dataSource.map((host) => (
-                                <div 
-                                  key={host.ip}
-                                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                    selectedRowKeys.includes(host.ip) 
-                                      ? 'border-blue-500 bg-blue-50' 
-                                      : 'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  onClick={() => {
-                                    const newSelected = selectedRowKeys.includes(host.ip)
-                                      ? selectedRowKeys.filter(key => key !== host.ip)
-                                      : [...selectedRowKeys, host.ip]
-                                    onSelectChange(newSelected)
-                                  }}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="font-medium text-gray-900">
-                                        {host.hostname || host.ip}
-                                      </div>
-                                      <div className="text-sm text-gray-500">{host.ip}</div>
+                            <div className="flex-1 overflow-hidden">
+                              {/* Apple风格的现代化表格设计 */}
+                              <div className="h-full flex flex-col bg-white">
+                                
+                                {/* 表格头部 - Apple风格 */}
+                                <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white/80 backdrop-blur-sm">
+                                  <div className="grid grid-cols-12 gap-6 px-6 py-4 text-sm font-semibold text-gray-700">
+                                    <div className="col-span-3 flex items-center space-x-2">
+                                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                      <span>节点名称</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Badge 
-                                        variant={host.managed ? "destructive" : "default"}
-                                        className={host.managed ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}
-                                      >
-                                        {host.managed ? '已受管' : '未受管'}
-                                      </Badge>
+                                    <div className="col-span-2 flex items-center space-x-2">
+                                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                      <span>状态</span>
+                                    </div>
+                                    <div className="col-span-3 flex items-center space-x-2">
+                                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                                      <span>角色</span>
+                                    </div>
+                                    <div className="col-span-2 flex items-center space-x-2">
+                                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                                      <span>运行时间</span>
+                                    </div>
+                                    <div className="col-span-2 flex items-center space-x-2">
+                                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                      <span>版本</span>
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                                
+                                {/* 节点列表容器 */}
+                                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                                  <div className="p-4 space-y-3">
+                                    {dataSource.map((host, index) => {
+                                      const isSelected = selectedRowKeys.includes(host.ip)
+                                      const statusColor = (host.status || 'Ready') === 'Ready' ? 'green' : 'red'
+                                      const managedStatus = host.managed === 'NO' ? '可用' : '已占用'
+                                      const managedColor = host.managed === 'NO' ? 'emerald' : 'rose'
+                                      
+                                      return (
+                                        <div 
+                                          key={host.ip}
+                                          className={`group relative transform transition-all duration-200 ease-out hover:scale-[1.02] ${
+                                            isSelected ? 'scale-[1.02]' : ''
+                                          }`}
+                                        >
+                                          {/* 主卡片容器 */}
+                                          <div 
+                                            className={`relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+                                              isSelected 
+                                                ? 'border-blue-300 bg-gradient-to-br from-blue-50 via-white to-blue-50/50 shadow-lg shadow-blue-100/50' 
+                                                : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md shadow-sm'
+                                            }`}
+                                            onClick={() => {
+                                              const newSelected = isSelected
+                                                ? selectedRowKeys.filter(key => key !== host.ip)
+                                                : [...selectedRowKeys, host.ip]
+                                              onSelectChange(newSelected)
+                                            }}
+                                          >
+                                            {/* 选中状态的左侧指示条 */}
+                                            <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-300 ${
+                                              isSelected ? 'bg-gradient-to-b from-blue-500 to-blue-600' : 'bg-transparent'
+                                            }`} />
+                                            
+                                            <div className="grid grid-cols-12 gap-6 px-6 py-5">
+                                              {/* 节点名称 */}
+                                              <div className="col-span-3 flex items-center space-x-4">
+                                                {/* 选择指示器 */}
+                                                <div className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                                                  isSelected 
+                                                    ? 'border-blue-500 bg-blue-500' 
+                                                    : 'border-gray-300 group-hover:border-blue-300'
+                                                }`}>
+                                                  {isSelected && (
+                                                    <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                  )}
+                                                </div>
+                                                
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="font-semibold text-gray-900 truncate text-base">
+                                                    {host.hostname || host.ip}
+                                                  </div>
+                                                  <div className="text-sm text-gray-500 font-mono truncate">
+                                                    {host.ip}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              
+                                              {/* 状态 */}
+                                              <div className="col-span-2 flex items-center">
+                                                <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                                  statusColor === 'green'
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                    : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                                }`}>
+                                                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                                                    statusColor === 'green' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                                                  }`}></div>
+                                                  {host.status || 'Ready'}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* 角色 */}
+                                              <div className="col-span-3 flex items-center">
+                                                <div className="flex flex-wrap gap-1">
+                                                  {(host.roles || host.nodeRoles || '<none>').split(',').map((role, idx) => (
+                                                    <span 
+                                                      key={idx}
+                                                      className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                                        role.trim() === '<none>' || role.trim() === '' 
+                                                          ? 'bg-gray-100 text-gray-600 border border-gray-200'
+                                                          : role.includes('control-plane') || role.includes('master')
+                                                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                                            : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                                      }`}
+                                                    >
+                                                      {role.trim() || 'worker'}
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* 运行时间 */}
+                                              <div className="col-span-2 flex items-center">
+                                                <div className="text-sm text-gray-700 font-mono">
+                                                  {host.age || host.nodeAge || '43d'}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* 版本和状态 */}
+                                              <div className="col-span-2 flex items-center justify-between">
+                                                <div className="text-sm text-gray-700 font-mono">
+                                                  {host.version || host.kubeVersion || 'v1.28.9'}
+                                                </div>
+                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-200 ${
+                                                  managedColor === 'emerald'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                }`}>
+                                                  {managedStatus}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </CardContent>
