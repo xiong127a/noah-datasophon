@@ -19,6 +19,7 @@ package com.datasophon.common.enums;
 
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.mybatisflex.annotation.EnumValue;
 import lombok.Getter;
 
 @Getter
