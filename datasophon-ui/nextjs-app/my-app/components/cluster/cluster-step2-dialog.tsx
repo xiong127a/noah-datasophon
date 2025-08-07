@@ -90,7 +90,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 使用hasFailedItems避免lint警告
   console.debug('Has failed items:', hasFailedItems)
 
-  // 获取主机列表
+  // 发现主机（基于Step1配置）
   const getEnvironmentList = async (showLoading = true) => {
     if (isRequesting) return
     
@@ -101,20 +101,37 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       if (!clusterId) {
         throw new Error('集群ID不能为空')
       }
+      
+      if (!step1Data) {
+        throw new Error('Step1配置数据不能为空')
+      }
 
       let response: {data: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}}, res: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}
       
-      // 使用新的统一主机管理API
+      // 构造Step1配置数据
+      const step1Config = {
+        clusterType: depType === DepType.KUBERNETES ? 'Kubernetes' : 'PVM',
+        // PVM配置参数
+        hosts: step1Data.hosts,
+        sshUser: step1Data.sshUser,
+        sshPort: step1Data.sshPort,
+        sshPassword: step1Data.sshPassword,
+        // K8S配置参数
+        kubeConfigContent: step1Data.kubeConfigContent,
+        namespace: step1Data.namespace,
+        isCreatingNewNamespace: step1Data.isCreatingNewNamespace,
+        customNamespace: step1Data.customNamespace,
+        clusterVersion: step1Data.clusterVersion,
+        namespaces: step1Data.namespaces,
+        forceRefresh: false
+      }
+      
+      // 调用新的主机发现接口
       try {
-        const params = {
-          page: paginationRef.current.current,
-          pageSize: paginationRef.current.pageSize
-        }
-        
         // 创建包含集群ID的请求头
         const headers = createClusterHeaders(clusterId)
         
-        response = await clusterApi.unifiedHost.list(params, { headers })
+        response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
         res = response.data
         
         // 统一API响应格式处理

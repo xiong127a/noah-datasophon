@@ -96,6 +96,7 @@ export const API_PATHS_V1 = {
   
   // 统一主机管理相关 - v1 (新架构)
   HOST_DISCOVER: `${API_BASE}/host/discover`,
+  HOST_DISCOVER_FROM_STEP1: `${API_BASE}/host/discover-from-step1`,
   HOST_LIST: `${API_BASE}/host/list`,
   HOST_IMPORT: `${API_BASE}/host/import`,
   HOST_REFRESH: `${API_BASE}/host/refresh`,

@@ -174,6 +174,24 @@ export const clusterApiV1 = {
     discover: (connectionParams: any) =>
       apiV1.post(API_PATHS_V1.HOST_DISCOVER, connectionParams),
     
+    // 从Step1配置发现主机（集群配置阶段专用）
+    discoverFromStep1: (step1Config: {
+      clusterType: string
+      // PVM parameters
+      hosts?: string
+      sshUser?: string
+      sshPort?: string
+      sshPassword?: string
+      // K8S parameters
+      kubeConfigContent?: string
+      namespace?: string
+      isCreatingNewNamespace?: boolean
+      customNamespace?: string
+      clusterVersion?: string
+      namespaces?: string[]
+      forceRefresh?: boolean
+    }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_FROM_STEP1, step1Config, config),
+    
     // 获取主机列表（支持分页和筛选）
     list: (params: {
       page?: number

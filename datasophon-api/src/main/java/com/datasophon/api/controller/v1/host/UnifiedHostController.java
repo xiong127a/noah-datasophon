@@ -20,22 +20,26 @@ package com.datasophon.api.controller.v1.host;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.dto.Result;
+import com.datasophon.api.dto.Step1ConfigurationDto;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
-import com.datasophon.api.service.host.strategy.model.HostListResult;
-import com.datasophon.dao.entity.ClusterHostDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * 统一主机管理控制器
- * 使用策略模式自动选择PVM或K8S模式，提供统一的API接口
+ * 专注于集群配置阶段的主机发现功能
+ * 自动根据集群类型选择合适的策略（PVM/Kubernetes）
+ * 
+ * @author DataSophon Team
  */
 @Slf4j
+@RestController
+@RequestMapping("/api")
 @ApiVersion(path = "host")
 public class UnifiedHostController {
 
@@ -43,25 +47,33 @@ public class UnifiedHostController {
     private UnifiedHostManagementService hostManagementService;
 
     /**
-     * 发现主机
-     * 根据集群类型自动选择策略发现主机
+     * Step1配置完成后的主机发现接口
+     * 根据Step1的配置信息发现主机列表
+     * 
+     * 支持两种模式：
+     * 1. PVM模式：解析IP范围，返回主机列表
+     * 2. K8S模式：调用K8S API获取节点列表
      */
-    @PostMapping("/discover")
-    public Result<HostDiscoveryResult> discoverHosts(
-            @RequestBody Map<String, Object> request,
+    @PostMapping("/host/discover-from-step1")
+    public Result<HostDiscoveryResult> discoverHostsFromStep1Configuration(
+            @RequestBody Step1ConfigurationDto step1Config,
             @ClusterId Integer clusterId) {
         
-        log.info("开始发现主机，集群ID: {}", clusterId);
+        log.info("开始从Step1配置发现主机，集群ID: {}, 集群类型: {}", clusterId, step1Config.getClusterType());
         
         try {
-            Boolean forceRefresh = (Boolean) request.get("forceRefresh");
+            // 设置集群ID到DTO中
+            step1Config.setClusterId(clusterId);
             
-            // 移除非连接参数
-            Map<String, Object> connectionParams = Map.copyOf(request);
-            connectionParams.remove("forceRefresh");
+            // 验证输入参数
+            validateStep1Configuration(step1Config);
             
+            // 根据集群类型构造连接参数
+            Map<String, Object> connectionParams = buildConnectionParams(step1Config);
+            
+            // 调用主机发现服务
             HostDiscoveryResult result = hostManagementService.discoverHosts(
-                clusterId, connectionParams, forceRefresh);
+                clusterId, connectionParams, step1Config.getForceRefresh());
             
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
@@ -71,6 +83,9 @@ public class UnifiedHostController {
                 return Result.error(result.getErrorMessage());
             }
             
+        } catch (IllegalArgumentException e) {
+            log.error("Step1配置参数错误，集群ID: {}", clusterId, e);
+            return Result.error("配置参数错误: " + e.getMessage());
         } catch (Exception e) {
             log.error("主机发现异常，集群ID: {}", clusterId, e);
             return Result.error("主机发现失败: " + e.getMessage());
@@ -78,215 +93,122 @@ public class UnifiedHostController {
     }
 
     /**
-     * 获取主机列表
-     * 支持分页和筛选，自动适配不同的集群模式
+     * 验证Step1配置参数
      */
-    @GetMapping("/list")
-    public Result<HostListResult> getHostList(
-            @ClusterId Integer clusterId,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer pageSize,
-            @RequestParam(required = false) String hostname,
-            @RequestParam(required = false) String ip,
-            @RequestParam(required = false) String cpuArchitecture,
-            @RequestParam(required = false) Integer hostState,
-            @RequestParam(required = false) String orderField,
-            @RequestParam(required = false) String orderType) {
+    private void validateStep1Configuration(Step1ConfigurationDto config) {
+        if (config.getClusterType() == null || config.getClusterType().trim().isEmpty()) {
+            throw new IllegalArgumentException("集群类型不能为空");
+        }
         
-        log.debug("获取主机列表，集群ID: {}, 页码: {}, 页大小: {}", clusterId, page, pageSize);
+        String clusterType = config.getClusterType().toLowerCase();
         
-        try {
-            HostListResult result = hostManagementService.getHostList(
-                clusterId, page, pageSize, hostname, ip, cpuArchitecture, 
-                hostState, orderField, orderType);
-            
-            log.debug("主机列表获取成功，集群ID: {}, 返回主机数: {}", clusterId, result.getHosts().size());
-            return Result.success(result);
-            
-        } catch (Exception e) {
-            log.error("获取主机列表异常，集群ID: {}", clusterId, e);
-            return Result.error("获取主机列表失败: " + e.getMessage());
+        if ("pvm".equals(clusterType)) {
+            // 验证PVM配置
+            if (config.getHosts() == null || config.getHosts().trim().isEmpty()) {
+                throw new IllegalArgumentException("PVM集群必须提供主机IP列表");
+            }
+            if (config.getSshUser() == null || config.getSshUser().trim().isEmpty()) {
+                throw new IllegalArgumentException("PVM集群必须提供SSH用户名");
+            }
+            if (config.getSshPort() == null || config.getSshPort().trim().isEmpty()) {
+                throw new IllegalArgumentException("PVM集群必须提供SSH端口");
+            }
+            if (config.getSshPassword() == null || config.getSshPassword().trim().isEmpty()) {
+                throw new IllegalArgumentException("PVM集群必须提供SSH密码");
+            }
+        } else if ("kubernetes".equals(clusterType)) {
+            // 验证K8S配置
+            if (config.getKubeConfigContent() == null || config.getKubeConfigContent().trim().isEmpty()) {
+                throw new IllegalArgumentException("Kubernetes集群必须提供kubeconfig文件内容");
+            }
+            if (config.getNamespace() == null || config.getNamespace().trim().isEmpty()) {
+                throw new IllegalArgumentException("Kubernetes集群必须提供命名空间");
+            }
+        } else {
+            throw new IllegalArgumentException("不支持的集群类型: " + config.getClusterType());
         }
     }
 
     /**
-     * 导入主机
-     * 将用户选择的主机导入到集群中
+     * 根据Step1配置构建连接参数
      */
-    @PostMapping("/import")
-    public Result<Void> importHosts(
-            @RequestBody Map<String, Object> request,
-            @ClusterId Integer clusterId) {
+    private Map<String, Object> buildConnectionParams(Step1ConfigurationDto config) {
+        Map<String, Object> params = new HashMap<>();
         
-        log.info("开始导入主机，集群ID: {}", clusterId);
+        String clusterType = config.getClusterType().toLowerCase();
         
-        try {
-            @SuppressWarnings("unchecked")
-            List<ClusterHostDO> selectedHosts = (List<ClusterHostDO>) request.get("selectedHosts");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> connectionParams = (Map<String, Object>) request.get("connectionParams");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> importOptions = (Map<String, Object>) request.get("importOptions");
+        if ("pvm".equals(clusterType)) {
+            // PVM集群参数
+            params.put("hosts", config.getHosts());
+            params.put("sshUser", config.getSshUser());
+            params.put("sshPort", config.getSshPort());
+            params.put("sshPassword", config.getSshPassword());
             
-            if (selectedHosts == null || selectedHosts.isEmpty()) {
-                return Result.error("选择的主机列表不能为空");
+            log.debug("构建PVM连接参数: 主机数={}, SSH用户={}, SSH端口={}", 
+                parseHostCount(config.getHosts()), config.getSshUser(), config.getSshPort());
+                
+        } else if ("kubernetes".equals(clusterType)) {
+            // K8S集群参数
+            params.put("kubeConfigContent", config.getKubeConfigContent());
+            params.put("namespace", config.getNamespace());
+            
+            // 可选参数
+            if (config.getIsCreatingNewNamespace() != null) {
+                params.put("isCreatingNewNamespace", config.getIsCreatingNewNamespace());
+            }
+            if (config.getCustomNamespace() != null) {
+                params.put("customNamespace", config.getCustomNamespace());
+            }
+            if (config.getClusterVersion() != null) {
+                params.put("clusterVersion", config.getClusterVersion());
             }
             
-            hostManagementService.importHosts(clusterId, selectedHosts, connectionParams, importOptions);
-            
-            log.info("主机导入成功，集群ID: {}, 导入主机数: {}", clusterId, selectedHosts.size());
-            return Result.success();
-            
-        } catch (Exception e) {
-            log.error("导入主机异常，集群ID: {}", clusterId, e);
-            return Result.error("导入主机失败: " + e.getMessage());
+            log.debug("构建K8S连接参数: 命名空间={}, 是否新建命名空间={}", 
+                config.getNamespace(), config.getIsCreatingNewNamespace());
         }
+        
+        return params;
     }
 
     /**
-     * 刷新主机信息
-     * 重新获取主机的最新状态
+     * 解析主机数量（用于日志）
+     * 简化版本，实际解析在策略层进行
      */
-    @PostMapping("/refresh")
-    public Result<List<ClusterHostDO>> refreshHosts(
-            @RequestBody Map<String, Object> connectionParams,
-            @ClusterId Integer clusterId) {
-        
-        log.info("开始刷新主机信息，集群ID: {}", clusterId);
-        
-        try {
-            List<ClusterHostDO> refreshedHosts = hostManagementService.refreshHosts(clusterId, connectionParams);
-            
-            log.info("主机信息刷新成功，集群ID: {}, 刷新主机数: {}", clusterId, refreshedHosts.size());
-            return Result.success(refreshedHosts);
-            
-        } catch (Exception e) {
-            log.error("刷新主机信息异常，集群ID: {}", clusterId, e);
-            return Result.error("刷新主机信息失败: " + e.getMessage());
+    private int parseHostCount(String hosts) {
+        if (hosts == null || hosts.trim().isEmpty()) {
+            return 0;
         }
-    }
-
-    /**
-     * 检查连接状态
-     * 验证是否能正常连接到目标环境
-     */
-    @PostMapping("/check-connection")
-    public Result<Map<String, Object>> checkConnection(
-            @RequestBody Map<String, Object> connectionParams,
-            @ClusterId Integer clusterId) {
         
-        log.info("开始检查连接状态，集群ID: {}", clusterId);
-        
-        try {
-            Map<String, Object> result = hostManagementService.checkConnection(clusterId, connectionParams);
-            
-            Boolean connected = (Boolean) result.get("connected");
-            log.info("连接状态检查完成，集群ID: {}, 连接状态: {}", clusterId, connected);
-            
-            return Result.success(result);
-            
-        } catch (Exception e) {
-            log.error("检查连接状态异常，集群ID: {}", clusterId, e);
-            return Result.error("检查连接状态失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 执行主机环境检查
-     * 对主机进行环境校验
-     */
-    @PostMapping("/check")
-    public Result<Map<String, Object>> performHostCheck(
-            @RequestBody Map<String, Object> request,
-            @ClusterId Integer clusterId) {
-        
-        log.info("开始执行主机环境检查，集群ID: {}", clusterId);
-        
-        try {
-            @SuppressWarnings("unchecked")
-            List<String> hostnames = (List<String>) request.get("hostnames");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> connectionParams = (Map<String, Object>) request.get("connectionParams");
-            
-            if (hostnames == null || hostnames.isEmpty()) {
-                return Result.error("主机名列表不能为空");
+        // 简单统计行数作为估算值
+        String[] lines = hosts.split("\n");
+        int count = 0;
+        for (String line : lines) {
+            line = line.trim();
+            if (!line.isEmpty()) {
+                if (line.contains("[") && line.contains("]")) {
+                    // 范围格式：10.3.144.[19-23]
+                    try {
+                        String range = line.substring(line.indexOf('[') + 1, line.indexOf(']'));
+                        String[] parts = range.split("-");
+                        if (parts.length == 2) {
+                            int start = Integer.parseInt(parts[0]);
+                            int end = Integer.parseInt(parts[1]);
+                            count += (end - start + 1);
+                        } else {
+                            count += 1;
+                        }
+                    } catch (Exception e) {
+                        count += 1; // 解析失败时按1个计算
+                    }
+                } else if (line.contains(",")) {
+                    // 逗号分隔格式
+                    count += line.split(",").length;
+                } else {
+                    // 单个主机
+                    count += 1;
+                }
             }
-            
-            Map<String, Object> result = hostManagementService.performHostCheck(
-                clusterId, hostnames, connectionParams);
-            
-            log.info("主机环境检查完成，集群ID: {}, 检查主机数: {}", clusterId, hostnames.size());
-            return Result.success(result);
-            
-        } catch (Exception e) {
-            log.error("执行主机环境检查异常，集群ID: {}", clusterId, e);
-            return Result.error("执行主机环境检查失败: " + e.getMessage());
         }
-    }
-
-    /**
-     * 获取主机检查状态
-     * 查询主机环境检查的进度和结果
-     */
-    @GetMapping("/check-status")
-    public Result<Map<String, Object>> getHostCheckStatus(@ClusterId Integer clusterId) {
-        
-        log.debug("查询主机检查状态，集群ID: {}", clusterId);
-        
-        try {
-            Map<String, Object> result = hostManagementService.getHostCheckStatus(clusterId);
-            
-            log.debug("主机检查状态查询完成，集群ID: {}", clusterId);
-            return Result.success(result);
-            
-        } catch (Exception e) {
-            log.error("查询主机检查状态异常，集群ID: {}", clusterId, e);
-            return Result.error("查询主机检查状态失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 清理资源
-     * 清理指定集群的主机管理相关资源
-     */
-    @PostMapping("/cleanup")
-    public Result<Void> cleanup(@ClusterId Integer clusterId) {
-        
-        log.info("开始清理主机管理资源，集群ID: {}", clusterId);
-        
-        try {
-            hostManagementService.cleanup(clusterId);
-            
-            log.info("主机管理资源清理完成，集群ID: {}", clusterId);
-            return Result.success();
-            
-        } catch (Exception e) {
-            log.error("清理主机管理资源异常，集群ID: {}", clusterId, e);
-            return Result.error("清理主机管理资源失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取支持的策略类型
-     * 用于前端显示可选的部署模式
-     */
-    @GetMapping("/strategies")
-    public Result<Map<String, String>> getSupportedStrategies() {
-        
-        try {
-            Map<String, String> strategies = hostManagementService.getAllStrategies()
-                    .entrySet()
-                    .stream()
-                    .collect(java.util.stream.Collectors.toMap(
-                            entry -> entry.getKey().getCode(),
-                            entry -> entry.getKey().getDescription()
-                    ));
-            
-            return Result.success(strategies);
-            
-        } catch (Exception e) {
-            log.error("获取支持的策略类型异常", e);
-            return Result.error("获取支持的策略类型失败: " + e.getMessage());
-        }
+        return count;
     }
 }
