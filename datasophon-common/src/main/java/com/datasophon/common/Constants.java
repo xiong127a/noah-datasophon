@@ -145,10 +145,6 @@ public final class Constants {
          */
         public static final String ROOT = "root";
 
-        public static final String PVM_MODE = "PVM";
-
-        public static final String KUBERNETES_MODE = "Kubernetes";
-
         public static final String SERVICE_CHECK_NAMES = "Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
 
         public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));

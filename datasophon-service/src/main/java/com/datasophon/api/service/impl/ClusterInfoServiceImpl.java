@@ -25,6 +25,7 @@ import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.dto.UserInfoDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.load.GlobalVariables;
@@ -414,7 +415,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public Map<Integer, String> getAllClusterIdAndType() {
+    public Map<Integer, ClusterType> getAllClusterIdAndType() {
         return list().stream()
                 .collect(java.util.stream.Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
     }

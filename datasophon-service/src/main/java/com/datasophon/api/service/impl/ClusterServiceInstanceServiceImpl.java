@@ -38,6 +38,7 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -512,7 +513,7 @@ public class ClusterServiceInstanceServiceImpl
         ClusterServiceInstanceEntity clusterServiceInstance = getById(serviceInstanceId);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
 
-        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
+        if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
             List<String> serviceRoleList = roleInstanceList.stream()
                     .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct()
                     .toList();

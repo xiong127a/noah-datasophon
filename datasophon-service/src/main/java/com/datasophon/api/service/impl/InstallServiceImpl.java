@@ -23,6 +23,7 @@ import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.datasophon.common.enums.Status;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
 import com.datasophon.api.master.WorkerStartActor;
@@ -258,11 +259,11 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             if (clusterInfo == null) {
                 throw new ServiceException("集群不存在");
             }
-            String depType = clusterInfo.getDepType();
+            ClusterType depType = clusterInfo.getDepType();
             log.info("集群ID: {}, 部署类型: {}", clusterId, depType);
 
             // 根据部署类型路由到不同的处理方法
-            if ("Kubernetes".equals(depType)) {
+            if (depType != null && depType.isKubernetes()) {
                 log.info("检测到Kubernetes集群，使用K8S API获取节点列表");
                 return analysisHostListForKubernetes(clusterId, kubeConfigContent, page, pageSize);
             } else {

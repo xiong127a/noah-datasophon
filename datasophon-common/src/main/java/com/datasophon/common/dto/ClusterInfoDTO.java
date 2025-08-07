@@ -17,6 +17,8 @@
 
 package com.datasophon.common.dto;
 
+import com.datasophon.common.enums.ClusterType;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -39,7 +41,7 @@ public record ClusterInfoDTO(
         String frameVersion,
         Integer clusterState,
         Integer frameId,
-        String depType,
+        ClusterType depType,
         String kubeConfig,
         String namespace,
         List<UserInfoDTO> clusterManagerList,

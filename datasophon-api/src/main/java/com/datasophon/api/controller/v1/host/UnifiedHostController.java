@@ -21,6 +21,7 @@ import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.dto.Step1ConfigurationDto;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,6 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api")
 @ApiVersion(path = "host")
 public class UnifiedHostController {
 
@@ -96,13 +96,13 @@ public class UnifiedHostController {
      * 验证Step1配置参数
      */
     private void validateStep1Configuration(Step1ConfigurationDto config) {
-        if (config.getClusterType() == null || config.getClusterType().trim().isEmpty()) {
+        if (config.getClusterType() == null) {
             throw new IllegalArgumentException("集群类型不能为空");
         }
         
-        String clusterType = config.getClusterType().toLowerCase();
+        ClusterType clusterType = config.getClusterType();
         
-        if ("pvm".equals(clusterType)) {
+        if (clusterType.isPvm()) {
             // 验证PVM配置
             if (config.getHosts() == null || config.getHosts().trim().isEmpty()) {
                 throw new IllegalArgumentException("PVM集群必须提供主机IP列表");
@@ -116,7 +116,7 @@ public class UnifiedHostController {
             if (config.getSshPassword() == null || config.getSshPassword().trim().isEmpty()) {
                 throw new IllegalArgumentException("PVM集群必须提供SSH密码");
             }
-        } else if ("kubernetes".equals(clusterType)) {
+        } else if (clusterType.isKubernetes()) {
             // 验证K8S配置
             if (config.getKubeConfigContent() == null || config.getKubeConfigContent().trim().isEmpty()) {
                 throw new IllegalArgumentException("Kubernetes集群必须提供kubeconfig文件内容");
@@ -125,7 +125,7 @@ public class UnifiedHostController {
                 throw new IllegalArgumentException("Kubernetes集群必须提供命名空间");
             }
         } else {
-            throw new IllegalArgumentException("不支持的集群类型: " + config.getClusterType());
+            throw new IllegalArgumentException("不支持的集群类型: " + clusterType);
         }
     }
 
@@ -135,9 +135,9 @@ public class UnifiedHostController {
     private Map<String, Object> buildConnectionParams(Step1ConfigurationDto config) {
         Map<String, Object> params = new HashMap<>();
         
-        String clusterType = config.getClusterType().toLowerCase();
+        ClusterType clusterType = config.getClusterType();
         
-        if ("pvm".equals(clusterType)) {
+        if (clusterType.isPvm()) {
             // PVM集群参数
             params.put("hosts", config.getHosts());
             params.put("sshUser", config.getSshUser());
@@ -147,7 +147,7 @@ public class UnifiedHostController {
             log.debug("构建PVM连接参数: 主机数={}, SSH用户={}, SSH端口={}", 
                 parseHostCount(config.getHosts()), config.getSshUser(), config.getSshPort());
                 
-        } else if ("kubernetes".equals(clusterType)) {
+        } else if (clusterType.isKubernetes()) {
             // K8S集群参数
             params.put("kubeConfigContent", config.getKubeConfigContent());
             params.put("namespace", config.getNamespace());

@@ -18,6 +18,7 @@
 package com.datasophon.api.master;
 
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
@@ -89,9 +90,9 @@ public class HostCheckActor extends AbstractActor {
       for (ClusterInfoDTO clusterInfoDto : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
         Integer clusterId = clusterInfoDto.id();
-        String depType = clusterInfoDto.depType();
+        ClusterType depType = clusterInfoDto.depType();
         String prometheusPort = "9090";
-        if (Constants.KUBERNETES_MODE.equals(depType)) {
+        if (depType == ClusterType.KUBERNETES) {
           prometheusPort = "30909";
         }
 
@@ -179,7 +180,7 @@ public class HostCheckActor extends AbstractActor {
                 logger.warn("Cluster with id {} not found", clusterId);
                 continue;
               }
-              if (Constants.KUBERNETES_MODE.equals(depType)) {
+              if (depType == ClusterType.KUBERNETES) {
                 try {
                   // 使用Java原生的isReachable方法替代系统ping命令
                   java.net.InetAddress address = java.net.InetAddress.getByName(host.getHostname());

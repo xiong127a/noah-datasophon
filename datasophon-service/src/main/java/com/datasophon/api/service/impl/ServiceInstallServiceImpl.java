@@ -47,6 +47,7 @@ import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -161,9 +162,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param clusterId 集群ID
      */
     public static void processConfigList(List<ServiceConfig> list, Integer clusterId) {
-        if (Constants.KUBERNETES_MODE.equals(ProcessUtils.getDepMode(clusterId))) {
+        if (ProcessUtils.getDepMode(clusterId) == ClusterType.KUBERNETES) {
             for (ServiceConfig config : list) {
-                if (Constants.KUBERNETES_MODE.toLowerCase().equals(config.getConfigType())) {
+                if (StrUtil.equals(config.getConfigType(),ClusterType.KUBERNETES.getCode())) {
                     config.setHidden(false);
                     config.setRequired(true);
                 }
@@ -214,8 +215,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         ClusterInfoEntity clusterInfoEntity = SpringUtil.getBean(ClusterInfoService.class).getById(clusterId);
-        String depType = clusterInfoEntity.getDepType();
-        if (Constants.KUBERNETES_MODE.equals(depType)) {
+        ClusterType depType = clusterInfoEntity.getDepType();
+        if (depType == ClusterType.KUBERNETES) {
             // 获取Kubernetes服务角色处理类
             KubernetesServiceRoleStrategy kubernetesServiceRoleStrategy = KubernetesServiceRoleStrategyContext
                     .getServiceRoleHandler(serviceName);

@@ -39,6 +39,7 @@ import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
@@ -210,10 +211,10 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
     @Override
     public ExecResult startInstallService(ServiceRoleInfo serviceRoleInfo) throws Exception {
-        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ClusterType depMode = getDepMode(serviceRoleInfo.getClusterId());
         ExecResult execResult;
 
-        if (Constants.PVM_MODE.equals(depMode)) {
+        if (depMode != null && depMode.isPvm()) {
             ServiceHandler serviceInstallHandler = new ServiceInstallHandler();
             ServiceHandler serviceConfigureHandler = new ServiceConfigureHandler();
             ServiceHandler serviceStartHandler = new ServiceStartHandler();
@@ -327,7 +328,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
     /**
      * 获取部署模式
      */
-    private String getDepMode(Integer clusterId) {
+    private ClusterType getDepMode(Integer clusterId) {
         ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(clusterId);
         return clusterInfoDTO.depType();
     }
@@ -365,10 +366,10 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         logger.info("启动服务: {} on {}, needReConfig: {}", 
                 serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), needReConfig);
         
-        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ClusterType depMode = getDepMode(serviceRoleInfo.getClusterId());
         ExecResult execResult;
 
-        if (Constants.PVM_MODE.equals(depMode)) {
+        if (depMode != null && depMode.isPvm()) {
             // PVM模式：如果需要重新配置，先配置再启动，否则直接启动
             if (needReConfig) {
                 ServiceHandler serviceConfigureHandler = new ServiceConfigureHandler();
@@ -402,10 +403,10 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
     public ExecResult stopService(ServiceRoleInfo serviceRoleInfo) {
         logger.info("停止服务: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
         
-        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ClusterType depMode = getDepMode(serviceRoleInfo.getClusterId());
         ExecResult execResult;
 
-        if (Constants.PVM_MODE.equals(depMode)) {
+        if (depMode != null && depMode.isPvm()) {
             // PVM模式：执行停止操作
             // TODO: 需要实现ServiceStopHandler
             logger.info("PVM模式停止服务暂未实现，模拟成功");

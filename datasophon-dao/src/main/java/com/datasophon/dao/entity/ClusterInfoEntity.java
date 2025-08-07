@@ -18,6 +18,7 @@
 package com.datasophon.dao.entity;
 
 import com.datasophon.dao.enums.ClusterState;
+import com.datasophon.common.enums.ClusterType;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -77,7 +78,7 @@ public class ClusterInfoEntity implements Serializable {
     /**
      * 集群部署模式
      */
-    private String depType;
+    private ClusterType depType;
     /**
      * Kubernetes配置
      */

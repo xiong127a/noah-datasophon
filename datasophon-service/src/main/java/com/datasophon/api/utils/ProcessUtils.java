@@ -23,6 +23,7 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -31,6 +32,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.MANAGED;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.mybatisflex.core.query.QueryChain;
+import io.fabric8.kubernetes.api.model.Cluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +108,7 @@ public class ProcessUtils {
     /**
      * 获取所有集群ID和类型的映射
      */
-    public static Map<Integer, String> getAllClusterIdAndType() {
+    public static Map<Integer, ClusterType> getAllClusterIdAndType() {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.list().stream()
                 .collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
@@ -149,7 +151,7 @@ public class ProcessUtils {
     /**
      * 获取部署模式
      */
-    public static String getDepMode(Integer clusterId) {
+    public static ClusterType getDepMode(Integer clusterId) {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.getById(clusterId).getDepType();
     }

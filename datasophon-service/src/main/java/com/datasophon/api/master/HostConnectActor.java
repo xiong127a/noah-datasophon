@@ -25,6 +25,7 @@ import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
@@ -79,7 +80,7 @@ public class HostConnectActor extends AbstractActor {
                 return;
             }
 
-            boolean isKubernetesMode = Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType());
+            boolean isKubernetesMode = clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes();
 
             if (isKubernetesMode) {
                 // Kubernetes模式：不进行SSH连接测试，基于受管状态给出校验结果

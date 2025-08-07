@@ -32,6 +32,7 @@ import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.command.KubernetesGetLogCommand;
 import com.datasophon.common.enums.CommandType;
@@ -233,7 +234,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstance.getClusterId());
         Future<Object> logFuture;
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
+        if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
             KubernetesGetLogCommand kubernetesGetLogCommand = new KubernetesGetLogCommand();
             kubernetesGetLogCommand.setLogFile(logFile);
             String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterInfo.getId());
@@ -305,7 +306,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             }
         }
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
+        if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
             List<String> matchingRoleNames = new ArrayList<>();
             for (Map.Entry<String, Long> entry : roleNameRemoveCount.entrySet()) {
                 String roleName = entry.getKey();

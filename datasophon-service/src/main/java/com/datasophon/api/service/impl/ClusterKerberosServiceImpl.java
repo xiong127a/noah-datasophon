@@ -25,6 +25,7 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterKerberosService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.kubernetes.util.KubeUtil;
@@ -62,9 +63,9 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + keytabFileName;
         File file = new File(keytabFilePath);
-        String depMode = getDepMode(clusterId);
+        ClusterType depMode = getDepMode(clusterId);
         if (!file.exists()) {
-            if (Constants.PVM_MODE.equals(depMode)) {
+            if (depMode== ClusterType.PVM ) {
                 generateKeytabFile(clusterId, keytabFilePath, keytabName);
             } else {
                 kubernetesGenerateKeytabFile(clusterId, keytabFilePath, keytabName);
@@ -92,12 +93,12 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             String keytabName,
             String hostname,
             HttpServletResponse response) throws IOException {
-        String depMode = getDepMode(clusterId);
+        ClusterType depMode = getDepMode(clusterId);
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH + keytabName;
         File file = new File(keytabFilePath);
         if (!file.exists()) {
-            if (Constants.PVM_MODE.equals(depMode)) {
+            if (depMode == ClusterType.PVM) {
                 generateKeytabFile(clusterId, keytabFilePath, principal);
             } else {
                 kubernetesGenerateKeytabFile(clusterId, keytabFilePath, principal);

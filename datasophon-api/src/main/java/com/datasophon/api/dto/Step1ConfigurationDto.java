@@ -1,5 +1,6 @@
 package com.datasophon.api.dto;
 
+import com.datasophon.common.enums.ClusterType;
 import lombok.Data;
 
 /**
@@ -17,9 +18,9 @@ public class Step1ConfigurationDto {
     private Integer clusterId;
     
     /**
-     * 集群类型：PVM 或 Kubernetes
+     * 集群类型枚举
      */
-    private String clusterType;
+    private ClusterType clusterType;
     
     // =================== PVM集群配置参数 ===================
     

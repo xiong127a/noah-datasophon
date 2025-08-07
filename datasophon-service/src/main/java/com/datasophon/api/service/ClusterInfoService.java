@@ -18,6 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.kubernetes.KubernetesNamespaceDto;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.mybatisflex.core.service.IService;
@@ -112,5 +113,5 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
      *
      * @return 集群ID和类型映射
      */
-    Map<Integer, String> getAllClusterIdAndType();
+    Map<Integer, ClusterType> getAllClusterIdAndType();
 }

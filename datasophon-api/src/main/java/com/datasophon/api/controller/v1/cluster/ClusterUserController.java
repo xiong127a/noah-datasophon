@@ -21,6 +21,7 @@ import com.datasophon.api.converter.ClusterUserConverter;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterUserDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterUserVO;
 import com.datasophon.api.dto.Result;
@@ -87,7 +88,7 @@ public class ClusterUserController {
             @RequestParam("username") String username,
             @RequestParam("mainGroupId") Integer mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
-        ClusterUserDTO clusterUserDTO = Constants.PVM_MODE.equals(getDepMode(clusterId))
+        ClusterUserDTO clusterUserDTO = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.createClusterUser(clusterId, username, mainGroupId, otherGroupIds)
                 : clusterUserService.createClusterUserOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
         ClusterUserVO clusterUserVO = clusterUserConverter.dtoToVo(clusterUserDTO);
@@ -112,7 +113,7 @@ public class ClusterUserController {
     @RequestMapping("/delete")
     public Result<String> delete(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("id") Integer id) {
-        boolean success = Constants.PVM_MODE.equals(getDepMode(clusterId))
+        boolean success = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.deleteClusterUser(id)
                 : clusterUserService.deleteClusterUserOnKubernetes(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");

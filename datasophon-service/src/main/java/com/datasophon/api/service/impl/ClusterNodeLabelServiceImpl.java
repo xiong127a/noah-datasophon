@@ -21,6 +21,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.converter.ClusterNodeLabelConverter;
 import com.datasophon.common.dto.ClusterNodeLabelDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
@@ -132,7 +133,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
                     return entity;
                 })
                 .toList();
-        String depMode = getDepMode(clusterId);
+        ClusterType depMode = getDepMode(clusterId);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
         String namespace = clusterInfo.getNamespace();
         ArrayList<String> commands = new ArrayList<>();
@@ -143,7 +144,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         commands.add("\"" + nodeLabel + "\"");
         if (CollUtil.isNotEmpty(roleList)) {
             String hostname = roleList.getFirst().getHostname();
-            if (depMode.equals(Constants.PVM_MODE)) {
+            if (depMode == ClusterType.PVM) {
                 ActorSelection execCmdActor = ActorUtils.actorSystem
                         .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
                 ExecuteCmdCommand command = new ExecuteCmdCommand();

@@ -38,6 +38,7 @@ import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -121,8 +122,8 @@ public class PrometheusActor extends AbstractActor {
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
 
-                    String depType = clusterInfoService.getById(clusterId).getDepType();
-                    boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
+                    ClusterType depType = clusterInfoService.getById(clusterId).getDepType();
+                    boolean isKubernetes = depType == ClusterType.KUBERNETES;
                     logger.info("start to generate {} prometheus config", serviceInstance.serviceName());
                     HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
@@ -231,14 +232,14 @@ public class PrometheusActor extends AbstractActor {
                             .getBean(ClusterInfoService.class);
                     ClusterHostService clusterHostService = SpringUtil
                             .getBean(ClusterHostService.class);
-                    String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
+                    ClusterType depType = clusterInfoService.getById(command.getClusterId()).getDepType();
 
                     List<ClusterHostDO> hostList = clusterHostService
                             .getAllManagedHostsByClusterId(clusterId);
 
                     ClusterServiceRoleInstanceDTO prometheusInstance = roleInstanceService.getOneServiceRole(
                             PROMETHEUS_SERVICE_NAME, null, command.getClusterId());
-                    boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
+                    boolean isKubernetes = depType == ClusterType.KUBERNETES;
                     if (Objects.nonNull(prometheusInstance)) {
 
                         Generators workerGenerators = new Generators();
@@ -308,13 +309,13 @@ public class PrometheusActor extends AbstractActor {
                             .getBean(ClusterServiceRoleInstanceService.class);
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
-                    String depType = clusterInfoService.getById(clusterId).getDepType();
+                    ClusterType depType = clusterInfoService.getById(clusterId).getDepType();
 
                     ClusterServiceRoleInstanceDTO prometheusInstance = roleInstanceService.getOneServiceRole(
                             PROMETHEUS_SERVICE_NAME, null, clusterId);
                     if (Objects.nonNull(prometheusInstance)) {
                         ExecResult configResult;
-                        if (Constants.KUBERNETES_MODE.equals(depType)) {
+                        if (depType == ClusterType.KUBERNETES) {
                             return;
                         } else {
                             ActorSelection alertConfigActor = ActorUtils.actorSystem.actorSelection(
@@ -352,7 +353,7 @@ public class PrometheusActor extends AbstractActor {
 
                     ClusterInfoService clusterInfoService = SpringUtil
                             .getBean(ClusterInfoService.class);
-                    String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
+                    ClusterType depType = clusterInfoService.getById(command.getClusterId()).getDepType();
 
                     logger.info("start to genetate {} prometheus config", serviceInstance.serviceName());
                     HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -408,7 +409,7 @@ public class PrometheusActor extends AbstractActor {
                     serviceRoleInfo.setConfigFileMap(configFileMap);
                     serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
                     serviceRoleInfo.setHostname(prometheusInstance.hostname());
-                    boolean isKubernetes = Constants.KUBERNETES_MODE.equals(depType);
+                    boolean isKubernetes = depType == ClusterType.KUBERNETES;
                     reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
                 })
                 .matchAny(this::unhandled)

@@ -22,6 +22,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.utils.ExecResult;
@@ -167,7 +168,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
 
         Timeout timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
-        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
+        if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
             String baseDir = System.getProperty("user.dir");
             String logStr = KubernetesMinaUtils
                     .readLastRows(

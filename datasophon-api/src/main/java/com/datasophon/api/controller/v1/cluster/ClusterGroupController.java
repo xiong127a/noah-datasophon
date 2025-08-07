@@ -22,6 +22,7 @@ import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterGroupDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterGroupVO;
 import com.datasophon.api.dto.Result;
@@ -86,7 +87,7 @@ public class ClusterGroupController {
     @RequestMapping("/save")
     public Result<ClusterGroupVO> save(@RequestParam("clusterId") Integer clusterId,
             @RequestParam("groupName") String groupName) {
-        ClusterGroupDTO dto = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
+        ClusterGroupDTO dto = ProcessUtils.getDepMode(clusterId)== ClusterType.PVM
                 ? clusterGroupService.saveClusterGroup(clusterId, groupName)
                 : clusterGroupService.saveClusterGroupOnKubernetes(clusterId, groupName);
         // Controller层：DTO → VO转换
@@ -119,7 +120,7 @@ public class ClusterGroupController {
      */
     @RequestMapping("/delete")
     public Result<String> delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("id") Integer id) {
-        boolean success = Constants.PVM_MODE.equals(ProcessUtils.getDepMode(clusterId))
+        boolean success = ProcessUtils.getDepMode(clusterId)== ClusterType.PVM
                 ? clusterGroupService.deleteUserGroup(id)
                 : clusterGroupService.deleteUserGroupOnKubernetes(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");

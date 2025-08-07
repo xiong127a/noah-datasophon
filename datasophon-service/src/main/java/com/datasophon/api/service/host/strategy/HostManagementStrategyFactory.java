@@ -19,6 +19,7 @@ package com.datasophon.api.service.host.strategy;
 
 import com.datasophon.api.service.host.strategy.impl.KubernetesHostStrategy;
 import com.datasophon.api.service.host.strategy.impl.PvmHostStrategy;
+import com.datasophon.common.enums.ClusterType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -111,15 +112,32 @@ public class HostManagementStrategyFactory {
             return getStrategy(HostManagementStrategy.StrategyType.PVM);
         }
         
-        // 标准化部署类型
-        String normalizedDepType = normalizeDepType(depType);
+        try {
+            ClusterType clusterType = ClusterType.fromCode(depType);
+            return getStrategyByClusterType(clusterType);
+        } catch (IllegalArgumentException e) {
+            log.warn("未知的部署类型: {}，使用默认PVM策略", depType);
+            return getStrategy(HostManagementStrategy.StrategyType.PVM);
+        }
+    }
+    
+    /**
+     * 根据集群类型枚举获取策略
+     * @param clusterType 集群类型枚举
+     * @return 策略实例
+     */
+    public HostManagementStrategy getStrategyByClusterType(ClusterType clusterType) {
+        if (clusterType == null) {
+            log.warn("集群类型为null，使用默认PVM策略");
+            return getStrategy(HostManagementStrategy.StrategyType.PVM);
+        }
         
-        if ("kubernetes".equalsIgnoreCase(normalizedDepType)) {
+        if (clusterType.isKubernetes()) {
             return getStrategy(HostManagementStrategy.StrategyType.KUBERNETES);
-        } else if ("pvm".equalsIgnoreCase(normalizedDepType)) {
+        } else if (clusterType.isPvm()) {
             return getStrategy(HostManagementStrategy.StrategyType.PVM);
         } else {
-            log.warn("未知的部署类型: {}，使用默认PVM策略", depType);
+            log.warn("未知的集群类型: {}，使用默认PVM策略", clusterType);
             return getStrategy(HostManagementStrategy.StrategyType.PVM);
         }
     }
@@ -159,36 +177,7 @@ public class HostManagementStrategyFactory {
         return new HashMap<>(strategies);
     }
 
-    /**
-     * 标准化部署类型字符串
-     * 处理各种可能的输入格式
-     *
-     * @param depType 原始部署类型
-     * @return 标准化后的部署类型
-     */
-    private String normalizeDepType(String depType) {
-        if (depType == null) {
-            return "";
-        }
-        
-        String normalized = depType.trim().toLowerCase();
-        
-        // 处理常见的变体
-        switch (normalized) {
-            case "k8s":
-            case "kube":
-            case "kubernetes":
-                return "kubernetes";
-            case "vm":
-            case "virtual":
-            case "virtualmachine":
-            case "pvm":
-            case "physical":
-                return "pvm";
-            default:
-                return normalized;
-        }
-    }
+
 
     /**
      * 根据集群ID和depType获取策略

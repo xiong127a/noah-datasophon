@@ -27,6 +27,7 @@ import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.enums.ClusterType;
 import org.apache.pekko.actor.AbstractActor;
 
 import java.util.List;
@@ -61,7 +62,7 @@ public class ServiceRoleCheckActor extends AbstractActor {
             List<ClusterServiceRoleInstanceDTO> list = roleInstanceService.getServiceRolesByNames(Constants.STATUS_CHECK_SERVICES);
 
             // 获取所有集群信息
-            Map<Integer, String> allClusterIdAndType = clusterInfoService.getAllClusterIdAndType();
+            Map<Integer, ClusterType> allClusterIdAndType = clusterInfoService.getAllClusterIdAndType();
 
             if (!list.isEmpty()) {
                 Map<String, ClusterServiceRoleInstanceDTO> map = translateListToMap(list);
@@ -71,13 +72,13 @@ public class ServiceRoleCheckActor extends AbstractActor {
                             .getServiceRoleHandler(roleInstanceDto.serviceRoleName());
 
                     // 服务集群部署模式
-                    String depType = allClusterIdAndType.get(roleInstanceDto.clusterId());
+                    ClusterType depType = allClusterIdAndType.get(roleInstanceDto.clusterId());
                     switch (depType) {
-                        case Constants.PVM_MODE:
+                        case PVM:
                             Optional.ofNullable(serviceRoleHandler)
                                     .ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceDto, map));
                             break;
-                        case Constants.KUBERNETES_MODE:
+                        case KUBERNETES:
                             handlerKubernetesServiceRoleCheck(roleInstanceDto);
                             Optional.ofNullable(serviceRoleHandler).ifPresent(
                                     handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceDto, map));

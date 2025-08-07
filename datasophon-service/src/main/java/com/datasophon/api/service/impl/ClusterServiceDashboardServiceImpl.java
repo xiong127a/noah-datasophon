@@ -17,13 +17,13 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceDashboard;
@@ -48,9 +48,6 @@ import java.util.Map;
 public class ClusterServiceDashboardServiceImpl
                 extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
                 implements ClusterServiceDashboardService {
-
-        private static final Logger logger = LoggerFactory.getLogger(ClusterServiceDashboardServiceImpl.class);
-
         @Autowired
         private ClusterServiceDashboardConverter converter;
 
@@ -60,17 +57,16 @@ public class ClusterServiceDashboardServiceImpl
         @Override
         public String getDashboardUrl(Integer clusterId) {
                 ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
-                String depType = clusterInfoEntity.getDepType();
+                ClusterType depType = clusterInfoEntity.getDepType();
                 String serviceName = "TOTAL";
-                if (StrUtil.equals(depType, Constants.KUBERNETES_MODE)) {
+                if (depType == ClusterType.KUBERNETES) {
                         serviceName = "KUBERNETES";
                 }
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterServiceDashboard dashboard = getMapper().selectByServiceName(serviceName);
 
-                String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                                Constants.REGEX_VARIABLE);
-                return dashboardUrl;
+            return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
+                            Constants.REGEX_VARIABLE);
         }
 
         @Override
@@ -78,9 +74,8 @@ public class ClusterServiceDashboardServiceImpl
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterServiceDashboard dashboard = getMapper().selectByServiceName("DATASOPHON");
 
-                String dashboardUrl = PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                                Constants.REGEX_VARIABLE);
-                return dashboardUrl;
+            return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
+                            Constants.REGEX_VARIABLE);
         }
 
         // DTO相关的CRUD方法实现

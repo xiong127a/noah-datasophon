@@ -25,6 +25,7 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
@@ -43,11 +44,11 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        String depMode = getDepMode(clusterId);
+        ClusterType depMode = getDepMode(clusterId);
         String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         
-        if (!Constants.PVM_MODE.equals(depMode)) {
+        if (depMode == ClusterType.KUBERNETES) {
             hosts = generateDnsName(hosts, "elasticsearch-elasticsearch",namespace);
         }
         simpleClusterVariableService.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}",
