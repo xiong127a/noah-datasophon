@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   X, ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
-  AlertCircle, Info, Clock, Minus, AlertTriangle, Server, 
-  Monitor, Eye, RotateCcw, FileText
+  AlertCircle, Info, Clock, Minus, AlertTriangle,
+  RotateCcw, FileText
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
@@ -41,8 +40,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 基础状态
   const [loading, setLoading] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
-  const [isCheckingActive, setIsCheckingActive] = useState(false)
-  const [hasStartedCheck, setHasStartedCheck] = useState(false)
+  const [_, setIsCheckingActive] = useState(false)
+  const [__, setHasStartedCheck] = useState(false)
   const [dataSource, setDataSource] = useState<Host[]>([])
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [queueStatus, setQueueStatus] = useState<QueueStatus>({
@@ -96,46 +95,53 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       
       // K8S模式和PVM模式使用不同的API
       if (depType === 'Kubernetes') {
-        // K8S模式：先分析主机列表设置缓存，再获取硬件信息
-        try {
-          // 第一步：分析主机列表（设置缓存）
-          // 注意：K8S模式下，ips参数实际上是kubeConfig内容
-          const kubeConfig = localStorage.getItem('kubeConfig') || '';
-          if (!kubeConfig) {
-            throw new Error('Kubernetes配置不能为空，请先完成集群配置');
-          }
-          
-          await clusterApi.host.analysisHostList({
-            ips: kubeConfig,
-            sshUser: '',
-            sshPort: '22',
-            sshPassword: '',
-            page: 1,
-            pageSize: 100
-          });
-          
-          // 第二步：获取K8S硬件信息（从缓存获取）
-          response = await clusterApi.hostCheck.getK8sHostsWithHardwareInfo(clusterId)
-          res = response.data
-          
-          // 转换K8S API响应格式以适配现有逻辑
-          if (res.code === 200) {
-            res = {
-              ...res,
-              data: res.data || [],
-              total: res.data?.length || 0,
-              queueStatus: null // K8S模式不需要队列状态
-            }
-          }
-        } catch (analysisError) {
-          console.error('K8S主机分析失败:', analysisError);
-          // 如果分析失败，返回空数据但不阻塞UI
+        // K8S模式：先检查是否有kubeConfig，然后分析主机列表设置缓存，再获取硬件信息
+        const kubeConfig = localStorage.getItem('kubeConfig') || '';
+        
+        if (!kubeConfig) {
+          // 如果没有kubeConfig，返回空数据，不抛出错误
+          console.warn('Kubernetes配置为空，等待用户完成Step1配置');
           res = {
             code: 200,
             data: [],
             total: 0,
             queueStatus: null
           };
+        } else {
+          try {
+            // 第一步：分析主机列表（设置缓存）
+            await clusterApi.host.analysisHostList({
+              ips: kubeConfig,
+              sshUser: '',
+              sshPort: '22',
+              sshPassword: '',
+              page: 1,
+              pageSize: 100
+            });
+            
+            // 第二步：获取K8S硬件信息（从缓存获取）
+            response = await clusterApi.hostCheck.getK8sHostsWithHardwareInfo(clusterId)
+            res = response.data
+            
+            // 转换K8S API响应格式以适配现有逻辑
+            if (res.code === 200) {
+              res = {
+                ...res,
+                data: res.data || [],
+                total: res.data?.length || 0,
+                queueStatus: null // K8S模式不需要队列状态
+              }
+            }
+          } catch (analysisError) {
+            console.error('K8S主机分析失败:', analysisError);
+            // 如果分析失败，返回空数据但不阻塞UI
+            res = {
+              code: 200,
+              data: [],
+              total: 0,
+              queueStatus: null
+            };
+          }
         }
       } else {
         // PVM模式：使用原有的分页API
@@ -150,13 +156,14 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       if (res.code === 200) {
         // 检查是否有主机已完成检查
         if (res.data && res.data.length > 0) {
-          const hasCompletedChecks = res.data.some(host => {
+          const hasCompletedChecks = res.data.some((host: Host) => {
             const checkItems = host.checkItems || []
             return checkItems.length > 0 && 
-                   checkItems.some(item => item.status !== 'WAITING')
+                   checkItems.some((item: any) => item.status !== 'WAITING')
           })
 
           if (hasCompletedChecks) {
+            // 检查已开始，可以在这里添加相关逻辑
             setHasStartedCheck(true)
           }
         }
@@ -184,8 +191,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
           
           // K8S模式下自动选中所有未受管主机
           const allUnmanagedHostIps = res.data
-            .filter(host => !host.managed)
-            .map(host => host.ip)
+            .filter((host: Host) => !host.managed)
+            .map((host: Host) => host.ip)
           setSelectedRowKeys(allUnmanagedHostIps)
         }
 
@@ -212,28 +219,28 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     if (checkItems.length === 0) return 'WAITING'
 
     // 如果有检查中的项，则状态为"检查中"
-    if (checkItems.some(item => item.status === 'CHECKING')) {
+    if (checkItems.some((item: any) => item.status === 'CHECKING')) {
       return 'CHECKING'
     }
 
     // 如果有等待检查的项，则状态为"等待检查"
-    if (checkItems.some(item => item.status === 'WAITING')) {
+    if (checkItems.some((item: any) => item.status === 'WAITING')) {
       return 'WAITING'
     }
 
     // 如果有失败的项，则状态为"未通过"
-    if (checkItems.some(item => item.status === 'FAILED')) {
+    if (checkItems.some((item: any) => item.status === 'FAILED')) {
       return 'FAILED'
     }
 
     // 如果所有项都是"跳过"，则状态为"已跳过"
-    if (checkItems.every(item => item.status === 'SKIPPED')) {
+    if (checkItems.every((item: any) => item.status === 'SKIPPED')) {
       return 'SKIPPED'
     }
 
     // 如果有的是跳过有的是成功，则状态为"部分通过"
-    if (checkItems.some(item => item.status === 'SKIPPED') &&
-        checkItems.some(item => item.status === 'SUCCESS')) {
+      if (checkItems.some((item: any) => item.status === 'SKIPPED') &&
+      checkItems.some((item: any) => item.status === 'SUCCESS')) {
       return 'MIXED'
     }
 
@@ -336,11 +343,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 获取成功的主机列表
   const getSuccessfulHosts = () => {
     if (depType === 'Kubernetes') {
-      return dataSource.filter(host => 
+      return dataSource.filter((host: Host) => 
         selectedRowKeys.includes(host.ip) && !host.managed
       )
     } else {
-      return dataSource.filter(host => 
+      return dataSource.filter((host: Host) => 
         selectedRowKeys.includes(host.ip) && 
         host.CheckResult && 
         host.CheckResult.code === '10001'
@@ -443,7 +450,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 主机环境校验是否完成
   const hostCheckCompleted = async (): Promise<{ hostCheckCompleted: boolean; data: string }> => {
     if (depType === 'Kubernetes') {
-      const unmanagedHosts = dataSource.filter(host => !host.managed)
+      const unmanagedHosts = dataSource.filter((host: Host) => !host.managed)
       return {
         hostCheckCompleted: unmanagedHosts.length > 0,
         data: unmanagedHosts.length > 0 ? 'K8S主机校验完成' : '没有可用的未受管主机'
@@ -468,7 +475,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   }
 
   // 获取K8S模式下的完整硬件信息
-  const getK8sHostsWithHardwareInfo = async () => {
+  const _getK8sHostsWithHardwareInfo = async () => {
     if (!clusterId) return []
     
     try {
@@ -492,7 +499,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   }
 
   // 分页变化
-  const handlePageChange = (current: number, pageSize: number) => {
+  const _handlePageChange = (current: number, pageSize: number) => {
     setPagination(prev => ({ ...prev, current, pageSize }))
   }
 
@@ -615,7 +622,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                             </div>
                           ) : (
                             <div className="space-y-4">
-                              {dataSource.map((host, index) => (
+                              {dataSource.map((host) => (
                                 <div 
                                   key={host.ip}
                                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
@@ -719,7 +726,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {dataSource.map((host, index) => {
+                          {dataSource.map((host) => {
                             const status = calculateHostStatus(host)
                             const statusDisplay = getStatusDisplay(status)
                             

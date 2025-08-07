@@ -722,6 +722,10 @@ export default function ClusterListEnhanced() {
               } : null}
               step1Data={step1Data}
               onSuccess={handleStep2Complete}
+              onPrevious={() => {
+                setStep2DialogOpen(false);
+                setSetupDialogOpen(true);
+              }}
             />
           )}
     </div>

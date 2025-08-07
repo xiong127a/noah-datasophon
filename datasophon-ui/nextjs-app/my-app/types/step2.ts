@@ -85,6 +85,7 @@ export interface ClusterStep2DialogProps {
   } | null
   step1Data: Step1Data
   onSuccess?: () => void
+  onPrevious?: () => void  // 新增：上一步回调
 }
 
 // API响应接口

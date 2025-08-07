@@ -72,6 +72,10 @@ export default function TestStep2Page() {
             console.log('Step2 完成')
             setDialogOpen(false)
           }}
+          onPrevious={() => {
+            console.log('返回上一步')
+            setDialogOpen(false)
+          }}
         />
       </div>
     </div>
