@@ -28,6 +28,10 @@ import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
 import com.datasophon.common.dto.FilterOptionsDTO;
 import com.datasophon.common.enums.ClusterType;
+import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.HostState;
+import com.datasophon.api.service.host.ClusterHostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -53,6 +57,9 @@ public class UnifiedHostController {
 
     @Autowired
     private K8sToClusterHostConverter converter;
+    
+    @Autowired
+    private ClusterHostService clusterHostService;
 
     /**
      * Step1配置完成后的主机发现接口
@@ -276,5 +283,76 @@ public class UnifiedHostController {
             .toList();
             
         return new FilterOptionsDTO(statuses, roles);
+    }
+
+    /**
+     * 校验集群所有主机状态
+     * 检查所有主机是否都满足进入下一步的条件：
+     * 1. Kubernetes集群：所有主机都是未受管且状态为Ready
+     * 2. PVM集群：根据具体业务逻辑校验
+     */
+    @GetMapping("validate-hosts-for-next-step")
+    public Result<Map<String, Object>> validateHostsForNextStep(@ClusterId Integer clusterId) {
+        log.info("开始校验集群主机状态，集群ID: {}", clusterId);
+        
+        try {
+            // 获取集群所有主机
+            List<ClusterHostDO> allHosts = clusterHostService.getHostListByClusterId(clusterId);
+            
+            if (allHosts == null || allHosts.isEmpty()) {
+                log.warn("集群没有发现任何主机，集群ID: {}", clusterId);
+                return Result.success(Map.of(
+                    "valid", false,
+                    "message", "集群中没有发现任何主机，请先完成主机发现",
+                    "totalHosts", 0,
+                    "unmanagedHosts", 0,
+                    "readyHosts", 0
+                ));
+            }
+
+            // 统计主机状态
+            long totalHosts = allHosts.size();
+            long unmanagedHosts = allHosts.stream()
+                .filter(host -> MANAGED.NO.equals(host.getManaged()))
+                .count();
+            long readyHosts = allHosts.stream()
+                .filter(host -> HostState.RUNNING.equals(host.getHostState()))
+                .count();
+            
+            log.info("主机状态统计 - 总数: {}, 未受管: {}, Ready状态: {}", totalHosts, unmanagedHosts, readyHosts);
+
+            // 校验条件：所有主机都必须是未受管且状态为Ready
+            boolean allUnmanaged = unmanagedHosts == totalHosts;
+            boolean allReady = readyHosts == totalHosts;
+            boolean valid = allUnmanaged && allReady;
+
+            String message;
+            if (valid) {
+                message = String.format("校验通过：所有 %d 台主机都是未受管状态且Ready", totalHosts);
+            } else if (!allUnmanaged) {
+                long managedCount = totalHosts - unmanagedHosts;
+                message = String.format("校验失败：存在 %d 台已受管主机，请确保所有主机都是未受管状态", managedCount);
+            } else {
+                long notReadyCount = totalHosts - readyHosts;
+                message = String.format("校验失败：存在 %d 台非Ready状态主机，请确保所有主机状态都是Ready", notReadyCount);
+            }
+
+            Map<String, Object> result = Map.of(
+                "valid", valid,
+                "message", message,
+                "totalHosts", totalHosts,
+                "unmanagedHosts", unmanagedHosts,
+                "readyHosts", readyHosts,
+                "managedHosts", totalHosts - unmanagedHosts,
+                "notReadyHosts", totalHosts - readyHosts
+            );
+
+            log.info("主机校验完成，集群ID: {}, 结果: {}", clusterId, valid ? "通过" : "失败");
+            return Result.success(result);
+
+        } catch (Exception e) {
+            log.error("校验集群主机状态失败，集群ID: {}", clusterId, e);
+            return Result.error("校验主机状态失败: " + e.getMessage());
+        }
     }
 }

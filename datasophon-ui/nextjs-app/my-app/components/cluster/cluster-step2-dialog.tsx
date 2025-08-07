@@ -121,7 +121,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       const unmanagedHostIps = filteredData
         .filter(host => {
           const hostAny = host as any
-          return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
+          return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
                  (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
         })
         .map(host => host.ip)
@@ -141,7 +141,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   const selectableCount = depType === 'Kubernetes' 
     ? filteredData.filter(host => {
         const hostAny = host as any
-        return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
+        return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
                (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
       }).length
     : filteredData.length
@@ -151,12 +151,12 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 计算统计信息 - 基于筛选后的数据
   const managedCount = filteredData.filter(host => {
     const hostAny = host as any
-    return (typeof hostAny.managed === 'boolean' && hostAny.managed === true) ||
+    return (typeof hostAny.managed === 'boolean' && hostAny.managed) ||
            (typeof hostAny.managed === 'string' && hostAny.managed === 'YES')
   }).length
   const unmanagedCount = filteredData.filter(host => {
     const hostAny = host as any
-    return (typeof hostAny.managed === 'boolean' && hostAny.managed === false) ||
+    return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
            (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
   }).length
   
@@ -519,10 +519,29 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 主机环境校验是否完成
   const hostCheckCompleted = async (): Promise<{ hostCheckCompleted: boolean; data: string }> => {
     if (depType === 'Kubernetes') {
-      const unmanagedHosts = dataSource.filter((host: Host) => !host.managed)
+      // 调用后端全量校验接口
+      try {
+        const response = await clusterApi.unifiedHost.validateForNextStep(createClusterHeaders(clusterId))
+        const result = response.data
+        
+        if (result.code === 200 && result.data) {
+          const validationResult = result.data
       return {
-        hostCheckCompleted: unmanagedHosts.length > 0,
-        data: unmanagedHosts.length > 0 ? 'K8S主机校验完成' : '没有可用的未受管主机'
+            hostCheckCompleted: validationResult.valid,
+            data: validationResult.message || '校验完成'
+          }
+        } else {
+          return {
+            hostCheckCompleted: false,
+            data: result.msg || '校验失败，请重试'
+          }
+        }
+      } catch (error) {
+        console.error('调用后端校验接口失败:', error)
+        return {
+          hostCheckCompleted: false,
+          data: '无法连接后端进行校验，请检查网络连接'
+        }
       }
     } else {
       if (!clusterId) {
@@ -842,7 +861,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                       const isSelected = selectedRowKeys.includes(host.ip)
                                       const hostAny = host as any
                                       const statusColor = (hostAny.status || 'Ready') === 'Ready' ? 'green' : 'red'
-                                      const isManaged = (typeof hostAny.managed === 'boolean' && hostAny.managed === true) ||
+                                      const isManaged = (typeof hostAny.managed === 'boolean' && hostAny.managed) ||
                                                        (typeof hostAny.managed === 'string' && hostAny.managed === 'YES')
                                       const managedStatus = isManaged ? '已受管' : '未受管'
                                       const managedColor = isManaged ? 'rose' : 'emerald'

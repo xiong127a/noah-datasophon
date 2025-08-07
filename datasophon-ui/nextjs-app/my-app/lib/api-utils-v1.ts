@@ -192,6 +192,10 @@ export const clusterApiV1 = {
       forceRefresh?: boolean
     }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_FROM_STEP1, step1Config, config),
     
+    // 校验所有主机状态（Step2下一步前的校验）
+    validateForNextStep: (config?: any) =>
+      apiV1.get(API_PATHS_V1.HOST_VALIDATE_FOR_NEXT_STEP, config),
+    
     // 获取主机列表（支持分页和筛选）
     list: (params: {
       page?: number
