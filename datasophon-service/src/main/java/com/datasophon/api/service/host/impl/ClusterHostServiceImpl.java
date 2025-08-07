@@ -264,114 +264,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         return clusterHostMapper.selectByClusterIdAndRack(clusterId, rack);
     }
 
-    @Override
-    public void saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) throws BusinessException {
-        for (HostInfo hostInfo : hostInfoList) {
-            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
-            if (ObjectUtil.isNull(hostEntity)) {
-                ClusterHostDO clusterHostDO = new ClusterHostDO();
-                clusterHostDO.setClusterId(clusterId);
-                clusterHostDO.setCreateTime(hostInfo.getCreateTime());
-                // 使用正确的主机名，而不是IP
-                clusterHostDO.setHostname(hostInfo.getHostname());
-                clusterHostDO.setIp(hostInfo.getIp());
-                clusterHostDO.setRack("/default-rack");
-                clusterHostDO.setHostState(HostState.RUNNING);
-                clusterHostDO.setManaged(MANAGED.YES);
 
-                // 从K8S API获取的完整信息
-                String arch = hostInfo.getCpuArchitecture();
-                if (StringUtils.isBlank(arch)) {
-                    arch = "x86_64";
-                    logger.warn("Host {} architecture is empty, using default: {}", hostInfo.getHostname(), arch);
-                } else {
-                    logger.info("Host {} architecture from Kubernetes API: {}", hostInfo.getHostname(), arch);
-                }
-                clusterHostDO.setCpuArchitecture(arch);
 
-                // 设置节点标签
-                clusterHostDO.setNodeLabel("default");
 
-                // 注意：在K8S模式下，硬件信息（coreNum, totalMem, totalDisk等）
-                // 应该从K8S API获取的原始ClusterHostDO中获取
-                // 但是由于HostInfo对象不包含这些信息，我们需要在调用此方法时
-                // 确保从K8S API获取的完整信息能够正确传递
-                // 建议修改调用方式，直接传递ClusterHostDO列表而不是HostInfo列表
 
-                this.save(clusterHostDO);
-                logger.info("Successfully saved Kubernetes host {} with info: hostname={}, ip={}, arch={}",
-                        hostInfo.getHostname(), hostInfo.getHostname(), hostInfo.getIp(), arch);
-            }
-        }
-    }
 
-    /**
-     * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
-     */
-    @Override
-    public void saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId)
-            throws BusinessException {
-        for (ClusterHostDO kubernetesHost : kubernetesHosts) {
-            ClusterHostDO hostEntity = this.getClusterHostByHostname(kubernetesHost.getHostname());
-            if (ObjectUtil.isNull(hostEntity)) {
-                ClusterHostDO clusterHostDO = getClusterHostDO(clusterId, kubernetesHost);
-
-                this.save(clusterHostDO);
-                logger.info(
-                        "Successfully saved Kubernetes host {} with complete info: hostname={}, ip={}, arch={}, cores={}, mem={}GB, disk={}GB",
-                        kubernetesHost.getHostname(), kubernetesHost.getHostname(), kubernetesHost.getIp(),
-                        kubernetesHost.getCpuArchitecture(), kubernetesHost.getCoreNum(),
-                        kubernetesHost.getTotalMem(), kubernetesHost.getTotalDisk());
-            }
-        }
-    }
-
-    private static ClusterHostDO getClusterHostDO(Integer clusterId, ClusterHostDO kubernetesHost) {
-        ClusterHostDO clusterHostDO = new ClusterHostDO();
-        clusterHostDO.setClusterId(clusterId);
-        clusterHostDO.setCreateTime(kubernetesHost.getCreateTime());
-        // 使用正确的主机名，而不是IP
-        clusterHostDO.setHostname(kubernetesHost.getHostname());
-        clusterHostDO.setIp(kubernetesHost.getIp());
-        clusterHostDO.setRack("/default-rack");
-        clusterHostDO.setHostState(HostState.RUNNING);
-        clusterHostDO.setManaged(MANAGED.YES);
-
-        // 从K8S API获取的完整硬件信息
-        clusterHostDO.setCpuArchitecture(kubernetesHost.getCpuArchitecture());
-        clusterHostDO.setCoreNum(kubernetesHost.getCoreNum());
-        clusterHostDO.setTotalMem(kubernetesHost.getTotalMem());
-        clusterHostDO.setTotalDisk(kubernetesHost.getTotalDisk());
-        clusterHostDO.setUsedMem(kubernetesHost.getUsedMem());
-        clusterHostDO.setUsedDisk(kubernetesHost.getUsedDisk());
-
-        // 设置节点标签
-        clusterHostDO.setNodeLabel("default");
-        return clusterHostDO;
-    }
-
-    /**
-     * 获取K8S模式下的完整硬件信息
-     */
-    @Override
-    public List<ClusterHostDO> getK8sHostsWithHardwareInfo(Integer clusterId) {
-        try {
-            // 从缓存中获取K8S完整硬件信息
-            Object cachedData = CacheUtils.get(clusterId + "_K8S_HOSTS_FOR_SAVE");
-            if (cachedData != null) {
-                @SuppressWarnings("unchecked")
-                List<ClusterHostDO> kubernetesHosts = (List<ClusterHostDO>) cachedData;
-                logger.info("获取到K8S完整硬件信息，共{}台主机", kubernetesHosts.size());
-                return kubernetesHosts;
-            } else {
-                logger.warn("未找到K8S完整硬件信息缓存");
-                return new ArrayList<>();
-            }
-        } catch (Exception e) {
-            logger.error("获取K8S完整硬件信息失败", e);
-            throw new BusinessException(500, "获取K8S完整硬件信息失败: " + e.getMessage());
-        }
-    }
 
     @Override
     public void updateBatchHostStatus(List<ClusterHostDO> hosts) {

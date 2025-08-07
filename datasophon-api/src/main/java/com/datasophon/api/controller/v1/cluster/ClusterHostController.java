@@ -19,7 +19,6 @@ package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.dto.Result;
-import com.datasophon.common.model.HostInfo;
 import com.datasophon.dao.entity.ClusterHostDO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -32,8 +31,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import io.micrometer.core.annotation.Timed;
 
@@ -72,24 +69,7 @@ public class ClusterHostController {
         }
     }
 
-    /**
-     * 查询集群所有主机
-     */
-    @GetMapping("/list")
-    public Result<Object> list(@ClusterId Integer clusterId,
-            @RequestParam("hostname") String hostname,
-            @RequestParam("ip") String ip,
-            @RequestParam("cpuArchitecture") String cpuArchitecture,
-            @RequestParam("hostState") Integer hostState,
-            @RequestParam("orderField") String orderField,
-            @RequestParam("orderType") String orderType,
-            @RequestParam("page") Integer page,
-            @RequestParam("pageSize") Integer pageSize) {
-        com.datasophon.common.model.PageResult<ClusterHostDO> pageResult = clusterHostService.listByPage(clusterId,
-                hostname, ip, cpuArchitecture, hostState, orderField, orderType,
-                page, pageSize);
-        return Result.success(pageResult.getRecords(), pageResult.getTotal());
-    }
+
 
     @GetMapping("/getRoleListByHostname")
     public Result<Object> getRoleListByHostname(
@@ -160,33 +140,6 @@ public class ClusterHostController {
         }
     }
 
-    /**
-     * Kubernetes配置集群时添加主机
-     */
-    @RequestMapping(value = "/saveKubernetesHost", method = RequestMethod.POST)
-    public Result<Void> saveKubernetesHost(@RequestBody List<HostInfo> hostInfoList,
-            @ClusterId Integer clusterId) {
-        clusterHostService.saveKubernetesHost(hostInfoList, clusterId);
-        return Result.success();
-    }
 
-    /**
-     * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
-     */
-    @RequestMapping(value = "/saveKubernetesHostDirect", method = RequestMethod.POST)
-    public Result<Void> saveKubernetesHostDirect(@RequestBody List<ClusterHostDO> kubernetesHosts,
-            @ClusterId Integer clusterId) {
-        clusterHostService.saveKubernetesHostDirect(kubernetesHosts, clusterId);
-        return Result.success();
-    }
-
-    /**
-     * 获取K8S模式下的完整硬件信息
-     */
-    @GetMapping("/getK8sHostsWithHardwareInfo")
-    public Result<List<ClusterHostDO>> getK8sHostsWithHardwareInfo(@ClusterId Integer clusterId) {
-        List<ClusterHostDO> hostList = clusterHostService.getK8sHostsWithHardwareInfo(clusterId);
-        return Result.success(hostList);
-    }
 
 }

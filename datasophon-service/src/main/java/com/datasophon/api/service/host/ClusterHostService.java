@@ -19,7 +19,6 @@ package com.datasophon.api.service.host;
 
 import com.datasophon.common.dto.ClusterRackDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.exception.BusinessException;
@@ -68,19 +67,7 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
 
     List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack);
 
-    void saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) throws BusinessException;
 
-    /**
-     * 直接保存K8S主机信息（使用从K8S API获取的完整ClusterHostDO信息）
-     *
-     * @throws BusinessException 保存失败时抛出异常
-     */
-    void saveKubernetesHostDirect(List<ClusterHostDO> kubernetesHosts, Integer clusterId) throws BusinessException;
-
-    /**
-     * 获取K8S模式下的完整硬件信息
-     */
-    List<ClusterHostDO> getK8sHostsWithHardwareInfo(Integer clusterId);
 
     /**
      * 批量更新主机状态信息

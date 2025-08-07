@@ -1631,8 +1631,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 hostInfoList.add(hostInfo);
             }
 
-            // 缓存K8S主机信息，用于后续保存
-            CacheUtils.put(clusterId + "_K8S_HOSTS_FOR_SAVE", kubernetesHostsForSave);
+
 
             // 使用HostUtils的统一排序方法对IP进行排序
             List<String> sortedIps = HostUtils.sortIpAddresses(hostInfoList.stream()

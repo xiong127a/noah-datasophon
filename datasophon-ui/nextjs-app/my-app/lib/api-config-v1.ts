@@ -89,10 +89,7 @@ export const API_PATHS_V1 = {
   START_HOST_CHECK: `${API_BASE}/host/install/startHostCheck`,
   GET_WORKER_LOG: `${API_BASE}/host/install/getWorkerLog`,
   
-  // Kubernetes主机相关 - v1
-  SAVE_KUBERNETES_HOST: `${API_BASE}/cluster/host/saveKubernetesHost`,
-  SAVE_KUBERNETES_HOST_DIRECT: `${API_BASE}/cluster/host/saveKubernetesHostDirect`,
-  GET_K8S_HOSTS_WITH_HARDWARE_INFO: `${API_BASE}/cluster/host/getK8sHostsWithHardwareInfo`,
+
   
   // 主机检查相关 - v1
   REHOST_CHECK: `${API_BASE}/host/check/rehostCheck`,
