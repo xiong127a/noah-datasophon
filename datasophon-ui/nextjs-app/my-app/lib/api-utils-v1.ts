@@ -184,7 +184,7 @@ export const clusterApiV1 = {
       hostState?: number
       orderField?: string
       orderType?: string
-    }) => apiV1.get(API_PATHS_V1.HOST_LIST, params),
+    }, config?: any) => apiV1.get(API_PATHS_V1.HOST_LIST, params, config),
     
     // 导入主机
     import: (data: {

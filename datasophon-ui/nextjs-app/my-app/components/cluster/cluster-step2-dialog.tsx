@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { 
   X, ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
   AlertCircle, Info, Clock, Minus, AlertTriangle,
@@ -14,6 +14,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
+import { createClusterHeaders } from '@/lib/cluster-id-header'
 import type { 
   ClusterStep2DialogProps, 
   Host, 
@@ -62,9 +63,17 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 轮询定时器
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const firstDataLoadedRef = useRef(false)
+  
+  // 稳定的分页参数引用
+  const paginationRef = useRef(pagination)
 
   // 集群ID
   const clusterId = cluster?.id
+
+  // 同步分页参数到ref
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
 
   // 计算统计信息
   const managedCount = dataSource.filter(host => host.managed).length
@@ -82,7 +91,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   console.debug('Has failed items:', hasFailedItems)
 
   // 获取主机列表
-  const getEnvironmentList = useCallback(async (showLoading = true) => {
+  const getEnvironmentList = async (showLoading = true) => {
     if (isRequesting) return
     
     if (showLoading) setLoading(true)
@@ -98,11 +107,14 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       // 使用新的统一主机管理API
       try {
         const params = {
-          page: pagination.current,
-          pageSize: pagination.pageSize
+          page: paginationRef.current.current,
+          pageSize: paginationRef.current.pageSize
         }
         
-        response = await clusterApi.unifiedHost.list(params)
+        // 创建包含集群ID的请求头
+        const headers = createClusterHeaders(clusterId)
+        
+        response = await clusterApi.unifiedHost.list(params, { headers })
         res = response.data
         
         // 统一API响应格式处理
@@ -155,7 +167,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       setLoading(false)
       setIsRequesting(false)
     }
-  }, [clusterId, pagination, depType, isRequesting])
+  }
+
+  // 创建稳定的函数引用
+  const getEnvironmentListRef = useRef(getEnvironmentList)
+  getEnvironmentListRef.current = getEnvironmentList
 
   // 计算主机的整体状态
   const calculateHostStatus = (host: Host): HostStatus => {
@@ -254,7 +270,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // K8S模式重新校验主机
   const refreshK8sHosts = () => {
     console.log('refreshK8sHosts方法被调用了！')
-    getEnvironmentList(true)
+    getEnvironmentListRef.current(true)
   }
 
   // 重试环境检查
@@ -274,7 +290,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
       await clusterApi.hostCheck.retry(params)
       toast.success('操作成功')
-      getEnvironmentList()
+      getEnvironmentListRef.current()
     } catch (error) {
       console.error('重试失败:', error)
       toast.error('重试失败')
@@ -430,9 +446,9 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 组件挂载时获取数据
   useEffect(() => {
     if (open && clusterId) {
-      getEnvironmentList()
+      getEnvironmentListRef.current()
     }
-  }, [open, clusterId, getEnvironmentList])
+  }, [open, clusterId])
 
   // 设置轮询（仅PVM模式）
   useEffect(() => {
@@ -448,7 +464,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     // PVM模式下设置轮询
     if (open && clusterId) {
       timerRef.current = setInterval(() => {
-        getEnvironmentList(false)
+        getEnvironmentListRef.current(false)
       }, 3000)
     }
 
@@ -458,7 +474,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         timerRef.current = null
       }
     }
-  }, [open, clusterId, depType, getEnvironmentList])
+  }, [open, clusterId, depType])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
