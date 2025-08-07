@@ -618,9 +618,9 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                   </div>
                                 </div>
                                 
-                                {/* 节点列表容器 */}
-                                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
-                                  <div className="p-4 space-y-3">
+                                {/* 节点列表容器 - 提高可视区域 */}
+                                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 max-h-[800px]">
+                                  <div className="p-3 space-y-2">
                                     {dataSource.map((host, index) => {
                                       const isSelected = selectedRowKeys.includes(host.ip)
                                       const statusColor = (host.status || 'Ready') === 'Ready' ? 'green' : 'red'
@@ -630,13 +630,13 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                       return (
                                         <div 
                                           key={host.ip}
-                                          className={`group relative transform transition-all duration-200 ease-out hover:scale-[1.02] ${
-                                            isSelected ? 'scale-[1.02]' : ''
+                                          className={`group relative transform transition-all duration-200 ease-out hover:scale-[1.01] ${
+                                            isSelected ? 'scale-[1.01]' : ''
                                           }`}
                                         >
-                                          {/* 主卡片容器 */}
+                                          {/* 主卡片容器 - 紧凑设计 */}
                                           <div 
-                                            className={`relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+                                            className={`relative rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden ${
                                               isSelected 
                                                 ? 'border-blue-300 bg-gradient-to-br from-blue-50 via-white to-blue-50/50 shadow-lg shadow-blue-100/50' 
                                                 : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md shadow-sm'
@@ -653,40 +653,63 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                               isSelected ? 'bg-gradient-to-b from-blue-500 to-blue-600' : 'bg-transparent'
                                             }`} />
                                             
-                                            <div className="grid grid-cols-12 gap-6 px-6 py-5">
-                                              {/* 节点名称 */}
-                                              <div className="col-span-3 flex items-center space-x-4">
+                                            <div className="grid grid-cols-12 gap-4 px-5 py-4">
+                                              {/* 节点名称 + 资源信息 */}
+                                              <div className="col-span-3 flex items-center space-x-3">
                                                 {/* 选择指示器 */}
-                                                <div className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                                                <div className={`w-4 h-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                                                   isSelected 
                                                     ? 'border-blue-500 bg-blue-500' 
                                                     : 'border-gray-300 group-hover:border-blue-300'
                                                 }`}>
                                                   {isSelected && (
-                                                    <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                    <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 20 20" fill="currentColor">
                                                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                     </svg>
                                                   )}
                                                 </div>
                                                 
                                                 <div className="flex-1 min-w-0">
-                                                  <div className="font-semibold text-gray-900 truncate text-base">
+                                                  <div className="font-semibold text-gray-900 truncate text-sm">
                                                     {host.hostname || host.ip}
                                                   </div>
-                                                  <div className="text-sm text-gray-500 font-mono truncate">
+                                                  <div className="text-xs text-gray-500 font-mono truncate mb-1">
                                                     {host.ip}
+                                                  </div>
+                                                  {/* 资源信息 - 小字显示 */}
+                                                  <div className="text-[10px] text-gray-400 space-y-0.5 font-mono">
+                                                    <div className="flex items-center space-x-3">
+                                                      <span className="inline-flex items-center">
+                                                        <span className="w-1 h-1 rounded-full bg-blue-400 mr-1"></span>
+                                                        CPU: {host.coreNum || 0}C
+                                                      </span>
+                                                      <span className="inline-flex items-center">
+                                                        <span className="w-1 h-1 rounded-full bg-green-400 mr-1"></span>
+                                                        MEM: {host.totalMem || 0}G
+                                                      </span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-3">
+                                                      <span className="inline-flex items-center">
+                                                        <span className="w-1 h-1 rounded-full bg-orange-400 mr-1"></span>
+                                                        DISK: {host.totalDisk || 0}G
+                                                      </span>
+                                                      <span className="inline-flex items-center">
+                                                        <span className="w-1 h-1 rounded-full bg-purple-400 mr-1"></span>
+                                                        ARCH: {(host.cpuArchitecture || 'unknown').slice(0, 6)}
+                                                      </span>
+                                                    </div>
                                                   </div>
                                                 </div>
                                               </div>
                                               
                                               {/* 状态 */}
                                               <div className="col-span-2 flex items-center">
-                                                <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
                                                   statusColor === 'green'
                                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                                     : 'bg-rose-100 text-rose-800 border border-rose-200'
                                                 }`}>
-                                                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                                                  <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                                                     statusColor === 'green' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
                                                   }`}></div>
                                                   {host.status || 'Ready'}
@@ -699,7 +722,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                                   {(host.roles || host.nodeRoles || '<none>').split(',').map((role, idx) => (
                                                     <span 
                                                       key={idx}
-                                                      className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-200 ${
                                                         role.trim() === '<none>' || role.trim() === '' 
                                                           ? 'bg-gray-100 text-gray-600 border border-gray-200'
                                                           : role.includes('control-plane') || role.includes('master')
@@ -715,17 +738,17 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                               
                                               {/* 运行时间 */}
                                               <div className="col-span-2 flex items-center">
-                                                <div className="text-sm text-gray-700 font-mono">
+                                                <div className="text-xs text-gray-700 font-mono">
                                                   {host.age || host.nodeAge || '43d'}
                                                 </div>
                                               </div>
                                               
                                               {/* 版本和状态 */}
                                               <div className="col-span-2 flex items-center justify-between">
-                                                <div className="text-sm text-gray-700 font-mono">
+                                                <div className="text-xs text-gray-700 font-mono">
                                                   {host.version || host.kubeVersion || 'v1.28.9'}
                                                 </div>
-                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-200 ${
+                                                <div className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all duration-200 ${
                                                   managedColor === 'emerald'
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                                     : 'bg-rose-50 text-rose-700 border-rose-200'
