@@ -47,6 +47,12 @@ public class K8sToClusterHostConverter {
             return null;
         }
 
+        // 构造K8S信息的nodeLabel格式：kubernetes-node|roles|version|age
+        String nodeLabel = String.format("kubernetes-node|%s|%s|%s", 
+                k8sNodeInfo.getRoles() != null ? k8sNodeInfo.getRoles() : "<none>",
+                k8sNodeInfo.getKubeVersion() != null ? k8sNodeInfo.getKubeVersion() : "unknown",
+                k8sNodeInfo.getAge() != null ? k8sNodeInfo.getAge() : "unknown");
+
         return ClusterHostDO.builder()
                 .clusterId(clusterId)
                 .ip(k8sNodeInfo.getIp())
@@ -59,9 +65,9 @@ public class K8sToClusterHostConverter {
                 .cpuArchitecture(k8sNodeInfo.getCpuArchitecture())
                 .createTime(k8sNodeInfo.getCreateTime())
                 .hostState(convertToHostState(k8sNodeInfo.getStatus()))
-                .managed(MANAGED.YES)
+                .managed(MANAGED.NO) // K8S新发现的节点初始状态为未受管
                 .rack("/default-rack") // 默认机架
-                .nodeLabel("default") // 默认节点标签
+                .nodeLabel(nodeLabel) // 保存K8S信息
                 .build();
     }
 
