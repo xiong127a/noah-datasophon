@@ -1,73 +1,57 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package com.datasophon.common.dto;
-
-import lombok.Builder;
-import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 主机发现结果DTO
- * 用于前端展示，包含HostInfoDTO列表而不是ClusterHostDO
+ * 主机发现结果DTO - 使用Java 21 Record特性
+ * 用于API返回给前端的数据结构
  */
-@Data
-@Builder
-public class HostDiscoveryResultDTO {
+public record HostDiscoveryResultDTO(
+    /*
+      发现的主机列表
+     */
+    List<HostInfoDTO> hosts,
+    
+    /*
+      总数
+     */
+    Integer totalCount,
+    
+    /*
+      是否成功
+     */
+    Boolean success,
+    
+    /*
+      错误消息（如果有）
+     */
+    String errorMessage,
+    
+    /*
+      元数据信息
+     */
+    Map<String, Object> metadata,
+    
+    /*
+      发现耗时（毫秒）
+     */
+    Long discoveryTime
+) {
+    /**
+     * 成功结果的构造器
+     */
+    public static HostDiscoveryResultDTO success(List<HostInfoDTO> hosts, 
+                                                Integer totalCount,
+                                                Map<String, Object> metadata, 
+                                                Long discoveryTime) {
+        return new HostDiscoveryResultDTO(hosts, totalCount, true, null, metadata, discoveryTime);
+    }
     
     /**
-     * 发现的主机列表（DTO格式）
+     * 失败结果的构造器
      */
-    private List<HostInfoDTO> hosts;
-    
-    /**
-     * 发现总数
-     */
-    private Integer totalCount;
-    
-    /**
-     * 是否成功
-     */
-    private Boolean success;
-    
-    /**
-     * 错误信息
-     */
-    private String errorMessage;
-    
-    /**
-     * 额外的元数据信息
-     */
-    private Map<String, Object> metadata;
-    
-    /**
-     * 发现耗时（毫秒）
-     */
-    private Long discoveryTime;
-    
-    /**
-     * 策略类型
-     */
-    private String strategyType;
-    
-    /**
-     * 发现数量
-     */
-    private Integer discoveredCount;
+    public static HostDiscoveryResultDTO error(String errorMessage) {
+        return new HostDiscoveryResultDTO(List.of(), 0, false, errorMessage, Map.of(), 0L);
+    }
 }

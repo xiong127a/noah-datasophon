@@ -22,6 +22,7 @@ import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.common.enums.HostState;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.kubernetes.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -228,7 +229,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         if (hosts != null) {
             long readyHosts = hosts.stream()
                     .filter(host -> hostnames.contains(host.getHostname()))
-                    .filter(host -> "Ready".equals(host.getHostState()))
+                    .filter(host -> HostState.RUNNING.equals(host.getHostState()))
                     .count();
             
             result.put("checkedHosts", hostnames.size());
@@ -250,7 +251,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
         if (hosts != null && !hosts.isEmpty()) {
             long readyHosts = hosts.stream()
-                    .filter(host -> "Ready".equals(host.getHostState()))
+                    .filter(host -> HostState.RUNNING.equals(host.getHostState()))
                     .count();
             
             result.put("totalHosts", hosts.size());
@@ -304,7 +305,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
                 .filter(host -> {
                     // 主机状态筛选
                     if (request.getHostState() != null) {
-                        return request.getHostState().equals(host.getHostState());
+                        return request.getHostState().equals(host.getHostState().getValue());
                     }
                     return true;
                 })

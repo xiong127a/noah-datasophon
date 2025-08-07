@@ -20,11 +20,11 @@ package com.datasophon.api.controller.v1.host;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
-
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
-import com.datasophon.api.service.host.strategy.impl.KubernetesHostStrategy;
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
+import com.datasophon.common.dto.HostDiscoveryResultDTO;
+import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
 import com.datasophon.common.enums.ClusterType;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,10 +51,7 @@ public class UnifiedHostController {
     private UnifiedHostManagementService hostManagementService;
 
     @Autowired
-    private K8sToClusterHostConverter k8sToClusterHostConverter;
-
-    @Autowired
-    private KubernetesHostStrategy kubernetesHostStrategy;
+    private K8sToClusterHostConverter converter;
 
     /**
      * Step1配置完成后的主机发现接口
@@ -64,7 +62,7 @@ public class UnifiedHostController {
      * 2. K8S模式：调用K8S API获取节点列表
      */
     @PostMapping("discover-from-step1")
-    public Result<HostDiscoveryResult> discoverHostsFromStep1Configuration(
+    public Result<HostDiscoveryResultDTO> discoverHostsFromStep1Configuration(
             @RequestBody Step1ConfigurationDto step1Config,
             @ClusterId Integer clusterId) {
         
@@ -86,7 +84,11 @@ public class UnifiedHostController {
             
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
-                return Result.success(result);
+                
+                // 转换为前端需要的DTO格式
+                HostDiscoveryResultDTO responseDto = convertToHostDiscoveryResultDTO(result, clusterId, step1Config.getClusterType());
+                
+                return Result.success(responseDto);
             } else {
                 log.error("主机发现失败，集群ID: {}, 错误: {}", clusterId, result.getErrorMessage());
                 return Result.error(result.getErrorMessage());
@@ -206,7 +208,7 @@ public class UnifiedHostController {
                         } else {
                             count += 1;
                         }
-                    } catch (Exception e) {
+        } catch (Exception e) {
                         count += 1; // 解析失败时按1个计算
                     }
                 } else if (line.contains(",")) {
@@ -219,5 +221,27 @@ public class UnifiedHostController {
             }
         }
         return count;
+    }
+
+    /**
+     * 将内部结果转换为前端需要的DTO格式 - 使用Java 21 Pattern Matching
+     */
+    private HostDiscoveryResultDTO convertToHostDiscoveryResultDTO(
+            HostDiscoveryResult result, Integer clusterId, ClusterType clusterType) {
+        
+        // 转换ClusterHostDO到HostInfoDTO
+        List<HostInfoDTO> hostDtos = result.getHosts().stream()
+            .map(host -> converter.convertClusterHostToDTO(host))
+            .toList(); // Java 16+ 新特性，替代collect(Collectors.toList())
+        
+        // 构造元数据 - 使用Map.of简化
+        var metadata = Map.<String, Object>of(
+            "discoveredCount", result.getTotalCount(),
+            "strategyType", clusterType.getCode()
+        );
+        
+        return result.getSuccess() 
+            ? HostDiscoveryResultDTO.success(hostDtos, result.getTotalCount(), metadata, result.getDiscoveryTime())
+            : HostDiscoveryResultDTO.error(result.getErrorMessage());
     }
 }
