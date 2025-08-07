@@ -30,6 +30,7 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.Set;
 import org.springframework.stereotype.Service;
@@ -80,6 +81,7 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
                     frame.setFrameServiceList(frameServiceGroupBys.get(frame.getId()));
                     return frameInfoConverter.entityToDto(frame);
                 })
+                .sorted(Comparator.comparing(FrameInfoDTO::frameCode))
                 .toList();
     }
 
