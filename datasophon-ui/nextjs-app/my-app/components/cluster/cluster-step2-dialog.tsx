@@ -137,8 +137,6 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         // 统一API响应格式处理
         if (res.code === 200) {
           // 新API返回的数据结构：res.data.hosts
-          console.log('API返回的完整数据:', res)
-          console.log('主机数据:', res.data?.hosts)
           setDataSource(res.data?.hosts || [])
           
           // 更新分页信息和队列状态
@@ -171,7 +169,6 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
             const allUnmanagedHostIps = res.data.hosts
               .filter((host: Host) => host.managed === 'NO')
               .map((host: Host) => host.ip)
-            console.log('K8S模式自动选中的主机IP:', allUnmanagedHostIps)
             setSelectedRowKeys(allUnmanagedHostIps)
           }
         } else {
@@ -502,12 +499,12 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden flex flex-col p-0 gap-0">
+      <DialogContent className="!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-64px),1000px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,1000px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden flex flex-col p-0 gap-0">
         <DialogTitle className="sr-only">
           主机环境校验 - {cluster?.clusterName}
         </DialogTitle>
         
-        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
+        <div className="flex h-full max-h-[min(calc(100vh-64px),1000px)] sm:max-h-[min(95vh,1000px)]">
           {/* 左侧导航 */}
           <ClusterWizardSidebar 
             steps={steps}
@@ -547,49 +544,55 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
             <div className="flex-1 overflow-hidden p-6">
               {depType === 'Kubernetes' ? (
                 // K8S模式内容
-                <div className="h-full flex flex-col space-y-6">
-                  {/* 操作区域 */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        <Button 
-                          onClick={refreshK8sHosts}
-                          disabled={loading}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          {loading ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                          )}
-                          重新校验
-                        </Button>
-                        <span className="text-sm text-gray-600">
-                          点击重新校验以刷新Kubernetes集群中的主机信息
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
+                <div className="h-full flex flex-col">
                   <div className="flex-1 grid grid-cols-4 gap-6 min-h-0">
                     {/* 主机列表表格 */}
                     <div className="col-span-3">
                       <Card className="h-full">
                         <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">主机列表</CardTitle>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">
+                              主机列表
+                              {dataSource.length > 0 && (
+                                <span className="ml-2 text-sm font-normal text-gray-500">
+                                  （共 {dataSource.length} 台）
+                                </span>
+                              )}
+                            </CardTitle>
+                            <Button 
+                              onClick={refreshK8sHosts}
+                              disabled={loading}
+                              variant="outline"
+                              size="sm"
+                              className="ml-4"
+                            >
+                              {loading ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                              )}
+                              重新校验
+                            </Button>
+                          </div>
                         </CardHeader>
-                        <CardContent className="pt-0 h-full">
+                        <CardContent className="pt-0 h-full flex flex-col">
                           {loading ? (
                             <div className="flex items-center justify-center h-64">
                               <Loader2 className="w-6 h-6 animate-spin mr-2" />
                               <span>加载中...</span>
                             </div>
+                          ) : dataSource.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                              <div className="text-4xl mb-4">🖥️</div>
+                              <div className="text-lg mb-2">暂无主机数据</div>
+                              <div className="text-sm">请检查Kubernetes集群配置或点击重新校验</div>
+                            </div>
                           ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-3 flex-1 overflow-y-auto max-h-[650px]">
                               {dataSource.map((host) => (
                                 <div 
                                   key={host.ip}
-                                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                                     selectedRowKeys.includes(host.ip) 
                                       ? 'border-blue-500 bg-blue-50' 
                                       : 'border-gray-200 hover:border-gray-300'
@@ -680,16 +683,29 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                   {/* 主机列表 */}
                   <Card className="flex-1">
                     <CardHeader className="pb-4">
-                      <CardTitle className="text-lg">主机环境校验列表</CardTitle>
+                      <CardTitle className="text-lg">
+                        主机环境校验列表
+                        {dataSource.length > 0 && (
+                          <span className="ml-2 text-sm font-normal text-gray-500">
+                            （共 {dataSource.length} 台）
+                          </span>
+                        )}
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0 h-full">
+                    <CardContent className="pt-0 h-full flex flex-col">
                       {loading ? (
                         <div className="flex items-center justify-center h-64">
                           <Loader2 className="w-6 h-6 animate-spin mr-2" />
                           <span>加载中...</span>
                         </div>
+                      ) : dataSource.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                          <div className="text-4xl mb-4">🖥️</div>
+                          <div className="text-lg mb-2">暂无主机数据</div>
+                          <div className="text-sm">请先添加主机或检查网络连接</div>
+                        </div>
                       ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-3 flex-1 overflow-y-auto max-h-[650px]">
                           {dataSource.map((host) => {
                             const status = calculateHostStatus(host)
                             const statusDisplay = getStatusDisplay(status)
@@ -697,7 +713,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                             return (
                               <div 
                                 key={host.ip}
-                                className={`p-4 border rounded-lg transition-colors ${
+                                className={`p-3 border rounded-lg transition-colors ${
                                   selectedRowKeys.includes(host.ip) 
                                     ? 'border-blue-500 bg-blue-50' 
                                     : 'border-gray-200 hover:border-gray-300'
