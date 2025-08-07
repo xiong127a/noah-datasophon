@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API版本化配置
-export const API_BASE_URL = "http://192.168.200.3:8081/ddh"; // 包含context-path
+export const API_BASE_URL = "http://localhost:8081/ddh"; // 包含context-path
 export const API_PREFIX = "/api"; // 移除重复的/ddh，因为baseURL已包含
 export const API_VERSION = "v1"; // 统一版本管理
 export const API_BASE = `${API_PREFIX}/${API_VERSION}`; // /api/v1
