@@ -108,7 +108,7 @@ export default function ClusterFramework() {
   const fetchFrameworks = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.post(API_PATHS.FRAME_LIST, {})
+      const response = await apiClient.get(API_PATHS.FRAME_LIST, {})
       if (response.data.code === 200) {
         const frameList = response.data.data || []
         setFrameworks(frameList)

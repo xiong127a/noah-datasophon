@@ -81,7 +81,7 @@ export default function CreateClusterDialogEnhanced({
   const fetchFrameworks = async () => {
     setFrameworkLoading(true)
     try {
-      const response = await apiClient.post(API_PATHS.FRAME_LIST, {})
+      const response = await apiClient.get(API_PATHS.FRAME_LIST, {})
       if (response.data && response.data.code === 200) {
         setFrameworks(response.data.data || [])
       } else {
