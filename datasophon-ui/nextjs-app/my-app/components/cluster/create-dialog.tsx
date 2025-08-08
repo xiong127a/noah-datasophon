@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
+import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
 
 interface CreateClusterDialogProps {
   open: boolean
@@ -36,6 +37,21 @@ export default function CreateClusterDialogEnhanced({
   onSuccess,
   editData = null 
 }: CreateClusterDialogProps) {
+  // 简单JWT解析（仅用于前端读取用户名/uid，非安全用途）
+  const parseJwt = (token: string | null) => {
+    if (!token) return null
+    try {
+      const base64Url = token.split('.')[1]
+      if (!base64Url) return null
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      }).join(''))
+      return JSON.parse(jsonPayload)
+    } catch {
+      return null
+    }
+  }
   const [formData, setFormData] = useState({
     clusterName: "",
     clusterCode: "",
@@ -123,14 +139,38 @@ export default function CreateClusterDialogEnhanced({
     if (formData.clusterName && formData.clusterCode && formData.clusterFrame && formData.depType) {
       setLoading(true)
       try {
-        // 获取当前用户信息（修复localStorage key）
+        // 获取当前用户信息（容错多种字段命名）
         const userStr = typeof window !== 'undefined' ? localStorage.getItem('user_info') : null
-        const currentUser = userStr ? JSON.parse(userStr) : null
+        let currentUserRaw: any = userStr ? JSON.parse(userStr) : null
+        const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null
+        const claims: any = parseJwt(token)
+        const hasToken = !!token
 
-        // 检查用户登录状态
-        if (!currentUser || !currentUser.id) {
-          alert('用户登录信息异常，请重新登录')
-          console.error('用户信息异常:', { userStr, currentUser })
+        // 若无本地用户信息或缺少数值型ID，则尝试向后端获取并缓存
+        if (hasToken && (!currentUserRaw || (currentUserRaw && currentUserRaw.id == null))) {
+          try {
+            const resp = await apiV1.get(API_PATHS_V1.USER_INFO)
+            const rdata: any = resp?.data
+            if (rdata && (rdata.code === 200 || rdata.success) && rdata.data) {
+              currentUserRaw = rdata.data
+              localStorage.setItem('user_info', JSON.stringify(currentUserRaw))
+            }
+          } catch (e) {
+            console.warn('获取后端用户信息失败，继续使用JWT信息兜底')
+          }
+        }
+
+        // 组合用户名与ID（ID需为数字型）
+        const username = (currentUserRaw?.username ?? currentUserRaw?.userName ?? currentUserRaw?.name ?? claims?.sub ?? 'system') as string
+        const userIdCandidate = currentUserRaw?.id ?? currentUserRaw?.userId ?? currentUserRaw?.uid ?? claims?.uid ?? null
+        const numericUserId = typeof userIdCandidate === 'number'
+          ? userIdCandidate
+          : (typeof userIdCandidate === 'string' && /^\d+$/.test(userIdCandidate) ? parseInt(userIdCandidate, 10) : null)
+
+        // 检查用户登录状态（允许无userId时继续，但不绑定管理员）
+        if (!hasToken) {
+          alert('登录状态已失效，请先登录后再创建集群')
+          console.error('缺少jwt_token，user_info=', currentUserRaw)
           return
         }
 
@@ -139,11 +179,12 @@ export default function CreateClusterDialogEnhanced({
           clusterCode: formData.clusterCode.trim(),
           clusterFrame: formData.clusterFrame,
           depType: formData.depType,
-          createBy: currentUser.username,
-          // 默认将当前用户设置为集群管理员
-          clusterManagerList: [{
-            id: currentUser.id
-          }]
+          createBy: username,
+        }
+
+        // 仅在ID为数字时，设置为集群管理员（后端要求Integer）
+        if (numericUserId !== null) {
+          params.clusterManagerList = [{ id: numericUserId }]
         }
 
         // 如果是编辑模式，添加集群ID

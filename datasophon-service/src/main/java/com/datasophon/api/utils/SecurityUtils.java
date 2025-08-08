@@ -110,7 +110,7 @@ public class SecurityUtils implements ApplicationContextAware {
             }
 
             // 获取用户名
-            String username = null;
+            String username;
             if (principal instanceof UserDetails) {
                 username = ((UserDetails) principal).getUsername();
             } else if (principal instanceof String) {
@@ -125,14 +125,12 @@ public class SecurityUtils implements ApplicationContextAware {
                 try {
                     // 通过Spring上下文获取用户服务
                     Object userService = applicationContext.getBean("userInfoService");
-                    if (userService != null) {
-                        // 通过反射调用getUserByUsername方法
-                        java.lang.reflect.Method method = userService.getClass().getMethod("getUserByUsername",
-                                String.class);
-                        Object result = method.invoke(userService, username);
-                        if (result instanceof UserInfoEntity) {
-                            return (UserInfoEntity) result;
-                        }
+                    // 通过反射调用getUserByUsername方法
+                    java.lang.reflect.Method method = userService.getClass().getMethod("getUserByUsername",
+                            String.class);
+                    Object result = method.invoke(userService, username);
+                    if (result instanceof UserInfoEntity) {
+                        return (UserInfoEntity) result;
                     }
                 } catch (Exception e) {
                     logger.error("通过用户名获取用户信息失败: {}", username, e);

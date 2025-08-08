@@ -18,12 +18,14 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.converter.ClusterRoleUserConverter;
+import com.datasophon.api.converter.UserInfoConverter;
 import com.datasophon.api.service.ClusterRoleUserService;
 import com.datasophon.common.dto.ClusterRoleUserDTO;
 import com.datasophon.common.dto.UserInfoDTO;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 
 import com.datasophon.common.enums.UserType;
+import com.datasophon.dao.entity.UserInfoEntity;
 import com.datasophon.dao.mapper.ClusterRoleUserMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +49,9 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
 
     @Autowired
     private ClusterRoleUserConverter clusterRoleUserConverter;
+
+    @Autowired
+    private UserInfoConverter userInfoConverter;
 
     @Override
     public boolean isClusterManager(Integer userId, String clusterId) {
@@ -81,11 +86,8 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
 
     @Override
     public List<UserInfoDTO> getAllClusterManagerByClusterId(Integer clusterId) {
-        // TODO: 需要UserInfoConverter将UserInfoEntity转换为UserInfoDTO
-        // List<UserInfoEntity> entities =
-        // getMapper().getAllClusterManagerByClusterId(clusterId);
-        // return userInfoConverter.entityListToDtoList(entities);
-        return List.of();
+        List<UserInfoEntity> entities = getMapper().getAllClusterManagerByClusterId(clusterId);
+        return userInfoConverter.entityListToDtoList(entities);
     }
 
     @Override

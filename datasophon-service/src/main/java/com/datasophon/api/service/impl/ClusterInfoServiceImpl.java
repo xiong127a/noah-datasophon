@@ -140,7 +140,22 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         }
 
         clusterInfo.setCreateTime(new Date());
-        clusterInfo.setCreateBy(Objects.requireNonNull(SecurityUtils.getAuthUser()).getUsername());
+        // 兼容未能从SecurityContext获取完整用户实体的场景：无法获取时直接报错，不再写死默认值
+        String createdBy = null;
+        var authUser = SecurityUtils.getAuthUser();
+        if (authUser != null && authUser.getUsername() != null) {
+            createdBy = authUser.getUsername();
+        }
+        if (createdBy == null) {
+            createdBy = SecurityUtils.getUsername();
+        }
+        if (createdBy == null && clusterInfoDTO.createBy() != null && !clusterInfoDTO.createBy().isEmpty()) {
+            createdBy = clusterInfoDTO.createBy();
+        }
+        if (createdBy == null || createdBy.isEmpty()) {
+            throw new RuntimeException("获取创建人失败，请重新登录后再试");
+        }
+        clusterInfo.setCreateBy(createdBy);
         clusterInfo.setClusterState(ClusterState.NEED_CONFIG);
 
         // 检查集群管理员列表是否为空
@@ -158,6 +173,20 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
         // 保存集群管理员关系
         clusterUserService.saveClusterManager(clusterInfo.getId(), managerIds);
+
+        // 重新加载管理员详细信息，保证返回DTO中包含完整的管理员信息
+        try {
+            List<UserInfoDTO> userDTOList = clusterUserService.getAllClusterManagerByClusterId(clusterInfo.getId());
+            List<UserInfoEntity> userList = userInfoConverter.dtoListToEntityList(userDTOList);
+            clusterInfo.setClusterManagerList(userList);
+        } catch (Exception e) {
+            log.warn("加载集群管理员信息失败，clusterId={}, err={}", clusterInfo.getId(), e.getMessage());
+        }
+
+        // 设置返回用的状态码字段，避免为null
+        if (clusterInfo.getClusterState() != null) {
+            clusterInfo.setClusterStateCode(clusterInfo.getClusterState().getValue());
+        }
 
         ProcessUtils.createServiceActor(clusterInfo);
         yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
