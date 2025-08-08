@@ -36,10 +36,8 @@ export const DIALOG_STYLES = {
     text-gray-400 hover:text-gray-600
   `,
   
-  // 主内容区域
-  content: `
-    flex-1 p-6 overflow-y-auto
-  `,
+  // 主内容区域 - 使用和之前一样的完整宽度样式
+  content: "!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden",
   
   // 底部操作区域
   footer: `

@@ -27,6 +27,7 @@ export const API_PATHS_V1 = {
   // Kubernetes相关 - v1
   CLUSTER_NAMESPACES: `${API_BASE}/cluster/namespaces`,
   CLUSTER_KUBE_CONFIG: `${API_BASE}/cluster/kube-config`,
+  CLUSTER_K8S_NODES: `${API_BASE}/cluster/k8s/nodes`,
   
   // 主机管理相关 - v1
   CLUSTER_HOST_LIST: `${API_BASE}/cluster/host/list`,

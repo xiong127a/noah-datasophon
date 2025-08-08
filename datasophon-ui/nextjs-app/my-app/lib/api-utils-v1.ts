@@ -94,6 +94,16 @@ export const clusterApiV1 = {
     },
   },
 
+  // Kubernetes集群管理
+  kubernetes: {
+    // 获取Kubernetes节点信息
+    getNodes: (params: { kubeconfig: string; namespace: string }) => {
+      console.log('API V1调用 - 获取K8S节点:', params.namespace)
+      // 调用后端API获取真实的K8S节点信息
+      return apiV1.post(API_PATHS_V1.CLUSTER_K8S_NODES, params)
+    },
+  },
+
   // 主机环境校验 (Step2) - V1版本
   hostInstall: {
     // 获取安装步骤
