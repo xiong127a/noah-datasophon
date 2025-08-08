@@ -40,7 +40,7 @@ public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> 
      * @param clusterId 集群ID
      * @return 是否为管理员
      */
-    boolean isClusterManager(Integer userId, String clusterId);
+    boolean isClusterManager(Integer userId, Integer clusterId);
 
     /**
      * 保存集群管理员

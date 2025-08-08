@@ -82,7 +82,7 @@ public class UserPermissionHandler implements HandlerInterceptor {
                     if (parameterMap.containsKey("clusterId")) {
                         logger.info("Find clusterId");
                         String[] clusterIds = parameterMap.get("clusterId");
-                        if (!clusterUserService.isClusterManager(authUser.getId(), clusterIds[0])) {
+                        if (!clusterUserService.isClusterManager(authUser.getId(), Integer.valueOf(clusterIds[0]))) {
                             throw new ServiceException(Status.USER_NO_OPERATION_PERM);
                         }
                         logger.info("{} is cluster manager", authUser.getUsername());

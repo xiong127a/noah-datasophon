@@ -64,7 +64,7 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
     /**
      * 根据IP列表查询指定集群的主机（用于检查IP重复）
      */
-    default List<ClusterHostDO> selectByClusterIdAndIpList(@Param("clusterId") Integer clusterId, 
+    default List<ClusterHostDO> selectByClusterIdAndIpList(@Param("clusterId") Integer clusterId,
                                                            @Param("ipList") List<String> ipList) {
         if (ipList == null || ipList.isEmpty()) {
             return new ArrayList<>();

@@ -54,7 +54,7 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
     private UserInfoConverter userInfoConverter;
 
     @Override
-    public boolean isClusterManager(Integer userId, String clusterId) {
+    public boolean isClusterManager(Integer userId, Integer clusterId) {
         List<ClusterRoleUserEntity> list = getMapper().selectByUserIdAndClusterId(userId, clusterId);
         return Objects.nonNull(list) && !list.isEmpty();
     }

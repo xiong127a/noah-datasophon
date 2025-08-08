@@ -2,6 +2,7 @@ package com.datasophon.api.interceptor;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSON;
@@ -225,9 +226,9 @@ public class OperationLogAspect {
         op.setOperateUser(username);
 
         //从header中获取集群 id
-        String clusterId = request.getHeader("Clusterid");
-        if (StrUtil.isNotEmpty(clusterId)) {
-            op.setClusterId(Integer.parseInt(clusterId));
+        Integer clusterId = request.getIntHeader("Clusterid");
+        if (ObjUtil.isNotNull(clusterId)) {
+            op.setClusterId(clusterId);
         }
 
         //从request中查找

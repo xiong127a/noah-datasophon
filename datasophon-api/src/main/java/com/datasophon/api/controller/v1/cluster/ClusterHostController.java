@@ -53,6 +53,7 @@ public class ClusterHostController {
         var threadInfo = getCurrentThreadInfo();
         log.debug("查询集群{}的所有主机 - {}", clusterId, threadInfo);
         
+        // 将Integer类型的clusterId转换为String传递给Service层
         List<ClusterHostDO> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
         return Result.success(list);
     }

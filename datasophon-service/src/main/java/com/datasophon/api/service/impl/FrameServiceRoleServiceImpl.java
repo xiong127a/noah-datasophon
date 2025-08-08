@@ -72,9 +72,18 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             throw new RuntimeException("服务ID列表不能为空");
         }
 
-        // 分割服务ID字符串为列表
-        List<String> ids = Arrays.stream(serviceIds.split(","))
+        // 分割服务ID字符串为列表并转换为Integer
+        List<Integer> ids = Arrays.stream(serviceIds.split(","))
                 .filter(id -> !id.trim().isEmpty())
+                .map(id -> {
+                    try {
+                        return Integer.parseInt(id.trim());
+                    } catch (NumberFormatException e) {
+                        log.warn("无效的服务ID: {}", id);
+                        return null;
+                    }
+                })
+                .filter(id -> id != null)
                 .toList();
 
         if (ids.isEmpty()) {
@@ -192,9 +201,18 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             throw new RuntimeException("服务ID列表不能为空");
         }
 
-        // 分割服务ID字符串为列表
-        List<String> ids = Arrays.stream(serviceIds.split(","))
+        // 分割服务ID字符串为列表并转换为Integer
+        List<Integer> ids = Arrays.stream(serviceIds.split(","))
                 .filter(id -> !id.trim().isEmpty())
+                .map(id -> {
+                    try {
+                        return Integer.parseInt(id.trim());
+                    } catch (NumberFormatException e) {
+                        log.warn("无效的服务ID: {}", id);
+                        return null;
+                    }
+                })
+                .filter(id -> id != null)
                 .toList();
 
         if (ids.isEmpty()) {
