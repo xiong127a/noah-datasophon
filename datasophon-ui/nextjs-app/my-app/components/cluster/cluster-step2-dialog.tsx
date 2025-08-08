@@ -442,7 +442,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         const configRes = await clusterApi.config.saveKubeConfig(
           clusterId,
           kubeConfigParams.kubeConfig || '',
-          kubeConfigParams.namespace || ''
+          kubeConfigParams.namespace || '',
+          kubeConfigParams.customNamespace
         )
         
         if (configRes.data?.code !== 200) {

@@ -1,4 +1,5 @@
 import { apiV1, API_PATHS_V1 } from './api-config-v1'
+import { createClusterHeaders } from './cluster-id-header'
 
 /**
  * 版本化的集群相关API调用工具函数
@@ -83,8 +84,14 @@ export const clusterApiV1 = {
       return apiV1.post(API_PATHS_V1.CLUSTER_NAMESPACES, { kubeConfigContent })
     },
     // 保存Kubernetes配置
-    saveKubeConfig: (clusterId: number, kubeConfigContent: string, namespace: string) =>
-      apiV1.post(API_PATHS_V1.CLUSTER_KUBE_CONFIG, { clusterId, kubeConfigContent, namespace }),
+    saveKubeConfig: (clusterId: number, kubeConfigContent: string, namespace: string, customNamespace?: string) => {
+      const config = { headers: createClusterHeaders(clusterId) };
+      return apiV1.post(API_PATHS_V1.CLUSTER_KUBE_CONFIG, { 
+        kubeConfig: kubeConfigContent, 
+        namespace, 
+        customNamespace 
+      }, config);
+    },
   },
 
   // 主机环境校验 (Step2) - V1版本
