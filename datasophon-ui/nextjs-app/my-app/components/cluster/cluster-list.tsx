@@ -902,8 +902,11 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           }}
           step4Data={{
-            serviceIds: step3Data.selectedServices?.map(s => s.id) || [],
-            selectedServices: step3Data.selectedServices || []
+            serviceIds: step3Data.serviceIds || [],
+            selectedServices: step3Data.serviceNames?.map(service => ({
+              id: service.serviceId,
+              name: service.serviceName
+            })) || []
           }}
           onComplete={handleStep5Complete}
         />

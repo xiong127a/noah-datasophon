@@ -351,11 +351,15 @@ export default function PvmStep1Dialog({
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
               {/* 顶部分割线光效 */}
               <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
-              <div className="flex justify-end space-x-4 relative z-10">
-                <Button
+              <div className="flex justify-end space-x-3 relative z-10">
+                <button
                   onClick={handleNext}
                   disabled={loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword}
-                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                  className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg ${
+                    loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105'
+                  }`}
                 >
                   {loading ? (
                     <>
@@ -365,12 +369,10 @@ export default function PvmStep1Dialog({
                   ) : (
                     <>
                       下一步
-                      <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                      <ChevronRight className="w-4 h-4 ml-2" />
                     </>
                   )}
-                  {/* 按钮光效 */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </Button>
+                </button>
               </div>
             </div>
           </div>

@@ -544,8 +544,8 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                     )}
                   </div>
                   
-                  <div className="flex items-center space-x-4">
-                    <Button
+                  <div className="flex items-center space-x-3">
+                    <button
                       onClick={() => {
                         if (onPrevious) {
                           onPrevious()
@@ -553,20 +553,24 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                           onOpenChange(false)
                         }
                       }}
-                      className="px-8 py-4 bg-white/80 hover:bg-white/90 text-gray-700 border-0 rounded-2xl shadow-lg shadow-black/5 font-semibold text-base transition-all duration-300 hover:shadow-xl hover:scale-105"
+                      className="flex items-center px-5 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-medium text-gray-700 transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <ChevronLeft className="w-5 h-5 mr-2" />
+                      <ChevronLeft className="w-4 h-4 mr-2" />
                       上一步
-                    </Button>
+                    </button>
                     
-                    <Button
+                    <button
                       onClick={handleNext}
                       disabled={selectedServiceIds.length === 0}
-                      className="px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 rounded-2xl shadow-xl shadow-blue-500/30 font-bold text-base transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                      className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg ${
+                        selectedServiceIds.length === 0
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105'
+                      }`}
                     >
                       下一步
-                      <ChevronRight className="w-5 h-5 ml-2" />
-                    </Button>
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </button>
                   </div>
                 </div>
               </div>
