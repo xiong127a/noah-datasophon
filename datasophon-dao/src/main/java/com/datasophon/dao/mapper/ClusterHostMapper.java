@@ -103,7 +103,7 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
     default List<ClusterHostDO> selectManagedHostsByClusterIdOrderByHostname(@Param("clusterId") Integer clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED)
+                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.CONFIGURING)
                 .orderBy(ClusterHostDO::getHostname, true);
         return this.selectListByQuery(query);
     }
@@ -112,6 +112,7 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
 
     /**
      * 分页查询主机，支持主机名筛选
+     * 查询可配置状态的主机（未受管和配置中状态）
      */
     default Page<ClusterHostDO> selectPageByClusterIdAndFilters(Page<ClusterHostDO> page,
             @Param("clusterId") Integer clusterId,
@@ -122,7 +123,7 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
             @Param("orderType") String orderType) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED);
+                .and(ClusterHostDO::getManagementStatus).in(ManagementStatus.UNMANAGED, ManagementStatus.CONFIGURING);
 
         if (StringUtils.isNotBlank(cpuArchitecture)) {
             query.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);

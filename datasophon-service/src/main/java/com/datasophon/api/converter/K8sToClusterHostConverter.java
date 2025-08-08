@@ -66,7 +66,7 @@ public class K8sToClusterHostConverter {
                 .cpuArchitecture(k8sNodeInfo.getCpuArchitecture())
                 .createTime(k8sNodeInfo.getCreateTime())
                 .hostState(convertToHostState(k8sNodeInfo.getStatus()))
-                .managementStatus(ManagementStatus.UNMANAGED) // K8S新发现的节点初始状态为未受管
+                .managementStatus(ManagementStatus.CONFIGURING) // K8S新发现的节点初始状态为未受管
                 .rack("/default-rack") // 默认机架
                 .nodeLabel(null) // 主机标签字段，由用户自定义
                 // K8s节点扩展信息JSON
