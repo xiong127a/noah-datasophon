@@ -1,6 +1,6 @@
 package com.datasophon.api.service.host.dto;
 
-import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ManagementStatus;
 import lombok.Data;
 
 import java.util.Date;
@@ -62,9 +62,9 @@ public class QueryHostListPageDTO {
      */
     private Integer hostState;
     /**
-     * 1:受管 2：断线
+     * 主机管理状态：1-受管，2-未受管，3-配置中
      */
-    private MANAGED managed;
+    private ManagementStatus managementStatus;
 
     private String cpuArchitecture;
 

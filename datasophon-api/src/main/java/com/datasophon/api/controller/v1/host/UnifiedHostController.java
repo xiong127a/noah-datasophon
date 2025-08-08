@@ -96,6 +96,17 @@ public class UnifiedHostController {
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
                 
+                // 自动导入发现的主机到数据库（确保数据持久化）
+                try {
+                    if (result.getHosts() != null && !result.getHosts().isEmpty()) {
+                        hostManagementService.importHosts(clusterId, result.getHosts(), new HashMap<>(), new HashMap<>());
+                        log.info("自动导入主机成功，集群ID: {}, 导入主机数: {}", clusterId, result.getHosts().size());
+                    }
+                } catch (Exception e) {
+                    log.warn("自动导入主机失败，但不影响主机发现结果，集群ID: {}", clusterId, e);
+                    // 导入失败不影响发现结果，因为数据仍在临时存储中
+                }
+                
                 // Step1完成，保持"待配置"状态，直到所有配置步骤完成
                 log.info("Step1主机发现完成，集群ID: {}", clusterId);
                 

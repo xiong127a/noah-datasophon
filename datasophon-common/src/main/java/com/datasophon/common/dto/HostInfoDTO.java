@@ -19,7 +19,7 @@ package com.datasophon.common.dto;
 
 
 import com.datasophon.common.enums.HostState;
-import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ManagementStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -117,7 +117,7 @@ public class HostInfoDTO implements Serializable {
     /**
      * 管理状态枚举
      */
-    private MANAGED managed;
+    private ManagementStatus managementStatus;
 
     /**
      * CPU架构
@@ -155,14 +155,4 @@ public class HostInfoDTO implements Serializable {
      */
     private String status;
 
-    // =============== 辅助方法 ===============
-    /**
-     * 前端兼容性方法：managed字段的字符串表示
-     */
-    public String getManagedString() {
-        if (managed == null) {
-            return "NO";
-        }
-        return managed == MANAGED.YES ? "YES" : "NO";
-    }
 }

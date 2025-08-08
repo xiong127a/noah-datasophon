@@ -250,8 +250,19 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     protected Map<String, Object> buildListStatistics(List<ClusterHostDO> hosts) {
         Map<String, Object> statistics = new HashMap<>();
         statistics.put("totalHosts", hosts.size());
-        statistics.put("managedHosts", hosts.stream().filter(h -> Boolean.TRUE.equals(h.getManaged())).count());
-        statistics.put("unmanagedHosts", hosts.stream().filter(h -> !Boolean.TRUE.equals(h.getManaged())).count());
+        
+        // 使用新的ManagementStatus字段进行统计，配置中状态不计入受管
+        long managedCount = hosts.stream()
+                .filter(h -> h.getManagementStatus() != null && h.getManagementStatus().isManaged())
+                .count();
+        long configuringCount = hosts.stream()
+                .filter(h -> h.getManagementStatus() != null && h.getManagementStatus().isConfiguring())
+                .count();
+        long unmanagedCount = hosts.size() - managedCount - configuringCount;
+        
+        statistics.put("managedHosts", managedCount);
+        statistics.put("unmanagedHosts", unmanagedCount); 
+        statistics.put("configuringHosts", configuringCount);
         return statistics;
     }
 }

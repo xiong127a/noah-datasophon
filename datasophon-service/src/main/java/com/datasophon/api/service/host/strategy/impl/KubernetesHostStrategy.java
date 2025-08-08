@@ -23,6 +23,7 @@ import com.datasophon.api.service.host.strategy.model.*;
 
 
 import com.datasophon.api.converter.K8sToClusterHostConverter;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.HostState;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
@@ -297,7 +298,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         }
 
         long total = hosts.size();
-        long unmanaged = hosts.stream().filter(h -> Boolean.FALSE.equals(h.getManaged())).count();
+        long unmanaged = hosts.stream().filter(h -> h.getManagementStatus() == ManagementStatus.UNMANAGED).count();
         long ready = hosts.stream().filter(h -> HostState.RUNNING.equals(h.getHostState())).count();
 
         boolean allUnmanaged = unmanaged == total;

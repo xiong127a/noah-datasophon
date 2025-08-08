@@ -24,12 +24,12 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.enums.ClusterType;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.common.enums.MANAGED;
 import com.datasophon.common.enums.ServiceRoleState;
 import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
@@ -256,7 +256,7 @@ public class ProcessUtils {
             List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterInfo.getId());
 
             for (ClusterHostDO host : hostList) {
-                if (MANAGED.YES.equals(host.getManaged())) { // 只为受管理的主机创建Actor
+                if (ManagementStatus.MANAGED.equals(host.getManagementStatus())) { // 只为受管理的主机创建Actor
                     String actorName = clusterInfo.getClusterCode() + "-serviceActor-" + host.getHostname();
 
                     try {

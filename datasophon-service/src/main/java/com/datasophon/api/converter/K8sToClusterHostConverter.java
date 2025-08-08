@@ -22,7 +22,7 @@ import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.HostState;
-import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ManagementStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -31,6 +31,10 @@ import java.util.stream.Collectors;
 /**
  * K8S节点信息到集群主机实体的转换器
  * 负责将Kubernetes领域模型转换为DAO实体
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-31
  */
 @Component
 public class K8sToClusterHostConverter {
@@ -47,12 +51,6 @@ public class K8sToClusterHostConverter {
             return null;
         }
 
-        // 构造K8S信息的nodeLabel格式：kubernetes-node|roles|version|age
-        String nodeLabel = String.format("kubernetes-node|%s|%s|%s", 
-                k8sNodeInfo.getRoles() != null ? k8sNodeInfo.getRoles() : "<none>",
-                k8sNodeInfo.getKubeVersion() != null ? k8sNodeInfo.getKubeVersion() : "unknown",
-                k8sNodeInfo.getAge() != null ? k8sNodeInfo.getAge() : "unknown");
-
         return ClusterHostDO.builder()
                 .clusterId(clusterId)
                 .ip(k8sNodeInfo.getIp())
@@ -65,9 +63,13 @@ public class K8sToClusterHostConverter {
                 .cpuArchitecture(k8sNodeInfo.getCpuArchitecture())
                 .createTime(k8sNodeInfo.getCreateTime())
                 .hostState(convertToHostState(k8sNodeInfo.getStatus()))
-                .managed(MANAGED.NO) // K8S新发现的节点初始状态为未受管
+                .managementStatus(ManagementStatus.UNMANAGED) // K8S新发现的节点初始状态为未受管
                 .rack("/default-rack") // 默认机架
-                .nodeLabel(nodeLabel) // 保存K8S信息
+                .nodeLabel(null) // 主机标签字段，由用户自定义
+                // K8s节点专用字段
+                .k8sNodeName(k8sNodeInfo.getHostname())
+                .k8sNodeVersion(k8sNodeInfo.getKubeVersion() != null ? k8sNodeInfo.getKubeVersion() : "unknown")
+                .k8sNodeAge(k8sNodeInfo.getAge() != null ? k8sNodeInfo.getAge() : "unknown")
                 .build();
     }
 
@@ -115,9 +117,9 @@ public class K8sToClusterHostConverter {
         hostInfoDTO.setCpuArchitecture(k8sNodeInfo.getCpuArchitecture());
         hostInfoDTO.setCreateTime(k8sNodeInfo.getCreateTime());
         hostInfoDTO.setHostState(convertToHostState(k8sNodeInfo.getStatus()));
-        hostInfoDTO.setManaged(MANAGED.NO); // 初始状态为未受管
+        // 初始状态为未受管，使用新的管理状态字段
         hostInfoDTO.setRack("/default-rack");
-        hostInfoDTO.setNodeLabel("kubernetes-node");
+        hostInfoDTO.setNodeLabel(null); // 主机标签由用户自定义
         
         // 设置K8S扩展字段
         hostInfoDTO.setRoles(k8sNodeInfo.getRoles() != null ? k8sNodeInfo.getRoles() : "<none>");
@@ -174,13 +176,21 @@ public class K8sToClusterHostConverter {
         hostInfoDTO.setCheckTime(clusterHost.getCheckTime());
         hostInfoDTO.setClusterId(clusterHost.getClusterId());
         hostInfoDTO.setHostState(clusterHost.getHostState());
-        hostInfoDTO.setManaged(clusterHost.getManaged());
+        // 保持向后兼容，但主要使用新的管理状态字段
         hostInfoDTO.setCpuArchitecture(clusterHost.getCpuArchitecture());
         hostInfoDTO.setNodeLabel(clusterHost.getNodeLabel());
         hostInfoDTO.setServiceRoleNum(clusterHost.getServiceRoleNum());
         
-        // 从nodeLabel中提取K8S信息（如果有）
-        extractK8sInfoFromNodeLabel(clusterHost.getNodeLabel(), hostInfoDTO);
+        // 优先使用专用的K8s字段，回退到从nodeLabel提取（向后兼容）
+        if (clusterHost.getK8sNodeName() != null || clusterHost.getK8sNodeVersion() != null || clusterHost.getK8sNodeAge() != null) {
+            // 使用新的K8s专用字段
+            hostInfoDTO.setRoles("<none>"); // K8s节点通常没有明确的roles概念，使用默认值
+            hostInfoDTO.setVersion(clusterHost.getK8sNodeVersion() != null ? clusterHost.getK8sNodeVersion() : "unknown");
+            hostInfoDTO.setAge(clusterHost.getK8sNodeAge() != null ? clusterHost.getK8sNodeAge() : "unknown");
+        } else {
+            // 向后兼容：从nodeLabel中提取K8S信息
+            extractK8sInfoFromNodeLabel(clusterHost.getNodeLabel(), hostInfoDTO);
+        }
         
         // 设置状态字符串
         hostInfoDTO.setStatus(clusterHost.getHostState() != null && 
@@ -203,8 +213,9 @@ public class K8sToClusterHostConverter {
     }
 
     /**
-     * 从nodeLabel中提取K8S信息
+     * 从nodeLabel中提取K8S信息（向后兼容方法）
      * 格式：kubernetes-node|roles|version|age
+     * 注意：此方法仅用于向后兼容，新代码应使用专用的K8s字段
      */
     private void extractK8sInfoFromNodeLabel(String nodeLabel, HostInfoDTO hostInfoDTO) {
         if (nodeLabel != null && nodeLabel.startsWith("kubernetes-node|")) {

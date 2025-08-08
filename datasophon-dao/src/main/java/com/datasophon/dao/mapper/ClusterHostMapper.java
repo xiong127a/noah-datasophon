@@ -19,7 +19,7 @@ package com.datasophon.dao.mapper;
 
 import com.mybatisflex.core.BaseMapper;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ManagementStatus;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 
@@ -62,24 +62,37 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
 
     /**
      * 根据集群ID查询所有受管理的主机
+     * 注意：配置中状态的主机不计入受管统计
      */
     default List<ClusterHostDO> selectByClusterId(@Param("clusterId") Integer clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
+                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED);
+        return this.selectListByQuery(query);
+    }
+
+    /**
+     * 根据集群ID查询所有主机（包括未受管和配置中状态）
+     */
+    default List<ClusterHostDO> selectAllByClusterId(@Param("clusterId") Integer clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID查询所有受管理的主机，按主机名排序
+     * 注意：配置中状态的主机不计入受管统计
      */
     default List<ClusterHostDO> selectManagedHostsByClusterIdOrderByHostname(@Param("clusterId") Integer clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES)
+                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED)
                 .orderBy(ClusterHostDO::getHostname, true);
         return this.selectListByQuery(query);
     }
+
+    // 向后兼容方法已删除，统一使用managementStatus字段
 
     /**
      * 分页查询主机，支持主机名筛选
@@ -93,7 +106,7 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
             @Param("orderType") String orderType) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManaged).eq(MANAGED.YES);
+                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED);
 
         if (StringUtils.isNotBlank(cpuArchitecture)) {
             query.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);

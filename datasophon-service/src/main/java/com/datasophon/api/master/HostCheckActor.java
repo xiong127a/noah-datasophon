@@ -19,6 +19,7 @@ package com.datasophon.api.master;
 
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.enums.ClusterType;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
@@ -39,7 +40,7 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.HostState;
-import com.datasophon.common.enums.MANAGED;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -188,7 +189,7 @@ public class HostCheckActor extends AbstractActor {
                   if (reachable) {
                     logger.info("检查主机连通性: {} 成功 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.RUNNING);
-                    checkedHost.setManaged(MANAGED.YES);
+                    checkedHost.setManagementStatus(ManagementStatus.MANAGED);
                   } else {
                     logger.warn("检查主机连通性: {} 失败 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.OFFLINE);
@@ -213,7 +214,7 @@ public class HostCheckActor extends AbstractActor {
                 throw new IllegalStateException("ping host: " + host.getHostname() + " failed.");
               }
               checkedHost.setHostState(HostState.RUNNING);
-              checkedHost.setManaged(MANAGED.YES);
+              checkedHost.setManagementStatus(ManagementStatus.MANAGED);
             } catch (Exception e) {
               Objects.requireNonNull(logger).warn("host: {} rpc error, cause: {}", host.getHostname(), e.getMessage());
               checkedHost.setHostState(HostState.OFFLINE);

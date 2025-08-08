@@ -45,6 +45,7 @@ import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.ExternalLink;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
@@ -55,7 +56,6 @@ import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.*;
 import com.datasophon.common.enums.HostState;
-import com.datasophon.common.enums.MANAGED;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.common.enums.ServiceRoleState;
 import com.datasophon.common.enums.ServiceState;
@@ -205,7 +205,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         clusterHostDO.setCreateTime(new Date());
         clusterHostDO.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostDO.setHostState(HostState.RUNNING);
-        clusterHostDO.setManaged(MANAGED.YES);
+        clusterHostDO.setManagementStatus(ManagementStatus.MANAGED);
         clusterHostService.saveHost(clusterHostDO);
     }
 

@@ -17,6 +17,7 @@
 
 package com.datasophon.api.master;
 
+import com.datasophon.common.enums.ManagementStatus;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
 import cn.hutool.core.util.ObjectUtil;
@@ -43,7 +44,6 @@ import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.enums.ServiceRoleState;
-import com.datasophon.common.enums.MANAGED;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,7 +128,7 @@ public class WorkerStartActor extends AbstractActor {
             } else {
                 // 更新现有主机信息
                 hostEntity.setCpuArchitecture(msg.getCpuArchitecture());
-                hostEntity.setManaged(MANAGED.YES);
+                hostEntity.setManagementStatus(ManagementStatus.MANAGED);
                 clusterHostService.saveHost(hostEntity);
             }
 

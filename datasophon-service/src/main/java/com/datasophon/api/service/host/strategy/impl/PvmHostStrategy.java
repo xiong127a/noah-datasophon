@@ -21,9 +21,9 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.api.service.impl.InstallServiceImpl;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.common.enums.MANAGED;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -152,7 +152,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             // PVM模式的主机通常已经在分析阶段保存，这里可能需要更新状态
             for (ClusterHostDO host : hosts) {
                 // 更新主机为受管状态
-                host.setManaged(MANAGED.YES);
+                host.setManagementStatus(ManagementStatus.MANAGED);
                 clusterHostService.updateById(host);
             }
             

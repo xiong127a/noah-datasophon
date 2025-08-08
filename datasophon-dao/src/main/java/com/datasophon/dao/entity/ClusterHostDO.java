@@ -18,7 +18,7 @@
 package com.datasophon.dao.entity;
 
 import com.datasophon.common.enums.HostState;
-import com.datasophon.common.enums.MANAGED;
+import com.datasophon.common.enums.ManagementStatus;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
@@ -99,16 +99,38 @@ public class ClusterHostDO implements Serializable {
      * 1:正常运行 2：断线 3、存在告警
      */
     private HostState hostState;
+    // MANAGED字段已删除，统一使用managementStatus
+
     /**
-     * 1:受管 2：断线
+     * 主机管理状态：1-受管，2-未受管，3-配置中
      */
-    private MANAGED managed;
+    private ManagementStatus managementStatus;
 
     private String cpuArchitecture;
 
+    /**
+     * 主机标签（用户自定义标签）
+     */
     private String nodeLabel;
+
+    /**
+     * Kubernetes节点名称
+     */
+    private String k8sNodeName;
+
+    /**
+     * Kubernetes节点版本
+     */
+    private String k8sNodeVersion;
+
+    /**
+     * Kubernetes节点运行时长
+     */
+    private String k8sNodeAge;
 
     @Column(ignore = true)
     private Integer serviceRoleNum;
+
+    // 管理状态同步方法已移除，统一使用managementStatus字段
 
 }

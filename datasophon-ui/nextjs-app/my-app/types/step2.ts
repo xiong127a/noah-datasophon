@@ -2,6 +2,8 @@
  * Step2 主机环境校验相关类型定义
  */
 
+import { ManagementStatus } from './management-status'
+
 // 主机检查项状态
 export type CheckItemStatus = 'WAITING' | 'CHECKING' | 'SUCCESS' | 'FAILED' | 'SKIPPED'
 
@@ -31,7 +33,7 @@ export interface Host {
   usedMem?: number
   usedDisk?: number
   cpuArchitecture?: string
-  managed?: boolean // K8S模式下的受管状态
+  managementStatus?: ManagementStatus // 主机管理状态
   status?: HostStatus
   statusStr?: string
   checkItems?: CheckItem[]
@@ -40,6 +42,13 @@ export interface Host {
     msg?: string
   }
   note?: string
+  // K8s节点扩展字段
+  k8sNodeName?: string
+  k8sNodeVersion?: string
+  k8sNodeAge?: string
+  roles?: string
+  version?: string
+  age?: string
 }
 
 // 队列状态接口
@@ -91,8 +100,15 @@ export interface ClusterStep2DialogProps {
 // API响应接口
 export interface HostListResponse {
   code: number
-  data: Host[]
-  total: number
+  data: {
+    hosts?: Host[]
+    filterOptions?: {
+      statuses?: string[]
+      roles?: string[]
+    }
+    totalCount?: number
+  }
+  total?: number
   queueStatus?: QueueStatus
   msg?: string
 }
