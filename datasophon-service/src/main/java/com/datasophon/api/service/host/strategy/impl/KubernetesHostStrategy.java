@@ -318,7 +318,8 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         }
 
         long total = hosts.size();
-        long unmanaged = hosts.stream().filter(h -> h.getManagementStatus() == ManagementStatus.UNMANAGED).count();
+        // 统计可配置的主机（未受管和配置中状态）
+        long unmanaged = hosts.stream().filter(h -> h.getManagementStatus().canConfigure()).count();
         long ready = hosts.stream().filter(h -> HostState.RUNNING.equals(h.getHostState())).count();
 
         boolean allUnmanaged = unmanaged == total;
@@ -333,7 +334,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         result.put("notReadyHosts", total - ready);
         
         // 添加详细的调试信息
-        log.info("主机校验详情 - 集群ID: {}, 总主机数: {}, 未受管数: {}, Ready数: {}, 校验结果: {}", 
+        log.info("主机校验详情 - 集群ID: {}, 总主机数: {}, 未受管数: {}, Ready数: {}, 校验结果: {}",
                 clusterId, total, unmanaged, ready, valid);
         
         // 打印每台主机的状态（仅在校验失败时）

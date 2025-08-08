@@ -22,6 +22,7 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.common.vo.FrameServiceRoleVO;
 import com.datasophon.api.dto.Result;
+import com.datasophon.api.annotation.ClusterId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +52,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getServiceRoleList")
     public Result<List<FrameServiceRoleVO>> getServiceRoleOfMaster(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("serviceIds") String serviceIds,
             @RequestParam("serviceRoleType") Integer serviceRoleType) {
         try {

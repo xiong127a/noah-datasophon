@@ -290,13 +290,13 @@ export const clusterApiV1 = {
   serviceRole: {
     /** 获取服务角色列表 */
     getList: async (params: GetServiceRoleListParams): Promise<GetServiceRoleListResponse> => {
-      // 使用GET请求，参数通过查询参数传递
+      // 集群ID通过请求头传递，其他参数作为查询参数
+      const headers = createClusterHeaders(params.clusterId)
       const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_ROLE_LIST, {
-        params: {
-          clusterId: params.clusterId,
-          serviceIds: params.serviceIds,
-          serviceRoleType: params.serviceRoleType
-        }
+        serviceIds: params.serviceIds,
+        serviceRoleType: params.serviceRoleType
+      }, {
+        headers
       })
       return response.data
     },
