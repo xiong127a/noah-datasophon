@@ -58,7 +58,7 @@ export class ClusterTypeUtil {
    */
   static isPvm(clusterType: string | ClusterType): boolean {
     if (typeof clusterType === 'string') {
-      return clusterType.toUpperCase() === 'PVM'
+      return clusterType.toLowerCase() === 'pvm'
     }
     return clusterType === ClusterType.PVM
   }
@@ -68,7 +68,7 @@ export class ClusterTypeUtil {
    */
   static isKubernetes(clusterType: string | ClusterType): boolean {
     if (typeof clusterType === 'string') {
-      return clusterType.toLowerCase() === 'kubernetes' || clusterType.toLowerCase() === 'k8s'
+      return clusterType.toLowerCase() === 'kubernetes'
     }
     return clusterType === ClusterType.KUBERNETES
   }

@@ -97,8 +97,7 @@ import CreateClusterDialogEnhanced from "./create-dialog"
 import ClusterStep1Dialog, { Step1Data } from "./cluster-step1-dialog"
 import ClusterStep2Dialog from "./cluster-step2-dialog"
 import ClusterStep3Dialog from "./common/cluster-step3-dialog"
-import KubernetesClusterStep1Dialog from "./kubernetes/cluster-step1-dialog"
-import KubernetesClusterStep2Dialog from "./kubernetes/cluster-step2-dialog"
+// 移除Kubernetes专用组件，统一使用通用组件
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -497,6 +496,7 @@ export default function ClusterListEnhanced() {
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
+  // 移除Kubernetes专用状态，统一使用step1Data
   const [step2Data, setStep2Data] = useState<Record<string, unknown> | null>(null);
   const router = useRouter();
 
@@ -598,19 +598,25 @@ export default function ClusterListEnhanced() {
     setStep2DialogOpen(true);
   };
 
+  // 移除Kubernetes专用处理函数，统一使用handleStep1Complete
+
   // 处理Step2完成  
   const handleStep2Complete = (step2CompletionData?: Record<string, unknown>) => {
     console.log('Step2完成', step2CompletionData);
+    console.log('setupCluster对象:', setupCluster);
+    console.log('setupCluster.depType:', setupCluster?.depType);
+    console.log('ClusterTypeUtil.isKubernetes(setupCluster?.depType):', ClusterTypeUtil.isKubernetes(setupCluster?.depType || ''));
+    
     setStep2Data(step2CompletionData || null);
     setStep2DialogOpen(false);
     
-    // 检查集群类型，如果是K8S模式则进入Step3（服务选择）
-    if (setupCluster && setupCluster.depType === 'Kubernetes') {
-      console.log('K8S模式，进入Step3服务选择');
+    // 检查集群类型，如果是Kubernetes模式则进入Step3（服务选择）
+    if (setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
+      console.log('Kubernetes模式，进入Step3服务选择');
       setStep3DialogOpen(true);
     } else {
       // PVM模式直接完成
-      console.log('PVM模式，完成配置');
+      console.log('PVM模式，完成配置。setupCluster.depType =', setupCluster?.depType);
       setStep1Data(null);
       setStep2Data(null);
       handleClusterSuccess();
@@ -748,59 +754,59 @@ export default function ClusterListEnhanced() {
         } : null}
       />
 
-                {/* 配置集群Step1弹窗 */}
-          <ClusterStep1Dialog
-            open={setupDialogOpen}
-            onOpenChange={setSetupDialogOpen}
-            cluster={setupCluster ? {
-              id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
-              clusterName: setupCluster.clusterName,
-              depType: setupCluster.depType || '',
-              clusterCode: setupCluster.clusterCode || ''
-            } : null}
-            onSuccess={handleClusterSuccess}
-            onStep1Complete={handleStep1Complete}
-          />
+      {/* 配置集群Step1弹窗 - 根据集群类型选择组件 */}
+      <ClusterStep1Dialog
+        open={setupDialogOpen}
+        onOpenChange={setSetupDialogOpen}
+        cluster={setupCluster ? {
+          id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+          clusterName: setupCluster.clusterName,
+          depType: setupCluster.depType || '',
+          clusterCode: setupCluster.clusterCode || ''
+        } : null}
+        onSuccess={handleClusterSuccess}
+        onStep1Complete={handleStep1Complete}
+      />
 
-          {/* 配置集群Step2弹窗 */}
-          {step1Data && (
-            <ClusterStep2Dialog
-              open={step2DialogOpen}
-              onOpenChange={setStep2DialogOpen}
-              cluster={setupCluster ? {
-                id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
-                clusterName: setupCluster.clusterName,
-                depType: setupCluster.depType || '',
-                clusterCode: setupCluster.clusterCode || ''
-              } : null}
-              step1Data={step1Data}
-              onSuccess={(data) => handleStep2Complete(data)}
-              onPrevious={() => {
-                setStep2DialogOpen(false);
-                setSetupDialogOpen(true);
-              }}
-            />
-          )}
+      {/* 配置集群Step2弹窗 - 根据集群类型选择组件 */}
+      {step1Data && (
+        <ClusterStep2Dialog
+          open={step2DialogOpen}
+          onOpenChange={setStep2DialogOpen}
+          cluster={setupCluster ? {
+            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            clusterName: setupCluster.clusterName,
+            depType: setupCluster.depType || '',
+            clusterCode: setupCluster.clusterCode || ''
+          } : null}
+          step1Data={step1Data}
+          onSuccess={(data) => handleStep2Complete(data)}
+          onPrevious={() => {
+            setStep2DialogOpen(false);
+            setSetupDialogOpen(true);
+          }}
+        />
+      )}
 
-          {/* 配置集群Step3弹窗 - K8S服务选择 */}
-          {step1Data && step2Data && (
-            <ClusterStep3Dialog
-              open={step3DialogOpen}
-              onOpenChange={setStep3DialogOpen}
-              cluster={setupCluster ? {
-                id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
-                clusterName: setupCluster.clusterName,
-                depType: setupCluster.depType || '',
-                clusterCode: setupCluster.clusterCode || ''
-              } : null}
-              step2Data={step2Data}
-              onSuccess={handleStep3Complete}
-              onPrevious={() => {
-                setStep3DialogOpen(false);
-                setStep2DialogOpen(true);
-              }}
-            />
-          )}
+      {/* 配置集群Step3弹窗 - Kubernetes服务选择 */}
+      {step1Data && step2Data && (
+        <ClusterStep3Dialog
+          open={step3DialogOpen}
+          onOpenChange={setStep3DialogOpen}
+          cluster={setupCluster ? {
+            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            clusterName: setupCluster.clusterName,
+            depType: setupCluster.depType || '',
+            clusterCode: setupCluster.clusterCode || ''
+          } : null}
+          step2Data={step2Data}
+          onSuccess={handleStep3Complete}
+          onPrevious={() => {
+            setStep3DialogOpen(false);
+            setStep2DialogOpen(true);
+          }}
+        />
+      )}
     </div>
   )
 } 
