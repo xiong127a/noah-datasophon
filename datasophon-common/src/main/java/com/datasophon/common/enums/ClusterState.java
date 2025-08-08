@@ -46,11 +46,6 @@ public enum ClusterState {
     RUNNING(3, "正在运行"),
     
     /**
-     * 配置中 - 正在进行配置过程
-     */
-    CONFIGURING(2, "配置中"),
-    
-    /**
      * 待配置 - 集群刚创建，需要开始配置
      */
     NEED_CONFIG(1, "待配置");
@@ -91,14 +86,14 @@ public enum ClusterState {
      * 是否需要继续配置
      */
     public boolean needsContinueConfig() {
-        return this == NEED_CONFIG || this == CONFIGURING;
+        return this == NEED_CONFIG;
     }
     
     /**
      * 是否正在配置中
      */
     public boolean isConfiguring() {
-        return this == CONFIGURING;
+        return false; // 已删除CONFIGURING状态
     }
     
     /**

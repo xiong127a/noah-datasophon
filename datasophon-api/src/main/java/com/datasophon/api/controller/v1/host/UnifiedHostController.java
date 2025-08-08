@@ -96,14 +96,8 @@ public class UnifiedHostController {
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
                 
-                // Step1成功完成，自动将集群状态切换为"配置中"
-                try {
-                    clusterInfoService.updateClusterState(clusterId, ClusterState.CONFIGURING.getValue());
-                    log.info("集群状态已从'待配置'切换为'配置中'，集群ID: {}", clusterId);
-                } catch (Exception e) {
-                    log.warn("更新集群状态失败，集群ID: {}, 错误: {}", clusterId, e.getMessage());
-                    // 状态更新失败不影响主机发现结果的返回
-                }
+                // Step1完成，保持"待配置"状态，直到所有配置步骤完成
+                log.info("Step1主机发现完成，集群ID: {}", clusterId);
                 
                 // 转换为前端需要的DTO格式
                 HostDiscoveryResultDTO responseDto = convertToHostDiscoveryResultDTO(result, clusterId, step1Config.getClusterType());

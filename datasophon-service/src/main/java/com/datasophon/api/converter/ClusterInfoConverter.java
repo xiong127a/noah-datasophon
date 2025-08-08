@@ -70,9 +70,9 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
         // 集群状态映射
         return switch (clusterState) {
             case 1 -> "待配置";
-            case 2 -> "配置中";
             case 3 -> "正在运行";
             case 4 -> "停止";
+            case 5 -> "删除中";
             default -> "未知状态";
         };
     }

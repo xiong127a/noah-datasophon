@@ -245,20 +245,17 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
             <div className="relative">
               <div className={`w-4 h-4 rounded-full shadow-lg relative z-10 ${
                 cluster.clusterStateCode === 1 ? "bg-gray-400" :
-                cluster.clusterStateCode === 2 ? "bg-orange-400" :
                 cluster.clusterStateCode === 3 ? "bg-green-400" :
                 cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
               }`}>
                 <div className={`absolute inset-0 rounded-full animate-ping ${
                   cluster.clusterStateCode === 1 ? "bg-gray-400" :
-                  cluster.clusterStateCode === 2 ? "bg-orange-400" :
                   cluster.clusterStateCode === 3 ? "bg-green-400" :
                   cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
                 }`} />
               </div>
               <div className={`absolute inset-0 w-4 h-4 rounded-full blur-md opacity-75 ${
                 cluster.clusterStateCode === 1 ? "bg-gray-400" :
-                cluster.clusterStateCode === 2 ? "bg-orange-400" :
                 cluster.clusterStateCode === 3 ? "bg-green-400" :
                 cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
               }`} />
@@ -301,7 +298,18 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
             {/* 主操作按钮 */}
             <Button
               disabled={!cluster.clusterStateCode || cluster.clusterStateCode > 4}
-              onClick={() => onEnter(cluster)}
+              onClick={() => {
+                if (cluster.clusterStateCode === 1) {
+                  // 待配置 - 开始配置
+                  onSetup(cluster);
+                } else if (cluster.clusterStateCode === 3) {
+                  // 正在运行 - 进入集群
+                  onEnter(cluster);
+                } else if (cluster.clusterStateCode === 4) {
+                  // 停止 - 启动集群
+                  onEnter(cluster); // 暂时使用onEnter，后续可以添加专门的启动函数
+                }
+              }}
               className={`w-full h-12 rounded-2xl font-semibold text-lg transition-all duration-500 group/btn relative overflow-hidden ${
                 cluster.clusterStateCode && cluster.clusterStateCode <= 4
                   ? `bg-gradient-to-r ${colors.gradient} hover:shadow-2xl hover:shadow-blue-200 text-white border-0 hover:scale-105`
@@ -315,7 +323,6 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
               <Play className="mr-3 h-5 w-5 relative z-10" />
               <span className="relative z-10">
                 {cluster.clusterStateCode === 1 && "开始配置"}
-                {cluster.clusterStateCode === 2 && "继续配置"}
                 {cluster.clusterStateCode === 3 && "进入集群"}
                 {cluster.clusterStateCode === 4 && "启动集群"}
                 {(!cluster.clusterStateCode || cluster.clusterStateCode > 4) && "状态异常"}

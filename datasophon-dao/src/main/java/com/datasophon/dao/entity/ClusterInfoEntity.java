@@ -68,7 +68,7 @@ public class ClusterInfoEntity implements Serializable {
      */
     private String frameVersion;
     /**
-     * 集群状态 1:待配置 2:配置中 3:正在运行 4:停止
+     * 集群状态 1:待配置 3:正在运行 4:停止 5:删除中
      */
     private ClusterState clusterState;
     /**
