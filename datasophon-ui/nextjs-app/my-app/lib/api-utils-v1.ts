@@ -1,5 +1,13 @@
 import { apiV1, API_PATHS_V1 } from './api-config-v1'
 import { createClusterHeaders } from './cluster-id-header'
+import type { 
+  GetServiceRoleListParams,
+  GetServiceRoleListResponse,
+  GetAllHostParams,
+  GetAllHostResponse,
+  SaveServiceRoleHostMappingResponse,
+  HostMapping
+} from '@/types/step5'
 
 /**
  * 版本化的集群相关API调用工具函数
@@ -274,6 +282,27 @@ export const clusterApiV1 = {
     // 获取支持的策略类型
     getStrategies: () =>
       apiV1.get(API_PATHS_V1.HOST_STRATEGIES),
+  },
+
+  // 服务角色分配相关 API (Step5)
+  serviceRole: {
+    /** 获取服务角色列表 */
+    getList: async (params: GetServiceRoleListParams): Promise<GetServiceRoleListResponse> => {
+      const response = await apiV1.post(API_PATHS_V1.GET_SERVICE_ROLE_LIST, params)
+      return response.data
+    },
+
+    /** 获取所有主机列表 */
+    getAllHosts: async (params: GetAllHostParams): Promise<GetAllHostResponse> => {
+      const response = await apiV1.post(API_PATHS_V1.GET_ALL_HOST, params)
+      return response.data
+    },
+
+    /** 保存服务角色主机映射 */
+    saveMapping: async (clusterId: number, mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
+      const response = await apiV1.post(`${API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2}/${clusterId}`, mappings)
+      return response.data
+    }
   }
 }
 

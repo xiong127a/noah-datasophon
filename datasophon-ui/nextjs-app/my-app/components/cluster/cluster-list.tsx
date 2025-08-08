@@ -22,6 +22,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { ClusterTypeUtil, Step3Data } from '@/types'
+import type { Step5Data } from '@/types/step5'
 
 // 自定义创建集群图标组件
 const CreateClusterIcon = ({ className }: { className?: string }) => (
@@ -102,6 +103,7 @@ import PvmStep1Dialog, { PvmStep1Data } from "./pvm/pvm-step1-dialog"
 import PvmStep2Dialog from "./pvm/pvm-step2-dialog"
 // 通用组件
 import ClusterStep3Dialog from "./common/cluster-step3-dialog"
+import ClusterStep5Dialog from "./common/cluster-step5-dialog"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -497,6 +499,7 @@ export default function ClusterListEnhanced() {
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [step2DialogOpen, setStep2DialogOpen] = useState(false);
   const [step3DialogOpen, setStep3DialogOpen] = useState(false);
+  const [step5DialogOpen, setStep5DialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   // K8S专用状态
@@ -505,6 +508,8 @@ export default function ClusterListEnhanced() {
   const [pvmStep1Data, setPvmStep1Data] = useState<PvmStep1Data | null>(null);
   // 通用状态
   const [step2Data, setStep2Data] = useState<Record<string, unknown> | null>(null);
+  const [step3Data, setStep3Data] = useState<Step3Data | null>(null);
+  const [step5Data, setStep5Data] = useState<Step5Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -638,12 +643,42 @@ export default function ClusterListEnhanced() {
   };
 
   // 处理Step3完成
-  const handleStep3Complete = (step3Data: Step3Data) => {
-    console.log('Step3完成', step3Data);
+  const handleStep3Complete = (step3CompletionData: Step3Data) => {
+    console.log('Step3完成', step3CompletionData);
+    setStep3Data(step3CompletionData);
     setStep3DialogOpen(false);
+    
+    // 检查集群类型，如果是Kubernetes模式则进入Step5（分配Master角色）
+    if (setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
+      setStep5DialogOpen(true);
+    } else {
+      // PVM模式的后续步骤（暂未实现）
+      console.log('PVM模式Step3完成，暂未实现后续步骤');
+      // 重置状态
+      handleFlowComplete();
+    }
+  };
+
+  // 处理Step5完成
+  const handleStep5Complete = (step5CompletionData: Step5Data) => {
+    console.log('Step5完成', step5CompletionData);
+    setStep5Data(step5CompletionData);
+    setStep5DialogOpen(false);
+    
+    // TODO: 继续下一步或完成流程
+    console.log('Master角色分配完成，准备进入下一步，已分配:', step5CompletionData.roleMappings.length, '个角色');
+    // 重置状态并刷新列表
+    handleFlowComplete();
+  };
+
+  // 完成整个流程
+  const handleFlowComplete = () => {
     setK8sStep1Data(null);
     setPvmStep1Data(null);
     setStep2Data(null);
+    setStep3Data(null);
+    setStep5Data(null);
+    setSetupCluster(null);
     handleClusterSuccess();
   };
 
@@ -852,6 +887,25 @@ export default function ClusterListEnhanced() {
             setStep3DialogOpen(false);
             setStep2DialogOpen(true);
           }}
+        />
+      )}
+
+      {/* 配置集群Step5弹窗 - 分配服务Master角色 */}
+      {step3Data && setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '') && (
+        <ClusterStep5Dialog
+          open={step5DialogOpen}
+          onClose={() => setStep5DialogOpen(false)}
+          cluster={{
+            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            clusterName: setupCluster.clusterName,
+            depType: setupCluster.depType || '',
+            clusterCode: setupCluster.clusterCode || ''
+          }}
+          step4Data={{
+            serviceIds: step3Data.selectedServices?.map(s => s.id) || [],
+            selectedServices: step3Data.selectedServices || []
+          }}
+          onComplete={handleStep5Complete}
         />
       )}
     </div>

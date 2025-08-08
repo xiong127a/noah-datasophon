@@ -48,6 +48,11 @@ export const API_PATHS_V1 = {
   FRAME_SERVICE_DELETE: `${API_BASE}/frame/service/delete`,
   FRAME_SERVICE_LIST_WITH_REQUIRED: `${API_BASE}/frame/service/listWithRequired`,
   
+  // 服务角色分配相关 - v1 (Step5)
+  GET_SERVICE_ROLE_LIST: `${API_BASE}/frame/service/role/getServiceRoleList`,
+  GET_ALL_HOST: `${API_BASE}/cluster/host/all`,
+  SAVE_SERVICE_ROLE_HOST_MAPPING: `/ddh/service/install/saveServiceRoleHostMapping`,
+  
   // 存储库相关 - v1
   PARCEL_LIST: `${API_BASE}/cluster/parcel/list`,
   PARCEL_PARSE: `${API_BASE}/cluster/parcel/parse`,
@@ -114,7 +119,7 @@ export const API_PATHS_V1 = {
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
-  SAVE_SERVICE_ROLE_HOST_MAPPING: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
+  SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `/ddh/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
 };
 
