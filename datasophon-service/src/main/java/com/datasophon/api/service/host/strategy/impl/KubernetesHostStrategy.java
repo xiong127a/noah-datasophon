@@ -20,9 +20,8 @@ package com.datasophon.api.service.host.strategy.impl;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
-import com.datasophon.common.enums.ConfigStatus;
-import com.datasophon.dao.entity.ClusterConfigProgressEntity;
-import com.datasophon.dao.mapper.ClusterConfigProgressMapper;
+
+
 import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.HostState;
@@ -50,8 +49,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     @Autowired
     private K8sToClusterHostConverter k8sToClusterHostConverter;
 
-    @Autowired
-    private ClusterConfigProgressMapper configProgressMapper;
+
 
     // K8S主机临时存储，替代缓存
     private final Map<Integer, List<ClusterHostDO>> k8sHostsStorage = new HashMap<>();
@@ -314,22 +312,6 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         result.put("notReadyHosts", total - ready);
         if (valid) {
             result.put("message", String.format("校验通过：所有 %d 台主机都是未受管状态且Ready", total));
-            // 通过则自动保存进度到 step2 完成（简化版：直接更新/插入）
-            ClusterConfigProgressEntity progress = configProgressMapper.findByClusterId(clusterId);
-            if (progress == null) {
-                progress = new ClusterConfigProgressEntity();
-                progress.setClusterId(clusterId);
-                progress.setConfigStatus(ConfigStatus.CONFIGURING);
-                progress.setCompletedStep(2);
-                configProgressMapper.insert(progress);
-            } else {
-                Integer current = progress.getCompletedStep() == null ? 0 : progress.getCompletedStep();
-                if (current < 2) {
-                    progress.setCompletedStep(2);
-                    progress.setConfigStatus(ConfigStatus.CONFIGURING);
-                    configProgressMapper.update(progress);
-                }
-            }
         } else {
             if (!allUnmanaged) {
                 long managed = total - unmanaged;

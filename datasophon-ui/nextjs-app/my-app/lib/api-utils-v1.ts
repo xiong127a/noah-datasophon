@@ -196,9 +196,7 @@ export const clusterApiV1 = {
     
     // ========== 配置进度管理相关 (简化版) ==========
     
-    // 获取集群配置进度
-    getConfigProgress: (config?: any) =>
-      apiV1.get(API_PATHS_V1.CONFIG_PROGRESS_GET, config),
+
     
     // 获取主机列表（支持分页和筛选）
     list: (params: {

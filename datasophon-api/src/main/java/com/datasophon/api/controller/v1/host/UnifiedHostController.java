@@ -22,7 +22,7 @@ import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
-import com.datasophon.dao.mapper.ClusterConfigProgressMapper;
+
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
 import com.datasophon.common.dto.HostDiscoveryResultDTO;
 import com.datasophon.common.dto.HostInfoDTO;
@@ -58,9 +58,7 @@ public class UnifiedHostController {
     @Autowired
     private K8sToClusterHostConverter converter;
     
-    @Autowired
-    private ClusterConfigProgressMapper clusterConfigProgressMapper;
-    
+
     @Autowired
     private ClusterInfoService clusterInfoService;
     
@@ -319,35 +317,7 @@ public class UnifiedHostController {
         }
     }
 
-    // ========== 配置进度管理接口 (简化版) ==========
 
-    /**
-     * 获取集群配置进度 - 唯一的进度接口
-     * 用于前端显示当前进度和判断可进入的步骤
-     */
-    @GetMapping("config-progress")
-    public Result<Map<String, Object>> getConfigProgress(@ClusterId Integer clusterId) {
-        log.debug("获取集群配置进度，集群ID: {}", clusterId);
-        
-        try {
-            // 通过DAO直接读取简化进度（避免依赖InstallService）
-            var progress = clusterConfigProgressMapper.findByClusterId(clusterId);
-            int completedStep = progress != null && progress.getCompletedStep() != null ? progress.getCompletedStep() : 0;
-            Integer currentStep = completedStep >= 8 ? 8 : Math.max(1, completedStep + 1);
-            String configStatus = progress != null && progress.getConfigStatus() != null ? progress.getConfigStatus().getCode() : "UNCONFIGURED";
-
-            Map<String, Object> result = Map.of(
-                "currentStep", currentStep,
-                "completedStep", completedStep,
-                "configStatus", configStatus,
-                "canEnterCluster", completedStep >= 8
-            );
-            return Result.success(result);
-        } catch (Exception e) {
-            log.error("获取集群配置进度失败，集群ID: {}", clusterId, e);
-            return Result.error("获取配置进度失败: " + e.getMessage());
-        }
-    }
 
     /**
      * 标记集群配置完成

@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
-import { useConfigProgress } from './config-progress-context'
+
 import type { 
   ClusterStep2DialogProps, 
   Host, 
@@ -41,10 +41,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   // 使用标准化的步骤配置
   const steps = getStepsByType(StepsType.NORMAL, depType)
   
-  // 简化的配置进度管理 - 只用来显示进度，业务逻辑保持不变
-  const { 
-    refreshProgress
-  } = useConfigProgress()
+
   
   // 基础状态
   const [loading, setLoading] = useState(false)
@@ -507,12 +504,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       // 保存K8S配置和主机列表
       await saveK8sConfigAndHosts()
       
-      // 🎉 简化版：后端已自动保存Step2完成进度，只需刷新显示
-      try {
-        await refreshProgress()
-      } catch {
-        console.warn('刷新进度显示失败，但不影响业务流程')
-      }
+      // 步骤2完成，无需保存进度（已移除进度保存功能）
       
       toast.success('Step2 校验完成，进入下一步')
       
