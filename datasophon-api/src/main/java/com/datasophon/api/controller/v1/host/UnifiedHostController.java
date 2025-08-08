@@ -29,7 +29,8 @@ import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
 import com.datasophon.common.dto.FilterOptionsDTO;
 import com.datasophon.common.enums.ClusterType;
-import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.common.enums.ClusterState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -58,10 +59,10 @@ public class UnifiedHostController {
     private K8sToClusterHostConverter converter;
     
     @Autowired
-    private ClusterHostService clusterHostService;
+    private ClusterConfigProgressMapper clusterConfigProgressMapper;
     
     @Autowired
-    private ClusterConfigProgressMapper clusterConfigProgressMapper;
+    private ClusterInfoService clusterInfoService;
     
     // 进度查询与保存迁移到策略/服务内，新接口不再直接依赖 InstallService
 
@@ -96,6 +97,15 @@ public class UnifiedHostController {
             
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
+                
+                // Step1成功完成，自动将集群状态切换为"配置中"
+                try {
+                    clusterInfoService.updateClusterState(clusterId, ClusterState.CONFIGURING.getValue());
+                    log.info("集群状态已从'待配置'切换为'配置中'，集群ID: {}", clusterId);
+                } catch (Exception e) {
+                    log.warn("更新集群状态失败，集群ID: {}, 错误: {}", clusterId, e.getMessage());
+                    // 状态更新失败不影响主机发现结果的返回
+                }
                 
                 // 转换为前端需要的DTO格式
                 HostDiscoveryResultDTO responseDto = convertToHostDiscoveryResultDTO(result, clusterId, step1Config.getClusterType());
@@ -322,7 +332,7 @@ public class UnifiedHostController {
         try {
             // 通过DAO直接读取简化进度（避免依赖InstallService）
             var progress = clusterConfigProgressMapper.findByClusterId(clusterId);
-            Integer completedStep = progress != null && progress.getCompletedStep() != null ? progress.getCompletedStep() : 0;
+            int completedStep = progress != null && progress.getCompletedStep() != null ? progress.getCompletedStep() : 0;
             Integer currentStep = completedStep >= 8 ? 8 : Math.max(1, completedStep + 1);
             String configStatus = progress != null && progress.getConfigStatus() != null ? progress.getConfigStatus().getCode() : "UNCONFIGURED";
 
@@ -336,6 +346,102 @@ public class UnifiedHostController {
         } catch (Exception e) {
             log.error("获取集群配置进度失败，集群ID: {}", clusterId, e);
             return Result.error("获取配置进度失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 标记集群配置完成
+     * 完成所有配置步骤后，将集群状态从"配置中"切换为"正在运行"
+     */
+    @PostMapping("mark-config-completed")
+    public Result<String> markConfigCompleted(@ClusterId Integer clusterId) {
+        log.info("标记集群配置完成，集群ID: {}", clusterId);
+        
+        try {
+            // 更新集群状态为"正在运行"
+            boolean success = clusterInfoService.updateClusterState(clusterId, ClusterState.RUNNING.getValue());
+            
+            if (success) {
+                log.info("集群状态已从'配置中'切换为'正在运行'，集群ID: {}", clusterId);
+                return Result.success("集群配置已完成，现在可以进入集群管理");
+            } else {
+                return Result.error("标记配置完成失败");
+            }
+        } catch (Exception e) {
+            log.error("标记集群配置完成失败，集群ID: {}", clusterId, e);
+            return Result.error("标记配置完成失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 重置集群配置状态
+     * 将集群状态重置为"待配置"，用于重新开始配置流程
+     */
+    @PostMapping("reset-config-status")
+    public Result<String> resetConfigStatus(@ClusterId Integer clusterId) {
+        log.info("重置集群配置状态，集群ID: {}", clusterId);
+        
+        try {
+            // 重置集群状态为"待配置"
+            boolean success = clusterInfoService.updateClusterState(clusterId, ClusterState.NEED_CONFIG.getValue());
+            
+            if (success) {
+                log.info("集群状态已重置为'待配置'，集群ID: {}", clusterId);
+                return Result.success("集群配置状态已重置，可以重新开始配置");
+            } else {
+                return Result.error("重置配置状态失败");
+            }
+        } catch (Exception e) {
+            log.error("重置集群配置状态失败，集群ID: {}", clusterId, e);
+            return Result.error("重置配置状态失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 停止集群
+     * 将集群状态从"正在运行"切换为"停止"
+     */
+    @PostMapping("stop-cluster")
+    public Result<String> stopCluster(@ClusterId Integer clusterId) {
+        log.info("停止集群，集群ID: {}", clusterId);
+        
+        try {
+            // 停止集群状态为"停止"
+            boolean success = clusterInfoService.updateClusterState(clusterId, ClusterState.STOP.getValue());
+            
+            if (success) {
+                log.info("集群状态已从'正在运行'切换为'停止'，集群ID: {}", clusterId);
+                return Result.success("集群已停止");
+            } else {
+                return Result.error("停止集群失败");
+            }
+        } catch (Exception e) {
+            log.error("停止集群失败，集群ID: {}", clusterId, e);
+            return Result.error("停止集群失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 启动集群
+     * 将集群状态从"停止"切换为"正在运行"
+     */
+    @PostMapping("start-cluster")
+    public Result<String> startCluster(@ClusterId Integer clusterId) {
+        log.info("启动集群，集群ID: {}", clusterId);
+        
+        try {
+            // 启动集群状态为"正在运行"
+            boolean success = clusterInfoService.updateClusterState(clusterId, ClusterState.RUNNING.getValue());
+            
+            if (success) {
+                log.info("集群状态已从'停止'切换为'正在运行'，集群ID: {}", clusterId);
+                return Result.success("集群已启动");
+            } else {
+                return Result.error("启动集群失败");
+            }
+        } catch (Exception e) {
+            log.error("启动集群失败，集群ID: {}", clusterId, e);
+            return Result.error("启动集群失败: " + e.getMessage());
         }
     }
 }

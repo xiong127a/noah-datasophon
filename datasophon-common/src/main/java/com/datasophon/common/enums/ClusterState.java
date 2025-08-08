@@ -31,11 +31,28 @@ import java.util.Arrays;
  **/
 @Getter
 public enum ClusterState {
-    DELETING(4, "删除中"),
+    /**
+     * 删除中 - 集群已删除，可以删除
+     */
+    DELETING(5, "删除中"),
+    /**
+     * 停止 - 集群已停止，可以删除
+     */
+    STOP(4, "停止"),
 
-    STOP(3, "停止"),
-
-    RUNNING(2, "正在运行"),
+    /**
+     * 正在运行 - 配置完成，可以进入集群管理
+     */
+    RUNNING(3, "正在运行"),
+    
+    /**
+     * 配置中 - 正在进行配置过程
+     */
+    CONFIGURING(2, "配置中"),
+    
+    /**
+     * 待配置 - 集群刚创建，需要开始配置
+     */
     NEED_CONFIG(1, "待配置");
 
     @Getter
@@ -61,6 +78,72 @@ public enum ClusterState {
 
     public static ClusterState of(int value) {
         return Arrays.stream(values()).filter(state -> state.getValue() == value).findAny().orElse(null);
+    }
+
+    /**
+     * 是否可以进入集群管理
+     */
+    public boolean canEnterCluster() {
+        return this == RUNNING;
+    }
+    
+    /**
+     * 是否需要继续配置
+     */
+    public boolean needsContinueConfig() {
+        return this == NEED_CONFIG || this == CONFIGURING;
+    }
+    
+    /**
+     * 是否正在配置中
+     */
+    public boolean isConfiguring() {
+        return this == CONFIGURING;
+    }
+    
+    /**
+     * 是否未开始配置
+     */
+    public boolean isUnconfigured() {
+        return this == NEED_CONFIG;
+    }
+    
+    /**
+     * 是否已停止
+     */
+    public boolean isStopped() {
+        return this == STOP;
+    }
+    
+    /**
+     * 是否正在运行
+     */
+    public boolean isRunning() {
+        return this == RUNNING;
+    }
+    
+    /**
+     * 是否可以删除
+     * 只有停止状态的集群才可以删除
+     */
+    public boolean canDelete() {
+        return this == STOP;
+    }
+    
+    /**
+     * 是否可以停止
+     * 只有正在运行的集群才可以停止
+     */
+    public boolean canStop() {
+        return this == RUNNING;
+    }
+    
+    /**
+     * 是否可以启动
+     * 只有停止状态的集群才可以启动
+     */
+    public boolean canStart() {
+        return this == STOP;
     }
 
     @Override

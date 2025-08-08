@@ -39,8 +39,16 @@ import org.mapstruct.Named;
 public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, ClusterInfoDTO, ClusterInfoVO> {
 
     /**
+     * Entity转换为DTO时，将枚举转换为整数
+     */
+    @Mapping(target = "clusterState", source = "clusterState", qualifiedByName = "mapClusterStateToInteger")
+    @Override
+    ClusterInfoDTO entityToDto(ClusterInfoEntity entity);
+
+    /**
      * Entity转换为VO时，添加状态文本映射
      */
+    @Mapping(target = "clusterState", source = "clusterState", qualifiedByName = "mapClusterStateToInteger")
     @Mapping(target = "clusterStateText", source = "clusterState", qualifiedByName = "mapEntityClusterStateText")
     @Override
     ClusterInfoVO entityToVo(ClusterInfoEntity entity);
@@ -59,13 +67,12 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
     default String mapClusterStateText(Integer clusterState) {
         if (clusterState == null)
             return null;
-        // 这里需要根据实际的ClusterState枚举值来映射
+        // 集群状态映射
         return switch (clusterState) {
             case 1 -> "待配置";
-            case 2 -> "正在运行";
-            case 3 -> "停止";
-            case 4 -> "删除中";
-            case 5 -> "已删除";
+            case 2 -> "配置中";
+            case 3 -> "正在运行";
+            case 4 -> "停止";
             default -> "未知状态";
         };
     }
