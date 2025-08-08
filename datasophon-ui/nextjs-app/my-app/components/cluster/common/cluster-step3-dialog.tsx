@@ -2,36 +2,34 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { 
-  X, ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
-  AlertCircle, Package, Database, Search
+  ChevronLeft, ChevronRight, Loader2, RefreshCw,
+  AlertCircle, Package, Search
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import ServiceIcon from "@/components/ui/service-icon"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
-import { ClusterType, ClusterTypeUtil } from '@/types'
+import { ClusterTypeUtil } from '@/types'
 
 import { SERVICE_TYPE_OPTIONS, ServiceType } from '@/types/step3'
 import type { 
   ClusterStep3DialogProps, 
   Service, 
   ServiceSelection,
-  Step3Data,
-  ServiceTypeOption,
-  ServiceListResponse
+  Step3Data
 } from '@/types/step3'
 
 /**
  * 集群步骤3：大数据服务选择对话框
  * 用于K8S模式下选择需要安装的大数据服务
+ * Apple风格设计
  * 
  * 作者：任相鹏
  * 邮箱：635887935@qq.com
@@ -41,7 +39,6 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
   open,
   onOpenChange,
   cluster,
-  step2Data,
   onSuccess,
   onPrevious
 }) => {
@@ -55,29 +52,22 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([])
   const [selectedServices, setSelectedServices] = useState<ServiceSelection[]>([])
-  const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType>(ServiceType.CORE)
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType>(ServiceType.MINIMAL)
   const [searchTerm, setSearchTerm] = useState('')
 
   // 集群ID
   const clusterId = cluster?.id
 
-  // 搜索和筛选后的服务列表
+  // 搜索筛选后的服务列表（显示所有服务）
   const filteredServices = useMemo(() => {
     return services.filter(service => {
-      // 搜索筛选
-      const searchMatch = searchTerm === '' || 
+      // 只进行搜索筛选，显示所有服务
+      return searchTerm === '' || 
         service.label?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.serviceName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.serviceDesc?.toLowerCase().includes(searchTerm.toLowerCase())
-      
-      // 服务类型筛选（根据必需状态进行筛选）
-      const typeMatch = serviceTypeFilter === ServiceType.CORE 
-        ? service.isRequired  // 核心服务：显示必需的服务
-        : !service.isRequired // 自定义服务：显示非必需的服务
-      
-      return searchMatch && typeMatch
     })
-  }, [services, searchTerm, serviceTypeFilter])
+  }, [services, searchTerm])
 
   // 获取服务列表
   const fetchServiceList = async (showLoading = true) => {
@@ -103,29 +93,7 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
         const serviceData = response.data.data || []
         setServices(serviceData)
         
-        // 如果是K8S模式，自动选中必需的服务（如果有的话）
-        if (ClusterTypeUtil.isKubernetes(clusterType)) {
-          const requiredServices = serviceData
-            .filter((service: Service) => service.isRequired && !service.installed)
-          
-          if (requiredServices.length > 0) {
-            const requiredIds = requiredServices.map((service: Service) => service.id)
-            const requiredSelections = requiredServices.map((service: Service) => ({
-              serviceId: service.id,
-              serviceName: service.serviceName
-            }))
-            
-            setSelectedServiceIds(prev => [...new Set([...prev, ...requiredIds])])
-            setSelectedServices(prev => {
-              const combined = [...prev, ...requiredSelections]
-              // 去重
-              const unique = combined.filter((item, index, self) => 
-                index === self.findIndex(t => t.serviceId === item.serviceId)
-              )
-              return unique
-            })
-          }
-        }
+        // 设置服务数据，自动勾选逻辑由 useEffect 处理
       } else {
         console.error('获取服务列表失败:', response.data?.msg || '未知错误')
         toast.error('获取服务列表失败')
@@ -141,42 +109,41 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
   }
 
   // 处理服务选择
-  const handleServiceSelection = (serviceId: number, checked: boolean) => {
+  const handleServiceSelection = (serviceId: number, selected: boolean) => {
     const service = services.find(s => s.id === serviceId)
     if (!service) return
 
-    if (checked) {
-      // 添加选择
-      setSelectedServiceIds(prev => [...prev, serviceId])
-      setSelectedServices(prev => [
-        ...prev,
-        {
-          serviceId: service.id,
-          serviceName: service.serviceName
+    if (selected) {
+      setSelectedServiceIds(prev => [...new Set([...prev, serviceId])])
+      setSelectedServices(prev => {
+        const exists = prev.some(s => s.serviceId === serviceId)
+        if (!exists) {
+          return [...prev, {
+            serviceId: service.id,
+            serviceName: service.serviceName
+          }]
         }
-      ])
+        return prev
+      })
     } else {
-      // 移除选择
       setSelectedServiceIds(prev => prev.filter(id => id !== serviceId))
       setSelectedServices(prev => prev.filter(s => s.serviceId !== serviceId))
     }
   }
 
-  // 全选/取消全选
+  // 全选功能
   const handleSelectAll = () => {
     const selectableServices = filteredServices.filter(service => 
       ClusterTypeUtil.isKubernetes(clusterType) ? true : !service.installed
     )
     
-    const allSelected = selectableServices.every(service => 
-      selectedServiceIds.includes(service.id)
-    )
-
+    const allSelected = selectableServices.every(s => selectedServiceIds.includes(s.id))
+    
     if (allSelected) {
       // 取消全选
-      const selectableIds = selectableServices.map(s => s.id)
-      setSelectedServiceIds(prev => prev.filter(id => !selectableIds.includes(id)))
-      setSelectedServices(prev => prev.filter(s => !selectableIds.includes(s.serviceId)))
+      const idsToRemove = selectableServices.map(s => s.id)
+      setSelectedServiceIds(prev => prev.filter(id => !idsToRemove.includes(id)))
+      setSelectedServices(prev => prev.filter(s => !idsToRemove.includes(s.serviceId)))
     } else {
       // 全选
       const newIds = selectableServices.map(s => s.id)
@@ -225,12 +192,44 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
     }
   }
 
+  // 根据服务类型自动勾选对应服务
+  useEffect(() => {
+    if (services.length > 0) {
+      // 根据选择的服务类型自动勾选对应服务
+      const requiredServices = services.filter(service => {
+        if (serviceTypeFilter === ServiceType.MINIMAL) {
+          // 最小化：选择基础必需服务（监控和核心大数据组件）
+          return ['PROMETHEUS', 'GRAFANA', 'ZOOKEEPER', 'HDFS', 'YARN'].includes(service.serviceName)
+        } else if (serviceTypeFilter === ServiceType.CUSTOM) {
+          // 自定义：选择基础监控服务
+          return ['PROMETHEUS', 'GRAFANA'].includes(service.serviceName)
+        }
+        return false
+      })
+      
+      if (requiredServices.length > 0) {
+        const requiredIds = requiredServices.map(service => service.id)
+        const requiredSelections = requiredServices.map(service => ({
+          serviceId: service.id,
+          serviceName: service.serviceName
+        }))
+        
+        setSelectedServiceIds(requiredIds)
+        setSelectedServices(requiredSelections)
+      } else {
+        // 如果没有匹配的必需服务，清空选择
+        setSelectedServiceIds([])
+        setSelectedServices([])
+      }
+    }
+  }, [services, serviceTypeFilter])
+
   // 组件挂载时获取服务列表
   useEffect(() => {
     if (open && clusterId) {
       fetchServiceList()
     }
-  }, [open, clusterId, serviceTypeFilter])
+  }, [open, clusterId, serviceTypeFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 计算统计信息
   const stats = useMemo(() => {
@@ -260,88 +259,90 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
             onClose={() => onOpenChange(false)}
           />
 
-          {/* 右侧内容 */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* 头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                  <Package className="w-6 h-6 mr-3 text-blue-600" />
-                  大数据服务选择
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  选择需要在Kubernetes集群中部署的大数据服务组件
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* 主内容区域 */}
-            <div className="flex-1 p-6 min-h-0">
-              <div className="h-full flex flex-col">
-                <div className="flex-1 grid grid-cols-4 gap-6 min-h-0">
-                  {/* 服务列表表格 */}
-                  <div className="col-span-3">
-                    <Card className="h-full flex flex-col">
-                      <CardHeader className="pb-4 flex-shrink-0">
-                        <div className="flex items-center justify-between">
+          {/* 主要内容区域 - Apple风格设计 */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* 渐变背景 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-white/10 to-purple-50/20"></div>
+            
+            <div className="relative flex-1 p-10 overflow-hidden">
+              <div className="h-full">
+                <div className="grid grid-cols-6 gap-8 h-full">
+                  {/* 左侧服务列表 - Apple卡片设计 */}
+                  <div className="col-span-5 flex flex-col min-h-0">
+                    <div className="flex-1 flex flex-col min-h-0 bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/5 border border-white/20">
+                      {/* 头部区域 */}
+                      <div className="p-8 pb-6 border-b border-gray-100/50">
+                        <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center space-x-4">
-                            <CardTitle className="text-lg flex items-center">
-                              <Database className="w-5 h-5 mr-2 text-blue-600" />
-                              可用服务
-                              {services.length > 0 && (
-                                <span className="ml-2 text-sm font-normal text-gray-500">
-                                  （共 {stats.total} 个）
-                                </span>
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+                              <Package className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                                大数据服务
+                              </h2>
+                              {stats.total > 0 && (
+                                <p className="text-sm text-gray-500 mt-1">
+                                  共 {stats.total} 个可用服务
+                                </p>
                               )}
-                            </CardTitle>
-                            <Button 
-                              onClick={() => fetchServiceList(true)}
-                              disabled={loading}
-                              variant="outline"
-                              size="sm"
-                            >
-                              {loading ? (
-                                <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                              ) : (
-                                <RefreshCw className="w-3 h-3 mr-1.5" />
-                              )}
-                              刷新
-                            </Button>
+                            </div>
                           </div>
+                          
+                          <Button 
+                            onClick={() => fetchServiceList(true)}
+                            disabled={loading}
+                            className="bg-white/80 hover:bg-white/90 text-gray-700 border-0 shadow-lg shadow-black/5 rounded-2xl px-6 py-3 transition-all duration-300 hover:shadow-xl hover:scale-105"
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                刷新中...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                刷新
+                              </>
+                            )}
+                          </Button>
                         </div>
                         
-                        {/* 搜索和筛选栏 */}
-                        <div className="flex items-center space-x-4 mt-4">
-                          <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        {/* Apple风格搜索和筛选栏 */}
+                        <div className="flex items-center space-x-6">
+                          <div className="relative flex-1 max-w-lg">
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <Input
                               type="text"
                               placeholder="搜索服务名称或描述..."
-                              className="pl-10"
+                              className="pl-12 pr-4 py-4 bg-gray-50/80 border-0 rounded-2xl text-base focus:bg-white/90 focus:shadow-lg focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
                             />
                           </div>
                           
-                          <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="选择服务类型" />
+                          <Select value={serviceTypeFilter} onValueChange={(value) => setServiceTypeFilter(value as ServiceType)}>
+                            <SelectTrigger className="w-56 h-12 bg-gray-50/80 border-0 rounded-2xl focus:bg-white/90 focus:shadow-lg focus:ring-2 focus:ring-blue-500/20 transition-all duration-300">
+                              <SelectValue placeholder="选择服务类型">
+                                {/* 自定义显示内容，只显示标签，不显示描述 */}
+                                {serviceTypeFilter && (
+                                  <span className="font-semibold text-gray-900">
+                                    {serviceTypeOptions.find(option => option.value === serviceTypeFilter)?.label}
+                                  </span>
+                                )}
+                              </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white/95 backdrop-blur-xl border-0 rounded-2xl shadow-2xl shadow-black/10">
                               {serviceTypeOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
+                                <SelectItem 
+                                  key={option.value} 
+                                  value={option.value}
+                                  className="rounded-xl p-4 focus:bg-blue-50/80"
+                                >
                                   <div>
-                                    <div className="font-medium">{option.label}</div>
+                                    <div className="font-semibold text-gray-900">{option.label}</div>
                                     {option.description && (
-                                      <div className="text-xs text-gray-500">{option.description}</div>
+                                      <div className="text-sm text-gray-500 mt-1">{option.description}</div>
                                     )}
                                   </div>
                                 </SelectItem>
@@ -351,79 +352,91 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
 
                           <Button
                             onClick={handleSelectAll}
-                            variant="outline"
-                            size="sm"
                             disabled={filteredServices.length === 0}
+                            className="h-12 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 rounded-2xl shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 disabled:opacity-50 disabled:scale-100"
                           >
                             {filteredServices.every(s => selectedServiceIds.includes(s.id)) ? '取消全选' : '全选'}
                           </Button>
                         </div>
-                      </CardHeader>
-                      
-                      <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
+                      </div>
+
+                      {/* 服务列表内容区域 */}
+                      <div className="pt-0 flex-1 flex flex-col min-h-0 p-8">
                         {loading ? (
-                          <div className="flex items-center justify-center h-64">
-                            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                            <span>加载中...</span>
+                          <div className="flex items-center justify-center h-96">
+                            <div className="flex flex-col items-center space-y-4">
+                              <div className="relative">
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center">
+                                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                </div>
+                              </div>
+                              <p className="text-gray-600 font-medium">正在加载服务列表...</p>
+                            </div>
                           </div>
                         ) : filteredServices.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                            <Package className="w-16 h-16 mb-4 text-gray-300" />
-                            <div className="text-lg mb-2">暂无可用服务</div>
-                            <div className="text-sm">请尝试调整筛选条件或检查服务配置</div>
+                          <div className="flex flex-col items-center justify-center h-96 text-gray-500">
+                            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mb-6">
+                              <Package className="w-12 h-12 text-gray-400" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-700 mb-2">暂无可用服务</h3>
+                            <p className="text-gray-500">请尝试调整筛选条件或检查服务配置</p>
                           </div>
                         ) : (
-                          <div className="flex-1 overflow-y-auto">
-                            <div className="grid gap-3">
+                          <div className="flex-1 overflow-y-auto pr-2" style={{scrollbarWidth: 'thin'}}>
+                            <div className="grid grid-cols-6 gap-3">
                               {filteredServices.map((service) => (
                                 <div
                                   key={service.id}
-                                  className={`group relative rounded-lg border p-4 transition-all duration-200 cursor-pointer ${
+                                  className={`group relative rounded-xl p-4 transition-all duration-300 cursor-pointer transform hover:scale-[1.02] ${
                                     selectedServiceIds.includes(service.id)
-                                      ? 'border-blue-300 bg-blue-50/50 shadow-sm'
-                                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                                      ? 'bg-gradient-to-r from-blue-50/90 to-blue-100/60 shadow-lg shadow-blue-500/10 border-2 border-blue-200/50'
+                                      : 'bg-white/60 hover:bg-white/80 shadow-md hover:shadow-lg shadow-black/5 border border-gray-100/50 hover:border-gray-200/50'
                                   }`}
                                   onClick={() => handleServiceSelection(service.id, !selectedServiceIds.includes(service.id))}
+                                  title={service.serviceDesc || service.serviceName}
                                 >
-                                  <div className="flex items-start space-x-3">
+                                  {/* 选择状态指示器 */}
+                                  <div className="absolute top-2 right-2">
                                     <Checkbox
                                       checked={selectedServiceIds.includes(service.id)}
                                       onCheckedChange={(checked) => 
                                         handleServiceSelection(service.id, checked === true)
                                       }
-                                      className="mt-0.5"
-                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-4 h-4 rounded-md"
+                                    />
+                                  </div>
+                                  
+                                  {/* 服务图标和信息 */}
+                                  <div className="flex flex-col items-center text-center space-y-3">
+                                    <ServiceIcon 
+                                      serviceName={service.serviceName}
+                                      size={40}
+                                      className="opacity-80 group-hover:opacity-100 transition-opacity duration-300"
                                     />
                                     
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="text-sm font-medium text-gray-900 truncate">
-                                          {service.label || service.serviceName}
-                                        </h4>
-                                        <div className="flex items-center space-x-2 ml-2">
-                                          {service.isRequired && (
-                                            <Badge variant="secondary" className="text-xs">必需</Badge>
-                                          )}
-                                          {service.installed && (
-                                            <Badge variant="outline" className="text-xs">已安装</Badge>
-                                          )}
-                                          {service.serviceVersion && (
-                                            <Badge variant="outline" className="text-xs font-mono">
-                                              v{service.serviceVersion}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
+                                      <h4 className="text-sm font-bold text-gray-900 truncate mb-1">
+                                        {service.label || service.serviceName}
+                                      </h4>
                                       
-                                      <div className="mt-1 text-xs text-gray-600 truncate">
-                                        {service.serviceName}
+                                      {/* 状态标识 */}
+                                      <div className="flex flex-wrap items-center justify-center gap-1 text-xs">
+                                        {service.isRequired && (
+                                          <span className="px-2 py-0.5 bg-gradient-to-r from-orange-400 to-orange-500 text-white font-semibold rounded-full">
+                                            必需
+                                          </span>
+                                        )}
+                                        {service.installed && (
+                                          <span className="px-2 py-0.5 bg-gradient-to-r from-green-400 to-green-500 text-white font-semibold rounded-full">
+                                            已安装
+                                          </span>
+                                        )}
+                                        {service.serviceVersion && (
+                                          <span className="px-2 py-0.5 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-mono font-bold rounded-full">
+                                            v{service.serviceVersion}
+                                          </span>
+                                        )}
                                       </div>
-                                      
-                                      {service.serviceDesc && (
-                                        <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                                          {service.serviceDesc}
-                                        </p>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -431,106 +444,130 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                             </div>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* 右侧统计面板 */}
-                  <div className="col-span-1">
-                    <Card className="h-full">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center">
-                          <AlertCircle className="w-5 h-5 text-blue-600 mr-2" />
-                          选择统计
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">总服务数</span>
-                          <span className="font-semibold text-lg">{stats.total}</span>
+                  {/* 右侧紧凑统计面板 */}
+                  <div className="col-span-1 flex flex-col space-y-4">
+                    {/* 紧凑统计卡片 */}
+                    <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/5 border border-white/20 p-4">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+                          <AlertCircle className="w-4 h-4 text-white" />
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">已选择</span>
-                          <span className="font-semibold text-lg text-blue-600">{stats.selected}</span>
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900">统计</h3>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">必需服务</span>
-                          <span className="font-semibold text-lg text-orange-600">{stats.required}</span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="bg-gradient-to-br from-blue-50/80 to-blue-100/60 rounded-xl p-3 border border-blue-200/30">
+                          <div className="text-xs font-medium text-blue-600 mb-1">总数</div>
+                          <div className="text-xl font-bold text-blue-900">{stats.total}</div>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">可用服务</span>
-                          <span className="font-semibold text-lg text-green-600">{stats.available}</span>
+                        <div className="bg-gradient-to-br from-green-50/80 to-green-100/60 rounded-xl p-3 border border-green-200/30">
+                          <div className="text-xs font-medium text-green-600 mb-1">已选</div>
+                          <div className="text-xl font-bold text-green-900">{stats.selected}</div>
+                        </div>
+                        <div className="bg-gradient-to-br from-orange-50/80 to-orange-100/60 rounded-xl p-3 border border-orange-200/30">
+                          <div className="text-xs font-medium text-orange-600 mb-1">必需</div>
+                          <div className="text-xl font-bold text-orange-900">{stats.required}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 紧凑已选择服务列表 */}
+                    {selectedServices.length > 0 && (
+                      <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/5 border border-white/20 p-4">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
+                            <span className="text-white font-bold text-xs">{stats.selected}</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-gray-900">已选服务</h4>
                         </div>
                         
-                        {selectedServices.length > 0 && (
-                          <div className="pt-4 border-t">
-                            <h4 className="font-medium text-gray-900 mb-3">已选择的服务：</h4>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {selectedServices.map((service) => (
-                                <div key={service.serviceId} className="text-sm text-gray-700 bg-blue-50 rounded p-2">
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1" style={{scrollbarWidth: 'thin'}}>
+                          {selectedServices.map((service) => (
+                            <div 
+                              key={service.serviceId} 
+                              className="flex items-center space-x-2 p-2 bg-gradient-to-r from-blue-50/80 to-blue-100/50 rounded-lg border border-blue-200/30 transition-all duration-200"
+                            >
+                              <ServiceIcon 
+                                serviceName={service.serviceName}
+                                size={16}
+                                className="flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-gray-900 truncate">
                                   {service.serviceName}
                                 </div>
-                              ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 底部操作栏 */}
-            <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
-                    <span className="text-sm font-medium text-gray-700">
-                      已选择 
-                      <span className="mx-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                        {stats.selected}
-                      </span>
-                      个服务
-                    </span>
-                  </div>
-                  {stats.required > 0 && (
-                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                      <span className="text-sm font-medium text-orange-700">
-                        {stats.required} 个必需服务
-                      </span>
+            {/* Apple风格底部操作栏 */}
+            <div className="relative">
+              {/* 渐变分隔线 */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200/60 to-transparent"></div>
+              
+              <div className="bg-white/90 backdrop-blur-xl border-t border-white/20 p-8 shadow-2xl shadow-black/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 animate-pulse"></div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-semibold text-gray-700">已选择</span>
+                        <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-blue-500/30 font-bold text-lg min-w-[3rem] text-center">
+                          {stats.selected}
+                        </div>
+                        <span className="text-lg font-semibold text-gray-700">个服务</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Button
-                    onClick={() => {
-                      if (onPrevious) {
-                        onPrevious()
-                      } else {
-                        onOpenChange(false)
-                      }
-                    }}
-                    variant="outline"
-                    className="px-6 py-2"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    上一步
-                  </Button>
-                  <Button
-                    onClick={handleNext}
-                    disabled={selectedServiceIds.length === 0}
-                    className={`px-6 py-2 ${
-                      selectedServiceIds.length === 0
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105'
-                    }`}
-                  >
-                    下一步
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
+                    
+                    {stats.required > 0 && (
+                      <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-orange-50/90 to-orange-100/70 rounded-2xl border border-orange-200/50 shadow-lg shadow-orange-500/10">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 shadow-lg shadow-orange-500/50"></div>
+                        <span className="text-orange-700 font-semibold">
+                          包含 {stats.required} 个必需服务
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <Button
+                      onClick={() => {
+                        if (onPrevious) {
+                          onPrevious()
+                        } else {
+                          onOpenChange(false)
+                        }
+                      }}
+                      className="px-8 py-4 bg-white/80 hover:bg-white/90 text-gray-700 border-0 rounded-2xl shadow-lg shadow-black/5 font-semibold text-base transition-all duration-300 hover:shadow-xl hover:scale-105"
+                    >
+                      <ChevronLeft className="w-5 h-5 mr-2" />
+                      上一步
+                    </Button>
+                    
+                    <Button
+                      onClick={handleNext}
+                      disabled={selectedServiceIds.length === 0}
+                      className="px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 rounded-2xl shadow-xl shadow-blue-500/30 font-bold text-base transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                    >
+                      下一步
+                      <ChevronRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

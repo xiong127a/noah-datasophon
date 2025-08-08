@@ -31,10 +31,10 @@ import lombok.Getter;
  */
 public enum ServiceType {
     
-    /** 核心服务 - 系统推荐的必需大数据服务组件 */
-    CORE("core", "核心"),
+    /** 最小化服务 - 最少的必需大数据服务组件 */
+    MINIMAL("minimal", "最小化"),
     
-    /** 自定义服务 - 用户可选的额外大数据服务组件 */
+    /** 自定义服务 - 用户可选的大数据服务组件 */
     CUSTOM("custom", "自定义");
     
     /** 类型代码 */
@@ -78,10 +78,10 @@ public enum ServiceType {
     }
     
     /**
-     * 判断是否为核心服务类型
+     * 判断是否为最小化服务类型
      */
-    public boolean isCore() {
-        return this == CORE;
+    public boolean isMinimal() {
+        return this == MINIMAL;
     }
     
     /**

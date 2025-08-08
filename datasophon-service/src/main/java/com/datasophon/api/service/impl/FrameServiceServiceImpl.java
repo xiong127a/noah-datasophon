@@ -68,14 +68,12 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     @Autowired
     private  ClusterServiceInstanceService serviceInstanceService;
 
-    // 自定义模式必需服务：基础监控和安全组件
-    private static final List<String> CUSTOM_REQUIRED_SERVICE = List.of(
-            "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER");
+    // 最小化模式必需服务：基础监控和安全组件
+    private static final List<String> MINIMAL_REQUIRED_SERVICE = List.of(
+            "PROMETHEUS", "GRAFANA", "ZOOKEEPER", "HDFS", "YARN");
 
-    // 核心模式必需服务：完整的大数据服务组件（包含基础组件）  
-    private static final List<String> CORE_REQUIRED_SERVICE = List.of(
-            "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
-            "SPARK3", "FLINK");
+    // 自定义模式必需服务：用户自定义选择，无预设必需服务
+    private static final List<String> CUSTOM_REQUIRED_SERVICE = List.of("PROMETHEUS", "GRAFANA");
 
     @Override
     public List<FrameServiceDTO> getAllFrameService(Integer clusterId) {
@@ -129,7 +127,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
      * 设置服务的必需状态 - DTO级别操作
      */
     private List<FrameServiceDTO> setRequiredStatus(List<FrameServiceDTO> dtos, ServiceType serviceType) {
-        List<String> requiredServices = serviceType.isCustom() ? CUSTOM_REQUIRED_SERVICE : CORE_REQUIRED_SERVICE;
+        List<String> requiredServices = serviceType.isMinimal() ? MINIMAL_REQUIRED_SERVICE : CUSTOM_REQUIRED_SERVICE;
 
         return dtos.stream()
                 .map(dto -> dto.withRequired(requiredServices.contains(dto.serviceName())))

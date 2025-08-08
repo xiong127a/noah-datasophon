@@ -53,7 +53,7 @@ export interface ClusterStep3DialogProps {
     clusterCode: string
   } | null
   /** Step2传递的数据 */
-  step2Data: any
+  step2Data?: Record<string, unknown>
   /** 成功回调（进入下一步） */
   onSuccess?: (step3Data: Step3Data) => void
   /** 返回上一步回调 */
@@ -71,10 +71,10 @@ export interface ServiceListResponse {
 
 /** 服务类型枚举 */
 export enum ServiceType {
-  /** 自定义服务 */
-  CUSTOM = 'custom',
-  /** 核心服务 */
-  CORE = 'core'
+  /** 最小化服务 - 最少的必需服务组件 */
+  MINIMAL = 'minimal',
+  /** 自定义服务 - 用户自定义的服务组件 */
+  CUSTOM = 'custom'
 }
 
 export interface ServiceTypeOption {
@@ -89,9 +89,9 @@ export interface ServiceTypeOption {
 // 预定义的服务类型选项（只有核心和自定义两个选项）
 export const SERVICE_TYPE_OPTIONS: ServiceTypeOption[] = [
   {
-    value: ServiceType.CORE,
-    label: '核心', 
-    description: '系统推荐的核心大数据服务组件'
+    value: ServiceType.MINIMAL,
+    label: '最小化', 
+    description: '最少的必需大数据服务组件'
   },
   {
     value: ServiceType.CUSTOM,
