@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
+import { ManagementStatus, ManagementStatusUtil } from '@/types/management-status'
 
 import type { 
   ClusterStep2DialogProps, 
@@ -107,11 +108,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         host.ip?.toLowerCase().includes(searchTerm.toLowerCase())
       
       // 状态筛选
-      const statusMatch = statusFilter === 'all' || ((host as any).status || 'Ready') === statusFilter
+      const statusMatch = statusFilter === 'all' || (host.status || 'Ready') === statusFilter
       
       // 角色筛选
       const roleMatch = roleFilter === 'all' || 
-        ((host as any).roles || (host as any).nodeRoles || '<none>').includes(roleFilter)
+        (host.roles || '<none>').includes(roleFilter)
       
       return searchMatch && statusMatch && roleMatch
     })
@@ -122,11 +123,9 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     if (depType === 'Kubernetes') {
       // K8S模式：选择所有未受管主机
       const unmanagedHostIps = filteredData
-        .filter(host => {
-          const hostAny = host as any
-          return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
-                 (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
-        })
+        .filter(host => 
+          ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
+        )
         .map(host => host.ip)
       setSelectedRowKeys(unmanagedHostIps)
     } else {
@@ -142,26 +141,23 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   // 计算可选择的主机数量和状态
   const selectableCount = depType === 'Kubernetes' 
-    ? filteredData.filter(host => {
-        const hostAny = host as any
-        return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
-               (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
-      }).length
+    ? filteredData.filter(host => 
+        ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
+      ).length
     : filteredData.length
 
   const isAllSelected = selectedRowKeys.length === selectableCount && selectableCount > 0
 
   // 计算统计信息 - 基于筛选后的数据
-  const managedCount = filteredData.filter(host => {
-    const hostAny = host as any
-    return (typeof hostAny.managed === 'boolean' && hostAny.managed) ||
-           (typeof hostAny.managed === 'string' && hostAny.managed === 'YES')
-  }).length
-  const unmanagedCount = filteredData.filter(host => {
-    const hostAny = host as any
-    return (typeof hostAny.managed === 'boolean' && !hostAny.managed) ||
-           (typeof hostAny.managed === 'string' && hostAny.managed === 'NO')
-  }).length
+  const managedCount = filteredData.filter(host => 
+    ManagementStatusUtil.isManaged(host.managementStatus || ManagementStatus.UNMANAGED)
+  ).length
+  const unmanagedCount = filteredData.filter(host => 
+    ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
+  ).length
+  const configuringCount = filteredData.filter(host => 
+    ManagementStatusUtil.isConfiguring(host.managementStatus || ManagementStatus.UNMANAGED)
+  ).length
   
   // 检查是否有失败项（用于UI显示）
   const hasFailedItems = depType === 'Kubernetes' 
@@ -216,7 +212,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         const headers = createClusterHeaders(clusterId)
         
         response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
-        res = response.data
+        res = response.data as any // 临时类型断言，待后端接口稳定后优化
         
         // 统一API响应格式处理
         if (res.code === 200) {
@@ -416,7 +412,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   const getSuccessfulHosts = () => {
     if (depType === 'Kubernetes') {
       return dataSource.filter((host: Host) => 
-        selectedRowKeys.includes(host.ip) && !host.managed
+        selectedRowKeys.includes(host.ip) && ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
       )
     } else {
       return dataSource.filter((host: Host) => 
@@ -865,12 +861,10 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                         .slice((pagination.current - 1) * pagination.pageSize, pagination.current * pagination.pageSize)
                                         .map((host) => {
                                       const isSelected = selectedRowKeys.includes(host.ip)
-                                      const hostAny = host as any
-                                      const statusColor = (hostAny.status || 'Ready') === 'Ready' ? 'green' : 'red'
-                                      const isManaged = (typeof hostAny.managed === 'boolean' && hostAny.managed) ||
-                                                       (typeof hostAny.managed === 'string' && hostAny.managed === 'YES')
-                                      const managedStatus = isManaged ? '已受管' : '未受管'
-                                      const managedColor = isManaged ? 'rose' : 'emerald'
+                                      const statusColor = (host.status || 'Ready') === 'Ready' ? 'green' : 'red'
+                                      const managementStatus = host.managementStatus || ManagementStatus.UNMANAGED
+                                      const managedStatus = ManagementStatusUtil.getLabel(managementStatus)
+                                      const managedColor = ManagementStatusUtil.getColor(managementStatus)
                                       
                                       return (
                                 <div 
@@ -930,21 +924,21 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                     <div className="flex items-center space-x-2">
                                                     <span className="inline-flex items-center">
                                                       <span className="w-1 h-1 rounded-full bg-blue-400 mr-1"></span>
-                                                      <span>CPU: {hostAny.coreNum || 0}C</span>
+                                                      <span>CPU: {host.cpuCore || 0}C</span>
                                                     </span>
                                                     <span className="inline-flex items-center">
                                                       <span className="w-1 h-1 rounded-full bg-green-400 mr-1"></span>
-                                                      <span>MEM: {hostAny.totalMem || 0}G</span>
+                                                      <span>MEM: {host.totalMem || 0}G</span>
                                                     </span>
                                     </div>
                                                   <div className="flex items-center space-x-2">
                                                     <span className="inline-flex items-center">
                                                       <span className="w-1 h-1 rounded-full bg-orange-400 mr-1"></span>
-                                                      <span>DISK: {hostAny.totalDisk || 0}G</span>
+                                                      <span>DISK: {host.totalDisk || 0}G</span>
                                                     </span>
                                                     <span className="inline-flex items-center">
                                                       <span className="w-1 h-1 rounded-full bg-purple-400 mr-1"></span>
-                                                      <span>{(hostAny.cpuArchitecture || 'x64').slice(0, 6)}</span>
+                                                      <span>{(host.cpuArchitecture || 'x64').slice(0, 6)}</span>
                                                     </span>
                                   </div>
                                 </div>
@@ -960,14 +954,14 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                                   <div className={`w-1 h-1 rounded-full mr-1 ${
                                                     statusColor === 'green' ? 'bg-emerald-500' : 'bg-rose-500'
                                                   }`}></div>
-                                                  {hostAny.status || 'Ready'}
+                                                  {host.status || 'Ready'}
                                                 </div>
                                               </div>
                                               
                                               {/* 角色 */}
                                               <div className="col-span-4 flex items-center">
-                                                <div className="flex flex-wrap gap-0.5 w-full" title={(hostAny.roles || hostAny.nodeRoles || '<none>')}>
-                                                  {(hostAny.roles || hostAny.nodeRoles || '<none>').split(',').map((role: string, idx: number) => (
+                                                <div className="flex flex-wrap gap-0.5 w-full" title={host.roles || '<none>'}>
+                                                  {(host.roles || '<none>').split(',').map((role: string, idx: number) => (
                                                     <span 
                                                       key={idx}
                                                       className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium transition-all duration-200 ${
@@ -988,15 +982,15 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                                               {/* 运行时间 */}
                                               <div className="col-span-1 flex items-center">
                                                 <div className="text-[10px] text-gray-500 font-mono">
-                                                  {hostAny.age || hostAny.nodeAge || '未知'}
+                                                  {host.age || '未知'}
                                                 </div>
                                               </div>
                                               
                                               {/* 版本 */}
                                               <div className="col-span-1 flex items-center">
                                                 <div className="text-[10px] text-gray-500 font-mono">
-                                                  {hostAny.version || hostAny.kubeVersion ? 
-                                                    (hostAny.version || hostAny.kubeVersion).replace('v', '') : 
+                                                  {host.version ? 
+                                                    host.version.replace('v', '') : 
                                                     '未知'}
                                                 </div>
                                               </div>
@@ -1151,13 +1145,17 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                               <span className="text-gray-500">{dataSource.length}</span>
                             </div>
                           )}
-                          <div className="flex justify-between items-center">
+                                                      <div className="flex justify-between items-center">
                             <span className="text-gray-600">已受管</span>
                             <span className="font-semibold text-red-600">{managedCount}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600">未受管</span>
                             <span className="font-semibold text-green-600">{unmanagedCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">配置中</span>
+                            <span className="font-semibold text-amber-600">{configuringCount}</span>
                           </div>
                         </CardContent>
                       </Card>
