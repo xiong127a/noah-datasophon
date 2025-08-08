@@ -142,7 +142,6 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
   }
 
   const iconPath = getIconPath();
-  const isConfigured = cluster.clusterStateCode === 2;
 
   // 根据集群类型获取增强的颜色方案
   const getClusterTypeColors = () => {
@@ -244,10 +243,25 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
 
             {/* 状态指示器 - 增强动画 */}
             <div className="relative">
-              <div className={`w-4 h-4 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} shadow-lg relative z-10`}>
-                <div className={`absolute inset-0 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} animate-ping`} />
+              <div className={`w-4 h-4 rounded-full shadow-lg relative z-10 ${
+                cluster.clusterStateCode === 1 ? "bg-gray-400" :
+                cluster.clusterStateCode === 2 ? "bg-orange-400" :
+                cluster.clusterStateCode === 3 ? "bg-green-400" :
+                cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
+              }`}>
+                <div className={`absolute inset-0 rounded-full animate-ping ${
+                  cluster.clusterStateCode === 1 ? "bg-gray-400" :
+                  cluster.clusterStateCode === 2 ? "bg-orange-400" :
+                  cluster.clusterStateCode === 3 ? "bg-green-400" :
+                  cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
+                }`} />
               </div>
-              <div className={`absolute inset-0 w-4 h-4 rounded-full ${isConfigured ? "bg-green-400" : "bg-orange-400"} blur-md opacity-75`} />
+              <div className={`absolute inset-0 w-4 h-4 rounded-full blur-md opacity-75 ${
+                cluster.clusterStateCode === 1 ? "bg-gray-400" :
+                cluster.clusterStateCode === 2 ? "bg-orange-400" :
+                cluster.clusterStateCode === 3 ? "bg-green-400" :
+                cluster.clusterStateCode === 4 ? "bg-red-400" : "bg-slate-400"
+              }`} />
             </div>
           </div>
 
@@ -286,20 +300,26 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
           <div className="space-y-4 mt-auto">
             {/* 主操作按钮 */}
             <Button
-              disabled={!isConfigured}
+              disabled={!cluster.clusterStateCode || cluster.clusterStateCode > 4}
               onClick={() => onEnter(cluster)}
               className={`w-full h-12 rounded-2xl font-semibold text-lg transition-all duration-500 group/btn relative overflow-hidden ${
-                isConfigured
+                cluster.clusterStateCode && cluster.clusterStateCode <= 4
                   ? `bg-gradient-to-r ${colors.gradient} hover:shadow-2xl hover:shadow-blue-200 text-white border-0 hover:scale-105`
                   : "bg-slate-100 text-slate-400 cursor-not-allowed border-0"
               }`}
             >
               {/* 按钮发光效果 */}
-              {isConfigured && (
+              {(cluster.clusterStateCode && cluster.clusterStateCode <= 4) && (
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
               )}
               <Play className="mr-3 h-5 w-5 relative z-10" />
-              <span className="relative z-10">{isConfigured ? "进入集群" : "配置中..."}</span>
+              <span className="relative z-10">
+                {cluster.clusterStateCode === 1 && "开始配置"}
+                {cluster.clusterStateCode === 2 && "继续配置"}
+                {cluster.clusterStateCode === 3 && "进入集群"}
+                {cluster.clusterStateCode === 4 && "启动集群"}
+                {(!cluster.clusterStateCode || cluster.clusterStateCode > 4) && "状态异常"}
+              </span>
             </Button>
 
             {/* 次要操作按钮 */}
@@ -604,7 +624,7 @@ export default function ClusterListEnhanced() {
                   </Badge>
                   <Badge className="px-6 py-3 rounded-2xl border-green-200 text-green-700 bg-green-50/80 text-lg font-semibold">
                     <div className="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse" />
-                    运行中: {clusters.filter((c) => c.clusterStateCode === 2).length}
+                    运行中: {clusters.filter((c) => c.clusterStateCode === 3).length}
                   </Badge>
                 </div>
               </div>
