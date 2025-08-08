@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
-import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import ClusterWizardSidebar from './common/cluster-wizard-sidebar'
 import Image from "next/image"
 import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { ClusterType, ClusterTypeUtil } from '@/types'

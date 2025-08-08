@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
-import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import ClusterWizardSidebar from './common/cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ManagementStatus, ManagementStatusUtil, ClusterTypeUtil } from '@/types'
