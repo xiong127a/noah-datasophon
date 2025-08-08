@@ -42,13 +42,11 @@ export interface Host {
     msg?: string
   }
   note?: string
-  // K8s节点扩展字段
-  k8sNodeName?: string
-  k8sNodeVersion?: string
-  k8sNodeAge?: string
+  // K8s节点扩展字段 (从k8sNodeInfo JSON中解析)
   roles?: string
   version?: string
   age?: string
+  status?: string // K8s节点状态
 }
 
 // 队列状态接口

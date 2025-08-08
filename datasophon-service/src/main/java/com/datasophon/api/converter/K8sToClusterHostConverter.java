@@ -18,6 +18,7 @@
 package com.datasophon.api.converter;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -25,7 +26,9 @@ import com.datasophon.common.enums.HostState;
 import com.datasophon.common.enums.ManagementStatus;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -66,10 +69,8 @@ public class K8sToClusterHostConverter {
                 .managementStatus(ManagementStatus.UNMANAGED) // K8S新发现的节点初始状态为未受管
                 .rack("/default-rack") // 默认机架
                 .nodeLabel(null) // 主机标签字段，由用户自定义
-                // K8s节点专用字段
-                .k8sNodeName(k8sNodeInfo.getHostname())
-                .k8sNodeVersion(k8sNodeInfo.getKubeVersion() != null ? k8sNodeInfo.getKubeVersion() : "unknown")
-                .k8sNodeAge(k8sNodeInfo.getAge() != null ? k8sNodeInfo.getAge() : "unknown")
+                // K8s节点扩展信息JSON
+                .k8sNodeInfo(buildK8sNodeInfoJson(k8sNodeInfo))
                 .build();
     }
 
@@ -176,21 +177,13 @@ public class K8sToClusterHostConverter {
         hostInfoDTO.setCheckTime(clusterHost.getCheckTime());
         hostInfoDTO.setClusterId(clusterHost.getClusterId());
         hostInfoDTO.setHostState(clusterHost.getHostState());
-        // 保持向后兼容，但主要使用新的管理状态字段
+        // 使用新的管理状态字段
         hostInfoDTO.setCpuArchitecture(clusterHost.getCpuArchitecture());
         hostInfoDTO.setNodeLabel(clusterHost.getNodeLabel());
         hostInfoDTO.setServiceRoleNum(clusterHost.getServiceRoleNum());
         
-        // 优先使用专用的K8s字段，回退到从nodeLabel提取（向后兼容）
-        if (clusterHost.getK8sNodeName() != null || clusterHost.getK8sNodeVersion() != null || clusterHost.getK8sNodeAge() != null) {
-            // 使用新的K8s专用字段
-            hostInfoDTO.setRoles("<none>"); // K8s节点通常没有明确的roles概念，使用默认值
-            hostInfoDTO.setVersion(clusterHost.getK8sNodeVersion() != null ? clusterHost.getK8sNodeVersion() : "unknown");
-            hostInfoDTO.setAge(clusterHost.getK8sNodeAge() != null ? clusterHost.getK8sNodeAge() : "unknown");
-        } else {
-            // 向后兼容：从nodeLabel中提取K8S信息
-            extractK8sInfoFromNodeLabel(clusterHost.getNodeLabel(), hostInfoDTO);
-        }
+        // 从K8s JSON信息中提取字段
+        extractK8sInfoFromJson(clusterHost.getK8sNodeInfo(), hostInfoDTO);
         
         // 设置状态字符串
         hostInfoDTO.setStatus(clusterHost.getHostState() != null && 
@@ -212,37 +205,57 @@ public class K8sToClusterHostConverter {
                 .collect(Collectors.toList());
     }
 
+
+
     /**
-     * 从nodeLabel中提取K8S信息（向后兼容方法）
-     * 格式：kubernetes-node|roles|version|age
-     * 注意：此方法仅用于向后兼容，新代码应使用专用的K8s字段
+     * 构建K8s节点信息JSON字符串
+     * 
+     * @param k8sNodeInfo K8s节点信息
+     * @return JSON字符串
      */
-    private void extractK8sInfoFromNodeLabel(String nodeLabel, HostInfoDTO hostInfoDTO) {
-        if (nodeLabel != null && nodeLabel.startsWith("kubernetes-node|")) {
-            String[] parts = nodeLabel.split("\\|");
-            
-            if (parts.length > 1) {
-                hostInfoDTO.setRoles(parts[1]);
-            } else {
-                hostInfoDTO.setRoles("<none>");
-            }
-            
-            if (parts.length > 2) {
-                hostInfoDTO.setVersion(parts[2]);
-            } else {
-                hostInfoDTO.setVersion("unknown");
-            }
-            
-            if (parts.length > 3) {
-                hostInfoDTO.setAge(parts[3]);
-            } else {
-                hostInfoDTO.setAge("unknown");
-            }
-        } else {
+    private String buildK8sNodeInfoJson(K8sNodeInfo k8sNodeInfo) {
+        if (k8sNodeInfo == null) {
+            return null;
+        }
+        
+        Map<String, Object> k8sInfo = new HashMap<>();
+        k8sInfo.put("status", k8sNodeInfo.getStatus() != null ? k8sNodeInfo.getStatus() : "Ready");
+        k8sInfo.put("roles", k8sNodeInfo.getRoles() != null ? k8sNodeInfo.getRoles() : "<none>");
+        k8sInfo.put("age", k8sNodeInfo.getAge() != null ? k8sNodeInfo.getAge() : "unknown");
+        k8sInfo.put("version", k8sNodeInfo.getKubeVersion() != null ? k8sNodeInfo.getKubeVersion() : "unknown");
+        
+        return JSONUtil.toJsonStr(k8sInfo);
+    }
+
+    /**
+     * 从K8s JSON信息中提取字段到HostInfoDTO
+     * 
+     * @param k8sNodeInfoJson K8s节点信息JSON字符串
+     * @param hostInfoDTO 主机信息DTO
+     */
+    private void extractK8sInfoFromJson(String k8sNodeInfoJson, HostInfoDTO hostInfoDTO) {
+        if (StrUtil.isBlank(k8sNodeInfoJson)) {
             // 非K8S主机的默认值
             hostInfoDTO.setRoles("<none>");
             hostInfoDTO.setVersion("unknown");
             hostInfoDTO.setAge("unknown");
+            hostInfoDTO.setStatus("Ready");
+            return;
+        }
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> k8sInfo = JSONUtil.toBean(k8sNodeInfoJson, Map.class);
+            hostInfoDTO.setStatus((String) k8sInfo.getOrDefault("status", "Ready"));
+            hostInfoDTO.setRoles((String) k8sInfo.getOrDefault("roles", "<none>"));
+            hostInfoDTO.setAge((String) k8sInfo.getOrDefault("age", "unknown"));
+            hostInfoDTO.setVersion((String) k8sInfo.getOrDefault("version", "unknown"));
+        } catch (Exception e) {
+            // JSON解析失败时使用默认值
+            hostInfoDTO.setRoles("<none>");
+            hostInfoDTO.setVersion("unknown");
+            hostInfoDTO.setAge("unknown");
+            hostInfoDTO.setStatus("Ready");
         }
     }
 

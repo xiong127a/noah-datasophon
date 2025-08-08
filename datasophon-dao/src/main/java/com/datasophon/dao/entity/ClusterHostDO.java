@@ -114,19 +114,10 @@ public class ClusterHostDO implements Serializable {
     private String nodeLabel;
 
     /**
-     * Kubernetes节点名称
+     * Kubernetes节点扩展信息JSON
+     * 格式：{"status": "Ready", "roles": "<none>", "age": "43d", "version": "v1.28.9"}
      */
-    private String k8sNodeName;
-
-    /**
-     * Kubernetes节点版本
-     */
-    private String k8sNodeVersion;
-
-    /**
-     * Kubernetes节点运行时长
-     */
-    private String k8sNodeAge;
+    private String k8sNodeInfo;
 
     @Column(ignore = true)
     private Integer serviceRoleNum;
