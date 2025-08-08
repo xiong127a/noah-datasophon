@@ -231,8 +231,10 @@ export const clusterApiV1 = {
     }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_FROM_STEP1, step1Config, config),
     
     // 校验所有主机状态（Step2下一步前的校验）
-    validateForNextStep: (config?: any) => 
-      apiV1.get(API_PATHS_V1.HOST_CHECK, undefined, config),
+    validateForNextStep: (config?: any) => {
+      console.log('validateForNextStep - config:', config)
+      return apiV1.get(API_PATHS_V1.HOST_CHECK, undefined, config)
+    },
     
     // ========== 配置进度管理相关 (简化版) ==========
     
@@ -288,13 +290,25 @@ export const clusterApiV1 = {
   serviceRole: {
     /** 获取服务角色列表 */
     getList: async (params: GetServiceRoleListParams): Promise<GetServiceRoleListResponse> => {
-      const response = await apiV1.post(API_PATHS_V1.GET_SERVICE_ROLE_LIST, params)
+      // 使用GET请求，参数通过查询参数传递
+      const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_ROLE_LIST, {
+        params: {
+          clusterId: params.clusterId,
+          serviceIds: params.serviceIds,
+          serviceRoleType: params.serviceRoleType
+        }
+      })
       return response.data
     },
 
     /** 获取所有主机列表 */
     getAllHosts: async (params: GetAllHostParams): Promise<GetAllHostResponse> => {
-      const response = await apiV1.post(API_PATHS_V1.GET_ALL_HOST, params)
+      // 使用GET请求，集群ID通过@ClusterId注解从请求头获取
+      const headers = createClusterHeaders(params.clusterId)
+      
+      const response = await apiV1.get(API_PATHS_V1.GET_ALL_HOST, {
+        headers
+      })
       return response.data
     },
 

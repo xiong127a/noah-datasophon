@@ -171,8 +171,16 @@ apiClientV1.interceptors.response.use(
 
 // 导出版本化的API请求函数
 export const apiV1 = {
-  get: (url: string, params?: any, config?: any) => 
-    apiClientV1.get(url, { params, ...config }),
+  get: (url: string, params?: any, config?: any) => {
+    // 如果 params 是一个对象且包含 headers，说明这是新的调用方式
+    if (params && typeof params === 'object' && params.headers && !config) {
+      // 新的调用方式：apiV1.get(url, { headers: {...} })
+      return apiClientV1.get(url, params)
+    } else {
+      // 原来的调用方式：apiV1.get(url, params, config) 或 apiV1.get(url, params)
+      return apiClientV1.get(url, { params, ...config })
+    }
+  },
   post: (url: string, data: any, config?: any) => {
     console.log('API V1 POST请求:', url, '数据:', data)
     return apiClientV1.post(url, data, {
@@ -184,8 +192,8 @@ export const apiV1 = {
   },
   put: (url: string, data: any, config?: any) => 
     apiClientV1.put(url, data, config),
-  delete: (url: string, params?: any, config?: any) => 
-    apiClientV1.delete(url, { params, ...config }),
+  delete: (url: string, config?: any) => 
+    apiClientV1.delete(url, config),
 };
 
 // 版本管理工具

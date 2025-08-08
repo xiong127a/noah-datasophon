@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Check, X, AlertCircle, Users, Settings, ChevronDown, Loader2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -13,6 +13,9 @@ import { DIALOG_STYLES } from './shared-styles'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/step5'
 import type { ClusterInfo } from '@/hooks/useCluster'
+import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { ClusterTypeUtil } from '@/types'
 
 /**
  * Step5 Dialog组件 - 分配服务Master角色
@@ -55,6 +58,11 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   const [formData, setFormData] = useState<Record<string, string | string[]>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // 步骤配置
+  const isK8s = ClusterTypeUtil.isKubernetes(cluster.depType || '')
+  const steps = getStepsByType(StepsType.NORMAL)
+  const currentStep = 5 // Step5: 分配服务Master角色
+
   // 表单项配置生成
   const formItems = useMemo((): FormItem[] => {
     return serviceRoles.map(role => ({
@@ -72,9 +80,13 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   // 获取所有主机
   const fetchAllHosts = useCallback(async () => {
     try {
+      console.log('调用API获取主机列表，集群ID:', cluster.id)
+      
       const response = await clusterApiV1.serviceRole.getAllHosts({
         clusterId: cluster.id
       })
+      
+      console.log('主机列表API响应:', response)
       
       if (response.success && response.data) {
         const hostnames = response.data.map(host => host.hostname)
@@ -91,24 +103,32 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   }, [cluster.id])
 
   // 获取服务角色列表
-  const fetchServiceRoles = useCallback(async () => {
+  const fetchServiceRoles = useCallback(async (hosts: string[] = []) => {
     try {
+      console.log('调用API获取服务角色列表，参数:', {
+        clusterId: cluster.id,
+        serviceIds: step4Data.serviceIds.join(','),
+        serviceRoleType: 1
+      })
+      
       const response = await clusterApiV1.serviceRole.getList({
         clusterId: cluster.id,
         serviceIds: step4Data.serviceIds.join(','),
         serviceRoleType: 1 // 1表示Master角色
       })
       
+      console.log('API响应:', response)
+      
       if (response.success && response.data) {
         setServiceRoles(response.data)
         
-        // 初始化表单数据
+        // 初始化表单数据，使用传入的hosts参数而不是依赖availableHosts
         const initialFormData: Record<string, string | string[]> = {}
         response.data.forEach(role => {
           if (role.hosts && role.hosts.length > 0) {
             initialFormData[role.serviceRoleName] = role.cardinality === "1" ? role.hosts[0] : role.hosts
-          } else if (availableHosts.length > 0) {
-            initialFormData[role.serviceRoleName] = role.cardinality === "1" ? availableHosts[0] : []
+          } else if (hosts.length > 0) {
+            initialFormData[role.serviceRoleName] = role.cardinality === "1" ? hosts[0] : []
           }
         })
         setFormData(initialFormData)
@@ -119,7 +139,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       console.error('获取服务角色列表失败:', error)
       toast.error(`获取服务角色列表失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
-  }, [cluster.id, step4Data.serviceIds, availableHosts])
+  }, [cluster.id, step4Data.serviceIds])
 
   // 初始化数据
   const initializeData = useCallback(async () => {
@@ -128,8 +148,8 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       // 先获取主机列表
       const hosts = await fetchAllHosts()
       if (hosts.length > 0) {
-        // 再获取服务角色列表
-        await fetchServiceRoles()
+        // 再获取服务角色列表，传入hosts参数
+        await fetchServiceRoles(hosts)
       }
     } finally {
       setLoading(false)
@@ -147,7 +167,8 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       setFormData({})
       setErrors({})
     }
-  }, [open, initializeData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]) // 移除initializeData依赖，避免循环
 
   // 表单值变更处理
   const handleFormChange = useCallback((name: string, value: string | string[]) => {
@@ -242,24 +263,60 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className={DIALOG_STYLES.content}>
-        <DialogHeader className={DIALOG_STYLES.header}>
-          <DialogTitle className={DIALOG_STYLES.title}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <Users className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">分配服务Master角色</h2>
-                <p className="text-sm text-gray-600 mt-1">为每个服务的Master角色分配合适的主机</p>
+        <DialogTitle className="sr-only">
+          分配服务Master角色 - {cluster.clusterName}
+        </DialogTitle>
+
+        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
+          {/* 左侧导航 */}
+          <ClusterWizardSidebar 
+            steps={steps}
+            currentStep={currentStep}
+            title="集群配置向导"
+            clusterName={cluster.clusterName}
+            isK8s={isK8s}
+            onClose={onClose}
+          />
+
+          {/* 右侧内容区域 */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* 当前步骤标题 */}
+            <div className="p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
+              {/* 装饰性光效 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+              {/* 分割线光效 */}
+              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"></div>
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                    分配服务Master角色
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    为所选服务指定Master节点主机
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-white/80 backdrop-blur-sm">
+                  步骤 {currentStep}/{steps.length}
+                </Badge>
               </div>
             </div>
-          </DialogTitle>
-        </DialogHeader>
 
-        <div className="grid grid-cols-5 gap-8 h-[600px]">
-          {/* 左侧：服务角色分配表单 */}
-          <div className="col-span-4 space-y-6">
-            <div className="h-full pr-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            {/* 步骤内容 */}
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
+              <div className="p-6 sm:p-8 lg:p-10">
+                {/* 主要内容区域 */}
+                <div className="grid grid-cols-5 gap-6">
+                  {/* 左侧：角色分配表单 */}
+                  <div className="col-span-4">
+                    {/* 添加调试信息 */}
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>调试信息：</strong> 
+                        集群ID: {cluster.id}, 
+                        服务IDs: {step4Data.serviceIds.join(',')}, 
+                        服务数量: {step4Data.selectedServices.length}
+                      </p>
+                    </div>
               {loading ? (
                 <div className="flex items-center justify-center h-40">
                   <div className="flex items-center gap-3 text-gray-500">
@@ -273,9 +330,9 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
                   <p className="text-lg font-medium">暂无服务角色</p>
                   <p className="text-sm">请确保已选择服务</p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {formItems.map((item) => (
+                    ) : (
+                      <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        {formItems.map((item) => (
                     <Card key={item.name} className="bg-white/70 backdrop-blur-sm border border-gray-200/60 hover:shadow-md transition-all duration-200">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center justify-between">
@@ -368,14 +425,13 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-          {/* 右侧：统计面板 */}
-          <div className="col-span-1 space-y-4">
+                  {/* 右侧：统计面板 */}
+                  <div className="col-span-1 space-y-4">
             <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/60">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-blue-900 flex items-center gap-2">
@@ -415,12 +471,14 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          </div>
-        </div>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        {/* 底部操作栏 */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50/80 backdrop-blur-sm border-t border-gray-200/60 rounded-b-3xl -mx-6 -mb-6">
+            {/* 底部操作栏 */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50/80 backdrop-blur-sm border-t border-gray-200/60">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <AlertCircle className="w-4 h-4" />
             <span>请为所有必需的Master角色分配主机</span>
@@ -450,7 +508,9 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
                   完成分配
                 </>
               )}
-            </Button>
+              </Button>
+            </div>
+            </div>
           </div>
         </div>
       </DialogContent>
