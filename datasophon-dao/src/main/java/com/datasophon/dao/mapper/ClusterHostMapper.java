@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.ArrayList;
 import java.util.List;
 
 // 使用lambda表达式方式，不依赖静态表定义
@@ -58,6 +59,21 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostDO::getIp).eq(ip);
         return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据IP列表查询指定集群的主机（用于检查IP重复）
+     */
+    default List<ClusterHostDO> selectByClusterIdAndIpList(@Param("clusterId") Integer clusterId, 
+                                                           @Param("ipList") List<String> ipList) {
+        if (ipList == null || ipList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostDO::getClusterId).eq(clusterId)
+                .and(ClusterHostDO::getIp).in(ipList);
+        return this.selectListByQuery(query);
     }
 
     /**

@@ -289,4 +289,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             }
         }
     }
+
+    @Override
+    public List<ClusterHostDO> getHostsByIpList(Integer clusterId, List<String> ipList) {
+        return getMapper().selectByClusterIdAndIpList(clusterId, ipList);
+    }
 }

@@ -77,6 +77,11 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
     void updateBatchHostStatus(List<ClusterHostDO> hosts);
 
     /**
+     * 根据IP列表查询指定集群的主机（用于检查IP重复）
+     */
+    List<ClusterHostDO> getHostsByIpList(Integer clusterId, List<String> ipList);
+
+    /**
      * 保存主机信息
      *
      * @param clusterHostDO 主机信息

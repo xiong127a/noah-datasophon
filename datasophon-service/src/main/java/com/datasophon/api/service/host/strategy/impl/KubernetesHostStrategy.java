@@ -163,10 +163,30 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         try {
             log.info("开始导入{}台K8S主机到数据库", hosts.size());
             
-            // 使用MyBatis-Flex的批量保存方法
+            // 1. 检查IP重复
+            List<String> ipList = hosts.stream().map(ClusterHostDO::getIp).toList();
+            List<ClusterHostDO> existingHosts = clusterHostService.getHostsByIpList(request.getClusterId(), ipList);
+            
+            if (!existingHosts.isEmpty()) {
+                List<String> duplicateIps = existingHosts.stream().map(ClusterHostDO::getIp).toList();
+                log.warn("发现重复IP，将跳过这些主机：{}", duplicateIps);
+                
+                // 过滤掉重复IP的主机
+                hosts = hosts.stream()
+                        .filter(host -> !duplicateIps.contains(host.getIp()))
+                        .toList();
+                
+                if (hosts.isEmpty()) {
+                    log.warn("所有主机IP都已存在，跳过导入");
+                    return;
+                }
+                log.info("过滤重复IP后，实际导入{}台主机", hosts.size());
+            }
+            
+            // 2. 批量保存主机
             clusterHostService.saveBatch(hosts);
             
-            // 清理临时存储
+            // 3. 清理临时存储
             k8sHostsStorage.remove(request.getClusterId());
             
             log.info("成功导入{}台K8S主机", hosts.size());
@@ -311,6 +331,19 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         result.put("readyHosts", ready);
         result.put("managedHosts", total - unmanaged);
         result.put("notReadyHosts", total - ready);
+        
+        // 添加详细的调试信息
+        log.info("主机校验详情 - 集群ID: {}, 总主机数: {}, 未受管数: {}, Ready数: {}, 校验结果: {}", 
+                clusterId, total, unmanaged, ready, valid);
+        
+        // 打印每台主机的状态（仅在校验失败时）
+        if (!valid) {
+            hosts.forEach(host -> {
+                log.info("主机状态详情 - IP: {}, 管理状态: {}, 主机状态: {}", 
+                        host.getIp(), host.getManagementStatus(), host.getHostState());
+            });
+        }
+        
         if (valid) {
             result.put("message", String.format("校验通过：所有 %d 台主机都是未受管状态且Ready", total));
         } else {
