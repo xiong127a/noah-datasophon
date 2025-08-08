@@ -29,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.common.enums.ServiceType;
+import com.datasophon.api.annotation.ClusterId;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -54,9 +56,10 @@ public class FrameServiceController {
 
     /**
      * 获取指定集群的框架服务列表
+     * 集群ID从请求头获取，保持API设计一致性
      */
     @GetMapping("/list")
-    public Result<List<FrameServiceVO>> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<FrameServiceVO>> list(@ClusterId Integer clusterId) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameService(clusterId);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);
@@ -64,12 +67,12 @@ public class FrameServiceController {
 
     /**
      * 获取包含必选组件标识的框架服务列表
+     * 集群ID从请求头获取，后端自动根据集群ID查询集群类型
      */
-
     @GetMapping("/listWithRequired")
     public Result<List<FrameServiceVO>> listWithRequired(
-            @RequestParam("clusterId") Integer clusterId,
-            @RequestParam("type") String type) {
+            @ClusterId Integer clusterId,
+            @RequestParam("type") ServiceType type) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameServiceWithRequired(clusterId, type);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);

@@ -19,13 +19,13 @@ import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ClusterType, ClusterTypeUtil } from '@/types'
 
+import { SERVICE_TYPE_OPTIONS, ServiceType } from '@/types/step3'
 import type { 
   ClusterStep3DialogProps, 
   Service, 
   ServiceSelection,
   Step3Data,
   ServiceTypeOption,
-  SERVICE_TYPE_OPTIONS,
   ServiceListResponse
 } from '@/types/step3'
 
@@ -55,7 +55,7 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([])
   const [selectedServices, setSelectedServices] = useState<ServiceSelection[]>([])
-  const [serviceTypeFilter, setServiceTypeFilter] = useState<string>('all')
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType>(ServiceType.CORE)
   const [searchTerm, setSearchTerm] = useState('')
 
   // 集群ID
@@ -70,9 +70,10 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
         service.serviceName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         service.serviceDesc?.toLowerCase().includes(searchTerm.toLowerCase())
       
-      // 服务类型筛选
-      const typeMatch = serviceTypeFilter === 'all' || !serviceTypeFilter || 
-        service.serviceType === serviceTypeFilter
+      // 服务类型筛选（根据必需状态进行筛选）
+      const typeMatch = serviceTypeFilter === ServiceType.CORE 
+        ? service.isRequired  // 核心服务：显示必需的服务
+        : !service.isRequired // 自定义服务：显示非必需的服务
       
       return searchMatch && typeMatch
     })
@@ -87,10 +88,9 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
         throw new Error('集群ID不能为空')
       }
 
-      // 构建请求参数
+      // 构建请求参数（集群ID通过请求头传递，服务类型用于设置必需标识）
       const params = {
-        type: serviceTypeFilter === 'all' ? '' : serviceTypeFilter,
-        clusterId
+        type: serviceTypeFilter
       }
       
       // 创建包含集群ID的请求头
@@ -197,11 +197,8 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
     }
   }
 
-  // 服务类型选项
-  const serviceTypeOptions = useMemo(() => [
-    { value: 'all', label: '全部服务', description: '显示所有可用的服务' },
-    ...SERVICE_TYPE_OPTIONS
-  ], [])
+  // 服务类型选项（只有核心和自定义两个选项）
+  const serviceTypeOptions = useMemo(() => SERVICE_TYPE_OPTIONS, [])
 
   // 下一步处理
   const handleNext = async () => {
@@ -214,7 +211,7 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
       const step3Data: Step3Data = {
         serviceIds: selectedServiceIds,
         serviceNames: selectedServices,
-        serviceType: serviceTypeFilter === 'all' ? undefined : serviceTypeFilter
+        serviceType: serviceTypeFilter
       }
 
       toast.success('服务选择完成，进入下一步')

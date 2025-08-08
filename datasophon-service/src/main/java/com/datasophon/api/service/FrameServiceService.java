@@ -20,6 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.mybatisflex.core.service.IService;
+import com.datasophon.common.enums.ServiceType;
 
 import java.util.List;
 
@@ -42,7 +43,7 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
     /**
      * 获取指定集群的所有框架服务，包含必选组件标识
      */
-    List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, String type);
+    List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, ServiceType type);
 
     /**
      * 根据服务ID列表获取服务信息

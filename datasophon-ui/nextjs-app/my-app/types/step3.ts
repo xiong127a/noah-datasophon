@@ -69,25 +69,33 @@ export interface ServiceListResponse {
   data: Service[]
 }
 
+/** 服务类型枚举 */
+export enum ServiceType {
+  /** 自定义服务 */
+  CUSTOM = 'custom',
+  /** 核心服务 */
+  CORE = 'core'
+}
+
 export interface ServiceTypeOption {
   /** 类型值 */
-  value: string
+  value: ServiceType
   /** 类型显示标签 */
   label: string
   /** 类型描述 */
   description?: string
 }
 
-// 预定义的服务类型选项
+// 预定义的服务类型选项（只有核心和自定义两个选项）
 export const SERVICE_TYPE_OPTIONS: ServiceTypeOption[] = [
   {
-    value: 'custom',
-    label: '自定义',
-    description: '用户自定义的大数据服务组件'
-  },
-  {
-    value: 'core',
+    value: ServiceType.CORE,
     label: '核心', 
     description: '系统推荐的核心大数据服务组件'
+  },
+  {
+    value: ServiceType.CUSTOM,
+    label: '自定义',
+    description: '用户自定义的大数据服务组件'
   }
 ]

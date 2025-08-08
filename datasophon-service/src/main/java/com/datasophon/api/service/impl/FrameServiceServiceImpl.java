@@ -25,6 +25,7 @@ import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.FrameServiceDTO;
+import com.datasophon.common.enums.ServiceType;
 import com.datasophon.common.exception.BusinessException;
 
 import com.datasophon.dao.entity.FrameInfoEntity;
@@ -67,10 +68,12 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     @Autowired
     private  ClusterServiceInstanceService serviceInstanceService;
 
+    // 自定义模式必需服务：基础监控和安全组件
     private static final List<String> CUSTOM_REQUIRED_SERVICE = List.of(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER");
 
-    private static final List<String> DATALAKE_REQUIRED_SERVICE = List.of(
+    // 核心模式必需服务：完整的大数据服务组件（包含基础组件）  
+    private static final List<String> CORE_REQUIRED_SERVICE = List.of(
             "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG",
             "SPARK3", "FLINK");
 
@@ -97,12 +100,12 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, String type) {
+    public List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, ServiceType serviceType) {
         if (clusterId == null) {
             throw new BusinessException("集群ID不能为空");
         }
-        if (StrUtil.isBlank(type)) {
-            throw new BusinessException("集群类型不能为空");
+        if (serviceType == null) {
+            throw new BusinessException("服务类型不能为空");
         }
 
         ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(clusterId);
@@ -119,14 +122,14 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
         List<FrameServiceDTO> dtos = frameServiceConverter.entityListToDtoList(entities);
 
         dtos = setInstalledStatus(clusterId, dtos);
-        return setRequiredStatus(dtos, type);
+        return setRequiredStatus(dtos, serviceType);
     }
 
     /**
      * 设置服务的必需状态 - DTO级别操作
      */
-    private List<FrameServiceDTO> setRequiredStatus(List<FrameServiceDTO> dtos, String type) {
-        List<String> requiredServices = "custom".equals(type) ? CUSTOM_REQUIRED_SERVICE : DATALAKE_REQUIRED_SERVICE;
+    private List<FrameServiceDTO> setRequiredStatus(List<FrameServiceDTO> dtos, ServiceType serviceType) {
+        List<String> requiredServices = serviceType.isCustom() ? CUSTOM_REQUIRED_SERVICE : CORE_REQUIRED_SERVICE;
 
         return dtos.stream()
                 .map(dto -> dto.withRequired(requiredServices.contains(dto.serviceName())))

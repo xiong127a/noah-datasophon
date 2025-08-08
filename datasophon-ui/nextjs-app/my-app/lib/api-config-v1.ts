@@ -46,6 +46,7 @@ export const API_PATHS_V1 = {
   // 框架相关 - v1
   FRAME_LIST: `${API_BASE}/frame/list`,
   FRAME_SERVICE_DELETE: `${API_BASE}/frame/service/delete`,
+  FRAME_SERVICE_LIST_WITH_REQUIRED: `${API_BASE}/frame/service/listWithRequired`,
   
   // 存储库相关 - v1
   PARCEL_LIST: `${API_BASE}/cluster/parcel/list`,
