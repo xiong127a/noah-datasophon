@@ -3,6 +3,8 @@
  * 基于原Vue2项目的步骤配置逻辑进行迁移
  */
 
+import { ClusterType } from '@/types/cluster-type'
+
 export interface ClusterStep {
   number: number
   title: string
@@ -29,11 +31,8 @@ export enum StepsType {
   SERVICE_EXAMPLE = 'service-example' // 服务示例流程
 }
 
-// 部署类型枚举
-export enum DepType {
-  KUBERNETES = 'Kubernetes',
-  PVM = 'PVM'  // Physical/Virtual Machine
-}
+// 导出集群类型枚举
+export { ClusterType }
 
 /**
  * 根据步骤类型和部署类型获取对应的步骤列表
@@ -43,7 +42,7 @@ export enum DepType {
  */
 export function getStepsByType(
   stepsType: StepsType = StepsType.NORMAL, 
-  depType: DepType = DepType.PVM
+  depType: ClusterType = ClusterType.PVM
 ): ClusterStep[] {
   let steps = [...ALL_STEPS]
   
@@ -77,7 +76,7 @@ export function getStepsByType(
   }
   
   // 根据部署类型过滤
-  if (depType === DepType.KUBERNETES) {
+  if (depType === ClusterType.KUBERNETES) {
     // Kubernetes模式：过滤掉'主机Agent分发'步骤
     steps = steps.filter(step => step.title !== '主机Agent分发')
     // 重新编号
@@ -98,26 +97,26 @@ export function getStepsByType(
  */
 export function getStepTitles(
   stepsType: StepsType = StepsType.NORMAL,
-  depType: DepType = DepType.PVM
+  clusterType: ClusterType = ClusterType.PVM
 ): string[] {
-  return getStepsByType(stepsType, depType).map(step => step.title)
+  return getStepsByType(stepsType, clusterType).map(step => step.title)
 }
 
 // 导出常用的步骤配置
 export const STEPS_CONFIG = {
   // 主机管理流程（3步）
-  HOST_MANAGE: getStepsByType(StepsType.HOST_MANAGE, DepType.PVM),
-  HOST_MANAGE_K8S: getStepsByType(StepsType.HOST_MANAGE, DepType.KUBERNETES),
+  HOST_MANAGE: getStepsByType(StepsType.HOST_MANAGE, ClusterType.PVM),
+  HOST_MANAGE_K8S: getStepsByType(StepsType.HOST_MANAGE, ClusterType.KUBERNETES),
   
   // 完整流程（8步/7步）
-  FULL_PVM: getStepsByType(StepsType.NORMAL, DepType.PVM),
-  FULL_K8S: getStepsByType(StepsType.NORMAL, DepType.KUBERNETES),
+  FULL_PVM: getStepsByType(StepsType.NORMAL, ClusterType.PVM),
+  FULL_K8S: getStepsByType(StepsType.NORMAL, ClusterType.KUBERNETES),
   
   // 添加服务流程
-  ADD_SERVICE: getStepsByType(StepsType.ADD_SERVICE, DepType.PVM),
-  ADD_SERVICE_K8S: getStepsByType(StepsType.ADD_SERVICE, DepType.KUBERNETES),
+  ADD_SERVICE: getStepsByType(StepsType.ADD_SERVICE, ClusterType.PVM),
+  ADD_SERVICE_K8S: getStepsByType(StepsType.ADD_SERVICE, ClusterType.KUBERNETES),
   
   // 服务示例流程
-  SERVICE_EXAMPLE: getStepsByType(StepsType.SERVICE_EXAMPLE, DepType.PVM),
-  SERVICE_EXAMPLE_K8S: getStepsByType(StepsType.SERVICE_EXAMPLE, DepType.KUBERNETES)
+  SERVICE_EXAMPLE: getStepsByType(StepsType.SERVICE_EXAMPLE, ClusterType.PVM),
+  SERVICE_EXAMPLE_K8S: getStepsByType(StepsType.SERVICE_EXAMPLE, ClusterType.KUBERNETES)
 }

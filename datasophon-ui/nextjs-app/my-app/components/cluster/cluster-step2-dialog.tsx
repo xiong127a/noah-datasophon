@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
-import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
-import { ManagementStatus, ManagementStatusUtil } from '@/types/management-status'
+import { ManagementStatus, ManagementStatusUtil, ClusterType, ClusterTypeUtil } from '@/types'
 
 import type { 
   ClusterStep2DialogProps, 
@@ -37,10 +37,10 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   onSuccess,
   onPrevious
 }) => {
-  const depType = cluster?.depType?.toLowerCase() === 'kubernetes' ? DepType.KUBERNETES : DepType.PVM
+  const clusterType = ClusterTypeUtil.fromString(cluster?.depType || 'PVM')
   
   // 使用标准化的步骤配置
-  const steps = getStepsByType(StepsType.NORMAL, depType)
+  const steps = getStepsByType(StepsType.NORMAL, clusterType)
   
 
   
@@ -120,7 +120,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   // 全选功能
   const handleSelectAll = () => {
-    if (depType === 'Kubernetes') {
+    if (ClusterTypeUtil.isKubernetes(clusterType)) {
       // K8S模式：选择所有未受管主机
       const unmanagedHostIps = filteredData
         .filter(host => 
@@ -140,7 +140,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   }
 
   // 计算可选择的主机数量和状态
-  const selectableCount = depType === 'Kubernetes' 
+  const selectableCount = ClusterTypeUtil.isKubernetes(clusterType) 
     ? filteredData.filter(host => 
         ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
       ).length
@@ -160,7 +160,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   ).length
   
   // 检查是否有失败项（用于UI显示）
-  const hasFailedItems = depType === 'Kubernetes' 
+  const hasFailedItems = ClusterTypeUtil.isKubernetes(clusterType) 
     ? managedCount > 0 
     : dataSource.some(host => {
         const status = calculateHostStatus(host)
@@ -190,7 +190,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       
       // 构造Step1配置数据
       const step1Config = {
-        clusterType: depType === DepType.KUBERNETES ? 'Kubernetes' : 'PVM',
+        clusterType: clusterType.toString(),
         // PVM配置参数
         hosts: step1Data.hosts,
         sshUser: step1Data.sshUser,
@@ -229,7 +229,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
           }
           
           // 更新分页信息和队列状态
-          if (depType !== 'Kubernetes') {
+          if (!ClusterTypeUtil.isKubernetes(clusterType)) {
             // PVM模式使用传统的分页数据
             setPagination(prev => ({ ...prev, total: res.total || 0 }))
             if (res.queueStatus) {
@@ -410,7 +410,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   // 获取成功的主机列表
   const getSuccessfulHosts = () => {
-    if (depType === 'Kubernetes') {
+    if (ClusterTypeUtil.isKubernetes(clusterType)) {
       return dataSource.filter((host: Host) => 
         selectedRowKeys.includes(host.ip) && ManagementStatusUtil.isUnmanaged(host.managementStatus || ManagementStatus.UNMANAGED)
       )
@@ -431,7 +431,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       }
 
       // 1. 保存K8S配置和命名空间
-      if (depType === 'Kubernetes' && step1Data) {
+      if (ClusterTypeUtil.isKubernetes(clusterType) && step1Data) {
         const kubeConfigParams = {
           kubeConfig: step1Data.kubeConfigContent,
           namespace: step1Data.namespace,
@@ -457,7 +457,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       if (successfulHosts && successfulHosts.length > 0) {
         console.log('保存主机列表:', successfulHosts)
         
-        if (depType === 'Kubernetes') {
+        if (ClusterTypeUtil.isKubernetes(clusterType)) {
           // K8S模式：主机已通过unifiedHost API自动发现和保存，无需额外保存
           console.log('K8S主机已通过unifiedHost API处理')
         } else {
@@ -521,7 +521,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   // 主机环境校验是否完成
   const hostCheckCompleted = async (): Promise<{ hostCheckCompleted: boolean; data: string }> => {
-    if (depType === 'Kubernetes') {
+    if (ClusterTypeUtil.isKubernetes(clusterType)) {
       // 调用后端全量校验接口
       try {
         const response = await clusterApi.unifiedHost.validateForNextStep({ headers: createClusterHeaders(clusterId) })
@@ -586,7 +586,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
   // 设置轮询（仅PVM模式）
   useEffect(() => {
-    if (depType === 'Kubernetes') {
+    if (ClusterTypeUtil.isKubernetes(clusterType)) {
       // K8S模式下不需要轮询
       if (timerRef.current) {
         clearInterval(timerRef.current)
@@ -608,7 +608,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         timerRef.current = null
       }
     }
-  }, [open, clusterId, depType])
+  }, [open, clusterId, clusterType])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -624,7 +624,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
             currentStep={2}
             title="主机环境校验"
             clusterName={cluster?.clusterName || ''}
-            isK8s={depType === DepType.KUBERNETES}
+            isK8s={ClusterTypeUtil.isKubernetes(clusterType)}
             onClose={() => onOpenChange(false)}
           />
 
@@ -634,10 +634,10 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">
-                  {depType === 'Kubernetes' ? 'Kubernetes主机校验' : '主机环境校验'}
+                  {ClusterTypeUtil.isKubernetes(clusterType) ? 'Kubernetes主机校验' : '主机环境校验'}
                 </h2>
                 <p className="text-gray-600 mt-1">
-                  {depType === 'Kubernetes' 
+                  {ClusterTypeUtil.isKubernetes(clusterType) 
                     ? '验证Kubernetes集群中的主机状态，确保可以正常部署服务'
                     : '验证主机环境配置，确保系统顺利部署'
                   }
@@ -655,7 +655,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
 
             {/* 主内容区域 */}
             <div className="flex-1 p-4 min-h-0">
-              {depType === 'Kubernetes' ? (
+              {ClusterTypeUtil.isKubernetes(clusterType) ? (
                 // K8S模式内容
                 <div className="h-full flex flex-col">
                   <div className="flex-1 grid grid-cols-4 gap-6 min-h-0 max-h-[calc(100vh-200px)]">
@@ -1305,7 +1305,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
                       台主机
                     </span>
                   </div>
-                  {depType === 'Kubernetes' && unmanagedCount > 0 && (
+                  {ClusterTypeUtil.isKubernetes(clusterType) && unmanagedCount > 0 && (
                     <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
                       <div className="w-2 h-2 rounded-full bg-green-500"></div>
                       <span className="text-sm font-medium text-green-700">

@@ -22,6 +22,7 @@ import {
   Activity,
   TrendingUp,
 } from "lucide-react"
+import { ClusterTypeUtil } from '@/types'
 
 // 自定义创建集群图标组件
 const CreateClusterIcon = ({ className }: { className?: string }) => (
@@ -216,7 +217,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
                 <div className={`relative p-4 rounded-3xl bg-gradient-to-br ${colors.gradient} shadow-2xl group-hover:scale-110 transition-all duration-500 preserve-3d`}>
                   <Image 
                     src={iconPath}
-                    alt={cluster.depType || "集群类型"}
+                    alt={ClusterTypeUtil.getLabel(ClusterTypeUtil.fromString(cluster.depType || 'PVM'))}
                     width={48}
                     height={48}
                     className="relative z-10 group-hover:rotate-12 transition-transform duration-500"
@@ -236,7 +237,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
                   {cluster.clusterName}
                 </h3>
                 <Badge className={`${colors.badgeColor} border-0 rounded-full px-4 py-1 font-medium shadow-lg group-hover:scale-105 transition-transform duration-300`}>
-                  {cluster.depType === "PVM" ? "裸金属/虚拟机" : cluster.depType}
+                  {ClusterTypeUtil.getLabel(ClusterTypeUtil.fromString(cluster.depType || 'PVM'))}
                 </Badge>
               </div>
             </div>

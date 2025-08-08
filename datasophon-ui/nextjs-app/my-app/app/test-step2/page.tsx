@@ -11,7 +11,7 @@ export default function TestStep2Page() {
   const mockCluster = {
     id: 1,
     clusterName: '测试集群',
-    depType: 'Kubernetes', // 或 'PVM'
+    depType: ClusterType.KUBERNETES, // 或 ClusterType.PVM
     clusterCode: 'test-cluster-001'
   }
 

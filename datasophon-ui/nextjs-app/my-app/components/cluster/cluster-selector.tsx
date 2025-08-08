@@ -64,7 +64,7 @@ const ClusterSelector: React.FC = () => {
           id: cluster.id,
           name: cluster.clusterName,
           clusterName: cluster.clusterName,
-          isK8s: cluster.depType === 'kubernetes',
+          isK8s: ClusterTypeUtil.isKubernetes(ClusterTypeUtil.fromString(cluster.depType || 'PVM')),
         })))
       }
     } catch (error) {

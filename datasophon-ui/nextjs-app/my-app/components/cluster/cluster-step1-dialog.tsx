@@ -19,7 +19,8 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import Image from "next/image"
-import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { ClusterType, ClusterTypeUtil } from '@/types'
 
 interface ClusterSetupDialogProps {
   open: boolean
@@ -76,24 +77,18 @@ const ClusterStep1Dialog: React.FC<ClusterSetupDialogProps> = ({
     clusterVersion: ''
   })
 
-  const isK8s = cluster?.depType?.toLowerCase() === 'kubernetes'
+  const clusterType = ClusterTypeUtil.fromString(cluster?.depType || 'PVM')
+  const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
 
   // 使用标准化的步骤配置
   const steps = getStepsByType(
     StepsType.NORMAL,
-    isK8s ? DepType.KUBERNETES : DepType.PVM
+    clusterType
   )
 
-  // 根据集群类型获取图标路径 (与集群列表保持一致)
+  // 根据集群类型获取图标路径 
   const getIconPath = () => {
-    switch (cluster?.depType) {
-      case "Kubernetes":
-        return "/images/cluster/kubernetes-logo.svg";
-      case "PVM":
-        return "/images/cluster/linux-tux.svg";
-      default:
-        return "/images/cluster/kubernetes-logo.svg";
-    }
+    return ClusterTypeUtil.getIcon(clusterType)
   }
 
   // 重置表单数据
