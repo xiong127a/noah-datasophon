@@ -293,12 +293,12 @@ public class UnifiedHostController {
 
     /**
      * 校验集群所有主机状态
-     * 检查所有主机是否都满足进入下一步的条件：
+     * 检查所有主机的配置和状态是否正确：
      * 1. Kubernetes集群：所有主机都是未受管且状态为Ready
      * 2. PVM集群：根据具体业务逻辑校验
      */
-    @GetMapping("validate-hosts-for-next-step")
-    public Result<Map<String, Object>> validateHostsForNextStep(@ClusterId Integer clusterId) {
+    @GetMapping("check-hosts")
+    public Result<Map<String, Object>> checkHosts(@ClusterId Integer clusterId) {
         log.info("开始校验集群主机状态，集群ID: {}", clusterId);
         try {
             // 由门面服务自动选择策略执行校验

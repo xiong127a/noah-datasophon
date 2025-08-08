@@ -97,7 +97,7 @@ export const API_PATHS_V1 = {
   // 统一主机管理相关 - v1 (新架构)
   HOST_DISCOVER: `${API_BASE}/host/discover`,
   HOST_DISCOVER_FROM_STEP1: `${API_BASE}/host/discover-from-step1`,
-  HOST_VALIDATE_FOR_NEXT_STEP: `${API_BASE}/host/validate-hosts-for-next-step`,
+  HOST_CHECK: `${API_BASE}/host/check-hosts`,
   
 
   HOST_LIST: `${API_BASE}/host/list`,
@@ -137,11 +137,11 @@ apiClientV1.interceptors.request.use(config => {
     // 添加集群ID到请求头
     const clusterId = localStorage.getItem('clusterId');
     if (clusterId && clusterId !== '-1') {
-      config.headers['x-cluster-id'] = clusterId;
+      config.headers['X-Cluster-Id'] = clusterId;
     }
     
     // 添加API版本头（可选）
-    config.headers['x-api-version'] = API_VERSION;
+    config.headers['X-Api-Version'] = API_VERSION;
   }
   return config;
 }, error => {

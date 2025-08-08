@@ -11,7 +11,7 @@ import java.lang.annotation.*;
  * {@code
  * @GetMapping("/cluster/info")
  * public Result getClusterInfo(@ClusterId Integer clusterId) {
- *     // clusterId 会自动从请求头 x-cluster-id 中获取
+ *     // clusterId 会自动从请求头 X-Cluster-Id 中获取
  *     return Result.success(clusterInfo);
  * }
  * }
@@ -25,10 +25,10 @@ import java.lang.annotation.*;
 public @interface ClusterId {
     
     /**
-     * 请求头名称，默认为"x-cluster-id"
+     * 请求头名称，默认为"X-Cluster-Id"
      * @return 请求头名称
      */
-    String value() default "x-cluster-id";
+    String value() default "X-Cluster-Id";
     
     /**
      * 是否必需，如果为true且请求头中没有集群ID，会抛出异常

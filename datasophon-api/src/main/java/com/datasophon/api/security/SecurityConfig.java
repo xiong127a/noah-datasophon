@@ -165,8 +165,8 @@ public class SecurityConfig {
                 "Origin",
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers",
-                "x-api-version",
-                "x-cluster-id"));
+                "X-Api-Version",
+                "X-Cluster-Id"));
         configuration.setExposedHeaders(Arrays.asList("X-Auth-Token", "Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

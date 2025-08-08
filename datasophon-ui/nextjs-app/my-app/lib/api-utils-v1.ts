@@ -191,8 +191,8 @@ export const clusterApiV1 = {
     }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_FROM_STEP1, step1Config, config),
     
     // 校验所有主机状态（Step2下一步前的校验）
-    validateForNextStep: (config?: any) =>
-      apiV1.get(API_PATHS_V1.HOST_VALIDATE_FOR_NEXT_STEP, config),
+    validateForNextStep: (config?: any) => 
+      apiV1.get(API_PATHS_V1.HOST_CHECK, undefined, config),
     
     // ========== 配置进度管理相关 (简化版) ==========
     

@@ -3,7 +3,7 @@
  * 用于统一管理集群ID在请求头中的传递
  */
 
-export const CLUSTER_ID_HEADER = 'x-cluster-id'
+export const CLUSTER_ID_HEADER = 'X-Cluster-Id'
 
 /**
  * 当前活动的集群ID

@@ -527,7 +527,7 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
     if (depType === 'Kubernetes') {
       // 调用后端全量校验接口
       try {
-        const response = await clusterApi.unifiedHost.validateForNextStep(createClusterHeaders(clusterId))
+        const response = await clusterApi.unifiedHost.validateForNextStep({ headers: createClusterHeaders(clusterId) })
         const result = response.data
         
         if (result.code === 200 && result.data) {
