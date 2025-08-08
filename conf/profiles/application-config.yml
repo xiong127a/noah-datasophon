@@ -1,0 +1,25 @@
+# DataSophon 应用配置文件
+# 这是一个可选的配置文件，用于覆盖默认配置
+
+# 应用基本配置
+spring:
+  profiles:
+    active: default
+  
+# 可在此添加环境特定的配置
+# 例如：开发、测试、生产环境的差异化配置
+
+# 数据库配置（如需覆盖默认配置）
+# datasource:
+#   url: jdbc:mysql://localhost:3306/datasophon2
+#   username: root
+#   password: 123456
+
+# 服务器配置（如需覆盖默认配置）  
+# server:
+#   port: 8081
+
+# 日志配置（如需覆盖默认配置）
+# logging:
+#   level:
+#     com.datasophon: DEBUG
