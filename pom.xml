@@ -84,7 +84,7 @@
         <commons-codec.version>1.15</commons-codec.version>
         <commons-compress.version>1.27.1</commons-compress.version>
         <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
-        <jackson.version>2.18.4</jackson.version>
+        <jackson.version>2.19.2</jackson.version>
         <ant.version>1.10.12</ant.version>
         <jsch.version>2.27.2</jsch.version>
         <commons-collections.version>3.2.2</commons-collections.version>
