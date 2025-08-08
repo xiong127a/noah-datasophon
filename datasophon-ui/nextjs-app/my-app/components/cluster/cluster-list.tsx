@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react"
 import {
   Server,
-  Database,
   Cloud,
   Zap,
   Users,
@@ -22,7 +21,7 @@ import {
   Activity,
   TrendingUp,
 } from "lucide-react"
-import { ClusterTypeUtil } from '@/types'
+import { ClusterTypeUtil, Step3Data } from '@/types'
 
 // 自定义创建集群图标组件
 const CreateClusterIcon = ({ className }: { className?: string }) => (
@@ -97,6 +96,7 @@ import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
 import ClusterStep1Dialog, { Step1Data } from "./cluster-step1-dialog"
 import ClusterStep2Dialog from "./cluster-step2-dialog"
+import ClusterStep3Dialog from "./cluster-step3-dialog"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -491,9 +491,11 @@ export default function ClusterListEnhanced() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [step2DialogOpen, setStep2DialogOpen] = useState(false);
+  const [step3DialogOpen, setStep3DialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
+  const [step2Data, setStep2Data] = useState<Record<string, unknown> | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -516,9 +518,9 @@ export default function ClusterListEnhanced() {
       } else {
         setError(response.data?.msg || "获取集群列表失败");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("获取集群列表出错:", err);
-      setError(err.message || "网络错误，请稍后重试");
+      setError(err instanceof Error ? err.message : "网络错误，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -539,7 +541,7 @@ export default function ClusterListEnhanced() {
       } else {
         alert(response.data?.msg || "进入集群失败");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("进入集群失败:", err);
       alert("进入集群失败，请稍后重试");
     }
@@ -552,6 +554,7 @@ export default function ClusterListEnhanced() {
 
   const handleAuthCluster = (cluster: ClusterItem) => {
     // 授权对话框会通过组件内部状态打开
+    console.log('打开授权对话框:', cluster.clusterName);
   };
 
   const handleDeleteCluster = (cluster: ClusterItem) => {
@@ -570,7 +573,7 @@ export default function ClusterListEnhanced() {
       } else {
         alert(response.data?.msg || "删除集群失败");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("删除集群失败:", err);
       alert("删除集群失败，请稍后重试");
     }
@@ -593,11 +596,31 @@ export default function ClusterListEnhanced() {
     setStep2DialogOpen(true);
   };
 
-  // 处理Step2完成
-  const handleStep2Complete = () => {
-    console.log('Step2完成');
+  // 处理Step2完成  
+  const handleStep2Complete = (step2CompletionData?: Record<string, unknown>) => {
+    console.log('Step2完成', step2CompletionData);
+    setStep2Data(step2CompletionData || null);
     setStep2DialogOpen(false);
+    
+    // 检查集群类型，如果是K8S模式则进入Step3（服务选择）
+    if (setupCluster && setupCluster.depType === 'Kubernetes') {
+      console.log('K8S模式，进入Step3服务选择');
+      setStep3DialogOpen(true);
+    } else {
+      // PVM模式直接完成
+      console.log('PVM模式，完成配置');
+      setStep1Data(null);
+      setStep2Data(null);
+      handleClusterSuccess();
+    }
+  };
+
+  // 处理Step3完成
+  const handleStep3Complete = (step3Data: Step3Data) => {
+    console.log('Step3完成', step3Data);
+    setStep3DialogOpen(false);
     setStep1Data(null);
+    setStep2Data(null);
     handleClusterSuccess();
   };
 
@@ -749,10 +772,30 @@ export default function ClusterListEnhanced() {
                 clusterCode: setupCluster.clusterCode || ''
               } : null}
               step1Data={step1Data}
-              onSuccess={handleStep2Complete}
+              onSuccess={(data) => handleStep2Complete(data)}
               onPrevious={() => {
                 setStep2DialogOpen(false);
                 setSetupDialogOpen(true);
+              }}
+            />
+          )}
+
+          {/* 配置集群Step3弹窗 - K8S服务选择 */}
+          {step1Data && step2Data && (
+            <ClusterStep3Dialog
+              open={step3DialogOpen}
+              onOpenChange={setStep3DialogOpen}
+              cluster={setupCluster ? {
+                id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+                clusterName: setupCluster.clusterName,
+                depType: setupCluster.depType || '',
+                clusterCode: setupCluster.clusterCode || ''
+              } : null}
+              step2Data={step2Data}
+              onSuccess={handleStep3Complete}
+              onPrevious={() => {
+                setStep3DialogOpen(false);
+                setStep2DialogOpen(true);
               }}
             />
           )}

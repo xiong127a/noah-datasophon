@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
-import { ManagementStatus, ManagementStatusUtil, ClusterType, ClusterTypeUtil } from '@/types'
+import { ManagementStatus, ManagementStatusUtil, ClusterTypeUtil } from '@/types'
 
 import type { 
   ClusterStep2DialogProps, 
@@ -186,7 +186,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         throw new Error('Step1配置数据不能为空')
       }
 
-      let response: {data: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}}, res: {code: number, hosts?: Host[], total?: number, queueStatus?: QueueStatus, msg?: string}
+      let response: {data: {code: number, data?: {hosts?: Host[], totalCount?: number, filterOptions?: {statuses: string[], roles: string[]}}, total?: number, queueStatus?: QueueStatus, msg?: string}}
+      let res: {code: number, data?: {hosts?: Host[], totalCount?: number, filterOptions?: {statuses: string[], roles: string[]}}, total?: number, queueStatus?: QueueStatus, msg?: string}
       
       // 构造Step1配置数据
       const step1Config = {
@@ -212,11 +213,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         const headers = createClusterHeaders(clusterId)
         
         response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
-        res = response.data as any // 临时类型断言，待后端接口稳定后优化
+        res = response.data
         
         // 统一API响应格式处理
         if (res.code === 200) {
-          const resData = (res as any).data
+          const resData = res.data
           // 新API返回的数据结构：res.data.hosts
           setDataSource(resData?.hosts || [])
           
@@ -505,8 +506,13 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       
       toast.success('Step2 校验完成，进入下一步')
       
-      // 调用成功回调
-      onSuccess?.()
+      // 调用成功回调，传递完成数据
+      onSuccess?.({
+        step1Data,
+        selectedHosts: getSuccessfulHosts(),
+        clusterType: clusterType.toString(),
+        timestamp: new Date().toISOString()
+      })
       
     } catch (error) {
       console.error('下一步处理失败:', error)

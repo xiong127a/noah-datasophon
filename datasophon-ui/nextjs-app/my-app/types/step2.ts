@@ -91,7 +91,7 @@ export interface ClusterStep2DialogProps {
     clusterCode: string
   } | null
   step1Data: Step1Data
-  onSuccess?: () => void
+  onSuccess?: (data?: Record<string, unknown>) => void
   onPrevious?: () => void  // 新增：上一步回调
 }
 

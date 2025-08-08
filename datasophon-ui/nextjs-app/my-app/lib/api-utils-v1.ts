@@ -173,6 +173,23 @@ export const clusterApiV1 = {
 
   },
 
+  // 服务管理相关
+  service: {
+    // 获取服务列表（带必需服务信息）
+    listWithRequired: (params: {
+      type?: string
+      clusterId: number
+    }, config?: any) => {
+      const url = `/ddh/api/frame/service/listWithRequired?type=${params.type || ''}&clusterId=${params.clusterId}`;
+      return apiV1.get(url, undefined, config);
+    },
+    
+    // 获取基础服务列表
+    list: (params: {
+      clusterId: number
+    }, config?: any) => apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_LIST, params, config),
+  },
+
   // 统一主机管理相关 - 新架构
   unifiedHost: {
     // 发现主机（自动选择PVM或K8S策略）
