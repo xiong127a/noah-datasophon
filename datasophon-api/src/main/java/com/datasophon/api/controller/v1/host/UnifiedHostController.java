@@ -22,15 +22,13 @@ import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
+import com.datasophon.dao.mapper.ClusterConfigProgressMapper;
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
 import com.datasophon.common.dto.HostDiscoveryResultDTO;
 import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
 import com.datasophon.common.dto.FilterOptionsDTO;
 import com.datasophon.common.enums.ClusterType;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.common.enums.MANAGED;
-import com.datasophon.common.enums.HostState;
 import com.datasophon.api.service.host.ClusterHostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +40,9 @@ import java.util.Map;
 
 /**
  * 统一主机管理控制器
- * 专注于集群配置阶段的主机发现功能
+ * 专注于集群配置阶段的主机发现功能和配置进度管理
  * 自动根据集群类型选择合适的策略（PVM/Kubernetes）
+ * 支持8步配置流程的进度保存和恢复
  * 
  * @author DataSophon Team
  */
@@ -60,6 +59,11 @@ public class UnifiedHostController {
     
     @Autowired
     private ClusterHostService clusterHostService;
+    
+    @Autowired
+    private ClusterConfigProgressMapper clusterConfigProgressMapper;
+    
+    // 进度查询与保存迁移到策略/服务内，新接口不再直接依赖 InstallService
 
     /**
      * Step1配置完成后的主机发现接口
@@ -294,65 +298,44 @@ public class UnifiedHostController {
     @GetMapping("validate-hosts-for-next-step")
     public Result<Map<String, Object>> validateHostsForNextStep(@ClusterId Integer clusterId) {
         log.info("开始校验集群主机状态，集群ID: {}", clusterId);
-        
         try {
-            // 获取集群所有主机
-            List<ClusterHostDO> allHosts = clusterHostService.getHostListByClusterId(clusterId);
-            
-            if (allHosts == null || allHosts.isEmpty()) {
-                log.warn("集群没有发现任何主机，集群ID: {}", clusterId);
-                return Result.success(Map.of(
-                    "valid", false,
-                    "message", "集群中没有发现任何主机，请先完成主机发现",
-                    "totalHosts", 0,
-                    "unmanagedHosts", 0,
-                    "readyHosts", 0
-                ));
-            }
-
-            // 统计主机状态
-            long totalHosts = allHosts.size();
-            long unmanagedHosts = allHosts.stream()
-                .filter(host -> MANAGED.NO.equals(host.getManaged()))
-                .count();
-            long readyHosts = allHosts.stream()
-                .filter(host -> HostState.RUNNING.equals(host.getHostState()))
-                .count();
-            
-            log.info("主机状态统计 - 总数: {}, 未受管: {}, Ready状态: {}", totalHosts, unmanagedHosts, readyHosts);
-
-            // 校验条件：所有主机都必须是未受管且状态为Ready
-            boolean allUnmanaged = unmanagedHosts == totalHosts;
-            boolean allReady = readyHosts == totalHosts;
-            boolean valid = allUnmanaged && allReady;
-
-            String message;
-            if (valid) {
-                message = String.format("校验通过：所有 %d 台主机都是未受管状态且Ready", totalHosts);
-            } else if (!allUnmanaged) {
-                long managedCount = totalHosts - unmanagedHosts;
-                message = String.format("校验失败：存在 %d 台已受管主机，请确保所有主机都是未受管状态", managedCount);
-            } else {
-                long notReadyCount = totalHosts - readyHosts;
-                message = String.format("校验失败：存在 %d 台非Ready状态主机，请确保所有主机状态都是Ready", notReadyCount);
-            }
-
-            Map<String, Object> result = Map.of(
-                "valid", valid,
-                "message", message,
-                "totalHosts", totalHosts,
-                "unmanagedHosts", unmanagedHosts,
-                "readyHosts", readyHosts,
-                "managedHosts", totalHosts - unmanagedHosts,
-                "notReadyHosts", totalHosts - readyHosts
-            );
-
-            log.info("主机校验完成，集群ID: {}, 结果: {}", clusterId, valid ? "通过" : "失败");
+            // 由门面服务自动选择策略执行校验
+            Map<String, Object> result = hostManagementService.validateForNextStep(clusterId);
+            log.info("主机校验完成，集群ID: {}, 结果: {}", clusterId, Boolean.TRUE.equals(result.get("valid")) ? "通过" : "失败");
             return Result.success(result);
-
         } catch (Exception e) {
             log.error("校验集群主机状态失败，集群ID: {}", clusterId, e);
             return Result.error("校验主机状态失败: " + e.getMessage());
+        }
+    }
+
+    // ========== 配置进度管理接口 (简化版) ==========
+
+    /**
+     * 获取集群配置进度 - 唯一的进度接口
+     * 用于前端显示当前进度和判断可进入的步骤
+     */
+    @GetMapping("config-progress")
+    public Result<Map<String, Object>> getConfigProgress(@ClusterId Integer clusterId) {
+        log.debug("获取集群配置进度，集群ID: {}", clusterId);
+        
+        try {
+            // 通过DAO直接读取简化进度（避免依赖InstallService）
+            var progress = clusterConfigProgressMapper.findByClusterId(clusterId);
+            Integer completedStep = progress != null && progress.getCompletedStep() != null ? progress.getCompletedStep() : 0;
+            Integer currentStep = completedStep >= 8 ? 8 : Math.max(1, completedStep + 1);
+            String configStatus = progress != null && progress.getConfigStatus() != null ? progress.getConfigStatus().getCode() : "UNCONFIGURED";
+
+            Map<String, Object> result = Map.of(
+                "currentStep", currentStep,
+                "completedStep", completedStep,
+                "configStatus", configStatus,
+                "canEnterCluster", completedStep >= 8
+            );
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("获取集群配置进度失败，集群ID: {}", clusterId, e);
+            return Result.error("获取配置进度失败: " + e.getMessage());
         }
     }
 }

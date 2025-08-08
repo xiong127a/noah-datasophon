@@ -313,6 +313,27 @@ public class UnifiedHostManagementService {
     }
 
     /**
+     * 校验是否可以进入下一步（策略内封装各自规则），并在通过时触发进度保存
+     */
+    public Map<String, Object> validateForNextStep(Integer clusterId) {
+        try {
+            // 获取集群信息
+            ClusterInfoDO cluster = getClusterInfo(clusterId);
+
+            // 选择策略
+            HostManagementStrategy strategy = strategyFactory.getStrategyWithContext(clusterId, cluster.getDepType());
+
+            // 执行校验
+            Map<String, Object> result = strategy.validateForNextStep(clusterId);
+            log.info("集群{}下一步校验完成，策略: {}, 结果: {}", clusterId, strategy.getStrategyType().getCode(), result.get("valid"));
+            return result;
+        } catch (Exception e) {
+            log.error("集群{}下一步校验失败", clusterId, e);
+            throw new RuntimeException("下一步校验失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 清理资源
      * 清理指定集群的主机管理相关资源
      *

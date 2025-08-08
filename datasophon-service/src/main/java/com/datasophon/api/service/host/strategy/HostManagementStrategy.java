@@ -23,6 +23,7 @@ import com.datasophon.api.service.host.strategy.model.HostListRequest;
 import com.datasophon.api.service.host.strategy.model.HostListResult;
 import com.datasophon.api.service.host.strategy.model.HostImportRequest;
 import com.datasophon.dao.entity.ClusterHostDO;
+import lombok.Getter;
 
 import java.util.List;
 import java.util.Map;
@@ -114,8 +115,18 @@ public interface HostManagementStrategy {
     void cleanup(Integer clusterId);
 
     /**
+     * 校验是否可以进入下一步（Step2 -> Step3等）
+     * 不同策略可有不同校验规则；返回校验细节，并在通过时触发进度保存
+     *
+     * @param clusterId 集群ID
+     * @return 校验结果Map，包含：valid(boolean), message(String), totalHosts, unmanagedHosts, readyHosts 等
+     */
+    Map<String, Object> validateForNextStep(Integer clusterId);
+
+    /**
      * 策略类型枚举
      */
+    @Getter
     enum StrategyType {
         PVM("PVM", "传统虚拟机模式"),
         KUBERNETES("Kubernetes", "Kubernetes容器模式");
@@ -126,14 +137,6 @@ public interface HostManagementStrategy {
         StrategyType(String code, String description) {
             this.code = code;
             this.description = description;
-        }
-
-        public String getCode() {
-            return code;
-        }
-
-        public String getDescription() {
-            return description;
         }
 
         public static StrategyType fromCode(String code) {

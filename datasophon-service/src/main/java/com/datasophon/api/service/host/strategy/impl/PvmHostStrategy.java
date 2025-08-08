@@ -277,6 +277,15 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         }
     }
 
+    @Override
+    public Map<String, Object> validateForNextStep(Integer clusterId) {
+        // PVM校验规则可按需实现；这里保持与现有逻辑兼容，简单返回未实现提示
+        Map<String, Object> result = new HashMap<>();
+        result.put("valid", false);
+        result.put("message", "PVM模式下一步校验规则待实现");
+        return result;
+    }
+
     /**
      * 获取队列状态信息（PVM模式特有）
      */

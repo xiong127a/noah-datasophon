@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType, DepType } from '@/lib/cluster-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
+import { useConfigProgress } from './config-progress-context'
 import type { 
   ClusterStep2DialogProps, 
   Host, 
@@ -39,6 +40,11 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
   
   // 使用标准化的步骤配置
   const steps = getStepsByType(StepsType.NORMAL, depType)
+  
+  // 简化的配置进度管理 - 只用来显示进度，业务逻辑保持不变
+  const { 
+    refreshProgress
+  } = useConfigProgress()
   
   // 基础状态
   const [loading, setLoading] = useState(false)
@@ -458,12 +464,8 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
         console.log('保存主机列表:', successfulHosts)
         
         if (depType === 'Kubernetes') {
-          // K8S模式：保存K8S主机
-          const hostRes = await clusterApi.host.saveKubernetesHost(successfulHosts)
-          
-          if (hostRes.data?.code !== 200) {
-            console.warn('保存K8S主机列表失败:', hostRes.data?.msg)
-          }
+          // K8S模式：主机已通过unifiedHost API自动发现和保存，无需额外保存
+          console.log('K8S主机已通过unifiedHost API处理')
         } else {
           // PVM模式：分析主机列表
           const analysisRes = await clusterApi.host.analysisHostList({
@@ -505,6 +507,15 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       // 保存K8S配置和主机列表
       await saveK8sConfigAndHosts()
       
+      // 🎉 简化版：后端已自动保存Step2完成进度，只需刷新显示
+      try {
+        await refreshProgress()
+      } catch {
+        console.warn('刷新进度显示失败，但不影响业务流程')
+      }
+      
+      toast.success('Step2 校验完成，进入下一步')
+      
       // 调用成功回调
       onSuccess?.()
       
@@ -515,6 +526,9 @@ const ClusterStep2Dialog: React.FC<ClusterStep2DialogProps> = ({
       setLoading(false)
     }
   }
+
+  // ✅ 简化版：删除复杂的Step2配置保存逻辑
+  // 后端已在validateForNextStep成功后自动保存Step2完成进度
 
   // 主机环境校验是否完成
   const hostCheckCompleted = async (): Promise<{ hostCheckCompleted: boolean; data: string }> => {

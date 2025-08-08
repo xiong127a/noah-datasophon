@@ -20,6 +20,9 @@ package com.datasophon.api.service.host.strategy.impl;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
+import com.datasophon.common.enums.ConfigStatus;
+import com.datasophon.dao.entity.ClusterConfigProgressEntity;
+import com.datasophon.dao.mapper.ClusterConfigProgressMapper;
 import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.HostState;
@@ -46,6 +49,9 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
 
     @Autowired
     private K8sToClusterHostConverter k8sToClusterHostConverter;
+
+    @Autowired
+    private ClusterConfigProgressMapper configProgressMapper;
 
     // K8S主机临时存储，替代缓存
     private final Map<Integer, List<ClusterHostDO>> k8sHostsStorage = new HashMap<>();
@@ -274,8 +280,67 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         log.info("已清理集群{}的K8S主机临时数据", clusterId);
     }
 
+    @Override
+    public Map<String, Object> validateForNextStep(Integer clusterId) {
+        Map<String, Object> result = new HashMap<>();
+        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        if (hosts == null || hosts.isEmpty()) {
+            // 回退到数据库读取
+            hosts = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+        }
 
+        if (hosts == null || hosts.isEmpty()) {
+            result.put("valid", false);
+            result.put("message", "集群中没有发现任何主机，请先完成主机发现");
+            result.put("totalHosts", 0);
+            result.put("unmanagedHosts", 0);
+            result.put("readyHosts", 0);
+            return result;
+        }
 
+        long total = hosts.size();
+        long unmanaged = hosts.stream().filter(h -> Boolean.FALSE.equals(h.getManaged())).count();
+        long ready = hosts.stream().filter(h -> HostState.RUNNING.equals(h.getHostState())).count();
+
+        boolean allUnmanaged = unmanaged == total;
+        boolean allReady = ready == total;
+        boolean valid = allUnmanaged && allReady;
+
+        result.put("valid", valid);
+        result.put("totalHosts", total);
+        result.put("unmanagedHosts", unmanaged);
+        result.put("readyHosts", ready);
+        result.put("managedHosts", total - unmanaged);
+        result.put("notReadyHosts", total - ready);
+        if (valid) {
+            result.put("message", String.format("校验通过：所有 %d 台主机都是未受管状态且Ready", total));
+            // 通过则自动保存进度到 step2 完成（简化版：直接更新/插入）
+            ClusterConfigProgressEntity progress = configProgressMapper.findByClusterId(clusterId);
+            if (progress == null) {
+                progress = new ClusterConfigProgressEntity();
+                progress.setClusterId(clusterId);
+                progress.setConfigStatus(ConfigStatus.CONFIGURING);
+                progress.setCompletedStep(2);
+                configProgressMapper.insert(progress);
+            } else {
+                Integer current = progress.getCompletedStep() == null ? 0 : progress.getCompletedStep();
+                if (current < 2) {
+                    progress.setCompletedStep(2);
+                    progress.setConfigStatus(ConfigStatus.CONFIGURING);
+                    configProgressMapper.update(progress);
+                }
+            }
+        } else {
+            if (!allUnmanaged) {
+                long managed = total - unmanaged;
+                result.put("message", String.format("校验失败：存在 %d 台已受管主机，请确保所有主机都是未受管状态", managed));
+            } else {
+                long notReady = total - ready;
+                result.put("message", String.format("校验失败：存在 %d 台非Ready状态主机，请确保所有主机状态都是Ready", notReady));
+            }
+        }
+        return result;
+    }
     /**
      * 应用筛选条件
      */

@@ -30,9 +30,7 @@ export const clusterApiV1 = {
     assignRack: (rack: string, hostIds: string) => 
       apiV1.post(API_PATHS_V1.CLUSTER_HOST_ASSIGN_RACK, { rack, hostIds }),
     
-    // 保存Kubernetes主机
-    saveKubernetesHost: (hosts: any[]) =>
-      apiV1.post(API_PATHS_V1.SAVE_KUBERNETES_HOST, hosts),
+    // 注释：saveKubernetesHost已移除，使用新的unifiedHost API
     
     // 分析主机列表
     analysisHostList: (params: {
@@ -196,6 +194,12 @@ export const clusterApiV1 = {
     validateForNextStep: (config?: any) =>
       apiV1.get(API_PATHS_V1.HOST_VALIDATE_FOR_NEXT_STEP, config),
     
+    // ========== 配置进度管理相关 (简化版) ==========
+    
+    // 获取集群配置进度
+    getConfigProgress: (config?: any) =>
+      apiV1.get(API_PATHS_V1.CONFIG_PROGRESS_GET, config),
+    
     // 获取主机列表（支持分页和筛选）
     list: (params: {
       page?: number
@@ -263,7 +267,7 @@ export const ApiCompatibility = {
   },
   
   // 获取API变更说明
-  getApiChanges: (fromVersion: string, toVersion: string) => {
+  getApiChanges: () => {
     // 将来用于API版本迁移指导
     return {
       breaking: [],
