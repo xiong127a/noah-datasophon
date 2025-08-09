@@ -71,7 +71,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getNonMasterRoleList")
     public Result<List<FrameServiceRoleVO>> getNonMasterRoleList(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("serviceIds") String serviceIds) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
