@@ -51,7 +51,10 @@ export const API_PATHS_V1 = {
   // 服务角色分配相关 - v1 (Step5)
   GET_SERVICE_ROLE_LIST: `${API_BASE}/frame/service/role/getServiceRoleList`,
   GET_ALL_HOST: `${API_BASE}/cluster/host/all`,
-  SAVE_SERVICE_ROLE_HOST_MAPPING: `/ddh/service/install/saveServiceRoleHostMapping`,
+  SAVE_SERVICE_ROLE_HOST_MAPPING: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
+  
+  // Worker&Client角色分配相关 - v1 (Step6)
+  GET_NON_MASTER_ROLE_LIST: `${API_BASE}/frame/service/role/getNonMasterRoleList`,
   
   // 存储库相关 - v1
   PARCEL_LIST: `${API_BASE}/cluster/parcel/list`,
