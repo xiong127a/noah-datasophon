@@ -52,8 +52,9 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   const [formData, setFormData] = useState<Record<string, string | string[]>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // 步骤配置
-  const currentStep = 5 // Step5: 分配服务Master角色
+  // 步骤配置（K8s模式跳过Agent分发）
+  const isK8s = cluster.depType?.toLowerCase() === 'kubernetes'
+  const currentStep = isK8s ? 4 : 5 // Step5: 分配服务Master角色
 
   // 表单项配置生成
   const formItems = useMemo((): FormItem[] => {

@@ -141,6 +141,10 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
     return { total, selected, required, available }
   }, [filteredServices, selectedServiceIds])
 
+  // 计算当前步骤编号（K8s模式跳过Agent分发）
+  const isK8s = clusterType?.toLowerCase() === 'kubernetes'
+  const currentStepNumber = isK8s ? 3 : 4
+
   // 状态信息配置
   const statusInfo: StatusInfo = {
     text: "已选择",
@@ -178,7 +182,7 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
       clusterType={clusterType}
       stepTitle="选择大数据服务"
       stepDescription="根据您的需求选择要部署的大数据服务组件"
-      currentStep={3}
+      currentStep={currentStepNumber}
       dialogTitle={`服务选择 - ${cluster?.clusterName}`}
       actionBar={
         <ClusterStepActionBar

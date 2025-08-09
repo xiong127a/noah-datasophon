@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { DIALOG_STYLES } from './shared-styles'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-steps'
-import { ClusterTypeUtil } from '@/types'
+import { ClusterTypeUtil, ClusterType } from '@/types'
 
 /**
  * 统一的集群步骤页面布局组件
@@ -51,7 +51,8 @@ const ClusterStepLayout: React.FC<ClusterStepLayoutProps> = ({
 }) => {
   // 步骤配置
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
-  const steps = getStepsByType(StepsType.NORMAL)
+  const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
+  const steps = getStepsByType(StepsType.NORMAL, depType)
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
