@@ -196,12 +196,10 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
         />
       }
     >
-      <div className="flex h-full">
-        {/* 左侧：服务选择区域 */}
-        <div className="flex-1 flex flex-col p-8 min-w-0">
-          {/* 顶部过滤区域 */}
-          <div className="mb-6">
-            <div className="flex items-center space-x-6 bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg shadow-black/5 border border-white/20">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* 顶部过滤区域 */}
+        <div className="flex-shrink-0 p-6 sm:p-8 pb-4">
+          <div className="flex items-center space-x-6 bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg shadow-black/5 border border-white/20">
               {/* 服务类型选择 */}
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
@@ -211,13 +209,16 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                   <div className="text-sm font-bold text-gray-900 mb-1">服务类型</div>
                   <Select value={serviceTypeFilter} onValueChange={(value: string) => setServiceTypeFilter(value as ServiceType)}>
                     <SelectTrigger className="w-[200px] bg-white/80 border border-gray-200/60 rounded-xl shadow-sm">
-                      <SelectValue />
+                      <SelectValue>
+                        {SERVICE_TYPE_OPTIONS.find(option => option.value === serviceTypeFilter)?.label}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {SERVICE_TYPE_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{option.label}</span>
+                          <div className="flex flex-col py-1">
+                            <span className="font-medium text-gray-900">{option.label}</span>
+                            <span className="text-xs text-gray-500 mt-0.5">{option.description}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -257,10 +258,12 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                 </button>
               </div>
             </div>
-          </div>
+        </div>
 
-          {/* 服务网格 */}
-          <div className="flex-1 min-h-0">
+        {/* 主要内容区域 */}
+        <div className="flex-1 flex gap-6 min-h-0 px-6 sm:px-8">
+          {/* 服务选择区域 */}
+          <div className="flex-1 flex flex-col min-w-0">
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="flex items-center space-x-3">
@@ -287,80 +290,100 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
                 <p>没有找到符合条件的服务</p>
               </div>
             ) : (
-              <div className="h-full overflow-y-auto pr-2" style={{scrollbarWidth: 'thin'}}>
-                <div className="grid grid-cols-6 gap-4 pb-4">
+              <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pt-2 pb-6">
+                <div className="grid grid-cols-4 gap-6 px-2">
                   {filteredServices.map((service) => {
                     const isSelected = selectedServiceIds.includes(service.id)
                     
                     return (
                       <div
                         key={service.id}
-                        className={`group cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                          isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
-                        }`}
+                        className="group cursor-pointer transition-all duration-300"
                         onClick={() => handleServiceToggle(service.id)}
                       >
-                        <div className={`relative overflow-hidden rounded-2xl transition-all duration-300 ${
+                        <div className={`relative overflow-hidden rounded-2xl transition-all duration-300 h-full transform ${
                           isSelected
-                            ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-xl shadow-blue-500/20'
-                            : 'bg-white/80 backdrop-blur-xl border border-gray-200/60 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/40'
+                            ? 'bg-gradient-to-br from-blue-500/15 via-blue-400/10 to-blue-600/15 border-2 border-blue-500 shadow-2xl shadow-blue-500/30 scale-105'
+                            : 'bg-white/90 backdrop-blur-xl border border-gray-200/60 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/40 hover:scale-[1.02]'
                         }`}>
                           {/* 必需服务标识 */}
                           {service.isRequired && (
                             <div className="absolute top-2 right-2 z-10">
-                              <div className="w-3 h-3 bg-gradient-to-br from-red-400 to-red-500 rounded-full shadow-lg shadow-red-500/50"></div>
+                              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg shadow-red-500/40 border border-red-400">
+                                必需
+                              </div>
                             </div>
                           )}
                           
                           {/* 已安装标识 */}
                           {service.installed && (
                             <div className="absolute top-2 left-2 z-10">
-                              <div className="w-3 h-3 bg-gradient-to-br from-green-400 to-green-500 rounded-full shadow-lg shadow-green-500/50"></div>
+                              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg shadow-green-500/40 border border-green-400">
+                                已装
+                              </div>
                             </div>
                           )}
 
-                          <div className="p-4">
+                          <div className="p-4 h-full flex flex-col">
                             {/* 服务图标 */}
                             <div className="flex justify-center mb-3">
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                                 isSelected
-                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30'
+                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl shadow-blue-500/40'
                                   : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-blue-200'
                               }`}>
                                 <ServiceIcon 
                                   serviceName={service.serviceName}
-                                  size={24}
+                                  size={28}
                                   className={isSelected ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'}
                                 />
                               </div>
                             </div>
 
                             {/* 服务信息 */}
-                            <div className="text-center">
-                              <h3 className={`text-sm font-bold mb-1 transition-colors duration-200 ${
-                                isSelected ? 'text-blue-700' : 'text-gray-900 group-hover:text-blue-600'
-                              }`}>
-                                {service.serviceName}
-                              </h3>
-                              
-                              {service.serviceDesc && (
-                                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
-                                  {service.serviceDesc}
-                                </p>
-                              )}
-                            </div>
+                            <div className="text-center flex-1 flex flex-col justify-between">
+                              <div>
+                                <h3 className={`text-sm font-bold mb-1 transition-colors duration-200 ${
+                                  isSelected ? 'text-blue-800' : 'text-gray-900 group-hover:text-blue-700'
+                                }`}>
+                                  {service.serviceName}
+                                </h3>
+                                
+                                {service.serviceDesc && (
+                                  <p className={`text-xs line-clamp-2 leading-relaxed mb-3 transition-colors duration-200 ${
+                                    isSelected ? 'text-blue-600/80' : 'text-gray-600'
+                                  }`}>
+                                    {service.serviceDesc}
+                                  </p>
+                                )}
+                                
+                                {/* 服务状态标签 */}
+                                <div className="flex justify-center gap-1 mb-2">
+                                  {service.isRequired && (
+                                    <div className="text-xs text-red-600 font-medium bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                      核心
+                                    </div>
+                                  )}
+                                  {service.installed && (
+                                    <div className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                                      已装
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
 
-                            {/* 选择复选框 */}
-                            <div className="flex justify-center mt-3">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => {}} // 由父级div处理点击
-                                className={`w-4 h-4 transition-all duration-200 ${
-                                  isSelected
-                                    ? 'border-blue-500 bg-blue-500'
-                                    : 'border-gray-300 group-hover:border-blue-400'
-                                }`}
-                              />
+                              {/* 选择复选框 */}
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => {}} // 由父级div处理点击
+                                  className={`w-5 h-5 transition-all duration-200 ${
+                                    isSelected
+                                      ? 'border-blue-500 bg-blue-500'
+                                      : 'border-gray-300 group-hover:border-blue-400'
+                                  }`}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -371,68 +394,114 @@ const ClusterStep3Dialog: React.FC<ClusterStep3DialogProps> = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* 右侧：统计和已选服务面板 */}
-        <div className="w-80 flex-shrink-0 p-8 space-y-6">
-          {/* 统计面板 */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/5 border border-white/20 p-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/25">
-                <AlertCircle className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900">统计</h3>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="bg-gradient-to-br from-blue-50/80 to-blue-100/60 rounded-xl p-3 border border-blue-200/30">
-                <div className="text-xs font-medium text-blue-600 mb-1">总数</div>
-                <div className="text-xl font-bold text-blue-900">{stats.total}</div>
-              </div>
-              <div className="bg-gradient-to-br from-green-50/80 to-green-100/60 rounded-xl p-3 border border-green-200/30">
-                <div className="text-xs font-medium text-green-600 mb-1">已选</div>
-                <div className="text-xl font-bold text-green-900">{stats.selected}</div>
-              </div>
-              <div className="bg-gradient-to-br from-orange-50/80 to-orange-100/60 rounded-xl p-3 border border-green-200/30">
-                <div className="text-xs font-medium text-orange-600 mb-1">必需</div>
-                <div className="text-xl font-bold text-orange-900">{stats.required}</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* 紧凑已选择服务列表 */}
-          {selectedServices.length > 0 && (
-            <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/5 border border-white/20 p-4">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
-                  <span className="text-white font-bold text-xs">{stats.selected}</span>
+          {/* 右侧：统计和已选服务面板 */}
+          <div className="w-80 flex-shrink-0 space-y-4">
+            {/* 统计面板 */}
+              <div className="bg-gradient-to-br from-white/90 to-gray-50/80 backdrop-blur-xl rounded-2xl shadow-xl shadow-black/10 border border-white/40 p-5">
+                <div className="flex items-center space-x-3 mb-5">
+                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <Package className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">服务统计</h3>
+                    <p className="text-xs text-gray-600">当前选择状态</p>
+                  </div>
                 </div>
-                <h4 className="text-sm font-bold text-gray-900">已选服务</h4>
-              </div>
-              
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1" style={{scrollbarWidth: 'thin'}}>
-                {selectedServices.map((service) => (
-                  <div 
-                    key={service.id} 
-                    className="flex items-center space-x-2 p-2 bg-gradient-to-r from-blue-50/80 to-blue-100/50 rounded-lg border border-blue-200/30 transition-all duration-200"
-                  >
-                    <ServiceIcon 
-                      serviceName={service.serviceName}
-                      size={16}
-                      className="flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-900 truncate">
-                        {service.serviceName}
+                
+                <div className="space-y-3">
+                  <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-xl p-4 border border-blue-200/50 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <Package className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-sm font-medium text-blue-800">总数</span>
                       </div>
+                      <div className="text-xl font-bold text-blue-900">{stats.total}</div>
                     </div>
                   </div>
-                ))}
+                  
+                  <div className="bg-gradient-to-r from-green-500/10 to-emerald-600/10 rounded-xl p-4 border border-green-200/50 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
+                          <Checkbox className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-sm font-medium text-green-800">已选</span>
+                      </div>
+                      <div className="text-xl font-bold text-green-900">{stats.selected}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-xl p-4 border border-red-200/50 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-red-500 rounded-lg flex items-center justify-center">
+                          <AlertCircle className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-sm font-medium text-red-800">必需</span>
+                      </div>
+                      <div className="text-xl font-bold text-red-900">{stats.required}</div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-red-200/50">
+                      <p className="text-xs text-red-600">
+                        核心服务，不可取消选择
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+              
+              {/* 已选择服务列表 */}
+              {selectedServices.length > 0 && (
+                <div className="bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-xl rounded-2xl shadow-xl shadow-black/10 border border-white/40 p-4 flex-1 min-h-0">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <span className="text-white font-bold text-sm">{stats.selected}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900">已选服务</h4>
+                      <p className="text-xs text-gray-600">当前选择的服务</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-[calc(100%-3rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300/50 scrollbar-track-blue-100/30">
+                    {selectedServices.map((service) => (
+                      <div 
+                        key={service.id} 
+                        className="group flex items-center space-x-3 p-3 bg-gradient-to-r from-white/80 to-blue-50/60 rounded-xl border border-blue-200/40 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
+                      >
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-200">
+                          <ServiceIcon 
+                            serviceName={service.serviceName}
+                            size={18}
+                            className="text-blue-600 group-hover:text-blue-700"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-800 transition-colors duration-200">
+                            {service.serviceName}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            {service.isRequired && (
+                              <div className="text-xs text-red-600 font-medium bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                                必需
+                              </div>
+                            )}
+                            {service.installed && (
+                              <div className="text-xs text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded border border-green-200">
+                                已装
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+          </div>
         </div>
       </div>
     </ClusterStepLayout>
