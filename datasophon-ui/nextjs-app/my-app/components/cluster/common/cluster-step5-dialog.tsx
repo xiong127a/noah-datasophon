@@ -99,15 +99,25 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
     try {
       setLoading(true)
       
+      // 防御性编程：确保serviceIds是数组
+      const serviceIds = Array.isArray(step4Data?.serviceIds) ? step4Data.serviceIds : []
+      if (serviceIds.length === 0) {
+        toast.error('服务ID列表为空')
+        setLoading(false)
+        return
+      }
+      
+      const serviceIdsStr = serviceIds.join(',')
+      
       console.log('调用API获取服务角色，参数:', {
         clusterId: cluster.id,
-        serviceIds: step4Data.serviceIds.join(','),
+        serviceIds: serviceIdsStr,
         serviceRoleType: 1
       })
       
       const response = await clusterApiV1.serviceRole.getList({
         clusterId: cluster.id,
-        serviceIds: step4Data.serviceIds.join(','),
+        serviceIds: serviceIdsStr,
         serviceRoleType: 1 // 1表示Master角色
       })
       
@@ -136,17 +146,18 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
     } finally {
       setLoading(false)
     }
-  }, [cluster.id, step4Data.serviceIds])
+  }, [cluster.id, step4Data?.serviceIds])
 
   // 初始化数据
   const initializeData = useCallback(async () => {
-    if (open && step4Data.serviceIds.length > 0) {
+    const serviceIds = Array.isArray(step4Data?.serviceIds) ? step4Data.serviceIds : []
+    if (open && serviceIds.length > 0) {
       const hosts = await fetchAllHosts()
       if (hosts.length > 0) {
         await fetchServiceRoles(hosts)
       }
     }
-  }, [open, step4Data.serviceIds, fetchAllHosts, fetchServiceRoles])
+  }, [open, step4Data?.serviceIds, fetchAllHosts, fetchServiceRoles])
 
   useEffect(() => {
     if (open) {
