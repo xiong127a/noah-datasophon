@@ -88,7 +88,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getServiceRoleByServiceName")
     public Result<List<FrameServiceRoleVO>> getServiceRoleByServiceName(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("serviceName") String serviceName) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId,

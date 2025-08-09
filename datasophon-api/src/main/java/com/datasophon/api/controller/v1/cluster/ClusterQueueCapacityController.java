@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterQueueCapacityConverter;
 import com.datasophon.api.service.ClusterQueueCapacityService;
 import com.datasophon.common.dto.ClusterQueueCapacityDTO;
@@ -54,7 +55,7 @@ public class ClusterQueueCapacityController {
      * 列表（树形结构）
      */
     @RequestMapping("/list")
-    public Result<ClusterQueueCapacityListVO> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<ClusterQueueCapacityListVO> list(@ClusterId Integer clusterId) {
         // 调用Service层方法，获取ClusterQueueCapacityList
         ClusterQueueCapacityList capacityList = clusterQueueCapacityService.listCapacityQueue(clusterId);
         // Controller层：Model → VO转换
@@ -118,7 +119,7 @@ public class ClusterQueueCapacityController {
      * 刷新队列配置到YARN
      */
     @RequestMapping("/refreshToYarn")
-    public Result<String> refreshToYarn(@RequestParam("clusterId") Integer clusterId) throws Exception {
+    public Result<String> refreshToYarn(@ClusterId Integer clusterId) throws Exception {
         boolean result = clusterQueueCapacityService.refreshToYarn(clusterId);
         return result ? Result.success("刷新成功") : Result.error("刷新失败");
     }

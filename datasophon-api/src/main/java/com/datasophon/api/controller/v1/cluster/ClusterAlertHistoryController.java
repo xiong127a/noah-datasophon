@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterAlertHistoryConverter;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
@@ -72,7 +73,7 @@ public class ClusterAlertHistoryController {
      * 分页查询所有告警历史
      */
     @RequestMapping("/getAllAlertList")
-    public Result<PageResult<ClusterAlertHistoryVO>> getAllAlertList(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterAlertHistoryVO>> getAllAlertList(@ClusterId Integer clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         try {

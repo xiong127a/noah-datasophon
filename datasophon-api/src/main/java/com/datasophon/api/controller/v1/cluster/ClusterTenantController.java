@@ -1,5 +1,6 @@
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterTenantConverter;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.common.dto.ClusterTenantDTO;
@@ -34,7 +35,7 @@ public class ClusterTenantController {
      * 查询租户列表
      */
     @RequestMapping("/listTenant")
-    public Result<PageResult<ClusterTenantVO>> listTenant(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterTenantVO>> listTenant(@ClusterId Integer clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("size") Integer size,
             @RequestParam(value = "tenantName", required = false) String tenantName) {

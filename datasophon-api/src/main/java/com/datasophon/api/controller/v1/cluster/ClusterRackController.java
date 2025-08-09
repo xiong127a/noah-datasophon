@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterRackConverter;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.common.dto.ClusterRackDTO;
@@ -52,7 +53,7 @@ public class ClusterRackController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterRackVO>> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<ClusterRackVO>> list(@ClusterId Integer clusterId) {
         // 调用Service层方法，获取DTO列表
         List<ClusterRackDTO> dtoList = clusterRackService.queryClusterRack(clusterId);
         // Controller层：DTO → VO转换
@@ -76,7 +77,7 @@ public class ClusterRackController {
      * 保存机架
      */
     @RequestMapping("/save")
-    public Result<ClusterRackVO> save(@RequestParam("clusterId") Integer clusterId, @RequestParam("rack") String rack) {
+    public Result<ClusterRackVO> save(@ClusterId Integer clusterId, @RequestParam("rack") String rack) {
         // 调用Service层方法，获取DTO
         ClusterRackDTO dto = clusterRackService.saveRack(clusterId, rack);
         // Controller层：DTO → VO转换
@@ -110,7 +111,7 @@ public class ClusterRackController {
      * 删除机架
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@RequestParam("clusterId") Integer clusterId, @RequestParam("rackId") Integer rackId) {
+    public Result<String> delete(@ClusterId Integer clusterId, @RequestParam("rackId") Integer rackId) {
         boolean result = clusterRackService.deleteRack(rackId);
         return result ? Result.success("删除成功") : Result.error("删除失败");
     }

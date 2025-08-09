@@ -3,6 +3,7 @@ package com.datasophon.api.controller.v1.system;
 
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSONArray;
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.common.model.OperationLogProp;
@@ -52,7 +53,7 @@ public class OperationLogController {
      * 当前集群所有服务名称
      */
     @RequestMapping("/serviceNameList")
-    public Result serviceNameList(@RequestParam("clusterId") Integer clusterId) {
+    public Result serviceNameList(@ClusterId Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
         List<FrameServiceEntity> list = QueryChain.of(FrameServiceEntity.class)

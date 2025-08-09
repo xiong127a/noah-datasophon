@@ -18,6 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterServiceCommandHostConverter;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
@@ -63,7 +64,7 @@ public class ClusterServiceCommandHostController {
     @GetMapping("/list")
     @Timed(value = "command.host.list", description = "获取命令主机列表的时间")
     public Result<PageResult<ClusterServiceCommandHostVO>> list(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("commandId") String commandId, 
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {

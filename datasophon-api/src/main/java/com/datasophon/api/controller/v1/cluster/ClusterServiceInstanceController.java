@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterServiceInstanceConverter;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
@@ -54,7 +55,7 @@ public class ClusterServiceInstanceController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterServiceInstanceVO>> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<ClusterServiceInstanceVO>> list(@ClusterId Integer clusterId) {
         List<ClusterServiceInstanceDTO> dtoList = clusterServiceInstanceService.listAll(clusterId);
         List<ClusterServiceInstanceVO> voList = clusterServiceInstanceConverter.dtoListToVoList(dtoList);
         return Result.success(voList);
@@ -100,7 +101,7 @@ public class ClusterServiceInstanceController {
      */
     @RequestMapping("/downloadClientConfig")
     public Result<String> downloadClientConfig(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("serviceName") String serviceName) {
         String configPath = clusterServiceInstanceService.downloadClientConfig(clusterId, serviceName);
         return Result.success(configPath);

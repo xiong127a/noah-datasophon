@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterRoleUserConverter;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterRoleUserService;
@@ -75,7 +76,7 @@ public class ClusterRoleUserController {
      */
     @RequestMapping("/saveClusterManager")
     @UserPermission
-    public Result<String> saveClusterManager(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> saveClusterManager(@ClusterId Integer clusterId,
             @RequestParam("userIds") String userIds) {
         boolean success = clusterRoleUserService.saveClusterManager(clusterId, userIds);
         return success ? Result.success("保存成功") : Result.error("保存失败");

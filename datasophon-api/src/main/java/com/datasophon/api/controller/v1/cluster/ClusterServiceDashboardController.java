@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
@@ -60,7 +61,7 @@ public class ClusterServiceDashboardController {
      * @return Result<String>
      */
     @RequestMapping("/getDashboardUrl")
-    public Result<String> getDashboardUrl(@RequestParam("clusterId") Integer clusterId) {
+    public Result<String> getDashboardUrl(@ClusterId Integer clusterId) {
         String dashboardUrl = clusterServiceDashboardService.getDashboardUrl(clusterId);
         return Result.success(dashboardUrl);
     }
@@ -72,7 +73,7 @@ public class ClusterServiceDashboardController {
      * @return Result<String>
      */
     @RequestMapping("/getDatasophonDashboard")
-    public Result<String> getDatasophonDashboard(@RequestParam("clusterId") Integer clusterId) {
+    public Result<String> getDatasophonDashboard(@ClusterId Integer clusterId) {
         String dashboardUrl = clusterServiceDashboardService.getDatasophonDashboard(clusterId);
         return Result.success(dashboardUrl);
     }

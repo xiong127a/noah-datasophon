@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterNodeLabelConverter;
 import com.datasophon.api.service.ClusterNodeLabelService;
 import com.datasophon.common.dto.ClusterNodeLabelDTO;
@@ -52,7 +53,7 @@ public class ClusterNodeLabelController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterNodeLabelVO>> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<ClusterNodeLabelVO>> list(@ClusterId Integer clusterId) {
         // 调用Service层方法，获取DTO列表
         List<ClusterNodeLabelDTO> dtoList = nodeLabelService.queryClusterNodeLabel(clusterId);
         // Controller层：DTO → VO转换
@@ -76,7 +77,7 @@ public class ClusterNodeLabelController {
      * 保存节点标签
      */
     @RequestMapping("/save")
-    public Result<ClusterNodeLabelVO> save(@RequestParam("clusterId") Integer clusterId,
+    public Result<ClusterNodeLabelVO> save(@ClusterId Integer clusterId,
             @RequestParam("nodeLabel") String nodeLabel) {
         // 调用Service层方法，获取DTO
         ClusterNodeLabelDTO dto = nodeLabelService.saveNodeLabel(clusterId, nodeLabel);

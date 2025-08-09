@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterAlertGroupMapConverter;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
@@ -52,7 +53,7 @@ public class ClusterAlertGroupMapController {
      * 根据集群ID获取告警组映射列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterAlertGroupMapVO>> list(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<ClusterAlertGroupMapVO>> list(@ClusterId Integer clusterId) {
         // 调用Service层方法，获取DTO列表
         List<ClusterAlertGroupMapDTO> dtoList = clusterAlertGroupMapService.getByClusterId(clusterId);
         // Controller层：DTO → VO转换

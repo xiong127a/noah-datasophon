@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.api.dto.Result;
@@ -40,7 +41,7 @@ public class ClusterAlertQuotaController {
      * list alert quota
      */
     @RequestMapping("/list")
-    public Result<Object> info(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> info(@ClusterId Integer clusterId,
             @RequestParam("alertGroupId") Integer alertGroupId,
             @RequestParam("noticeGroupId") Integer noticeGroupId,
             @RequestParam("quotaName") String quotaName,
@@ -56,7 +57,7 @@ public class ClusterAlertQuotaController {
      * enable alert quota
      */
     @RequestMapping("/start")
-    public Result<Object> start(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> start(@ClusterId Integer clusterId,
             @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.start(clusterId, alertQuotaIds);
         return Result.success();
@@ -66,7 +67,7 @@ public class ClusterAlertQuotaController {
      * disable alert quota
      */
     @RequestMapping("/stop")
-    public Result<Object> stop(@RequestParam("clusterId") Integer clusterId,
+    public Result<Object> stop(@ClusterId Integer clusterId,
             @RequestParam("alertQuotaIds") String alertQuotaIds) {
         clusterAlertQuotaService.stop(clusterId, alertQuotaIds);
         return Result.success();

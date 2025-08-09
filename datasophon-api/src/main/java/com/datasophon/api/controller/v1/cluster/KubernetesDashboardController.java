@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.K8sResourceConverter;
 import com.datasophon.api.converter.KubernetesResourceVOConverter;
 import com.datasophon.api.service.KubernetesDashboardService;
@@ -58,7 +59,7 @@ public class KubernetesDashboardController {
      * 获取Kubernetes命名空间列表
      */
     @GetMapping("/namespaces")
-    public Result<List<K8sNamespaceVO>> getNamespaces(@RequestParam("clusterId") Integer clusterId) {
+    public Result<List<K8sNamespaceVO>> getNamespaces(@ClusterId Integer clusterId) {
         try {
             if (clusterId == null) {
                 return Result.error("集群ID不能为空");
@@ -78,7 +79,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/deployments")
     public Result<List<KubernetesResourceVO>> getDeployments(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
@@ -140,7 +141,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/services")
     public Result<List<KubernetesResourceVO>> getServices(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -161,7 +162,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/configmaps")
     public Result<List<KubernetesResourceVO>> getConfigMaps(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -182,7 +183,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/secrets")
     public Result<List<KubernetesResourceVO>> getSecrets(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -203,7 +204,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/persistentvolumes")
     public Result<List<KubernetesResourceVO>> getPersistentVolumes(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 
@@ -223,7 +224,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/pvcs")
     public Result<List<KubernetesResourceVO>> getPersistentVolumeClaims(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -245,7 +246,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/storageclasses")
     public Result<List<KubernetesResourceVO>> getStorageClasses(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 
@@ -270,7 +271,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/ingresses")
     public Result<List<KubernetesResourceVO>> getIngresses(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -291,7 +292,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/ingressclasses")
     public Result<List<KubernetesResourceVO>> getIngressClasses(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
@@ -311,7 +312,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/daemonsets")
     public Result<List<KubernetesResourceVO>> getDaemonSets(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
@@ -334,7 +335,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/statefulsets")
     public Result<List<KubernetesResourceVO>> getStatefulSets(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -355,7 +356,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/replicasets")
     public Result<List<KubernetesResourceVO>> getReplicaSets(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -376,7 +377,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/replicationcontrollers")
     public Result<List<KubernetesResourceVO>> getReplicationControllers(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -396,7 +397,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/jobs")
     public Result<List<KubernetesResourceVO>> getJobs(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
@@ -417,7 +418,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/cronjobs")
     public Result<List<KubernetesResourceVO>> getCronJobs(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -438,7 +439,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/deployment/detail")
     public Result<KubernetesResourceVO> getDeploymentDetail(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("namespace") String namespace,
             @RequestParam("name") String name) {
         try {
@@ -457,7 +458,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/deployment/events")
     public Result<List<Map<String, Object>>> getDeploymentEvents(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("namespace") String namespace,
             @RequestParam("kind") String kind,
             @RequestParam("name") String name) {

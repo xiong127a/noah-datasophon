@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.service;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ServiceDocConverter;
 import com.datasophon.api.service.DocService;
 import com.datasophon.common.dto.ServiceDocDTO;
@@ -83,7 +84,7 @@ public class ServiceDocController {
      */
     @GetMapping("/hasServiceDoc")
     public Result<Boolean> hasServiceDoc(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam("serviceId") Integer serviceId,
             @RequestParam("type") String type) {
         try {

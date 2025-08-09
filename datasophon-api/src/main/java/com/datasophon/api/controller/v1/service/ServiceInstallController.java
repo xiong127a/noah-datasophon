@@ -18,6 +18,7 @@
 package com.datasophon.api.controller.v1.service;
 
 import com.alibaba.fastjson2.JSONArray;
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.common.model.HostServiceRoleMapping;
@@ -64,7 +65,7 @@ public class ServiceInstallController {
      */
     @GetMapping("/getServiceConfigOption")
     @Timed(value = "service.install.config.option", description = "获取服务配置选项的时间")
-    public Result<Map<String, List<ServiceConfig>>> getServiceConfigOption(@RequestParam("clusterId") Integer clusterId, 
+    public Result<Map<String, List<ServiceConfig>>> getServiceConfigOption(@ClusterId Integer clusterId, 
                                                                           @RequestParam("serviceName") String serviceName) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取服务配置选项: clusterId={}, serviceName={} - {}", 
@@ -80,7 +81,7 @@ public class ServiceInstallController {
     @PostMapping("/saveServiceConfig")
     @UserPermission
     @Timed(value = "service.install.config.save", description = "保存服务配置的时间")
-    public Result<Boolean> saveServiceConfig(@RequestParam("clusterId") Integer clusterId, 
+    public Result<Boolean> saveServiceConfig(@ClusterId Integer clusterId,
                                             @RequestParam("serviceName") String serviceName, 
                                             @RequestParam("serviceConfig") String serviceConfig, 
                                             @RequestParam(name = "roleGroupId", required = false) Integer roleGroupId,
@@ -119,7 +120,7 @@ public class ServiceInstallController {
     @GetMapping("/getServiceRoleHostMapping")
     @Timed(value = "service.install.role.host.mapping.get", description = "获取服务角色主机映射的时间")
     @UserPermission
-    public Result<String> getServiceRoleHostMapping(@RequestParam("clusterId") Integer clusterId) {
+    public Result<String> getServiceRoleHostMapping(@ClusterId Integer clusterId) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取服务角色主机映射: clusterId={} - {}", clusterId, threadInfo);
         
@@ -147,7 +148,7 @@ public class ServiceInstallController {
      */
     @GetMapping("/getServiceRoleDeployOverview")
     @Timed(value = "service.install.deploy.overview", description = "获取服务部署总览的时间")
-    public Result<Map<String, List<String>>> getServiceRoleDeployOverview(@RequestParam("clusterId") Integer clusterId) {
+    public Result<Map<String, List<String>>> getServiceRoleDeployOverview(@ClusterId Integer clusterId) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取服务部署总览: clusterId={} - {}", clusterId, threadInfo);
         
@@ -190,7 +191,7 @@ public class ServiceInstallController {
      */
     @GetMapping("/checkServiceDependency")
     @Timed(value = "service.install.dependency.check", description = "检查服务依赖关系的时间")
-    public Result<String> checkServiceDependency(@RequestParam("clusterId") Integer clusterId, 
+    public Result<String> checkServiceDependency(@ClusterId Integer clusterId, 
                                                 @RequestParam("serviceIds") String serviceIds) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("检查服务依赖关系: clusterId={}, serviceIds={} - {}", 

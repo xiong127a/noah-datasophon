@@ -150,7 +150,7 @@
 //    @PostMapping("/fixCheckItem")
 //    @UserPermission
 //    public Result<String> fixCheckItem(
-//            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @ClusterId @NotNull(message = "集群ID不能为空") Integer clusterId,
 //            @RequestParam("ip") String ip,
 //            @RequestParam("itemId") Integer itemId,
 //            @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {

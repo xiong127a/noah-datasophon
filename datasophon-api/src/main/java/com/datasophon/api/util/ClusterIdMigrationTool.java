@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 /**
  * 集群ID迁移工具
- * 自动将Controller中的 @RequestParam("clusterId") 和 @PathVariable("clusterId") 
+ * 自动将Controller中的 @ClusterId 和 @PathVariable("clusterId") 
  * 替换为 @ClusterId 注解，并添加必要的import
  * 
  * @author DataSophon Team
@@ -20,7 +20,7 @@ public class ClusterIdMigrationTool {
     
     private static final String CLUSTER_ID_ANNOTATION_IMPORT = "import com.datasophon.api.annotation.ClusterId;";
     
-    // 匹配 @RequestParam("clusterId") 的正则表达式
+    // 匹配 @ClusterId 的正则表达式
     private static final Pattern REQUEST_PARAM_PATTERN = 
         Pattern.compile("@RequestParam\\(\\s*[\"']clusterId[\"']\\s*\\)\\s+(\\w+)\\s+(\\w+)");
     
@@ -92,7 +92,7 @@ public class ClusterIdMigrationTool {
         // 检查是否需要添加ClusterId import
         boolean needsImport = false;
         
-        // 替换 @RequestParam("clusterId") 
+        // 替换 @ClusterId 
         Matcher requestParamMatcher = REQUEST_PARAM_PATTERN.matcher(content);
         while (requestParamMatcher.find()) {
             String type = requestParamMatcher.group(1);

@@ -18,6 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
@@ -91,7 +92,7 @@ public class ClusterServiceCommandHostCommandController {
     @GetMapping("/getHostCommandLog")
     @Timed(value = "command.host.command.log", description = "获取主机命令日志的时间")
     public Result<String> getHostCommandLog(
-            @RequestParam("clusterId") Integer clusterId, 
+            @ClusterId Integer clusterId,
             @RequestParam("hostCommandId") String hostCommandId) throws Exception {
         
         log.debug("获取主机命令日志: clusterId={}, hostCommandId={}", clusterId, hostCommandId);

@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.cluster;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterUserConverter;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
@@ -57,7 +58,7 @@ public class ClusterUserController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<PageResult<ClusterUserVO>> list(@RequestParam("clusterId") Integer clusterId,
+    public Result<PageResult<ClusterUserVO>> list(@ClusterId Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
@@ -84,7 +85,7 @@ public class ClusterUserController {
      * 保存
      */
     @RequestMapping("/create")
-    public Result<ClusterUserVO> save(@RequestParam("clusterId") Integer clusterId,
+    public Result<ClusterUserVO> save(@ClusterId Integer clusterId,
             @RequestParam("username") String username,
             @RequestParam("mainGroupId") Integer mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
@@ -111,7 +112,7 @@ public class ClusterUserController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@RequestParam("clusterId") Integer clusterId,
+    public Result<String> delete(@ClusterId Integer clusterId,
             @RequestParam("id") Integer id) {
         boolean success = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.deleteClusterUser(id)

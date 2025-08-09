@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1.system;
 
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.dto.Result;
 import com.datasophon.common.vo.AlertGroupVO;
 import com.datasophon.common.dto.AlertGroupDTO;
@@ -52,7 +53,7 @@ public class AlertGroupController {
      */
     @GetMapping("/list")
     public Result<PageResult<AlertGroupVO>> list(
-            @RequestParam("clusterId") Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(value = "alertGroupName", required = false) String alertGroupName,
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
