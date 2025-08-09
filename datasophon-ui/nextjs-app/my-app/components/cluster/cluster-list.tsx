@@ -24,6 +24,7 @@ import {
 import { ClusterTypeUtil, Step3Data } from '@/types'
 import type { Step3AgentData } from '@/types/step3-agent'
 import type { Step5Data } from '@/types/step5'
+import type { Step6Data } from '@/types/step6'
 
 // 自定义创建集群图标组件
 const CreateClusterIcon = ({ className }: { className?: string }) => (
@@ -106,6 +107,7 @@ import PvmStep2Dialog from "./pvm/pvm-step2-dialog"
 import ClusterStep3AgentDialog from "./common/cluster-step3-agent-dialog"
 import ClusterStep4Dialog from "./common/cluster-step4-dialog"
 import ClusterStep5Dialog from "./common/cluster-step5-dialog"
+import ClusterStep6Dialog from "./common/cluster-step6-dialog"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -503,6 +505,7 @@ export default function ClusterListEnhanced() {
   const [step3AgentDialogOpen, setStep3AgentDialogOpen] = useState(false);
   const [step4DialogOpen, setStep4DialogOpen] = useState(false);
   const [step5DialogOpen, setStep5DialogOpen] = useState(false);
+  const [step6DialogOpen, setStep6DialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   // K8S专用状态
@@ -513,6 +516,8 @@ export default function ClusterListEnhanced() {
   const [step2Data, setStep2Data] = useState<Record<string, unknown> | null>(null);
   const [step3AgentData, setStep3AgentData] = useState<Step3AgentData | null>(null);
   const [step4Data, setStep4Data] = useState<Step3Data | null>(null);
+  const [step5Data, setStep5Data] = useState<Step5Data | null>(null);
+  const [step6Data, setStep6Data] = useState<Step6Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -666,9 +671,20 @@ export default function ClusterListEnhanced() {
   const handleStep5Complete = (step5CompletionData: Step5Data) => {
     console.log('Step5完成', step5CompletionData);
     setStep5DialogOpen(false);
+    setStep5Data(step5CompletionData);
+    
+    // 进入Step6（分配Worker与Client角色）
+    setStep6DialogOpen(true);
+  };
+
+  // 处理Step6完成
+  const handleStep6Complete = (step6CompletionData: Step6Data) => {
+    console.log('Step6完成', step6CompletionData);
+    setStep6DialogOpen(false);
+    setStep6Data(step6CompletionData);
     
     // TODO: 继续下一步或完成流程
-    console.log('Master角色分配完成，准备进入下一步，已分配:', step5CompletionData.roleMappings.length, '个角色');
+    console.log('Worker与Client角色分配完成，已分配:', step6CompletionData.assignedHosts.length, '台主机');
     // 重置状态并刷新列表
     handleFlowComplete();
   };
@@ -680,6 +696,8 @@ export default function ClusterListEnhanced() {
     setStep2Data(null);
     setStep3AgentData(null);
     setStep4Data(null);
+    setStep5Data(null);
+    setStep6Data(null);
     setSetupCluster(null);
     handleClusterSuccess();
   };
@@ -939,6 +957,30 @@ export default function ClusterListEnhanced() {
             })) || []
           }}
           onComplete={handleStep5Complete}
+        />
+      )}
+
+      {/* 配置集群Step6弹窗 - 分配服务Worker与Client角色 */}
+      {step4Data && setupCluster && (
+        <ClusterStep6Dialog
+          open={step6DialogOpen}
+          onOpenChange={setStep6DialogOpen}
+          cluster={{
+            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            clusterName: setupCluster.clusterName,
+            depType: setupCluster.depType || ''
+          }}
+          clusterType={setupCluster.depType || ''}
+          step4Data={{
+            serviceIds: step4Data.serviceIds || [],
+            serviceNames: step4Data.serviceNames || [],
+            serviceType: step4Data.serviceType || ''
+          }}
+          onComplete={handleStep6Complete}
+          onPrevious={() => {
+            setStep6DialogOpen(false);
+            setStep5DialogOpen(true);
+          }}
         />
       )}
     </div>

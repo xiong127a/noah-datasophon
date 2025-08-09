@@ -128,7 +128,7 @@ export const API_PATHS_V1 = {
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
-  SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `/ddh/service/install/saveServiceRoleHostMapping`,
+  SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
 };
 

@@ -316,6 +316,15 @@ export const clusterApiV1 = {
     saveMapping: async (clusterId: number, mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
       const response = await apiV1.post(`${API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2}/${clusterId}`, mappings)
       return response.data
+    },
+
+    /** 获取非Master角色列表 (Step6) */
+    getNonMasterRoleList: async (clusterId: number, serviceIds: string): Promise<any> => {
+      const response = await apiV1.post(API_PATHS_V1.GET_NON_MASTER_ROLE_LIST, {
+        clusterId,
+        serviceIds
+      })
+      return response.data
     }
   },
 

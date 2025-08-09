@@ -1,6 +1,9 @@
 // 导出所有类型定义
 export * from './step2'
 export * from './step3'
+export * from './step3-agent'
+export * from './step5'
+export * from './step6'
 export * from './user'
 export * from './rack'
 export * from './tag'
