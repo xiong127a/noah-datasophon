@@ -317,6 +317,38 @@ export const clusterApiV1 = {
       const response = await apiV1.post(`${API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2}/${clusterId}`, mappings)
       return response.data
     }
+  },
+
+  // Agent分发相关 API (Step3)
+  agent: {
+    /** 开始Agent分发 */
+    startDistribution: async (clusterId: number, hostIds: number[]) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.START_AGENT_DISTRIBUTION, { hostIds }, { headers })
+      return response.data
+    },
+
+    /** 获取Agent分发状态 */
+    getDistributionStatus: async (clusterId: number, taskId?: string) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.get(API_PATHS_V1.GET_AGENT_DISTRIBUTION_STATUS, 
+        taskId ? { taskId } : {}, { headers })
+      return response.data
+    },
+
+    /** 重试失败的Agent分发 */
+    retryDistribution: async (clusterId: number, hostIds: number[]) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.RETRY_AGENT_DISTRIBUTION, { hostIds }, { headers })
+      return response.data
+    },
+
+    /** 取消Agent分发 */
+    cancelDistribution: async (clusterId: number, taskId: string) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.CANCEL_AGENT_DISTRIBUTION, { taskId }, { headers })
+      return response.data
+    }
   }
 }
 

@@ -95,6 +95,12 @@ export const API_PATHS_V1 = {
   GENERATE_HOST_SERVICE_COMMAND: `${API_BASE}/host/install/generateHostServiceCommand`,
   START_HOST_CHECK: `${API_BASE}/host/install/startHostCheck`,
   GET_WORKER_LOG: `${API_BASE}/host/install/getWorkerLog`,
+
+  // Agent分发相关 - v1 (Step3)
+  START_AGENT_DISTRIBUTION: `${API_BASE}/host/agent/distribute`,
+  GET_AGENT_DISTRIBUTION_STATUS: `${API_BASE}/host/agent/status`,
+  RETRY_AGENT_DISTRIBUTION: `${API_BASE}/host/agent/retry`,
+  CANCEL_AGENT_DISTRIBUTION: `${API_BASE}/host/agent/cancel`,
   
 
   

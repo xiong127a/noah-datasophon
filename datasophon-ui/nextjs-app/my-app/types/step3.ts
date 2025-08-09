@@ -52,10 +52,14 @@ export interface ClusterStep3DialogProps {
     depType: string
     clusterCode: string
   } | null
+  /** 集群类型 */
+  clusterType?: string
   /** Step2传递的数据 */
   step2Data?: Record<string, unknown>
   /** 成功回调（进入下一步） */
   onSuccess?: (step3Data: Step3Data) => void
+  /** Step3完成回调 */
+  onComplete: (step3Data: Step3Data) => void
   /** 返回上一步回调 */
   onPrevious?: () => void
 }
