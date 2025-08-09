@@ -73,9 +73,9 @@ const ClusterStepLayout: React.FC<ClusterStepLayoutProps> = ({
           />
 
           {/* 右侧内容区域 */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col h-full">
             {/* 当前步骤标题 */}
-            <div className="p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
+            <div className="flex-shrink-0 p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
               {/* 装饰性光效 */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
               {/* 分割线光效 */}
@@ -96,12 +96,14 @@ const ClusterStepLayout: React.FC<ClusterStepLayoutProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-b from-white to-slate-50/50">
+            <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-hidden">
               {children}
             </div>
 
             {/* 底部操作栏 */}
-            {actionBar}
+            <div className="flex-shrink-0">
+              {actionBar}
+            </div>
           </div>
         </div>
       </DialogContent>
