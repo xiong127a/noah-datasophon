@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { DIALOG_STYLES } from './shared-styles'
 
 /**
  * 统一的集群步骤操作栏组件
@@ -133,8 +134,13 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 p-4 shadow-lg">
-      <div className="flex items-center justify-between">
+    <div className={DIALOG_STYLES.footer}>
+      {/* 装饰性光效 */}
+      <div className={DIALOG_STYLES.footerGlow}></div>
+      {/* 顶部分割线光效 */}
+      <div className={DIALOG_STYLES.footerTopLine}></div>
+      
+      <div className={DIALOG_STYLES.footerContent}>
         {/* 左侧状态信息 */}
         <div className="flex items-center space-x-4">
           {statusInfo && (

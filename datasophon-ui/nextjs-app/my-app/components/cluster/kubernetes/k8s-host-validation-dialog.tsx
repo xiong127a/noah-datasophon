@@ -23,6 +23,7 @@ import type {
 } from '@/types/host-validation'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DIALOG_STYLES } from '../common/shared-styles'
 import type { K8sStep1Data, K8sClusterInfo } from './k8s-host-config-dialog'
 
 // K8S Step2弹窗属性接口
@@ -460,12 +461,12 @@ export default function K8sHostValidationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-none !w-[min(calc(100vw-32px),1900px)] !max-h-[calc(100vh-32px)] sm:!w-[min(98vw,1900px)] sm:!max-h-[calc(98vh-32px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden flex flex-col p-0 gap-0">
+      <DialogContent className={DIALOG_STYLES.content}>
         <DialogTitle className="sr-only">
           主机环境校验 - {cluster?.clusterName}
         </DialogTitle>
         
-        <div className="flex h-full max-h-[calc(100vh-32px)] sm:max-h-[calc(98vh-32px)]">
+        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
           <ClusterWizardSidebar 
             steps={steps}
             currentStep={2}
@@ -475,7 +476,7 @@ export default function K8sHostValidationDialog({
             onClose={() => onOpenChange(false)}
           />
 
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">
@@ -992,8 +993,14 @@ export default function K8sHostValidationDialog({
               </div>
             </div>
 
-            <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/80 p-4 shadow-lg">
-              <div className="flex items-center justify-between">
+            {/* 底部操作栏 - 统一美观样式 */}
+            <div className={DIALOG_STYLES.footer}>
+              {/* 装饰性光效 */}
+              <div className={DIALOG_STYLES.footerGlow}></div>
+              {/* 顶部分割线光效 */}
+              <div className={DIALOG_STYLES.footerTopLine}></div>
+              
+              <div className={DIALOG_STYLES.footerContent}>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>

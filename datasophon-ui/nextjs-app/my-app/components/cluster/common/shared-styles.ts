@@ -36,12 +36,27 @@ export const DIALOG_STYLES = {
     text-gray-400 hover:text-gray-600
   `,
   
-  // 主内容区域 - 恢复合理高度确保底栏可见
+  // 主内容区域 - 标准统一样式（以步骤1为基准）
   content: "!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden",
   
-  // 底部操作区域
+  // 底部操作区域 - 统一美观样式（基于步骤1最佳样式）
   footer: `
-    border-t bg-white p-6
+    p-6 sm:p-8 border-t border-slate-200/50 bg-white/90 backdrop-blur-sm relative
+  `,
+  
+  // 底部装饰光效
+  footerGlow: `
+    absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent
+  `,
+  
+  // 顶部分割线光效  
+  footerTopLine: `
+    absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent
+  `,
+  
+  // 底部内容容器
+  footerContent: `
+    flex justify-between items-center relative z-10
   `,
   
   // 按钮容器
