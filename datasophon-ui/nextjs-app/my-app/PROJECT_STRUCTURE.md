@@ -34,8 +34,17 @@ components/
 │   ├── cluster-storage.tsx    # 集群存储组件
 │   ├── authorization-dialog.tsx # 集群授权对话框
 │   ├── create-dialog.tsx      # 创建集群对话框
-│   ├── cluster-step1-dialog.tsx # 集群创建第一步（集群配置）
-│   ├── cluster-step2-dialog.tsx # 集群创建第二步（主机环境校验）
+│   ├── kubernetes/
+│   │   ├── k8s-host-config-dialog.tsx # K8S主机配置对话框
+│   │   └── k8s-host-validation-dialog.tsx # K8S主机校验对话框
+│   ├── pvm/
+│   │   ├── pvm-host-config-dialog.tsx # PVM主机配置对话框
+│   │   └── pvm-host-validation-dialog.tsx # PVM主机校验对话框
+│   └── common/
+│       ├── agent-deployment-dialog.tsx # Agent分发对话框
+│       ├── service-selection-dialog.tsx # 服务选择对话框
+│       ├── master-role-assign-dialog.tsx # Master角色分配对话框
+│       └── worker-role-assign-dialog.tsx # Worker角色分配对话框
 │   ├── cluster-wizard-sidebar.tsx # 集群创建向导侧边栏
 │   └── index.ts              # 导出索引
 ├── host/                      # 主机相关组件
@@ -177,7 +186,7 @@ import FinalNavbar from "../layout/navbar-final"
 - **状态管理**：完整的校验状态跟踪和错误处理
 
 #### 技术架构
-- **组件**：`ClusterStep1Dialog`、`ClusterStep2Dialog` - 模块化向导组件
-- **类型安全**：完整的TypeScript类型定义 (`types/step2.ts`)
+- **组件**：采用功能性命名的向导组件，支持K8S和PVM两种部署模式
+- **类型安全**：完整的TypeScript类型定义 (`types/host-validation.ts`)
 - **API集成**：保持与后端100%兼容的API调用
-- **测试页面**：`/test-step2` - 组件功能测试页面 
+- **测试页面**：组件功能测试页面（已重构为功能性命名） 

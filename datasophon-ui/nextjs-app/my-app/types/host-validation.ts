@@ -81,7 +81,7 @@ export interface Pagination {
 }
 
 // Step2 props接口
-export interface ClusterStep2DialogProps {
+export interface HostValidationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: {

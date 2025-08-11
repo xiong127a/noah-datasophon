@@ -66,7 +66,7 @@ export interface Step3AgentData {
   failedCount: number
 }
 
-export interface ClusterStep3AgentDialogProps {
+export interface AgentDeploymentDialogProps {
   /** 对话框是否打开 */
   open: boolean
   /** 对话框打开状态改变回调 */

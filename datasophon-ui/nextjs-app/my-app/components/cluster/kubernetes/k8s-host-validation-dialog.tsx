@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ManagementStatus, ManagementStatusUtil, ClusterType, ClusterTypeUtil } from '@/types'
 
@@ -20,13 +20,13 @@ import type {
   Pagination,
   QueueStatus,
   CheckItem
-} from '@/types/step2'
+} from '@/types/host-validation'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { K8sStep1Data, K8sClusterInfo } from './k8s-step1-dialog'
+import type { K8sStep1Data, K8sClusterInfo } from './k8s-host-config-dialog'
 
 // K8S Step2弹窗属性接口
-export interface K8sStep2DialogProps {
+export interface K8sHostValidationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: K8sClusterInfo | null
@@ -35,14 +35,14 @@ export interface K8sStep2DialogProps {
   onPrevious: () => void
 }
 
-export default function K8sStep2Dialog({
+export default function K8sHostValidationDialog({
   open,
   onOpenChange,
   cluster,
   step1Data,
   onSuccess,
   onPrevious
-}: K8sStep2DialogProps) {
+}: K8sHostValidationDialogProps) {
   const clusterType = ClusterType.KUBERNETES
   
   // 使用标准化的步骤配置

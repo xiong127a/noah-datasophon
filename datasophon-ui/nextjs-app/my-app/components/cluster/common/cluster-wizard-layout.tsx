@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { DIALOG_STYLES } from './shared-styles'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { ClusterTypeUtil, ClusterType } from '@/types'
 
 /**
@@ -14,7 +14,7 @@ import { ClusterTypeUtil, ClusterType } from '@/types'
  * 邮箱：635887935@qq.com
  */
 
-interface ClusterStepLayoutProps {
+interface ClusterWizardLayoutProps {
   /** 是否显示弹窗 */
   open: boolean
   /** 关闭弹窗回调 */
@@ -37,7 +37,7 @@ interface ClusterStepLayoutProps {
   actionBar: React.ReactNode
 }
 
-const ClusterStepLayout: React.FC<ClusterStepLayoutProps> = ({
+const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   open,
   onClose,
   clusterName,
@@ -111,4 +111,4 @@ const ClusterStepLayout: React.FC<ClusterStepLayoutProps> = ({
   )
 }
 
-export default ClusterStepLayout
+export default ClusterWizardLayout

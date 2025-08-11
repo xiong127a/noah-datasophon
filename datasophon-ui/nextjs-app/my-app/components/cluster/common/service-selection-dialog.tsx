@@ -13,18 +13,18 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { Badge } from '@/components/ui/badge'
 import { DIALOG_STYLES } from './shared-styles'
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { ClusterTypeUtil, ClusterType } from '@/types'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 
-import { SERVICE_TYPE_OPTIONS, ServiceType } from '@/types/step3'
+import { SERVICE_TYPE_OPTIONS, ServiceType } from '@/types/service-selection'
 import type { 
-  ClusterStep3DialogProps, 
+  ServiceSelectionDialogProps, 
   Service, 
   ServiceSelection,
   Step3Data
-} from '@/types/step3'
+} from '@/types/service-selection'
 
 /**
  * 集群步骤4：大数据服务选择对话框
@@ -32,7 +32,7 @@ import type {
  * 邮箱：635887935@qq.com
  */
 
-const ClusterStep4Dialog: React.FC<ClusterStep3DialogProps> = ({
+const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
   open,
   onOpenChange,
   cluster,
@@ -566,4 +566,4 @@ const ClusterStep4Dialog: React.FC<ClusterStep3DialogProps> = ({
   )
 }
 
-export default ClusterStep4Dialog
+export default ServiceSelectionDialog

@@ -18,7 +18,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import Image from "next/image"
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { DIALOG_STYLES } from '../common/shared-styles'
 
 // K8S集群信息接口
@@ -40,19 +40,19 @@ export interface K8sStep1Data {
 }
 
 // K8S Step1弹窗属性接口
-export interface K8sStep1DialogProps {
+export interface K8sHostConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: K8sClusterInfo | null
   onStep1Complete: (data: K8sStep1Data) => void
 }
 
-export default function K8sStep1Dialog({
+export default function K8sHostConfigDialog({
   open,
   onOpenChange,
   cluster,
   onStep1Complete
-}: K8sStep1DialogProps) {
+}: K8sHostConfigDialogProps) {
   const [step1Data, setStep1Data] = useState<K8sStep1Data>({
     kubeConfigContent: '',
     namespace: '',

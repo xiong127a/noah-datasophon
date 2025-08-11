@@ -12,9 +12,9 @@ import { Badge } from "@/components/ui/badge"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { DIALOG_STYLES } from '../common/shared-styles'
-import type { PvmStep1Data, PvmClusterInfo } from './pvm-step1-dialog'
+import type { PvmStep1Data, PvmClusterInfo } from './pvm-host-config-dialog'
 
 // PVM主机信息接口
 export interface PvmHost {
@@ -37,7 +37,7 @@ export interface PvmHost {
 }
 
 // PVM Step2弹窗属性接口
-export interface PvmStep2DialogProps {
+export interface PvmHostValidationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: PvmClusterInfo | null
@@ -46,14 +46,14 @@ export interface PvmStep2DialogProps {
   onPrevious: () => void
 }
 
-export default function PvmStep2Dialog({
+export default function PvmHostValidationDialog({
   open,
   onOpenChange,
   cluster,
   step1Data,
   onSuccess,
   onPrevious
-}: PvmStep2DialogProps) {
+}: PvmHostValidationDialogProps) {
   const [loading, setLoading] = useState(false)
   const [hosts, setHosts] = useState<PvmHost[]>([])
   const [checkStatus, setCheckStatus] = useState<'idle' | 'checking' | 'completed' | 'failed'>('idle')

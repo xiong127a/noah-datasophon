@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import Image from "next/image"
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { DIALOG_STYLES } from '../common/shared-styles'
 
 // PVM集群信息接口
@@ -34,19 +34,19 @@ export interface PvmStep1Data {
 }
 
 // PVM Step1弹窗属性接口
-export interface PvmStep1DialogProps {
+export interface PvmHostConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: PvmClusterInfo | null
   onStep1Complete: (data: PvmStep1Data) => void
 }
 
-export default function PvmStep1Dialog({
+export default function PvmHostConfigDialog({
   open,
   onOpenChange,
   cluster,
   onStep1Complete
-}: PvmStep1DialogProps) {
+}: PvmHostConfigDialogProps) {
   const [step1Data, setStep1Data] = useState<PvmStep1Data>({
     hosts: '',
     sshUser: 'root',

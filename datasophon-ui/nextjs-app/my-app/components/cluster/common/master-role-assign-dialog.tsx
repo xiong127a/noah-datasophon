@@ -6,10 +6,10 @@ import { AlertCircle, Loader2, User } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
-import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/step5'
+import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/master-role-assign'
 import type { ClusterInfo } from '@/hooks/useCluster'
-import ClusterStepLayout from './cluster-step-layout'
-import ClusterStepActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-step-action-bar'
+import ClusterWizardLayout from './cluster-wizard-layout'
+import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
 import SuperHostSelector, { type HostInfo } from './super-host-selector'
 
 /**
@@ -18,7 +18,7 @@ import SuperHostSelector, { type HostInfo } from './super-host-selector'
  * 邮箱：635887935@qq.com
  */
 
-interface ClusterStep5DialogProps {
+interface MasterRoleAssignDialogProps {
   /** 是否显示弹窗 */
   open: boolean
   /** 关闭弹窗回调 */
@@ -38,7 +38,7 @@ interface ClusterStep5DialogProps {
   onComplete: (step5Data: Step5Data) => void
 }
 
-const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
+const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   open,
   onClose,
   cluster,
@@ -318,7 +318,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   ]
 
   return (
-    <ClusterStepLayout
+    <ClusterWizardLayout
       open={open}
       onClose={onClose}
       clusterName={cluster.clusterName}
@@ -328,7 +328,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       currentStep={currentStep}
       dialogTitle={`分配服务Master角色 - ${cluster.clusterName}`}
       actionBar={
-        <ClusterStepActionBar
+        <ClusterWizardActionBar
           statusInfo={statusInfo}
           statusBadge={statusBadge}
           buttons={buttons}
@@ -408,8 +408,8 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
           )}
         </div>
       </div>
-    </ClusterStepLayout>
+    </ClusterWizardLayout>
   )
 }
 
-export default ClusterStep5Dialog
+export default MasterRoleAssignDialog

@@ -40,7 +40,7 @@ export interface Step3Data {
   serviceType?: string
 }
 
-export interface ClusterStep3DialogProps {
+export interface ServiceSelectionDialogProps {
   /** 对话框是否打开 */
   open: boolean
   /** 对话框打开状态改变回调 */

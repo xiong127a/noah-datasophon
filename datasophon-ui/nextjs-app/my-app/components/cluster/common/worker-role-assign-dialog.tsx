@@ -10,21 +10,21 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { User } from 'lucide-react'
 import { toast } from 'sonner'
-import ClusterStepLayout from './cluster-step-layout'
-import ClusterStepActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-step-action-bar'
+import ClusterWizardLayout from './cluster-wizard-layout'
+import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
 import SuperHostSelector, { type HostInfo } from './super-host-selector'
-import { getStepsByType, StepsType } from '@/lib/cluster-steps'
+import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { ClusterTypeUtil, ClusterType } from '@/types'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 
 import type {
-  ClusterStep6DialogProps,
+  WorkerRoleAssignDialogProps,
   Step6Data,
   NonMasterRole,
   TableRowData,
   ServiceRoleHostMapping
-} from '@/types/step6'
+} from '@/types/worker-role-assign'
 
 /**
  * 集群步骤6：分配服务Worker与Client角色对话框
@@ -32,7 +32,7 @@ import type {
  * 邮箱：635887935@qq.com
  */
 
-const ClusterStep6Dialog: React.FC<ClusterStep6DialogProps> = ({
+const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
   open,
   onOpenChange,
   cluster,
@@ -288,7 +288,7 @@ const ClusterStep6Dialog: React.FC<ClusterStep6DialogProps> = ({
   ]
 
   return (
-    <ClusterStepLayout
+    <ClusterWizardLayout
       open={open}
       onClose={() => onOpenChange(false)}
       clusterName={cluster?.clusterName || ''}
@@ -298,7 +298,7 @@ const ClusterStep6Dialog: React.FC<ClusterStep6DialogProps> = ({
       currentStep={currentStepNumber}
       dialogTitle={`分配服务Worker与Client角色 - ${cluster?.clusterName}`}
       actionBar={
-        <ClusterStepActionBar
+        <ClusterWizardActionBar
           statusInfo={statusInfo}
           statusBadge={statusBadge}
           buttons={buttons}
@@ -382,8 +382,8 @@ const ClusterStep6Dialog: React.FC<ClusterStep6DialogProps> = ({
           )}
         </div>
       </div>
-    </ClusterStepLayout>
+    </ClusterWizardLayout>
   )
 }
 
-export default ClusterStep6Dialog
+export default WorkerRoleAssignDialog

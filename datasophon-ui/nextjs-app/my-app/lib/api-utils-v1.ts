@@ -7,7 +7,7 @@ import type {
   GetAllHostResponse,
   SaveServiceRoleHostMappingResponse,
   HostMapping
-} from '@/types/step5'
+} from '@/types/master-role-assign'
 
 /**
  * 版本化的集群相关API调用工具函数

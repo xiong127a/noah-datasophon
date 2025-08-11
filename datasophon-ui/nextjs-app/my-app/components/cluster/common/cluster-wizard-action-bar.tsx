@@ -48,7 +48,7 @@ export interface StatusBadge {
   show: boolean
 }
 
-interface ClusterStepActionBarProps {
+interface ClusterWizardActionBarProps {
   /** 左侧状态信息 */
   statusInfo?: StatusInfo
   /** 状态徽章 */
@@ -57,7 +57,7 @@ interface ClusterStepActionBarProps {
   buttons: ActionButton[]
 }
 
-const ClusterStepActionBar: React.FC<ClusterStepActionBarProps> = ({
+const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
   statusInfo,
   statusBadge,
   buttons,
@@ -198,4 +198,4 @@ const ClusterStepActionBar: React.FC<ClusterStepActionBarProps> = ({
   )
 }
 
-export default ClusterStepActionBar
+export default ClusterWizardActionBar

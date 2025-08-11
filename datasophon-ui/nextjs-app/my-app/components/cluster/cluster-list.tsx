@@ -21,10 +21,11 @@ import {
   Activity,
   TrendingUp,
 } from "lucide-react"
-import { ClusterTypeUtil, Step3Data } from '@/types'
-import type { Step3AgentData } from '@/types/step3-agent'
-import type { Step5Data } from '@/types/step5'
-import type { Step6Data } from '@/types/step6'
+import { ClusterTypeUtil } from '@/types'
+import { Step3Data } from '@/types/service-selection'
+import type { Step3AgentData } from '@/types/agent-deployment'
+import type { Step5Data } from '@/types/master-role-assign'
+import type { Step6Data } from '@/types/worker-role-assign'
 
 // 自定义创建集群图标组件
 const CreateClusterIcon = ({ className }: { className?: string }) => (
@@ -98,16 +99,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
 // K8S专用组件
-import K8sStep1Dialog, { K8sStep1Data } from "./kubernetes/k8s-step1-dialog"
-import K8sStep2Dialog from "./kubernetes/k8s-step2-dialog"
+import K8sHostConfigDialog, { K8sStep1Data } from "./kubernetes/k8s-host-config-dialog"
+import K8sHostValidationDialog from "./kubernetes/k8s-host-validation-dialog"
 // PVM专用组件
-import PvmStep1Dialog, { PvmStep1Data } from "./pvm/pvm-step1-dialog"
-import PvmStep2Dialog from "./pvm/pvm-step2-dialog"
+import PvmHostConfigDialog, { PvmStep1Data } from "./pvm/pvm-host-config-dialog"
+import PvmHostValidationDialog from "./pvm/pvm-host-validation-dialog"
 // 通用组件
-import ClusterStep3AgentDialog from "./common/cluster-step3-agent-dialog"
-import ClusterStep4Dialog from "./common/cluster-step4-dialog"
-import ClusterStep5Dialog from "./common/cluster-step5-dialog"
-import ClusterStep6Dialog from "./common/cluster-step6-dialog"
+import AgentDeploymentDialog from "./common/agent-deployment-dialog"
+import ServiceSelectionDialog from "./common/service-selection-dialog"
+import MasterRoleAssignDialog from "./common/master-role-assign-dialog"
+import WorkerRoleAssignDialog from "./common/worker-role-assign-dialog"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -501,11 +502,11 @@ export default function ClusterListEnhanced() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
-  const [step2DialogOpen, setStep2DialogOpen] = useState(false);
-  const [step3AgentDialogOpen, setStep3AgentDialogOpen] = useState(false);
-  const [step4DialogOpen, setStep4DialogOpen] = useState(false);
-  const [step5DialogOpen, setStep5DialogOpen] = useState(false);
-  const [step6DialogOpen, setStep6DialogOpen] = useState(false);
+  const [hostValidationDialogOpen, setHostValidationDialogOpen] = useState(false);
+  const [agentDeploymentDialogOpen, setAgentDeploymentDialogOpen] = useState(false);
+  const [serviceSelectionDialogOpen, setServiceSelectionDialogOpen] = useState(false);
+  const [masterRoleAssignDialogOpen, setMasterRoleAssignDialogOpen] = useState(false);
+  const [workerRoleAssignDialogOpen, setWorkerRoleAssignDialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   // K8S专用状态
@@ -513,11 +514,11 @@ export default function ClusterListEnhanced() {
   // PVM专用状态
   const [pvmStep1Data, setPvmStep1Data] = useState<PvmStep1Data | null>(null);
   // 通用状态
-  const [step2Data, setStep2Data] = useState<Record<string, unknown> | null>(null);
-  const [step3AgentData, setStep3AgentData] = useState<Step3AgentData | null>(null);
-  const [step4Data, setStep4Data] = useState<Step3Data | null>(null);
-  const [step5Data, setStep5Data] = useState<Step5Data | null>(null);
-  const [step6Data, setStep6Data] = useState<Step6Data | null>(null);
+  const [hostValidationData, setHostValidationData] = useState<Record<string, unknown> | null>(null);
+  const [agentDeploymentData, setAgentDeploymentData] = useState<Step3AgentData | null>(null);
+  const [serviceSelectionData, setServiceSelectionData] = useState<Step3Data | null>(null);
+  const [, setMasterRoleAssignData] = useState<Step5Data | null>(null);
+  const [, setWorkerRoleAssignData] = useState<Step6Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -610,81 +611,81 @@ export default function ClusterListEnhanced() {
     fetchClusters();
   };
 
-  // 处理K8S Step1完成
-  const handleK8sStep1Complete = (data: K8sStep1Data) => {
-    console.log('K8S Step1完成，准备打开Step2:', data);
+  // 处理K8S主机配置完成
+  const handleK8sHostConfigComplete = (data: K8sStep1Data) => {
+    console.log('K8S主机配置完成，准备打开主机校验:', data);
     setK8sStep1Data(data);
     setSetupDialogOpen(false);
-    setStep2DialogOpen(true);
+    setHostValidationDialogOpen(true);
   };
 
-  // 处理PVM Step1完成
-  const handlePvmStep1Complete = (data: PvmStep1Data) => {
-    console.log('PVM Step1完成，准备打开Step2:', data);
+  // 处理PVM主机配置完成
+  const handlePvmHostConfigComplete = (data: PvmStep1Data) => {
+    console.log('PVM主机配置完成，准备打开主机校验:', data);
     setPvmStep1Data(data);
     setSetupDialogOpen(false);
-    setStep2DialogOpen(true);
+    setHostValidationDialogOpen(true);
   };
 
-  // 处理Step2完成  
-  const handleStep2Complete = (step2CompletionData?: Record<string, unknown>) => {
-    console.log('Step2完成', step2CompletionData);
+  // 处理主机校验完成  
+  const handleHostValidationComplete = (hostValidationCompletionData?: Record<string, unknown>) => {
+    console.log('主机校验完成', hostValidationCompletionData);
     console.log('setupCluster对象:', setupCluster);
     console.log('setupCluster.depType:', setupCluster?.depType);
     console.log('ClusterTypeUtil.isKubernetes(setupCluster?.depType):', ClusterTypeUtil.isKubernetes(setupCluster?.depType || ''));
     
-    setStep2Data(step2CompletionData || null);
-    setStep2DialogOpen(false);
+    setHostValidationData(hostValidationCompletionData || null);
+    setHostValidationDialogOpen(false);
     
     // 检查集群类型，进入相应的下一步
     if (setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
-      console.log('Kubernetes模式，进入Step4服务选择');
-      setStep4DialogOpen(true);
+      console.log('Kubernetes模式，直接进入服务选择');
+      setServiceSelectionDialogOpen(true);
     } else {
-      // PVM模式进入Step3 Agent分发
-      console.log('PVM模式，进入Step3 Agent分发');
-      setStep3AgentDialogOpen(true);
+      // PVM模式进入Agent分发
+      console.log('PVM模式，进入Agent分发');
+      setAgentDeploymentDialogOpen(true);
     }
   };
 
-  // 处理Step3 Agent分发完成
-  const handleStep3AgentComplete = (step3AgentCompletionData: Step3AgentData) => {
-    console.log('Step3 Agent分发完成', step3AgentCompletionData);
-    setStep3AgentData(step3AgentCompletionData);
-    setStep3AgentDialogOpen(false);
+  // 处理Agent分发完成
+  const handleAgentDeploymentComplete = (agentDeploymentCompletionData: Step3AgentData) => {
+    console.log('Agent分发完成', agentDeploymentCompletionData);
+    setAgentDeploymentData(agentDeploymentCompletionData);
+    setAgentDeploymentDialogOpen(false);
     
-    // PVM模式进入Step4服务选择
-    setStep4DialogOpen(true);
+    // PVM模式进入服务选择
+    setServiceSelectionDialogOpen(true);
   };
 
-  // 处理Step4完成
-  const handleStep4Complete = (step4CompletionData: Step3Data) => {
-    console.log('Step4完成', step4CompletionData);
-    setStep4Data(step4CompletionData);
-    setStep4DialogOpen(false);
+  // 处理服务选择完成
+  const handleServiceSelectionComplete = (serviceSelectionCompletionData: Step3Data) => {
+    console.log('服务选择完成', serviceSelectionCompletionData);
+    setServiceSelectionData(serviceSelectionCompletionData);
+    setServiceSelectionDialogOpen(false);
     
-    // 进入Step5（分配Master角色）
-    setStep5DialogOpen(true);
+    // 进入Master角色分配
+    setMasterRoleAssignDialogOpen(true);
   };
 
-  // 处理Step5完成
-  const handleStep5Complete = (step5CompletionData: Step5Data) => {
-    console.log('Step5完成', step5CompletionData);
-    setStep5DialogOpen(false);
-    setStep5Data(step5CompletionData);
+  // 处理Master角色分配完成
+  const handleMasterRoleAssignComplete = (masterRoleAssignCompletionData: Step5Data) => {
+    console.log('Master角色分配完成', masterRoleAssignCompletionData);
+    setMasterRoleAssignDialogOpen(false);
+    setMasterRoleAssignData(masterRoleAssignCompletionData);
     
-    // 进入Step6（分配Worker与Client角色）
-    setStep6DialogOpen(true);
+    // 进入Worker角色分配
+    setWorkerRoleAssignDialogOpen(true);
   };
 
-  // 处理Step6完成
-  const handleStep6Complete = (step6CompletionData: Step6Data) => {
-    console.log('Step6完成', step6CompletionData);
-    setStep6DialogOpen(false);
-    setStep6Data(step6CompletionData);
+  // 处理Worker角色分配完成
+  const handleWorkerRoleAssignComplete = (workerRoleAssignCompletionData: Step6Data) => {
+    console.log('Worker角色分配完成', workerRoleAssignCompletionData);
+    setWorkerRoleAssignDialogOpen(false);
+    setWorkerRoleAssignData(workerRoleAssignCompletionData);
     
     // TODO: 继续下一步或完成流程
-    console.log('Worker与Client角色分配完成，已分配:', step6CompletionData.assignedHosts.length, '台主机');
+    console.log('Worker与Client角色分配完成，已分配:', workerRoleAssignCompletionData.assignedHosts.length, '台主机');
     // 重置状态并刷新列表
     handleFlowComplete();
   };
@@ -693,11 +694,11 @@ export default function ClusterListEnhanced() {
   const handleFlowComplete = () => {
     setK8sStep1Data(null);
     setPvmStep1Data(null);
-    setStep2Data(null);
-    setStep3AgentData(null);
-    setStep4Data(null);
-    setStep5Data(null);
-    setStep6Data(null);
+    setHostValidationData(null);
+    setAgentDeploymentData(null);
+    setServiceSelectionData(null);
+    setMasterRoleAssignData(null);
+    setWorkerRoleAssignData(null);
     setSetupCluster(null);
     handleClusterSuccess();
   };
@@ -824,9 +825,9 @@ export default function ClusterListEnhanced() {
         } : null}
       />
 
-      {/* 配置集群Step1弹窗 - 根据集群类型选择组件 */}
+      {/* 配置集群主机配置弹窗 - 根据集群类型选择组件 */}
       {setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '') ? (
-        <K8sStep1Dialog
+        <K8sHostConfigDialog
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           cluster={setupCluster ? {
@@ -835,10 +836,10 @@ export default function ClusterListEnhanced() {
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
           } : null}
-          onStep1Complete={handleK8sStep1Complete}
+          onStep1Complete={handleK8sHostConfigComplete}
         />
       ) : (
-        <PvmStep1Dialog
+        <PvmHostConfigDialog
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           cluster={setupCluster ? {
@@ -847,15 +848,15 @@ export default function ClusterListEnhanced() {
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
           } : null}
-          onStep1Complete={handlePvmStep1Complete}
+          onStep1Complete={handlePvmHostConfigComplete}
         />
       )}
 
-      {/* 配置集群Step2弹窗 - 根据集群类型选择组件 */}
+      {/* 主机校验弹窗 - 根据集群类型选择组件 */}
       {k8sStep1Data && setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '') && (
-        <K8sStep2Dialog
-          open={step2DialogOpen}
-          onOpenChange={setStep2DialogOpen}
+        <K8sHostValidationDialog
+          open={hostValidationDialogOpen}
+          onOpenChange={setHostValidationDialogOpen}
           cluster={setupCluster ? {
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
             clusterName: setupCluster.clusterName,
@@ -863,18 +864,18 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           } : null}
           step1Data={k8sStep1Data}
-          onSuccess={(data) => handleStep2Complete(data)}
+          onSuccess={(data) => handleHostValidationComplete(data)}
           onPrevious={() => {
-            setStep2DialogOpen(false);
+            setHostValidationDialogOpen(false);
             setSetupDialogOpen(true);
           }}
         />
       )}
 
       {pvmStep1Data && setupCluster && ClusterTypeUtil.isPvm(setupCluster.depType || '') && (
-        <PvmStep2Dialog
-          open={step2DialogOpen}
-          onOpenChange={setStep2DialogOpen}
+        <PvmHostValidationDialog
+          open={hostValidationDialogOpen}
+          onOpenChange={setHostValidationDialogOpen}
           cluster={setupCluster ? {
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
             clusterName: setupCluster.clusterName,
@@ -882,20 +883,19 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           } : null}
           step1Data={pvmStep1Data}
-          onSuccess={(data) => handleStep2Complete(data)}
+          onSuccess={(data) => handleHostValidationComplete(data)}
           onPrevious={() => {
-            setStep2DialogOpen(false);
+            setHostValidationDialogOpen(false);
             setSetupDialogOpen(true);
           }}
         />
       )}
 
-      {/* 配置集群Step3弹窗 - Kubernetes服务选择 */}
-      {/* Step3: Agent分发 (仅PVM模式) */}
-      {step2Data && setupCluster && ClusterTypeUtil.isPvm(setupCluster.depType || '') && (
-        <ClusterStep3AgentDialog
-          open={step3AgentDialogOpen}
-          onOpenChange={setStep3AgentDialogOpen}
+      {/* Agent分发弹窗 (仅PVM模式) */}
+      {hostValidationData && setupCluster && ClusterTypeUtil.isPvm(setupCluster.depType || '') && (
+        <AgentDeploymentDialog
+          open={agentDeploymentDialogOpen}
+          onOpenChange={setAgentDeploymentDialogOpen}
           cluster={setupCluster ? {
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
             clusterName: setupCluster.clusterName,
@@ -903,21 +903,21 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           } : null}
           clusterType={setupCluster.depType || ''}
-          step2Data={step2Data || undefined}
-          onComplete={handleStep3AgentComplete}
+          step2Data={hostValidationData || undefined}
+          onComplete={handleAgentDeploymentComplete}
           onPrevious={() => {
-            setStep3AgentDialogOpen(false);
-            setStep2DialogOpen(true);
+            setAgentDeploymentDialogOpen(false);
+            setHostValidationDialogOpen(true);
           }}
         />
       )}
 
-      {/* Step4: 服务选择 (K8s和PVM都需要) */}
-      {((k8sStep1Data && step2Data && ClusterTypeUtil.isKubernetes(setupCluster?.depType || '')) || 
-        (step3AgentData && ClusterTypeUtil.isPvm(setupCluster?.depType || ''))) && setupCluster && (
-        <ClusterStep4Dialog
-          open={step4DialogOpen}
-          onOpenChange={setStep4DialogOpen}
+      {/* 服务选择弹窗 (K8s和PVM都需要) */}
+      {((k8sStep1Data && hostValidationData && ClusterTypeUtil.isKubernetes(setupCluster?.depType || '')) || 
+        (agentDeploymentData && ClusterTypeUtil.isPvm(setupCluster?.depType || ''))) && setupCluster && (
+        <ServiceSelectionDialog
+          open={serviceSelectionDialogOpen}
+          onOpenChange={setServiceSelectionDialogOpen}
           cluster={setupCluster ? {
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
             clusterName: setupCluster.clusterName,
@@ -925,46 +925,46 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           } : null}
           clusterType={setupCluster.depType || ''}
-          step2Data={step2Data || undefined}
-          onComplete={handleStep4Complete}
+          step2Data={hostValidationData || undefined}
+          onComplete={handleServiceSelectionComplete}
           onPrevious={() => {
-            setStep4DialogOpen(false);
+            setServiceSelectionDialogOpen(false);
             if (ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
-              setStep2DialogOpen(true);
+              setHostValidationDialogOpen(true);
             } else {
-              setStep3AgentDialogOpen(true);
+              setAgentDeploymentDialogOpen(true);
             }
           }}
         />
       )}
 
-      {/* 配置集群Step5弹窗 - 分配服务Master角色 */}
-      {step4Data && setupCluster && (
-        <ClusterStep5Dialog
-          open={step5DialogOpen}
-          onClose={() => setStep5DialogOpen(false)}
+      {/* Master角色分配弹窗 */}
+      {serviceSelectionData && setupCluster && (
+        <MasterRoleAssignDialog
+          open={masterRoleAssignDialogOpen}
+          onClose={() => setMasterRoleAssignDialogOpen(false)}
           cluster={{
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            name: setupCluster.clusterName,
             clusterName: setupCluster.clusterName,
-            depType: setupCluster.depType || '',
-            clusterCode: setupCluster.clusterCode || ''
+            depType: setupCluster.depType || ''
           }}
           step4Data={{
-            serviceIds: step4Data.serviceIds || [],
-            selectedServices: step4Data.serviceNames?.map((service: { serviceId: number; serviceName: string }) => ({
+            serviceIds: serviceSelectionData.serviceIds || [],
+            selectedServices: serviceSelectionData.serviceNames?.map((service: { serviceId: number; serviceName: string }) => ({
               id: service.serviceId,
               name: service.serviceName
             })) || []
           }}
-          onComplete={handleStep5Complete}
+          onComplete={handleMasterRoleAssignComplete}
         />
       )}
 
-      {/* 配置集群Step6弹窗 - 分配服务Worker与Client角色 */}
-      {step4Data && setupCluster && (
-        <ClusterStep6Dialog
-          open={step6DialogOpen}
-          onOpenChange={setStep6DialogOpen}
+      {/* Worker角色分配弹窗 */}
+      {serviceSelectionData && setupCluster && (
+        <WorkerRoleAssignDialog
+          open={workerRoleAssignDialogOpen}
+          onOpenChange={setWorkerRoleAssignDialogOpen}
           cluster={{
             id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
             clusterName: setupCluster.clusterName,
@@ -972,14 +972,14 @@ export default function ClusterListEnhanced() {
           }}
           clusterType={setupCluster.depType || ''}
           step4Data={{
-            serviceIds: step4Data.serviceIds || [],
-            serviceNames: step4Data.serviceNames || [],
-            serviceType: step4Data.serviceType || ''
+            serviceIds: serviceSelectionData.serviceIds || [],
+            serviceNames: serviceSelectionData.serviceNames || [],
+            serviceType: serviceSelectionData.serviceType || ''
           }}
-          onComplete={handleStep6Complete}
+          onComplete={handleWorkerRoleAssignComplete}
           onPrevious={() => {
-            setStep6DialogOpen(false);
-            setStep5DialogOpen(true);
+            setWorkerRoleAssignDialogOpen(false);
+            setMasterRoleAssignDialogOpen(true);
           }}
         />
       )}

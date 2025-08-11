@@ -10,17 +10,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from 'sonner'
-import ClusterStepLayout from './cluster-step-layout'
-import ClusterStepActionBar, { type ActionButton, type StatusInfo } from './cluster-step-action-bar'
+import ClusterWizardLayout from './cluster-wizard-layout'
+import ClusterWizardActionBar, { type ActionButton, type StatusInfo } from './cluster-wizard-action-bar'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ClusterTypeUtil } from '@/types'
 
 import type { 
-  ClusterStep3AgentDialogProps, 
+  AgentDeploymentDialogProps, 
   HostInfo, 
   AgentDistributionTask,
   Step3AgentData
-} from '@/types/step3-agent'
+} from '@/types/agent-deployment'
 
 /**
  * 集群步骤3：主机Agent分发对话框
@@ -28,7 +28,7 @@ import type {
  * 邮箱：635887935@qq.com
  */
 
-const ClusterStep3AgentDialog: React.FC<ClusterStep3AgentDialogProps> = ({
+const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
   open,
   onOpenChange,
   cluster,
@@ -277,7 +277,7 @@ const ClusterStep3AgentDialog: React.FC<ClusterStep3AgentDialogProps> = ({
   ]
 
   return (
-    <ClusterStepLayout
+    <ClusterWizardLayout
       open={open}
       onClose={() => onOpenChange(false)}
       clusterName={cluster?.clusterName || ''}
@@ -287,7 +287,7 @@ const ClusterStep3AgentDialog: React.FC<ClusterStep3AgentDialogProps> = ({
       currentStep={3}
       dialogTitle={`主机Agent分发 - ${cluster?.clusterName}`}
       actionBar={
-        <ClusterStepActionBar
+        <ClusterWizardActionBar
           statusInfo={statusInfo}
           statusBadge={!isK8s ? {
             text: overallStatus === 'COMPLETED' ? '分发完成' : overallStatus === 'IN_PROGRESS' ? '分发中...' : '待分发',
@@ -493,8 +493,8 @@ const ClusterStep3AgentDialog: React.FC<ClusterStep3AgentDialogProps> = ({
           )}
         </div>
       </div>
-    </ClusterStepLayout>
+    </ClusterWizardLayout>
   )
 }
 
-export default ClusterStep3AgentDialog
+export default AgentDeploymentDialog

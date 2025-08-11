@@ -1,6 +1,6 @@
 import type { HostInfo } from './step5'
 
-export interface ClusterStep6DialogProps {
+export interface WorkerRoleAssignDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: { id: number; clusterName: string; depType?: string } | null
