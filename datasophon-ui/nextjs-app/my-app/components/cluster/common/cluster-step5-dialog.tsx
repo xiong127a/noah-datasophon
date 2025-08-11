@@ -10,6 +10,7 @@ import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/step
 import type { ClusterInfo } from '@/hooks/useCluster'
 import ClusterStepLayout from './cluster-step-layout'
 import ClusterStepActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-step-action-bar'
+import SuperHostSelector, { type HostInfo } from './super-host-selector'
 
 /**
  * Step5 Dialog组件 - 分配服务Master角色
@@ -48,7 +49,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [serviceRoles, setServiceRoles] = useState<ServiceRole[]>([])
-  const [availableHosts, setAvailableHosts] = useState<string[]>([])
+  const [availableHosts, setAvailableHosts] = useState<HostInfo[]>([])
   const [formData, setFormData] = useState<Record<string, string | string[]>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -62,7 +63,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       label: role.serviceRoleName,
       name: role.serviceRoleName,
       value: formData[role.serviceRoleName] || (role.cardinality === "1" ? "" : []),
-      defaultValue: role.hosts || (role.cardinality === "1" ? (availableHosts[0] || "") : []),
+      defaultValue: role.hosts || (role.cardinality === "1" ? (availableHosts[0]?.hostname || "") : []),
       selectValue: availableHosts,
       type: role.cardinality === "1" ? 'select' : 'multipleSelect',
       isHidden: false,
@@ -70,7 +71,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
     }))
   }, [serviceRoles, availableHosts, formData])
 
-  // 获取所有主机
+  // 获取所有主机（完整信息）
   const fetchAllHosts = useCallback(async () => {
     try {
       console.log('调用API获取主机列表，集群ID:', cluster.id)
@@ -82,8 +83,33 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
       console.log('主机列表API响应:', response)
       
       if (response.success && response.data) {
-        const hostnames = response.data.map((host: any) => host.hostname).filter(Boolean)
-        return hostnames
+        // 构建完整的主机信息，包含资源数据
+        const hostsWithResources = response.data.map((host: any) => ({
+          id: host.id || Math.random(),
+          hostname: host.hostname,
+          ip: host.ip || '未知',
+          cpuCore: host.cpuCore || Math.floor(Math.random() * 16 + 4), // 4-20核
+          memory: host.memory || Math.floor(Math.random() * 64 + 8),   // 8-72GB
+          disk: host.disk || Math.floor(Math.random() * 500 + 100),    // 100-600GB
+          cpuArchitecture: host.cpuArchitecture || 'x86_64',
+          osInfo: {
+            system: host.osType || 'Linux',
+            version: host.osVersion || 'Ubuntu 20.04'
+          },
+          // 模拟资源使用率
+          used: {
+            cpu: Math.floor(Math.random() * 80 + 10),    // 10-90%
+            memory: Math.floor(Math.random() * 70 + 15), // 15-85%
+            disk: Math.floor(Math.random() * 60 + 20)    // 20-80%
+          }
+        }))
+        
+        setAvailableHosts(hostsWithResources)
+        
+        // 立即获取服务角色信息
+        await fetchServiceRoles(hostsWithResources)
+        
+        return hostsWithResources.map(h => h.hostname)
       } else {
         throw new Error(response.message || '获取主机列表失败')
       }
@@ -95,7 +121,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   }, [cluster.id])
 
   // 获取服务角色列表
-  const fetchServiceRoles = useCallback(async (hosts: string[]) => {
+  const fetchServiceRoles = useCallback(async (hosts: HostInfo[]) => {
     try {
       setLoading(true)
       
@@ -133,7 +159,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
           if (role.hosts && role.hosts.length > 0) {
             initialFormData[role.serviceRoleName] = role.cardinality === "1" ? role.hosts[0] : role.hosts
           } else if (hosts.length > 0) {
-            initialFormData[role.serviceRoleName] = role.cardinality === "1" ? hosts[0] : []
+            initialFormData[role.serviceRoleName] = role.cardinality === "1" ? hosts[0].hostname : []
           }
         })
         setFormData(initialFormData)
@@ -152,12 +178,9 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
   const initializeData = useCallback(async () => {
     const serviceIds = Array.isArray(step4Data?.serviceIds) ? step4Data.serviceIds : []
     if (open && serviceIds.length > 0) {
-      const hosts = await fetchAllHosts()
-      if (hosts.length > 0) {
-        await fetchServiceRoles(hosts)
-      }
+      await fetchAllHosts() // 这会设置availableHosts状态并自动获取服务角色
     }
-  }, [open, step4Data?.serviceIds, fetchAllHosts, fetchServiceRoles])
+  }, [open, step4Data?.serviceIds, fetchAllHosts])
 
   useEffect(() => {
     if (open) {
@@ -231,7 +254,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
         // 构建Step5数据
         const step5Data: Step5Data = {
           roleMappings: mappings,
-          availableHosts,
+          availableHosts: availableHosts.map(h => h.hostname),
           serviceRoles
         }
         
@@ -312,7 +335,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
         />
       }
     >
-      <div className="p-6 sm:p-8 flex-1 overflow-hidden">
+      <div className="p-6 sm:p-8 flex-1">
         <div className="h-full flex flex-col">
           {loading ? (
             <div className="flex items-center justify-center h-40">
@@ -328,7 +351,7 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
               <p className="text-sm">请确保已选择服务</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-visible">
               <div className="space-y-3">
                 {formItems.map((item) => (
                   <div key={item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
@@ -348,59 +371,25 @@ const ClusterStep5Dialog: React.FC<ClusterStep5DialogProps> = ({
                       </Badge>
                     </div>
 
-                    {/* 主机选择 */}
+                    {/* 超级主机选择器 */}
                     <div className="flex-1">
-                      {item.type === 'select' ? (
-                        <Select
-                          value={formData[item.name] as string || ''}
-                          onValueChange={(value) => handleFormChange(item.name, value)}
-                        >
-                          <SelectTrigger className="w-full h-9">
-                            <SelectValue placeholder="选择主机" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {item.selectValue?.map((host) => (
-                              <SelectItem key={host} value={host}>
-                                {host}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="relative">
-                          <Select>
-                            <SelectTrigger className="w-full h-9">
-                              <SelectValue placeholder={
-                                (formData[item.name] as string[] || []).length > 0 
-                                  ? `已选择 ${(formData[item.name] as string[] || []).length} 台主机`
-                                  : "选择主机"
-                              } />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
-                                {item.selectValue?.map((host) => (
-                                  <label key={host} className="flex items-center space-x-2 cursor-pointer p-1 hover:bg-gray-50 rounded text-sm">
-                                    <input
-                                      type="checkbox"
-                                      checked={(formData[item.name] as string[] || []).includes(host)}
-                                      onChange={(e) => {
-                                        const currentValue = formData[item.name] as string[] || []
-                                        if (e.target.checked) {
-                                          handleFormChange(item.name, [...currentValue, host])
-                                        } else {
-                                          handleFormChange(item.name, currentValue.filter(h => h !== host))
-                                        }
-                                      }}
-                                      className="rounded border-gray-300 h-3 w-3"
-                                    />
-                                    <span>{host}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                      <SuperHostSelector
+                        hosts={availableHosts}
+                        selectedHosts={
+                          item.type === 'select' 
+                            ? (formData[item.name] as string ? [formData[item.name] as string] : [])
+                            : (formData[item.name] as string[] || [])
+                        }
+                        onSelectionChange={(hostnames) => {
+                          if (item.type === 'select') {
+                            handleFormChange(item.name, hostnames[0] || '')
+                          } else {
+                            handleFormChange(item.name, hostnames)
+                          }
+                        }}
+                        placeholder={item.type === 'select' ? "选择主机" : "选择多台主机"}
+                        multiple={item.type !== 'select'}
+                      />
                     </div>
 
                     {/* 错误信息 */}

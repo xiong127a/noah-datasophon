@@ -46,7 +46,7 @@ export interface FormItem {
   /** 默认值 */
   defaultValue: string | string[]
   /** 可选值列表 */
-  selectValue: string[]
+  selectValue: string[] | any[]
   /** 控件类型：select/multipleSelect */
   type: 'select' | 'multipleSelect'
   /** 是否隐藏 */
