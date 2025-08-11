@@ -239,131 +239,40 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
               <div className="p-2">
                 {filteredHosts.map((host) => {
                   const isSelected = selectedHosts.includes(host.hostname)
-                  const getResourceStatus = (usage: number) => {
-                    if (usage <= 30) return { color: 'emerald', text: '空闲' }
-                    if (usage <= 70) return { color: 'amber', text: '适中' }
-                    return { color: 'red', text: '繁忙' }
-                  }
-
-                  const cpuStatus = getResourceStatus(host.used?.cpu || 0)
-                  const overallStatus = getResourceStatus(Math.max(host.used?.cpu || 0, host.used?.memory || 0, host.used?.disk || 0))
 
                   return (
                     <div
                       key={host.id}
                       className={cn(
-                        "relative group p-4 m-1 rounded-xl border transition-all duration-200 cursor-pointer",
-                        "hover:shadow-lg hover:border-blue-200/60",
+                        "relative group p-3 m-1 rounded-lg border transition-all duration-200 cursor-pointer",
+                        "hover:shadow-md hover:border-blue-200/60",
                         isSelected 
                           ? "bg-gradient-to-r from-blue-50 to-indigo-50/50 border-blue-300/60 shadow-md ring-1 ring-blue-200/50"
                           : "bg-white/50 border-gray-200/60 hover:bg-white/80 hover:from-blue-50/30 hover:to-indigo-50/20"
                       )}
                       onClick={() => handleHostSelect(host.hostname)}
                     >
-                      {/* 主机信息头部 */}
-                      <div className="flex items-center justify-between mb-3">
+                      {/* 主机信息 - 简化版 */}
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={cn(
-                            "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
+                            "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200",
                             isSelected 
                               ? "bg-blue-500 border-blue-500" 
                               : "border-gray-300 group-hover:border-blue-400"
                           )}>
-                            {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                            {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-gray-900 mb-0.5">{host.hostname}</h4>
-                            <p className="text-xs text-gray-500 font-mono">{host.ip} • {host.cpuArchitecture}</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className={cn(
-                          "text-xs px-2 py-1 font-medium",
-                          overallStatus.color === 'emerald' && "text-emerald-600 bg-emerald-50",
-                          overallStatus.color === 'amber' && "text-amber-600 bg-amber-50",
-                          overallStatus.color === 'red' && "text-red-600 bg-red-50"
-                        )}>
-                          {overallStatus.text}
-                        </Badge>
-                      </div>
-
-                      {/* 资源显示 - 3列卡片布局 */}
-                      <div className="grid grid-cols-3 gap-3">
-                        {/* CPU */}
-                        <div className="bg-white/60 rounded-lg p-3 border border-gray-100/80">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-medium text-gray-700">CPU</span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="text-xs text-gray-600">{host.cpuCore} 核心</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={cn(
-                                    "h-full transition-all duration-300",
-                                    cpuStatus.color === 'emerald' && "bg-emerald-500",
-                                    cpuStatus.color === 'amber' && "bg-amber-500",
-                                    cpuStatus.color === 'red' && "bg-red-500"
-                                  )}
-                                  style={{ width: `${host.used?.cpu || 0}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-medium text-gray-600 min-w-[30px] text-right">{host.used?.cpu || 0}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 内存 */}
-                        <div className="bg-white/60 rounded-lg p-3 border border-gray-100/80">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-medium text-gray-700">内存</span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="text-xs text-gray-600">{host.memory} GB</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={cn(
-                                    "h-full transition-all duration-300",
-                                    getResourceStatus(host.used?.memory || 0).color === 'emerald' && "bg-emerald-500",
-                                    getResourceStatus(host.used?.memory || 0).color === 'amber' && "bg-amber-500",
-                                    getResourceStatus(host.used?.memory || 0).color === 'red' && "bg-red-500"
-                                  )}
-                                  style={{ width: `${host.used?.memory || 0}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-medium text-gray-600 min-w-[30px] text-right">{host.used?.memory || 0}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 磁盘 */}
-                        <div className="bg-white/60 rounded-lg p-3 border border-gray-100/80">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-medium text-gray-700">磁盘</span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="text-xs text-gray-600">{host.disk} GB</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={cn(
-                                    "h-full transition-all duration-300",
-                                    getResourceStatus(host.used?.disk || 0).color === 'emerald' && "bg-emerald-500",
-                                    getResourceStatus(host.used?.disk || 0).color === 'amber' && "bg-amber-500",
-                                    getResourceStatus(host.used?.disk || 0).color === 'red' && "bg-red-500"
-                                  )}
-                                  style={{ width: `${host.used?.disk || 0}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-medium text-gray-600 min-w-[30px] text-right">{host.used?.disk || 0}%</span>
-                            </div>
+                            <h4 className="text-sm font-medium text-gray-900">{host.hostname}</h4>
+                            <p className="text-xs text-gray-500 font-mono">{host.ip}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* 选中状态边框 */}
                       {isSelected && (
-                        <div className="absolute inset-0 rounded-xl border-2 border-blue-400/40 pointer-events-none" />
+                        <div className="absolute inset-0 rounded-lg border-2 border-blue-400/40 pointer-events-none" />
                       )}
                     </div>
                   )
