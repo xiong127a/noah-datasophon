@@ -37,7 +37,7 @@ export const DIALOG_STYLES = {
   `,
   
   // 主内容区域 - 标准统一样式（以步骤1为基准）
-  content: "!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-hidden",
+  content: "!max-w-none !w-[min(calc(100vw-64px),1800px)] !max-h-[min(calc(100vh-96px),900px)] sm:!w-[min(95vw,1800px)] sm:!max-h-[min(95vh,900px)] border-0 shadow-2xl bg-white rounded-3xl !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !m-0 [&>button]:hidden overflow-visible",
   
   // 底部操作区域 - 统一美观样式（基于步骤1最佳样式）
   footer: `

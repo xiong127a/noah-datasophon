@@ -96,7 +96,7 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-hidden">
+            <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-y-auto" style={{ overflowX: 'visible' }}>
               {children}
             </div>
 

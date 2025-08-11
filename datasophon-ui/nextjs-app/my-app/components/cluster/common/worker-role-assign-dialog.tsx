@@ -2,27 +2,25 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { 
-  Loader2, AlertCircle, Users, CheckCircle
+  Loader2, AlertCircle
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User } from 'lucide-react'
+
 import { toast } from 'sonner'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
-import SuperHostSelector, { type HostInfo } from './super-host-selector'
-import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { ClusterTypeUtil, ClusterType } from '@/types'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
+import SuperHostSelectorV2, { type HostInfo } from './super-host-selector-v2'
+import Image from "next/image"
+import { ClusterTypeUtil } from '@/types'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 
 import type {
   WorkerRoleAssignDialogProps,
   Step6Data,
   NonMasterRole,
-  TableRowData,
+
   ServiceRoleHostMapping
 } from '@/types/worker-role-assign'
 
@@ -50,8 +48,6 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
   // 计算当前步骤编号
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
-  const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
-  const steps = getStepsByType(StepsType.NORMAL, depType)
   const currentStepNumber = isK8s ? 5 : 6
 
   // 表单项生成
@@ -67,6 +63,64 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       required: false
     }))
   }, [roles, availableHosts, formData])
+
+  // 获取大数据组件图标
+  const getComponentIcon = (serviceName: string = '') => {
+    const service = serviceName.toLowerCase()
+    
+    // 大数据组件图标映射
+    const iconMap: Record<string, string> = {
+      'hdfs': '/icons/hdfs.svg',
+      'yarn': '/icons/yarn.svg', 
+      'hive': '/icons/hive.svg',
+      'hbase': '/icons/hbase.svg',
+      'kafka': '/icons/kafka.svg',
+      'zookeeper': '/icons/zookeeper.svg',
+      'spark': '/icons/spark3.svg',
+      'flink': '/icons/flink.svg',
+      'elasticsearch': '/icons/elasticsearch.svg',
+      'kibana': '/icons/kibana.svg',
+      'logstash': '/icons/logstash.svg',
+      'prometheus': '/icons/prometheus.svg',
+      'grafana': '/icons/grafana.svg',
+      'alertmanager': '/icons/alertmanager.svg',
+      'redis': '/icons/redis.svg',
+      'doris': '/icons/doris.svg',
+      'clickhouse': '/icons/clickhouse.svg',
+      'trino': '/icons/trino.svg',
+      'presto': '/icons/presto.svg',
+      'alluxio': '/icons/alluxio.svg',
+      'juicefs': '/icons/juicefs.svg',
+      'minio': '/icons/minio.svg',
+      'ranger': '/icons/ranger.svg',
+      'kerberos': '/icons/kerberos.svg',
+      'flume': '/icons/flume.svg',
+      'kyuubi': '/icons/kyuubi.svg',
+      'hue': '/icons/hue.svg',
+      'zeppelin': '/icons/zeppelin.svg',
+      'streampark': '/icons/streampark.svg',
+      'seatunnel': '/icons/seatunnel.svg',
+      'starrocks': '/icons/starrocks.svg',
+      'postgresql': '/icons/postgresql.svg',
+      'neo4j': '/icons/neo4j.svg',
+      'nebulagraph': '/icons/nebulagraph.svg',
+      'iceberg': '/icons/iceberg.svg',
+      'hudi': '/icons/hudi.svg',
+      'paimon': '/icons/paimon.svg',
+      'tez': '/icons/tez.svg',
+      'openldap': '/icons/openldap.svg'
+    }
+    
+    // 从服务名称中提取主要组件名
+    for (const [component, icon] of Object.entries(iconMap)) {
+      if (service.includes(component)) {
+        return icon
+      }
+    }
+    
+    // 默认图标
+    return '/icons/service-default.svg'
+  }
 
   // 表单数据处理
   const handleFormChange = useCallback((name: string, value: string[]) => {
@@ -305,7 +359,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
         />
       }
     >
-      <div className="p-6 sm:p-8 flex-1">
+      <div className="p-6 sm:p-8 flex-1" style={{ overflow: 'visible' }}>
         <div className="h-full flex flex-col">
           {loading ? (
             <div className="flex items-center justify-center h-40">
@@ -339,7 +393,15 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
                   <div key={item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
-                      <User className="w-4 h-4 text-blue-600" />
+                      <div className="w-4 h-4 flex-shrink-0">
+                        <Image
+                          src={getComponentIcon(item.name)}
+                          alt={item.name}
+                          width={16}
+                          height={16}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                       <span className="font-medium text-gray-900 truncate">{item.label}</span>
                       {item.required && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">必需</Badge>
@@ -355,7 +417,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
                     {/* 超级主机选择器 */}
                     <div className="flex-1">
-                      <SuperHostSelector
+                      <SuperHostSelectorV2
                         hosts={item.selectValue || []}
                         selectedHosts={formData[item.name] || []}
                         onSelectionChange={(hostnames) => {
@@ -363,6 +425,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
                         }}
                         placeholder="选择多台主机"
                         multiple={true}
+                        serviceName={item.name}
                       />
                     </div>
 

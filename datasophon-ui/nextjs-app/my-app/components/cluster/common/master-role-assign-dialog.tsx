@@ -10,7 +10,8 @@ import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/mast
 import type { ClusterInfo } from '@/hooks/useCluster'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
-import SuperHostSelector, { type HostInfo } from './super-host-selector'
+import SuperHostSelectorV2, { type HostInfo } from './super-host-selector-v2'
+import Image from "next/image"
 
 /**
  * Step5 Dialog组件 - 分配服务Master角色
@@ -198,6 +199,64 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // 获取大数据组件图标
+  const getComponentIcon = (serviceName: string = '') => {
+    const service = serviceName.toLowerCase()
+    
+    // 大数据组件图标映射
+    const iconMap: Record<string, string> = {
+      'hdfs': '/icons/hdfs.svg',
+      'yarn': '/icons/yarn.svg', 
+      'hive': '/icons/hive.svg',
+      'hbase': '/icons/hbase.svg',
+      'kafka': '/icons/kafka.svg',
+      'zookeeper': '/icons/zookeeper.svg',
+      'spark': '/icons/spark3.svg',
+      'flink': '/icons/flink.svg',
+      'elasticsearch': '/icons/elasticsearch.svg',
+      'kibana': '/icons/kibana.svg',
+      'logstash': '/icons/logstash.svg',
+      'prometheus': '/icons/prometheus.svg',
+      'grafana': '/icons/grafana.svg',
+      'alertmanager': '/icons/alertmanager.svg',
+      'redis': '/icons/redis.svg',
+      'doris': '/icons/doris.svg',
+      'clickhouse': '/icons/clickhouse.svg',
+      'trino': '/icons/trino.svg',
+      'presto': '/icons/presto.svg',
+      'alluxio': '/icons/alluxio.svg',
+      'juicefs': '/icons/juicefs.svg',
+      'minio': '/icons/minio.svg',
+      'ranger': '/icons/ranger.svg',
+      'kerberos': '/icons/kerberos.svg',
+      'flume': '/icons/flume.svg',
+      'kyuubi': '/icons/kyuubi.svg',
+      'hue': '/icons/hue.svg',
+      'zeppelin': '/icons/zeppelin.svg',
+      'streampark': '/icons/streampark.svg',
+      'seatunnel': '/icons/seatunnel.svg',
+      'starrocks': '/icons/starrocks.svg',
+      'postgresql': '/icons/postgresql.svg',
+      'neo4j': '/icons/neo4j.svg',
+      'nebulagraph': '/icons/nebulagraph.svg',
+      'iceberg': '/icons/iceberg.svg',
+      'hudi': '/icons/hudi.svg',
+      'paimon': '/icons/paimon.svg',
+      'tez': '/icons/tez.svg',
+      'openldap': '/icons/openldap.svg'
+    }
+    
+    // 从服务名称中提取主要组件名
+    for (const [component, icon] of Object.entries(iconMap)) {
+      if (service.includes(component)) {
+        return icon
+      }
+    }
+    
+    // 默认图标
+    return '/icons/service-default.svg'
+  }
+
   // 表单值变更处理
   const handleFormChange = useCallback((name: string, value: string | string[]) => {
     setFormData(prev => ({
@@ -344,8 +403,8 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         />
       }
     >
-      <div className="p-6 sm:p-8 flex-1">
-        <div className="h-full flex flex-col">
+      <div className="p-6 sm:p-8 flex-1" style={{ overflow: 'visible' }}>
+        <div className="h-full flex flex-col" style={{ overflow: 'visible' }}>
           {loading ? (
             <div className="flex items-center justify-center h-40">
               <div className="flex items-center gap-3 text-gray-500">
@@ -360,13 +419,21 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
               <p className="text-sm">请确保已选择服务</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto overflow-x-visible">
+            <div className="flex-1 overflow-y-auto" style={{ overflowX: 'visible' }}>
               <div className="space-y-3">
                 {formItems.map((item) => (
                   <div key={item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
-                      <User className="w-4 h-4 text-blue-600" />
+                      <div className="w-4 h-4 flex-shrink-0">
+                        <Image
+                          src={getComponentIcon(item.name)}
+                          alt={item.name}
+                          width={16}
+                          height={16}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                       <span className="font-medium text-gray-900 truncate">{item.label}</span>
                       {item.required && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">必需</Badge>
@@ -380,9 +447,9 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                       </Badge>
                     </div>
 
-                    {/* 超级主机选择器 */}
-                    <div className="flex-1">
-                      <SuperHostSelector
+                    {/* 超级主机选择器 V2 */}
+                    <div className="flex-1 min-w-0">
+                      <SuperHostSelectorV2
                         hosts={availableHosts}
                         selectedHosts={
                           item.type === 'select' 
@@ -398,6 +465,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                         }}
                         placeholder={item.type === 'select' ? "选择主机" : "选择多台主机"}
                         multiple={item.type !== 'select'}
+                        serviceName={item.name}
                       />
                     </div>
 

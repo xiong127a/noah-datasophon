@@ -103,13 +103,13 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative", className)} style={{ zIndex: 99999 }}>
       {/* 触发器 */}
       <Button
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full h-11 px-4 justify-between font-normal",
+          "w-full max-w-80 h-11 px-4 justify-between font-normal",
           "bg-white/70 backdrop-blur-sm border-gray-200/60",
           "hover:bg-white/90 hover:border-gray-300/80 hover:shadow-lg",
           "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400",
@@ -131,7 +131,7 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
 
       {/* 下拉面板 */}
       {isOpen && (
-        <div className="absolute z-[9999] w-full mt-2 bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute z-[99999] w-full max-w-96 min-w-80 mt-2 bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-xl shadow-2xl overflow-hidden">
           {/* 搜索框 */}
           <div className="p-4 border-b border-gray-100/80 bg-gradient-to-r from-gray-50/50 to-gray-50/30">
             <div className="relative">
@@ -146,7 +146,7 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
           </div>
 
           {/* 主机列表 */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
             {filteredHosts.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 <Server className="h-8 w-8 mx-auto mb-2 text-gray-300" />
@@ -306,7 +306,7 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
       {/* 背景遮罩 */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-[9998]" 
+          className="fixed inset-0 z-[99998]" 
           onClick={() => setIsOpen(false)}
         />
       )}
