@@ -130,6 +130,7 @@ export const API_PATHS_V1 = {
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
   SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
+  GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generateCommand`,
 };
 
 // 创建版本化的axios实例

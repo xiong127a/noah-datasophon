@@ -109,6 +109,8 @@ import AgentDeploymentDialog from "./common/agent-deployment-dialog"
 import ServiceSelectionDialog from "./common/service-selection-dialog"
 import MasterRoleAssignDialog from "./common/master-role-assign-dialog"
 import WorkerRoleAssignDialog from "./common/worker-role-assign-dialog"
+import ServiceConfigDialog from "./common/service-config-dialog"
+import type { Step7Data } from "@/types/service-config"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -507,6 +509,7 @@ export default function ClusterListEnhanced() {
   const [serviceSelectionDialogOpen, setServiceSelectionDialogOpen] = useState(false);
   const [masterRoleAssignDialogOpen, setMasterRoleAssignDialogOpen] = useState(false);
   const [workerRoleAssignDialogOpen, setWorkerRoleAssignDialogOpen] = useState(false);
+  const [serviceConfigDialogOpen, setServiceConfigDialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   // K8S专用状态
@@ -518,7 +521,7 @@ export default function ClusterListEnhanced() {
   const [agentDeploymentData, setAgentDeploymentData] = useState<Step3AgentData | null>(null);
   const [serviceSelectionData, setServiceSelectionData] = useState<Step3Data | null>(null);
   const [, setMasterRoleAssignData] = useState<Step5Data | null>(null);
-  const [, setWorkerRoleAssignData] = useState<Step6Data | null>(null);
+  const [workerRoleAssignData, setWorkerRoleAssignData] = useState<Step6Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -684,9 +687,16 @@ export default function ClusterListEnhanced() {
     setWorkerRoleAssignDialogOpen(false);
     setWorkerRoleAssignData(workerRoleAssignCompletionData);
     
-    // TODO: 继续下一步或完成流程
-    console.log('Worker与Client角色分配完成，已分配:', workerRoleAssignCompletionData.assignedHosts.length, '台主机');
-    // 重置状态并刷新列表
+    // 进入服务配置步骤
+    setServiceConfigDialogOpen(true);
+  };
+
+  // 处理服务配置完成
+  const handleServiceConfigComplete = (serviceConfigCompletionData: Step7Data) => {
+    console.log('服务配置完成', serviceConfigCompletionData);
+    setServiceConfigDialogOpen(false);
+    
+    // 配置完成，重置状态并刷新列表
     handleFlowComplete();
   };
 
@@ -984,6 +994,29 @@ export default function ClusterListEnhanced() {
           onPrevious={() => {
             setWorkerRoleAssignDialogOpen(false);
             setMasterRoleAssignDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* 服务配置弹窗 */}
+      {workerRoleAssignData && setupCluster && serviceSelectionData && (
+        <ServiceConfigDialog
+          open={serviceConfigDialogOpen}
+          onOpenChange={setServiceConfigDialogOpen}
+          cluster={{
+            id: typeof setupCluster!.id === 'string' ? parseInt(setupCluster!.id) : setupCluster!.id,
+            clusterName: setupCluster!.clusterName,
+            depType: setupCluster!.depType || ''
+          }}
+          clusterType={setupCluster!.depType || ''}
+          step6Data={{
+            ...workerRoleAssignData,
+            serviceNames: serviceSelectionData!.serviceNames || []
+          }}
+          onComplete={handleServiceConfigComplete}
+          onPrevious={() => {
+            setServiceConfigDialogOpen(false);
+            setWorkerRoleAssignDialogOpen(true);
           }}
         />
       )}
