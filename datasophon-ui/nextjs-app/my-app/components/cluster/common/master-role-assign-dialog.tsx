@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
-import { AlertCircle, Loader2, User } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import type { ServiceRole, FormItem, HostMapping, Step5Data } from '@/types/master-role-assign'
 import type { ClusterInfo } from '@/hooks/useCluster'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
-import SuperHostSelectorV2, { type HostInfo } from './super-host-selector-v2'
+import SuperHostSelector, { type HostInfo } from './super-host-selector'
 import Image from "next/image"
 
 /**
@@ -447,9 +446,9 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                       </Badge>
                     </div>
 
-                    {/* 超级主机选择器 V2 */}
+                    {/* 超级主机选择器 */}
                     <div className="flex-1 min-w-0">
-                      <SuperHostSelectorV2
+                      <SuperHostSelector
                         hosts={availableHosts}
                         selectedHosts={
                           item.type === 'select' 

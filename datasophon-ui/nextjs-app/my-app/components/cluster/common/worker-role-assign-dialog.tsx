@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
-import SuperHostSelectorV2, { type HostInfo } from './super-host-selector-v2'
+import SuperHostSelector, { type HostInfo } from './super-host-selector'
 import Image from "next/image"
 import { ClusterTypeUtil } from '@/types'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
@@ -417,7 +417,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
                     {/* 超级主机选择器 */}
                     <div className="flex-1">
-                      <SuperHostSelectorV2
+                      <SuperHostSelector
                         hosts={item.selectValue || []}
                         selectedHosts={formData[item.name] || []}
                         onSelectionChange={(hostnames) => {
