@@ -957,6 +957,10 @@ export default function ClusterListEnhanced() {
             })) || []
           }}
           onComplete={handleMasterRoleAssignComplete}
+          onPrevious={() => {
+            setMasterRoleAssignDialogOpen(false);
+            setServiceSelectionDialogOpen(true);
+          }}
         />
       )}
 

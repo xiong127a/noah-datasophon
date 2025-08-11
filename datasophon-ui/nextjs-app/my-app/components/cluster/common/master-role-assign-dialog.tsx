@@ -36,6 +36,8 @@ interface MasterRoleAssignDialogProps {
   }
   /** Step5完成回调 */
   onComplete: (step5Data: Step5Data) => void
+  /** 上一步回调 */
+  onPrevious?: () => void
 }
 
 const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
@@ -44,6 +46,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   cluster,
   step4Data,
   onComplete,
+  onPrevious,
 }) => {
   // 状态管理
   const [loading, setLoading] = useState(false)
@@ -304,7 +307,13 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   const buttons: ActionButton[] = [
     {
       text: "上一步",
-      onClick: onClose,
+      onClick: () => {
+        if (onPrevious) {
+          onPrevious()
+        } else {
+          onClose()
+        }
+      },
       variant: "secondary"
     },
     {
