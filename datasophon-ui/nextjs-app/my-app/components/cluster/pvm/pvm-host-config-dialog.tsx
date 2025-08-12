@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import Image from "next/image"
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { DIALOG_STYLES } from '../common/shared-styles'
+import { DIALOG_STYLES, BUTTON_STYLES, CARD_STYLES } from '../common/shared-styles'
 
 // PVM集群信息接口
 export interface PvmClusterInfo {
@@ -188,15 +188,15 @@ export default function PvmHostConfigDialog({
 
           {/* 右侧内容区域 */}
           <div className="flex-1 flex flex-col min-h-0">
-            {/* 当前步骤标题 */}
-            <div className="p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-              {/* 分割线光效 */}
-              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"></div>
+            {/* 当前步骤标题 - 框架化样式 */}
+            <div className="p-6 sm:p-8 border-b border-gray-200 bg-gradient-to-r from-white via-blue-50/30 to-indigo-50/30 relative">
+              {/* 装饰性光效 - 框架化 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
+              {/* 分割线光效 - 框架化 */}
+              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900">
                     PVM集群配置
                   </h2>
                   <p className="text-gray-600 mt-1">
@@ -213,9 +213,9 @@ export default function PvmHostConfigDialog({
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
               <div className="p-6 sm:p-8 lg:p-10">
                 <div className="space-y-8">
-                  {/* Header */}
+                  {/* Header - 框架化样式 */}
                   <div className="text-center pb-4">
-                    <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
+                    <div className="mx-auto w-20 h-20 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
                       <div className="w-12 h-12 relative">
                         <Image
                           src={getIconPath()}
@@ -226,18 +226,18 @@ export default function PvmHostConfigDialog({
                         />
                       </div>
                     </div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">传统集群配置</h3>
-                    <p className="text-slate-600 max-w-md mx-auto">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent mb-2">传统集群配置</h3>
+                    <p className="text-gray-600 max-w-md mx-auto">
                       配置集群主机列表和 SSH 连接信息，支持批量主机管理
                     </p>
                   </div>
 
                   {/* 主配置区域 - 使用左右分栏布局 */}
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Host Configuration */}
-                    <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm rounded-3xl">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center">
+                    {/* Host Configuration - 框架化卡片 */}
+                    <Card className={`${CARD_STYLES.base} shadow-xl rounded-2xl`}>
+                      <CardHeader className={CARD_STYLES.header}>
+                        <CardTitle className={`${CARD_STYLES.title} flex items-center`}>
                           <Server className="w-5 h-5 mr-2 text-indigo-600" />
                           主机列表
                         </CardTitle>
@@ -250,7 +250,7 @@ export default function PvmHostConfigDialog({
                             value={step1Data.hosts}
                             onChange={(e) => setStep1Data(prev => ({ ...prev, hosts: e.target.value }))}
                             rows={12}
-                            className="font-mono text-sm resize-none rounded-2xl"
+                            className="font-mono text-sm resize-none rounded-xl"
                           />
                           {step1Data.hosts && (
                             <div className="text-xs text-gray-500">
@@ -261,10 +261,10 @@ export default function PvmHostConfigDialog({
                       </CardContent>
                     </Card>
 
-                    {/* SSH Credentials */}
-                    <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm rounded-3xl">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center">
+                    {/* SSH Credentials - 框架化卡片 */}
+                    <Card className={`${CARD_STYLES.base} shadow-xl rounded-2xl`}>
+                      <CardHeader className={CARD_STYLES.header}>
+                        <CardTitle className={`${CARD_STYLES.title} flex items-center`}>
                           <Shield className="w-5 h-5 mr-2 text-purple-600" />
                           SSH 连接凭证
                         </CardTitle>
@@ -278,7 +278,7 @@ export default function PvmHostConfigDialog({
                               placeholder="root"
                               value={step1Data.sshUser}
                               onChange={(e) => setStep1Data(prev => ({ ...prev, sshUser: e.target.value }))}
-                              className="h-12 rounded-2xl"
+                              className="h-12 rounded-xl"
                             />
                           </div>
                           <div className="space-y-3">
@@ -289,7 +289,7 @@ export default function PvmHostConfigDialog({
                               placeholder="22"
                               value={step1Data.sshPort}
                               onChange={(e) => setStep1Data(prev => ({ ...prev, sshPort: e.target.value }))}
-                              className="h-12 rounded-2xl"
+                              className="h-12 rounded-xl"
                             />
                           </div>
                         </div>
@@ -303,7 +303,7 @@ export default function PvmHostConfigDialog({
                               placeholder="输入 SSH 连接密码"
                               value={step1Data.sshPassword}
                               onChange={(e) => setStep1Data(prev => ({ ...prev, sshPassword: e.target.value }))}
-                              className="h-12 pr-12 rounded-2xl"
+                              className="h-12 pr-12 rounded-xl"
                             />
                             <Button
                               type="button"
@@ -324,9 +324,9 @@ export default function PvmHostConfigDialog({
                     </Card>
                   </div>
 
-                  {/* Tips */}
-                  <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm rounded-3xl">
-                    <CardContent className="pt-6">
+                  {/* Tips - 框架化卡片 */}
+                  <Card className={`${CARD_STYLES.base} ${CARD_STYLES.info} shadow-xl rounded-2xl`}>
+                    <CardContent className={CARD_STYLES.content}>
                       <div className="flex items-start space-x-3">
                         <Info className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
                         <div className="space-y-2">
@@ -345,34 +345,44 @@ export default function PvmHostConfigDialog({
               </div>
             </div>
 
-            {/* 底部按钮 */}
-            <div className="p-6 sm:p-8 border-t border-slate-200/50 bg-white/90 backdrop-blur-sm relative">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
-              {/* 顶部分割线光效 */}
-              <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
-              <div className="flex justify-end space-x-3 relative z-10">
-                <button
-                  onClick={handleNext}
-                  disabled={loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword}
-                  className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg ${
-                    loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105'
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      处理中...
-                    </>
-                  ) : (
-                    <>
-                      下一步
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </button>
+            {/* 底部操作栏 - 框架化样式 */}
+            <div className={DIALOG_STYLES.footer}>
+              <div className={DIALOG_STYLES.footerGlow}></div>
+              <div className={DIALOG_STYLES.footerTopLine}></div>
+              
+              <div className={DIALOG_STYLES.footerContent}>
+                {/* 左侧：集群信息 */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    PVM 集群配置
+                  </span>
+                </div>
+
+                {/* 右侧：操作按钮 */}
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleNext}
+                    disabled={loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword}
+                    className={`${BUTTON_STYLES.next} ${
+                      loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword
+                        ? BUTTON_STYLES.nextDisabled
+                        : BUTTON_STYLES.nextEnabled
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        处理中...
+                      </>
+                    ) : (
+                      <>
+                        下一步
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
