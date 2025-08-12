@@ -54,9 +54,9 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
   const steps = getStepsByType(StepsType.NORMAL, depType)
   
-  // 获取当前步骤标题
+  // 优先使用传入的具体步骤标题，如果没有再使用通用标题
   const currentStepInfo = steps.find(step => step.number === currentStep)
-  const currentStepTitle = currentStepInfo?.title || stepTitle
+  const currentStepTitle = stepTitle || currentStepInfo?.title
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
