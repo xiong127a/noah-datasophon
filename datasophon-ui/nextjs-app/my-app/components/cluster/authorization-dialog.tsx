@@ -1,25 +1,21 @@
 "use client"
 
-import { DialogFooter } from "@/components/ui/dialog"
-
 import { useState, useEffect } from "react"
 import { 
   Search, 
   X, 
   Check, 
   Users, 
-  Shield, 
   Sparkles,
   UserCheck,
   LoaderIcon
 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DIALOG_STYLES } from "./common/shared-styles"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
+import ClusterWizardLayout from "./common/cluster-wizard-layout"
+import ClusterWizardActionBar from "./common/cluster-wizard-action-bar"
 
 // 用户数据类型定义
 interface User {
@@ -64,7 +60,6 @@ export default function ClusterAuthorizationDialogSuper({
   const [selectedUsers, setSelectedUsers] = useState<number[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   // 获取用户列表
   const fetchUsers = async () => {
@@ -118,7 +113,7 @@ export default function ClusterAuthorizationDialogSuper({
 
   const handleConfirm = async () => {
     if (selectedUsers.length > 0) {
-      setSaving(true)
+      setLoading(true)
       try {
         // 使用GET请求，就像Vue2项目中一样，通过URL参数传递数据
         const clusterIdValue = Number(clusterId || localStorage.getItem("clusterId") || -1)
@@ -139,7 +134,7 @@ export default function ClusterAuthorizationDialogSuper({
         console.error('集群授权失败:', error)
         alert('集群授权失败，请稍后重试')
       } finally {
-        setSaving(false)
+        setLoading(false)
       }
     }
   }
@@ -150,46 +145,50 @@ export default function ClusterAuthorizationDialogSuper({
     setSearchTerm("")
   }
 
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: `已选择 ${selectedUsers.length} 位管理员`,
+        value: selectedUsers.length,
+        pulse: loading
+      }}
+      buttons={[
+        {
+          text: "取消",
+          onClick: handleCancel,
+          variant: 'secondary' as const,
+          disabled: loading
+        },
+        {
+          text: loading ? '授权中...' : `确认授权 ${selectedUsers.length > 0 ? `(${selectedUsers.length})` : ''}`,
+          onClick: handleConfirm,
+          disabled: loading || selectedUsers.length === 0,
+          loading: loading,
+          loadingText: '授权中...'
+        }
+      ]}
+    />
+  )
+
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent
-        className={`${DIALOG_STYLES.content} max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden [&>button]:hidden`}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        {/* 背景装饰 - 框架化样式 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/50 to-pink-50/80" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl transform translate-x-16 -translate-y-16" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-pink-400/20 to-amber-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
-
-        <DialogHeader className="relative z-10">
-          <Button
-            onClick={handleCancel}
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl border border-white/50 z-20 group"
-          >
-            <X className="h-4 w-4 text-gray-600 group-hover:text-gray-700 transition-colors" />
-          </Button>
-          
-          <div className="flex items-center space-x-3 pr-12">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                集群授权
-              </DialogTitle>
-              <DialogDescription className="text-slate-600 mt-1">
-                为集群 <span className="font-semibold text-blue-600">&quot;{clusterName}&quot;</span> 分配管理权限
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="py-6 space-y-6 relative z-10">
-          {/* 搜索和筛选区域 */}
-          <div className="space-y-4">
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => {}}
+      clusterName={clusterName}
+      clusterType="集群权限"
+      stepTitle="集群授权"
+      stepDescription={`为集群 "${clusterName}" 分配管理权限`}
+      currentStep={1}
+      dialogTitle={`集群授权 - ${clusterName}`}
+      actionBar={actionBar}
+    >
+      {/* 权限配置内容 */}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-6">
+            {/* 搜索和筛选区域 */}
+            <div className="space-y-4">
             {/* 搜索框 */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -317,39 +316,10 @@ export default function ClusterAuthorizationDialogSuper({
                 <p className="text-sm">请尝试调整搜索条件或筛选器</p>
               </div>
             )}
+            </div>
           </div>
         </div>
-
-        <DialogFooter className="relative z-10">
-                      <Button
-              onClick={handleConfirm}
-              disabled={selectedUsers.length === 0 || saving}
-              className={`w-full h-12 rounded-2xl text-white border-0 font-semibold transition-all duration-300 relative overflow-hidden ${
-                selectedUsers.length > 0 && !saving
-                  ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl hover:scale-105"
-                  : "bg-slate-300 cursor-not-allowed"
-              }`}
-            >
-              {/* 按钮光效 */}
-              {selectedUsers.length > 0 && !saving && (
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
-              )}
-              <span className="relative z-10 flex items-center justify-center">
-                {saving ? (
-                  <>
-                    <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                    授权中...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="mr-2 h-4 w-4" />
-                    确认授权 {selectedUsers.length > 0 && `(${selectedUsers.length})`}
-                  </>
-                )}
-              </span>
-            </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ClusterWizardLayout>
   )
 } 
