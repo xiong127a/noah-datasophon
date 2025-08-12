@@ -166,8 +166,7 @@ export default function K8sHostValidationDialog({
         return status === 'FAILED' || status === 'MIXED'
       })
   
-  // 使用hasFailedItems避免lint警告
-  console.debug('Has failed items:', hasFailedItems)
+  // hasFailedItems用于判断是否有失败项
 
   // 发现主机（基于Step1配置）
   const getEnvironmentList = async (showLoading = true) => {
@@ -255,17 +254,16 @@ export default function K8sHostValidationDialog({
 
           // K8S模式下不自动选中主机，让用户手动选择
         } else {
-          console.error('获取主机列表失败:', res.msg || '未知错误')
           setDataSource([])
+          toast.error(res.msg || '获取主机列表失败')
         }
       } catch (apiError) {
-        console.error('API调用失败:', apiError)
         setDataSource([])
+        toast.error('获取主机列表失败')
       }
 
       firstDataLoadedRef.current = true
     } catch (error) {
-      console.error('请求失败:', error)
       toast.error('获取主机列表失败')
     } finally {
       setLoading(false)
@@ -318,7 +316,6 @@ export default function K8sHostValidationDialog({
 
   // 其他必要的函数
   const refreshK8sHosts = () => {
-    console.log('refreshK8sHosts方法被调用了！')
     getEnvironmentListRef.current(true)
   }
 
@@ -341,7 +338,6 @@ export default function K8sHostValidationDialog({
           customNamespace: step1Data.customNamespace
         }
         
-        console.log('保存K8S配置:', kubeConfigParams)
         const configRes = await clusterApi.config.saveKubeConfig(
           clusterId,
           kubeConfigParams.kubeConfig || '',
@@ -358,7 +354,6 @@ export default function K8sHostValidationDialog({
       return Promise.resolve()
       
     } catch (error) {
-      console.error('保存K8S配置和主机列表失败:', error)
       throw error
     }
   }
@@ -385,7 +380,6 @@ export default function K8sHostValidationDialog({
       })
       
     } catch (error) {
-      console.error('下一步处理失败:', error)
       toast.error('保存配置失败，请重试')
     } finally {
       setLoading(false)
@@ -411,7 +405,6 @@ export default function K8sHostValidationDialog({
           }
         }
       } catch (error) {
-        console.error('调用后端校验接口失败:', error)
         return {
           hostCheckCompleted: false,
           data: '无法连接后端进行校验，请检查网络连接'

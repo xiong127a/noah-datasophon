@@ -157,7 +157,6 @@ export default function PvmHostValidationDialog({
         }
       }
     } catch (error) {
-      console.error(`检查主机 ${host.ip} 异常:`, error)
       return {
         ...host,
         status: 'failed',
@@ -217,7 +216,6 @@ export default function PvmHostValidationDialog({
         setCheckStatus('failed')
       }
     } catch (error) {
-      console.error('批量检查主机异常:', error)
       toast.error('主机检查失败，请重试')
       setCheckStatus('failed')
     } finally {
@@ -266,7 +264,6 @@ export default function PvmHostValidationDialog({
         }
       })
     } catch (error) {
-      console.error('Step2处理异常:', error)
       toast.error('保存主机信息失败，请重试')
     } finally {
       setLoading(false)
