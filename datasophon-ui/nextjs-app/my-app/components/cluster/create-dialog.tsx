@@ -1,16 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CheckCircle, Loader2, Database, Settings, Star, Cloud, Server } from "lucide-react"
+import { CheckCircle, Loader2, Database, Settings, Star, Cloud, Server, X, Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
-import ClusterWizardLayout from "./common/cluster-wizard-layout"
-import ClusterWizardActionBar from "./common/cluster-wizard-action-bar"
 
 interface CreateClusterDialogProps {
   open: boolean
@@ -234,47 +234,38 @@ export default function CreateClusterDialogEnhanced({
            formData.depType
   }
 
-  // 创建统一的ActionBar
-  const actionBar = (
-    <ClusterWizardActionBar
-      statusInfo={{
-        text: isEdit ? "编辑集群配置" : "新建集群配置",
-        pulse: loading
-      }}
-      buttons={[
-        {
-          text: "取消",
-          onClick: handleCancel,
-          variant: 'secondary' as const,
-          disabled: loading
-        },
-        {
-          text: loading ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存修改' : '创建集群'),
-          onClick: handleCreate,
-          disabled: loading || !isFormValid(),
-          loading: loading,
-          loadingText: isEdit ? '保存中...' : '创建中...'
-        }
-      ]}
-    />
-  )
-
   return (
-    <ClusterWizardLayout
-      open={open}
-      onClose={() => {}}
-      clusterName={formData.clusterName || (isEdit ? '编辑集群' : '新建集群')}
-      clusterType="通用"
-      stepTitle={isEdit ? "编辑集群" : "创建新集群"}
-      stepDescription={isEdit ? "修改集群的基本配置信息" : "配置您的大数据平台集群环境"}
-      currentStep={1}
-      dialogTitle={isEdit ? "编辑集群" : "创建新集群"}
-      actionBar={actionBar}
-    >
-      {/* 表单内容 */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0">
-        <div className="p-6 sm:p-8 lg:p-10">
-          <div className="space-y-8">
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        {/* 对话框头部 */}
+        <DialogHeader className="relative pb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <Database className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800">
+                  {isEdit ? '编辑集群' : '创建新集群'}
+                </DialogTitle>
+                <DialogDescription className="text-slate-600 mt-1">
+                  {isEdit ? '修改集群的基本配置信息' : '配置您的大数据平台集群环境'}
+                </DialogDescription>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* 表单内容 */}
+        <div className="flex-1 overflow-y-auto space-y-6 py-4">
             {/* 基本信息区域 */}
             <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -525,10 +516,40 @@ export default function CreateClusterDialogEnhanced({
                 })}
               </div>
             </div>
-            </div>
           </div>
         </div>
-      </div>
-    </ClusterWizardLayout>
+
+        {/* 对话框底部按钮 */}
+        <DialogFooter className="pt-6 border-t border-slate-200">
+          <div className="flex space-x-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
+              className="flex-1 sm:flex-none"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!isFormValid() || loading}
+              className="flex-1 sm:flex-none"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {isEdit ? '保存中...' : '创建中...'}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {isEdit ? '保存修改' : '创建集群'}
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
