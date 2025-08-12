@@ -39,6 +39,7 @@ public class ServiceConfigGroupConverter {
 
     /**
      * 将分组后的配置映射转换为DTO
+     * 支持Kubernetes配置的子分组处理
      * 
      * @param groupedConfigs 分组后的配置映射
      * @return 服务配置分组DTO
@@ -48,18 +49,93 @@ public class ServiceConfigGroupConverter {
             return new ServiceConfigGroupDTO(Map.of());
         }
 
-        // 使用JDK21 Stream API进行转换
         var groups = groupedConfigs.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> new ServiceConfigGroupDTO.GroupInfo(
-                                generateDisplayName(entry.getKey()),
-                                List.copyOf(entry.getValue()) // JDK21: 创建不可变副本
-                        )
+                        entry -> processRoleGroup(entry.getKey(), entry.getValue())
                 ));
 
         return new ServiceConfigGroupDTO(groups);
+    }
+
+    /**
+     * 处理单个角色分组，支持Kubernetes子分组
+     * 
+     * @param roleName 角色名称
+     * @param configs 配置列表
+     * @return 分组信息
+     */
+    private ServiceConfigGroupDTO.GroupInfo processRoleGroup(String roleName, List<ServiceConfig> configs) {
+        // 分离Kubernetes配置和普通配置
+        var kubernetesConfigs = new java.util.HashMap<String, List<ServiceConfig>>();
+        var normalConfigs = new java.util.ArrayList<ServiceConfig>();
+
+        for (var config : configs) {
+            var configGroup = config.getConfigGroup();
+            if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+                // 解析kubernetes配置类型
+                var parts = configGroup.split("\\.");
+                if (parts.length >= 3) {
+                    var type = parts[2]; // persistent-volume-claims, resources, services
+                    kubernetesConfigs.computeIfAbsent(type, k -> new java.util.ArrayList<>()).add(config);
+                }
+            } else {
+                normalConfigs.add(config);
+            }
+        }
+
+        // 构建最终的配置列表和子分组
+        var finalConfigs = new java.util.ArrayList<>(normalConfigs);
+        var subGroups = new java.util.HashMap<String, ServiceConfigGroupDTO.GroupInfo>();
+
+        // 处理Kubernetes子分组
+        if (!kubernetesConfigs.isEmpty()) {
+            for (var entry : kubernetesConfigs.entrySet()) {
+                var type = entry.getKey();
+                var typeConfigs = entry.getValue();
+                
+                // 创建子分组显示名称
+                var subGroupDisplayName = generateKubernetesSubGroupDisplayName(type);
+                var subGroupInfo = new ServiceConfigGroupDTO.GroupInfo(subGroupDisplayName, typeConfigs);
+                
+                // 使用完整的分组键作为子分组键
+                var subGroupKey = "kubernetes.config." + type + "." + roleName;
+                subGroups.put(subGroupKey, subGroupInfo);
+            }
+        }
+
+        // 生成角色显示名称
+        var displayName = generateDisplayName(roleName);
+        
+        // 如果有子分组，创建包含子分组的GroupInfo
+        if (!subGroups.isEmpty()) {
+            return new ServiceConfigGroupDTO.GroupInfo(displayName, finalConfigs, subGroups);
+        } else {
+            return new ServiceConfigGroupDTO.GroupInfo(displayName, finalConfigs);
+        }
+    }
+
+    /**
+     * 生成Kubernetes子分组的显示名称
+     * 
+     * @param type Kubernetes配置类型
+     * @return 显示名称
+     */
+    private String generateKubernetesSubGroupDisplayName(String type) {
+        return switch (type) {
+            case "persistent-volume-claims" -> "存储配置";
+            case "resources" -> "资源配置";
+            case "services" -> "服务配置";
+            case "config-maps" -> "配置映射";
+            case "secrets" -> "密钥配置";
+            case "volumes" -> "存储卷配置";
+            case "node-selector" -> "节点选择";
+            case "affinity" -> "亲和性配置";
+            case "tolerations" -> "容忍度配置";
+            case "security-context" -> "安全上下文";
+            default -> type + "配置";
+        };
     }
 
     /**

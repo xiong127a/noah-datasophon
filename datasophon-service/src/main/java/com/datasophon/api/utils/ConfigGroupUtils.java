@@ -215,7 +215,7 @@ public class ConfigGroupUtils {
         var kubernetesConfigsByType = originalKubernetesConfigsByType;
         if (kubernetesConfigsByType.isEmpty()) {
             // 如果没有获取到原始配置，回退到使用传入的配置
-            kubernetesConfigsByType = new HashMap<String, List<ServiceConfig>>();
+            kubernetesConfigsByType = new HashMap<>();
             for (var config : list) {
                 var configGroup = config.getConfigGroup();
                 if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
@@ -388,15 +388,6 @@ public class ConfigGroupUtils {
             logger.error("处理JMX端口时出错: {}", e.getMessage(), e);
         }
     }
-
-    /**
-     * 配置映射结果记录 - 使用JDK16 Records
-     * 
-     * @param port 端口号
-     * @param mappedPort 映射端口号
-     * @param found 是否找到现有映射
-     */
-    public record PortMappingResult(String port, String mappedPort, boolean found) {}
 
     /**
      * 为特定角色处理JMX端口
@@ -731,10 +722,13 @@ public class ConfigGroupUtils {
     }
 
     /**
-     * 将配置项按配置组分组
+     * 将配置项按角色和类型进行分组
+     * 新的分组逻辑：
+     * 1. 普通配置 → General分组
+     * 2. kubernetes.config.{type}.{role} → {role}分组下的k8s子分组{type}
      *
      * @param list 配置项列表
-     * @return 按配置组分组后的映射
+     * @return 按角色分组的配置映射
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list) {
         // 先处理所有配置项的模板内容
@@ -748,110 +742,48 @@ public class ConfigGroupUtils {
             }
         }
 
-        // 存储分组结果 - 使用var
-        var groupedConfigs = new LinkedHashMap<String, List<ServiceConfig>>();
-        // 收集从Kubernetes配置中提取的角色名 - 使用var
-        var kubernetesRoles = new HashSet<String>();
+        // 存储最终分组结果：角色 -> 配置列表
+        var finalGroupedConfigs = new LinkedHashMap<String, List<ServiceConfig>>();
 
         if (list != null) {
             for (var config : list) {
-                var configCategory = config.getConfigCategory();
                 var configGroup = config.getConfigGroup();
-                var configLevel = config.getConfigLevel();
-                var configTargetRoles = config.getConfigTargetRoles();
-                var groupKey = "";
-
-                // 处理kubernetes.config类型的配置组 - 使用JDK11的isBlank()和var
-                if (configGroup != null && !configGroup.isBlank() && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-                    // 特殊处理kubernetes配置，使用完整的configGroup作为键
-                    groupKey = configGroup;
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-
-                    // 从Kubernetes配置组名中提取角色名 - 使用var
-                    var roleName = extractRoleFromKubernetesConfigGroup(configGroup);
-                    if (roleName != null && !roleName.isBlank()) {
-                        kubernetesRoles.add(roleName);
-                    }
-                }
-                // 处理角色配置
-                else if ("role".equals(configCategory) && configGroup != null) {
-                    // 使用configGroup作为分组键，这样角色配置会被正确地分到各自的角色组
-                    groupKey = configGroup;
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-                }
-                // 处理配置级别为"custom"或"advanced"的情况 - 使用JDK11的isBlank()和var
-                else if (configLevel != null && !configLevel.isBlank() &&
-                        ("custom".equalsIgnoreCase(configLevel) || "advanced".equalsIgnoreCase(configLevel)) &&
-                        configGroup != null && !configGroup.isBlank()) {
-
-                    var levelPrefix = configLevel.toLowerCase() + "_";
-
-                    // 直接将configLevel和configGroup用下划线连接
-                    if (configGroup.startsWith(levelPrefix)) {
-                        groupKey = configGroup;
+                
+                // 处理kubernetes.config类型的配置
+                if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
+                    // 解析kubernetes配置：kubernetes.config.{type}.{role}
+                    var parts = configGroup.split("\\.");
+                    if (parts.length >= 4) {
+                        var type = parts[2]; // persistent-volume-claims, resources, services
+                        var role = parts[3]; // NodeExporter, Prometheus等
+                        
+                        // 将配置添加到对应角色分组
+                        finalGroupedConfigs.computeIfAbsent(role, k -> new ArrayList<>()).add(config);
+                        
+                        logger.debug("Kubernetes配置 {} 分组到角色: {}, 类型: {}", config.getName(), role, type);
                     } else {
-                        // 如果不以级别前缀开头，使用原始configGroup作为分组键
-                        groupKey = configGroup;
-                    }
-
-                    // 将配置添加到对应分组
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-                } else if ((configCategory == null || configCategory.isBlank()) && 
-                          (configGroup == null || configGroup.isBlank()) && 
-                          (configLevel == null || configLevel.isBlank())) {
-                    groupKey = GENERAL;
-                    // 为空字段设置默认值 - 使用JDK11的isBlank()
-                    if (configCategory == null || configCategory.isBlank()) {
-                        config.setConfigCategory("role");
-                    }
-                    if (configGroup == null || configGroup.isBlank()) {
-                        config.setConfigGroup("General");
-                    }
-                    if (configLevel == null || configLevel.isBlank()) {
-                        config.setConfigLevel("advanced");
-                    }
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-                }
-                // 处理configTargetRoles情况 - 使用var
-                else if (configTargetRoles != null) {
-                    var roleNames = parseRoleNames(configTargetRoles);
-                    for (var roleName : roleNames) {
-                        groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>()).add(config);
+                        // 格式不正确的kubernetes配置，放入General
+                        finalGroupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).add(config);
+                        logger.warn("Kubernetes配置格式不正确: {}, 已分组到General", configGroup);
                     }
                 }
-                // 处理至少有一个字段不为空的情况 - 使用JDK11的isBlank()
-                else if ((configCategory != null && !configCategory.isBlank()) ||
-                        (configGroup != null && !configGroup.isBlank()) ||
-                        (configLevel != null && !configLevel.isBlank())) {
-                    // 优先使用configGroup作为分组键
-                    if (configGroup != null && !configGroup.isBlank()) {
-                        groupKey = configGroup;
-                    }
-                    // 如果configGroup为空但configCategory不为空，使用configCategory
-                    else if (configCategory != null && !configCategory.isBlank()) {
-                        groupKey = configCategory;
-                    }
-                    // 如果前两者都为空但configLevel不为空，使用configLevel
-                    else {
-                        groupKey = configLevel;
-                    }
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
+                // 处理普通配置，都放入General分组
+                else {
+                    finalGroupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).add(config);
+                    logger.debug("普通配置 {} 分组到General", config.getName());
                 }
             }
         }
 
-        // 移除空角色分组的自动创建逻辑
-        // 注释：不再为Kubernetes配置中提取的角色自动创建空分组，避免返回冗余的空数据
-
         // 处理空键分组，将其合并到General分组中
-        if (groupedConfigs.containsKey("")) {
-            var emptyGroupConfigs = groupedConfigs.remove("");
-            groupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).addAll(emptyGroupConfigs);
+        if (finalGroupedConfigs.containsKey("")) {
+            var emptyGroupConfigs = finalGroupedConfigs.remove("");
+            finalGroupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).addAll(emptyGroupConfigs);
             logger.warn("发现空键分组，已将 {} 个配置项合并到General分组中", emptyGroupConfigs.size());
         }
 
-        // 确保每个配置组内的配置名称唯一 - 使用var
-        for (var entry : groupedConfigs.entrySet()) {
+        // 确保每个配置组内的配置名称唯一
+        for (var entry : finalGroupedConfigs.entrySet()) {
             var uniqueNameMap = new LinkedHashMap<String, ServiceConfig>();
             for (var config : entry.getValue()) {
                 uniqueNameMap.put(config.getName(), config);
@@ -859,28 +791,11 @@ public class ConfigGroupUtils {
             entry.setValue(new ArrayList<>(uniqueNameMap.values()));
         }
 
-        return groupedConfigs;
+        logger.info("配置分组完成，共 {} 个角色分组: {}", finalGroupedConfigs.size(), finalGroupedConfigs.keySet());
+        return finalGroupedConfigs;
     }
 
-    /**
-     * 从Kubernetes配置组名中提取角色名
-     * 例如从 "kubernetes.config.persistent-volume-claims.DataNode" 提取 "DataNode"
-     *
-     * @param configGroup Kubernetes配置组名
-     * @return 提取的角色名，如果无法提取则返回null
-     */
-    private static String extractRoleFromKubernetesConfigGroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-            return null;
-        }
 
-        String[] parts = configGroup.split("\\.");
-        if (parts.length >= 4) {
-            return parts[3]; // 返回第四部分作为角色名
-        }
-
-        return null;
-    }
 
     /**
      * 为Kubernetes配置生成角色前缀的配置映射
@@ -1227,54 +1142,6 @@ public class ConfigGroupUtils {
         
         logger.debug("框架 {} 完成配置名称映射，共处理 {} 个配置项", frameCode, resultMap.size());
         return resultMap;
-    }
-
-    /**
-     * 兼容性方法：不带框架代码的版本
-     * 
-     * @param configFileMap 配置文件映射
-     * @return 配置名称到角色的映射
-     * @deprecated 建议使用带框架代码参数的版本以确保框架隔离
-     */
-    @Deprecated(since = "1.0.0", forRemoval = false)
-    public static Map<String, String> buildNameToRoleMap(Map<Generators, List<ServiceConfig>> configFileMap) {
-        return buildNameToRoleMap(configFileMap, "UNKNOWN");
-    }
-
-    /**
-     * 将分组的配置数据扁平化为单一列表 - JDK21优化版本
-     * 用于API返回数据的格式转换，确保前端兼容性
-     * 
-     * @param groupedConfigs 分组的配置数据
-     * @return 扁平化的配置列表
-     */
-    public static List<ServiceConfig> flattenGroupedConfigs(Map<String, List<ServiceConfig>> groupedConfigs) {
-        if (groupedConfigs == null || groupedConfigs.isEmpty()) {
-            return List.of();
-        }
-        
-        logger.debug("开始扁平化分组配置，共 {} 个分组", groupedConfigs.size());
-        
-        // 使用JDK21流式API和现代集合操作
-        var flattenedConfigs = groupedConfigs.entrySet().stream()
-            .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
-            .flatMap(entry -> {
-                var groupName = entry.getKey();
-                var configs = entry.getValue();
-                logger.trace("处理分组 '{}', 包含 {} 个配置项", groupName, configs.size());
-                return configs.stream();
-            })
-            .distinct() // 去重，避免重复配置
-            .sorted((config1, config2) -> {
-                // 按配置名称排序，确保结果稳定
-                var name1 = config1.getName() != null ? config1.getName() : "";
-                var name2 = config2.getName() != null ? config2.getName() : "";
-                return name1.compareTo(name2);
-            })
-            .toList(); // JDK16+ Stream.toList()
-        
-        logger.debug("扁平化完成，共 {} 个配置项", flattenedConfigs.size());
-        return flattenedConfigs;
     }
 
     /**

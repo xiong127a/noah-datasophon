@@ -93,11 +93,32 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     const result: Record<string, ConfigGroup> = {}
     
     Object.entries(configGroupData.groups).forEach(([groupKey, groupInfo]) => {
+      // 检查是否有子分组
+      const hasSubGroups = groupInfo.subGroups && Object.keys(groupInfo.subGroups).length > 0
+      const hasKubernetesConfig = hasSubGroups && Object.keys(groupInfo.subGroups!).some(key => 
+        key.startsWith('kubernetes.config.')
+      )
+      
+      // 转换子分组为kubernetesSubGroups格式
+      const kubernetesSubGroups: Record<string, ConfigGroup> = {}
+      if (hasSubGroups && groupInfo.subGroups) {
+        Object.entries(groupInfo.subGroups).forEach(([subGroupKey, subGroupInfo]) => {
+          if (subGroupKey.startsWith('kubernetes.config.')) {
+            kubernetesSubGroups[subGroupKey] = {
+              items: subGroupInfo.configs,
+              displayName: subGroupInfo.displayName,
+              hasKubernetesConfig: false,
+              kubernetesSubGroups: {}
+            }
+          }
+        })
+      }
+      
       result[groupKey] = {
         items: groupInfo.configs,
         displayName: groupInfo.displayName,
-        hasKubernetesConfig: false,
-        kubernetesSubGroups: {}
+        hasKubernetesConfig: hasKubernetesConfig,
+        kubernetesSubGroups: kubernetesSubGroups
       }
     })
     
@@ -164,8 +185,13 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
           [activeService]: configGroupData
         }))
 
-        // 提取所有配置项用于兼容性
-        const allConfigs = Object.values(configGroupData.groups).flatMap(group => group.configs)
+        // 提取所有配置项用于兼容性，包括子分组中的配置
+        const allConfigs = Object.values(configGroupData.groups).flatMap(group => {
+          const mainConfigs = group.configs || []
+          const subGroupConfigs = group.subGroups ? 
+            Object.values(group.subGroups).flatMap(subGroup => subGroup.configs || []) : []
+          return [...mainConfigs, ...subGroupConfigs]
+        })
         
         // 更新服务模板(保持兼容性)
         setServiceTemplate(prev => ({

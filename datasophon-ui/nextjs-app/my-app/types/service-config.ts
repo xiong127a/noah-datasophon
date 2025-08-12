@@ -182,3 +182,20 @@ export enum CommandType {
   STOP_SERVICE = 'STOP_SERVICE',
   RESTART_SERVICE = 'RESTART_SERVICE'
 }
+
+// 新的分组数据结构类型定义
+export interface GroupInfo {
+  displayName: string
+  configs: ConfigItem[]
+  subGroups?: Record<string, GroupInfo>
+  empty?: boolean
+  configCount?: number
+  subGroupCount?: number
+}
+
+export interface ServiceConfigGroupData {
+  groups: Record<string, GroupInfo>
+  empty?: boolean
+  groupCount?: number 
+  totalConfigCount?: number
+}

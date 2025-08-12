@@ -41,7 +41,7 @@ public record ServiceConfigGroupDTO(
     
     /**
      * 分组信息
-     * 使用JDK21 record定义嵌套数据结构
+     * 使用JDK21 record定义嵌套数据结构，支持子分组
      */
     public record GroupInfo(
             /**
@@ -52,8 +52,22 @@ public record ServiceConfigGroupDTO(
             /**
              * 分组内的配置项列表
              */
-            List<ServiceConfig> configs
+            List<ServiceConfig> configs,
+            
+            /**
+             * 子分组映射（可选）
+             * key: 子分组标识  
+             * value: 子分组信息
+             */
+            Map<String, GroupInfo> subGroups
     ) {
+        
+        /**
+         * 简化构造器：仅包含基本信息，无子分组
+         */
+        public GroupInfo(String displayName, List<ServiceConfig> configs) {
+            this(displayName, configs, Map.of());
+        }
         
         /**
          * 构造器验证
@@ -65,15 +79,22 @@ public record ServiceConfigGroupDTO(
             if (configs == null) {
                 configs = List.of(); // JDK21: 不可变空列表
             }
+            if (subGroups == null) {
+                subGroups = Map.of(); // JDK21: 不可变空映射
+            }
         }
         
         /**
-         * 获取配置项数量
+         * 获取配置项数量（包含子分组）
          * 
          * @return 配置项数量
          */
         public int getConfigCount() {
-            return configs.size();
+            var mainConfigCount = configs.size();
+            var subGroupConfigCount = subGroups.values().stream()
+                    .mapToInt(GroupInfo::getConfigCount)
+                    .sum();
+            return mainConfigCount + subGroupConfigCount;
         }
         
         /**
@@ -82,7 +103,26 @@ public record ServiceConfigGroupDTO(
          * @return 是否为空分组
          */
         public boolean isEmpty() {
-            return configs.isEmpty();
+            return configs.isEmpty() && 
+                   (subGroups.isEmpty() || subGroups.values().stream().allMatch(GroupInfo::isEmpty));
+        }
+        
+        /**
+         * 检查是否有子分组
+         * 
+         * @return 是否有子分组
+         */
+        public boolean hasSubGroups() {
+            return !subGroups.isEmpty();
+        }
+        
+        /**
+         * 获取子分组数量
+         * 
+         * @return 子分组数量
+         */
+        public int getSubGroupCount() {
+            return subGroups.size();
         }
     }
     
