@@ -20,6 +20,7 @@ import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
+import { CARD_STYLES, BADGE_STYLES } from './shared-styles'
 
 import type { 
   ServiceConfigDialogProps,
@@ -542,13 +543,13 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     const isExpanded = expandedKeys[activeService]?.includes(groupName) ?? true
 
     return (
-      <Card key={groupName} className="border border-gray-200 shadow-sm">
+      <Card key={groupName} className={`${CARD_STYLES.base} shadow-sm`}>
         <CardHeader 
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className={`${CARD_STYLES.header} cursor-pointer hover:bg-gray-50 transition-colors`}
           onClick={() => handleGroupToggle(groupName)}
         >
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
+            <CardTitle className={`${CARD_STYLES.title} text-base font-medium flex items-center gap-2`}>
               <Package className="h-4 w-4 text-gray-500" />
               {group.displayName}
             </CardTitle>
@@ -675,7 +676,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       >
         <div className="flex-1 flex flex-col min-h-0">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-2">
+            <div className={`${CARD_STYLES.error} rounded-lg p-4 mb-6 flex items-center gap-2`}>
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
               <span className="text-red-700">{error}</span>
             </div>
