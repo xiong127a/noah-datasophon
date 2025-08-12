@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { 
-  X, ChevronLeft, ChevronRight, Loader2, RefreshCw, Info
+  X, Loader2, RefreshCw, Info
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
-import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
-import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
+import ClusterWizardLayout from '../common/cluster-wizard-layout'
+import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ManagementStatus, ManagementStatusUtil, ClusterType, ClusterTypeUtil } from '@/types'
 
@@ -23,7 +22,6 @@ import type {
 } from '@/types/host-validation'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DIALOG_STYLES, BUTTON_STYLES } from '../common/shared-styles'
 import type { K8sStep1Data, K8sClusterInfo } from './k8s-host-config-dialog'
 
 // K8S Step2弹窗属性接口
@@ -46,8 +44,7 @@ export default function K8sHostValidationDialog({
 }: K8sHostValidationDialogProps) {
   const clusterType = ClusterType.KUBERNETES
   
-  // 使用标准化的步骤配置
-  const steps = getStepsByType(StepsType.NORMAL, clusterType)
+
   
   // 基础状态
   const [loading, setLoading] = useState(false)
@@ -452,24 +449,49 @@ export default function K8sHostValidationDialog({
     }
   }, [open, clusterId, clusterType])
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DIALOG_STYLES.content}>
-        <DialogTitle className="sr-only">
-          主机环境校验 - {cluster?.clusterName}
-        </DialogTitle>
-        
-        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
-          <ClusterWizardSidebar 
-            steps={steps}
-            currentStep={2}
-            title="主机环境校验"
-            clusterName={cluster?.clusterName || ''}
-            isK8s={ClusterTypeUtil.isKubernetes(clusterType)}
-            onClose={() => onOpenChange(false)}
-          />
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: `主机校验 (${selectedRowKeys.length}/${dataSource.length})`,
+        value: selectedRowKeys.length,
+        total: dataSource.length,
+        pulse: loading
+      }}
+      buttons={[
+        ...(onPrevious ? [{
+          text: "上一步",
+          onClick: onPrevious,
+          variant: 'secondary' as const,
+          disabled: loading
+        }] : []),
+        {
+          text: "下一步",
+          onClick: handleNext,
+          disabled: loading || selectedRowKeys.length === 0,
+          loading: loading,
+          loadingText: "处理中..."
+        }
+      ]}
+    />
+  )
 
-          <div className="flex-1 flex flex-col min-h-0">
+  return (
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => onOpenChange(false)}
+      clusterName={cluster?.clusterName || ''}
+      clusterType="Kubernetes"
+      stepTitle="主机验证"
+      stepDescription="验证Kubernetes节点环境和资源"
+      currentStep={2}
+      dialogTitle={`主机环境校验 - ${cluster?.clusterName}`}
+      actionBar={actionBar}
+    >
+      {/* 当前步骤内容 */}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-8">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">
@@ -985,77 +1007,9 @@ export default function K8sHostValidationDialog({
                 </div>
               </div>
             </div>
-
-            {/* 底部操作栏 - 统一美观样式 */}
-            <div className={DIALOG_STYLES.footer}>
-              {/* 装饰性光效 */}
-              <div className={DIALOG_STYLES.footerGlow}></div>
-              {/* 顶部分割线光效 */}
-              <div className={DIALOG_STYLES.footerTopLine}></div>
-              
-              <div className={DIALOG_STYLES.footerContent}>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
-                    <span className="text-sm font-medium text-gray-700">
-                      已选择 
-                      <span className="mx-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                        {selectedRowKeys.length}
-                      </span>
-                      台主机
-                    </span>
-                  </div>
-                  {ClusterTypeUtil.isKubernetes(clusterType) && unmanagedCount > 0 && (
-                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm font-medium text-green-700">
-                        {unmanagedCount} 台可部署
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Button
-                    onClick={() => {
-                      if (onPrevious) {
-                        onPrevious()
-                      } else {
-                        onOpenChange(false)
-                      }
-                    }}
-                    variant="outline"
-                    className={BUTTON_STYLES.previous}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    上一步
-                  </Button>
-                  <Button
-                    onClick={handleNext}
-                    disabled={selectedRowKeys.length === 0 || loading}
-                    className={`${BUTTON_STYLES.next} ${
-                      selectedRowKeys.length === 0 || loading
-                        ? BUTTON_STYLES.nextDisabled
-                        : BUTTON_STYLES.nextEnabled
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        保存中...
-                      </>
-                    ) : (
-                      <>
-                        下一步
-                        <ChevronRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ClusterWizardLayout>
   )
 }
