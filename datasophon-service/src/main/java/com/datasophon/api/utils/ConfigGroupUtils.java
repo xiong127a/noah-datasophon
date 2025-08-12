@@ -767,10 +767,33 @@ public class ConfigGroupUtils {
                         logger.warn("Kubernetes配置格式不正确: {}, 已分组到General", configGroup);
                     }
                 }
-                // 处理普通配置，都放入General分组
+                // 处理普通配置，根据configLevel进行细分分组
                 else {
-                    finalGroupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).add(config);
-                    logger.debug("普通配置 {} 分组到General", config.getName());
+                    var configLevel = config.getConfigLevel();
+                    var groupKey = GENERAL; // 默认分组
+                    
+                    // 根据configLevel创建特殊分组
+                    if (configLevel != null && !configLevel.isBlank()) {
+                        if ("custom".equalsIgnoreCase(configLevel)) {
+                            // 自定义配置分组
+                            var serviceName = configGroup != null ? configGroup : "配置";
+                            groupKey = "自定义" + serviceName;
+                            logger.debug("自定义配置 {} 分组到: {}", config.getName(), groupKey);
+                        } else if ("advanced".equalsIgnoreCase(configLevel)) {
+                            // 高级配置分组
+                            var serviceName = configGroup != null ? configGroup : "配置";
+                            groupKey = "高级" + serviceName;
+                            logger.debug("高级配置 {} 分组到: {}", config.getName(), groupKey);
+                        } else {
+                            // 其他级别的配置放入General
+                            groupKey = GENERAL;
+                            logger.debug("普通配置 {} 分组到General", config.getName());
+                        }
+                    } else {
+                        logger.debug("普通配置 {} 分组到General", config.getName());
+                    }
+                    
+                    finalGroupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
             }
         }

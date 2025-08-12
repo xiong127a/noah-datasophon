@@ -149,6 +149,11 @@ public class ServiceConfigGroupConverter {
             return "通用配置";
         }
 
+        // 处理自定义和高级配置分组
+        if (groupKey.startsWith("自定义") || groupKey.startsWith("高级")) {
+            return groupKey; // 直接返回原始分组名，已经是中文友好名称
+        }
+        
         // 使用JDK21增强的switch表达式进行名称转换
         return switch (groupKey.toLowerCase()) {
             case "general" -> "通用配置";
