@@ -10,6 +10,12 @@ import {
   AlertCircle,
   Layers
 } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -85,209 +91,69 @@ const ServiceFilters: React.FC<ServiceFiltersProps> = ({
   filterStats
 }) => {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4 shadow-sm">
-      {/* 顶部：搜索框和服务类型 */}
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      {/* 紧凑的单行布局：搜索框和模式切换 */}
+      <div className="flex items-center gap-2 p-2">
         {/* 搜索框 */}
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="搜索服务名称或描述..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-10"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => onSearchChange('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 服务类型选择 */}
-        <div className="w-full sm:w-64">
-          <Select 
-            value={serviceTypeFilter} 
-            onValueChange={(value: string) => onServiceTypeChange(value as ServiceType)}
-          >
-            <SelectTrigger className="h-10">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-gray-500" />
-                <SelectValue>
-                  {SERVICE_TYPE_OPTIONS.find(option => option.value === serviceTypeFilter)?.label}
-                </SelectValue>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {SERVICE_TYPE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex flex-col py-1">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-gray-500">{option.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* 中部：高级过滤选项 */}
-      <div className="flex flex-wrap items-center gap-4">
-        {/* 快速过滤复选框 */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="required-only"
-              checked={showRequiredOnly}
-              onCheckedChange={onShowRequiredOnlyChange}
-            />
-            <label 
-              htmlFor="required-only" 
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              仅显示必需服务
-            </label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="selected-only"
-              checked={showSelectedOnly}
-              onCheckedChange={onShowSelectedOnlyChange}
-            />
-            <label 
-              htmlFor="selected-only" 
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              仅显示已选服务
-            </label>
-          </div>
-        </div>
-
-        {/* 分类过滤器（如果有分类） */}
-        {availableCategories.length > 0 && onCategoryChange && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
-                <Layers className="w-4 h-4 mr-2" />
-                分类
-                {selectedCategory && (
-                  <Badge variant="secondary" className="ml-2 h-5">
-                    {selectedCategory}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuLabel>服务分类</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={!selectedCategory}
-                onCheckedChange={() => onCategoryChange(null)}
-              >
-                全部分类
-              </DropdownMenuCheckboxItem>
-              {availableCategories.map((category) => (
-                <DropdownMenuCheckboxItem
-                  key={category}
-                  checked={selectedCategory === category}
-                  onCheckedChange={(checked) => 
-                    onCategoryChange(checked ? category : null)
-                  }
-                >
-                  {category}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        {/* 清空过滤器按钮 */}
-        {filterStats.hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearFilters}
-            className="h-9 text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-4 h-4 mr-1" />
-            清空过滤器
-          </Button>
-        )}
-      </div>
-
-      {/* 底部：统计信息和活跃过滤器标签 */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-gray-100">
-        {/* 统计信息 */}
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-1">
-            <Package className="w-4 h-4" />
-            显示 {filterStats.filtered} / {filterStats.total} 个服务
-          </div>
-        </div>
-
-        {/* 活跃过滤器标签 */}
-        <div className="flex items-center gap-2">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            type="text"
+            placeholder="搜索服务..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10 h-8 text-sm border-0 bg-gray-50/50 focus:bg-white transition-colors"
+          />
           {searchTerm && (
-            <Badge variant="outline" className="gap-1">
-              <Search className="w-3 h-3" />
-              搜索: {searchTerm}
-              <button 
-                onClick={() => onSearchChange('')}
-                className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          
-          {showRequiredOnly && (
-            <Badge variant="outline" className="gap-1">
-              <AlertCircle className="w-3 h-3" />
-              必需服务
-              <button 
-                onClick={() => onShowRequiredOnlyChange(false)}
-                className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          
-          {showSelectedOnly && (
-            <Badge variant="outline" className="gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              已选服务
-              <button 
-                onClick={() => onShowSelectedOnlyChange(false)}
-                className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          
-          {selectedCategory && (
-            <Badge variant="outline" className="gap-1">
-              <Layers className="w-3 h-3" />
-              分类: {selectedCategory}
-              <button 
-                onClick={() => onCategoryChange?.(null)}
-                className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-3 h-3" />
+            </button>
           )}
         </div>
+
+        {/* 模式切换按钮组 */}
+        <TooltipProvider>
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            {SERVICE_TYPE_OPTIONS.map((option) => (
+              <Tooltip key={option.value}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onServiceTypeChange(option.value as ServiceType)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      serviceTypeFilter === option.value
+                        ? 'bg-white text-blue-600 shadow-sm border border-blue-200'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{option.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </TooltipProvider>
       </div>
+
+      {/* 搜索状态提示 */}
+      {searchTerm && (
+        <div className="px-3 py-2 border-t border-gray-100 bg-blue-50/30">
+          <div className="flex items-center justify-between text-xs text-blue-700">
+            <span>搜索结果: "{searchTerm}"</span>
+            <button 
+              onClick={() => onSearchChange('')}
+              className="text-blue-500 hover:text-blue-700"
+            >
+              清除
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

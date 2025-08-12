@@ -5,10 +5,8 @@ import {
   getCoreRowModel, 
   useReactTable,
   ColumnDef,
-  PaginationState,
   SortingState,
-  getSortedRowModel,
-  getPaginationRowModel
+  getSortedRowModel
 } from '@tanstack/react-table'
 import type { Service } from '@/types/service-selection'
 
@@ -27,24 +25,26 @@ interface UseServiceTableOptions {
 
 interface UseServiceTableReturn {
   table: ReturnType<typeof useReactTable<Service>>
-  pagination: PaginationState
-  setPagination: (updater: PaginationState | ((old: PaginationState) => PaginationState)) => void
 }
 
 export const useServiceTable = ({
-  services
+  services,
+  selectedServiceIds = []
 }: UseServiceTableOptions): UseServiceTableReturn => {
-  // 分页状态
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10
-  })
-
   // 排序状态
   const [sorting, setSorting] = useState<SortingState>([])
 
-  // 简化的列定义 - 移除JSX元素
+  // 包含勾选功能的列定义
   const columns = useMemo<ColumnDef<Service>[]>(() => [
+    {
+      id: 'select',
+      header: '选择',
+      cell: ({ row }) => {
+        const isSelected = selectedServiceIds.includes(row.original.id)
+        return isSelected ? '✓' : ''
+      },
+      size: 80
+    },
     {
       accessorKey: 'serviceName',
       header: '服务名称',
@@ -60,29 +60,23 @@ export const useServiceTable = ({
       header: '类型',
       cell: info => (info.getValue() as boolean) ? '必需' : '可选'
     }
-  ], [])
+  ], [selectedServiceIds])
 
-  // 创建表格实例
+  // 创建表格实例（无分页）
   const table = useReactTable({
     data: services,
     columns,
     state: {
-      pagination,
       sorting
     },
-    onPaginationChange: setPagination,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: false,
     manualSorting: false
   })
 
   return {
-    table,
-    pagination,
-    setPagination
+    table
   }
 }
 

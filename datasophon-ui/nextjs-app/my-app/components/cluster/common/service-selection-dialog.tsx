@@ -20,7 +20,7 @@ import { useAdvancedServiceFilters } from '../service-selection/hooks/use-servic
 import { useServiceTable } from '../service-selection/hooks/use-service-table'
 import ServiceSelectionTable, { ServiceCardView } from '../service-selection/service-selection-table'
 import ServiceFilters from '../service-selection/service-filters'
-import ServiceStats, { CompactServiceStats } from '../service-selection/service-stats'
+
 
 // 导入布局组件
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
@@ -175,7 +175,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
             </div>
 
             {/* 过滤器区域 */}
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-3 border-b border-gray-100">
               <ServiceFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -193,23 +193,12 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
               />
             </div>
 
-            {/* 统计信息 */}
-            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-              <ServiceStats
-                services={services}
-                selectedServices={selectedServices}
-                filteredServices={filteredServices}
-                requiredServices={requiredServices}
-              />
-            </div>
+
 
             {/* 视图切换和内容区域 */}
             <div className="flex-1 flex flex-col min-h-0">
               {/* 视图切换 */}
-              <div className="flex items-center justify-between p-4 bg-white border-b border-gray-100">
-                <div className="text-sm text-gray-600">
-                  显示 {filteredServices.length} 个服务
-                </div>
+              <div className="flex items-center justify-end p-2 bg-white border-b border-gray-100">
                 
                 <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'grid')}>
                   <TabsList className="grid w-full grid-cols-2">
@@ -229,7 +218,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
               <div className="flex-1 overflow-hidden">
                 <Tabs value={viewMode} className="h-full">
                   {/* 卡片视图 */}
-                  <TabsContent value="grid" className="h-full overflow-y-auto p-4 mt-0">
+                  <TabsContent value="grid" className="h-full overflow-y-auto p-3 mt-0">
                     <ServiceCardView
                       services={filteredServices}
                       selectedServiceIds={selectedServiceIds}
@@ -239,7 +228,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
                   </TabsContent>
 
                   {/* 表格视图 */}
-                  <TabsContent value="table" className="h-full overflow-y-auto p-4 mt-0">
+                  <TabsContent value="table" className="h-full overflow-y-auto p-3 mt-0">
                     <ServiceSelectionTable
                       table={table.table}
                       loading={loading}
@@ -257,17 +246,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
               <div className={DIALOG_STYLES.footerTopLine}></div>
               
               <div className={DIALOG_STYLES.footerContent}>
-                {/* 左侧：紧凑统计信息 */}
-                <div className="flex-1">
-                  <CompactServiceStats
-                    services={services}
-                    selectedServices={selectedServices}
-                    filteredServices={filteredServices}
-                    requiredServices={requiredServices}
-                  />
-                </div>
-
-                {/* 右侧：操作按钮 */}
+                {/* 操作按钮 */}
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={() => {

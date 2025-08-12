@@ -70,10 +70,9 @@ export const useServiceSelection = ({
     [services, selectedServiceIds]
   )
 
-  const requiredServices = useMemo(() => 
-    services.filter(service => service.isRequired),
-    [services]
-  )
+  const requiredServices = useMemo(() => {
+    return services.filter(service => service.isRequired)
+  }, [services])
 
   const stats = useMemo(() => ({
     total: services.length,
@@ -104,7 +103,7 @@ export const useServiceSelection = ({
         const params = new URLSearchParams(requestData).toString()
         const url = `${API_PATHS_V1.FRAME_SERVICE_LIST_WITH_REQUIRED}?${params}`
         response = await apiV1.get(url, { headers })
-      } catch (primaryError: any) {
+      } catch {
         // 尝试备用API
         const params = new URLSearchParams(requestData).toString()
         const url = `${API_PATHS_V1.CLUSTER_SERVICE_LIST}?${params}`
@@ -112,15 +111,65 @@ export const useServiceSelection = ({
       }
       
       if (response.data?.success && response.data?.data) {
-        setServices(response.data.data)
+        const rawServicesData = response.data.data
+        
+        // 直接使用后端返回的数据，不进行任何逻辑转换
+        const servicesData = rawServicesData.map((s: Record<string, unknown>) => ({
+          ...s,
+          isRequired: Boolean(s.isRequired) // 简单的布尔值转换
+        }))
+        
+        setServices(servicesData)
+        
+        // 数据加载完成后，根据新的必需服务列表重新设置选中状态
+        const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
+        const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
+        
+        // 自动选择所有必需服务，取消所有非必需服务
+        setSelectedServiceIds(newRequiredIds)
+        
+        // 显示切换完成的Toast消息
+        if (serviceTypeFilter === ServiceType.MINIMAL) {
+          toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+        } else {
+          toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+        }
       } else if (response.data?.code === 200 && response.data?.data) {
-        setServices(response.data.data)
+        const rawServicesData = response.data.data
+        
+        // 直接使用后端返回的数据，不进行任何逻辑转换
+        const servicesData = rawServicesData.map((s: Record<string, unknown>) => ({
+          ...s,
+          isRequired: Boolean(s.isRequired) // 简单的布尔值转换
+        }))
+        
+        setServices(servicesData)
+        
+        // 数据加载完成后，根据新的必需服务列表重新设置选中状态
+        const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
+        const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
+        
+        // 自动选择所有必需服务，取消所有非必需服务
+        setSelectedServiceIds(newRequiredIds)
+        
+        // 显示切换完成的Toast消息
+        if (serviceTypeFilter === ServiceType.MINIMAL) {
+          toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+        } else {
+          toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+        }
       } else {
         const errorMsg = response.data?.message || response.data?.msg || '获取服务列表失败'
         throw new Error(errorMsg)
       }
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.response?.data?.msg || err?.message || '获取服务列表失败'
+    } catch (err: unknown) {
+      const errorMessage = (() => {
+        if (err instanceof Error) {
+          return err.message
+        }
+        const errorResponse = err as { response?: { data?: { message?: string; msg?: string } } }
+        return errorResponse?.response?.data?.message || errorResponse?.response?.data?.msg || '获取服务列表失败'
+      })()
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -131,18 +180,37 @@ export const useServiceSelection = ({
   // 服务选择切换
   const toggleService = useCallback((serviceId: number) => {
     const service = services.find(s => s.id === serviceId)
+    const isCurrentlySelected = selectedServiceIds.includes(serviceId)
     
-    if (service?.isRequired) {
+    console.log('🔄 服务选择切换:', {
+      serviceId,
+      serviceName: service?.serviceName,
+      isRequired: service?.isRequired,
+      isCurrentlySelected,
+      action: isCurrentlySelected ? '取消选择' : '选择'
+    })
+    
+    // 如果是必需服务且要取消选择，则不允许
+    if (service?.isRequired && isCurrentlySelected) {
       toast.warning('必需服务不能取消选择')
       return
     }
 
-    setSelectedServiceIds(prev => 
-      prev.includes(serviceId)
+    setSelectedServiceIds(prev => {
+      const newSelection = prev.includes(serviceId)
         ? prev.filter(id => id !== serviceId)
         : [...prev, serviceId]
-    )
-  }, [services])
+      
+      console.log('✅ 选择状态更新:', {
+        prev: prev.length,
+        new: newSelection.length,
+        serviceId,
+        selected: newSelection.includes(serviceId)
+      })
+      
+      return newSelection
+    })
+  }, [services, selectedServiceIds])
 
   // 选择所有必需服务
   const selectAllRequired = useCallback(() => {
@@ -181,37 +249,44 @@ export const useServiceSelection = ({
 
       onComplete?.(step3Data)
     } catch (error) {
-
+      console.error('处理服务选择失败:', error)
       toast.error('处理服务选择失败，请重试')
     }
   }, [canProceed, hasRequiredServices, selectedServiceIds, selectedServices, serviceTypeFilter, onComplete])
 
-  // 自动选择必需服务
+  // 优化的服务类型切换处理
+  const handleServiceTypeChange = useCallback((newType: ServiceType) => {
+    // 切换模式，等待新的服务数据加载完成后会自动重新设置选中状态
+    setServiceTypeFilter(newType)
+    
+    // Toast提示
+    if (newType === ServiceType.MINIMAL) {
+      toast.success(`正在切换到最小化模式...`)
+    } else {
+      toast.success(`正在切换到自定义模式...`)
+    }
+  }, [serviceTypeFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 已移除：初始化时自动选择必需服务的逻辑
+  // 现在在每次数据加载完成后都会自动设置选中状态，不需要额外的初始化逻辑
+
+  // 监控选中状态变化和数据一致性检查
   useEffect(() => {
-    if (services.length > 0) {
-      const requiredIds = requiredServices.map(service => service.id)
+    if (services.length > 0 && process.env.NODE_ENV === 'development') {
+      // 仅在开发环境进行数据一致性检查
+      const missingRequiredServices = requiredServices.filter(s => !selectedServiceIds.includes(s.id))
+      const selectedServices = selectedServiceIds.map(id => services.find(s => s.id === id)).filter(Boolean)
+      const extraSelectedServices = selectedServices.filter(s => s && !s.isRequired)
       
-      // 如果是最小化模式，只选择必需服务
-      if (serviceTypeFilter === ServiceType.MINIMAL) {
-        setSelectedServiceIds(requiredIds)
-        toast.success(`最小化模式：已选择 ${requiredIds.length} 个必需服务`)
-      } else {
-        // 自定义模式：确保必需服务被选中，但保留其他已选服务
-        setSelectedServiceIds(prev => {
-          const nonRequiredSelected = prev.filter(id => 
-            !requiredIds.includes(id) && services.find(s => s.id === id && !s.isRequired)
-          )
-          const newSelection = [...requiredIds, ...nonRequiredSelected]
-          
-          if (prev.length === 0) {
-            toast.success(`自定义模式：已选择 ${requiredIds.length} 个必需服务，可继续选择其他服务`)
-          }
-          
-          return newSelection
-        })
+      if (missingRequiredServices.length > 0) {
+        console.warn('数据不一致：有必需服务未被选中:', missingRequiredServices.map(s => s.serviceName))
+      }
+      
+      if (extraSelectedServices.length > 0) {
+        console.warn('数据不一致：有非必需服务被选中:', extraSelectedServices.map(s => s?.serviceName).filter(Boolean))
       }
     }
-  }, [services, requiredServices, serviceTypeFilter])
+  }, [selectedServiceIds, services, requiredServices, serviceTypeFilter])
 
   // 初始化加载
   useEffect(() => {
@@ -236,7 +311,7 @@ export const useServiceSelection = ({
     stats,
     
     // 操作方法
-    setServiceTypeFilter,
+    setServiceTypeFilter: handleServiceTypeChange,
     toggleService,
     selectAllRequired,
     clearSelection,
