@@ -162,8 +162,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
     try {
       const headers = createClusterHeaders(cluster.id)
-      const response = await apiV1.post(API_PATHS_V1.GET_SERVICE_CONFIG_OPTION, {
-        clusterId: cluster.id,
+      const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_CONFIG_OPTION, {
         serviceName: activeService
       }, { headers })
 
