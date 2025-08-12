@@ -13,7 +13,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { DIALOG_STYLES, BUTTON_STYLES } from '../common/shared-styles'
+import { DIALOG_STYLES, BUTTON_STYLES, BADGE_STYLES } from '../common/shared-styles'
 import type { PvmStep1Data, PvmClusterInfo } from './pvm-host-config-dialog'
 
 // PVM主机信息接口
@@ -273,17 +273,17 @@ export default function PvmHostValidationDialog({
     }
   }
 
-  // 获取主机状态样式
-  const getHostStatusStyle = (status: string) => {
+  // 获取主机状态Badge样式（框架化）
+  const getHostStatusBadgeStyle = (status: string) => {
     switch (status) {
       case 'success':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return BADGE_STYLES.status.ready
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200'
+        return BADGE_STYLES.status.notReady
       case 'checking':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+        return BADGE_STYLES.management.configuring // 使用配置中状态的黄色
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return BADGE_STYLES.status.unknown
     }
   }
 
@@ -419,7 +419,7 @@ export default function PvmHostValidationDialog({
                                   {host.hostname && (
                                     <span className="text-sm text-gray-600">({host.hostname})</span>
                                   )}
-                                  <Badge className={getHostStatusStyle(host.status)}>
+                                  <Badge className={`${BADGE_STYLES.base} ${getHostStatusBadgeStyle(host.status)}`}>
                                     {host.status === 'success' ? '成功' : 
                                      host.status === 'failed' ? '失败' : 
                                      host.status === 'checking' ? '检查中' : '等待'}

@@ -91,15 +91,16 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
     }
   }
 
+  // 获取点状指示器的框架化颜色
   const getBadgeDotColor = (variant?: string) => {
     switch (variant) {
       case 'success':
-        return "bg-green-500"
+        return "bg-emerald-500"  // 与BADGE_STYLES.status.ready对应
       case 'warning':
-        return "bg-orange-500"
+        return "bg-amber-500"    // 与BADGE_STYLES.management.configuring对应
       case 'info':
       default:
-        return "bg-blue-500"
+        return "bg-blue-500"     // 保持蓝色作为默认信息色
     }
   }
 
@@ -133,13 +134,13 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
         <div className="flex items-center space-x-4">
           {statusInfo && (
             <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full bg-blue-500 ${statusInfo.pulse ? 'animate-pulse' : ''}`}></div>
+              <div className={`w-3 h-3 rounded-full ${getBadgeDotColor('info')} ${statusInfo.pulse ? 'animate-pulse' : ''}`}></div>
               <span className="text-sm font-medium text-gray-700">
                 {statusInfo.text}
                 {statusInfo.value !== undefined && (
-                  <span className="mx-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                  <Badge variant="secondary" className="mx-1 text-xs">
                     {statusInfo.value}
-                  </span>
+                  </Badge>
                 )}
                 {statusInfo.total !== undefined && (
                   <span className="text-gray-600">
