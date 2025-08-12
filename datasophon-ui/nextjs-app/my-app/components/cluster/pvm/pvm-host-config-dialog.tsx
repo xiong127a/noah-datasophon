@@ -161,7 +161,6 @@ export default function PvmHostConfigDialog({
     try {
       onStep1Complete(step1Data)
     } catch (error) {
-      console.error('Step1处理异常:', error)
       toast.error('配置保存失败，请重试')
     } finally {
       setLoading(false)

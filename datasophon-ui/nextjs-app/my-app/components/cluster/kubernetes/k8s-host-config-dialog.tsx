@@ -122,12 +122,7 @@ export default function K8sHostConfigDialog({
         const clusterVersion = responseData.clusterVersion || ''
         const showNamespaceSelector = responseData.showNamespaceSelector
         
-        console.log('解析到的数据:', { 
-          namespaces: namespaces.length, 
-          defaultNamespace, 
-          clusterVersion,
-          showNamespaceSelector 
-        })
+        // 数据解析成功
         
         setStep1Data(prev => ({ 
           ...prev, 
@@ -142,7 +137,6 @@ export default function K8sHostConfigDialog({
         
         toast.success(`成功获取到 ${namespaces.length} 个命名空间${clusterVersion ? ` (Kubernetes ${clusterVersion})` : ''}${defaultNamespace ? `，已自动选择默认命名空间：${defaultNamespace}` : ''}`)
       } else {
-        console.error('获取命名空间失败:', response.data?.message)
         toast.error(`无法获取命名空间: ${response.data?.message || '请检查配置文件格式'}`)
         setStep1Data(prev => ({ 
           ...prev, 
@@ -151,7 +145,6 @@ export default function K8sHostConfigDialog({
         }))
       }
     } catch (error) {
-      console.error('解析kubeconfig异常:', error)
       toast.error('解析配置文件失败，请检查文件格式是否正确')
       setStep1Data(prev => ({ 
         ...prev, 
@@ -231,7 +224,6 @@ export default function K8sHostConfigDialog({
     try {
       onStep1Complete(step1Data)
     } catch (error) {
-      console.error('Step1处理异常:', error)
       toast.error('配置保存失败，请重试')
     } finally {
       setLoading(false)
