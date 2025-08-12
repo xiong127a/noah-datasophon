@@ -1,18 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, CheckCircle, Loader2, Database, Settings, Star, Sparkles, Cloud, Server } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { CheckCircle, Loader2, Database, Settings, Star, Cloud, Server } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
-import { DIALOG_STYLES, CARD_STYLES } from "./common/shared-styles"
+import ClusterWizardLayout from "./common/cluster-wizard-layout"
+import ClusterWizardActionBar from "./common/cluster-wizard-action-bar"
 
 interface CreateClusterDialogProps {
   open: boolean
@@ -236,42 +234,49 @@ export default function CreateClusterDialogEnhanced({
            formData.depType
   }
 
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: isEdit ? "编辑集群配置" : "新建集群配置",
+        pulse: loading
+      }}
+      buttons={[
+        {
+          text: "取消",
+          onClick: handleCancel,
+          variant: 'secondary' as const,
+          disabled: loading
+        },
+        {
+          text: loading ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存修改' : '创建集群'),
+          onClick: handleCreate,
+          disabled: loading || !isFormValid(),
+          loading: loading,
+          loadingText: isEdit ? '保存中...' : '创建中...'
+        }
+      ]}
+    />
+  )
+
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className={`max-w-3xl ${DIALOG_STYLES.content} overflow-hidden [&>button]:hidden`}>
-        {/* 头部设计 - 框架化样式 */}
-        <div className="relative -m-6 mb-6 overflow-hidden rounded-t-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-50" />
-          
-          {/* 装饰性光效 - 框架化 */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl transform translate-x-20 -translate-y-20" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-indigo-400/20 to-pink-400/20 rounded-full blur-2xl transform -translate-x-16 translate-y-16" />
-          
-          {/* 边框光效 - 框架化 */}
-          <div className="absolute inset-0 rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-10" />
-
-          <div className="relative p-6">
-            <Button
-              onClick={handleCancel}
-              variant="ghost"
-              size="sm"
-              className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white border border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl group"
-            >
-              <X className="h-5 w-5 text-gray-600 group-hover:text-gray-800 transition-colors" />
-            </Button>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent pr-12">
-              {isEdit ? '编辑集群' : '创建新集群'}
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 mt-2">
-              {isEdit ? '修改集群的基本配置信息' : '配置您的大数据平台集群环境'}
-            </DialogDescription>
-          </div>
-        </div>
-
-        {/* 表单内容 */}
-        <div className="px-6 pb-6 space-y-8">
-          {/* 基本信息区域 */}
-          <div className="space-y-6">
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => {}}
+      clusterName={formData.clusterName || (isEdit ? '编辑集群' : '新建集群')}
+      clusterType="通用"
+      stepTitle={isEdit ? "编辑集群" : "创建新集群"}
+      stepDescription={isEdit ? "修改集群的基本配置信息" : "配置您的大数据平台集群环境"}
+      currentStep={1}
+      dialogTitle={isEdit ? "编辑集群" : "创建新集群"}
+      actionBar={actionBar}
+    >
+      {/* 表单内容 */}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-8">
+            {/* 基本信息区域 */}
+            <div className="space-y-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                 <Database className="h-4 w-4 text-white" />
@@ -520,48 +525,10 @@ export default function CreateClusterDialogEnhanced({
                 })}
               </div>
             </div>
+            </div>
           </div>
         </div>
-
-        {/* 底部按钮 */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-blue-50 border-t border-slate-100 flex justify-end space-x-3">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={loading}
-            className="px-6 h-10 rounded-xl border-slate-200 bg-white/80 backdrop-blur-sm hover:bg-white hover:border-slate-300 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            取消
-          </Button>
-          <Button
-            onClick={handleCreate}
-            disabled={!isFormValid() || loading}
-            className={`px-6 h-10 rounded-xl border-0 transition-all duration-300 relative overflow-hidden ${
-              isFormValid() && !loading
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-1"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            {/* 按钮光效 */}
-            {isFormValid() && !loading && (
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-1000" />
-            )}
-            <span className="relative z-10 flex items-center">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {isEdit ? '保存中...' : '创建中...'}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {isEdit ? '保存修改' : '创建集群'}
-                </>
-              )}
-            </span>
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ClusterWizardLayout>
   )
 }
