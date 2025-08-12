@@ -483,7 +483,7 @@ export default function K8sHostValidationDialog({
       clusterName={cluster?.clusterName || ''}
       clusterType="Kubernetes"
       stepTitle="主机验证"
-      stepDescription="验证Kubernetes节点环境和资源"
+      stepDescription="Kubernetes主机校验 - 验证Kubernetes集群中的主机状态，确保可以正常部署服务"
       currentStep={2}
       dialogTitle={`主机环境校验 - ${cluster?.clusterName}`}
       actionBar={actionBar}
@@ -491,19 +491,7 @@ export default function K8sHostValidationDialog({
       {/* 当前步骤内容 */}
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
         <div className="p-6 sm:p-8 lg:p-10">
-          <div className="space-y-8">
-            {/* 页面功能标题 - 衬托主题 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  Kubernetes主机校验
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  验证Kubernetes集群中的主机状态，确保可以正常部署服务
-                </p>
-              </div>
-            </div>
-
+          <div className="space-y-6">
             <div className="flex-1 p-6 min-h-0">
               <div className="h-full flex flex-col">
                 <div className="flex-1 grid grid-cols-4 gap-6 min-h-0 max-h-[calc(100vh-200px)]">

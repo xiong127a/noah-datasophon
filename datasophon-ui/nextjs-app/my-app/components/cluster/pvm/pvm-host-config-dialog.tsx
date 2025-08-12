@@ -191,7 +191,7 @@ export default function PvmHostConfigDialog({
       clusterName={cluster?.clusterName || ''}
       clusterType="PVM"
       stepTitle="安装主机"
-      stepDescription="配置集群主机列表和 SSH 连接信息"
+      stepDescription="传统集群配置 - 配置集群主机列表和SSH连接信息，支持批量主机管理"
       currentStep={currentStep}
       dialogTitle={`PVM集群配置 - ${cluster?.clusterName}`}
       actionBar={actionBar}

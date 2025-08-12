@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { DIALOG_STYLES } from './shared-styles'
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
@@ -26,7 +25,7 @@ interface ClusterWizardLayoutProps {
   /** 当前步骤标题 */
   stepTitle: string
   /** 当前步骤描述 */
-  stepDescription: string
+  stepDescription?: string
   /** 当前步骤编号 */
   currentStep: number
   /** Dialog标题（用于无障碍） */
@@ -56,7 +55,7 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   
   // 优先使用传入的具体步骤标题，如果没有再使用通用标题
   const currentStepInfo = steps.find(step => step.number === currentStep)
-  const currentStepTitle = stepTitle || currentStepInfo?.title
+  const currentStepTitle = stepTitle || currentStepInfo?.title || '集群配置'
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -78,26 +77,24 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
 
           {/* 右侧内容区域 */}
           <div className="flex-1 flex flex-col h-full">
-            {/* 当前步骤标题 */}
-            <div className="flex-shrink-0 p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-              {/* 分割线光效 */}
-              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"></div>
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                    {stepTitle}
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    {stepDescription}
-                  </p>
+            {/* 顶栏描述区域 - 框架化样式 */}
+            {stepDescription && (
+              <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-lg flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white/90 to-purple-50/80" />
+                <div className="relative w-full px-8 py-8">
+                  <div className="space-y-2">
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent">
+                      {stepDescription.split(' - ')[0]}
+                    </h1>
+                    {stepDescription.includes(' - ') && (
+                      <p className="text-lg text-gray-600">
+                        {stepDescription.split(' - ')[1]}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-white/80 backdrop-blur-sm">
-                  步骤 {currentStep}/{steps.length}
-                </Badge>
               </div>
-            </div>
+            )}
 
             {/* 步骤内容 */}
             <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-y-auto" style={{ overflowX: 'visible' }}>

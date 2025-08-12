@@ -330,7 +330,7 @@ export default function PvmHostValidationDialog({
       clusterName={cluster?.clusterName || ''}
       clusterType="PVM"
       stepTitle="主机验证"
-      stepDescription="验证主机连通性和系统资源"
+      stepDescription="PVM主机验证 - 验证所有主机的SSH连接和系统状态"
       currentStep={currentStep}
       dialogTitle={`PVM主机验证 - ${cluster?.clusterName}`}
       actionBar={actionBar}
@@ -338,19 +338,7 @@ export default function PvmHostValidationDialog({
       {/* 当前步骤内容 */}
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
         <div className="p-6 sm:p-8 lg:p-10">
-          <div className="space-y-8">
-            {/* 页面功能标题 - 衬托主题 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  PVM主机验证
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  验证所有主机的SSH连接和系统状态
-                </p>
-              </div>
-            </div>
-
+          <div className="space-y-6">
             {/* 步骤内容 */}
             <div className="space-y-6">
               {/* SSH配置信息概览 */}

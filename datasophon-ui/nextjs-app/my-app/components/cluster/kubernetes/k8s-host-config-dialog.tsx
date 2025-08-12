@@ -254,7 +254,7 @@ export default function K8sHostConfigDialog({
       clusterName={cluster?.clusterName || ''}
       clusterType="Kubernetes"
       stepTitle="安装主机"
-      stepDescription="配置Kubernetes集群连接信息和命名空间"
+      stepDescription="Kubernetes集群配置 - 上传或输入Kubernetes配置文件，系统将自动识别可用的命名空间"
       currentStep={currentStep}
       dialogTitle={`Kubernetes集群配置 - ${cluster?.clusterName}`}
       actionBar={actionBar}

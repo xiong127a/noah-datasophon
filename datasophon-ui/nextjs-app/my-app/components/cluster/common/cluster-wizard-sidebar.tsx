@@ -16,6 +16,7 @@ interface ClusterWizardSidebarProps {
   steps: Step[]
   currentStep: number
   title: string
+  description?: string
   clusterName: string
   isK8s: boolean
   onClose: () => void
@@ -25,6 +26,7 @@ const ClusterWizardSidebar: React.FC<ClusterWizardSidebarProps> = ({
   steps,
   currentStep,
   title,
+  description,
   clusterName,
   isK8s,
   onClose
@@ -39,6 +41,11 @@ const ClusterWizardSidebar: React.FC<ClusterWizardSidebarProps> = ({
         {/* 装饰性光效 */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-100/20 to-transparent"></div>
         <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 mb-2 relative z-10">{title}</DialogTitle>
+        {description && (
+          <p className="text-sm text-gray-600 mb-3 relative z-10 leading-relaxed">
+            {description}
+          </p>
+        )}
         <div className="flex items-center text-sm text-gray-600 relative z-10">
           <span className="font-medium">{clusterName}</span>
           <Badge className="ml-2" variant={isK8s ? "default" : "secondary"}>
