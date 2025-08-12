@@ -20,7 +20,8 @@ import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
-import { CARD_STYLES, BADGE_STYLES } from './shared-styles'
+import { CARD_STYLES } from './shared-styles'
+import MultipleWithKeyInput from '@/components/config/multiple-with-key-input'
 
 import type { 
   ServiceConfigDialogProps,
@@ -35,12 +36,12 @@ import type {
   Step7Data,
   SaveConfigParams,
   SaveConfigResponse,
-  GenerateCommandParams
+  GenerateCommandParams,
+  ServiceConfigGroupData
 } from '@/types/service-config'
 import { 
   ConfigType,
-  CommandType,
-  KUBERNETES_SUBGROUP_CHINESE_NAMES
+  CommandType
 } from '@/types/service-config'
 import type { Step6Data } from '@/types/worker-role-assign'
 
@@ -72,6 +73,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const [activeService, setActiveService] = useState<string>('')
   const [serviceTemplate, setServiceTemplate] = useState<ServiceTemplate>({})
   const [groupedTemplateData, setGroupedTemplateData] = useState<GroupedTemplateData>({})
+  const [, setServiceConfigGroups] = useState<Record<string, ServiceConfigGroupData>>({})
 
   // UI状态
   const [expandedKeys, setExpandedKeys] = useState<ExpandedKeys>({})
@@ -86,24 +88,44 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const isK8s = clusterType?.toLowerCase() === 'kubernetes'
   const currentStepNumber = isK8s ? 6 : 7
 
+  // 转换新的分组数据格式为内部格式
+  const convertToGroupedData = useCallback((configGroupData: ServiceConfigGroupData): Record<string, ConfigGroup> => {
+    const result: Record<string, ConfigGroup> = {}
+    
+    Object.entries(configGroupData.groups).forEach(([groupKey, groupInfo]) => {
+      result[groupKey] = {
+        items: groupInfo.configs,
+        displayName: groupInfo.displayName,
+        hasKubernetesConfig: false,
+        kubernetesSubGroups: {}
+      }
+    })
+    
+    return result
+  }, [])
+
   // 从step6Data中提取服务列表
   useEffect(() => {
     // 优先从serviceNames字段获取服务列表
-    const stepData = typedStep6Data as any
+    const stepData = typedStep6Data as unknown as Record<string, unknown>
     let services: string[] = []
     
     if (stepData?.serviceNames && Array.isArray(stepData.serviceNames)) {
       // 如果有serviceNames字段，优先使用
-      services = stepData.serviceNames.map((item: any) => 
-        typeof item === 'string' ? item : item.serviceName || item.name
-      )
-    } else if (stepData?.roleHostMappings) {
+      services = stepData.serviceNames.map((item: unknown) => 
+        typeof item === 'string' ? item : 
+        (item as Record<string, unknown>)?.serviceName as string || 
+        (item as Record<string, unknown>)?.name as string || ''
+      ).filter(Boolean)
+    } else if (stepData?.roleHostMappings && Array.isArray(stepData.roleHostMappings)) {
       // 否则尝试从roleHostMappings中提取
       services = Array.from(new Set(
-        stepData.roleHostMappings.map((mapping: any) => {
-          return mapping.serviceName || mapping.serviceRole?.split('_')[0] || 'Unknown'
+        stepData.roleHostMappings.map((mapping: unknown) => {
+          const mappingObj = mapping as Record<string, unknown>
+          return mappingObj.serviceName as string || 
+                 (mappingObj.serviceRole as string)?.split('_')[0] || 'Unknown'
         })
-      )).filter(s => s !== 'Unknown') as string[]
+      )).filter(s => s !== 'Unknown')
     }
     
     // 服务列表提取完成
@@ -118,40 +140,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
   }, [typedStep6Data, activeService])
 
-  // 分组配置数据
-  const groupConfigsByService = useCallback((serviceName: string, configs: ConfigItem[]): Record<string, ConfigGroup> => {
-    const groups: Record<string, ConfigGroup> = {}
-    
-    // 按配置组分类
-    configs.forEach(config => {
-      const groupName = extractGroupName(config.name || config.label || 'General')
-      
-      if (!groups[groupName]) {
-        groups[groupName] = {
-          items: [],
-          displayName: convertGroupName(groupName),
-          hasKubernetesConfig: false,
-          kubernetesSubGroups: {}
-        }
-      }
-      
-      // 处理配置项名称，替换特殊字符
-      const processedConfig = {
-        ...config,
-        name: (config.name || '').replace(/\./g, '!')
-      }
-      
-      // 判断是否为Kubernetes配置
-      if (config.name?.startsWith('kubernetes.config.')) {
-        handleKubernetesConfig(groups, groupName, processedConfig)
-      } else {
-        groups[groupName].items.push(processedConfig)
-      }
-    })
 
-    // 排序分组
-    return sortConfigGroups(groups)
-  }, [])
 
   // 获取服务配置选项
   const getServiceConfigOption = useCallback(async () => {
@@ -167,26 +156,35 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       }, { headers })
 
       if (response.data?.code === 200 && response.data?.data) {
-        const configs = response.data.data as ConfigItem[]
+        const configGroupData = response.data.data as ServiceConfigGroupData
         
-        // 更新服务模板
-        setServiceTemplate(prev => ({
+        // 存储原始分组数据
+        setServiceConfigGroups(prev => ({
           ...prev,
-          [activeService]: configs
+          [activeService]: configGroupData
         }))
 
-        // 处理和分组配置数据
-        const groupedData = groupConfigsByService(activeService, configs)
+        // 提取所有配置项用于兼容性
+        const allConfigs = Object.values(configGroupData.groups).flatMap(group => group.configs)
+        
+        // 更新服务模板(保持兼容性)
+        setServiceTemplate(prev => ({
+          ...prev,
+          [activeService]: allConfigs
+        }))
+
+        // 转换为内部格式(保持兼容性)
+        const groupedData = convertToGroupedData(configGroupData)
         setGroupedTemplateData(prev => ({
           ...prev,
           [activeService]: groupedData
         }))
 
         // 初始化表单数据
-        initializeFormData(activeService, configs)
+        initializeFormData(activeService, allConfigs)
 
         // 设置默认展开状态
-        const groupKeys = Object.keys(groupedData)
+        const groupKeys = Object.keys(configGroupData.groups)
         setExpandedKeys(prev => ({
           ...prev,
           [activeService]: groupKeys
@@ -195,73 +193,17 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       } else {
         throw new Error(response.data?.message || '获取服务配置失败')
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || '获取服务配置失败'
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string }
+      const errorMsg = error.response?.data?.message || error.message || '获取服务配置失败'
       setError(errorMsg)
       toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
-  }, [activeService, cluster?.id, groupConfigsByService])
+  }, [activeService, cluster?.id, convertToGroupedData])
 
-  // 处理Kubernetes配置
-  const handleKubernetesConfig = (groups: Record<string, ConfigGroup>, targetGroup: string, config: ConfigItem) => {
-    if (!groups[targetGroup].hasKubernetesConfig) {
-      groups[targetGroup].hasKubernetesConfig = true
-      groups[targetGroup].kubernetesSubGroups = {}
-    }
 
-    const parts = (config.name || '').split('.')
-    const subGroupName = parts.slice(2, -1).join('.')
-    const displayName = KUBERNETES_SUBGROUP_CHINESE_NAMES[subGroupName] || subGroupName
-
-    if (!groups[targetGroup].kubernetesSubGroups![subGroupName]) {
-      groups[targetGroup].kubernetesSubGroups![subGroupName] = {
-        items: [],
-        displayName
-      }
-    }
-
-    groups[targetGroup].kubernetesSubGroups![subGroupName].items.push(config)
-  }
-
-  // 提取组名
-  const extractGroupName = (name: string): string => {
-    if (name.includes('.')) {
-      const parts = name.split('.')
-      return parts[0] || 'General'
-    }
-    return 'General'
-  }
-
-  // 转换组名显示
-  const convertGroupName = (groupName: string): string => {
-    if (groupName.startsWith('advanced_')) {
-      return '高级 ' + groupName.substring('advanced_'.length)
-    } else if (groupName.startsWith('custom_')) {
-      return '自定义 ' + groupName.substring('custom_'.length)
-    }
-    return groupName
-  }
-
-  // 排序配置组
-  const sortConfigGroups = (groups: Record<string, ConfigGroup>): Record<string, ConfigGroup> => {
-    const sortedKeys = Object.keys(groups).sort((a, b) => {
-      // 通用配置排在前面
-      if (a === 'General') return -1
-      if (b === 'General') return 1
-      
-      // 角色配置按字母排序
-      return a.localeCompare(b)
-    })
-
-    const sortedGroups: Record<string, ConfigGroup> = {}
-    sortedKeys.forEach(key => {
-      sortedGroups[key] = groups[key]
-    })
-
-    return sortedGroups
-  }
 
   // 初始化表单数据
   const initializeFormData = (serviceName: string, configs: ConfigItem[]) => {
@@ -279,7 +221,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   }
 
   // 处理表单字段变化
-  const handleFieldChange = (fieldName: string, value: any) => {
+  const handleFieldChange = (fieldName: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
@@ -391,9 +333,10 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       toast.success('所有服务配置保存成功')
       return results
 
-    } catch (error: any) {
-      toast.error(error.message || '保存配置失败')
-      throw error
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      toast.error(err.message || '保存配置失败')
+      throw err
     } finally {
       setSaveLoading(false)
     }
@@ -441,8 +384,9 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       
       onComplete(step7Data)
       
-    } catch (error: any) {
-      toast.error(error.message || '配置保存或命令生成失败')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      toast.error(err.message || '配置保存或命令生成失败')
     } finally {
       setSaveLoading(false)
     }
@@ -456,7 +400,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
     const commonProps = {
       value,
-      onChange: (newValue: any) => handleFieldChange(fieldName, newValue),
+      onChange: (newValue: unknown) => handleFieldChange(fieldName, newValue),
       disabled: loading,
       className: hasError ? 'border-red-500' : ''
     }
@@ -522,6 +466,17 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
             type="password"
             {...commonProps}
             placeholder={config.placeholder || `请输入${config.label}`}
+          />
+        )
+
+      case ConfigType.MULTIPLE_WITH_KEY:
+        return (
+          <MultipleWithKeyInput
+            value={value}
+            onChange={commonProps.onChange}
+            disabled={commonProps.disabled}
+            placeholder={config.placeholder || `请输入${config.label}`}
+            className={commonProps.className}
           />
         )
 

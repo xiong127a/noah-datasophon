@@ -24,6 +24,7 @@ import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.common.model.HostServiceRoleMapping;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleHostMapping;
+import com.datasophon.common.dto.ServiceConfigGroupDTO;
 import com.datasophon.api.dto.Result;
 import io.micrometer.core.annotation.Timed;
 import jakarta.servlet.http.HttpServletResponse;
@@ -62,12 +63,12 @@ public class ServiceInstallController {
 
     /**
      * 根据服务角色名称查询服务配置选项
-     * 返回扁平化的配置列表，确保前端兼容性
+     * 返回按分组组织的配置数据，提升前端用户体验
      */
     @GetMapping("/getServiceConfigOption")
     @Timed(value = "service.install.config.option", description = "获取服务配置选项的时间")
-    public Result<List<ServiceConfig>> getServiceConfigOption(@ClusterId Integer clusterId, 
-                                                             @RequestParam("serviceName") String serviceName) {
+    public Result<ServiceConfigGroupDTO> getServiceConfigOption(@ClusterId Integer clusterId, 
+                                                               @RequestParam("serviceName") String serviceName) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取服务配置选项: clusterId={}, serviceName={} - {}", 
                  clusterId, serviceName, threadInfo);

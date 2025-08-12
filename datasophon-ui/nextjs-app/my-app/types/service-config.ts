@@ -50,11 +50,22 @@ export interface GroupedTemplateData {
   [serviceName: string]: Record<string, ConfigGroup>
 }
 
+// 分组信息接口
+export interface GroupInfo {
+  displayName: string
+  configs: ConfigItem[]
+}
+
+// 服务配置分组接口
+export interface ServiceConfigGroupData {
+  groups: Record<string, GroupInfo>
+}
+
 // 服务配置选项API响应
 export interface ServiceConfigOptionResponse {
   code: number
   message?: string
-  data?: ConfigItem[]
+  data?: ServiceConfigGroupData
 }
 
 // 保存配置API参数
@@ -160,7 +171,8 @@ export enum ConfigType {
   NUMBER = 'number',
   TEXTAREA = 'textarea',
   PASSWORD = 'password',
-  MULTIPLE = 'multiple'
+  MULTIPLE = 'multiple',
+  MULTIPLE_WITH_KEY = 'multipleWithKey'
 }
 
 // 命令类型枚举

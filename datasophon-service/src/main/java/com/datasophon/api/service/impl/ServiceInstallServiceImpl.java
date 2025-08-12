@@ -47,6 +47,7 @@ import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+import com.datasophon.common.dto.ServiceConfigGroupDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.Constants;
@@ -54,6 +55,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.Status;
 // 添加必要的Converter依赖
 import com.datasophon.api.converter.*;
+import com.datasophon.api.converter.ServiceConfigGroupConverter;
 
 import com.datasophon.common.model.DAG;
 import com.datasophon.common.model.Generators;
@@ -154,6 +156,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterVariableConverter clusterVariableConverter;
     @Autowired
     private ClusterServiceRoleInstanceConverter roleInstanceConverter;
+    @Autowired
+    private ServiceConfigGroupConverter serviceConfigGroupConverter;
 
     /**
      * 处理配置列表，根据集群模式修改配置项的hidden和required属性
@@ -173,7 +177,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public List<ServiceConfig> getServiceConfigOption(Integer clusterId, String serviceName) {
+    public ServiceConfigGroupDTO getServiceConfigOption(Integer clusterId, String serviceName) {
         List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
@@ -227,10 +231,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
         }
 
-        // 返回扁平化配置列表，确保前端兼容性
-        // 内部仍使用分组逻辑进行数据处理，但最终返回扁平化结果
+        // 使用分组逻辑处理配置数据，返回分组结构提升前端用户体验
         var groupedConfigs = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(list);
-        return ConfigGroupUtils.flattenGroupedConfigs(groupedConfigs);
+        return serviceConfigGroupConverter.toDto(groupedConfigs);
     }
 
     @Override
