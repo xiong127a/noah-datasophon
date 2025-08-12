@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react'
 import { 
-  ChevronLeft, 
-  ChevronRight, 
   LayoutGrid, 
   LayoutList, 
   AlertCircle 
@@ -23,7 +21,8 @@ import ServiceFilters from '../service-selection/service-filters'
 
 
 // 导入布局组件
-import ClusterWizardSidebar from './cluster-wizard-sidebar'
+import ClusterWizardLayout from './cluster-wizard-layout'
+import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { ClusterTypeUtil, ClusterType } from '@/types'
 import { DIALOG_STYLES, BUTTON_STYLES } from './shared-styles'
@@ -137,165 +136,119 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
     )
   }
 
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: "服务选择配置",
+        value: selectedServices.length,
+        total: stats.total,
+        pulse: true
+      }}
+      buttons={[
+        ...(onPrevious ? [{
+          text: "上一步",
+          onClick: () => {
+            if (onPrevious) {
+              onPrevious()
+            } else {
+              onOpenChange(false)
+            }
+          },
+          variant: 'secondary' as const,
+          disabled: loading
+        }] : []),
+        {
+          text: "下一步",
+          onClick: () => {
+            if (!hasRequiredServices) {
+              toast.error('请确保已选择所有必需服务')
+              return
+            }
+            handleNext()
+          },
+          disabled: !canProceed || loading,
+          loading: false
+        }
+      ]}
+    />
+  )
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DIALOG_STYLES.content}>
-        <DialogTitle className="sr-only">
-          选择大数据服务 - {cluster?.clusterName}
-        </DialogTitle>
-        
-        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
-          {/* 侧边栏 */}
-          <ClusterWizardSidebar 
-            steps={steps}
-            currentStep={currentStepNumber}
-            title="集群配置向导"
-            clusterName={cluster?.clusterName || ''}
-            isK8s={isK8s}
-            onClose={() => onOpenChange(false)}
-          />
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => onOpenChange(false)}
+      clusterName={cluster?.clusterName || ''}
+      clusterType={safeClusterType}
+      stepTitle="选择大数据服务"
+      stepDescription="根据您的需求选择要部署的大数据服务组件"
+      currentStep={currentStepNumber}
+      dialogTitle={`选择大数据服务 - ${cluster?.clusterName}`}
+      actionBar={actionBar}
+    >
+      {/* 过滤器区域 */}
+      <div className="p-3 border-b border-gray-100">
+        <ServiceFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          serviceTypeFilter={serviceTypeFilter}
+          onServiceTypeChange={setServiceTypeFilter}
+          showRequiredOnly={showRequiredOnly}
+          onShowRequiredOnlyChange={setShowRequiredOnly}
+          showSelectedOnly={showSelectedOnly}
+          onShowSelectedOnlyChange={setShowSelectedOnly}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          availableCategories={availableCategories}
+          onClearFilters={clearFilters}
+          filterStats={filterStats}
+        />
+      </div>
 
-          {/* 主要内容区域 */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* 标题栏 */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-white via-blue-50/30 to-indigo-50/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    选择大数据服务
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    根据您的需求选择要部署的大数据服务组件
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-blue-600 border-blue-200">
-                  步骤 {currentStepNumber}/{steps.length}
-                </Badge>
-              </div>
-            </div>
-
-            {/* 过滤器区域 */}
-            <div className="p-3 border-b border-gray-100">
-              <ServiceFilters
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                serviceTypeFilter={serviceTypeFilter}
-                onServiceTypeChange={setServiceTypeFilter}
-                showRequiredOnly={showRequiredOnly}
-                onShowRequiredOnlyChange={setShowRequiredOnly}
-                showSelectedOnly={showSelectedOnly}
-                onShowSelectedOnlyChange={setShowSelectedOnly}
-                selectedCategory={selectedCategory}
-                onCategoryChange={setSelectedCategory}
-                availableCategories={availableCategories}
-                onClearFilters={clearFilters}
-                filterStats={filterStats}
-              />
-            </div>
-
-
-
-            {/* 视图切换和内容区域 */}
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* 视图切换 */}
-              <div className="flex items-center justify-end p-2 bg-white border-b border-gray-100">
-                
-                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'grid')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="grid" className="flex items-center gap-2">
-                      <LayoutGrid className="w-4 h-4" />
-                      卡片视图
-                    </TabsTrigger>
-                    <TabsTrigger value="table" className="flex items-center gap-2">
-                      <LayoutList className="w-4 h-4" />
-                      表格视图
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {/* 内容区域 */}
-              <div className="flex-1 overflow-hidden">
-                <Tabs value={viewMode} className="h-full">
-                  {/* 卡片视图 */}
-                  <TabsContent value="grid" className="h-full overflow-y-auto p-3 mt-0">
-                    <ServiceCardView
-                      services={filteredServices}
-                      selectedServiceIds={selectedServiceIds}
-                      onToggleService={toggleService}
-                      loading={loading}
-                    />
-                  </TabsContent>
-
-                  {/* 表格视图 */}
-                  <TabsContent value="table" className="h-full overflow-y-auto p-3 mt-0">
-                    <ServiceSelectionTable
-                      table={table.table}
-                      loading={loading}
-                      selectedServiceIds={selectedServiceIds}
-                      onToggleService={toggleService}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-
-            {/* 底部操作栏 */}
-            <div className={DIALOG_STYLES.footer}>
-              <div className={DIALOG_STYLES.footerGlow}></div>
-              <div className={DIALOG_STYLES.footerTopLine}></div>
-              
-              <div className={DIALOG_STYLES.footerContent}>
-                {/* 左侧：服务选择状态信息 */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    服务选择配置
-                  </span>
-                </div>
-
-                {/* 右侧：操作按钮 */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={() => {
-                      if (onPrevious) {
-                        onPrevious()
-                      } else {
-                        onOpenChange(false)
-                      }
-                    }}
-                    variant="outline"
-                    className={BUTTON_STYLES.previous}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    上一步
-                  </Button>
-                  
-                  <Button
-                    onClick={() => {
-                      if (!hasRequiredServices) {
-                        toast.error('请确保已选择所有必需服务')
-                        return
-                      }
-                      handleNext()
-                    }}
-                    disabled={!canProceed || loading}
-                    className={`${BUTTON_STYLES.next} ${
-                      canProceed && hasRequiredServices
-                        ? BUTTON_STYLES.nextEnabled
-                        : BUTTON_STYLES.nextDisabled
-                    }`}
-                  >
-                    下一步
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* 视图切换和内容区域 */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* 视图切换 */}
+        <div className="flex items-center justify-end p-2 bg-white border-b border-gray-100">
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'grid')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="grid" className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                卡片视图
+              </TabsTrigger>
+              <TabsTrigger value="table" className="flex items-center gap-2">
+                <LayoutList className="w-4 h-4" />
+                表格视图
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-hidden">
+          <Tabs value={viewMode} className="h-full">
+            {/* 卡片视图 */}
+            <TabsContent value="grid" className="h-full overflow-y-auto p-3 mt-0">
+              <ServiceCardView
+                services={filteredServices}
+                selectedServiceIds={selectedServiceIds}
+                onToggleService={toggleService}
+                loading={loading}
+              />
+            </TabsContent>
+
+            {/* 表格视图 */}
+            <TabsContent value="table" className="h-full overflow-y-auto p-3 mt-0">
+              <ServiceSelectionTable
+                table={table.table}
+                loading={loading}
+                selectedServiceIds={selectedServiceIds}
+                onToggleService={toggleService}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </ClusterWizardLayout>
   )
 }
 
