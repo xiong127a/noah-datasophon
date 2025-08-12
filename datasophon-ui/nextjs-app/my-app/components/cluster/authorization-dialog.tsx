@@ -9,7 +9,6 @@ import {
   Check, 
   Users, 
   Shield, 
-  Star,
   Sparkles,
   UserCheck,
   LoaderIcon
@@ -18,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DIALOG_STYLES, CARD_STYLES } from "./common/shared-styles"
+import { DIALOG_STYLES } from "./common/shared-styles"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
 
@@ -155,33 +154,35 @@ export default function ClusterAuthorizationDialogSuper({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        className="rounded-3xl border-0 shadow-2xl max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden [&>button]:hidden"
+        className={`${DIALOG_STYLES.content} max-w-lg bg-white/95 backdrop-blur-xl overflow-hidden [&>button]:hidden`}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* 背景装饰 */}
+        {/* 背景装饰 - 框架化样式 */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/50 to-pink-50/80" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl transform translate-x-16 -translate-y-16" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-pink-400/20 to-orange-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-pink-400/20 to-amber-400/20 rounded-full blur-2xl transform -translate-x-12 translate-y-12" />
 
         <DialogHeader className="relative z-10">
-          <button
+          <Button
             onClick={handleCancel}
-            className="absolute right-0 top-0 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl border border-white/50 flex items-center justify-center transition-all duration-300 hover:scale-110 z-20 group"
+            variant="ghost"
+            size="sm"
+            className="absolute right-0 top-0 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl border border-white/50 z-20 group"
           >
-            <X className="h-4 w-4 text-slate-600 group-hover:text-slate-700 transition-colors" />
-          </button>
+            <X className="h-4 w-4 text-gray-600 group-hover:text-gray-700 transition-colors" />
+          </Button>
           
           <div className="flex items-center space-x-3 pr-12">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                 集群授权
               </DialogTitle>
               <DialogDescription className="text-slate-600 mt-1">
-                为集群 <span className="font-semibold text-blue-600">"{clusterName}"</span> 分配管理权限
+                为集群 <span className="font-semibold text-blue-600">&quot;{clusterName}&quot;</span> 分配管理权限
               </DialogDescription>
             </div>
           </div>
