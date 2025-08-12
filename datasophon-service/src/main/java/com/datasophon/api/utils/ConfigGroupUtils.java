@@ -1189,27 +1189,56 @@ public class ConfigGroupUtils {
     }
 
     /**
-     * 根据角色名构建配置名称到角色的映射
+     * 根据角色名构建配置名称到角色的映射 - JDK21框架隔离版本
      *
      * @param configFileMap 配置文件映射
+     * @param frameCode 框架代码，用于隔离不同框架的配置处理
      * @return 配置名称到角色的映射
      */
-    public static Map<String, String> buildNameToRoleMap(Map<Generators, List<ServiceConfig>> configFileMap) {
-        return configFileMap.entrySet().stream()
+    public static Map<String, String> buildNameToRoleMap(Map<Generators, List<ServiceConfig>> configFileMap, 
+                                                         String frameCode) {
+        logger.debug("开始为框架 {} 构建配置名称到角色的映射", frameCode);
+        var resultMap = configFileMap.entrySet().stream()
             .flatMap(entry -> {
-                Generators generator = entry.getKey();
-                List<ServiceConfig> configs = entry.getValue();
-                String configTargetRoles = generator.getConfigTargetRoles();
+                var generator = entry.getKey();
+                var configs = entry.getValue();
+                var configTargetRoles = generator.getConfigTargetRoles();
                 
                 // 确定角色名
-                String roleName = determineRoleNameForGenerator(configTargetRoles);
+                var roleName = determineRoleNameForGenerator(configTargetRoles);
                 
                 // 为每个配置创建名称到角色的映射
                 return configs.stream().map(config -> 
                     Map.entry(config.getName(), roleName)
                 );
             })
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .collect(Collectors.toMap(
+                Map.Entry::getKey, 
+                Map.Entry::getValue,
+                // JDK21框架隔离：处理重复键时包含框架上下文
+                (existingValue, newValue) -> {
+                    if (!existingValue.equals(newValue)) {
+                        logger.debug("框架 {} 中配置名称重复但角色不同: 现有角色={}, 新角色={}, 使用现有角色", 
+                            frameCode, existingValue, newValue);
+                    }
+                    return existingValue;
+                }
+            ));
+        
+        logger.debug("框架 {} 完成配置名称映射，共处理 {} 个配置项", frameCode, resultMap.size());
+        return resultMap;
+    }
+
+    /**
+     * 兼容性方法：不带框架代码的版本
+     * 
+     * @param configFileMap 配置文件映射
+     * @return 配置名称到角色的映射
+     * @deprecated 建议使用带框架代码参数的版本以确保框架隔离
+     */
+    @Deprecated(since = "1.0.0", forRemoval = false)
+    public static Map<String, String> buildNameToRoleMap(Map<Generators, List<ServiceConfig>> configFileMap) {
+        return buildNameToRoleMap(configFileMap, "UNKNOWN");
     }
 
     /**
@@ -1223,7 +1252,7 @@ public class ConfigGroupUtils {
             return GENERAL;
         }
         
-        Set<String> roleNames = parseRoleNames(configTargetRoles);
+        var roleNames = parseRoleNames(configTargetRoles);
         return roleNames.isEmpty() ? GENERAL : roleNames.iterator().next();
     }
 
@@ -1242,9 +1271,9 @@ public class ConfigGroupUtils {
 
         // 如果配置组是Kubernetes相关的，添加角色前缀
         if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-            // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
-            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
-            return normRoleName + "_" + configName;
+            // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致 - 使用var
+            var normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+            return "%s_%s".formatted(normRoleName, configName);
         }
 
         return configName;

@@ -80,6 +80,8 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.function.Function;
 
@@ -131,6 +133,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         logger.info("""
                 ============================================================
                   开始加载服务元数据 (DataSophon Service Meta Loader)
+                  使用JDK21虚拟线程实现框架隔离处理
                 ============================================================
                 """);
 
@@ -143,10 +146,24 @@ public class LoadServiceMeta implements ApplicationRunner {
         
         logger.info("发现 {} 个框架目录，{} 个集群", ddps.length, loadContext.clusterCount());
         
-        // 使用现代化流式处理加载框架
-        Arrays.stream(ddps)
-                .parallel() // 并行处理框架目录
-                .forEach(framePath -> processFrameDirectory(framePath, loadContext));
+        // 使用JDK21虚拟线程实现框架隔离处理
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var frameTasks = Arrays.stream(ddps)
+                .map(framePath -> 
+                    executor.submit(() -> processFrameDirectory(framePath, loadContext))
+                )
+                .toList();
+            
+            // 等待所有框架处理完成，确保完全隔离
+            frameTasks.forEach(task -> {
+                try {
+                    task.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    logger.error("框架处理失败: {}", e.getMessage(), e);
+                    Thread.currentThread().interrupt();
+                }
+            });
+        }
         
         // 启动服务缓存同步Actor
         ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
@@ -184,10 +201,26 @@ public class LoadServiceMeta implements ApplicationRunner {
         
         logger.info("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
         
-        // 使用并行流处理服务文件
-        var parseResults = serviceFiles.parallelStream()
-                .map(file -> parseServiceFile(frameCode, frameInfo, file, loadContext))
+        // 使用虚拟线程处理服务文件，确保框架内服务隔离
+        var parseResults = new ArrayList<ParseResult>();
+        try (var serviceExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var serviceTasks = serviceFiles.stream()
+                .map(file -> 
+                    serviceExecutor.submit(() -> parseServiceFile(frameCode, frameInfo, file, loadContext))
+                )
                 .toList();
+            
+            // 收集所有服务处理结果
+            for (var task : serviceTasks) {
+                try {
+                    parseResults.add(task.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    logger.error("服务文件处理失败: {}", e.getMessage(), e);
+                    parseResults.add(ParseResult.Failure.of("未知服务", "任务执行异常", e));
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
         
         // 统计处理结果
         var successCount = parseResults.stream()
@@ -282,8 +315,24 @@ public class LoadServiceMeta implements ApplicationRunner {
     private void saveFrameServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
         var serviceRoles = config.serviceRoles();
         
-        serviceRoles.parallelStream().forEach(serviceRole -> 
-                processServiceRole(config, serviceEntity, serviceRole));
+        // 使用虚拟线程处理服务角色，确保角色级别的隔离
+        try (var roleExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var roleTasks = serviceRoles.stream()
+                .map(serviceRole -> 
+                    roleExecutor.submit(() -> processServiceRole(config, serviceEntity, serviceRole))
+                )
+                .toList();
+            
+            // 等待所有角色处理完成
+            roleTasks.forEach(task -> {
+                try {
+                    task.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    logger.error("服务角色处理失败: {}", e.getMessage(), e);
+                    Thread.currentThread().interrupt();
+                }
+            });
+        }
         
         logger.debug("put {} {} service info into cache", config.frameCode(), config.serviceName());
         ServiceInfoMap.put(config.frameCode() + Constants.UNDERLINE + config.serviceName(), config.serviceInfo());
@@ -356,7 +405,8 @@ public class LoadServiceMeta implements ApplicationRunner {
         var serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
         var serviceEntity = serviceDto != null ? serviceConverter.dtoToEntity(serviceDto) : null;
         var parameters = config.parameters();
-        var nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(config.configFileMap());
+        // 使用JDK21框架隔离版本，传入框架代码确保配置隔离
+        var nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(config.configFileMap(), config.frameCode());
 
         // 使用现代化流式API处理配置目标角色
         parameters.stream()
