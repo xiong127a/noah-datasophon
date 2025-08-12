@@ -11,11 +11,11 @@ import {
   LoaderIcon
 } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
-import ClusterWizardLayout from "./common/cluster-wizard-layout"
-import ClusterWizardActionBar from "./common/cluster-wizard-action-bar"
 
 // 用户数据类型定义
 interface User {
@@ -145,51 +145,38 @@ export default function ClusterAuthorizationDialogSuper({
     setSearchTerm("")
   }
 
-  // 创建统一的ActionBar
-  const actionBar = (
-    <ClusterWizardActionBar
-      statusInfo={{
-        text: `已选择 ${selectedUsers.length} 位管理员`,
-        value: selectedUsers.length,
-        pulse: loading
-      }}
-      buttons={[
-        {
-          text: "取消",
-          onClick: handleCancel,
-          variant: 'secondary' as const,
-          disabled: loading
-        },
-        {
-          text: loading ? '授权中...' : `确认授权 ${selectedUsers.length > 0 ? `(${selectedUsers.length})` : ''}`,
-          onClick: handleConfirm,
-          disabled: loading || selectedUsers.length === 0,
-          loading: loading,
-          loadingText: '授权中...'
-        }
-      ]}
-    />
-  )
-
   return (
-    <ClusterWizardLayout
-      open={open}
-      onClose={() => {}}
-      clusterName={clusterName}
-      clusterType="集群权限"
-      stepTitle="集群授权"
-      stepDescription={`为集群 "${clusterName}" 分配管理权限`}
-      currentStep={1}
-      dialogTitle={`集群授权 - ${clusterName}`}
-      actionBar={actionBar}
-    >
-      {/* 权限配置内容 */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0">
-        <div className="p-6 sm:p-8 lg:p-10">
-          <div className="space-y-6">
-            {/* 搜索和筛选区域 */}
-            <div className="space-y-4">
-            {/* 搜索框 */}
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent className="max-w-lg h-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+        {/* 对话框头部 */}
+        <DialogHeader className="relative pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800">集群授权</DialogTitle>
+                <DialogDescription className="text-slate-600 mt-1">
+                  为集群 <span className="font-semibold text-purple-600">&ldquo;{clusterName}&rdquo;</span> 分配管理权限
+                </DialogDescription>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* 权限配置内容 */}
+        <div className="flex-1 overflow-hidden flex flex-col space-y-4 py-2">
+          {/* 搜索框 - 固定区域 */}
+          <div className="flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
@@ -202,43 +189,54 @@ export default function ClusterAuthorizationDialogSuper({
                 <Sparkles className="h-4 w-4 text-blue-400 animate-pulse" />
               </div>
             </div>
-
-
           </div>
 
-          {/* 已选择用户展示 */}
+          {/* 已选择用户展示 - 紧凑设计，限制高度 */}
           {selectedUsers.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-200/50 shadow-sm">
-              <div className="flex items-center space-x-2 mb-2">
-                <UserCheck className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-semibold text-blue-700">
-                  已选择 {selectedUsers.length} 位管理员
-                </span>
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200/50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-700">
+                    已选择 {selectedUsers.length} 位管理员
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedUsers([])}
+                  className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+                >
+                  清空
+                </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {selectedUsers.map((userId) => {
-                  const user = users.find(u => u.id === userId)
-                  return (
-                    <Badge
-                      key={userId}
-                      className="bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                    >
-                      {user?.username || `用户${userId}`}
-                      <button
-                        onClick={() => handleUserToggle(userId)}
-                        className="ml-1 hover:bg-blue-600 rounded-full p-0.5"
+              <div className="max-h-16 overflow-y-auto">
+                <div className="flex flex-wrap gap-1">
+                  {selectedUsers.map((userId) => {
+                    const user = users.find(u => u.id === userId)
+                    return (
+                      <Badge
+                        key={userId}
+                        variant="secondary"
+                        className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )
-                })}
+                        {user?.username || `用户${userId}`}
+                        <button
+                          onClick={() => handleUserToggle(userId)}
+                          className="ml-1 hover:bg-blue-300 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </Badge>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}
 
-          {/* 用户列表 */}
-          <div className="max-h-64 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          {/* 用户列表 - 自适应剩余空间 */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2 min-h-0">
             {loading ? (
               <div className="text-center py-8">
                 <LoaderIcon className="h-8 w-8 mx-auto mb-3 text-blue-500 animate-spin" />
@@ -251,11 +249,11 @@ export default function ClusterAuthorizationDialogSuper({
                 <div
                   key={user.id}
                   onClick={() => handleUserToggle(user.id)}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all duration-300 animate-fade-in group relative overflow-hidden ${
+                  style={{ animationDelay: `${index * 30}ms` }}
+                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 animate-fade-in group relative overflow-hidden ${
                     isSelected
-                      ? "bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 shadow-lg scale-105"
-                      : "bg-white/80 hover:bg-white border-2 border-transparent hover:shadow-lg hover:scale-102"
+                      ? "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-300 shadow-md"
+                      : "bg-white/80 hover:bg-white border border-transparent hover:shadow-md"
                   }`}
                 >
                   {/* 选中时的背景光效 */}
@@ -263,45 +261,45 @@ export default function ClusterAuthorizationDialogSuper({
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-2xl" />
                   )}
                   
-                  <div className="flex items-center space-x-4 relative z-10">
+                  <div className="flex items-center space-x-3 relative z-10">
                     {/* 用户头像 */}
                     <div className="relative">
-                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${user.avatarColor} flex items-center justify-center text-white text-lg font-bold shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${user.avatarColor} flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-105 transition-transform duration-200`}>
                         {user.username.charAt(0).toUpperCase()}
                       </div>
                       {/* 用户图标 */}
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-lg">
-                        <Users className="h-3 w-3 text-white" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm">
+                        <Users className="h-2 w-2 text-white" />
                       </div>
                     </div>
                     
                     {/* 用户信息 */}
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <div className="flex items-center space-x-2">
-                        <p className="font-semibold text-slate-800 group-hover:text-slate-900 transition-colors">
+                        <p className="font-medium text-slate-800 group-hover:text-slate-900 transition-colors text-sm">
                           {user.username}
                         </p>
                         {user.role && (
                           <Badge 
                             variant="outline" 
-                            className="text-xs bg-gradient-to-r from-slate-500 to-slate-600 text-white border-0 shadow-sm"
+                            className="text-xs bg-gradient-to-r from-slate-500 to-slate-600 text-white border-0 px-1.5 py-0.5"
                           >
                             {user.role}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-slate-500">{user.email}</p>
+                      <p className="text-xs text-slate-500">{user.email}</p>
                     </div>
                   </div>
                   
                   {/* 选中状态指示 */}
                   <div className="relative z-10">
                     {isSelected ? (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
-                        <Check className="h-5 w-5 text-white" />
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
+                        <Check className="h-3.5 w-3.5 text-white" />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full border-2 border-slate-300 group-hover:border-blue-400 transition-colors" />
+                      <div className="w-6 h-6 rounded-full border-2 border-slate-300 group-hover:border-blue-400 transition-colors" />
                     )}
                   </div>
                 </div>
@@ -316,10 +314,44 @@ export default function ClusterAuthorizationDialogSuper({
                 <p className="text-sm">请尝试调整搜索条件或筛选器</p>
               </div>
             )}
-            </div>
           </div>
         </div>
-      </div>
-    </ClusterWizardLayout>
+
+        {/* 对话框底部 - 固定区域 */}
+        <DialogFooter className="flex-shrink-0 pt-4 border-t border-slate-200">
+          <div className="flex items-center justify-between w-full">
+            <div className="text-sm text-slate-600">
+              已选择 <span className="font-semibold text-purple-600">{selectedUsers.length}</span> 位管理员
+            </div>
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={loading}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={selectedUsers.length === 0 || loading}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+              >
+                {loading ? (
+                  <>
+                    <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                    授权中...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="mr-2 h-4 w-4" />
+                    确认授权 {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 } 
