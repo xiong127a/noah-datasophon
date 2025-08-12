@@ -88,6 +88,41 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const isK8s = clusterType?.toLowerCase() === 'kubernetes'
   const currentStepNumber = isK8s ? 6 : 7
 
+  // 分组排序逻辑，与后端保持一致
+  const sortConfigGroups = useCallback((groups: Record<string, ConfigGroup>): [string, ConfigGroup][] => {
+    return Object.entries(groups).sort(([groupName1], [groupName2]) => {
+      // 获取分组优先级，与后端保持完全一致
+      const getGroupPriority = (groupName: string): number => {
+        if (groupName === 'General') {
+          return 1; // 通用配置排第一
+        } else if (groupName.startsWith('advanced_')) {
+          return 3; // 高级配置排第三 (倒数第二)
+        } else if (groupName.startsWith('custom_')) {
+          return 4; // 自定义配置排最后
+        } else if (groupName.startsWith('高级')) {
+          // 兼容旧格式
+          return 3; // 高级配置排第三 (倒数第二)
+        } else if (groupName.startsWith('自定义')) {
+          // 兼容旧格式
+          return 4; // 自定义配置排最后
+        } else {
+          return 2; // 角色分组排第二
+        }
+      }
+
+      const priority1 = getGroupPriority(groupName1)
+      const priority2 = getGroupPriority(groupName2)
+      
+      // 先按优先级排序
+      if (priority1 !== priority2) {
+        return priority1 - priority2
+      }
+      
+      // 同优先级按首字母排序
+      return groupName1.localeCompare(groupName2)
+    })
+  }, [])
+
   // 转换新的分组数据格式为内部格式
   const convertToGroupedData = useCallback((configGroupData: ServiceConfigGroupData): Record<string, ConfigGroup> => {
     const result: Record<string, ConfigGroup> = {}
@@ -740,7 +775,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(groupedTemplateData[serviceName] || {}).map(([groupName, group]) =>
+                    {sortConfigGroups(groupedTemplateData[serviceName] || {}).map(([groupName, group]) =>
                       renderConfigGroup(groupName, group)
                     )}
                   </div>

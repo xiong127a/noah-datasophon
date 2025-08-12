@@ -19,10 +19,10 @@ package com.datasophon.api.converter;
 
 import com.datasophon.common.dto.ServiceConfigGroupDTO;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 服务配置分组转换器
@@ -49,12 +49,12 @@ public class ServiceConfigGroupConverter {
             return new ServiceConfigGroupDTO(Map.of());
         }
 
-        var groups = groupedConfigs.entrySet().stream()
+        // 使用LinkedHashMap保持后端排序
+        var groups = new java.util.LinkedHashMap<String, ServiceConfigGroupDTO.GroupInfo>();
+        
+        groupedConfigs.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> processRoleGroup(entry.getKey(), entry.getValue())
-                ));
+                .forEach(entry -> groups.put(entry.getKey(), processRoleGroup(entry.getKey(), entry.getValue())));
 
         return new ServiceConfigGroupDTO(groups);
     }
@@ -87,7 +87,7 @@ public class ServiceConfigGroupConverter {
 
         // 构建最终的配置列表和子分组
         var finalConfigs = new java.util.ArrayList<>(normalConfigs);
-        var subGroups = new java.util.HashMap<String, ServiceConfigGroupDTO.GroupInfo>();
+        var subGroups = new java.util.LinkedHashMap<String, ServiceConfigGroupDTO.GroupInfo>();
 
         // 处理Kubernetes子分组
         if (!kubernetesConfigs.isEmpty()) {
@@ -149,7 +149,12 @@ public class ServiceConfigGroupConverter {
             return "通用配置";
         }
 
-        // 处理自定义和高级配置分组
+        // 优先使用ConfigGroupUtils的显示名称生成逻辑
+        if (groupKey.startsWith("custom_") || groupKey.startsWith("advanced_")) {
+            return ConfigGroupUtils.generateDisplayNameFromGroupKey(groupKey);
+        }
+        
+        // 处理旧格式的自定义和高级配置分组
         if (groupKey.startsWith("自定义") || groupKey.startsWith("高级")) {
             return groupKey; // 直接返回原始分组名，已经是中文友好名称
         }

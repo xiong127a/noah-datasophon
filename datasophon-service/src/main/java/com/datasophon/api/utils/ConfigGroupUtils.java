@@ -767,7 +767,7 @@ public class ConfigGroupUtils {
                         logger.warn("Kubernetes配置格式不正确: {}, 已分组到General", configGroup);
                     }
                 }
-                // 处理普通配置，根据configLevel进行细分分组
+                // 处理普通配置，根据configLevel和configGroup创建分组
                 else {
                     var configLevel = config.getConfigLevel();
                     var groupKey = GENERAL; // 默认分组
@@ -775,21 +775,31 @@ public class ConfigGroupUtils {
                     // 根据configLevel创建特殊分组
                     if (configLevel != null && !configLevel.isBlank()) {
                         if ("custom".equalsIgnoreCase(configLevel)) {
-                            // 自定义配置分组
-                            var serviceName = configGroup != null ? configGroup : "配置";
-                            groupKey = "自定义" + serviceName;
-                            logger.debug("自定义配置 {} 分组到: {}", config.getName(), groupKey);
+                            // 自定义配置分组：自定义 + configGroup
+                            if (configGroup != null && !configGroup.isBlank()) {
+                                groupKey = createGroupKey("custom", configGroup);
+                                logger.debug("自定义配置 {} 分组到: {}", config.getName(), groupKey);
+                            } else {
+                                groupKey = "自定义配置";
+                                logger.debug("自定义配置 {} 分组到: {}", config.getName(), groupKey);
+                            }
                         } else if ("advanced".equalsIgnoreCase(configLevel)) {
-                            // 高级配置分组
-                            var serviceName = configGroup != null ? configGroup : "配置";
-                            groupKey = "高级" + serviceName;
-                            logger.debug("高级配置 {} 分组到: {}", config.getName(), groupKey);
+                            // 高级配置分组：高级 + configGroup
+                            if (configGroup != null && !configGroup.isBlank()) {
+                                groupKey = createGroupKey("advanced", configGroup);
+                                logger.debug("高级配置 {} 分组到: {}", config.getName(), groupKey);
+                            } else {
+                                groupKey = "高级配置";
+                                logger.debug("高级配置 {} 分组到: {}", config.getName(), groupKey);
+                            }
                         } else {
                             // 其他级别的配置放入General
                             groupKey = GENERAL;
                             logger.debug("普通配置 {} 分组到General", config.getName());
                         }
                     } else {
+                        // 没有configLevel的配置放入General
+                        groupKey = GENERAL;
                         logger.debug("普通配置 {} 分组到General", config.getName());
                     }
                     
@@ -814,11 +824,131 @@ public class ConfigGroupUtils {
             entry.setValue(new ArrayList<>(uniqueNameMap.values()));
         }
 
-        logger.info("配置分组完成，共 {} 个角色分组: {}", finalGroupedConfigs.size(), finalGroupedConfigs.keySet());
-        return finalGroupedConfigs;
+        // 对分组进行排序：通用配置 → 角色分组 → 高级配置 → 自定义配置
+        logger.info("排序前分组顺序: {}", finalGroupedConfigs.keySet());
+        var sortedGroupedConfigs = sortConfigGroups(finalGroupedConfigs);
+        logger.info("排序后分组顺序: {}", sortedGroupedConfigs.keySet());
+        
+        logger.info("配置分组完成，共 {} 个角色分组", sortedGroupedConfigs.size());
+        return sortedGroupedConfigs;
     }
 
+    /**
+     * 创建分组键，处理特殊字符
+     * 
+     * @param level 配置级别 (custom, advanced)
+     * @param configGroup 配置组名称
+     * @return 格式化的分组键
+     */
+    private static String createGroupKey(String level, String configGroup) {
+        // 处理小数点和特殊字符，转换为下划线
+        var sanitizedConfigGroup = configGroup.replace(".", "_");
+        
+        // 生成分组键：level_configGroup (用于内部key)
+        var groupKey = level.toLowerCase() + "_" + sanitizedConfigGroup;
+        
+        logger.debug("创建分组键: level={}, configGroup={}, groupKey={}", level, configGroup, groupKey);
+        return groupKey;
+    }
 
+    /**
+     * 根据分组键生成显示名称
+     * 
+     * @param groupKey 分组键
+     * @return 友好的显示名称
+     */
+    public static String generateDisplayNameFromGroupKey(String groupKey) {
+        if (groupKey == null || groupKey.isBlank()) {
+            return "配置";
+        }
+        
+        // 处理自定义和高级配置的显示名称
+        if (groupKey.startsWith("custom_")) {
+            var configName = groupKey.substring("custom_".length()).replace("_", ".");
+            return "自定义 " + configName;
+        } else if (groupKey.startsWith("advanced_")) {
+            var configName = groupKey.substring("advanced_".length()).replace("_", ".");
+            return "高级 " + configName;
+        }
+        
+        return groupKey;
+    }
+
+    /**
+     * 对配置分组进行排序
+     * 排序规则：通用配置 → 角色分组 → 高级配置 → 自定义配置，同类型按首字母排序
+     * 
+     * @param groupedConfigs 原始分组配置
+     * @return 排序后的分组配置
+     */
+    private static Map<String, List<ServiceConfig>> sortConfigGroups(Map<String, List<ServiceConfig>> groupedConfigs) {
+        logger.debug("开始分组排序，原始分组: {}", groupedConfigs.keySet());
+        
+        var sortedEntries = groupedConfigs.entrySet().stream()
+            .sorted((entry1, entry2) -> {
+                var groupName1 = entry1.getKey();
+                var groupName2 = entry2.getKey();
+                
+                // 获取分组优先级
+                var priority1 = getGroupPriority(groupName1);
+                var priority2 = getGroupPriority(groupName2);
+                
+                logger.debug("比较分组: {} (优先级:{}) vs {} (优先级:{})", 
+                    groupName1, priority1, groupName2, priority2);
+                
+                // 先按优先级排序
+                if (priority1 != priority2) {
+                    return Integer.compare(priority1, priority2);
+                }
+                
+                // 同优先级按首字母排序
+                return groupName1.compareTo(groupName2);
+            })
+            .toList();
+        
+        // 手动构建LinkedHashMap以确保顺序
+        var sortedMap = new LinkedHashMap<String, List<ServiceConfig>>();
+        for (var entry : sortedEntries) {
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+        
+        logger.debug("排序后分组顺序: {}", sortedMap.keySet());
+        return sortedMap;
+    }
+    
+    /**
+     * 获取分组的排序优先级
+     * 
+     * @param groupName 分组名称
+     * @return 优先级数字，数字越小优先级越高
+     */
+    private static int getGroupPriority(String groupName) {
+        if (groupName == null) {
+            return 5; // null分组排最后
+        }
+        
+        if (GENERAL.equals(groupName)) {
+            logger.debug("分组 '{}' -> 优先级 1 (通用配置)", groupName);
+            return 1; // 通用配置排第一
+        } else if (groupName.startsWith("advanced_")) {
+            logger.debug("分组 '{}' -> 优先级 3 (高级配置)", groupName);
+            return 3; // 高级配置排第三  
+        } else if (groupName.startsWith("custom_")) {
+            logger.debug("分组 '{}' -> 优先级 4 (自定义配置)", groupName);
+            return 4; // 自定义配置排最后
+        } else if (groupName.startsWith("高级")) {
+            // 兼容旧的显示名称格式
+            logger.debug("分组 '{}' -> 优先级 3 (高级配置-旧格式)", groupName);
+            return 3;
+        } else if (groupName.startsWith("自定义")) {
+            // 兼容旧的显示名称格式
+            logger.debug("分组 '{}' -> 优先级 4 (自定义配置-旧格式)", groupName);
+            return 4;
+        } else {
+            logger.debug("分组 '{}' -> 优先级 2 (角色分组)", groupName);
+            return 2; // 角色分组排第二
+        }
+    }
 
     /**
      * 为Kubernetes配置生成角色前缀的配置映射
