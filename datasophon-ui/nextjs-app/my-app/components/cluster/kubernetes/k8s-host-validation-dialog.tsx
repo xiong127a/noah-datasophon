@@ -23,7 +23,7 @@ import type {
 } from '@/types/host-validation'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DIALOG_STYLES } from '../common/shared-styles'
+import { DIALOG_STYLES, BUTTON_STYLES } from '../common/shared-styles'
 import type { K8sStep1Data, K8sClusterInfo } from './k8s-host-config-dialog'
 
 // K8S Step2弹窗属性接口
@@ -1022,7 +1022,7 @@ export default function K8sHostValidationDialog({
                   )}
                 </div>
                 <div className="flex items-center space-x-3">
-                  <button
+                  <Button
                     onClick={() => {
                       if (onPrevious) {
                         onPrevious()
@@ -1030,18 +1030,19 @@ export default function K8sHostValidationDialog({
                         onOpenChange(false)
                       }
                     }}
-                    className="flex items-center px-5 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-medium text-gray-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                    variant="outline"
+                    className={BUTTON_STYLES.previous}
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" />
                     上一步
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleNext}
                     disabled={selectedRowKeys.length === 0 || loading}
-                    className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg ${
+                    className={`${BUTTON_STYLES.next} ${
                       selectedRowKeys.length === 0 || loading
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105'
+                        ? BUTTON_STYLES.nextDisabled
+                        : BUTTON_STYLES.nextEnabled
                     }`}
                   >
                     {loading ? (
@@ -1055,7 +1056,7 @@ export default function K8sHostValidationDialog({
                         <ChevronRight className="w-4 h-4 ml-2" />
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

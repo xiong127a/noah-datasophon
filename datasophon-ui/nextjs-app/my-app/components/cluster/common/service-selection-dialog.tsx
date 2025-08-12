@@ -26,7 +26,7 @@ import ServiceStats, { CompactServiceStats } from '../service-selection/service-
 import ClusterWizardSidebar from './cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { ClusterTypeUtil, ClusterType } from '@/types'
-import { DIALOG_STYLES } from './shared-styles'
+import { DIALOG_STYLES, BUTTON_STYLES } from './shared-styles'
 
 // 导入类型
 import type { ServiceSelectionDialogProps } from '@/types/service-selection'
@@ -278,7 +278,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
                       }
                     }}
                     variant="outline"
-                    className="flex items-center px-6 py-2.5"
+                    className={BUTTON_STYLES.previous}
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" />
                     上一步
@@ -293,10 +293,10 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
                       handleNext()
                     }}
                     disabled={!canProceed || loading}
-                    className={`flex items-center px-6 py-2.5 ${
+                    className={`${BUTTON_STYLES.next} ${
                       canProceed && hasRequiredServices
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
-                        : 'bg-gray-300 cursor-not-allowed'
+                        ? BUTTON_STYLES.nextEnabled
+                        : BUTTON_STYLES.nextDisabled
                     }`}
                   >
                     下一步

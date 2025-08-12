@@ -2,7 +2,9 @@
 
 import React from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { DIALOG_STYLES } from './shared-styles'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { DIALOG_STYLES, BUTTON_STYLES } from './shared-styles'
 
 /**
  * 统一的集群步骤操作栏组件
@@ -63,55 +65,41 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
   statusBadge,
   buttons,
 }) => {
-  const getButtonClass = (button: ActionButton) => {
-    const baseClass = "flex items-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-    
+  // 获取框架化按钮样式
+  const getButtonStyles = (button: ActionButton) => {
     if (button.disabled || button.loading) {
-      return `${baseClass} bg-gray-200 text-gray-400 cursor-not-allowed`
+      return `${BUTTON_STYLES.next} ${BUTTON_STYLES.nextDisabled}`
     }
     
-    if (button.variant === 'secondary') {
-      return `${baseClass} px-5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 text-gray-700 shadow-sm hover:shadow-md`
+    if (button.variant === 'secondary' || button.text.includes('上一步')) {
+      return BUTTON_STYLES.previous
     }
     
-    return `${baseClass} bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transform hover:scale-105`
+    return `${BUTTON_STYLES.next} ${BUTTON_STYLES.nextEnabled}`
   }
 
-  const getBadgeClass = (variant?: string) => {
-    const baseClass = "flex items-center space-x-2 px-3 py-1.5 rounded-lg border"
-    
+  // 获取框架化Badge样式
+  const getBadgeVariant = (variant?: string) => {
     switch (variant) {
       case 'success':
-        return `${baseClass} bg-green-50 border-green-200`
+        return 'default' // 绿色成功样式
       case 'warning':
-        return `${baseClass} bg-orange-50 border-orange-200`
+        return 'secondary' // 橙色警告样式  
       case 'info':
       default:
-        return `${baseClass} bg-blue-50 border-blue-200`
-    }
-  }
-
-  const getBadgeTextClass = (variant?: string) => {
-    switch (variant) {
-      case 'success':
-        return "text-sm font-medium text-green-700"
-      case 'warning':
-        return "text-sm font-medium text-orange-700"
-      case 'info':
-      default:
-        return "text-sm font-medium text-blue-700"
+        return 'outline' // 蓝色信息样式
     }
   }
 
-  const getBadgeDotClass = (variant?: string) => {
+  const getBadgeDotColor = (variant?: string) => {
     switch (variant) {
       case 'success':
-        return "w-2 h-2 rounded-full bg-green-500"
+        return "bg-green-500"
       case 'warning':
-        return "w-2 h-2 rounded-full bg-orange-500"
+        return "bg-orange-500"
       case 'info':
       default:
-        return "w-2 h-2 rounded-full bg-blue-500"
+        return "bg-blue-500"
     }
   }
 
@@ -163,23 +151,27 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
           )}
           
           {statusBadge?.show && (
-            <div className={getBadgeClass(statusBadge.variant)}>
-              <div className={getBadgeDotClass(statusBadge.variant)}></div>
-              <span className={getBadgeTextClass(statusBadge.variant)}>
+            <Badge 
+              variant={getBadgeVariant(statusBadge.variant)}
+              className="flex items-center space-x-2 px-3 py-1.5"
+            >
+              <div className={`w-2 h-2 rounded-full ${getBadgeDotColor(statusBadge.variant)}`}></div>
+              <span className="text-sm font-medium">
                 {statusBadge.text}
               </span>
-            </div>
+            </Badge>
           )}
         </div>
         
         {/* 右侧按钮 */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           {buttons.map((button, index) => (
-            <button
+            <Button
               key={index}
               onClick={button.onClick}
               disabled={button.disabled || button.loading}
-              className={getButtonClass(button)}
+              variant={button.variant === 'secondary' || button.text.includes('上一步') ? 'outline' : 'default'}
+              className={getButtonStyles(button)}
             >
               {button.iconPosition === 'left' || button.variant === 'secondary' || button.text.includes('上一步') ? (
                 <>
@@ -196,7 +188,7 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
                   {renderIcon(button)}
                 </>
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

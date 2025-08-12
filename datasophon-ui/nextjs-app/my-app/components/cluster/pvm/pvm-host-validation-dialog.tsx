@@ -13,7 +13,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { DIALOG_STYLES } from '../common/shared-styles'
+import { DIALOG_STYLES, BUTTON_STYLES } from '../common/shared-styles'
 import type { PvmStep1Data, PvmClusterInfo } from './pvm-host-config-dialog'
 
 // PVM主机信息接口
@@ -517,41 +517,53 @@ export default function PvmHostValidationDialog({
               </div>
             </div>
 
-            {/* 底部按钮 */}
-            <div className="p-6 sm:p-8 border-t border-slate-200/50 bg-white/90 backdrop-blur-sm relative">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
-              {/* 顶部分割线光效 */}
-              <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
-              <div className="flex justify-between space-x-4 relative z-10">
-                <Button
-                  onClick={onPrevious}
-                  variant="outline"
-                  className="px-6 py-3 rounded-2xl"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  上一步
-                </Button>
-                
-                <Button
-                  onClick={handleNext}
-                  disabled={loading || checkStatus !== 'completed' || hosts.filter(h => h.status === 'success').length === 0}
-                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      处理中...
-                    </>
-                  ) : (
-                    <>
-                      下一步
-                      <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-                    </>
-                  )}
-                  {/* 按钮光效 */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </Button>
+            {/* 底部操作栏 - 统一框架样式 */}
+            <div className={DIALOG_STYLES.footer}>
+              <div className={DIALOG_STYLES.footerGlow}></div>
+              <div className={DIALOG_STYLES.footerTopLine}></div>
+              
+              <div className={DIALOG_STYLES.footerContent}>
+                {/* 左侧：主机状态信息 */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    PVM 主机校验
+                  </span>
+                </div>
+
+                {/* 右侧：操作按钮 */}
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={onPrevious}
+                    variant="outline"
+                    className={BUTTON_STYLES.previous}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    上一步
+                  </Button>
+                  
+                  <Button
+                    onClick={handleNext}
+                    disabled={loading || checkStatus !== 'completed' || hosts.filter(h => h.status === 'success').length === 0}
+                    className={`${BUTTON_STYLES.next} ${
+                      loading || checkStatus !== 'completed' || hosts.filter(h => h.status === 'success').length === 0
+                        ? BUTTON_STYLES.nextDisabled
+                        : BUTTON_STYLES.nextEnabled
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        处理中...
+                      </>
+                    ) : (
+                      <>
+                        下一步
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
