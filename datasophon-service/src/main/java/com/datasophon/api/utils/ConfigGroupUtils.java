@@ -789,6 +789,9 @@ public class ConfigGroupUtils {
                     // 直接将configLevel和configGroup用下划线连接
                     if (configGroup.startsWith(levelPrefix)) {
                         groupKey = configGroup;
+                    } else {
+                        // 如果不以级别前缀开头，使用原始configGroup作为分组键
+                        groupKey = configGroup;
                     }
 
                     // 将配置添加到对应分组
@@ -839,6 +842,13 @@ public class ConfigGroupUtils {
 
         // 移除空角色分组的自动创建逻辑
         // 注释：不再为Kubernetes配置中提取的角色自动创建空分组，避免返回冗余的空数据
+
+        // 处理空键分组，将其合并到General分组中
+        if (groupedConfigs.containsKey("")) {
+            var emptyGroupConfigs = groupedConfigs.remove("");
+            groupedConfigs.computeIfAbsent(GENERAL, k -> new ArrayList<>()).addAll(emptyGroupConfigs);
+            logger.warn("发现空键分组，已将 {} 个配置项合并到General分组中", emptyGroupConfigs.size());
+        }
 
         // 确保每个配置组内的配置名称唯一 - 使用var
         for (var entry : groupedConfigs.entrySet()) {
