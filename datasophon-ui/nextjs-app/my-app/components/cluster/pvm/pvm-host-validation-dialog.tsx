@@ -12,7 +12,6 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardLayout from '../common/cluster-wizard-layout'
 import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
-import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
 import { BADGE_STYLES } from '../common/shared-styles'
 import type { PvmStep1Data, PvmClusterInfo } from './pvm-host-config-dialog'
 
@@ -58,7 +57,6 @@ export default function PvmHostValidationDialog({
   const [hosts, setHosts] = useState<PvmHost[]>([])
   const [checkStatus, setCheckStatus] = useState<'idle' | 'checking' | 'completed' | 'failed'>('idle')
 
-  const steps = getStepsByType('pvm' as StepsType)
   const currentStep = 2
 
   // 解析主机列表
@@ -355,62 +353,62 @@ export default function PvmHostValidationDialog({
 
             {/* 步骤内容 */}
             <div className="space-y-6">
-                  {/* SSH配置信息概览 */}
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg flex items-center">
-                        <Shield className="w-5 h-5 mr-2 text-purple-600" />
-                        SSH连接配置
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{step1Data.sshUser}</div>
-                          <div className="text-sm text-gray-600">用户名</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-blue-600">{step1Data.sshPort}</div>
-                          <div className="text-sm text-gray-600">端口</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-purple-600">{hosts.length}</div>
-                          <div className="text-sm text-gray-600">总主机数</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-green-600">{hosts.filter(h => h.status === 'success').length}</div>
-                          <div className="text-sm text-gray-600">可用主机</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* SSH配置信息概览 */}
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center">
+                    <Shield className="w-5 h-5 mr-2 text-purple-600" />
+                    SSH连接配置
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">{step1Data.sshUser}</div>
+                      <div className="text-sm text-gray-600">用户名</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">{step1Data.sshPort}</div>
+                      <div className="text-sm text-gray-600">端口</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-purple-600">{hosts.length}</div>
+                      <div className="text-sm text-gray-600">总主机数</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-600">{hosts.filter(h => h.status === 'success').length}</div>
+                      <div className="text-sm text-gray-600">可用主机</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  {/* 主机检查状态 */}
-                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Server className="w-5 h-5 mr-2 text-indigo-600" />
-                          主机检查 ({hosts.length} 台主机)
-                        </div>
-                        <Button
-                          onClick={() => handleCheckHosts()}
-                          disabled={loading || hosts.length === 0}
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                        >
-                          {loading ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4 mr-1" />
-                          )}
-                          {loading ? '检查中' : '重新检查'}
-                        </Button>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {hosts.length === 0 && (
+              {/* 主机检查状态 */}
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Server className="w-5 h-5 mr-2 text-indigo-600" />
+                      主机检查 ({hosts.length} 台主机)
+                    </div>
+                    <Button
+                      onClick={() => handleCheckHosts()}
+                      disabled={loading || hosts.length === 0}
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                      )}
+                      {loading ? '检查中' : '重新检查'}
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {hosts.length === 0 && (
                         <div className="text-center py-8">
                           <Server className="mx-auto w-12 h-12 text-gray-400 mb-4" />
                           <p className="text-gray-600">没有要检查的主机</p>
@@ -480,50 +478,49 @@ export default function PvmHostValidationDialog({
                           ))}
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                </CardContent>
+              </Card>
 
-                  {/* 统计信息 */}
-                  {checkStatus === 'completed' && hosts.length > 0 && (
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg flex items-center">
-                          <Activity className="w-5 h-5 mr-2 text-purple-600" />
-                          检查统计
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="text-center p-4 bg-green-50 rounded-xl">
-                            <div className="text-2xl font-bold text-green-600">
-                              {hosts.filter(h => h.status === 'success').length}
-                            </div>
-                            <div className="text-sm text-green-700">成功连接</div>
-                          </div>
-                          <div className="text-center p-4 bg-red-50 rounded-xl">
-                            <div className="text-2xl font-bold text-red-600">
-                              {hosts.filter(h => h.status === 'failed').length}
-                            </div>
-                            <div className="text-sm text-red-700">连接失败</div>
-                          </div>
-                          <div className="text-center p-4 bg-blue-50 rounded-xl">
-                            <div className="text-2xl font-bold text-blue-600">
-                              {Math.round((hosts.filter(h => h.status === 'success').length / hosts.length) * 100)}%
-                            </div>
-                            <div className="text-sm text-blue-700">成功率</div>
-                          </div>
-                          <div className="text-center p-4 bg-purple-50 rounded-xl">
-                            <div className="text-2xl font-bold text-purple-600">
-                              {hosts.filter(h => h.osInfo?.system).length}
-                            </div>
-                            <div className="text-sm text-purple-700">获取系统信息</div>
-                          </div>
+              {/* 统计信息 */}
+              {checkStatus === 'completed' && hosts.length > 0 && (
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center">
+                      <Activity className="w-5 h-5 mr-2 text-purple-600" />
+                      检查统计
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-green-50 rounded-xl">
+                        <div className="text-2xl font-bold text-green-600">
+                          {hosts.filter(h => h.status === 'success').length}
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </div>
+                        <div className="text-sm text-green-700">成功连接</div>
+                      </div>
+                      <div className="text-center p-4 bg-red-50 rounded-xl">
+                        <div className="text-2xl font-bold text-red-600">
+                          {hosts.filter(h => h.status === 'failed').length}
+                        </div>
+                        <div className="text-sm text-red-700">连接失败</div>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 rounded-xl">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {Math.round((hosts.filter(h => h.status === 'success').length / hosts.length) * 100)}%
+                        </div>
+                        <div className="text-sm text-blue-700">成功率</div>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-xl">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {hosts.filter(h => h.osInfo?.system).length}
+                        </div>
+                        <div className="text-sm text-purple-700">获取系统信息</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </div>
