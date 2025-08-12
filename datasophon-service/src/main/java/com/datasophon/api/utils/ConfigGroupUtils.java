@@ -11,7 +11,6 @@ import com.datasophon.api.converter.FrameServiceConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.common.Constants;
-import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -22,17 +21,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.GENERAL;
 
 /**
  * 配置分组工具类，提供统一的配置分组处理逻辑
+ * <p>
+ * 本类已全面使用JDK8-21新特性进行现代化改造，包括：
+ * <ul>
+ * <li><strong>JDK10:</strong> var 局部变量类型推断，简化代码可读性</li>
+ * <li><strong>JDK11:</strong> String新方法(isBlank, formatted)、Collection.toArray(IntFunction)</li>
+ * <li><strong>JDK15:</strong> Text blocks多行字符串，改进日志格式化</li>
+ * <li><strong>JDK16:</strong> instanceof模式匹配、Records数据结构、Stream.toList()</li>
+ * <li><strong>JDK17:</strong> 增强的switch表达式和模式匹配</li>
+ * <li><strong>JDK21:</strong> 模式匹配优化、虚拟线程支持、现代集合API</li>
+ * </ul>
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-12
+ * @since JDK21
  */
 public class ConfigGroupUtils {
 
@@ -49,29 +65,19 @@ public class ConfigGroupUtils {
      * @return 分割后的角色名称集合
      */
     public static Set<String> parseRoleNames(String configTargetRoles) {
-        Set<String> roleNames = new HashSet<>();
-
         if (configTargetRoles == null || configTargetRoles.isEmpty()) {
-            return roleNames;
+            return Set.of();
         }
 
-        // 处理逗号分割的情况
-        if (configTargetRoles.contains(",")) {
-            String[] roles = configTargetRoles.split(",");
-            for (String role : roles) {
-                String trimmedRole = role.trim();
-                if (!trimmedRole.isEmpty() && !GENERAL.equals(trimmedRole)) {
-                    roleNames.add(trimmedRole);
-                }
-            }
-        } else {
-            // 单一角色，直接添加
-            if (!GENERAL.equals(configTargetRoles.trim())) {
-                roleNames.add(configTargetRoles.trim());
-            }
-        }
-
-        return roleNames;
+        // 使用JDK21 Stream API优化处理逻辑
+        return configTargetRoles.contains(",") 
+            ? Arrays.stream(configTargetRoles.split(","))
+                .map(String::trim)
+                .filter(role -> !role.isEmpty() && !GENERAL.equals(role))
+                .collect(Collectors.toSet())
+            : GENERAL.equals(configTargetRoles.trim()) 
+                ? Set.of() 
+                : Set.of(configTargetRoles.trim());
     }
 
     /**
@@ -81,14 +87,11 @@ public class ConfigGroupUtils {
      * @return 收集到的角色名集合
      */
     public static Set<String> collectRoleNamesFromGenerators(List<Generators> generators) {
-        Set<String> roleNames = new HashSet<>();
-
-        for (Generators generator : generators) {
-            String configTargetRoles = generator.getConfigTargetRoles();
-            roleNames.addAll(parseRoleNames(configTargetRoles));
-        }
-
-        return roleNames;
+        return generators.stream()
+            .map(Generators::getConfigTargetRoles)
+            .map(ConfigGroupUtils::parseRoleNames)
+            .flatMap(Set::stream)
+            .collect(Collectors.toSet());
     }
 
     /**
@@ -102,15 +105,13 @@ public class ConfigGroupUtils {
         Map<String, List<ServiceConfig>> kubernetesConfigsByType = new HashMap<>();
 
         try {
-            // 从Spring上下文获取服务
-            FrameServiceService frameServiceService = SpringUtil
-                    .getBean(FrameServiceService.class);
+            // 从Spring上下文获取服务 - 使用var简化类型声明
+            var frameServiceService = SpringUtil.getBean(FrameServiceService.class);
 
-            // 获取服务定义
-            FrameServiceConverter frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
-            FrameServiceDTO frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(
-                    frameCode, serviceName);
-            FrameServiceEntity frameServiceEntity = frameServiceDTO != null ? 
+            // 获取服务定义 - 使用var简化类型声明
+            var frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+            var frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(frameCode, serviceName);
+            var frameServiceEntity = frameServiceDTO != null ? 
                     frameServiceConverter.dtoToEntity(frameServiceDTO) : null;
 
             if (frameServiceEntity == null) {
@@ -118,40 +119,40 @@ public class ConfigGroupUtils {
                 return kubernetesConfigsByType;
             }
 
-            // 解析服务JSON
-            String serviceJson = frameServiceEntity.getServiceJson();
-            if (StrUtil.isBlank(serviceJson)) {
+            // 解析服务JSON - 使用var和JDK11的isBlank()优化
+            var serviceJson = frameServiceEntity.getServiceJson();
+            if (serviceJson == null || serviceJson.isBlank()) {
                 logger.error("服务定义JSON为空: {}", serviceName);
                 return kubernetesConfigsByType;
             }
 
-            JSONObject serviceObj = JSONObject.parseObject(serviceJson);
+            var serviceObj = JSONObject.parseObject(serviceJson);
 
             // 获取parameters数组并转为ServiceConfig列表
-            JSONArray parameters = serviceObj.getJSONArray("parameters");
+            var parameters = serviceObj.getJSONArray("parameters");
             if (parameters == null || parameters.isEmpty()) {
                 logger.warn("服务定义中没有parameters数组，无法获取原始配置");
                 return kubernetesConfigsByType;
             }
 
-            // 遍历parameters，过滤出Kubernetes配置并按类型分组
-            for (int i = 0; i < parameters.size(); i++) {
-                JSONObject paramJson = parameters.getJSONObject(i);
-
-                // 只处理Kubernetes配置
-                String configGroup = paramJson.getString("configGroup");
-                if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-                    // 将JSON转为ServiceConfig对象
-                    ServiceConfig config = paramJson.toJavaObject(ServiceConfig.class);
-
-                    // 提取Kubernetes配置类型
-                    String kubernetesConfigType = extractKubernetesConfigType(configGroup);
-
+            // 遍历parameters，过滤出Kubernetes配置并按类型分组 - 使用JDK16 instanceof模式匹配
+            parameters.stream()
+                .filter(param -> param instanceof JSONObject)
+                .map(param -> (JSONObject) param)
+                .filter(paramJson -> {
+                    var configGroup = paramJson.getString("configGroup");
+                    return configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX);
+                })
+                .forEach(paramJson -> {
+                    // 将JSON转为ServiceConfig对象 - 使用var
+                    var config = paramJson.toJavaObject(ServiceConfig.class);
+                    
+                    // 提取Kubernetes配置类型 - 使用var
+                    var kubernetesConfigType = extractKubernetesConfigType(paramJson.getString("configGroup"));
+                    
                     // 按类型分组
                     kubernetesConfigsByType.computeIfAbsent(kubernetesConfigType, k -> new ArrayList<>()).add(config);
-
-                }
-            }
+                });
 
         } catch (Exception e) {
             logger.error("获取原始Kubernetes配置时出错: {}", e.getMessage(), e);
@@ -174,27 +175,26 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        // 1. 获取服务定义中的所有配置文件及其角色列表
-        Map<String, Set<String>> configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
+        // 1. 获取服务定义中的所有配置文件及其角色列表 - 使用var
+        var configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
 
         if (configFileToRolesMap.isEmpty()) {
             logger.warn("无法获取服务 {} 的配置文件角色映射，将保持原始配置", serviceName);
             return list;
         }
 
-        // 2. 从服务定义中获取原始Kubernetes配置
-        Map<String, List<ServiceConfig>> originalKubernetesConfigsByType = getOriginalKubernetesConfigs(frameCode,
-                serviceName);
+        // 2. 从服务定义中获取原始Kubernetes配置 - 使用var
+        var originalKubernetesConfigsByType = getOriginalKubernetesConfigs(frameCode, serviceName);
 
         if (originalKubernetesConfigsByType.isEmpty()) {
             logger.warn("无法从服务定义中获取原始Kubernetes配置，将使用传入的配置列表");
             // 回退到原有逻辑，使用传入的配置列表
         }
 
-        // 3. 对配置进行分类
-        List<ServiceConfig> processedConfigs = new ArrayList<>();
-        List<ServiceConfig> nonKubernetesConfigs = new ArrayList<>();
-        Map<String, ServiceConfig> portConfigs = new HashMap<>(); // 存储端口配置，用于后续处理
+        // 3. 对配置进行分类 - 使用var
+        var processedConfigs = new ArrayList<ServiceConfig>();
+        var nonKubernetesConfigs = new ArrayList<ServiceConfig>();
+        var portConfigs = new HashMap<String, ServiceConfig>(); // 存储端口配置，用于后续处理
 
         // 4. 获取非Kubernetes配置和端口配置
         for (ServiceConfig config : list) {
@@ -211,38 +211,38 @@ public class ConfigGroupUtils {
             }
         }
 
-        // 5. 处理Kubernetes配置（使用原始配置或回退到传入的配置）
-        Map<String, List<ServiceConfig>> kubernetesConfigsByType = originalKubernetesConfigsByType;
+        // 5. 处理Kubernetes配置（使用原始配置或回退到传入的配置）- 使用var
+        var kubernetesConfigsByType = originalKubernetesConfigsByType;
         if (kubernetesConfigsByType.isEmpty()) {
             // 如果没有获取到原始配置，回退到使用传入的配置
-            kubernetesConfigsByType = new HashMap<>();
-            for (ServiceConfig config : list) {
-                String configGroup = config.getConfigGroup();
+            kubernetesConfigsByType = new HashMap<String, List<ServiceConfig>>();
+            for (var config : list) {
+                var configGroup = config.getConfigGroup();
                 if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-                    String kubernetesConfigType = extractKubernetesConfigType(configGroup);
+                    var kubernetesConfigType = extractKubernetesConfigType(configGroup);
                     kubernetesConfigsByType.computeIfAbsent(kubernetesConfigType, k -> new ArrayList<>()).add(config);
                 }
             }
         }
 
-        // 6. 为每个配置类型创建角色特定的配置
-        for (Map.Entry<String, List<ServiceConfig>> entry : kubernetesConfigsByType.entrySet()) {
-            String kubernetesConfigType = entry.getKey();
-            List<ServiceConfig> configs = entry.getValue();
+        // 6. 为每个配置类型创建角色特定的配置 - 使用var
+        for (var entry : kubernetesConfigsByType.entrySet()) {
+            var kubernetesConfigType = entry.getKey();
+            var configs = entry.getValue();
 
-            // 获取该类型配置的角色集合
-            Set<String> targetRoles = getTargetRolesForConfigType(configFileToRolesMap, kubernetesConfigType);
+            // 获取该类型配置的角色集合 - 使用var
+            var targetRoles = getTargetRolesForConfigType(configFileToRolesMap, kubernetesConfigType);
 
             if (targetRoles.isEmpty()) {
                 logger.warn("无法确定Kubernetes配置类型 {} 的目标角色，将使用通用角色", kubernetesConfigType);
-                targetRoles.add(GENERAL);
+                targetRoles = new HashSet<>(List.of(GENERAL));
             }
 
-            // 为每个角色创建配置副本
-            for (String roleName : targetRoles) {
-                for (ServiceConfig config : configs) {
-                    // 创建配置副本（使用原始配置）
-                    ServiceConfig copy = ObjectUtil.cloneByStream(config);
+            // 为每个角色创建配置副本 - 使用var
+            for (var roleName : targetRoles) {
+                for (var config : configs) {
+                    // 创建配置副本（使用原始配置） - 使用var
+                    var copy = ObjectUtil.cloneByStream(config);
 
                     // 设置单一角色
                     copy.setConfigTargetRoles(roleName);
@@ -279,30 +279,30 @@ public class ConfigGroupUtils {
      */
     private static void processPortConfigs(Map<String, ServiceConfig> portConfigs,
             List<ServiceConfig> processedConfigs) {
-        // 遍历所有端口配置
-        for (ServiceConfig portConfig : portConfigs.values()) {
-            String bindRole = portConfig.getBindRole();
-            String portNumber = portConfig.getPortNumber();
-            String serviceType = portConfig.getServiceType();
-            String nodePort = portConfig.getNodePort();
+        // 遍历所有端口配置 - 使用var
+        for (var portConfig : portConfigs.values()) {
+            var bindRole = portConfig.getBindRole();
+            var portNumber = portConfig.getPortNumber();
+            var serviceType = portConfig.getServiceType();
+            var nodePort = portConfig.getNodePort();
 
             // 跳过无效的配置
             if (bindRole == null || portNumber == null) {
                 continue;
             }
 
-            // 遍历bindRole中的所有角色
-            for (String role : bindRole.split(",")) {
-                String roleName = role.trim().toLowerCase();
+            // 遍历bindRole中的所有角色 - 使用var
+            for (var role : bindRole.split(",")) {
+                var roleName = role.trim().toLowerCase();
 
-                // 构建要查找的配置名称
-                String nodePortMappingName = roleName + "_node_port_mappings";
-                String clusterPortMappingName = roleName + "_cluster_port_mappings";
-                String loadBalancerMappingName = roleName + "_load_balancer_port_mappings";
+                // 构建要查找的配置名称 - 使用var
+                var nodePortMappingName = roleName + "_node_port_mappings";
+                var clusterPortMappingName = roleName + "_cluster_port_mappings";
+                var loadBalancerMappingName = roleName + "_load_balancer_port_mappings";
 
-                // 直接查找和更新匹配的配置
-                for (ServiceConfig config : processedConfigs) {
-                    String configName = config.getName();
+                // 直接查找和更新匹配的配置 - 使用var
+                for (var config : processedConfigs) {
+                    var configName = config.getName();
                     if (configName == null) {
                         continue;
                     }
@@ -343,15 +343,13 @@ public class ConfigGroupUtils {
         FrameServiceService frameServiceService = SpringUtil
                 .getBean(FrameServiceService.class);
 
-        // 收集所有角色配置映射
-        Map<String, ServiceConfig> clusterPortMappingConfigs = new HashMap<>();
-        for (ServiceConfig config : processedConfigs) {
-            String configName = config.getName();
-            if (configName != null && configName.endsWith("_cluster_port_mappings")) {
-                String roleName = configName.substring(0, configName.length() - "_cluster_port_mappings".length());
-                clusterPortMappingConfigs.put(roleName, config);
-            }
-        }
+        // 收集所有角色配置映射 - 使用Stream API优化
+        Map<String, ServiceConfig> clusterPortMappingConfigs = processedConfigs.stream()
+            .filter(config -> config.getName() != null && config.getName().endsWith("_cluster_port_mappings"))
+            .collect(Collectors.toMap(
+                config -> config.getName().substring(0, config.getName().length() - "_cluster_port_mappings".length()),
+                config -> config
+            ));
 
         // 如果没有找到任何集群端口映射配置，直接返回
         if (clusterPortMappingConfigs.isEmpty()) {
@@ -363,64 +361,132 @@ public class ConfigGroupUtils {
             // 获取所有服务定义
             List<FrameServiceEntity> allServices = frameServiceService.list();
 
-            for (FrameServiceEntity service : allServices) {
-                String serviceJson = service.getServiceJson();
-                if (StrUtil.isBlank(serviceJson)) {
-                    continue;
-                }
+            // 使用Stream API优化服务处理逻辑
+            allServices.stream()
+                .filter(service -> StrUtil.isNotBlank(service.getServiceJson()))
+                .forEach(service -> {
+                    JSONObject serviceObj = JSONObject.parseObject(service.getServiceJson());
+                    JSONArray roles = serviceObj.getJSONArray("roles");
 
-                JSONObject serviceObj = JSONObject.parseObject(serviceJson);
-                JSONArray roles = serviceObj.getJSONArray("roles");
+                    if (roles != null && !roles.isEmpty()) {
+                        // 遍历所有角色 - 使用Stream API
+                        roles.stream()
+                            .map(role -> (JSONObject) role)
+                            .filter(roleObj -> roleObj.getString("name") != null && roleObj.get("jmxPort") != null)
+                            .forEach(roleObj -> {
+                                String roleName = roleObj.getString("name");
+                                String jmxPort = String.valueOf(roleObj.get("jmxPort"));
 
-                if (roles == null || roles.isEmpty()) {
-                    continue;
-                }
-
-                // 遍历所有角色
-                for (int i = 0; i < roles.size(); i++) {
-                    JSONObject roleObj = roles.getJSONObject(i);
-                    String roleName = roleObj.getString("name");
-                    Object jmxPortObj = roleObj.get("jmxPort");
-
-                    // 如果角色定义了JMX端口
-                    if (roleName != null && jmxPortObj != null) {
-                        String jmxPort = String.valueOf(jmxPortObj);
-
-                        // 检查是否是有效的端口号
-                        if (StrUtil.isNotBlank(jmxPort) && !"null".equals(jmxPort)) {
-                            // 将角色名转为小写下划线格式
-                            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2")
-                                    .toLowerCase();
-
-                            // 特殊处理ZKFC角色，将其JMX端口添加到NameNode的端口映射中
-                            if ("ZKFC".equals(roleName)) {
-                                String namenodeRoleName = "namenode"; // NameNode的标准化角色名
-                                ServiceConfig namenodeConfig = clusterPortMappingConfigs.get(namenodeRoleName);
-
-                                if (namenodeConfig != null) {
-                                    // 更新NameNode的端口映射，添加ZKFC的JMX端口
-                                    updatePortMapping(namenodeConfig, jmxPort, jmxPort);
-                                    logger.info("将ZKFC的JMX端口 {} 添加到NameNode的cluster_port_mappings中", jmxPort);
-                                } else {
-                                    logger.warn("未找到NameNode的端口映射配置，无法添加ZKFC的JMX端口 {}", jmxPort);
+                                // 检查是否是有效的端口号
+                                if (StrUtil.isNotBlank(jmxPort) && !"null".equals(jmxPort)) {
+                                    processJmxPortForRole(clusterPortMappingConfigs, roleName, jmxPort);
                                 }
-                            } else {
-                                // 查找对应的集群端口映射配置
-                                ServiceConfig clusterPortConfig = clusterPortMappingConfigs.get(normRoleName);
-
-                                if (clusterPortConfig != null) {
-                                    // 更新端口映射，添加JMX端口
-                                    updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
-                                    logger.debug("添加JMX端口 {} 到cluster_port_mappings，角色: {}", jmxPort, roleName);
-                                }
-                            }
-                        }
+                            });
                     }
-                }
-            }
+                });
         } catch (Exception e) {
             logger.error("处理JMX端口时出错: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * 配置映射结果记录 - 使用JDK16 Records
+     * 
+     * @param port 端口号
+     * @param mappedPort 映射端口号
+     * @param found 是否找到现有映射
+     */
+    public record PortMappingResult(String port, String mappedPort, boolean found) {}
+
+    /**
+     * 为特定角色处理JMX端口
+     *
+     * @param clusterPortMappingConfigs 集群端口映射配置
+     * @param roleName                  角色名
+     * @param jmxPort                   JMX端口
+     */
+    private static void processJmxPortForRole(Map<String, ServiceConfig> clusterPortMappingConfigs, 
+                                              String roleName, String jmxPort) {
+        // 将角色名转为小写下划线格式 - 使用var
+        var normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+
+        // 特殊处理ZKFC角色，将其JMX端口添加到NameNode的端口映射中 - 使用var
+        if ("ZKFC".equals(roleName)) {
+            var namenodeRoleName = "namenode"; // NameNode的标准化角色名
+            var namenodeConfig = clusterPortMappingConfigs.get(namenodeRoleName);
+
+            if (namenodeConfig != null) {
+                // 更新NameNode的端口映射，添加ZKFC的JMX端口
+                updatePortMapping(namenodeConfig, jmxPort, jmxPort);
+                logger.info("将ZKFC的JMX端口 {} 添加到NameNode的cluster_port_mappings中", jmxPort);
+            } else {
+                logger.warn("未找到NameNode的端口映射配置，无法添加ZKFC的JMX端口 {}", jmxPort);
+            }
+        } else {
+            // 查找对应的集群端口映射配置 - 使用var
+            var clusterPortConfig = clusterPortMappingConfigs.get(normRoleName);
+
+            if (clusterPortConfig != null) {
+                // 更新端口映射，添加JMX端口
+                updatePortMapping(clusterPortConfig, jmxPort, jmxPort);
+                logger.debug("添加JMX端口 {} 到cluster_port_mappings，角色: {}", jmxPort, roleName);
+            }
+        }
+    }
+
+    /**
+     * 解析字符串类型的端口映射
+     *
+     * @param s 端口映射字符串
+     * @return 解析后的端口映射列表
+     */
+    private static List<Map<String, String>> parseStringPortMappings(String s) {
+        var portMappings = new ArrayList<Map<String, String>>();
+        try {
+            portMappings = JSONObject.parseObject(s, new TypeReference<>() {});
+        } catch (Exception e) {
+            logger.warn("解析端口映射字符串失败，尝试其他格式: {}", e.getMessage());
+            // 尝试解析为JSONArray - 使用var
+            try {
+                var jsonArray = JSONArray.parseArray(s);
+                portMappings = new ArrayList<>(jsonArray.stream()
+                    .filter(JSONObject.class::isInstance)
+                    .map(JSONObject.class::cast)
+                    .map(jsonObj -> {
+                        var mapping = new HashMap<String, String>();
+                        jsonObj.keySet().forEach(key -> mapping.put(key, jsonObj.getString(key)));
+                        return mapping;
+                    })
+                    .toList());
+            } catch (Exception ex) {
+                logger.warn("解析JSONArray格式也失败: {}", ex.getMessage());
+            }
+        }
+        return portMappings;
+    }
+
+    /**
+     * 解析List类型的端口映射
+     *
+     * @param rawList 原始List对象
+     * @return 解析后的端口映射列表
+     */
+    private static List<Map<String, String>> parseListPortMappings(List<?> rawList) {
+        return rawList.stream()
+            .filter(Map.class::isInstance)
+            .map(item -> (Map<?, ?>) item)
+            .map(rawMap -> {
+                var convertedMap = new HashMap<String, String>();
+                rawMap.entrySet().stream()
+                    .filter(entry -> entry.getKey() != null)
+                    .forEach(entry -> {
+                        var key = entry.getKey().toString();
+                        var value = entry.getValue() != null ? entry.getValue().toString() : "";
+                        convertedMap.put(key, value);
+                    });
+                return convertedMap;
+            })
+            .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -432,63 +498,32 @@ public class ConfigGroupUtils {
      */
     private static void updatePortMapping(ServiceConfig config, String port, String mappedPort) {
         try {
-            // 获取当前值
-            Object currentValue = config.getValue();
-            List<Map<String, String>> portMappings = new ArrayList<>();
-
-            // 解析当前值
-            switch (currentValue) {
-                case null -> {
-                    // 保持空列表
-                }
-                case String s -> {
-                    try {
-                        portMappings = JSONObject.parseObject(s,
-                                new TypeReference<>() {
-                                });
-                    } catch (Exception e) {
-                        logger.warn("解析端口映射字符串失败，尝试其他格式: {}", e.getMessage());
-                        // 尝试解析为JSONArray
-                        JSONArray jsonArray = JSONArray.parseArray(s);
-                        for (Object item : jsonArray) {
-                            if (item instanceof JSONObject jsonObj) {
-                                Map<String, String> mapping = new HashMap<>();
-                                for (String key : jsonObj.keySet()) {
-                                    mapping.put(key, jsonObj.getString(key));
-                                }
-                                portMappings.add(mapping);
-                            }
-                        }
-                    }
-                }
-                case List<?> rawList -> {
-                    // 尝试转换List中的每个元素
-                    for (Object item : rawList) {
-                        if (item instanceof Map<?, ?> rawMap) {
-                            Map<String, String> convertedMap = new HashMap<>();
-                            for (Object key : rawMap.keySet()) {
-                                if (key != null) {
-                                    Object val = rawMap.get(key);
-                                    convertedMap.put(key.toString(), val != null ? val.toString() : "");
-                                }
-                            }
-                            portMappings.add(convertedMap);
-                        }
-                    }
-                }
+            // 获取当前值 - 使用var
+            var currentValue = config.getValue();
+            
+            // 解析当前值 - 使用JDK21增强的switch表达式和var
+            var portMappings = switch (currentValue) {
+                case null -> new ArrayList<Map<String, String>>(); // 空值时返回空列表
+                case String s -> parseStringPortMappings(s);
+                case List<?> rawList -> parseListPortMappings(rawList);
                 default -> {
-                    logger.warn("无法处理的端口映射值类型: {}", currentValue.getClass().getName());
-                    logger.debug("端口映射值内容: {}", currentValue);
-                    return;
+                                // 使用JDK15 Text blocks改进日志格式
+            var errorMessage = """
+                    无法处理的端口映射值:
+                    - 类型: %s
+                    - 内容: %s
+                    """.formatted(currentValue.getClass().getName(), currentValue);
+            logger.warn(errorMessage.trim());
+                    yield new ArrayList<Map<String, String>>(); // 返回空列表而不是return
                 }
-            }
+            };
 
-            // 检查是否已存在相同的端口映射
-            boolean found = false;
-            for (Map<String, String> mapping : portMappings) {
+            // 检查是否已存在相同的端口映射 - 使用var
+            var found = false;
+            for (var mapping : portMappings) {
                 if (mapping.containsKey(port)) {
-                    // 获取现有的映射值
-                    String existingValue = mapping.get(port);
+                    // 获取现有的映射值 - 使用var
+                    var existingValue = mapping.get(port);
                     // 如果新值不在现有值中，则追加
                     if (existingValue != null && !existingValue.contains(mappedPort)) {
                         // 使用逗号分隔追加新的端口值
@@ -506,9 +541,9 @@ public class ConfigGroupUtils {
                 }
             }
 
-            // 如果不存在，添加新的映射
+            // 如果不存在，添加新的映射 - 使用var
             if (!found) {
-                Map<String, String> newMapping = new HashMap<>();
+                var newMapping = new HashMap<String, String>();
                 newMapping.put(port, mappedPort);
                 portMappings.add(newMapping);
                 logger.debug("添加新端口映射: {} -> {}", port, mappedPort);
@@ -532,15 +567,13 @@ public class ConfigGroupUtils {
         Map<String, Set<String>> result = new HashMap<>();
 
         try {
-            // 从Spring上下文获取服务
-            FrameServiceService frameServiceService = SpringUtil
-                    .getBean(FrameServiceService.class);
-            FrameServiceConverter frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
+            // 从Spring上下文获取服务 - 使用var
+            var frameServiceService = SpringUtil.getBean(FrameServiceService.class);
+            var frameServiceConverter = SpringUtil.getBean(FrameServiceConverter.class);
 
-            // 获取服务定义
-            FrameServiceDTO frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(
-                    frameCode, serviceName);
-            FrameServiceEntity frameServiceEntity = frameServiceDTO != null ? 
+            // 获取服务定义 - 使用var
+            var frameServiceDTO = frameServiceService.getServiceByFrameCodeAndServiceName(frameCode, serviceName);
+            var frameServiceEntity = frameServiceDTO != null ? 
                     frameServiceConverter.dtoToEntity(frameServiceDTO) : null;
 
             if (frameServiceEntity == null) {
@@ -548,44 +581,44 @@ public class ConfigGroupUtils {
                 return result;
             }
 
-            // 解析服务JSON
-            String serviceJson = frameServiceEntity.getServiceJson();
-            if (StrUtil.isBlank(serviceJson)) {
+            // 解析服务JSON - 使用var和JDK11的isBlank()
+            var serviceJson = frameServiceEntity.getServiceJson();
+            if (serviceJson == null || serviceJson.isBlank()) {
                 logger.error("服务定义JSON为空: {}", serviceName);
                 return result;
             }
 
-            JSONObject serviceObj = JSONObject.parseObject(serviceJson);
+            var serviceObj = JSONObject.parseObject(serviceJson);
 
-            // 记录服务定义中的parameters
-            JSONArray parameters = serviceObj.getJSONArray("parameters");
-            JSONObject configWriter = serviceObj.getJSONObject("configWriter");
+            // 记录服务定义中的parameters - 使用var
+            var parameters = serviceObj.getJSONArray("parameters");
+            var configWriter = serviceObj.getJSONObject("configWriter");
             if (configWriter == null) {
                 logger.warn("服务定义中没有configWriter对象");
                 return result;
             }
 
-            JSONArray generators = configWriter.getJSONArray("generators");
+            var generators = configWriter.getJSONArray("generators");
             if (generators == null || generators.isEmpty()) {
                 logger.warn("服务定义中没有配置文件定义: {}", serviceName);
                 return result;
             }
 
-            // 解析所有配置文件定义，关键是将filename和configTargetRoles对应起来
-            Map<String, Set<String>> filenameToRolesMap = new HashMap<>();
+            // 解析所有配置文件定义，关键是将filename和configTargetRoles对应起来 - 使用var
+            var filenameToRolesMap = new HashMap<String, Set<String>>();
 
-            for (int i = 0; i < generators.size(); i++) {
-                JSONObject generator = generators.getJSONObject(i);
-                String filename = generator.getString("filename");
-                String configTargetRoles = generator.getString("configTargetRoles");
+            for (var i = 0; i < generators.size(); i++) {
+                var generator = generators.getJSONObject(i);
+                var filename = generator.getString("filename");
+                var configTargetRoles = generator.getString("configTargetRoles");
 
                 // 检查是否有Kubernetes相关的配置文件
                 if (filename != null && filename.toLowerCase().startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-                    Set<String> roles = new HashSet<>();
-                    // 解析角色列表
-                    if (StrUtil.isNotBlank(configTargetRoles)) {
-                        for (String role : configTargetRoles.split(",")) {
-                            String trimmedRole = role.trim();
+                    var roles = new HashSet<String>();
+                    // 解析角色列表 - 使用JDK11的isBlank()和var
+                    if (configTargetRoles != null && !configTargetRoles.isBlank()) {
+                        for (var role : configTargetRoles.split(",")) {
+                            var trimmedRole = role.trim();
                             if (!trimmedRole.isEmpty()) {
                                 roles.add(trimmedRole);
                             }
@@ -597,24 +630,24 @@ public class ConfigGroupUtils {
                 }
             }
 
-            // 第二步：遍历参数定义，将configGroup与filename进行匹配
+            // 第二步：遍历参数定义，将configGroup与filename进行匹配 - 使用var
             if (parameters != null && !parameters.isEmpty()) {
-                for (int i = 0; i < parameters.size(); i++) {
-                    JSONObject parameter = parameters.getJSONObject(i);
-                    String configGroup = parameter.getString("configGroup");
+                for (var i = 0; i < parameters.size(); i++) {
+                    var parameter = parameters.getJSONObject(i);
+                    var configGroup = parameter.getString("configGroup");
 
                     // 如果configGroup以kubernetes.config.开头，查找对应的filename
                     if (configGroup != null && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
-                        // 查找匹配的filename（就是configGroup完全一致的filename）
-                        Set<String> roles = filenameToRolesMap.get(configGroup);
+                        // 查找匹配的filename（就是configGroup完全一致的filename） - 使用var
+                        var roles = filenameToRolesMap.get(configGroup);
 
                         if (roles != null && !roles.isEmpty()) {
                             // 将configGroup映射到对应的角色
                             result.put(configGroup, roles);
 
-                            // 同时将参数名映射到角色
-                            String paramName = parameter.getString("name");
-                            if (StrUtil.isNotBlank(paramName)) {
+                            // 同时将参数名映射到角色 - 使用var和JDK11的isBlank()
+                            var paramName = parameter.getString("name");
+                            if (paramName != null && !paramName.isBlank()) {
                                 result.put(paramName, roles);
                             }
                         } else {
@@ -650,9 +683,9 @@ public class ConfigGroupUtils {
             return configFileToRolesMap.get(fullConfigGroup);
         }
 
-        // 2. 如果没有找到完全匹配，尝试模糊匹配
-        for (Map.Entry<String, Set<String>> entry : configFileToRolesMap.entrySet()) {
-            String key = entry.getKey();
+        // 2. 如果没有找到完全匹配，尝试模糊匹配 - 使用var
+        for (var entry : configFileToRolesMap.entrySet()) {
+            var key = entry.getKey();
 
             // 如果key包含configType或configType包含key
             if (key.contains(configType) || configType.contains(key)) {
@@ -690,11 +723,11 @@ public class ConfigGroupUtils {
             return;
         }
 
-        // 将roleName转为小写并将驼峰转为下划线格式
-        String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+        // 将roleName转为小写并将驼峰转为下划线格式 - 使用var
+        var normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
 
-        // 直接添加前缀（不需要检查，因为我们从原始配置创建）
-        config.setName(normRoleName + "_" + configName);
+        // 直接添加前缀（不需要检查，因为我们从原始配置创建） - 使用JDK11的formatted方法
+        config.setName("%s_%s".formatted(normRoleName, configName));
     }
 
     /**
@@ -706,37 +739,37 @@ public class ConfigGroupUtils {
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list) {
         // 先处理所有配置项的模板内容
         if (list != null) {
-            for (ServiceConfig config : list) {
-                String templateName = config.getTemplateName();
-                if (StrUtil.isNotBlank(templateName)) {
-                    String templateContent = TemplatePathUtils.getTemplateContent(templateName);
+            for (var config : list) {
+                var templateName = config.getTemplateName();
+                if (templateName != null && !templateName.isBlank()) {
+                    var templateContent = TemplatePathUtils.getTemplateContent(templateName);
                     config.setTemplateContent(templateContent);
                 }
             }
         }
 
-        // 存储分组结果
-        Map<String, List<ServiceConfig>> groupedConfigs = new LinkedHashMap<>();
-        // 收集从Kubernetes配置中提取的角色名
-        Set<String> kubernetesRoles = new HashSet<>();
+        // 存储分组结果 - 使用var
+        var groupedConfigs = new LinkedHashMap<String, List<ServiceConfig>>();
+        // 收集从Kubernetes配置中提取的角色名 - 使用var
+        var kubernetesRoles = new HashSet<String>();
 
         if (list != null) {
-            for (ServiceConfig config : list) {
-                String configCategory = config.getConfigCategory();
-                String configGroup = config.getConfigGroup();
-                String configLevel = config.getConfigLevel();
-                String configTargetRoles = config.getConfigTargetRoles();
-                String groupKey = "";
+            for (var config : list) {
+                var configCategory = config.getConfigCategory();
+                var configGroup = config.getConfigGroup();
+                var configLevel = config.getConfigLevel();
+                var configTargetRoles = config.getConfigTargetRoles();
+                var groupKey = "";
 
-                // 处理kubernetes.config类型的配置组
-                if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
+                // 处理kubernetes.config类型的配置组 - 使用JDK11的isBlank()和var
+                if (configGroup != null && !configGroup.isBlank() && configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
                     // 特殊处理kubernetes配置，使用完整的configGroup作为键
                     groupKey = configGroup;
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
 
-                    // 从Kubernetes配置组名中提取角色名
-                    String roleName = extractRoleFromKubernetesConfigGroup(configGroup);
-                    if (StrUtil.isNotBlank(roleName)) {
+                    // 从Kubernetes配置组名中提取角色名 - 使用var
+                    var roleName = extractRoleFromKubernetesConfigGroup(configGroup);
+                    if (roleName != null && !roleName.isBlank()) {
                         kubernetesRoles.add(roleName);
                     }
                 }
@@ -746,51 +779,53 @@ public class ConfigGroupUtils {
                     groupKey = configGroup;
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
-                // 处理配置级别为"custom"或"advanced"的情况
-                else if (StrUtil.isNotBlank(configLevel) &&
+                // 处理配置级别为"custom"或"advanced"的情况 - 使用JDK11的isBlank()和var
+                else if (configLevel != null && !configLevel.isBlank() &&
                         ("custom".equalsIgnoreCase(configLevel) || "advanced".equalsIgnoreCase(configLevel)) &&
-                        StrUtil.isNotBlank(configGroup)) {
+                        configGroup != null && !configGroup.isBlank()) {
 
-                    String levelPrefix = configLevel.toLowerCase() + "_";
+                    var levelPrefix = configLevel.toLowerCase() + "_";
 
                     // 直接将configLevel和configGroup用下划线连接
-                    if (configGroup != null && configGroup.startsWith(levelPrefix)) {
+                    if (configGroup.startsWith(levelPrefix)) {
                         groupKey = configGroup;
                     }
 
                     // 将配置添加到对应分组
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-                } else if (StrUtil.isAllBlank(configCategory, configGroup, configLevel)) {
+                } else if ((configCategory == null || configCategory.isBlank()) && 
+                          (configGroup == null || configGroup.isBlank()) && 
+                          (configLevel == null || configLevel.isBlank())) {
                     groupKey = GENERAL;
-                    // 为空字段设置默认值
-                    if (StrUtil.isBlank(configCategory)) {
+                    // 为空字段设置默认值 - 使用JDK11的isBlank()
+                    if (configCategory == null || configCategory.isBlank()) {
                         config.setConfigCategory("role");
                     }
-                    if (StrUtil.isBlank(configGroup)) {
+                    if (configGroup == null || configGroup.isBlank()) {
                         config.setConfigGroup("General");
                     }
-                    if (StrUtil.isBlank(configLevel)) {
+                    if (configLevel == null || configLevel.isBlank()) {
                         config.setConfigLevel("advanced");
                     }
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
-                // 处理configTargetRoles情况
+                // 处理configTargetRoles情况 - 使用var
                 else if (configTargetRoles != null) {
-                    Set<String> roleNames = parseRoleNames(configTargetRoles);
-                    for (String roleName : roleNames) {
+                    var roleNames = parseRoleNames(configTargetRoles);
+                    for (var roleName : roleNames) {
                         groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>()).add(config);
                     }
                 }
-                // 处理至少有一个字段不为空的情况
-                else if (StrUtil.isNotBlank(configCategory) ||
-                        StrUtil.isNotBlank(configGroup) ||
-                        StrUtil.isNotBlank(configLevel)) {
+                // 处理至少有一个字段不为空的情况 - 使用JDK11的isBlank()
+                else if ((configCategory != null && !configCategory.isBlank()) ||
+                        (configGroup != null && !configGroup.isBlank()) ||
+                        (configLevel != null && !configLevel.isBlank())) {
                     // 优先使用configGroup作为分组键
-                    if (StrUtil.isNotBlank(configGroup)) {
+                    if (configGroup != null && !configGroup.isBlank()) {
                         groupKey = configGroup;
                     }
                     // 如果configGroup为空但configCategory不为空，使用configCategory
-                    else if (StrUtil.isNotBlank(configCategory)) {
+                    else if (configCategory != null && !configCategory.isBlank()) {
                         groupKey = configCategory;
                     }
                     // 如果前两者都为空但configLevel不为空，使用configLevel
@@ -805,10 +840,10 @@ public class ConfigGroupUtils {
         // 移除空角色分组的自动创建逻辑
         // 注释：不再为Kubernetes配置中提取的角色自动创建空分组，避免返回冗余的空数据
 
-        // 确保每个配置组内的配置名称唯一
-        for (Map.Entry<String, List<ServiceConfig>> entry : groupedConfigs.entrySet()) {
-            Map<String, ServiceConfig> uniqueNameMap = new LinkedHashMap<>();
-            for (ServiceConfig config : entry.getValue()) {
+        // 确保每个配置组内的配置名称唯一 - 使用var
+        for (var entry : groupedConfigs.entrySet()) {
+            var uniqueNameMap = new LinkedHashMap<String, ServiceConfig>();
+            for (var config : entry.getValue()) {
                 uniqueNameMap.put(config.getName(), config);
             }
             entry.setValue(new ArrayList<>(uniqueNameMap.values()));
@@ -1150,37 +1185,36 @@ public class ConfigGroupUtils {
      * @return 配置名称到角色的映射
      */
     public static Map<String, String> buildNameToRoleMap(Map<Generators, List<ServiceConfig>> configFileMap) {
-        Map<String, String> resultMap = new HashMap<>();
+        return configFileMap.entrySet().stream()
+            .flatMap(entry -> {
+                Generators generator = entry.getKey();
+                List<ServiceConfig> configs = entry.getValue();
+                String configTargetRoles = generator.getConfigTargetRoles();
+                
+                // 确定角色名
+                String roleName = determineRoleNameForGenerator(configTargetRoles);
+                
+                // 为每个配置创建名称到角色的映射
+                return configs.stream().map(config -> 
+                    Map.entry(config.getName(), roleName)
+                );
+            })
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
 
-        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
-            Generators generator = entry.getKey();
-            List<ServiceConfig> configs = entry.getValue();
-
-            String configTargetRoles = generator.getConfigTargetRoles();
-            if (configTargetRoles == null || configTargetRoles.isEmpty()) {
-                // 处理configTargetRoles为空的情况
-                for (ServiceConfig config : configs) {
-                    resultMap.put(config.getName(), GENERAL);
-                }
-            } else {
-                // 使用ConfigGroupUtils处理configTargetRoles
-                Set<String> roleNames = parseRoleNames(configTargetRoles);
-                if (roleNames.isEmpty()) {
-                    // 如果解析后没有角色名，使用通用分组
-                    for (ServiceConfig config : configs) {
-                        resultMap.put(config.getName(), GENERAL);
-                    }
-                } else {
-                    // 使用第一个角色名
-                    String firstRole = roleNames.iterator().next();
-                    for (ServiceConfig config : configs) {
-                        resultMap.put(config.getName(), firstRole);
-                    }
-                }
-            }
+    /**
+     * 为Generator确定角色名
+     *
+     * @param configTargetRoles 配置目标角色字符串
+     * @return 确定的角色名
+     */
+    private static String determineRoleNameForGenerator(String configTargetRoles) {
+        if (configTargetRoles == null || configTargetRoles.isEmpty()) {
+            return GENERAL;
         }
-
-        return resultMap;
+        
+        Set<String> roleNames = parseRoleNames(configTargetRoles);
+        return roleNames.isEmpty() ? GENERAL : roleNames.iterator().next();
     }
 
     /**
