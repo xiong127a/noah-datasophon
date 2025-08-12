@@ -18,7 +18,7 @@ import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
 import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
 import Image from "next/image"
-import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
+import { getStepsByType, StepsType, ClusterType } from '@/lib/cluster-wizard-steps'
 import { DIALOG_STYLES } from '../common/shared-styles'
 
 // K8S集群信息接口
@@ -68,7 +68,7 @@ export default function K8sHostConfigDialog({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const steps = getStepsByType('kubernetes' as StepsType)
+  const steps = getStepsByType(StepsType.NORMAL, ClusterType.KUBERNETES)
   const currentStep = 1
 
   // 获取集群类型图标路径
