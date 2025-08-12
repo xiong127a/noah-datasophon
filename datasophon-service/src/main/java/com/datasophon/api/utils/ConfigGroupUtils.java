@@ -754,7 +754,7 @@ public class ConfigGroupUtils {
                     String levelPrefix = configLevel.toLowerCase() + "_";
 
                     // 直接将configLevel和configGroup用下划线连接
-                    if (configGroup.startsWith(levelPrefix)) {
+                    if (configGroup != null && configGroup.startsWith(levelPrefix)) {
                         groupKey = configGroup;
                     }
 
@@ -802,10 +802,8 @@ public class ConfigGroupUtils {
             }
         }
 
-        // 为从Kubernetes配置组中提取的角色创建空角色分组（如果尚不存在）
-        for (String roleName : kubernetesRoles) {
-            groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>());
-        }
+        // 移除空角色分组的自动创建逻辑
+        // 注释：不再为Kubernetes配置中提取的角色自动创建空分组，避免返回冗余的空数据
 
         // 确保每个配置组内的配置名称唯一
         for (Map.Entry<String, List<ServiceConfig>> entry : groupedConfigs.entrySet()) {
