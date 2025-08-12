@@ -156,7 +156,7 @@ export default function PvmHostValidationDialog({
           checkTime: new Date().toLocaleString()
         }
       }
-    } catch (error) {
+    } catch {
       return {
         ...host,
         status: 'failed',
@@ -215,7 +215,7 @@ export default function PvmHostValidationDialog({
         toast.error('所有主机检查都失败了，请检查SSH连接信息')
         setCheckStatus('failed')
       }
-    } catch (error) {
+    } catch {
       toast.error('主机检查失败，请重试')
       setCheckStatus('failed')
     } finally {
@@ -263,7 +263,7 @@ export default function PvmHostValidationDialog({
           sshPassword: step1Data.sshPassword
         }
       })
-    } catch (error) {
+    } catch {
       toast.error('保存主机信息失败，请重试')
     } finally {
       setLoading(false)

@@ -199,7 +199,6 @@ export default function CreateClusterDialogEnhanced({
         const response = await apiClient.post(url, params)
         
         if (response.data && response.data.code === 200) {
-          console.log(`${isEdit ? '更新' : '创建'}集群成功`)
           onSuccess?.()
           handleCancel()
         } else {

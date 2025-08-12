@@ -182,13 +182,7 @@ export const useServiceSelection = ({
     const service = services.find(s => s.id === serviceId)
     const isCurrentlySelected = selectedServiceIds.includes(serviceId)
     
-    console.log('🔄 服务选择切换:', {
-      serviceId,
-      serviceName: service?.serviceName,
-      isRequired: service?.isRequired,
-      isCurrentlySelected,
-      action: isCurrentlySelected ? '取消选择' : '选择'
-    })
+    // 切换服务选择状态
     
     // 如果是必需服务且要取消选择，则不允许
     if (service?.isRequired && isCurrentlySelected) {
@@ -201,12 +195,7 @@ export const useServiceSelection = ({
         ? prev.filter(id => id !== serviceId)
         : [...prev, serviceId]
       
-      console.log('✅ 选择状态更新:', {
-        prev: prev.length,
-        new: newSelection.length,
-        serviceId,
-        selected: newSelection.includes(serviceId)
-      })
+      // 选择状态已更新
       
       return newSelection
     })

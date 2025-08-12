@@ -120,7 +120,7 @@ export default function K8sHostConfigDialog({
         const namespaces = responseData.namespaces || []
         const defaultNamespace = responseData.defaultNamespace
         const clusterVersion = responseData.clusterVersion || ''
-        const showNamespaceSelector = responseData.showNamespaceSelector
+        // const showNamespaceSelector = responseData.showNamespaceSelector
         
         // 数据解析成功
         
@@ -144,7 +144,7 @@ export default function K8sHostConfigDialog({
           clusterVersion: '' 
         }))
       }
-    } catch (error) {
+    } catch {
       toast.error('解析配置文件失败，请检查文件格式是否正确')
       setStep1Data(prev => ({ 
         ...prev, 
@@ -223,7 +223,7 @@ export default function K8sHostConfigDialog({
     setLoading(true)
     try {
       onStep1Complete(step1Data)
-    } catch (error) {
+    } catch {
       toast.error('配置保存失败，请重试')
     } finally {
       setLoading(false)

@@ -106,7 +106,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       )).filter(s => s !== 'Unknown') as string[]
     }
     
-    console.log('服务配置 - 提取到的服务列表:', services)
+    // 服务列表提取完成
     
     if (services.length > 0) {
       setServiceNames(services)
@@ -114,7 +114,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
         setActiveService(services[0])
       }
     } else {
-      console.warn('服务配置 - 未能提取到服务列表', stepData)
       setError('无法获取服务列表，请检查前面步骤的数据')
     }
   }, [typedStep6Data, activeService])
@@ -444,7 +443,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       onComplete(step7Data)
       
     } catch (error: any) {
-      console.error('步骤7完成失败:', error)
       toast.error(error.message || '配置保存或命令生成失败')
     } finally {
       setSaveLoading(false)

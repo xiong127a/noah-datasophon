@@ -160,7 +160,7 @@ export default function PvmHostConfigDialog({
     setLoading(true)
     try {
       onStep1Complete(step1Data)
-    } catch (error) {
+    } catch {
       toast.error('配置保存失败，请重试')
     } finally {
       setLoading(false)

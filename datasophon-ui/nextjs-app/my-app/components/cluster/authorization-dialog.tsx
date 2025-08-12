@@ -128,7 +128,6 @@ export default function ClusterAuthorizationDialogSuper({
         const response = await apiClient.get(url)
         
         if (response.data && response.data.code === 200) {
-          console.log(`授权集群 ${clusterName} 给用户成功`)
           onOpenChange(false)
           setSelectedUsers([])
           setSearchTerm("")

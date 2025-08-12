@@ -207,8 +207,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       if (response?.success && response?.data) {
         const roleData = response.data
         
-        // 添加调试信息
-        console.log('Step6 - API响应数据:', roleData)
+        // API响应数据处理
         
         setRoles(roleData)
         
@@ -222,11 +221,9 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
         
         setFormData(initialFormData)
       } else {
-        console.error('Step6 - API响应失败:', response)
         throw new Error(response?.message || '获取角色列表失败')
       }
     } catch (err) {
-      console.error('Step6 - 获取非Master角色列表异常:', err)
       const errorMessage = err instanceof Error ? err.message : '获取角色列表失败'
       setError(errorMessage)
       toast.error(errorMessage)

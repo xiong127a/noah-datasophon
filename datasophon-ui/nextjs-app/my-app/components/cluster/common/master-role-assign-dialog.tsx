@@ -77,13 +77,9 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   // 获取所有主机（完整信息）
   const fetchAllHosts = useCallback(async () => {
     try {
-      console.log('调用API获取主机列表，集群ID:', cluster.id)
-      
       const response = await clusterApiV1.serviceRole.getAllHosts({
         clusterId: cluster.id
       })
-      
-      console.log('主机列表API响应:', response)
       
       if (response.success && response.data) {
         // 构建完整的主机信息，包含资源数据
@@ -117,7 +113,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         throw new Error(response.message || '获取主机列表失败')
       }
     } catch (error) {
-      console.error('获取主机列表失败:', error)
       toast.error(`获取主机列表失败: ${error instanceof Error ? error.message : '未知错误'}`)
       return []
     }
@@ -138,19 +133,11 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
       
       const serviceIdsStr = serviceIds.join(',')
       
-      console.log('调用API获取服务角色，参数:', {
-        clusterId: cluster.id,
-        serviceIds: serviceIdsStr,
-        serviceRoleType: 1
-      })
-      
       const response = await clusterApiV1.serviceRole.getList({
         clusterId: cluster.id,
         serviceIds: serviceIdsStr,
         serviceRoleType: 1 // 1表示Master角色
       })
-      
-      console.log('API响应:', response)
       
       if (response.success && response.data) {
         setServiceRoles(response.data)
@@ -170,7 +157,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         throw new Error(response.message || '获取服务角色列表失败')
       }
     } catch (error) {
-      console.error('获取服务角色列表失败:', error)
       toast.error(`获取服务角色列表失败: ${error instanceof Error ? error.message : '未知错误'}`)
     } finally {
       setLoading(false)
@@ -324,7 +310,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         throw new Error(response.message || '保存失败')
       }
     } catch (error) {
-      console.error('保存Master角色分配失败:', error)
       toast.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
     } finally {
       setSaving(false)

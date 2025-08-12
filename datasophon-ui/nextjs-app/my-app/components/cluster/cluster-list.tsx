@@ -579,9 +579,8 @@ export default function ClusterListEnhanced() {
     setEditDialogOpen(true);
   };
 
-  const handleAuthCluster = (cluster: ClusterItem) => {
-    // 授权对话框会通过组件内部状态打开
-    console.log('打开授权对话框:', cluster.clusterName);
+  const handleAuthCluster = () => {
+    // 打开授权对话框
   };
 
   const handleDeleteCluster = (cluster: ClusterItem) => {
@@ -617,7 +616,6 @@ export default function ClusterListEnhanced() {
 
   // 处理K8S主机配置完成
   const handleK8sHostConfigComplete = (data: K8sStep1Data) => {
-    console.log('K8S主机配置完成，准备打开主机校验:', data);
     setK8sStep1Data(data);
     setSetupDialogOpen(false);
     setHostValidationDialogOpen(true);
@@ -625,7 +623,6 @@ export default function ClusterListEnhanced() {
 
   // 处理PVM主机配置完成
   const handlePvmHostConfigComplete = (data: PvmStep1Data) => {
-    console.log('PVM主机配置完成，准备打开主机校验:', data);
     setPvmStep1Data(data);
     setSetupDialogOpen(false);
     setHostValidationDialogOpen(true);
@@ -633,28 +630,22 @@ export default function ClusterListEnhanced() {
 
   // 处理主机校验完成  
   const handleHostValidationComplete = (hostValidationCompletionData?: Record<string, unknown>) => {
-    console.log('主机校验完成', hostValidationCompletionData);
-    console.log('setupCluster对象:', setupCluster);
-    console.log('setupCluster.depType:', setupCluster?.depType);
-    console.log('ClusterTypeUtil.isKubernetes(setupCluster?.depType):', ClusterTypeUtil.isKubernetes(setupCluster?.depType || ''));
+    // 主机校验完成
     
     setHostValidationData(hostValidationCompletionData || null);
     setHostValidationDialogOpen(false);
     
     // 检查集群类型，进入相应的下一步
     if (setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
-      console.log('Kubernetes模式，直接进入服务选择');
       setServiceSelectionDialogOpen(true);
     } else {
       // PVM模式进入Agent分发
-      console.log('PVM模式，进入Agent分发');
       setAgentDeploymentDialogOpen(true);
     }
   };
 
   // 处理Agent分发完成
   const handleAgentDeploymentComplete = (agentDeploymentCompletionData: Step3AgentData) => {
-    console.log('Agent分发完成', agentDeploymentCompletionData);
     setAgentDeploymentData(agentDeploymentCompletionData);
     setAgentDeploymentDialogOpen(false);
     
@@ -664,7 +655,6 @@ export default function ClusterListEnhanced() {
 
   // 处理服务选择完成
   const handleServiceSelectionComplete = (serviceSelectionCompletionData: Step3Data) => {
-    console.log('服务选择完成', serviceSelectionCompletionData);
     setServiceSelectionData(serviceSelectionCompletionData);
     setServiceSelectionDialogOpen(false);
     
@@ -674,7 +664,6 @@ export default function ClusterListEnhanced() {
 
   // 处理Master角色分配完成
   const handleMasterRoleAssignComplete = (masterRoleAssignCompletionData: Step5Data) => {
-    console.log('Master角色分配完成', masterRoleAssignCompletionData);
     setMasterRoleAssignDialogOpen(false);
     setMasterRoleAssignData(masterRoleAssignCompletionData);
     
@@ -684,7 +673,6 @@ export default function ClusterListEnhanced() {
 
   // 处理Worker角色分配完成
   const handleWorkerRoleAssignComplete = (workerRoleAssignCompletionData: Step6Data) => {
-    console.log('Worker角色分配完成', workerRoleAssignCompletionData);
     setWorkerRoleAssignDialogOpen(false);
     setWorkerRoleAssignData(workerRoleAssignCompletionData);
     
@@ -693,8 +681,7 @@ export default function ClusterListEnhanced() {
   };
 
   // 处理服务配置完成
-  const handleServiceConfigComplete = (serviceConfigCompletionData: Step7Data) => {
-    console.log('服务配置完成', serviceConfigCompletionData);
+  const handleServiceConfigComplete = () => {
     setServiceConfigDialogOpen(false);
     
     // 配置完成，重置状态并刷新列表
