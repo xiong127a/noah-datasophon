@@ -87,8 +87,6 @@ export const clusterApiV1 = {
   config: {
     // 获取Kubernetes命名空间列表
     getNamespaces: (kubeConfigContent: string) => {
-      console.log('API V1调用 - 发送kubeConfigContent长度:', kubeConfigContent?.length)
-      console.log('API V1调用 - 参数对象:', { kubeConfigContent })
       return apiV1.post(API_PATHS_V1.CLUSTER_NAMESPACES, { kubeConfigContent })
     },
     // 保存Kubernetes配置
@@ -106,7 +104,6 @@ export const clusterApiV1 = {
   kubernetes: {
     // 获取Kubernetes节点信息
     getNodes: (params: { kubeconfig: string; namespace: string }) => {
-      console.log('API V1调用 - 获取K8S节点:', params.namespace)
       // 调用后端API获取真实的K8S节点信息
       return apiV1.post(API_PATHS_V1.CLUSTER_K8S_NODES, params)
     },
@@ -232,7 +229,6 @@ export const clusterApiV1 = {
     
     // 校验所有主机状态（Step2下一步前的校验）
     validateForNextStep: (config?: any) => {
-      console.log('validateForNextStep - config:', config)
       return apiV1.get(API_PATHS_V1.HOST_CHECK, undefined, config)
     },
     

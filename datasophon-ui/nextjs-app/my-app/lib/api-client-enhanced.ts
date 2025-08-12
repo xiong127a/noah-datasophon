@@ -57,13 +57,7 @@ export function createEnhancedApiClient(): AxiosInstance {
         config.headers[CLUSTER_ID_HEADER] = clusterIdToUse.toString()
       }
 
-      // 添加调试信息（仅开发环境）
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`API请求: ${config.method?.toUpperCase()} ${config.url}`, {
-          clusterId: clusterIdToUse,
-          headers: config.headers,
-        })
-      }
+      // 集群ID已添加到请求头
 
       return config
     },
@@ -75,13 +69,7 @@ export function createEnhancedApiClient(): AxiosInstance {
   // 响应拦截器：处理通用错误
   client.interceptors.response.use(
     (response: AxiosResponse) => {
-      // 在开发环境下记录响应
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`API响应: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-          status: response.status,
-          data: response.data,
-        })
-      }
+      // 响应处理成功
       return response
     },
     (error) => {

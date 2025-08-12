@@ -192,7 +192,6 @@ export const apiV1 = {
     }
   },
   post: (url: string, data: any, config?: any) => {
-    console.log('API V1 POST请求:', url, '数据:', data)
     return apiClientV1.post(url, data, {
       headers: {
         'Content-Type': 'application/json'

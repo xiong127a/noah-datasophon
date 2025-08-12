@@ -157,7 +157,7 @@ export default function CreateClusterDialogEnhanced({
               localStorage.setItem('user_info', JSON.stringify(currentUserRaw))
             }
           } catch (e) {
-            console.warn('获取后端用户信息失败，继续使用JWT信息兜底')
+            // 获取后端用户信息失败，继续使用JWT信息兜底
           }
         }
 
