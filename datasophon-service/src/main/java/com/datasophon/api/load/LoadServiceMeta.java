@@ -29,43 +29,24 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.crypto.SecureUtil;
-import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.serviceCacheSyncActor;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
-import com.datasophon.api.utils.CommonUtils;
-import com.datasophon.api.utils.ConfigGroupUtils;
+import com.datasophon.api.service.ServiceMetadataTransactionService;
 import com.datasophon.api.utils.PackageUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.dto.ClusterInfoDTO;
-import com.datasophon.common.dto.ClusterServiceInstanceDTO;
-import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterVariable;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import com.datasophon.api.converter.FrameServiceConverter;
-import com.datasophon.api.converter.FrameServiceRoleConverter;
-import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.pekko.actor.Props;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +55,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -86,7 +66,6 @@ import java.util.stream.Collectors;
 import java.util.function.Function;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
-import static com.datasophon.common.Constants.GENERAL;
 
 @Component
 public class LoadServiceMeta implements ApplicationRunner {
@@ -97,13 +76,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     private static final String HDFS = "HDFS";
     private static final String HADOOP = "HADOOP";
     @Autowired
-    private FrameServiceService frameServiceService;
-
-    @Autowired
     private FrameInfoService frameInfoService;
-
-    @Autowired
-    private FrameServiceRoleService roleService;
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -112,22 +85,18 @@ public class LoadServiceMeta implements ApplicationRunner {
     private ConfigBean configBean;
 
     @Autowired
-    private ClusterServiceInstanceService serviceInstanceService;
-
-    @Autowired
-    private ClusterServiceInstanceRoleGroupService roleGroupService;
-
-    @Autowired
-    private ClusterServiceRoleGroupConfigService roleGroupConfigService;
+    private ServiceMetadataTransactionService metadataTransactionService;
 
 
     /**
      * 1、设置全局环境变量
      * 2、创建各集群角色 MasterServiceActor
      * 3、解析各角色 service_ddl.json 更新到 t_ddh_frame_service t_ddh_frame_service_role 表
+     * <p>
+     * 注意：移除顶层事务注解，避免虚拟线程并发访问时的死锁问题
+     * 事务控制下沉到具体的数据库操作方法中
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void run(ApplicationArguments args) throws Exception {
         // 使用JDK 21的text blocks和现代化方法
         logger.info("""
@@ -202,6 +171,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         logger.info("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
         
         // 使用虚拟线程处理服务文件，确保框架内服务隔离
+        // 添加重试机制处理数据库死锁问题
         var parseResults = new ArrayList<ParseResult>();
         try (var serviceExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
             var serviceTasks = serviceFiles.stream()
@@ -272,15 +242,18 @@ public class LoadServiceMeta implements ApplicationRunner {
 
     /**
      * 处理服务元数据 - 重构使用JDK 21新特性
+     * 使用独立的事务Service避免自调用问题
      */
     private void processServiceMetadata(ServiceMetaConfig config, LoadContext loadContext) {
         putServicePackageToMap(config);
         putServiceHomeToVariable(loadContext.clusters(), config.serviceName(), config.decompressPackageName());
         
-        // 保存服务和服务配置
-        var serviceEntity = saveFrameService(config);
-        // 保存框架服务角色
-        saveFrameServiceRole(config, serviceEntity);
+        // 通过独立的事务Service保存数据，确保事务有效
+        var serviceEntity = metadataTransactionService.saveFrameServiceInTransaction(config);
+        metadataTransactionService.saveFrameServiceRoleInTransaction(config, serviceEntity);
+        
+        // 更新缓存映射
+        updateServiceCacheMapping(config, serviceEntity);
     }
 
     /**
@@ -293,7 +266,39 @@ public class LoadServiceMeta implements ApplicationRunner {
                 config.decompressPackageName());
     }
 
-
+    /**
+     * 更新服务缓存映射
+     */
+    private void updateServiceCacheMapping(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
+        // 更新缓存映射
+        var cacheKey = config.frameCode() + Constants.UNDERLINE + config.serviceInfo().getName();
+        ServiceConfigMap.put(cacheKey + Constants.CONFIG, config.parameters());
+        ServiceConfigFileMap.put(cacheKey + Constants.CONFIG_FILE, config.configFileMap());
+        
+        logger.debug("put {} {} service info into cache", config.frameCode(), config.serviceName());
+        ServiceInfoMap.put(config.frameCode() + Constants.UNDERLINE + config.serviceName(), config.serviceInfo());
+        
+        // 处理服务角色缓存
+        config.serviceRoles().forEach(serviceRole -> {
+            var roleKey = config.frameCode() + Constants.UNDERLINE + 
+                          config.serviceInfo().getName() + Constants.UNDERLINE + 
+                          serviceRole.getName();
+            
+            logger.debug("put {} {} {} service role info into cache",
+                    config.frameCode(), config.serviceName(), serviceRole.getName());
+            
+            // 处理JMX端口
+            Optional.ofNullable(serviceRole.getJmxPort())
+                    .filter(StringUtils::isNotBlank)
+                    .ifPresent(jmxPort -> {
+                        logger.debug("{} jmx port is :{} and the jmx key is: {}",
+                                serviceRole.getName(), jmxPort, roleKey);
+                        ServiceRoleJmxMap.put(roleKey, jmxPort);
+                    });
+            
+            ServiceRoleMap.put(roleKey, serviceRole);
+        });
+    }
 
     private void putServiceHomeToVariable(
             List<ClusterInfoDTO> clusters, String serviceName,
@@ -309,138 +314,15 @@ public class LoadServiceMeta implements ApplicationRunner {
         }
     }
 
-    /**
-     * 保存框架服务角色 - 重构使用JDK 21新特性
-     */
-    private void saveFrameServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
-        var serviceRoles = config.serviceRoles();
-        
-        // 使用虚拟线程处理服务角色，确保角色级别的隔离
-        try (var roleExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var roleTasks = serviceRoles.stream()
-                .map(serviceRole -> 
-                    roleExecutor.submit(() -> processServiceRole(config, serviceEntity, serviceRole))
-                )
-                .toList();
-            
-            // 等待所有角色处理完成
-            roleTasks.forEach(task -> {
-                try {
-                    task.get();
-                } catch (InterruptedException | ExecutionException e) {
-                    logger.error("服务角色处理失败: {}", e.getMessage(), e);
-                    Thread.currentThread().interrupt();
-                }
-            });
-        }
-        
-        logger.debug("put {} {} service info into cache", config.frameCode(), config.serviceName());
-        ServiceInfoMap.put(config.frameCode() + Constants.UNDERLINE + config.serviceName(), config.serviceInfo());
-    }
-
-    /**
-     * 处理单个服务角色
-     */
-    private void processServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity, 
-                                  ServiceRoleInfo serviceRole) {
-        var roleKey = config.frameCode() + Constants.UNDERLINE + 
-                      config.serviceInfo().getName() + Constants.UNDERLINE + 
-                      serviceRole.getName();
-        
-        logger.debug("put {} {} {} service role info into cache",
-                config.frameCode(), config.serviceName(), serviceRole.getName());
-        
-        // 处理JMX端口
-        Optional.ofNullable(serviceRole.getJmxPort())
-                .filter(StringUtils::isNotBlank)
-                .ifPresent(jmxPort -> {
-                    logger.debug("{} jmx port is :{} and the jmx key is: {}",
-                            serviceRole.getName(), jmxPort, roleKey);
-                    ServiceRoleJmxMap.put(roleKey, jmxPort);
-                });
-        
-        ServiceRoleMap.put(roleKey, serviceRole);
-        
-        var serviceRoleJson = JSONObject.toJSONString(serviceRole);
-        var serviceRoleJsonMd5 = SecureUtil.md5(serviceRoleJson);
-        
-        saveOrUpdateServiceRole(config, serviceEntity, serviceRole, serviceRoleJson, serviceRoleJsonMd5);
-    }
-
-    /**
-     * 保存或更新服务角色实体
-     */
-    private void saveOrUpdateServiceRole(ServiceMetaConfig config, FrameServiceEntity serviceEntity,
-                                       ServiceRoleInfo serviceRole, String serviceRoleJson, 
-                                       String serviceRoleJsonMd5) {
-        // 使用新的非异常方法查找服务角色
-        var roleDto = roleService.findServiceRoleByServiceIdAndServiceRoleName(
-                serviceEntity.getId(), serviceRole.getName()).orElse(null);
-        var roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
-        var role = roleDto != null ? roleConverter.dtoToEntity(roleDto) : null;
-        
-        // JDK 21现代化处理 - 使用简洁的条件处理
-        if (role == null) {
-            var newRole = new FrameServiceRoleEntity();
-            buildFrameServiceRole(config, serviceEntity, serviceRole, 
-                    serviceRoleJson, serviceRoleJsonMd5, newRole);
-            roleService.save(newRole);
-        } else if (!role.getServiceRoleJsonMd5().equals(serviceRoleJsonMd5)) {
-            buildFrameServiceRole(config, serviceEntity, serviceRole, 
-                    serviceRoleJson, serviceRoleJsonMd5, role);
-            roleService.updateById(role);
-        }
-    }
 
 
 
-    /**
-     * 保存框架服务 - 重构使用JDK 21新特性和新的查找方法
-     */
-    private FrameServiceEntity saveFrameService(ServiceMetaConfig config) {
-        // 使用新的非异常方法查找服务
-        var serviceDto = frameServiceService.findServiceByFrameIdAndServiceName(
-                config.frameInfo().getId(), config.serviceName()).orElse(null);
-        
-        var serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
-        var serviceEntity = serviceDto != null ? serviceConverter.dtoToEntity(serviceDto) : null;
-        var parameters = config.parameters();
-        // 使用JDK21框架隔离版本，传入框架代码确保配置隔离
-        var nameToRoleMap = ConfigGroupUtils.buildNameToRoleMap(config.configFileMap(), config.frameCode());
 
-        // 使用现代化流式API处理配置目标角色
-        parameters.stream()
-                .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles()))
-                .forEach(serviceConfig -> {
-                    var configTargetRoles = nameToRoleMap.getOrDefault(serviceConfig.getName(), GENERAL);
-                    serviceConfig.setConfigTargetRoles(configTargetRoles);
-                });
 
-        // JDK 21现代化处理服务实体状态
-        if (serviceEntity == null) {
-            serviceEntity = new FrameServiceEntity();
-            buildServiceEntity(config, serviceEntity);
-            frameServiceService.save(serviceEntity);
-        } else if (!serviceEntity.getServiceJsonMd5().equals(config.serviceInfoMd5())) {
-            var configMapStr = JSONObject.toJSONString(config.configFileMap());
-            var configFileMapStrMd5 = SecureUtil.md5(configMapStr);
-            
-            if (!configFileMapStrMd5.equals(serviceEntity.getConfigFileJsonMd5())) {
-                updateServiceInstanceConfig(config.frameCode(), 
-                        config.serviceInfo().getName(), 
-                        config.serviceInfo().getParameters());
-            }
-            buildServiceEntity(config, serviceEntity);
-            frameServiceService.updateById(serviceEntity);
-        }
 
-        // 更新缓存映射
-        var cacheKey = config.frameCode() + Constants.UNDERLINE + config.serviceInfo().getName();
-        ServiceConfigMap.put(cacheKey + Constants.CONFIG, parameters);
-        ServiceConfigFileMap.put(cacheKey + Constants.CONFIG_FILE, config.configFileMap());
 
-        return serviceEntity;
-    }
+
+
 
     /**
      * 构建配置文件映射 - 重构使用JDK 21新特性
@@ -526,72 +408,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         }
     }
 
-    private void updateServiceInstanceConfig(
-            String frameCode, String serviceName, List<ServiceConfig> parameters) {
-        // 查询frameCode相同的集群
-        List<ClusterInfoDTO> clusters = clusterInfoService.getClusterByFrameCode(frameCode);
-        // 查询集群的服务实例
-        for (ClusterInfoDTO cluster : clusters) {
-            ClusterServiceInstanceDTO serviceInstanceDto = serviceInstanceService
-                    .getServiceInstanceByClusterIdAndServiceName(
-                            cluster.id(), serviceName);
-            if (Objects.nonNull(serviceInstanceDto)) {
-                ClusterServiceRoleGroupConfigDTO configDto = roleGroupService
-                        .getRoleGroupConfigByServiceId(serviceInstanceDto.id());
-                ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-                ClusterServiceRoleGroupConfig config = configConverter.dtoToEntity(configDto);
-                String configJson = config.getConfigJson();
-                List<ServiceConfig> serviceConfigs = JSONArray.parseArray(configJson, ServiceConfig.class);
-                ProcessUtils.addAll(serviceConfigs, parameters);
-                // 更新服务实例的配置
-                config.setConfigJson(JSONObject.toJSONString(serviceConfigs));
-                roleGroupConfigService.updateById(config);
-            }
-        }
-    }
 
-    /**
-     * 构建框架服务角色实体 - 重构使用JDK 21新特性
-     */
-    private void buildFrameServiceRole(
-            ServiceMetaConfig config,
-            FrameServiceEntity serviceEntity,
-            ServiceRoleInfo serviceRole,
-            String serviceRoleJson,
-            String serviceRoleJsonMd5,
-            FrameServiceRoleEntity role) {
-        role.setServiceId(serviceEntity.getId());
-        role.setServiceRoleName(serviceRole.getName());
-        role.setCardinality(serviceRole.getCardinality());
-        role.setFrameCode(config.frameCode());
-        role.setServiceRoleJson(serviceRoleJson);
-        role.setServiceRoleType(CommonUtils.convertRoleType(serviceRole.getRoleType().getName()));
-        role.setJmxPort(serviceRole.getJmxPort());
-        role.setServiceRoleJsonMd5(serviceRoleJsonMd5);
-        role.setLogFile(serviceRole.getLogFile());
-    }
-
-    /**
-     * 构建服务实体 - 重构使用JDK 21新特性
-     */
-    private void buildServiceEntity(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
-        var serviceInfo = config.serviceInfo();
-        serviceEntity.setServiceName(config.serviceName());
-        serviceEntity.setLabel(serviceInfo.getLabel());
-        serviceEntity.setFrameId(config.frameInfo().getId());
-        serviceEntity.setServiceDesc(serviceInfo.getDescription());
-        serviceEntity.setServiceVersion(serviceInfo.getVersion());
-        serviceEntity.setPackageName(serviceInfo.getPackageName());
-        serviceEntity.setDependencies(StringUtils.join(serviceInfo.getDependencies(), ","));
-        serviceEntity.setFrameCode(config.frameCode());
-        serviceEntity.setServiceConfig(JSON.toJSONString(serviceInfo.getParameters()));
-        serviceEntity.setServiceJson(config.serviceDdl());
-        serviceEntity.setServiceJsonMd5(config.serviceInfoMd5());
-        serviceEntity.setDecompressPackageName(config.decompressPackageName());
-        serviceEntity.setConfigFileJson(JSONObject.toJSONString(config.configFileMap()));
-        serviceEntity.setConfigFileJsonMd5(SecureUtil.md5(serviceEntity.getConfigFileJson()));
-        serviceEntity.setSortNum(serviceInfo.getSortNum());
-    }
 
     // 根据 IP 地址推断子网掩码
     public static String getSubnetFromIp(String ip) {
