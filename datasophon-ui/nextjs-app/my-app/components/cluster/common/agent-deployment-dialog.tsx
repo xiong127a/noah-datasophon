@@ -14,6 +14,7 @@ import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo } from './cluster-wizard-action-bar'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ClusterTypeUtil } from '@/types'
+import { CARD_STYLES, BADGE_STYLES } from './shared-styles'
 
 import type { 
   AgentDeploymentDialogProps, 
@@ -303,19 +304,19 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
           {/* K8s模式提示 */}
           {isK8s ? (
             <div className="flex-1 flex items-center justify-center">
-              <Card className="max-w-md mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/50 shadow-xl">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/25">
+              <Card className={`max-w-md mx-auto ${CARD_STYLES.base} ${CARD_STYLES.info} shadow-xl`}>
+                <CardHeader className={`${CARD_STYLES.header} text-center`}>
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <CheckCircle2 className="w-8 h-8 text-white" />
                   </div>
-                  <CardTitle className="text-lg font-bold text-gray-900">
+                  <CardTitle className={`${CARD_STYLES.title} text-center font-bold text-gray-900`}>
                     Kubernetes模式
                   </CardTitle>
                   <CardDescription className="text-gray-600">
                     无需手动分发Agent程序
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-center space-y-4">
+                <CardContent className={`${CARD_STYLES.content} text-center`}>
                   <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-blue-200/30">
                     <Info className="w-6 h-6 text-blue-500 mx-auto mb-2" />
                     <p className="text-sm text-gray-700 leading-relaxed">
@@ -331,10 +332,10 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
           ) : (
             /* PVM模式Agent分发 */
             <div className="space-y-6">
-              {/* 操作栏 */}
-              <div className="flex items-center justify-between bg-white/70 backdrop-blur-xl rounded-2xl p-4 shadow-lg shadow-black/5 border border-white/20">
+              {/* 操作栏 - 框架化样式 */}
+              <div className="flex items-center justify-between bg-white/70 backdrop-blur-xl rounded-xl p-4 shadow-lg border border-white/20">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/25">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
                     <Server className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -352,7 +353,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                       disabled={isDistributing}
                       variant="outline"
                       size="sm"
-                      className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                      className="text-amber-600 border-amber-200 hover:bg-amber-50"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
                       重试失败
@@ -362,7 +363,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                   <Button
                     onClick={startAgentDistribution}
                     disabled={isDistributing || hosts.length === 0 || overallStatus === 'COMPLETED'}
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg shadow-blue-500/25"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                   >
                     {isDistributing ? (
                       <>
@@ -414,15 +415,15 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-[500px] pr-2">
                   {hosts.map((host) => (
-                    <Card key={host.id} className="bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-200">
-                      <CardHeader className="pb-3">
+                    <Card key={host.id} className={`${CARD_STYLES.base} bg-white/70 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-200`}>
+                      <CardHeader className={`${CARD_STYLES.header} pb-3`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-500 rounded-lg flex items-center justify-center">
                               <Server className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                              <CardTitle className="text-sm font-bold text-gray-900">
+                              <CardTitle className={`${CARD_STYLES.title} text-sm font-bold text-gray-900`}>
                                 {host.hostname}
                               </CardTitle>
                               <CardDescription className="text-xs text-gray-600">
@@ -467,7 +468,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                         
                         {/* 错误信息 */}
                         {host.errorMessage && (
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-2 mt-2">
+                          <div className={`${CARD_STYLES.error} rounded-lg p-2 mt-2`}>
                             <div className="flex items-center space-x-2">
                               <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                               <span className="text-xs text-red-700">{host.errorMessage}</span>
