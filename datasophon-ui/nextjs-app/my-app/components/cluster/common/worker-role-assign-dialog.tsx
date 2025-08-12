@@ -246,44 +246,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
 
 
-  // 提交数据
-  const handleSubmit = useCallback(async () => {
-    if (!cluster?.id) {
-      toast.error('集群信息缺失')
-      return
-    }
 
-    // 构建保存数据
-    const saveData: ServiceRoleHostMapping[] = Object.entries(formData).map(([roleName, hosts]) => ({
-      serviceRole: roleName,
-      hosts: hosts || []
-    }))
-
-    try {
-      setLoading(true)
-      const response = await clusterApiV1.serviceRole.saveMapping(cluster.id, saveData as any)
-      
-      if (response?.success) {
-        toast.success('Worker与Client角色分配保存成功')
-        
-        // 构建完成数据
-        const step6Data: Step6Data = {
-          roleHostMappings: saveData,
-          selectedRoles: Object.keys(formData),
-          assignedHosts: [] // Step6不需要这个字段
-        }
-        
-        onComplete(step6Data)
-      } else {
-        throw new Error(response?.message || '保存失败')
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '保存失败'
-      toast.error(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }, [cluster?.id, formData, onComplete])
 
   // 统计信息
   const stats = useMemo(() => {
@@ -330,7 +293,22 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
     },
     {
       text: "下一步",
-      onClick: handleSubmit,
+      onClick: () => {
+        // TODO: 实现保存功能
+        if (onComplete) {
+          const roleHostMappings: ServiceRoleHostMapping[] = Object.entries(formData).map(([serviceRole, hosts]) => ({
+            serviceRole,
+            hosts
+          }))
+          
+          const step6Data: Step6Data = {
+            roleHostMappings,
+            selectedRoles: Object.keys(formData),
+            assignedHosts: []
+          }
+          onComplete(step6Data)
+        }
+      },
       disabled: loading || stats.assignedRoles !== stats.totalRoles,
       loading: loading,
       loadingText: "保存中...",

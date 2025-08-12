@@ -246,7 +246,15 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
               <div className={DIALOG_STYLES.footerTopLine}></div>
               
               <div className={DIALOG_STYLES.footerContent}>
-                {/* 操作按钮 */}
+                {/* 左侧：服务选择状态信息 */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    服务选择配置
+                  </span>
+                </div>
+
+                {/* 右侧：操作按钮 */}
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={() => {
