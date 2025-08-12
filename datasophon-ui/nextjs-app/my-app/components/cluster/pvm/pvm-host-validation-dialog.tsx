@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { 
-  ChevronLeft, ChevronRight, CheckCircle, Loader2, RefreshCw,
+  CheckCircle, Loader2, RefreshCw,
   AlertCircle, Clock, Server, Activity, Shield, AlertTriangle
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
-import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
+import ClusterWizardLayout from '../common/cluster-wizard-layout'
+import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
 import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { DIALOG_STYLES, BUTTON_STYLES, BADGE_STYLES } from '../common/shared-styles'
+import { BADGE_STYLES } from '../common/shared-styles'
 import type { PvmStep1Data, PvmClusterInfo } from './pvm-host-config-dialog'
 
 // PVM主机信息接口
@@ -298,28 +298,49 @@ export default function PvmHostValidationDialog({
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DIALOG_STYLES.content}>
-        <DialogTitle className="sr-only">
-          PVM主机验证 - {cluster?.clusterName}
-        </DialogTitle>
-        
-        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
-          {/* 左侧导航 */}
-          <ClusterWizardSidebar 
-            steps={steps}
-            currentStep={currentStep}
-            title="PVM集群配置"
-            clusterName={cluster?.clusterName || ''}
-            isK8s={false}
-            onClose={() => onOpenChange(false)}
-          />
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: `主机验证 (${hosts.filter(h => h.status === 'success').length}/${hosts.length})`,
+        value: hosts.filter(h => h.status === 'success').length,
+        total: hosts.length,
+        pulse: checkStatus === 'checking'
+      }}
+      buttons={[
+        ...(onPrevious ? [{
+          text: "上一步",
+          onClick: onPrevious,
+          variant: 'secondary' as const,
+          disabled: loading
+        }] : []),
+        {
+          text: checkStatus === 'completed' ? "下一步" : "检查主机",
+          onClick: checkStatus === 'completed' ? handleNext : handleCheckHosts,
+          disabled: loading || (checkStatus === 'completed' && hosts.filter(h => h.status === 'success').length === 0),
+          loading: loading,
+          loadingText: checkStatus === 'completed' ? "处理中..." : "检查中..."
+        }
+      ]}
+    />
+  )
 
-          {/* 右侧内容区域 */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* 当前步骤标题 */}
-            <div className="p-6 sm:p-8 border-b border-slate-200/70 bg-gradient-to-r from-white via-indigo-50/30 to-purple-50/30 relative">
+  return (
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => onOpenChange(false)}
+      clusterName={cluster?.clusterName || ''}
+      clusterType="PVM"
+      stepTitle="主机验证"
+      stepDescription="验证主机连通性和系统资源"
+      currentStep={currentStep}
+      dialogTitle={`PVM主机验证 - ${cluster?.clusterName}`}
+      actionBar={actionBar}
+    >
+      {/* 当前步骤内容 */}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-8">
               {/* 装饰性光效 */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
               {/* 分割线光效 */}
@@ -512,60 +533,9 @@ export default function PvmHostValidationDialog({
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* 底部操作栏 - 统一框架样式 */}
-            <div className={DIALOG_STYLES.footer}>
-              <div className={DIALOG_STYLES.footerGlow}></div>
-              <div className={DIALOG_STYLES.footerTopLine}></div>
-              
-              <div className={DIALOG_STYLES.footerContent}>
-                {/* 左侧：主机状态信息 */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    PVM 主机校验
-                  </span>
-                </div>
-
-                {/* 右侧：操作按钮 */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={onPrevious}
-                    variant="outline"
-                    className={BUTTON_STYLES.previous}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-2" />
-                    上一步
-                  </Button>
-                  
-                  <Button
-                    onClick={handleNext}
-                    disabled={loading || checkStatus !== 'completed' || hosts.filter(h => h.status === 'success').length === 0}
-                    className={`${BUTTON_STYLES.next} ${
-                      loading || checkStatus !== 'completed' || hosts.filter(h => h.status === 'success').length === 0
-                        ? BUTTON_STYLES.nextDisabled
-                        : BUTTON_STYLES.nextEnabled
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        处理中...
-                      </>
-                    ) : (
-                      <>
-                        下一步
-                        <ChevronRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ClusterWizardLayout>
   )
 }
