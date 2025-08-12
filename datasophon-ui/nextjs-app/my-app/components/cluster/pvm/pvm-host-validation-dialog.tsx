@@ -341,29 +341,20 @@ export default function PvmHostValidationDialog({
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
         <div className="p-6 sm:p-8 lg:p-10">
           <div className="space-y-8">
-              {/* 装饰性光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-              {/* 分割线光效 */}
-              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/80 to-transparent"></div>
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                    PVM主机验证
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    验证所有主机的SSH连接和系统状态
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-white/80 backdrop-blur-sm">
-                  步骤 {currentStep}/{steps.length}
-                </Badge>
+            {/* 页面功能标题 - 衬托主题 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  PVM主机验证
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  验证所有主机的SSH连接和系统状态
+                </p>
               </div>
             </div>
 
             {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
-              <div className="p-6 sm:p-8 lg:p-10">
-                <div className="space-y-6">
+            <div className="space-y-6">
                   {/* SSH配置信息概览 */}
                   <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm rounded-3xl">
                     <CardHeader className="pb-4">
