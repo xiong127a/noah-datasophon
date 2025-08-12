@@ -98,6 +98,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import ClusterAuthorizationDialogSuper from "./authorization-dialog"
 import CreateClusterDialogEnhanced from "./create-dialog"
+import { CARD_STYLES, BUTTON_STYLES, BADGE_STYLES, DIALOG_STYLES } from "./common/shared-styles"
 // K8S专用组件
 import K8sHostConfigDialog, { K8sStep1Data } from "./kubernetes/k8s-host-config-dialog"
 import K8sHostValidationDialog from "./kubernetes/k8s-host-validation-dialog"
@@ -208,7 +209,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
 
   return (
     <>
-      <Card className={`group relative overflow-hidden rounded-3xl border-0 bg-white ${colors.shadowColor} shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 animate-scale-in h-[560px]`}>
+      <Card className={`${CARD_STYLES.rounded} group relative overflow-hidden ${colors.shadowColor} shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 animate-scale-in h-[560px]`}>
         {/* 主背景渐变 */}
         <div className={`absolute inset-0 bg-gradient-to-br ${colors.bgGradient}`} />
         
@@ -222,7 +223,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
         {/* 边框光效 */}
         <div className={`absolute inset-0 rounded-3xl bg-gradient-to-r ${colors.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-sm`} />
 
-        <CardContent className="relative p-8 z-10 h-full flex flex-col">
+        <CardContent className={`${CARD_STYLES.content} relative z-10 h-full flex flex-col`}>
           {/* 头部信息 - 增强设计 */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center space-x-5">
@@ -250,7 +251,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
                 <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent group-hover:from-slate-900 group-hover:to-slate-700 transition-all duration-300">
                   {cluster.clusterName}
                 </h3>
-                <Badge className={`${colors.badgeColor} border-0 rounded-full px-4 py-1 font-medium shadow-lg group-hover:scale-105 transition-transform duration-300`}>
+                <Badge className={`${BADGE_STYLES.base} ${colors.badgeColor} shadow-lg group-hover:scale-105 transition-transform duration-300`}>
                   {ClusterTypeUtil.getLabel(ClusterTypeUtil.fromString(cluster.depType || 'PVM'))}
                 </Badge>
               </div>
@@ -325,10 +326,10 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
                   onEnter(cluster); // 暂时使用onEnter，后续可以添加专门的启动函数
                 }
               }}
-              className={`w-full h-12 rounded-2xl font-semibold text-lg transition-all duration-500 group/btn relative overflow-hidden ${
+              className={`${BUTTON_STYLES.next} w-full h-12 font-semibold text-lg group/btn relative overflow-hidden ${
                 cluster.clusterStateCode && cluster.clusterStateCode <= 4
-                  ? `bg-gradient-to-r ${colors.gradient} hover:shadow-2xl hover:shadow-blue-200 text-white border-0 hover:scale-105`
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed border-0"
+                  ? `${BUTTON_STYLES.nextEnabled} bg-gradient-to-r ${colors.gradient} hover:shadow-2xl hover:scale-105`
+                  : `${BUTTON_STYLES.nextDisabled} cursor-not-allowed`
               }`}
             >
               {/* 按钮发光效果 */}
@@ -349,7 +350,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
               <Button
                 variant="secondary"
                 onClick={() => onSetup(cluster)}
-                className="h-11 rounded-2xl bg-white/80 hover:bg-white border border-white/50 hover:shadow-lg transition-all duration-300 text-slate-700 hover:scale-105 backdrop-blur-sm"
+                className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 配置集群
@@ -360,7 +361,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
                   setAuthDialogOpen(true);
                   onAuth(cluster);
                 }}
-                className="h-11 rounded-2xl bg-white/80 hover:bg-white border border-white/50 hover:shadow-lg transition-all duration-300 text-slate-700 hover:scale-105 backdrop-blur-sm"
+                className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
               >
                 <Shield className="mr-2 h-4 w-4" />
                 用户授权
@@ -372,16 +373,16 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="secondary"
-                  className="w-full h-10 rounded-2xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200/50 hover:shadow-lg transition-all duration-300 text-slate-600"
+                  className={`${BUTTON_STYLES.previous} w-full h-10 bg-gray-50/80 hover:bg-gray-100 hover:shadow-lg text-gray-600`}
                 >
                   <MoreHorizontal className="mr-2 h-4 w-4" />
                   更多操作
                   <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-xl p-2">
+              <DropdownMenuContent className={`w-56 ${DIALOG_STYLES.content} backdrop-blur-xl p-2`}>
                 <DropdownMenuItem 
-                  className="rounded-2xl m-1 hover:bg-slate-50 p-3 transition-all duration-200"
+                  className="rounded-xl m-1 hover:bg-gray-50 p-3 transition-all duration-200"
                   onClick={() => onEdit(cluster)}
                 >
                   <Edit className="mr-3 h-4 w-4" />
@@ -390,7 +391,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
 
                 <DropdownMenuSeparator className="my-2" />
                 <DropdownMenuItem 
-                  className="rounded-2xl m-1 text-red-600 hover:bg-red-50 p-3 transition-all duration-200"
+                  className="rounded-xl m-1 text-red-600 hover:bg-red-50 p-3 transition-all duration-200"
                   onClick={() => onDelete(cluster)}
                 >
                   <Trash2 className="mr-3 h-4 w-4" />
@@ -416,7 +417,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
 const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
   return (
     <Card
-      className="group relative overflow-hidden rounded-3xl border-0 bg-white shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[560px]"
+      className={`${CARD_STYLES.rounded} group relative overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-scale-in h-[560px]`}
       onClick={onClick}
     >
         {/* 动态背景渐变 */}
@@ -430,10 +431,10 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
         {/* 边框发光效果 */}
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-sm" />
 
-        <CardContent className="relative p-8 h-full flex flex-col justify-between items-center text-center z-10">
+        <CardContent className={`${CARD_STYLES.content} relative h-full flex flex-col justify-between items-center text-center z-10`}>
           {/* 主图标 - 增强3D效果 */}
           <div className="relative mb-6 perspective-1000">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 preserve-3d overflow-hidden">
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 preserve-3d overflow-hidden">
               <CreateClusterIcon className="h-16 w-16 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute inset-0 rounded-3xl bg-white/30 backdrop-blur-sm" />
             </div>
@@ -454,15 +455,15 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
 
             {/* 特性列表 - 重新设计 */}
             <div className="space-y-4 mb-6 w-full">
-                          <div className="flex items-center justify-center text-slate-600 group-hover:text-slate-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
+                          <div className="flex items-center justify-center text-gray-600 group-hover:text-gray-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
                 <Rocket className="h-5 w-5 mr-3 text-indigo-500" />
                 <span className="font-medium">快速部署全新环境</span>
               </div>
-              <div className="flex items-center justify-center text-slate-600 group-hover:text-slate-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
+              <div className="flex items-center justify-center text-gray-600 group-hover:text-gray-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
                 <Brain className="h-5 w-5 mr-3 text-purple-500" />
                 <span className="font-medium">AI智能配置优化</span>
               </div>
-              <div className="flex items-center justify-center text-slate-600 group-hover:text-slate-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
+              <div className="flex items-center justify-center text-gray-600 group-hover:text-gray-800 transition-colors bg-white/60 rounded-2xl p-3 backdrop-blur-sm border border-white/30">
                 <Zap className="h-5 w-5 mr-3 text-pink-500" />
                 <span className="font-medium">高性能计算集群</span>
               </div>
@@ -472,7 +473,7 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
           {/* 底部区域 */}
           <div className="space-y-4">
             {/* 创建按钮 - 增强样式 */}
-            <Button className="w-full h-12 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 text-white border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 group-hover:scale-105 font-semibold text-lg relative overflow-hidden group/btn">
+            <Button className={`${BUTTON_STYLES.next} ${BUTTON_STYLES.nextEnabled} w-full h-12 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:via-purple-700 hover:to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all duration-500 group-hover:scale-105 font-semibold text-lg relative overflow-hidden group/btn`}>
             {/* 按钮光效 */}
             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
                           <Plus className="mr-3 h-5 w-5 relative z-10" />
@@ -482,11 +483,11 @@ const CreateClusterCard = ({ onClick }: { onClick: () => void }) => {
 
                       {/* 底部提示 */}
             <div className="mt-6 flex items-center justify-center space-x-4">
-              <Badge variant="outline" className="bg-white/80 border-indigo-200 text-indigo-700 rounded-full">
+              <Badge variant="outline" className={`${BADGE_STYLES.base} bg-white/80 border-indigo-200 text-indigo-700`}>
                 <Server className="h-3 w-3 mr-1" />
                 Kubernetes
               </Badge>
-              <Badge variant="outline" className="bg-white/80 border-emerald-200 text-emerald-700 rounded-full">
+              <Badge variant="outline" className={`${BADGE_STYLES.base} bg-white/80 border-emerald-200 text-emerald-700`}>
                 <Cloud className="h-3 w-3 mr-1" />
                 虚拟机
               </Badge>
@@ -714,35 +715,35 @@ export default function ClusterListEnhanced() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/50 relative overflow-hidden">
       {/* 背景装饰 */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl transform -translate-x-48 -translate-y-48" />
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl transform translate-x-40 translate-y-40" />
 
       {/* 页面头部 - 增强设计 */}
-      <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-lg">
+      <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white/90 to-purple-50/80" />
         <div className="relative w-full px-8 py-12">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent">
                 集群管理中心
               </h1>
-              <p className="text-lg text-slate-600">统一管理和监控您的大数据集群环境</p>
+              <p className="text-lg text-gray-600">统一管理和监控您的大数据集群环境</p>
               <div className="flex items-center space-x-2 pt-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-sm text-slate-500">实时监控 • 智能管理 • 高效运维</span>
+                <span className="text-sm text-gray-500">实时监控 • 智能管理 • 高效运维</span>
               </div>
             </div>
             
             <div className="flex items-center space-x-6">
               <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
                 <div className="flex items-center space-x-4">
-                  <Badge className="px-6 py-3 rounded-2xl border-blue-200 text-blue-700 bg-blue-50/80 text-lg font-semibold">
+                  <Badge className={`${BADGE_STYLES.base} px-6 py-3 border-blue-200 text-blue-700 bg-blue-50/80 text-lg font-semibold`}>
                     <Server className="h-5 w-5 mr-3 text-blue-600" />
                     总集群: {clusters.length}
                   </Badge>
-                  <Badge className="px-6 py-3 rounded-2xl border-green-200 text-green-700 bg-green-50/80 text-lg font-semibold">
+                  <Badge className={`${BADGE_STYLES.base} px-6 py-3 border-green-200 text-green-700 bg-green-50/80 text-lg font-semibold`}>
                     <div className="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse" />
                     运行中: {clusters.filter((c) => c.clusterStateCode === 3).length}
                   </Badge>

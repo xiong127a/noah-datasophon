@@ -120,6 +120,11 @@ export const CARD_STYLES = {
     border border-gray-200 rounded-xl bg-white shadow-sm
   `,
   
+  // 圆润卡片 - 适用于集群列表等需要更圆润外观的场景
+  rounded: `
+    border border-gray-200 rounded-3xl bg-white shadow-sm
+  `,
+  
   // 信息卡片 - 蓝色主题
   info: `
     border-blue-200 bg-blue-50/50
