@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { apiClient, API_PATHS } from "@/lib/api"
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
+import { DIALOG_STYLES, CARD_STYLES } from "./common/shared-styles"
 
 interface CreateClusterDialogProps {
   open: boolean
@@ -238,29 +239,31 @@ export default function CreateClusterDialogEnhanced({
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-3xl bg-white rounded-3xl border-0 shadow-2xl overflow-hidden [&>button]:hidden">
-        {/* 头部设计 - 仿照集群列表风格 */}
-        <div className="relative -m-6 mb-6 overflow-hidden rounded-t-3xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50" />
+      <DialogContent className={`max-w-3xl ${DIALOG_STYLES.content} overflow-hidden [&>button]:hidden`}>
+        {/* 头部设计 - 框架化样式 */}
+        <div className="relative -m-6 mb-6 overflow-hidden rounded-t-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-50" />
           
-          {/* 装饰性光效 */}
+          {/* 装饰性光效 - 框架化 */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl transform translate-x-20 -translate-y-20" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-indigo-400/20 to-pink-400/20 rounded-full blur-2xl transform -translate-x-16 translate-y-16" />
           
-          {/* 边框光效 */}
-          <div className="absolute inset-0 rounded-t-3xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-10" />
+          {/* 边框光效 - 框架化 */}
+          <div className="absolute inset-0 rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-10" />
 
           <div className="relative p-6">
-            <button
+            <Button
               onClick={handleCancel}
-              className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white border border-white/50 hover:border-white/70 flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl group"
+              variant="ghost"
+              size="sm"
+              className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white border border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl group"
             >
-              <X className="h-5 w-5 text-slate-600 group-hover:text-slate-800 transition-colors" />
-            </button>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent pr-12">
+              <X className="h-5 w-5 text-gray-600 group-hover:text-gray-800 transition-colors" />
+            </Button>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent pr-12">
               {isEdit ? '编辑集群' : '创建新集群'}
             </DialogTitle>
-            <DialogDescription className="text-slate-600 mt-2">
+            <DialogDescription className="text-gray-600 mt-2">
               {isEdit ? '修改集群的基本配置信息' : '配置您的大数据平台集群环境'}
             </DialogDescription>
           </div>
