@@ -53,6 +53,10 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
   const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
   const steps = getStepsByType(StepsType.NORMAL, depType)
+  
+  // 获取当前步骤标题
+  const currentStepInfo = steps.find(step => step.number === currentStep)
+  const currentStepTitle = currentStepInfo?.title || stepTitle
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -66,7 +70,7 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
           <ClusterWizardSidebar 
             steps={steps}
             currentStep={currentStep}
-            title="集群配置向导"
+            title={currentStepTitle}
             clusterName={clusterName}
             isK8s={isK8s}
             onClose={onClose}

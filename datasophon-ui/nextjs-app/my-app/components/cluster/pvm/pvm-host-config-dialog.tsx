@@ -2,20 +2,19 @@
 
 import React, { useState, useEffect } from 'react'
 import { 
-  ChevronRight, Loader2, Info, Server, Shield, Eye, EyeOff
+  Info, Server, Shield, Eye, EyeOff
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { toast } from 'sonner'
-import ClusterWizardSidebar from '../common/cluster-wizard-sidebar'
+import ClusterWizardLayout from '../common/cluster-wizard-layout'
+import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
 import Image from "next/image"
-import { getStepsByType, StepsType } from '@/lib/cluster-wizard-steps'
-import { DIALOG_STYLES, BUTTON_STYLES, CARD_STYLES } from '../common/shared-styles'
+
+import { CARD_STYLES } from '../common/shared-styles'
 
 // PVM集群信息接口
 export interface PvmClusterInfo {
@@ -57,7 +56,6 @@ export default function PvmHostConfigDialog({
   const [loading, setLoading] = useState(false)
   const [passwordVisible, setPasswordVisible] = useState(false)
 
-  const steps = getStepsByType('pvm' as StepsType)
   const currentStep = 1
 
   // 获取集群类型图标路径
@@ -167,51 +165,41 @@ export default function PvmHostConfigDialog({
     }
   }
 
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: "PVM 集群配置",
+        pulse: true
+      }}
+      buttons={[
+        {
+          text: loading ? "处理中..." : "下一步",
+          onClick: handleNext,
+          disabled: loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword,
+          loading: loading,
+          loadingText: "处理中..."
+        }
+      ]}
+    />
+  )
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DIALOG_STYLES.content}>
-        <DialogTitle className="sr-only">
-          PVM集群配置 - {cluster?.clusterName}
-        </DialogTitle>
-        
-        <div className="flex h-full max-h-[min(calc(100vh-96px),900px)] sm:max-h-[min(95vh,900px)]">
-          {/* 左侧导航 */}
-          <ClusterWizardSidebar 
-            steps={steps}
-            currentStep={currentStep}
-            title="PVM集群配置"
-            clusterName={cluster?.clusterName || ''}
-            isK8s={false}
-            onClose={() => onOpenChange(false)}
-          />
-
-          {/* 右侧内容区域 */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* 当前步骤标题 - 框架化样式 */}
-            <div className="p-6 sm:p-8 border-b border-gray-200 bg-gradient-to-r from-white via-blue-50/30 to-indigo-50/30 relative">
-              {/* 装饰性光效 - 框架化 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent"></div>
-              {/* 分割线光效 - 框架化 */}
-              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-indigo-200/60 to-transparent"></div>
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    PVM集群配置
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    配置集群主机列表和 SSH 连接信息
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-white/80 backdrop-blur-sm">
-                  步骤 {currentStep}/{steps.length}
-                </Badge>
-              </div>
-            </div>
-
-            {/* 步骤内容 */}
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
-              <div className="p-6 sm:p-8 lg:p-10">
-                <div className="space-y-8">
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => onOpenChange(false)}
+      clusterName={cluster?.clusterName || ''}
+      clusterType="PVM"
+      stepTitle="安装主机"
+      stepDescription="配置集群主机列表和 SSH 连接信息"
+      currentStep={currentStep}
+      dialogTitle={`PVM集群配置 - ${cluster?.clusterName}`}
+      actionBar={actionBar}
+    >
+      {/* 步骤内容 */}
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-8">
                   {/* Header - 框架化样式 */}
                   <div className="text-center pb-4">
                     <div className="mx-auto w-20 h-20 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
@@ -343,50 +331,6 @@ export default function PvmHostConfigDialog({
                 </div>
               </div>
             </div>
-
-            {/* 底部操作栏 - 框架化样式 */}
-            <div className={DIALOG_STYLES.footer}>
-              <div className={DIALOG_STYLES.footerGlow}></div>
-              <div className={DIALOG_STYLES.footerTopLine}></div>
-              
-              <div className={DIALOG_STYLES.footerContent}>
-                {/* 左侧：集群信息 */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    PVM 集群配置
-                  </span>
-                </div>
-
-                {/* 右侧：操作按钮 */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={handleNext}
-                    disabled={loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword}
-                    className={`${BUTTON_STYLES.next} ${
-                      loading || !step1Data.hosts || !step1Data.sshUser || !step1Data.sshPort || !step1Data.sshPassword
-                        ? BUTTON_STYLES.nextDisabled
-                        : BUTTON_STYLES.nextEnabled
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        处理中...
-                      </>
-                    ) : (
-                      <>
-                        下一步
-                        <ChevronRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ClusterWizardLayout>
   )
 }
