@@ -1242,6 +1242,42 @@ public class ConfigGroupUtils {
     }
 
     /**
+     * 将分组的配置数据扁平化为单一列表 - JDK21优化版本
+     * 用于API返回数据的格式转换，确保前端兼容性
+     * 
+     * @param groupedConfigs 分组的配置数据
+     * @return 扁平化的配置列表
+     */
+    public static List<ServiceConfig> flattenGroupedConfigs(Map<String, List<ServiceConfig>> groupedConfigs) {
+        if (groupedConfigs == null || groupedConfigs.isEmpty()) {
+            return List.of();
+        }
+        
+        logger.debug("开始扁平化分组配置，共 {} 个分组", groupedConfigs.size());
+        
+        // 使用JDK21流式API和现代集合操作
+        var flattenedConfigs = groupedConfigs.entrySet().stream()
+            .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
+            .flatMap(entry -> {
+                var groupName = entry.getKey();
+                var configs = entry.getValue();
+                logger.trace("处理分组 '{}', 包含 {} 个配置项", groupName, configs.size());
+                return configs.stream();
+            })
+            .distinct() // 去重，避免重复配置
+            .sorted((config1, config2) -> {
+                // 按配置名称排序，确保结果稳定
+                var name1 = config1.getName() != null ? config1.getName() : "";
+                var name2 = config2.getName() != null ? config2.getName() : "";
+                return name1.compareTo(name2);
+            })
+            .toList(); // JDK16+ Stream.toList()
+        
+        logger.debug("扁平化完成，共 {} 个配置项", flattenedConfigs.size());
+        return flattenedConfigs;
+    }
+
+    /**
      * 为Generator确定角色名
      *
      * @param configTargetRoles 配置目标角色字符串

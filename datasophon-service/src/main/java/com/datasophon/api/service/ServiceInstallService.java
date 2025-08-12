@@ -38,12 +38,13 @@ public interface ServiceInstallService {
 
     /**
      * 获取服务配置选项
+     * 返回扁平化的配置列表，确保前端兼容性
      * 
      * @param clusterId   集群ID
      * @param serviceName 服务名称
-     * @return 服务配置映射
+     * @return 服务配置列表
      */
-    Map<String, List<ServiceConfig>> getServiceConfigOption(Integer clusterId, String serviceName);
+    List<ServiceConfig> getServiceConfigOption(Integer clusterId, String serviceName);
 
     /**
      * 保存服务角色主机映射

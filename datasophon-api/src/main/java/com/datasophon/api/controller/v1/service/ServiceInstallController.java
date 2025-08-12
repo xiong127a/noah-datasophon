@@ -62,11 +62,12 @@ public class ServiceInstallController {
 
     /**
      * 根据服务角色名称查询服务配置选项
+     * 返回扁平化的配置列表，确保前端兼容性
      */
     @GetMapping("/getServiceConfigOption")
     @Timed(value = "service.install.config.option", description = "获取服务配置选项的时间")
-    public Result<Map<String, List<ServiceConfig>>> getServiceConfigOption(@ClusterId Integer clusterId, 
-                                                                          @RequestParam("serviceName") String serviceName) {
+    public Result<List<ServiceConfig>> getServiceConfigOption(@ClusterId Integer clusterId, 
+                                                             @RequestParam("serviceName") String serviceName) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取服务配置选项: clusterId={}, serviceName={} - {}", 
                  clusterId, serviceName, threadInfo);

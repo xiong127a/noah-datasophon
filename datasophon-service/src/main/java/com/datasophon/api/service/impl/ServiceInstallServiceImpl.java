@@ -173,7 +173,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public Map<String, List<ServiceConfig>> getServiceConfigOption(Integer clusterId, String serviceName) {
+    public List<ServiceConfig> getServiceConfigOption(Integer clusterId, String serviceName) {
         List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
@@ -227,8 +227,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
         }
 
-        return ConfigGroupUtils.groupByConfigTargetRoleOrCommon(
-                list);
+        // 返回扁平化配置列表，确保前端兼容性
+        // 内部仍使用分组逻辑进行数据处理，但最终返回扁平化结果
+        var groupedConfigs = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(list);
+        return ConfigGroupUtils.flattenGroupedConfigs(groupedConfigs);
     }
 
     @Override
