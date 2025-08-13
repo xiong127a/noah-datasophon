@@ -56,5 +56,5 @@ public class AlertHistory {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 }

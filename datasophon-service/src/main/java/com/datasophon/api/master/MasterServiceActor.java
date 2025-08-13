@@ -19,6 +19,7 @@
 
 package com.datasophon.api.master;
 
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import org.apache.pekko.actor.AbstractActor;
 
 import cn.hutool.extra.spring.SpringUtil;
@@ -41,7 +42,6 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.common.enums.ServiceRoleState;
@@ -107,7 +107,7 @@ public class MasterServiceActor extends AbstractActor {
                     ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
                     // 使用MapStruct Converter进行转换 - 符合架构规范
                     ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-                    ClusterServiceRoleGroupConfig config = converter.dtoToEntity(configDto);
+                    ClusterServiceRoleGroupConfigEntity config = converter.dtoToEntity(configDto);
                     // TODO 获取角色组配置
                     ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (Objects.equals(NeedRestart.YES.getValue(), serviceRoleInstance.needRestart())) {
@@ -115,7 +115,7 @@ public class MasterServiceActor extends AbstractActor {
                             serviceRoleInstance.roleGroupId());
                     // 使用MapStruct Converter进行转换 - 符合架构规范
                     ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-                    ClusterServiceRoleGroupConfig config = converter.dtoToEntity(configDto);
+                    ClusterServiceRoleGroupConfigEntity config = converter.dtoToEntity(configDto);
                     ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
@@ -327,7 +327,7 @@ public class MasterServiceActor extends AbstractActor {
         }
     }
 
-    private boolean isEnableRangerPlugin(Integer clusterId, String serviceName) {
+    private boolean isEnableRangerPlugin(Long clusterId, String serviceName) {
         Map<String, String> variables = GlobalVariables.get(clusterId);
         if (variables.containsKey("enableRangerPlugin")) {
             return "true".equals(variables.get("enableRangerPlugin"));

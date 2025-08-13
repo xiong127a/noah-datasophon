@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterYarnQueueDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterYarnQueueVO;
-import com.datasophon.dao.entity.ClusterYarnQueue;
+import com.datasophon.dao.entity.ClusterYarnQueueEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -39,17 +39,17 @@ import org.mapstruct.ReportingPolicy;
         unmappedSourcePolicy = ReportingPolicy.IGNORE,
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ClusterYarnQueueConverter
-        extends BaseConverter<ClusterYarnQueue, ClusterYarnQueueDTO, ClusterYarnQueueVO> {
+        extends BaseConverter<ClusterYarnQueueEntity, ClusterYarnQueueDTO, ClusterYarnQueueVO> {
 
     @Override
     @Named("entityToDto")
     @Mapping(target = "minResources", source = ".", qualifiedByName = "formatMinResources")
     @Mapping(target = "maxResources", source = ".", qualifiedByName = "formatMaxResources")
-    ClusterYarnQueueDTO entityToDto(ClusterYarnQueue entity);
+    ClusterYarnQueueDTO entityToDto(ClusterYarnQueueEntity entity);
 
     @Override
     @Named("dtoToEntity")
-    ClusterYarnQueue dtoToEntity(ClusterYarnQueueDTO dto);
+    ClusterYarnQueueEntity dtoToEntity(ClusterYarnQueueDTO dto);
 
     @Override
     @Named("entityToVo")
@@ -57,7 +57,7 @@ public interface ClusterYarnQueueConverter
     @Mapping(target = "maxResources", source = ".", qualifiedByName = "formatMaxResources")
     @Mapping(target = "allowPreemptionText", source = "allowPreemption", qualifiedByName = "formatAllowPreemption")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
-    ClusterYarnQueueVO entityToVo(ClusterYarnQueue entity);
+    ClusterYarnQueueVO entityToVo(ClusterYarnQueueEntity entity);
 
     @Override
     @Named("dtoToVo")
@@ -66,7 +66,7 @@ public interface ClusterYarnQueueConverter
     ClusterYarnQueueVO dtoToVo(ClusterYarnQueueDTO dto);
 
     @Override
-    java.util.List<ClusterYarnQueueVO> entityListToVoList(java.util.List<ClusterYarnQueue> entityList);
+    java.util.List<ClusterYarnQueueVO> entityListToVoList(java.util.List<ClusterYarnQueueEntity> entityList);
 
     @Override
     java.util.List<ClusterYarnQueueVO> dtoListToVoList(java.util.List<ClusterYarnQueueDTO> dtoList);
@@ -75,7 +75,7 @@ public interface ClusterYarnQueueConverter
      * 格式化最小资源
      */
     @Named("formatMinResources")
-    default String formatMinResources(ClusterYarnQueue entity) {
+    default String formatMinResources(ClusterYarnQueueEntity entity) {
         if (entity.getMinCore() == null || entity.getMinMem() == null) {
             return "";
         }
@@ -86,7 +86,7 @@ public interface ClusterYarnQueueConverter
      * 格式化最大资源
      */
     @Named("formatMaxResources")
-    default String formatMaxResources(ClusterYarnQueue entity) {
+    default String formatMaxResources(ClusterYarnQueueEntity entity) {
         if (entity.getMaxCore() == null || entity.getMaxMem() == null) {
             return "";
         }

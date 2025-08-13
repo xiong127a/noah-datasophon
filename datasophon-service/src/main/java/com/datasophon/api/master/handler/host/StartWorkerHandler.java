@@ -39,12 +39,12 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
     private static final Logger logger = LoggerFactory.getLogger(StartWorkerHandler.class);
 
 
-    private Integer clusterId;
+    private Long clusterId;
 
 
     private String clusterFrame;
 
-    public StartWorkerHandler(Integer clusterId, String clusterFrame) {
+    public StartWorkerHandler(Long clusterId, String clusterFrame) {
         this.clusterId = clusterId;
         this.clusterFrame = clusterFrame;
     }

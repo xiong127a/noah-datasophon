@@ -88,7 +88,7 @@ public class TenantRangerActor extends AbstractActor {
         }
     }
 
-    private ExecResult createRangerService(Integer clusterId, String serviceName) throws Exception {
+    private ExecResult createRangerService(Long clusterId, String serviceName) throws Exception {
         RangerClient rangerClient = getRangerClient(clusterId);
         RangerUtil.createSuperRole(rangerClient);
         AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, clusterId);
@@ -125,7 +125,7 @@ public class TenantRangerActor extends AbstractActor {
         return execResult;
     }
 
-    private ExecResult deleteRangerPolicy(String tenantName, Integer clusterId) throws Exception {
+    private ExecResult deleteRangerPolicy(String tenantName, Long clusterId) throws Exception {
         RangerClient rangerClient = getRangerClient(clusterId);
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -149,7 +149,7 @@ public class TenantRangerActor extends AbstractActor {
         return execResult;
     }
 
-    private void deleteRangerRole(String tenantName, Integer clusterId) {
+    private void deleteRangerRole(String tenantName, Long clusterId) {
         try {
             RangerClient rangerClient = getRangerClient(clusterId);
             rangerClient.getRoles().deleteRoleByName(tenantName);

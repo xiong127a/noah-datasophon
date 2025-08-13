@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterUserGroupDTO;
 import com.datasophon.common.vo.ClusterUserGroupVO;
-import com.datasophon.dao.entity.ClusterUserGroup;
+import com.datasophon.dao.entity.ClusterUserGroupEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -35,14 +35,14 @@ import org.mapstruct.Named;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterUserGroupConverter extends
-        BaseConverter<ClusterUserGroup, ClusterUserGroupDTO, ClusterUserGroupVO> {
+        BaseConverter<ClusterUserGroupEntity, ClusterUserGroupDTO, ClusterUserGroupVO> {
 
     /**
      * Entity转换为VO时，添加用户组类型描述
      */
     @Mapping(target = "userGroupTypeText", source = "userGroupType", qualifiedByName = "mapUserGroupTypeText")
     @Override
-    ClusterUserGroupVO entityToVo(ClusterUserGroup entity);
+    ClusterUserGroupVO entityToVo(ClusterUserGroupEntity entity);
 
     /**
      * DTO转换为VO时，添加用户组类型描述

@@ -62,7 +62,7 @@ public class ServiceRoleCheckActor extends AbstractActor {
             List<ClusterServiceRoleInstanceDTO> list = roleInstanceService.getServiceRolesByNames(Constants.STATUS_CHECK_SERVICES);
 
             // 获取所有集群信息
-            Map<Integer, ClusterType> allClusterIdAndType = clusterInfoService.getAllClusterIdAndType();
+            Map<Long, ClusterType> allClusterIdAndType = clusterInfoService.getAllClusterIdAndType();
 
             if (!list.isEmpty()) {
                 Map<String, ClusterServiceRoleInstanceDTO> map = translateListToMap(list);

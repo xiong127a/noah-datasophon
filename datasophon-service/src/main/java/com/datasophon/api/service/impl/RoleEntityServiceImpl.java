@@ -48,7 +48,7 @@ public class RoleEntityServiceImpl implements RoleEntityService {
 
     @Override
     public List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         return roleInstanceMapper.selectByHostnameAndClusterId(hostname, clusterId);
     }
 
@@ -64,7 +64,7 @@ public class RoleEntityServiceImpl implements RoleEntityService {
 
     @Override
     public ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         List<ClusterServiceRoleInstanceEntity> list = roleInstanceMapper
                 .selectByServiceRoleNameAndClusterId(serviceRoleName, clusterId, hostname);
 

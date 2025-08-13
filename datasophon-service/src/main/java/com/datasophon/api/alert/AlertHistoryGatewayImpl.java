@@ -2,7 +2,7 @@ package com.datasophon.api.alert;
 
 import com.datasophon.api.alert.gateway.AlertHistoryGateway;
 import com.datasophon.api.alert.model.AlertHistory;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import com.mybatisflex.core.query.QueryChain;
@@ -26,30 +26,30 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
 
 
     @Override
-    public boolean hasEnabledAlertHistory(String alertname, int clusterId, String hostname) {
-        ClusterAlertHistory alertHistory = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getAlertTargetName).eq(alertname)
-                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getHostname).eq(hostname)
-                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
+    public boolean hasEnabledAlertHistory(String alertname, Long clusterId, String hostname) {
+        ClusterAlertHistoryEntity alertHistory = QueryChain.of(ClusterAlertHistoryEntity.class)
+                .where(ClusterAlertHistoryEntity::getAlertTargetName).eq(alertname)
+                .and(ClusterAlertHistoryEntity::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistoryEntity::getHostname).eq(hostname)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(ENABLED)
                 .one();
 
         return Objects.nonNull(alertHistory);
     }
 
     @Override
-    public AlertHistory getEnabledAlertHistory(String alertname, int clusterId, String hostname) {
-        ClusterAlertHistory clusterAlertHistory = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getAlertTargetName).eq(alertname)
-                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getHostname).eq(hostname)
-                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
+    public AlertHistory getEnabledAlertHistory(String alertname, Long clusterId, String hostname) {
+        ClusterAlertHistoryEntity clusterAlertHistoryEntity = QueryChain.of(ClusterAlertHistoryEntity.class)
+                .where(ClusterAlertHistoryEntity::getAlertTargetName).eq(alertname)
+                .and(ClusterAlertHistoryEntity::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistoryEntity::getHostname).eq(hostname)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(ENABLED)
                 .one();
 
-        if (Objects.nonNull(clusterAlertHistory)) {
+        if (Objects.nonNull(clusterAlertHistoryEntity)) {
             AlertHistory alertHistory = new AlertHistory();
-            BeanUtils.copyProperties(clusterAlertHistory, alertHistory);
-            alertHistory.setAlertLevel(clusterAlertHistory.getAlertLevel().getValue());
+            BeanUtils.copyProperties(clusterAlertHistoryEntity, alertHistory);
+            alertHistory.setAlertLevel(clusterAlertHistoryEntity.getAlertLevel().getValue());
             return alertHistory;
         }
 
@@ -58,8 +58,8 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
 
     @Override
     public void updateAlertHistoryToDisabled(Integer id) {
-        ClusterAlertHistory alertHistory = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getId).eq(id)
+        ClusterAlertHistoryEntity alertHistory = QueryChain.of(ClusterAlertHistoryEntity.class)
+                .where(ClusterAlertHistoryEntity::getId).eq(id)
                 .one();
 
         if (Objects.nonNull(alertHistory)) {
@@ -70,12 +70,12 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
 
     @Override
     public boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Integer id) {
-        List<ClusterAlertHistory> alertHistories = QueryChain.of(ClusterAlertHistory.class)
-                .where(ClusterAlertHistory::getHostname).eq(hostname)
-                .and(ClusterAlertHistory::getAlertGroupName).eq(serviceRoleName.toLowerCase())
-                .and(ClusterAlertHistory::getIsEnabled).eq(ENABLED)
-                .and(ClusterAlertHistory::getAlertLevel).eq(AlertLevel.WARN)
-                .and(ClusterAlertHistory::getId).ne(id)
+        List<ClusterAlertHistoryEntity> alertHistories = QueryChain.of(ClusterAlertHistoryEntity.class)
+                .where(ClusterAlertHistoryEntity::getHostname).eq(hostname)
+                .and(ClusterAlertHistoryEntity::getAlertGroupName).eq(serviceRoleName.toLowerCase())
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(ENABLED)
+                .and(ClusterAlertHistoryEntity::getAlertLevel).eq(AlertLevel.WARN)
+                .and(ClusterAlertHistoryEntity::getId).ne(id)
                 .list();
 
         return !CollectionUtils.isEmpty(alertHistories);

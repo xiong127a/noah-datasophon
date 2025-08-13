@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterVariableConverter;
 import com.datasophon.api.service.ClusterVariableService;
 import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 import com.datasophon.dao.mapper.ClusterVariableMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -37,15 +37,15 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariable>
+public class ClusterVariableServiceImpl extends ServiceImpl<ClusterVariableMapper, ClusterVariableEntity>
         implements ClusterVariableService {
 
     @Autowired
     private ClusterVariableConverter clusterVariableConverter;
 
     @Override
-    public ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId) {
-        ClusterVariable entity = getMapper().getVariableByVariableName(variableName, clusterId);
+    public ClusterVariableDTO getVariableByVariableName(String variableName, Long clusterId) {
+        ClusterVariableEntity entity = getMapper().getVariableByVariableName(variableName, clusterId);
         return entity != null ? clusterVariableConverter.entityToDto(entity) : null;
     }
 }

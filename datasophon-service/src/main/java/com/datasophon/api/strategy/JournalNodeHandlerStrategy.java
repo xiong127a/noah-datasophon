@@ -30,7 +30,7 @@ public class JournalNodeHandlerStrategy implements ServiceRoleStrategy {
     private static final Logger logger = LoggerFactory.getLogger(JournalNodeHandlerStrategy.class);
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() >= 3) {

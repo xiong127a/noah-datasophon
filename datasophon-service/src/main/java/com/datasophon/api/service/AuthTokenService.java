@@ -80,7 +80,7 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @param userId 用户ID
      * @param reason 撤销原因
      */
-    void revokeAllUserTokens(Integer userId, String reason);
+    void revokeAllUserTokens(Long userId, String reason);
 
     /**
      * 清理过期的令牌
@@ -122,7 +122,7 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @param userId 用户ID
      * @return 有效令牌列表
      */
-    List<AuthTokenDTO> getValidTokensByUserId(Integer userId);
+    List<AuthTokenDTO> getValidTokensByUserId(Long userId);
 
     /**
      * 根据ID获取令牌
@@ -148,5 +148,5 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @param maxTokens 最大令牌数量
      * @return 清理的令牌数量
      */
-    int cleanupExcessiveTokens(Integer userId, int maxTokens);
+    int cleanupExcessiveTokens(Long userId, int maxTokens);
 }

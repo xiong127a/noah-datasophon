@@ -22,7 +22,7 @@ import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
 import com.datasophon.api.service.host.strategy.model.HostListRequest;
 import com.datasophon.api.service.host.strategy.model.HostListResult;
 import com.datasophon.api.service.host.strategy.model.HostImportRequest;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.Getter;
 
 import java.util.List;
@@ -74,7 +74,7 @@ public interface HostManagementStrategy {
      * @param connectionParams 连接参数
      * @return 刷新后的主机列表
      */
-    List<ClusterHostDO> refreshHosts(Integer clusterId, Map<String, Object> connectionParams);
+    List<ClusterHostEntity> refreshHosts(Long clusterId, Map<String, Object> connectionParams);
 
     /**
      * 检查连接状态
@@ -94,7 +94,7 @@ public interface HostManagementStrategy {
      * @param connectionParams 连接参数
      * @return 检查结果
      */
-    Map<String, Object> performHostCheck(Integer clusterId, List<String> hostnames, 
+    Map<String, Object> performHostCheck(Long clusterId, List<String> hostnames, 
                                        Map<String, Object> connectionParams);
 
     /**
@@ -104,7 +104,7 @@ public interface HostManagementStrategy {
      * @param clusterId 集群ID
      * @return 检查状态
      */
-    Map<String, Object> getHostCheckStatus(Integer clusterId);
+    Map<String, Object> getHostCheckStatus(Long clusterId);
 
     /**
      * 清理资源
@@ -112,7 +112,7 @@ public interface HostManagementStrategy {
      * 
      * @param clusterId 集群ID
      */
-    void cleanup(Integer clusterId);
+    void cleanup(Long clusterId);
 
     /**
      * 校验是否可以进入下一步（Step2 -> Step3等）
@@ -121,7 +121,7 @@ public interface HostManagementStrategy {
      * @param clusterId 集群ID
      * @return 校验结果Map，包含：valid(boolean), message(String), totalHosts, unmanagedHosts, readyHosts 等
      */
-    Map<String, Object> validateForNextStep(Integer clusterId);
+    Map<String, Object> validateForNextStep(Long clusterId);
 
     /**
      * 策略类型枚举

@@ -17,12 +17,12 @@ import java.util.Map;
 public class DorisHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
         @Override
-        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
                 getConfig(clusterId, list);
         }
 
         @Override
-        public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void getConfig(Long clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 String priority_networks = globalVariables.get("${priority_networks}");
                 for (ServiceConfig serviceConfig : list) {
@@ -34,7 +34,7 @@ public class DorisHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         // 获取DorisFE节点信息 (master)
                         List<String> feNodes = getRoleHosts(clusterId, serviceInstanceId, "DorisFE");

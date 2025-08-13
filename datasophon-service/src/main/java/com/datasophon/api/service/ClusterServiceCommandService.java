@@ -42,34 +42,34 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 生成命令
          */
-        String generateCommand(Integer clusterId, CommandType commandType, List<String> serviceNames);
+        String generateCommand(Long clusterId, CommandType commandType, List<String> serviceNames);
 
         /**
          * 获取服务命令列表（分页）
          */
-        PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Integer clusterId, Integer page, Integer pageSize);
+        PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Long clusterId, Integer page, Integer pageSize);
 
         /**
          * 生成服务命令
          */
-        String generateServiceCommand(Integer clusterId, CommandType command, List<String> ids);
+        String generateServiceCommand(Long clusterId, CommandType command, List<String> ids);
 
         /**
          * 生成服务角色命令集合
          */
-        String generateServiceRoleCommands(Integer clusterId, CommandType commandType,
+        String generateServiceRoleCommands(Long clusterId, CommandType commandType,
                         Map<Integer, List<String>> instanceIdMap);
 
         /**
          * 生成服务角色命令
          */
-        String generateServiceRoleCommand(Integer clusterId, CommandType command, Integer serviceIntanceId,
+        String generateServiceRoleCommand(Long clusterId, CommandType command, Integer serviceIntanceId,
                         List<String> ids, RollingRestartInfo rollingRestartInfo);
 
         /**
          * 启动执行命令
          */
-        void startExecuteCommand(Integer clusterId, String commandType, String commandIds);
+        void startExecuteCommand(Long clusterId, String commandType, String commandIds);
 
         /**
          * 取消命令

@@ -37,8 +37,8 @@ import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterGroup;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterGroupEntity;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
@@ -71,7 +71,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service("clusterGroupService")
 @Transactional
-public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, ClusterGroup>
+public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, ClusterGroupEntity>
         implements ClusterGroupService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterGroupServiceImpl.class);
@@ -89,7 +89,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     private HostGroupSyncService hostGroupSyncService;
 
     @Override
-    public ClusterGroupDTO saveClusterGroup(Integer clusterId, String groupName) {
+    public ClusterGroupDTO saveClusterGroup(Long clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -105,13 +105,13 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         if (hasRepeatGroupName(clusterId, groupName)) {
             throw new RuntimeException(Status.GROUP_NAME_DUPLICATION.getMsg());
         }
-        ClusterGroup clusterGroup = new ClusterGroup();
-        clusterGroup.setClusterId(clusterId);
-        clusterGroup.setGroupName(groupName);
-        this.save(clusterGroup);
+        ClusterGroupEntity clusterGroupEntity = new ClusterGroupEntity();
+        clusterGroupEntity.setClusterId(clusterId);
+        clusterGroupEntity.setGroupName(groupName);
+        this.save(clusterGroupEntity);
 
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
-        for (ClusterHostDO clusterHost : hostList) {
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        for (ClusterHostEntity clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             CreateUnixGroupCommand createUnixGroupCommand = new CreateUnixGroupCommand();
             createUnixGroupCommand.setGroupName(groupName);
@@ -134,11 +134,11 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
 
         // Service层：Entity → DTO转换
-        return clusterGroupConverter.entityToDto(clusterGroup);
+        return clusterGroupConverter.entityToDto(clusterGroupEntity);
     }
 
     @Override
-    public ClusterGroupDTO saveClusterGroupOnKubernetes(Integer clusterId, String groupName) {
+    public ClusterGroupDTO saveClusterGroupOnKubernetes(Long clusterId, String groupName) {
         // 用户组名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         WordValidator wordValidator = new WordValidator();
@@ -154,10 +154,10 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         if (hasRepeatGroupName(clusterId, groupName)) {
             throw new RuntimeException(Status.GROUP_NAME_DUPLICATION.getMsg());
         }
-        ClusterGroup clusterGroup = new ClusterGroup();
-        clusterGroup.setClusterId(clusterId);
-        clusterGroup.setGroupName(groupName);
-        this.save(clusterGroup);
+        ClusterGroupEntity clusterGroupEntity = new ClusterGroupEntity();
+        clusterGroupEntity.setClusterId(clusterId);
+        clusterGroupEntity.setGroupName(groupName);
+        this.save(clusterGroupEntity);
 
         Map<String, UserEnum> groupNameMap = UserEnum.getGroupNameMap();
         Integer systemInitMaxGid = groupNameMap.values().stream()
@@ -167,9 +167,9 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         int globalMaxGid = 0;
 
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
 
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             // 执行命令获取当前主机的最大 GID
             String result = KubernetesMinaUtils.execCmdWithResult(clusterHost.getHostname(),
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/group");
@@ -195,7 +195,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new ServiceException(500,
                     "create unix user " + groupName + " failed at Gid{" + createUnixUserGid + "} > 65535");
         }
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             try {
                 String result = createUnixGroup(groupName, clusterHost.getHostname(), createUnixUserGid);
                 if (!result.equals(Constants.FAILED)) {
@@ -212,27 +212,27 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
 
         // Service层：Entity → DTO转换
-        return clusterGroupConverter.entityToDto(clusterGroup);
+        return clusterGroupConverter.entityToDto(clusterGroupEntity);
     }
 
-    private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
-        List<ClusterGroup> list = this.getMapper().selectByClusterIdAndGroupName(clusterId, groupName);
+    private boolean hasRepeatGroupName(Long clusterId, String groupName) {
+        List<ClusterGroupEntity> list = this.getMapper().selectByClusterIdAndGroupName(clusterId, groupName);
         return CollUtil.isNotEmpty(list);
     }
 
     @Override
-    public void refreshUserGroupToHost(Integer clusterId) {
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
-        List<ClusterGroup> groupList = this.list();
-        for (ClusterGroup clusterGroup : groupList) {
-            hostGroupSyncService.syncUserGroupToHosts(hostList, clusterGroup.getGroupName(), "groupadd");
+    public void refreshUserGroupToHost(Long clusterId) {
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterGroupEntity> groupList = this.list();
+        for (ClusterGroupEntity clusterGroupEntity : groupList) {
+            hostGroupSyncService.syncUserGroupToHosts(hostList, clusterGroupEntity.getGroupName(), "groupadd");
         }
     }
 
     @Override
     public boolean deleteUserGroup(Integer id) {
-        ClusterGroup clusterGroup = this.getById(id);
-        if (clusterGroup == null) {
+        ClusterGroupEntity clusterGroupEntity = this.getById(id);
+        if (clusterGroupEntity == null) {
             throw new RuntimeException("Group not found with id: " + id);
         }
         long num = userGroupService.countGroupUserNum(id);
@@ -240,11 +240,11 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
         this.removeById(id);
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
-        for (ClusterHostDO clusterHost : hostList) {
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterGroupEntity.getClusterId());
+        for (ClusterHostEntity clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             DelUnixGroupCommand delUnixGroupCommand = new DelUnixGroupCommand();
-            delUnixGroupCommand.setGroupName(clusterGroup.getGroupName());
+            delUnixGroupCommand.setGroupName(clusterGroupEntity.getGroupName());
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             Future<Object> execFuture = Patterns.ask(unixGroupActor, delUnixGroupCommand, timeout);
             ExecResult execResult;
@@ -264,8 +264,8 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     @Override
     public boolean deleteUserGroupOnKubernetes(Integer id) {
-        ClusterGroup clusterGroup = this.getById(id);
-        if (clusterGroup == null) {
+        ClusterGroupEntity clusterGroupEntity = this.getById(id);
+        if (clusterGroupEntity == null) {
             throw new RuntimeException("Group not found with id: " + id);
         }
         long num = userGroupService.countGroupUserNum(id);
@@ -273,10 +273,10 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
         this.removeById(id);
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
-        for (ClusterHostDO clusterHost : hostList) {
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterGroupEntity.getClusterId());
+        for (ClusterHostEntity clusterHost : hostList) {
             try {
-                if (!delUnixGroup(clusterGroup.getGroupName(), clusterHost.getHostname()).equals(Constants.FAILED)) {
+                if (!delUnixGroup(clusterGroupEntity.getGroupName(), clusterHost.getHostname()).equals(Constants.FAILED)) {
                     logger.info("del unix group success at {}", clusterHost.getHostname());
                 } else {
                     logger.info("del unix group failed at {}", clusterHost.getHostname());
@@ -289,32 +289,32 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     @Override
-    public PageResult<ClusterGroupDTO> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
+    public PageResult<ClusterGroupDTO> listPage(String groupName, Long clusterId, Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
-        PageResult<ClusterGroup> pageResult = this.getMapper().selectPageByClusterIdAndGroupName(
+        PageResult<ClusterGroupEntity> pageResult = this.getMapper().selectPageByClusterIdAndGroupName(
                 clusterId, groupName, page, pageSize);
 
-        List<ClusterGroup> list = pageResult.getRecords();
+        List<ClusterGroupEntity> list = pageResult.getRecords();
 
         // 填充用户信息并转换为DTO
         List<ClusterGroupDTO> dtoList = new ArrayList<>();
-        for (ClusterGroup clusterGroup : list) {
-            List<ClusterUserDTO> clusterUserList = userGroupService.listClusterUsers(clusterGroup.getId());
+        for (ClusterGroupEntity clusterGroupEntity : list) {
+            List<ClusterUserDTO> clusterUserList = userGroupService.listClusterUsers(clusterGroupEntity.getId());
             if (Objects.nonNull(clusterUserList) && !clusterUserList.isEmpty()) {
                 String clusterUsers = clusterUserList.stream().map(ClusterUserDTO::username)
                         .collect(java.util.stream.Collectors.joining(","));
-                clusterGroup.setClusterUsers(clusterUsers);
+                clusterGroupEntity.setClusterUsers(clusterUsers);
             }
             // Entity → DTO转换
-            dtoList.add(clusterGroupConverter.entityToDto(clusterGroup));
+            dtoList.add(clusterGroupConverter.entityToDto(clusterGroupEntity));
         }
 
         return PageResult.of(dtoList, pageResult.getTotal(), pageResult.getCurrent(), pageResult.getSize());
     }
 
     @Override
-    public List<ClusterGroupDTO> listAllUserGroup(Integer clusterId) {
-        List<ClusterGroup> entities = this.getMapper().selectByClusterId(clusterId);
+    public List<ClusterGroupDTO> listAllUserGroup(Long clusterId) {
+        List<ClusterGroupEntity> entities = this.getMapper().selectByClusterId(clusterId);
         return entities.stream()
                 .map(clusterGroupConverter::entityToDto)
                 .toList();
@@ -375,21 +375,21 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     @Override
     public ClusterGroupDTO getByIdAsDto(Integer id) {
         // Service层：Entity → DTO转换
-        ClusterGroup entity = this.getById(id);
+        ClusterGroupEntity entity = this.getById(id);
         return clusterGroupConverter.entityToDto(entity);
     }
 
     @Override
     public void saveClusterGroupDto(ClusterGroupDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterGroup entity = clusterGroupConverter.dtoToEntity(dto);
+        ClusterGroupEntity entity = clusterGroupConverter.dtoToEntity(dto);
         this.save(entity);
     }
 
     @Override
     public void updateClusterGroup(ClusterGroupDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterGroup entity = clusterGroupConverter.dtoToEntity(dto);
+        ClusterGroupEntity entity = clusterGroupConverter.dtoToEntity(dto);
         this.updateById(entity);
     }
 }

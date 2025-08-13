@@ -24,7 +24,7 @@ import lombok.Data;
 public class AlertLabels {
 
     private String alertname;
-    private int clusterId;
+    private Long clusterId;
     private String serviceRoleName;
     private String instance;
     private String job;

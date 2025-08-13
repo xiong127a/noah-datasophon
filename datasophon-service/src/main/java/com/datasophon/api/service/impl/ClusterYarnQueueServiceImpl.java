@@ -35,7 +35,7 @@ import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterYarnQueue;
+import com.datasophon.dao.entity.ClusterYarnQueueEntity;
 import com.datasophon.dao.mapper.ClusterYarnQueueMapper;
 import com.mybatisflex.core.paginate.Page;
 
@@ -69,7 +69,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service("clusterYarnQueueService")
 @Transactional
-public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMapper, ClusterYarnQueue>
+public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMapper, ClusterYarnQueueEntity>
         implements ClusterYarnQueueService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterYarnQueueServiceImpl.class);
@@ -84,9 +84,9 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     private ClusterYarnQueueConverter clusterYarnQueueConverter;
 
     @Override
-    public PageResult<ClusterYarnQueueDTO> listByPage(Integer clusterId, Integer page, Integer pageSize) {
-        Page<ClusterYarnQueue> pageParam = Page.of(page, pageSize);
-        Page<ClusterYarnQueue> pageResult = clusterYarnQueueMapper.selectPageByClusterId(pageParam, clusterId);
+    public PageResult<ClusterYarnQueueDTO> listByPage(Long clusterId, Integer page, Integer pageSize) {
+        Page<ClusterYarnQueueEntity> pageParam = Page.of(page, pageSize);
+        Page<ClusterYarnQueueEntity> pageResult = clusterYarnQueueMapper.selectPageByClusterId(pageParam, clusterId);
 
         List<ClusterYarnQueueDTO> dtoList = clusterYarnQueueConverter.entityListToDtoList(pageResult.getRecords());
         return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
@@ -99,7 +99,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
                     Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
         }
 
-        ClusterYarnQueue entity = clusterYarnQueueConverter.dtoToEntity(clusterYarnQueueDTO);
+        ClusterYarnQueueEntity entity = clusterYarnQueueConverter.dtoToEntity(clusterYarnQueueDTO);
         entity.setCreateTime(new Date());
         this.save(entity);
 
@@ -107,8 +107,8 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public void refreshQueues(Integer clusterId) throws BusinessException {
-        List<ClusterYarnQueue> list = clusterYarnQueueMapper.selectByClusterId(clusterId);
+    public void refreshQueues(Long clusterId) throws BusinessException {
+        List<ClusterYarnQueueEntity> list = clusterYarnQueueMapper.selectByClusterId(clusterId);
         // 查询resourcemanager节点
         List<ClusterServiceRoleInstanceDTO> roleList = roleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
@@ -124,13 +124,13 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
         ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
         ServiceConfig config = new ServiceConfig();
         ArrayList<JSONObject> queueList = new ArrayList<>();
-        for (ClusterYarnQueue clusterYarnQueue : list) {
+        for (ClusterYarnQueueEntity clusterYarnQueueEntity : list) {
             JSONObject queue = new JSONObject();
-            Integer minMem = clusterYarnQueue.getMinMem() * 1024;
-            Integer maxMem = clusterYarnQueue.getMaxMem() * 1024;
-            clusterYarnQueue.setMinResources(minMem + "mb," + clusterYarnQueue.getMinCore() + "vcores");
-            clusterYarnQueue.setMaxResources(maxMem + "mb," + clusterYarnQueue.getMaxCore() + "vcores");
-            BeanUtil.copyProperties(clusterYarnQueue, queue, false);
+            Integer minMem = clusterYarnQueueEntity.getMinMem() * 1024;
+            Integer maxMem = clusterYarnQueueEntity.getMaxMem() * 1024;
+            clusterYarnQueueEntity.setMinResources(minMem + "mb," + clusterYarnQueueEntity.getMinCore() + "vcores");
+            clusterYarnQueueEntity.setMaxResources(maxMem + "mb," + clusterYarnQueueEntity.getMaxCore() + "vcores");
+            BeanUtil.copyProperties(clusterYarnQueueEntity, queue, false);
             queueList.add(queue);
         }
         config.setName("queueList");
@@ -186,27 +186,27 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public ClusterYarnQueueDTO getQueueByName(Integer clusterId, String queueName) {
-        ClusterYarnQueue entity = clusterYarnQueueMapper.selectByClusterIdAndQueueName(clusterId, queueName);
+    public ClusterYarnQueueDTO getQueueByName(Long clusterId, String queueName) {
+        ClusterYarnQueueEntity entity = clusterYarnQueueMapper.selectByClusterIdAndQueueName(clusterId, queueName);
         return Objects.nonNull(entity) ? clusterYarnQueueConverter.entityToDto(entity) : null;
     }
 
     @Override
     public ClusterYarnQueueDTO getByIdAsDto(Integer id) {
-        ClusterYarnQueue entity = getById(id);
+        ClusterYarnQueueEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterYarnQueueConverter.entityToDto(entity) : null;
     }
 
     @Override
-    public List<ClusterYarnQueueDTO> getQueuesByClusterId(Integer clusterId) {
+    public List<ClusterYarnQueueDTO> getQueuesByClusterId(Long clusterId) {
         // SQL逻辑已在DAO层，直接调用Mapper方法
-        List<ClusterYarnQueue> entities = getMapper().selectByClusterId(clusterId);
+        List<ClusterYarnQueueEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterYarnQueueConverter.entityListToDtoList(entities);
     }
 
     @Override
     public ClusterYarnQueueDTO updateQueue(ClusterYarnQueueDTO dto) throws BusinessException {
-        ClusterYarnQueue entity = clusterYarnQueueConverter.dtoToEntity(dto);
+        ClusterYarnQueueEntity entity = clusterYarnQueueConverter.dtoToEntity(dto);
         updateById(entity);
         return clusterYarnQueueConverter.entityToDto(entity);
     }

@@ -187,7 +187,7 @@ public class HostManagementStrategyFactory {
      * @param depType 部署类型
      * @return 策略实例
      */
-    public HostManagementStrategy getStrategyWithContext(Integer clusterId, String depType) {
+    public HostManagementStrategy getStrategyWithContext(Long clusterId, String depType) {
         log.debug("为集群{}获取主机管理策略，部署类型: {}", clusterId, depType);
         
         HostManagementStrategy strategy = getStrategyByDepType(depType);

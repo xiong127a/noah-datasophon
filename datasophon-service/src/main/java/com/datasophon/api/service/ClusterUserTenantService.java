@@ -1,6 +1,6 @@
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterUserTenant;
+import com.datasophon.dao.entity.ClusterUserTenantEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -13,25 +13,25 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface ClusterUserTenantService extends IService<ClusterUserTenant> {
+public interface ClusterUserTenantService extends IService<ClusterUserTenantEntity> {
 
     /**
      * 租户策略授权给当前用户
      */
-    void addUserToTenant(Integer clusterId, Integer userId, String tenantIds);
+    void addUserToTenant(Long clusterId, Integer userId, String tenantIds);
 
     /**
      * 删除用户授权
      */
-    void deleteUser(Integer clusterId, Integer userId, String tenantIds);
+    void deleteUser(Long clusterId, Integer userId, String tenantIds);
 
     /**
      * 获取授权列表
      */
-    List<ClusterUserTenant> getListByUserId(Integer clusterId, Integer userId);
+    List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Integer userId);
 
     /**
      * 根据租户ID获取用户租户关系列表
      */
-    List<ClusterUserTenant> getListByTenantId(Integer tenantId);
+    List<ClusterUserTenantEntity> getListByTenantId(Integer tenantId);
 }

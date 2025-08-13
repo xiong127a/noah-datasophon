@@ -41,10 +41,10 @@ import com.datasophon.api.converter.ClusterUserConverter;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterGroup;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterUser;
-import com.datasophon.dao.entity.ClusterUserGroup;
+import com.datasophon.dao.entity.ClusterGroupEntity;
+import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.dao.entity.ClusterUserEntity;
+import com.datasophon.dao.entity.ClusterUserGroupEntity;
 import com.datasophon.dao.mapper.ClusterUserMapper;
 import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 
@@ -82,7 +82,7 @@ import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
  */
 @Service("clusterUserService")
 @Transactional
-public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUser> implements ClusterUserService {
+public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUserEntity> implements ClusterUserService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterUserServiceImpl.class);
     @Autowired
@@ -101,7 +101,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     private ClusterUserConverter clusterUserConverter;
 
     @Override
-    public ClusterUserDTO createClusterUser(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+    public ClusterUserDTO createClusterUser(Long clusterId, String username, Integer mainGroupId, String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -118,29 +118,29 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         if (hasRepeatUserName(clusterId, username)) {
             throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
 
-        ClusterUser clusterUser = new ClusterUser();
-        clusterUser.setUsername(username);
-        clusterUser.setClusterId(clusterId);
-        this.save(clusterUser);
-        buildClusterUserGroup(clusterId, clusterUser.getId(), mainGroupId, 1);
+        ClusterUserEntity clusterUserEntity = new ClusterUserEntity();
+        clusterUserEntity.setUsername(username);
+        clusterUserEntity.setClusterId(clusterId);
+        this.save(clusterUserEntity);
+        buildClusterUserGroup(clusterId, clusterUserEntity.getId(), mainGroupId, 1);
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
             List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
                     .toList();
             for (Integer id : otherGroupIds) {
-                buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
+                buildClusterUserGroup(clusterId, clusterUserEntity.getId(), id, 2);
             }
-            Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName)
+            Collection<ClusterGroupEntity> clusterGroupEntities = groupService.listByIds(otherGroupIds);
+            otherGroup = clusterGroupEntities.stream().map(ClusterGroupEntity::getGroupName)
                     .collect(java.util.stream.Collectors.joining(","));
         }
 
-        ClusterGroup mainGroup = groupService.getById(mainGroupId);
+        ClusterGroupEntity mainGroup = groupService.getById(mainGroupId);
         // sync to all hosts
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
 
             ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
                     "akka.tcp://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
@@ -211,11 +211,11 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return clusterUserConverter.entityToDto(clusterUser);
+        return clusterUserConverter.entityToDto(clusterUserEntity);
     }
 
     @Override
-    public ClusterUserDTO createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
+    public ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Integer mainGroupId,
             String groupIds) {
 
         // 用户名校验
@@ -233,26 +233,26 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         if (hasRepeatUserName(clusterId, username)) {
             throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
 
-        ClusterUser clusterUser = new ClusterUser();
-        clusterUser.setUsername(username);
-        clusterUser.setClusterId(clusterId);
-        this.save(clusterUser);
-        buildClusterUserGroup(clusterId, clusterUser.getId(), mainGroupId, 1);
+        ClusterUserEntity clusterUserEntity = new ClusterUserEntity();
+        clusterUserEntity.setUsername(username);
+        clusterUserEntity.setClusterId(clusterId);
+        this.save(clusterUserEntity);
+        buildClusterUserGroup(clusterId, clusterUserEntity.getId(), mainGroupId, 1);
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
             List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
                     .toList();
             for (Integer id : otherGroupIds) {
-                buildClusterUserGroup(clusterId, clusterUser.getId(), id, 2);
+                buildClusterUserGroup(clusterId, clusterUserEntity.getId(), id, 2);
             }
-            Collection<ClusterGroup> clusterGroups = groupService.listByIds(otherGroupIds);
-            otherGroup = clusterGroups.stream().map(ClusterGroup::getGroupName)
+            Collection<ClusterGroupEntity> clusterGroupEntities = groupService.listByIds(otherGroupIds);
+            otherGroup = clusterGroupEntities.stream().map(ClusterGroupEntity::getGroupName)
                     .collect(java.util.stream.Collectors.joining(","));
         }
-        ClusterGroup mainGroup = groupService.getById(mainGroupId);
+        ClusterGroupEntity mainGroup = groupService.getById(mainGroupId);
         Map<String, UserEnum> userNameMap = UserEnum.getUserNameMap();
         Integer systemInitMaxUid = userNameMap.values().stream()
                 .map(UserEnum::getUserId)
@@ -260,7 +260,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                 .orElse(0);
         int globalMaxUid = 0; // 声明一个全局变量来存储最大 UID
 
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             // 执行命令获取当前主机的最大 UID
             String result = KubernetesMinaUtils.execCmdWithResult(clusterHost.getHostname(),
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/passwd");
@@ -286,7 +286,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                     "create unix user " + username + " failed at Uid{" + createUnixUserUid + "} > 65535");
         }
 
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             try {
                 if (!createUnixUser(username, mainGroup.getGroupName(), otherGroup, clusterHost.getHostname(),
                         createUnixUserUid).equals(Constants.FAILED)) {
@@ -329,39 +329,39 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             logger.error(e.getMessage());
         }
 
-        return clusterUserConverter.entityToDto(clusterUser);
+        return clusterUserConverter.entityToDto(clusterUserEntity);
     }
 
-    private void buildClusterUserGroup(Integer clusterId, Integer userId, Integer groupId, Integer userGroupType) {
-        ClusterUserGroup clusterUserGroup = new ClusterUserGroup();
-        clusterUserGroup.setUserId(userId);
-        clusterUserGroup.setGroupId(groupId);
-        clusterUserGroup.setClusterId(clusterId);
-        clusterUserGroup.setUserGroupType(userGroupType);
-        userGroupService.save(clusterUserGroup);
+    private void buildClusterUserGroup(Long clusterId, Integer userId, Integer groupId, Integer userGroupType) {
+        ClusterUserGroupEntity clusterUserGroupEntity = new ClusterUserGroupEntity();
+        clusterUserGroupEntity.setUserId(userId);
+        clusterUserGroupEntity.setGroupId(groupId);
+        clusterUserGroupEntity.setClusterId(clusterId);
+        clusterUserGroupEntity.setUserGroupType(userGroupType);
+        userGroupService.save(clusterUserGroupEntity);
     }
 
-    private boolean hasRepeatUserName(Integer clusterId, String username) {
-        List<ClusterUser> list = getMapper().selectByClusterIdAndUsername(clusterId, username);
+    private boolean hasRepeatUserName(Long clusterId, String username) {
+        List<ClusterUserEntity> list = getMapper().selectByClusterIdAndUsername(clusterId, username);
         return CollUtil.isNotEmpty(list);
     }
 
     @Override
-    public PageResult<ClusterUserDTO> listPagedUsers(Integer clusterId, String username, Integer page,
+    public PageResult<ClusterUserDTO> listPagedUsers(Long clusterId, String username, Integer page,
             Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
 
-        List<ClusterUser> list = getMapper().selectByClusterIdWithPagination(clusterId, username, offset, pageSize);
+        List<ClusterUserEntity> list = getMapper().selectByClusterIdWithPagination(clusterId, username, offset, pageSize);
 
-        for (ClusterUser clusterUser : list) {
-            ClusterGroupDTO mainGroup = userGroupService.queryMainGroup(clusterUser.getId());
-            List<ClusterGroupDTO> otherGroupList = userGroupService.listOtherGroups(clusterUser.getId());
+        for (ClusterUserEntity clusterUserEntity : list) {
+            ClusterGroupDTO mainGroup = userGroupService.queryMainGroup(clusterUserEntity.getId());
+            List<ClusterGroupDTO> otherGroupList = userGroupService.listOtherGroups(clusterUserEntity.getId());
             if (Objects.nonNull(otherGroupList) && !otherGroupList.isEmpty()) {
                 String otherGroups = otherGroupList.stream().map(ClusterGroupDTO::groupName)
                         .collect(java.util.stream.Collectors.joining(","));
-                clusterUser.setOtherGroups(otherGroups);
+                clusterUserEntity.setOtherGroups(otherGroups);
             }
-            clusterUser.setMainGroup(mainGroup.groupName());
+            clusterUserEntity.setMainGroup(mainGroup.groupName());
         }
 
         long total = getMapper().countByClusterIdAndUsername(clusterId, username);
@@ -371,17 +371,17 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Override
     public boolean deleteClusterUser(Integer id) {
-        ClusterUser clusterUser = this.getById(id);
+        ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterUser.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterUserEntity.getClusterId());
         // sync to all hosts
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
                     "akka.tcp://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
             DelUnixUserCommand createUnixUserCommand = new DelUnixUserCommand();
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            createUnixUserCommand.setUsername(clusterUser.getUsername());
+            createUnixUserCommand.setUsername(clusterUserEntity.getUsername());
             Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
             ExecResult execResult;
             try {
@@ -397,7 +397,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         // delete ldap user
-        Map<String, String> globalVariables = GlobalVariables.get(clusterUser.getClusterId());
+        Map<String, String> globalVariables = GlobalVariables.get(clusterUserEntity.getClusterId());
         // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
         ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
 
@@ -406,7 +406,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setLdapUrl(globalVariables.get("${syncLdapUrl}"));
         ldapCommand.setRootDn(globalVariables.get("${syncLdapBindDn}"));
         ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
-        ldapCommand.setUsername(clusterUser.getUsername());
+        ldapCommand.setUsername(clusterUserEntity.getUsername());
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
@@ -415,14 +415,14 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
-                logger.info("delete ldap user {} success", clusterUser.getUsername());
+                logger.info("delete ldap user {} success", clusterUserEntity.getUsername());
             } else {
-                logger.error("delete ldap user {} failed", clusterUser.getUsername());
+                logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
                 logger.error(execResult.getExecOut());
                 logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            logger.error("delete ldap user {} failed", clusterUser.getUsername());
+            logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
             logger.error(e.getMessage());
         }
 
@@ -431,14 +431,14 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Override
     public boolean deleteClusterUserOnKubernetes(Integer id) {
-        ClusterUser clusterUser = this.getById(id);
+        ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
-        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterUser.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterUserEntity.getClusterId());
         // sync to all hosts
-        for (ClusterHostDO clusterHost : hostList) {
+        for (ClusterHostEntity clusterHost : hostList) {
             try {
-                if (!delUnixUser(clusterUser.getUsername(), clusterHost.getHostname()).equals(Constants.FAILED)) {
+                if (!delUnixUser(clusterUserEntity.getUsername(), clusterHost.getHostname()).equals(Constants.FAILED)) {
                     logger.info("del unix user success at {}", clusterHost.getHostname());
                 } else {
                     logger.info("del unix user failed at {}", clusterHost.getHostname());
@@ -449,24 +449,24 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         // delete ldap user
-        Map<String, String> globalVariables = GlobalVariables.get(clusterUser.getClusterId());
+        Map<String, String> globalVariables = GlobalVariables.get(clusterUserEntity.getClusterId());
 
         LdapCommand ldapCommand = new LdapCommand();
         ldapCommand.setOperation("delete");
         ldapCommand.setLdapUrl(globalVariables.get("${syncLdapUrl}"));
         ldapCommand.setRootDn(globalVariables.get("${syncLdapBindDn}"));
         ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
-        ldapCommand.setUsername(clusterUser.getUsername());
+        ldapCommand.setUsername(clusterUserEntity.getUsername());
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
 
         try {
             if (openldapProcess(ldapCommand)) {
-                logger.info("delete ldap user {} success", clusterUser.getUsername());
+                logger.info("delete ldap user {} success", clusterUserEntity.getUsername());
             } else {
-                logger.error("delete ldap user {} failed", clusterUser.getUsername());
+                logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
             }
         } catch (Exception e) {
-            logger.error("delete ldap user {} failed", clusterUser.getUsername());
+            logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
             logger.error(e.getMessage());
         }
 
@@ -474,8 +474,8 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public List<ClusterUserDTO> listAllUser(Integer clusterId) {
-        List<ClusterUser> entities = getMapper().selectByClusterId(clusterId);
+    public List<ClusterUserDTO> listAllUser(Long clusterId) {
+        List<ClusterUserEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterUserConverter.entityListToDtoList(entities);
     }
 

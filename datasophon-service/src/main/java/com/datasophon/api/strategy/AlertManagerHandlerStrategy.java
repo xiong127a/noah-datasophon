@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
 
         NoticeGroupService noticeGroupService = SpringUtil.getBean(NoticeGroupService.class);
 
@@ -77,7 +77,7 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         ServiceRoleStrategy.super.getConfig(clusterId, list);
     }
 

@@ -24,12 +24,10 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.common.Constants;
-import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.pekko.actor.AbstractActor;
@@ -87,7 +85,7 @@ public class HostConnectActor extends AbstractActor {
                 logger.info("Kubernetes mode detected for host: {}, skipping SSH check", hostInfo.getHostname());
 
                 // 检查主机是否已受管
-                ClusterHostDO existingHost = clusterHostService.getClusterHostByHostname(hostInfo.getHostname());
+                ClusterHostEntity existingHost = clusterHostService.getClusterHostByHostname(hostInfo.getHostname());
 
                 if (existingHost != null && existingHost.getClusterId().equals(clusterInfo.getId())) {
                     // 主机已在当前集群中受管 - 重复添加

@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterRackDTO;
-import com.datasophon.dao.entity.ClusterRack;
+import com.datasophon.dao.entity.ClusterRackEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -31,17 +31,17 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterRackService extends IService<ClusterRack> {
+public interface ClusterRackService extends IService<ClusterRackEntity> {
 
     /**
      * 查询集群机架
      */
-    List<ClusterRackDTO> queryClusterRack(Integer clusterId);
+    List<ClusterRackDTO> queryClusterRack(Long clusterId);
 
     /**
      * 保存机架
      */
-    ClusterRackDTO saveRack(Integer clusterId, String rack);
+    ClusterRackDTO saveRack(Long clusterId, String rack);
 
     /**
      * 删除机架
@@ -51,7 +51,7 @@ public interface ClusterRackService extends IService<ClusterRack> {
     /**
      * 创建默认机架
      */
-    void createDefaultRack(Integer clusterId);
+    void createDefaultRack(Long clusterId);
 
     /**
      * 根据ID获取机架DTO

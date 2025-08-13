@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterUserVO;
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.dao.entity.ClusterUserEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -37,28 +37,28 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", uses = FormatterUtils.class,
         unmappedSourcePolicy = ReportingPolicy.IGNORE,
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ClusterUserConverter extends BaseConverter<ClusterUser, ClusterUserDTO, ClusterUserVO> {
+public interface ClusterUserConverter extends BaseConverter<ClusterUserEntity, ClusterUserDTO, ClusterUserVO> {
 
     @Override
-    ClusterUserDTO entityToDto(ClusterUser entity);
+    ClusterUserDTO entityToDto(ClusterUserEntity entity);
 
     @Override
-    ClusterUser dtoToEntity(ClusterUserDTO dto);
+    ClusterUserEntity dtoToEntity(ClusterUserDTO dto);
 
     @Override
     @Mapping(target = "createTimeFormatted", ignore = true)
-    ClusterUserVO entityToVo(ClusterUser entity);
+    ClusterUserVO entityToVo(ClusterUserEntity entity);
 
     @Override
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     ClusterUserVO dtoToVo(ClusterUserDTO dto);
 
     @Override
-    java.util.List<ClusterUserVO> entityListToVoList(java.util.List<ClusterUser> entityList);
+    java.util.List<ClusterUserVO> entityListToVoList(java.util.List<ClusterUserEntity> entityList);
 
     @Override
     java.util.List<ClusterUserVO> dtoListToVoList(java.util.List<ClusterUserDTO> dtoList);
 
     @Override
-    void updateEntityFromDto(ClusterUserDTO dto, @MappingTarget ClusterUser entity);
+    void updateEntityFromDto(ClusterUserDTO dto, @MappingTarget ClusterUserEntity entity);
 }

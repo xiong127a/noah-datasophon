@@ -37,7 +37,7 @@ import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -93,7 +93,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
     private ClusterInfoService clusterInfoService;
 
     @Override
-    public ClusterNodeLabelDTO saveNodeLabel(Integer clusterId, String nodeLabel) {
+    public ClusterNodeLabelDTO saveNodeLabel(Long clusterId, String nodeLabel) {
         // 标签名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         GeneralValidator generalValidator = new GeneralValidator();
@@ -122,7 +122,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         return clusterNodeLabelConverter.entityToDto(nodeLabelEntity);
     }
 
-    private boolean refreshToYarn(Integer clusterId, String type, String nodeLabel) {
+    private boolean refreshToYarn(Long clusterId, String type, String nodeLabel) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         // 由于ClusterServiceRoleInstanceService已重构，直接使用getMapper()查询Entity
         List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
@@ -212,7 +212,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         List<String> ids = List.of(hostIds.split(","));
         hostService.updateBatchNodeLabel(ids, nodeLabelEntity.getNodeLabel());
 
-        List<ClusterHostDO> list = hostService.getHostListByIds(ids);
+        List<ClusterHostEntity> list = hostService.getHostListByIds(ids);
         String assignNodeLabel = list.stream().map(e -> e.getHostname() + "=" + nodeLabelEntity.getNodeLabel())
                 .collect(java.util.stream.Collectors.joining(" "));
         logger.info("assign node label {}", assignNodeLabel);
@@ -225,13 +225,13 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
     }
 
     @Override
-    public List<ClusterNodeLabelDTO> queryClusterNodeLabel(Integer clusterId) {
+    public List<ClusterNodeLabelDTO> queryClusterNodeLabel(Long clusterId) {
         List<ClusterNodeLabelEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterNodeLabelConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public void createDefaultNodeLabel(Integer clusterId) {
+    public void createDefaultNodeLabel(Long clusterId) {
         ClusterNodeLabelEntity nodeLabelEntity = new ClusterNodeLabelEntity();
         nodeLabelEntity.setNodeLabel("default");
         nodeLabelEntity.setClusterId(clusterId);
@@ -240,12 +240,12 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     private boolean nodeLabelInUse(String nodeLabel) {
         // TODO: 待ClusterHostService改造完成后实现具体的查询逻辑
-        // List<ClusterHostDO> list = hostService.getHostListByNodeLabel(nodeLabel);
+        // List<ClusterHostEntity> list = hostService.getHostListByNodeLabel(nodeLabel);
         // 临时返回false，避免编译错误
         return false;
     }
 
-    private boolean repeatNodeLable(Integer clusterId, String nodeLabel) {
+    private boolean repeatNodeLable(Long clusterId, String nodeLabel) {
         List<ClusterNodeLabelEntity> list = getMapper().selectByClusterIdAndNodeLabel(clusterId, nodeLabel);
         return CollUtil.isNotEmpty(list);
     }

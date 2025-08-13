@@ -20,7 +20,7 @@ package com.datasophon.api.service.host;
 import com.datasophon.api.service.host.strategy.HostManagementStrategy;
 import com.datasophon.api.service.host.strategy.HostManagementStrategyFactory;
 import com.datasophon.api.service.host.strategy.model.*;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
 import com.datasophon.common.model.ClusterInfoDO;
@@ -59,7 +59,7 @@ public class UnifiedHostManagementService {
      * @param forceRefresh 是否强制刷新
      * @return 发现结果
      */
-    public HostDiscoveryResult discoverHosts(Integer clusterId, Map<String, Object> connectionParams, 
+    public HostDiscoveryResult discoverHosts(Long clusterId, Map<String, Object> connectionParams,
                                            Boolean forceRefresh) {
         try {
             // 获取集群信息
@@ -109,7 +109,7 @@ public class UnifiedHostManagementService {
      * @param orderType 排序类型
      * @return 主机列表结果
      */
-    public HostListResult getHostList(Integer clusterId, Integer page, Integer pageSize,
+    public HostListResult getHostList(Long clusterId, Integer page, Integer pageSize,
                                     String hostname, String ip, String cpuArchitecture, 
                                     Integer hostState, String orderField, String orderType) {
         try {
@@ -162,7 +162,7 @@ public class UnifiedHostManagementService {
      * @param connectionParams 连接参数
      * @param importOptions 导入选项
      */
-    public void importHosts(Integer clusterId, List<ClusterHostDO> selectedHosts,
+    public void importHosts(Long clusterId, List<ClusterHostEntity> selectedHosts,
                            Map<String, Object> connectionParams, Map<String, Object> importOptions) {
         try {
             // 获取集群信息
@@ -199,7 +199,7 @@ public class UnifiedHostManagementService {
      * @param connectionParams 连接参数
      * @return 刷新后的主机列表
      */
-    public List<ClusterHostDO> refreshHosts(Integer clusterId, Map<String, Object> connectionParams) {
+    public List<ClusterHostEntity> refreshHosts(Long clusterId, Map<String, Object> connectionParams) {
         try {
             // 获取集群信息
             ClusterInfoDO cluster = getClusterInfo(clusterId);
@@ -208,7 +208,7 @@ public class UnifiedHostManagementService {
             HostManagementStrategy strategy = strategyFactory.getStrategyWithContext(clusterId, cluster.getDepType());
             
             // 执行刷新
-            List<ClusterHostDO> refreshedHosts = strategy.refreshHosts(clusterId, connectionParams);
+            List<ClusterHostEntity> refreshedHosts = strategy.refreshHosts(clusterId, connectionParams);
             
             log.info("集群{}主机信息刷新完成，策略: {}, 刷新主机数: {}", 
                     clusterId, strategy.getStrategyType().getCode(), refreshedHosts.size());
@@ -229,7 +229,7 @@ public class UnifiedHostManagementService {
      * @param connectionParams 连接参数
      * @return 连接状态信息
      */
-    public Map<String, Object> checkConnection(Integer clusterId, Map<String, Object> connectionParams) {
+    public Map<String, Object> checkConnection(Long clusterId, Map<String, Object> connectionParams) {
         try {
             // 获取集群信息
             ClusterInfoDO cluster = getClusterInfo(clusterId);
@@ -260,7 +260,7 @@ public class UnifiedHostManagementService {
      * @param connectionParams 连接参数
      * @return 检查结果
      */
-    public Map<String, Object> performHostCheck(Integer clusterId, List<String> hostnames,
+    public Map<String, Object> performHostCheck(Long clusterId, List<String> hostnames,
                                               Map<String, Object> connectionParams) {
         try {
             // 获取集群信息
@@ -290,7 +290,7 @@ public class UnifiedHostManagementService {
      * @param clusterId 集群ID
      * @return 检查状态
      */
-    public Map<String, Object> getHostCheckStatus(Integer clusterId) {
+    public Map<String, Object> getHostCheckStatus(Long clusterId) {
         try {
             // 获取集群信息
             ClusterInfoDO cluster = getClusterInfo(clusterId);
@@ -315,7 +315,7 @@ public class UnifiedHostManagementService {
     /**
      * 校验是否可以进入下一步（策略内封装各自规则），并在通过时触发进度保存
      */
-    public Map<String, Object> validateForNextStep(Integer clusterId) {
+    public Map<String, Object> validateForNextStep(Long clusterId) {
         try {
             // 获取集群信息
             ClusterInfoDO cluster = getClusterInfo(clusterId);
@@ -339,7 +339,7 @@ public class UnifiedHostManagementService {
      *
      * @param clusterId 集群ID
      */
-    public void cleanup(Integer clusterId) {
+    public void cleanup(Long clusterId) {
         try {
             // 获取集群信息
             ClusterInfoDO cluster = getClusterInfo(clusterId);
@@ -386,7 +386,7 @@ public class UnifiedHostManagementService {
      * @param clusterId 集群ID
      * @return 集群信息
      */
-    private ClusterInfoDO getClusterInfo(Integer clusterId) {
+    private ClusterInfoDO getClusterInfo(Long clusterId) {
         if (clusterId == null) {
             throw new IllegalArgumentException("集群ID不能为空");
         }

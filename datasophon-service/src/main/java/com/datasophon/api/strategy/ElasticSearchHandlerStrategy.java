@@ -42,7 +42,7 @@ import static com.datasophon.common.utils.HostUtils.generateDnsName;
 public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ClusterType depMode = getDepMode(clusterId);
         String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
@@ -65,7 +65,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
     }
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         
@@ -87,7 +87,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
      */
     @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
                         log.info("开始获取ElasticSearch服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

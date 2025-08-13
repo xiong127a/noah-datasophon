@@ -42,7 +42,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param serviceRoleType 服务角色类型
      * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleDTO> getServiceRoleList(Integer clusterId, String serviceIds, Integer serviceRoleType);
+    List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, String serviceIds, Integer serviceRoleType);
 
     /**
      * 根据服务ID和服务角色名称获取服务角色
@@ -51,7 +51,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param roleName  角色名称
      * @return 服务角色DTO
      */
-    FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
+    FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Long serviceId, String roleName);
 
     /**
      * 根据服务ID和服务角色名称查找服务角色（用于角色发现，不抛出异常）
@@ -60,7 +60,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param roleName  角色名称
      * @return Optional包装的服务角色DTO，如果不存在则返回空Optional
      */
-    java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName);
+    java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Long serviceId, String roleName);
 
     /**
      * 根据集群框架和服务角色名称获取服务角色
@@ -78,7 +78,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param serviceIds 服务ID列表（逗号分隔）
      * @return 非Master角色DTO列表
      */
-    List<FrameServiceRoleDTO> getNonMasterRoleList(Integer clusterId, String serviceIds);
+    List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, String serviceIds);
 
     /**
      * 根据服务名称获取服务角色列表
@@ -87,7 +87,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param serviceName 服务名称
      * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleDTO> getServiceRoleByServiceName(Integer clusterId, String serviceName);
+    List<FrameServiceRoleDTO> getServiceRoleByServiceName(Long clusterId, String serviceName);
 
     /**
      * 获取所有服务角色列表
@@ -95,7 +95,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param frameServiceId 框架服务ID
      * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleDTO> getAllServiceRoleList(Integer frameServiceId);
+    List<FrameServiceRoleDTO> getAllServiceRoleList(Long frameServiceId);
 
     /**
      * 根据ID获取服务角色DTO

@@ -39,8 +39,13 @@ import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.model.tenant.resource.TenantResource;
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.ClusterUserTenant;
+import com.datasophon.dao.entity.ClusterTenantEntity;
+import com.datasophon.dao.entity.ClusterUserTenantEntity;
+import com.datasophon.dao.entity.tenantResource.TenantHbaseResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantHdfsResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantHiveResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantKafkaResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantYarnResourceEntity;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +72,7 @@ import static com.datasophon.common.enums.RangerOpType.DELETE_TENANT;
  */
 @Service("clusterTenantService")
 @Slf4j
-public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, ClusterTenant>
+public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, ClusterTenantEntity>
         implements ClusterTenantService {
 
     @Autowired
@@ -80,9 +85,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     private ClusterUserService clusterUserService;
 
     @Override
-    public PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
+    public PageResult<ClusterTenantDTO> listTenant(Long clusterId, Integer page, Integer size, String tenantName) {
         // 使用DAO层分页查询方法
-        com.mybatisflex.core.paginate.Page<ClusterTenant> flexPage = getMapper().selectPageByClusterId(clusterId,
+        com.mybatisflex.core.paginate.Page<ClusterTenantEntity> flexPage = getMapper().selectPageByClusterId(clusterId,
                 tenantName, page, size);
 
         List<ClusterTenantDTO> dtoList = clusterTenantConverter.entityListToDtoList(flexPage.getRecords());
@@ -91,32 +96,32 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public ClusterTenantDTO saveOrUpdateTenant(ClusterTenantDTO clusterTenantDTO) {
-        ClusterTenant clusterTenant = clusterTenantConverter.dtoToEntity(clusterTenantDTO);
+        ClusterTenantEntity clusterTenantEntity = clusterTenantConverter.dtoToEntity(clusterTenantDTO);
 
         try {
-            checkTenant(clusterTenant);
+            checkTenant(clusterTenantEntity);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
 
-        filterDeleteResource(clusterTenant);
+        filterDeleteResource(clusterTenantEntity);
 
         TenantResource resource = new TenantResource();
-        BeanUtil.copyProperties(clusterTenant, resource);
+        BeanUtil.copyProperties(clusterTenantEntity, resource);
         List<TenantFrameResource> allFrameResource = CollUtil.unionAll(
                 resource.getHdfsResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
+                        .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).toList(),
                 resource.getHbaseResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
+                        .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).toList(),
                 resource.getHiveResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
+                        .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).toList(),
                 resource.getKafkaResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).toList(),
+                        .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).toList(),
                 resource.getYarnResourceList().stream().map(t -> (TenantFrameResource) t)
-                        .peek(t -> t.setClusterId(clusterTenant.getClusterId())).collect(Collectors.toList()));
+                        .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).collect(Collectors.toList()));
 
         // 框架资源操作
-        Map<String, String> globalVariables = GlobalVariables.get(clusterTenant.getClusterId());
+        Map<String, String> globalVariables = GlobalVariables.get(clusterTenantEntity.getClusterId());
         ActorRef tenantResourceDispatcherActor = ActorUtils.getLocalActor(TenantResourceDispatcherActor.class,
                 "tenantResourceDispatcherActor");
         for (TenantFrameResource tenantFrameResource : allFrameResource) {
@@ -130,32 +135,32 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         tenantRangerActor.tell(resource, ActorRef.noSender());
 
-        this.saveOrUpdate(clusterTenant);
+        this.saveOrUpdate(clusterTenantEntity);
 
-        return clusterTenantConverter.entityToDto(clusterTenant);
+        return clusterTenantConverter.entityToDto(clusterTenantEntity);
     }
 
-    private void filterDeleteResource(ClusterTenant clusterTenant) {
-        clusterTenant.getHdfsResourceList()
+    private void filterDeleteResource(ClusterTenantEntity clusterTenantEntity) {
+        clusterTenantEntity.getHdfsResourceList()
                 .removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
-        clusterTenant.getYarnResourceList()
+        clusterTenantEntity.getYarnResourceList()
                 .removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
-        clusterTenant.getKafkaResourceList()
+        clusterTenantEntity.getKafkaResourceList()
                 .removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
-        clusterTenant.getHiveResourceList()
+        clusterTenantEntity.getHiveResourceList()
                 .removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
-        clusterTenant.getHbaseResourceList()
+        clusterTenantEntity.getHbaseResourceList()
                 .removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
     }
 
     @Override
     public boolean deleteTenantById(Integer id) {
         // 检查是否有用户被授权到此租户
-        List<ClusterUserTenant> userTenantList = clusterUserTenantService.getListByTenantId(id);
+        List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.getListByTenantId(id);
 
         if (CollUtil.isNotEmpty(userTenantList)) {
             List<Integer> userIds = userTenantList.stream()
-                    .map(ClusterUserTenant::getUserId)
+                    .map(ClusterUserTenantEntity::getUserId)
                     .toList(); // JDK21现代特性
 
             List<String> usernames = clusterUserService.getUsernamesByIds(userIds);
@@ -163,7 +168,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
             throw new RuntimeException("当前租户已经授权给用户：" + usernames + ", 请先取消授权");
         }
 
-        ClusterTenant tenant = this.getById(id);
+        ClusterTenantEntity tenant = this.getById(id);
         TenantRangerCommand command = new TenantRangerCommand();
         command.setClusterId(tenant.getClusterId());
         command.setTenantName(tenant.getTenantName());
@@ -178,33 +183,33 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public ClusterTenantDTO getByIdAsDto(Integer id) {
-        ClusterTenant entity = getById(id);
+        ClusterTenantEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
     }
 
     @Override
-    public List<ClusterTenantDTO> getTenantsByClusterId(Integer clusterId) {
+    public List<ClusterTenantDTO> getTenantsByClusterId(Long clusterId) {
         // 使用DAO层查询方法
-        List<ClusterTenant> entities = getMapper().selectByClusterId(clusterId);
+        List<ClusterTenantEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterTenantConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public ClusterTenantDTO getTenantByName(Integer clusterId, String tenantName) {
+    public ClusterTenantDTO getTenantByName(Long clusterId, String tenantName) {
         // 使用DAO层查询方法
-        ClusterTenant entity = getMapper().selectByClusterIdAndTenantName(clusterId, tenantName);
+        ClusterTenantEntity entity = getMapper().selectByClusterIdAndTenantName(clusterId, tenantName);
         return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
     }
 
     @Override
     public ClusterTenantDTO updateTenant(ClusterTenantDTO dto) {
-        ClusterTenant entity = clusterTenantConverter.dtoToEntity(dto);
+        ClusterTenantEntity entity = clusterTenantConverter.dtoToEntity(dto);
         updateById(entity);
         return clusterTenantConverter.entityToDto(entity);
     }
 
-    private void checkTenant(ClusterTenant clusterTenant) throws Exception {
-        List<ClusterTenant> tenantList = this.list();
+    private void checkTenant(ClusterTenantEntity clusterTenantEntity) throws Exception {
+        List<ClusterTenantEntity> tenantList = this.list();
 
         // 校验名称
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -212,25 +217,25 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         LengthValidator lengthValidator = new LengthValidator();
         notEmptyValidator.setNext(wordValidator);
         wordValidator.setNext(lengthValidator);
-        notEmptyValidator.validate(clusterTenant.getTenantName());
+        notEmptyValidator.validate(clusterTenantEntity.getTenantName());
 
-        List<String> exitsName = tenantList.stream().map(ClusterTenant::getTenantName).toList();
-        if (Objects.nonNull(clusterTenant.getId())) {
-            exitsName.remove(clusterTenant.getTenantName());
+        List<String> exitsName = tenantList.stream().map(ClusterTenantEntity::getTenantName).toList();
+        if (Objects.nonNull(clusterTenantEntity.getId())) {
+            exitsName.remove(clusterTenantEntity.getTenantName());
         }
-        if (CollUtil.isNotEmpty(exitsName) && exitsName.contains(clusterTenant.getTenantName())) {
+        if (CollUtil.isNotEmpty(exitsName) && exitsName.contains(clusterTenantEntity.getTenantName())) {
             throw new IllegalArgumentException("租户名称已存在");
         }
 
         // 校验hdfs资源
-        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
+        if (CollUtil.isNotEmpty(clusterTenantEntity.getHdfsResourceList())) {
             List<String> existHdfsPaths = tenantList.stream()
-                    .map(ClusterTenant::getHdfsResourceList)
+                    .map(ClusterTenantEntity::getHdfsResourceList)
                     .map(this::convertToMap)
                     .flatMap(List::stream)
                     .map(t -> t.get("hdfsPath"))
                     .toList();
-            for (com.datasophon.dao.entity.tenantResource.TenantHdfsResource hdfsResource : clusterTenant
+            for (TenantHdfsResourceEntity hdfsResource : clusterTenantEntity
                     .getHdfsResourceList()) {
                 if (!TROperateType.ADD.name().equals(hdfsResource.getType())) {
                     continue;
@@ -251,15 +256,15 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         }
 
         // 校验yarn
-        if (CollUtil.isNotEmpty(clusterTenant.getYarnResourceList())) {
+        if (CollUtil.isNotEmpty(clusterTenantEntity.getYarnResourceList())) {
             List<String> existYarnQueue = tenantList.stream()
-                    .map(ClusterTenant::getYarnResourceList)
+                    .map(ClusterTenantEntity::getYarnResourceList)
                     .map(this::convertToMap)
                     .flatMap(Collection::parallelStream)
                     .map(t -> t.get("parentQueueName") + "." + t.get("queueName"))
                     .toList();
 
-            for (com.datasophon.dao.entity.tenantResource.TenantYarnResource tenantYarnResource : clusterTenant
+            for (TenantYarnResourceEntity tenantYarnResource : clusterTenantEntity
                     .getYarnResourceList()) {
                 if (!TROperateType.ADD.name().equals(tenantYarnResource.getType())) {
                     continue;
@@ -279,14 +284,14 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         }
 
         // 校验hive
-        if (CollUtil.isNotEmpty(clusterTenant.getHiveResourceList())) {
+        if (CollUtil.isNotEmpty(clusterTenantEntity.getHiveResourceList())) {
             List<String> existHiveDbName = tenantList.stream()
-                    .map(ClusterTenant::getHiveResourceList)
+                    .map(ClusterTenantEntity::getHiveResourceList)
                     .map(this::convertToMap)
                     .flatMap(Collection::parallelStream)
                     .map(t -> t.get("hiveDatabase"))
                     .toList();
-            for (com.datasophon.dao.entity.tenantResource.TenantHiveResource tenantHiveResource : clusterTenant
+            for (TenantHiveResourceEntity tenantHiveResource : clusterTenantEntity
                     .getHiveResourceList()) {
                 if (!TROperateType.ADD.name().equals(tenantHiveResource.getType())) {
                     continue;
@@ -301,15 +306,15 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         }
 
         // 校验hbase
-        if (CollUtil.isNotEmpty(clusterTenant.getHbaseResourceList())) {
+        if (CollUtil.isNotEmpty(clusterTenantEntity.getHbaseResourceList())) {
             List<String> existHbaseNameSpace = tenantList.stream()
-                    .map(ClusterTenant::getHbaseResourceList)
+                    .map(ClusterTenantEntity::getHbaseResourceList)
                     .map(this::convertToMap)
                     .flatMap(Collection::parallelStream)
                     .map(t -> t.get("hbaseNamespace"))
                     .toList();
 
-            for (com.datasophon.dao.entity.tenantResource.TenantHbaseResource tenantHbaseResource : clusterTenant
+            for (TenantHbaseResourceEntity tenantHbaseResource : clusterTenantEntity
                     .getHbaseResourceList()) {
                 if (!TROperateType.ADD.name().equals(tenantHbaseResource.getType())) {
                     continue;
@@ -325,14 +330,14 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         }
 
         // 校验kafka
-        if (CollUtil.isNotEmpty(clusterTenant.getKafkaResourceList())) {
+        if (CollUtil.isNotEmpty(clusterTenantEntity.getKafkaResourceList())) {
             List<String> existKafkaTopic = tenantList.stream()
-                    .map(ClusterTenant::getKafkaResourceList)
+                    .map(ClusterTenantEntity::getKafkaResourceList)
                     .map(this::convertToMap)
                     .flatMap(Collection::parallelStream)
                     .map(t -> t.get("kafkaTopicName"))
                     .toList();
-            for (com.datasophon.dao.entity.tenantResource.TenantKafkaResource tenantKafkaResource : clusterTenant
+            for (TenantKafkaResourceEntity tenantKafkaResource : clusterTenantEntity
                     .getKafkaResourceList()) {
                 if (!TROperateType.ADD.name().equals(tenantKafkaResource.getType())) {
                     continue;

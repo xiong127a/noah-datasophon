@@ -38,12 +38,12 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * 根据主机名和集群ID获取停止的服务角色列表
      */
     List<ClusterServiceRoleInstanceDTO> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
-            Integer clusterId);
+            Long clusterId);
 
     /**
      * 根据主机名和集群ID获取服务角色列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname, Integer clusterId);
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname, Long clusterId);
 
     /**
      * 根据服务ID和角色状态获取服务角色实例列表
@@ -54,7 +54,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 获取单个服务角色
      */
-    ClusterServiceRoleInstanceDTO getOneServiceRole(String serviceRoleName, String hostname, Integer clusterId);
+    ClusterServiceRoleInstanceDTO getOneServiceRole(String serviceRoleName, String hostname, Long clusterId);
 
     /**
      * 分页列表查询
@@ -76,7 +76,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据集群ID获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterId(int clusterId);
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterId(Long clusterId);
 
     /**
      * 删除服务角色
@@ -86,7 +86,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据集群ID和角色名称获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Long clusterId,
             String roleName);
 
     /**
@@ -127,7 +127,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 获取主机上停止的角色实例
      */
-    List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Integer clusterId, String hostname,
+    List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Long clusterId, String hostname,
             ServiceRoleState state);
 
     /**
@@ -138,7 +138,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 获取KAdmin角色实例
      */
-    ClusterServiceRoleInstanceDTO getKAdminRoleIns(Integer clusterId);
+    ClusterServiceRoleInstanceDTO getKAdminRoleIns(Long clusterId);
 
     /**
      * 根据服务角色名称列表查询
@@ -148,7 +148,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据集群ID和服务角色名称查询
      */
-    ClusterServiceRoleInstanceDTO listServiceRoleByNameAndClusterId(Integer clusterId, String serviceRoleName);
+    ClusterServiceRoleInstanceDTO listServiceRoleByNameAndClusterId(Long clusterId, String serviceRoleName);
 
     /**
      * 根据主机名和服务角色名称获取服务角色实例
@@ -163,7 +163,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据集群ID、服务实例ID和角色名称获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Long clusterId,
             Integer serviceInstanceId, String roleName);
 
     /**

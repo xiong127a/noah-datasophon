@@ -31,9 +31,9 @@ import java.util.List;
  */
 public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
 
-    void removeByGroupIds(List<Integer> list);
+    void removeByGroupIds(List<Long> list);
 
-    List<NoticeGroupUserEntity> listByGroupId(Integer id);
+    List<NoticeGroupUserEntity> listByGroupId(Long id);
 
-    List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids);
+    List<NoticeGroupUserEntity> listByGroupIds(List<Long> ids);
 }

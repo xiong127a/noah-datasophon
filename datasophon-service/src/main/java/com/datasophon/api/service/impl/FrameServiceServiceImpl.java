@@ -76,7 +76,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     private static final List<String> CUSTOM_REQUIRED_SERVICE = List.of("PROMETHEUS", "GRAFANA");
 
     @Override
-    public List<FrameServiceDTO> getAllFrameService(Integer clusterId) {
+    public List<FrameServiceDTO> getAllFrameService(Long clusterId) {
         if (clusterId == null) {
             throw new BusinessException("集群ID不能为空");
         }
@@ -98,7 +98,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, ServiceType serviceType) {
+    public List<FrameServiceDTO> getAllFrameServiceWithRequired(Long clusterId, ServiceType serviceType) {
         if (clusterId == null) {
             throw new BusinessException("集群ID不能为空");
         }
@@ -137,7 +137,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     /**
      * 设置服务的安装状态 - DTO级别操作
      */
-    private List<FrameServiceDTO> setInstalledStatus(Integer clusterId, List<FrameServiceDTO> dtos) {
+    private List<FrameServiceDTO> setInstalledStatus(Long clusterId, List<FrameServiceDTO> dtos) {
         return dtos.stream()
                 .map(dto -> {
                     ClusterServiceInstanceDTO serviceInstance = serviceInstanceService
@@ -150,7 +150,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public List<FrameServiceDTO> getServiceListByServiceIds(List<Integer> serviceIds) {
+    public List<FrameServiceDTO> getServiceListByServiceIds(List<Long> serviceIds) {
         if (serviceIds == null || serviceIds.isEmpty()) {
             return List.of();
         }
@@ -160,7 +160,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public FrameServiceDTO getServiceByFrameIdAndServiceName(Integer frameId, String serviceName) {
+    public FrameServiceDTO getServiceByFrameIdAndServiceName(Long frameId, String serviceName) {
         if (frameId == null) {
             throw new BusinessException("框架ID不能为空");
         }
@@ -177,7 +177,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Integer frameId, String serviceName) {
+    public java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Long frameId, String serviceName) {
         // 使用JDK 21的现代化参数验证
         if (frameId == null) {
             log.warn("服务查找参数验证失败: 框架ID不能为空");

@@ -32,7 +32,7 @@ public class HostDiscoveryRequest {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
     
     /**
      * 连接参数（包含不同策略特有的连接信息）

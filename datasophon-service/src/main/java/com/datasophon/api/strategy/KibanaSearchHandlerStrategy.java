@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         for (ServiceConfig config : list) {
@@ -29,7 +29,7 @@ public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String initMasterNodes = globalVariables.get("${initMasterNodes}");
         String esHttpPort = globalVariables.get("${esHttpPort}");

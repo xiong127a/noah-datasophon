@@ -28,8 +28,8 @@ import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ public final class SpringTool  {
         ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
         
         ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupDTO != null ? 
+        ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupDTO != null ?
                 roleGroupConverter.dtoToEntity(roleGroupDTO) : null;
         
         if (roleGroup == null) {
@@ -57,7 +57,7 @@ public final class SpringTool  {
         }
         
         ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-        ClusterServiceRoleGroupConfig config = configDTO != null ? 
+        ClusterServiceRoleGroupConfigEntity config = configDTO != null ?
                 configConverter.dtoToEntity(configDTO) : null;
 
         ServiceInfo serviceInfo = ServiceInfoMap.get("DDP-1.2.1_" + roleGroup.getServiceName());

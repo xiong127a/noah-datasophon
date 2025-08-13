@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 public class YARNRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
-    public YARNRangerStrategy(Integer clusterId) throws Exception {
+    public YARNRangerStrategy(Long clusterId) throws Exception {
         super(clusterId);
         logger = LoggerFactory.getLogger("YarnRangerOperateLogger");
     }

@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterVariableConverter;
 import com.datasophon.api.service.ClusterVariableManagementService;
 import com.datasophon.api.service.ClusterVariableService;
 import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,20 +51,20 @@ public class ClusterVariableManagementServiceImpl implements ClusterVariableMana
     private ClusterVariableConverter variableConverter;
 
     @Override
-    public void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
+    public void generateClusterVariable(Map<String, String> globalVariables, Long clusterId,
             String variableName, String value) {
         ClusterVariableDTO clusterVariableDTO = variableService.getVariableByVariableName(variableName, clusterId);
         if (Objects.nonNull(clusterVariableDTO)) {
             logger.info("update variable {} value {} to {}", variableName, clusterVariableDTO.variableValue(), value);
-            ClusterVariable clusterVariable = variableConverter.dtoToEntity(clusterVariableDTO);
-            clusterVariable.setVariableValue(value);
-            variableService.updateById(clusterVariable);
+            ClusterVariableEntity clusterVariableEntity = variableConverter.dtoToEntity(clusterVariableDTO);
+            clusterVariableEntity.setVariableValue(value);
+            variableService.updateById(clusterVariableEntity);
         } else {
-            ClusterVariable newClusterVariable = new ClusterVariable();
-            newClusterVariable.setClusterId(clusterId);
-            newClusterVariable.setVariableName(variableName);
-            newClusterVariable.setVariableValue(value);
-            variableService.save(newClusterVariable);
+            ClusterVariableEntity newClusterVariableEntity = new ClusterVariableEntity();
+            newClusterVariableEntity.setClusterId(clusterId);
+            newClusterVariableEntity.setVariableName(variableName);
+            newClusterVariableEntity.setVariableValue(value);
+            variableService.save(newClusterVariableEntity);
         }
         globalVariables.put(variableName, value);
         putRemoteVariableCache(variableName, value, clusterId);

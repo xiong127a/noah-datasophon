@@ -21,7 +21,7 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.mapper.ClusterServiceRoleGroupConfigMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ import java.util.List;
  */
 @Service("clusterServiceRoleGroupConfigService")
 public class ClusterServiceRoleGroupConfigServiceImpl
-        extends ServiceImpl<ClusterServiceRoleGroupConfigMapper, ClusterServiceRoleGroupConfig>
+        extends ServiceImpl<ClusterServiceRoleGroupConfigMapper, ClusterServiceRoleGroupConfigEntity>
         implements ClusterServiceRoleGroupConfigService {
 
     @Autowired
@@ -46,13 +46,13 @@ public class ClusterServiceRoleGroupConfigServiceImpl
 
     @Override
     public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Integer roleGroupId) {
-        ClusterServiceRoleGroupConfig entity = getMapper().selectByRoleGroupId(roleGroupId);
+        ClusterServiceRoleGroupConfigEntity entity = getMapper().selectByRoleGroupId(roleGroupId);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
     @Override
     public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version) {
-        ClusterServiceRoleGroupConfig entity = getMapper().selectByRoleGroupIdAndVersion(roleGroupId, version);
+        ClusterServiceRoleGroupConfigEntity entity = getMapper().selectByRoleGroupIdAndVersion(roleGroupId, version);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
@@ -63,7 +63,7 @@ public class ClusterServiceRoleGroupConfigServiceImpl
 
     @Override
     public List<ClusterServiceRoleGroupConfigDTO> listRoleGroupConfigsByRoleGroupIds(List<Integer> roleGroupIds) {
-        List<ClusterServiceRoleGroupConfig> entities = getMapper().selectByRoleGroupIds(roleGroupIds);
+        List<ClusterServiceRoleGroupConfigEntity> entities = getMapper().selectByRoleGroupIds(roleGroupIds);
         return entities.stream()
                 .map(clusterServiceRoleGroupConfigConverter::entityToDto)
                 .toList();
@@ -72,31 +72,31 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     @Override
     public ClusterServiceRoleGroupConfigDTO getByIdAsDto(Integer id) {
         // Service层：Entity → DTO转换
-        ClusterServiceRoleGroupConfig entity = this.getById(id);
+        ClusterServiceRoleGroupConfigEntity entity = this.getById(id);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
     @Override
     public void saveConfig(ClusterServiceRoleGroupConfigDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterServiceRoleGroupConfig entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
+        ClusterServiceRoleGroupConfigEntity entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
         this.save(entity);
     }
 
     @Override
     public void updateConfig(ClusterServiceRoleGroupConfigDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterServiceRoleGroupConfig entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
+        ClusterServiceRoleGroupConfigEntity entity = clusterServiceRoleGroupConfigConverter.dtoToEntity(dto);
         this.updateById(entity);
     }
 
     @Override
-    public List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId) {
+    public List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Integer roleGroupId) {
         return getMapper().selectConfigVersionsByRoleGroupId(roleGroupId);
     }
 
     @Override
-    public List<ClusterServiceRoleGroupConfig> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId) {
+    public List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId) {
         return getMapper().selectLatestTwoConfigsByRoleGroupId(roleGroupId);
     }
 }

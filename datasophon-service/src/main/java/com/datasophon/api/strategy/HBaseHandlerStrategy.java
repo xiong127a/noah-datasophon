@@ -40,7 +40,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
     private static final Logger logger = LoggerFactory.getLogger(HBaseHandlerStrategy.class);
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -73,7 +73,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
      */
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
             logger.info("开始获取HBase服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service.host.strategy.model;
 
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.Builder;
 import lombok.Data;
 
@@ -34,7 +34,7 @@ public class HostListResult {
     /**
      * 主机列表
      */
-    private List<ClusterHostDO> hosts;
+    private List<ClusterHostEntity> hosts;
     
     /**
      * 总数

@@ -25,7 +25,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
     private static final Logger logger = LoggerFactory.getLogger(RedisSentinelHandlerStrategy.class);
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String redisSentinelMasterHost = globalVariables.get("${redisSentinelMasterHost}");
         Map<String, ServiceConfig> map = list.stream()
@@ -96,7 +96,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
 
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取服务节点列表
             List<String> sentinelNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinel");

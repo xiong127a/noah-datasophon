@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import com.mybatisflex.core.service.IService;
 
 /**
@@ -29,17 +29,17 @@ import com.mybatisflex.core.service.IService;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterServiceDashboardService extends IService<ClusterServiceDashboard> {
+public interface ClusterServiceDashboardService extends IService<ClusterServiceDashboardEntity> {
 
     /**
      * 获取仪表盘URL
      */
-    String getDashboardUrl(Integer clusterId);
+    String getDashboardUrl(Long clusterId);
 
     /**
      * 获取Datasophon仪表盘URL
      */
-    String getDatasophonDashboard(Integer clusterId);
+    String getDatasophonDashboard(Long clusterId);
 
     /**
      * 根据ID获取仪表盘DTO
@@ -62,5 +62,5 @@ public interface ClusterServiceDashboardService extends IService<ClusterServiceD
      * @param serviceName 服务名称
      * @return 仪表盘实体
      */
-    ClusterServiceDashboard getByServiceName(String serviceName);
+    ClusterServiceDashboardEntity getByServiceName(String serviceName);
 }

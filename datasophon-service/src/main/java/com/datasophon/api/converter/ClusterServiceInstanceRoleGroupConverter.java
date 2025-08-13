@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -37,11 +37,11 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring")
 public interface ClusterServiceInstanceRoleGroupConverter
         extends
-        BaseConverter<ClusterServiceInstanceRoleGroup, ClusterServiceInstanceRoleGroupDTO, ClusterServiceInstanceRoleGroupVO> {
+        BaseConverter<ClusterServiceInstanceRoleGroupEntity, ClusterServiceInstanceRoleGroupDTO, ClusterServiceInstanceRoleGroupVO> {
 
     @Override
     @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromEnum")
-    ClusterServiceInstanceRoleGroupVO entityToVo(ClusterServiceInstanceRoleGroup entity);
+    ClusterServiceInstanceRoleGroupVO entityToVo(ClusterServiceInstanceRoleGroupEntity entity);
 
     @Override
     @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromInteger")

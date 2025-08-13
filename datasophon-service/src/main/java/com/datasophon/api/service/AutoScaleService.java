@@ -57,7 +57,7 @@ public interface AutoScaleService extends IService<AutoScaleTaskEntity> {
      * @param pageSize  页大小
      * @return 分页结果
      */
-    PageResult<AutoScaleTaskDTO> getAutoScaleTasks(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<AutoScaleTaskDTO> getAutoScaleTasks(Long clusterId, Integer page, Integer pageSize);
 
     /**
      * 根据集群ID获取所有启用的自动伸缩任务
@@ -65,7 +65,7 @@ public interface AutoScaleService extends IService<AutoScaleTaskEntity> {
      * @param clusterId 集群ID
      * @return 任务列表
      */
-    List<AutoScaleTaskDTO> getEnabledTasksByClusterId(Integer clusterId);
+    List<AutoScaleTaskDTO> getEnabledTasksByClusterId(Long clusterId);
 
     /**
      * 删除自动伸缩任务
@@ -90,5 +90,5 @@ public interface AutoScaleService extends IService<AutoScaleTaskEntity> {
      * @param clusterId 集群ID
      * @return 是否启用
      */
-    boolean isAutoScaleEnabled(Integer clusterId);
+    boolean isAutoScaleEnabled(Long clusterId);
 }

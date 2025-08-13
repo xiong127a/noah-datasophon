@@ -18,6 +18,7 @@
 package com.datasophon.api.master;
 
 import com.datasophon.common.enums.ManagementStatus;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
 import cn.hutool.core.util.ObjectUtil;
@@ -38,7 +39,6 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
@@ -95,13 +95,13 @@ public class WorkerStartActor extends AbstractActor {
         try {
             String hostname = msg.getHostname();
             String ip = msg.getIp();
-            Integer clusterId = msg.getClusterId();
+            Long clusterId = msg.getClusterId();
             logger.info("收到Worker首次启动消息,主机名:{},IP地址:{}", hostname, ip);
 
             ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
-            ClusterHostDO hostEntity = clusterHostService.getClusterHostByIp(ip);
+            ClusterHostEntity hostEntity = clusterHostService.getClusterHostByIp(ip);
             ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
             logger.info("收到来自主机 {} ({}) 的Worker启动消息,设置主机安装状态为100%", hostname, ip);
 
@@ -169,7 +169,7 @@ public class WorkerStartActor extends AbstractActor {
      * @param clusterId   集群ID
      * @param commandType 命令类型(START_SERVICE或STOP_SERVICE)
      */
-    private void autoAddServiceOperatorNeeded(String hostname, Integer clusterId, CommandType commandType) {
+    private void autoAddServiceOperatorNeeded(String hostname, Long clusterId, CommandType commandType) {
         ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceCommandService serviceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
@@ -214,7 +214,7 @@ public class WorkerStartActor extends AbstractActor {
      * @param clusterId 集群ID
      * @param hostname  主机名
      */
-    private void syncClusterUserAndGroup(Integer clusterId, String hostname) {
+    private void syncClusterUserAndGroup(Long clusterId, String hostname) {
         ClusterGroupService clusterGroupService = SpringUtil.getBean(ClusterGroupService.class);
         ClusterUserService clusterUserService = SpringUtil.getBean(ClusterUserService.class);
 

@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterAlertExpressionConverter;
 import com.datasophon.api.service.ClusterAlertExpressionService;
 import com.datasophon.common.dto.ClusterAlertExpressionDTO;
-import com.datasophon.dao.entity.ClusterAlertExpression;
+import com.datasophon.dao.entity.ClusterAlertExpressionEntity;
 import com.datasophon.dao.mapper.ClusterAlertExpressionMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
  * @date 2025-08-04
  */
 @Service("clusterAlertExpressionService")
-public class ClusterAlertExpressionServiceImpl extends ServiceImpl<ClusterAlertExpressionMapper, ClusterAlertExpression>
+public class ClusterAlertExpressionServiceImpl extends ServiceImpl<ClusterAlertExpressionMapper, ClusterAlertExpressionEntity>
                 implements ClusterAlertExpressionService {
 
         @Autowired
@@ -44,21 +44,21 @@ public class ClusterAlertExpressionServiceImpl extends ServiceImpl<ClusterAlertE
         @Override
         public ClusterAlertExpressionDTO getByIdAsDto(Long id) {
                 // Service层：Entity → DTO转换
-                ClusterAlertExpression entity = this.getById(id);
+                ClusterAlertExpressionEntity entity = this.getById(id);
                 return clusterAlertExpressionConverter.entityToDto(entity);
         }
 
         @Override
         public void saveAlertExpression(ClusterAlertExpressionDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertExpression entity = clusterAlertExpressionConverter.dtoToEntity(dto);
+                ClusterAlertExpressionEntity entity = clusterAlertExpressionConverter.dtoToEntity(dto);
                 this.save(entity);
         }
 
         @Override
         public void updateAlertExpression(ClusterAlertExpressionDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertExpression entity = clusterAlertExpressionConverter.dtoToEntity(dto);
+                ClusterAlertExpressionEntity entity = clusterAlertExpressionConverter.dtoToEntity(dto);
                 this.updateById(entity);
         }
 }

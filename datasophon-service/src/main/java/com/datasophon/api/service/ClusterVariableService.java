@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 import com.mybatisflex.core.service.IService;
 
 /**
@@ -29,7 +29,7 @@ import com.mybatisflex.core.service.IService;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface ClusterVariableService extends IService<ClusterVariable> {
+public interface ClusterVariableService extends IService<ClusterVariableEntity> {
 
     /**
      * 根据变量名和集群ID获取变量
@@ -38,5 +38,5 @@ public interface ClusterVariableService extends IService<ClusterVariable> {
      * @param clusterId 集群ID
      * @return 变量DTO，如果不存在返回null
      */
-    ClusterVariableDTO getVariableByVariableName(String variableName, Integer clusterId);
+    ClusterVariableDTO getVariableByVariableName(String variableName, Long clusterId);
 }

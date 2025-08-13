@@ -33,7 +33,7 @@ public interface RoleEntityService {
      * @param clusterId 集群ID
      * @return 服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname, Integer clusterId);
+    List<ClusterServiceRoleInstanceEntity> getServiceRoleListByHostnameAndClusterId(String hostname, Long clusterId);
 
     /**
      * 根据ID获取服务角色实例
@@ -59,7 +59,7 @@ public interface RoleEntityService {
      * @param clusterId       集群ID
      * @return 服务角色实例
      */
-    ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname, Integer clusterId);
+    ClusterServiceRoleInstanceEntity getOneServiceRole(String serviceRoleName, String hostname, Long clusterId);
 
     /**
      * 根据主机名和服务名称获取角色实例列表

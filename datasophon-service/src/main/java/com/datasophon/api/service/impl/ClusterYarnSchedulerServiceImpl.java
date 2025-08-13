@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterYarnSchedulerConverter;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
 import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
-import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.dao.entity.ClusterYarnSchedulerEntity;
 import com.datasophon.dao.mapper.ClusterYarnSchedulerMapper;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -40,7 +40,7 @@ import java.util.Objects;
  */
 @Service("clusterYarnSchedulerService")
 @Transactional
-public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSchedulerMapper, ClusterYarnScheduler>
+public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSchedulerMapper, ClusterYarnSchedulerEntity>
         implements ClusterYarnSchedulerService {
 
     // 定义常量
@@ -51,15 +51,15 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
     private ClusterYarnSchedulerConverter clusterYarnSchedulerConverter;
 
     @Override
-    public ClusterYarnSchedulerDTO getScheduler(Integer clusterId) {
+    public ClusterYarnSchedulerDTO getScheduler(Long clusterId) {
         // SQL逻辑迁移到DAO层
-        ClusterYarnScheduler entity = getMapper().selectByClusterId(clusterId);
+        ClusterYarnSchedulerEntity entity = getMapper().selectByClusterId(clusterId);
         return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
     }
 
     @Override
-    public ClusterYarnSchedulerDTO createDefaultYarnScheduler(Integer clusterId) {
-        ClusterYarnScheduler scheduler = new ClusterYarnScheduler();
+    public ClusterYarnSchedulerDTO createDefaultYarnScheduler(Long clusterId) {
+        ClusterYarnSchedulerEntity scheduler = new ClusterYarnSchedulerEntity();
         scheduler.setScheduler(CAPACITY_SCHEDULER);
         scheduler.setClusterId(clusterId);
         scheduler.setInUse(SCHEDULER_IN_USE);
@@ -69,20 +69,20 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
 
     @Override
     public ClusterYarnSchedulerDTO getByIdAsDto(Integer id) {
-        ClusterYarnScheduler entity = getById(id);
+        ClusterYarnSchedulerEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
     }
 
     @Override
-    public List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Integer clusterId) {
+    public List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Long clusterId) {
         // SQL逻辑迁移到DAO层
-        List<ClusterYarnScheduler> entities = getMapper().selectAllByClusterId(clusterId);
+        List<ClusterYarnSchedulerEntity> entities = getMapper().selectAllByClusterId(clusterId);
         return clusterYarnSchedulerConverter.entityListToDtoList(entities);
     }
 
     @Override
     public ClusterYarnSchedulerDTO saveOrUpdateScheduler(ClusterYarnSchedulerDTO dto) {
-        ClusterYarnScheduler entity = clusterYarnSchedulerConverter.dtoToEntity(dto);
+        ClusterYarnSchedulerEntity entity = clusterYarnSchedulerConverter.dtoToEntity(dto);
         saveOrUpdate(entity);
         return clusterYarnSchedulerConverter.entityToDto(entity);
     }

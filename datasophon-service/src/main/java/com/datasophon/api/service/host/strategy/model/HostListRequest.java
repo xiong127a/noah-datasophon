@@ -30,7 +30,7 @@ public class HostListRequest {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
     
     /**
      * 分页页码

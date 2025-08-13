@@ -36,7 +36,7 @@ public interface AlertGroupService extends IService<AlertGroupEntity> {
     /**
      * 获取告警组分页列表
      */
-    PageResult<AlertGroupDTO> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
+    PageResult<AlertGroupDTO> getAlertGroupList(Long clusterId, String alertGroupName, Integer page,
             Integer pageSize);
 
     /**
@@ -57,7 +57,7 @@ public interface AlertGroupService extends IService<AlertGroupEntity> {
     /**
      * 删除告警组
      */
-    boolean deleteAlertGroups(List<Integer> ids);
+    boolean deleteAlertGroups(List<Long> ids);
 
     /**
      * 获取所有告警组
@@ -67,5 +67,5 @@ public interface AlertGroupService extends IService<AlertGroupEntity> {
     /**
      * 校验告警组删除前是否绑定指标
      */
-    void validateAlertGroupBeforeDelete(List<Integer> ids);
+    void validateAlertGroupBeforeDelete(List<Long> ids);
 }

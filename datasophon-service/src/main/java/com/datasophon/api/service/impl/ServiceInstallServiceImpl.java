@@ -165,7 +165,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param list      配置列表
      * @param clusterId 集群ID
      */
-    public static void processConfigList(List<ServiceConfig> list, Integer clusterId) {
+    public static void processConfigList(List<ServiceConfig> list, Long clusterId) {
         if (ProcessUtils.getDepMode(clusterId) == ClusterType.KUBERNETES) {
             for (ServiceConfig config : list) {
                 if (StrUtil.equals(config.getConfigType(),ClusterType.KUBERNETES.getCode())) {
@@ -177,7 +177,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public ServiceConfigGroupDTO getServiceConfigOption(Integer clusterId, String serviceName) {
+    public ServiceConfigGroupDTO getServiceConfigOption(Long clusterId, String serviceName) {
         List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
@@ -238,7 +238,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public boolean saveServiceConfig(
-            Integer clusterId, String serviceName, List<ServiceConfig> list,
+            Long clusterId, String serviceName, List<ServiceConfig> list,
             Integer roleGroupId, String description, Integer userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ServiceConfigMap.put(clusterInfo.getClusterCode() + UNDERLINE + serviceName + CONFIG,
@@ -312,7 +312,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         if (Objects.isNull(serviceInstanceEntity)) {
             serviceInstanceEntity = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
-            ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = saveServiceInstanceRoleGroup(clusterId,
+            ClusterServiceInstanceRoleGroupEntity clusterServiceInstanceRoleGroupEntity = saveServiceInstanceRoleGroup(clusterId,
                     serviceName, serviceInstanceEntity);
 
             // 如果描述为空，使用默认描述
@@ -322,11 +322,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
 
             boolean initialSaveResult = saveServiceRoleGroupConfig(
-                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, finalDescription,
+                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroupEntity, finalDescription,
                     userId, username);
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
-                    clusterServiceInstanceRoleGroup.getId());
+                    clusterServiceInstanceRoleGroupEntity.getId());
 
             versionCreated = initialSaveResult; // 只有当成功保存到数据库时才标记为创建了新版本
         } else {
@@ -340,12 +340,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
 
             configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
-            ClusterServiceRoleGroupConfig roleGroupConfig;
+            ClusterServiceRoleGroupConfigEntity roleGroupConfig;
             if (Objects.isNull(roleGroupId)) {
                 // Service层：获取DTO后转换为Entity
                 ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(
                         serviceInstanceEntity.getId());
-                ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+                ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
                 ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
                         .getConfigByRoleGroupId(roleGroup.getId());
                 roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
@@ -358,9 +358,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
                     roleGroupConfig.getRoleGroupId());
             if (!configUpdateRoleSet.isEmpty()) {
-                ClusterServiceRoleGroupConfig newRoleGroupConfig = new ClusterServiceRoleGroupConfig();
+                ClusterServiceRoleGroupConfigEntity newRoleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
                 if (Objects.isNull(roleGroupId)) {
-                    ClusterServiceInstanceRoleGroup roleGroup = saveNewRoleGroup(serviceInstanceEntity);
+                    ClusterServiceInstanceRoleGroupEntity roleGroup = saveNewRoleGroup(serviceInstanceEntity);
                     newRoleGroupConfig.setConfigVersion(1);
                     newRoleGroupConfig.setRoleGroupId(roleGroup.getId());
                     CacheUtils.put(
@@ -413,7 +413,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public boolean saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list) {
+    public boolean saveServiceRoleHostMapping(Long clusterId, List<ServiceRoleHostMapping> list) {
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey = clusterInfo.getClusterCode()
@@ -462,7 +462,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public void saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list) {
+    public void saveHostServiceRoleMapping(Long clusterId, List<HostServiceRoleMapping> list) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map = new HashMap<>();
         for (HostServiceRoleMapping hostServiceRoleMapping : list) {
@@ -477,7 +477,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public Map<String, List<String>> getServiceRoleDeployOverview(Integer clusterId) {
+    public Map<String, List<String>> getServiceRoleDeployOverview(Long clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         // 使用 getGeneric 自动返回空Map，避免空指针异常
         return CacheOperateUtils.getGeneric(
@@ -490,7 +490,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     /**
      */
     @Override
-    public Map<String, Object> startInstallService(Integer clusterId, List<String> commandIds) {
+    public Map<String, Object> startInstallService(Long clusterId, List<String> commandIds) {
         Collection<ClusterServiceCommandEntity> commands = commandService.listByIds(commandIds);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         DAG<String, ServiceNode, ServiceNodeEdge> dag = new DAG<>();
@@ -559,13 +559,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     @Override
-    public void getServiceRoleHostMapping(Integer clusterId) {
+    public void getServiceRoleHostMapping(Long clusterId) {
         // TODO 实现获取服务角色主机映射逻辑
         // 方法无返回值，操作完成
     }
 
     @Override
-    public void checkServiceDependency(Integer clusterId, String serviceIds) {
+    public void checkServiceDependency(Long clusterId, String serviceIds) {
         // TODO 解除注释
         // //
         // List<ClusterServiceInstanceEntity> serviceInstanceList =
@@ -607,11 +607,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // 方法无返回值，操作完成
     }
 
-    private ClusterServiceInstanceRoleGroup saveNewRoleGroup(
+    private ClusterServiceInstanceRoleGroupEntity saveNewRoleGroup(
             ClusterServiceInstanceEntity serviceInstanceEntity) {
         // DAO层：使用Mapper统计角色组数量
         long count = roleGroupMapper.countByRoleGroupTypeAndServiceInstanceId("auto", serviceInstanceEntity.getId());
-        ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
+        ClusterServiceInstanceRoleGroupEntity roleGroup = new ClusterServiceInstanceRoleGroupEntity();
         long num = count + 1;
         roleGroup.setRoleGroupName("RoleGroup" + num);
         roleGroup.setServiceInstanceId(serviceInstanceEntity.getId());
@@ -647,16 +647,16 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private boolean saveServiceRoleGroupConfig(
-            Integer clusterId,
+            Long clusterId,
             String serviceName,
             List<ServiceConfig> list,
             HashMap<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup,
+            ClusterServiceInstanceRoleGroupEntity clusterServiceInstanceRoleGroupEntity,
             String description,
             Integer userId,
             String username) {
-        ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
-        roleGroupConfig.setRoleGroupId(clusterServiceInstanceRoleGroup.getId());
+        ClusterServiceRoleGroupConfigEntity roleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
+        roleGroupConfig.setRoleGroupId(clusterServiceInstanceRoleGroupEntity.getId());
         roleGroupConfig.setClusterId(clusterId);
         roleGroupConfig.setServiceName(serviceName);
         roleGroupConfig.setCreateTime(new Date());
@@ -677,28 +677,28 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
     }
 
-    private ClusterServiceInstanceRoleGroup saveServiceInstanceRoleGroup(
-            Integer clusterId,
+    private ClusterServiceInstanceRoleGroupEntity saveServiceInstanceRoleGroup(
+            Long clusterId,
             String serviceName,
             ClusterServiceInstanceEntity serviceInstanceEntity) {
-        ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = new ClusterServiceInstanceRoleGroup();
-        clusterServiceInstanceRoleGroup.setServiceInstanceId(serviceInstanceEntity.getId());
-        clusterServiceInstanceRoleGroup.setClusterId(clusterId);
-        clusterServiceInstanceRoleGroup.setRoleGroupName("默认");
-        clusterServiceInstanceRoleGroup.setServiceName(serviceName);
-        clusterServiceInstanceRoleGroup.setRoleGroupType("default");
-        boolean saveResult = roleGroupService.save(clusterServiceInstanceRoleGroup);
+        ClusterServiceInstanceRoleGroupEntity clusterServiceInstanceRoleGroupEntity = new ClusterServiceInstanceRoleGroupEntity();
+        clusterServiceInstanceRoleGroupEntity.setServiceInstanceId(serviceInstanceEntity.getId());
+        clusterServiceInstanceRoleGroupEntity.setClusterId(clusterId);
+        clusterServiceInstanceRoleGroupEntity.setRoleGroupName("默认");
+        clusterServiceInstanceRoleGroupEntity.setServiceName(serviceName);
+        clusterServiceInstanceRoleGroupEntity.setRoleGroupType("default");
+        boolean saveResult = roleGroupService.save(clusterServiceInstanceRoleGroupEntity);
 
         if (!saveResult) {
             logger.warn("Failed to save role group for service: {}, serviceInstanceId: {}",
                     serviceName, serviceInstanceEntity.getId());
         }
 
-        return clusterServiceInstanceRoleGroup;
+        return clusterServiceInstanceRoleGroupEntity;
     }
 
     private ClusterServiceInstanceEntity saveServiceInstance(
-            Integer clusterId, String serviceName,
+            Long clusterId, String serviceName,
             FrameServiceEntity frameServiceEntity) {
         ClusterServiceInstanceEntity serviceInstanceEntity;
         serviceInstanceEntity = new ClusterServiceInstanceEntity();
@@ -716,9 +716,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void addHostNodeToPrometheus(
-            Integer clusterId, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+            Long clusterId, HashMap<Generators, List<ServiceConfig>> configFileMap) {
         // DAO层：使用Mapper查询受管理的主机列表
-        List<ClusterHostDO> hostList = clusterHostMapper.selectByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = clusterHostMapper.selectByClusterId(clusterId);
 
         Generators workerGenerators = new Generators();
         workerGenerators.setFilename("worker.json");
@@ -733,16 +733,16 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         nodeGenerators.setTemplateName("scrape.ftl");
         ArrayList<ServiceConfig> workerServiceConfigs = new ArrayList<>();
         ArrayList<ServiceConfig> nodeServiceConfigs = new ArrayList<>();
-        for (ClusterHostDO clusterHostDO : hostList) {
+        for (ClusterHostEntity clusterHostEntity : hostList) {
             ServiceConfig serviceConfig = new ServiceConfig();
-            serviceConfig.setName("worker_" + clusterHostDO.getHostname());
-            serviceConfig.setValue(clusterHostDO.getHostname() + ":8585");
+            serviceConfig.setName("worker_" + clusterHostEntity.getHostname());
+            serviceConfig.setValue(clusterHostEntity.getHostname() + ":8585");
             serviceConfig.setRequired(true);
             workerServiceConfigs.add(serviceConfig);
 
             ServiceConfig nodeServiceConfig = new ServiceConfig();
-            nodeServiceConfig.setName("node_" + clusterHostDO.getHostname());
-            nodeServiceConfig.setValue(clusterHostDO.getHostname() + ":9100");
+            nodeServiceConfig.setName("node_" + clusterHostEntity.getHostname());
+            nodeServiceConfig.setValue(clusterHostEntity.getHostname() + ":9100");
             nodeServiceConfig.setRequired(true);
             nodeServiceConfigs.add(nodeServiceConfig);
         }
@@ -831,31 +831,31 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return "ALERTMANAGER".equalsIgnoreCase(serviceName);
     }
 
-    private void addToGlobalVariable(Integer clusterId, String variableName, String value) {
+    private void addToGlobalVariable(Long clusterId, String variableName, String value) {
         // Service层：获取DTO后转换为Entity
         ClusterVariableDTO clusterVariableDTO = variableService.getVariableByVariableName(variableName, clusterId);
-        ClusterVariable clusterVariable = null;
+        ClusterVariableEntity clusterVariableEntity = null;
         if (clusterVariableDTO != null) {
-            clusterVariable = clusterVariableConverter.dtoToEntity(clusterVariableDTO);
+            clusterVariableEntity = clusterVariableConverter.dtoToEntity(clusterVariableDTO);
         }
-        if (Objects.nonNull(clusterVariable)) {
-            if (!value.equals(clusterVariable.getVariableValue())) {
-                clusterVariable.setVariableValue(value);
-                variableService.updateById(clusterVariable);
+        if (Objects.nonNull(clusterVariableEntity)) {
+            if (!value.equals(clusterVariableEntity.getVariableValue())) {
+                clusterVariableEntity.setVariableValue(value);
+                variableService.updateById(clusterVariableEntity);
             }
         } else {
-            clusterVariable = new ClusterVariable();
-            clusterVariable.setClusterId(clusterId);
-            clusterVariable.setVariableName(variableName);
-            clusterVariable.setVariableValue(value);
-            variableService.save(clusterVariable);
+            clusterVariableEntity = new ClusterVariableEntity();
+            clusterVariableEntity.setClusterId(clusterId);
+            clusterVariableEntity.setVariableName(variableName);
+            clusterVariableEntity.setVariableValue(value);
+            variableService.save(clusterVariableEntity);
         }
     }
 
     private void buildConfig(
             List<ServiceConfig> list,
             HashMap<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleGroupConfig roleGroupConfig,
+            ClusterServiceRoleGroupConfigEntity roleGroupConfig,
             String description) {
         roleGroupConfig.setConfigJson(JSONArray.toJSONString(list));
         roleGroupConfig.setConfigJsonMd5(SecureUtil.md5(JSONArray.toJSONString(list)));
@@ -876,8 +876,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param userId          用户ID
      * @param username        用户名
      */
-    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId,
-            Integer userId, String username, String description) {
+    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfigEntity roleGroupConfig, String refType, Integer refId,
+                                       Integer userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
@@ -927,9 +927,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // Service层：获取DTO后转换为Entity
         ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService
                 .getRoleGroupByServiceInstanceId(serviceInstance.getId());
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+        ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
         ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDTO);
+        ClusterServiceRoleGroupConfigEntity config = roleGroupConfigConverter.dtoToEntity(configDTO);
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 

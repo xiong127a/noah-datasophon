@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuisEntity;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceWebuisMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * 集群服务角色实例WebUI服务实现
- * 继承ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>，获得标准CRUD能力
+ * 继承ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuisEntity>，获得标准CRUD能力
  * 按照架构重构规范，ServiceImpl返回DTO，不返回Result，使用JDK21现代特性
  * 
  * @author 任相鹏
@@ -41,7 +41,7 @@ import java.util.List;
 @Slf4j
 @Service("clusterServiceRoleInstanceWebuisService")
 public class ClusterServiceRoleInstanceWebuisServiceImpl
-        extends ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuis>
+        extends ServiceImpl<ClusterServiceRoleInstanceWebuisMapper, ClusterServiceRoleInstanceWebuisEntity>
         implements ClusterServiceRoleInstanceWebuisService {
 
     @Autowired
@@ -102,14 +102,14 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     private void updateWebUiName(Integer roleInstanceId, String state) {
-        List<ClusterServiceRoleInstanceWebuis> webuisList = getMapper()
+        List<ClusterServiceRoleInstanceWebuisEntity> webuisList = getMapper()
                 .selectListByServiceRoleInstanceId(roleInstanceId);
 
         if (webuisList.isEmpty()) {
             return;
         }
 
-        for (ClusterServiceRoleInstanceWebuis webuis : webuisList) {
+        for (ClusterServiceRoleInstanceWebuisEntity webuis : webuisList) {
             String webuiName = webuis.getName();
             boolean needUpdate = false;
 

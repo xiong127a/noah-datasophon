@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterAlertExpressionDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterAlertExpressionVO;
-import com.datasophon.dao.entity.ClusterAlertExpression;
+import com.datasophon.dao.entity.ClusterAlertExpressionEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -35,7 +35,7 @@ import org.mapstruct.Mapping;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterAlertExpressionConverter extends
-        BaseConverter<ClusterAlertExpression, ClusterAlertExpressionDTO, ClusterAlertExpressionVO> {
+        BaseConverter<ClusterAlertExpressionEntity, ClusterAlertExpressionDTO, ClusterAlertExpressionVO> {
 
     /**
      * Entity转换为VO时，添加格式化字段
@@ -43,7 +43,7 @@ public interface ClusterAlertExpressionConverter extends
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
-    ClusterAlertExpressionVO entityToVo(ClusterAlertExpression entity);
+    ClusterAlertExpressionVO entityToVo(ClusterAlertExpressionEntity entity);
 
     /**
      * DTO转换为VO时，添加格式化字段

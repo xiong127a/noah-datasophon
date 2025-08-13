@@ -30,9 +30,9 @@ import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.utils.ExecResult;
 
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.ClusterUser;
-import com.datasophon.dao.entity.ClusterUserTenant;
+import com.datasophon.dao.entity.ClusterTenantEntity;
+import com.datasophon.dao.entity.ClusterUserEntity;
+import com.datasophon.dao.entity.ClusterUserTenantEntity;
 import com.datasophon.dao.mapper.ClusterUserTenantMapper;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
 
 @Service("clusterUserTenantService")
 @Transactional
-public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantMapper, ClusterUserTenant>
+public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantMapper, ClusterUserTenantEntity>
         implements ClusterUserTenantService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterUserTenantServiceImpl.class);
@@ -67,24 +67,24 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     private ClusterTenantService clusterTenantService;
 
     @Override
-    public void addUserToTenant(Integer clusterId, Integer userId, String tenantIds) {
+    public void addUserToTenant(Long clusterId, Integer userId, String tenantIds) {
         List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).toList();
 
         // SQL逻辑已迁移到DAO层
-        List<ClusterUserTenant> list = getMapper().selectByClusterIdAndUserIdAndTenantIds(clusterId, userId,
+        List<ClusterUserTenantEntity> list = getMapper().selectByClusterIdAndUserIdAndTenantIds(clusterId, userId,
                 tenantIdList);
         if (CollUtil.isNotEmpty(list)) {
             throw new RuntimeException("当前用户授权已存在");
         }
-        List<ClusterUserTenant> addUserTenant = tenantIdList.stream()
-                .map(t -> ClusterUserTenant.builder().tenantId(t).clusterId(clusterId).userId(userId).build())
+        List<ClusterUserTenantEntity> addUserTenant = tenantIdList.stream()
+                .map(t -> ClusterUserTenantEntity.builder().tenantId(t).clusterId(clusterId).userId(userId).build())
                 .toList();
         this.saveOrUpdateBatch(addUserTenant);
         operateTenantUser(clusterId, userId, tenantIdList);
     }
 
     @Override
-    public void deleteUser(Integer clusterId, Integer userId, String tenantIds) {
+    public void deleteUser(Long clusterId, Integer userId, String tenantIds) {
         List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).toList();
 
         // SQL逻辑已迁移到DAO层
@@ -93,21 +93,21 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     }
 
     @Override
-    public List<ClusterUserTenant> getListByUserId(Integer clusterId, Integer userId) {
+    public List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Integer userId) {
         Map<Integer, String> tenantMap = clusterTenantService.list()
                 .stream()
-                .collect(Collectors.toMap(ClusterTenant::getId, ClusterTenant::getTenantName));
+                .collect(Collectors.toMap(ClusterTenantEntity::getId, ClusterTenantEntity::getTenantName));
 
         // SQL逻辑已迁移到DAO层
-        List<ClusterUserTenant> userTenantList = getMapper().selectByClusterIdAndUserId(clusterId, userId);
+        List<ClusterUserTenantEntity> userTenantList = getMapper().selectByClusterIdAndUserId(clusterId, userId);
         userTenantList.forEach(t -> t.setTenantName(tenantMap.get(t.getTenantId())));
         return userTenantList;
     }
 
-    private void operateTenantUser(Integer clusterId, Integer userId, List<Integer> tenantIdList) {
-        List<ClusterUserTenant> allUserTenants = this.list();
-        List<ClusterUser> allUsers = clusterUserService.list();
-        List<ClusterUser> users = allUsers.stream()
+    private void operateTenantUser(Long clusterId, Integer userId, List<Integer> tenantIdList) {
+        List<ClusterUserTenantEntity> allUserTenants = this.list();
+        List<ClusterUserEntity> allUsers = clusterUserService.list();
+        List<ClusterUserEntity> users = allUsers.stream()
                 .filter(t -> t.getClusterId().equals(clusterId) && t.getId().equals(userId))
                 .toList();
         if (CollUtil.isEmpty(users)) {
@@ -115,23 +115,23 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
             return;
         }
         // SQL逻辑已迁移到DAO层，通过ClusterTenantService调用
-        List<ClusterTenant> tenantList = ((ClusterTenantMapper) clusterTenantService.getMapper())
+        List<ClusterTenantEntity> tenantList = ((ClusterTenantMapper) clusterTenantService.getMapper())
                 .selectByClusterIdAndIds(clusterId, tenantIdList);
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
 
-        for (ClusterTenant clusterTenant : tenantList) {
+        for (ClusterTenantEntity clusterTenantEntity : tenantList) {
             List<Integer> exitsUserIds = allUserTenants.stream()
-                    .filter(t -> t.getClusterId().equals(clusterId) && t.getTenantId().equals(clusterTenant.getId()))
-                    .map(ClusterUserTenant::getUserId)
+                    .filter(t -> t.getClusterId().equals(clusterId) && t.getTenantId().equals(clusterTenantEntity.getId()))
+                    .map(ClusterUserTenantEntity::getUserId)
                     .toList();
             List<String> exitsUserNames = allUsers.stream()
                     .filter(t -> exitsUserIds.contains(t.getId()))
-                    .map(ClusterUser::getUsername)
+                    .map(ClusterUserEntity::getUsername)
                     .toList();
 
             TenantRangerCommand tenantRangerCommand = new TenantRangerCommand();
             tenantRangerCommand.setClusterId(clusterId);
-            tenantRangerCommand.setRoleName(clusterTenant.getTenantName());
+            tenantRangerCommand.setRoleName(clusterTenantEntity.getTenantName());
             tenantRangerCommand.setOperateType(RangerOpType.OP_USER_TO_ROLE);
             tenantRangerCommand.setUserList(exitsUserNames);
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
@@ -153,7 +153,7 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     }
 
     @Override
-    public List<ClusterUserTenant> getListByTenantId(Integer tenantId) {
+    public List<ClusterUserTenantEntity> getListByTenantId(Integer tenantId) {
         return getMapper().selectByTenantId(tenantId);
     }
 

@@ -17,7 +17,7 @@ public class MinioHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 

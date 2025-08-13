@@ -47,7 +47,7 @@ public class RoleInstanceQueryServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterIdAndHostname(clusterId, hostname);
         return converter.entityListToDtoList(entities);
     }
@@ -69,7 +69,7 @@ public class RoleInstanceQueryServiceImpl
 
     @Override
     public ClusterServiceRoleInstanceDTO getOneServiceRole(String serviceRoleName, String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         ClusterServiceRoleInstanceEntity entity;
         if (hostname != null && !hostname.isEmpty()) {
             entity = getMapper().selectByClusterIdAndServiceRoleNameAndHostname(clusterId, serviceRoleName, hostname);

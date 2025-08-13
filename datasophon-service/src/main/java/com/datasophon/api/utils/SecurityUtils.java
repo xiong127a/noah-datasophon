@@ -64,7 +64,7 @@ public class SecurityUtils implements ApplicationContextAware {
      * 
      * @return 用户ID，如果未找到则返回null
      */
-    public static Integer getUserId() {
+    public static Long getUserId() {
         UserInfoEntity user = getAuthUser();
         if (user != null && user.getId() != null) {
             return user.getId();

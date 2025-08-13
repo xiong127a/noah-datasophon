@@ -38,22 +38,22 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
     /**
      * 获取指定集群的所有框架服务（包含安装状态）
      */
-    List<FrameServiceDTO> getAllFrameService(Integer clusterId);
+    List<FrameServiceDTO> getAllFrameService(Long clusterId);
 
     /**
      * 获取指定集群的所有框架服务，包含必选组件标识
      */
-    List<FrameServiceDTO> getAllFrameServiceWithRequired(Integer clusterId, ServiceType type);
+    List<FrameServiceDTO> getAllFrameServiceWithRequired(Long clusterId, ServiceType type);
 
     /**
      * 根据服务ID列表获取服务信息
      */
-    List<FrameServiceDTO> getServiceListByServiceIds(List<Integer> serviceIds);
+    List<FrameServiceDTO> getServiceListByServiceIds(List<Long> serviceIds);
 
     /**
      * 根据框架ID和服务名称获取服务信息
      */
-    FrameServiceDTO getServiceByFrameIdAndServiceName(Integer frameId, String serviceName);
+    FrameServiceDTO getServiceByFrameIdAndServiceName(Long frameId, String serviceName);
 
     /**
      * 根据框架ID和服务名称查找服务信息（用于服务发现，不抛出异常）
@@ -61,7 +61,7 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
      * @param serviceName 服务名称
      * @return Optional包装的服务信息，如果不存在则返回空Optional
      */
-    java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Integer frameId, String serviceName);
+    java.util.Optional<FrameServiceDTO> findServiceByFrameIdAndServiceName(Long frameId, String serviceName);
 
     /**
      * 根据框架代码和服务名称获取服务信息

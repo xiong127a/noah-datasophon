@@ -197,7 +197,7 @@ public class ClusterServiceInstanceConfigServiceImpl
         
         @Override
         public PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
-                        Integer clusterId, Integer serviceId, Integer page, Integer pageSize) {
+                        Long clusterId, Integer serviceId, Integer page, Integer pageSize) {
                 log.debug("分页查询服务实例配置列表: clusterId={}, serviceId={}, page={}, pageSize={}", 
                          clusterId, serviceId, page, pageSize);
                 

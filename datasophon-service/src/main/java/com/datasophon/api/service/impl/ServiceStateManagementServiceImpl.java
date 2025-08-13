@@ -21,7 +21,7 @@ import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.service.*;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.common.enums.AlertLevel;
@@ -66,7 +66,7 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
 
     @Override
     public void updateServiceRoleState(CommandType commandType, String serviceRoleName, String hostname,
-            Integer clusterId, ServiceRoleState serviceRoleState) {
+            Long clusterId, ServiceRoleState serviceRoleState) {
         ClusterServiceRoleInstanceDTO serviceRoleDTO = serviceRoleInstanceService.getOneServiceRole(serviceRoleName,
                 hostname, clusterId);
         ClusterServiceRoleInstanceEntity serviceRole = serviceRoleInstanceConverter.dtoToEntity(serviceRoleDTO);
@@ -82,15 +82,15 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
     public void saveAlert(ClusterServiceRoleInstanceDTO roleInstanceDto, String alertTargetName,
             AlertLevel alertLevel, String alertAdvice) {
         // DAO层：使用Mapper查询告警历史
-        ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
+        ClusterAlertHistoryEntity clusterAlertHistoryEntity = clusterAlertHistoryMapper
                 .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
                         alertTargetName, roleInstanceDto.clusterId(),
                         roleInstanceDto.hostname(), 1);
 
         ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
                 .getById(roleInstanceDto.serviceId());
-        if (Objects.isNull(clusterAlertHistory)) {
-            clusterAlertHistory = ClusterAlertHistory.builder()
+        if (Objects.isNull(clusterAlertHistoryEntity)) {
+            clusterAlertHistoryEntity = ClusterAlertHistoryEntity.builder()
                     .clusterId(roleInstanceDto.clusterId())
                     .alertGroupName(roleInstanceDto.serviceName().toLowerCase())
                     .alertTargetName(alertTargetName)
@@ -105,7 +105,7 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
                     .isEnabled(1)
                     .build();
 
-            alertHistoryService.save(clusterAlertHistory);
+            alertHistoryService.save(clusterAlertHistoryEntity);
         }
         // update service role instance state
         serviceInstanceEntity.setServiceState(ServiceState.EXISTS_EXCEPTION);
@@ -121,15 +121,15 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
     @Override
     public void recoverAlert(ClusterServiceRoleInstanceDTO roleInstanceDto) {
         // DAO层：使用Mapper查询告警历史
-        ClusterAlertHistory clusterAlertHistory = clusterAlertHistoryMapper
+        ClusterAlertHistoryEntity clusterAlertHistoryEntity = clusterAlertHistoryMapper
                 .selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
                         roleInstanceDto.serviceRoleName() + " Survive",
                         roleInstanceDto.clusterId(),
                         roleInstanceDto.hostname(), 1);
 
-        if (Objects.nonNull(clusterAlertHistory)) {
-            clusterAlertHistory.setIsEnabled(2);
-            alertHistoryService.updateById(clusterAlertHistory);
+        if (Objects.nonNull(clusterAlertHistoryEntity)) {
+            clusterAlertHistoryEntity.setIsEnabled(2);
+            alertHistoryService.updateById(clusterAlertHistoryEntity);
         }
         // update service role instance state
         if (!Objects.equals(ServiceRoleState.RUNNING.getValue(), roleInstanceDto.serviceRoleState())) {

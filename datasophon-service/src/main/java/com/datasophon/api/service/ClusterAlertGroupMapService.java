@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
+import com.datasophon.dao.entity.ClusterAlertGroupMapEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupMap> {
+public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupMapEntity> {
 
     /**
      * 根据集群ID获取告警组映射列表
@@ -39,7 +39,7 @@ public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupM
      * @param clusterId 集群ID
      * @return 告警组映射DTO列表
      */
-    List<ClusterAlertGroupMapDTO> getByClusterId(Integer clusterId);
+    List<ClusterAlertGroupMapDTO> getByClusterId(Long clusterId);
 
     /**
      * 根据ID获取告警组映射DTO

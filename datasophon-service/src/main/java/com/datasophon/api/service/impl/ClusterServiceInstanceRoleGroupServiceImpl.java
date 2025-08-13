@@ -28,8 +28,8 @@ import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
@@ -52,7 +52,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Service("clusterServiceInstanceRoleGroupService")
-public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroup> implements ClusterServiceInstanceRoleGroupService {
+public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroupEntity> implements ClusterServiceInstanceRoleGroupService {
 
     @Autowired
     private ClusterServiceInstanceRoleGroupConverter clusterServiceInstanceRoleGroupConverter;
@@ -87,7 +87,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
 
     @Override
     public ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroup entity = getMapper().selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
+        ClusterServiceInstanceRoleGroupEntity entity = getMapper().selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
                 DEFAULT);
         return clusterServiceInstanceRoleGroupConverter.entityToDto(entity);
     }
@@ -104,7 +104,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
         if (isRepeatRoleGroupName(serviceInstanceId, roleGroupName)) {
             return;
         }
-        ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
+        ClusterServiceInstanceRoleGroupEntity roleGroup = new ClusterServiceInstanceRoleGroupEntity();
         roleGroup.setRoleGroupType("custom");
         roleGroup.setRoleGroupName(roleGroupName);
         roleGroup.setServiceName(serviceInstance.getServiceName());
@@ -115,8 +115,8 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
 
         ClusterServiceRoleGroupConfigDTO configDTO = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
         if (configDTO != null) {
-            ClusterServiceRoleGroupConfig config = clusterServiceRoleGroupConfigConverter.dtoToEntity(configDTO);
-            ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
+            ClusterServiceRoleGroupConfigEntity config = clusterServiceRoleGroupConfigConverter.dtoToEntity(configDTO);
+            ClusterServiceRoleGroupConfigEntity roleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
             BeanUtils.copyProperties(config, roleGroupConfig);
             roleGroupConfig.setConfigVersion(1);
             roleGroupConfig.setId(null);
@@ -152,7 +152,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
 
     @Override
     public ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroup instanceRoleGroup = getMapper()
+        ClusterServiceInstanceRoleGroupEntity instanceRoleGroup = getMapper()
                 .selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId, "default");
 
         if (instanceRoleGroup != null) {
@@ -163,7 +163,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
 
     @Override
     public boolean rename(Integer roleGroupId, String roleGroupName) {
-        ClusterServiceInstanceRoleGroup roleGroup = this.getById(roleGroupId);
+        ClusterServiceInstanceRoleGroupEntity roleGroup = this.getById(roleGroupId);
         if (roleGroup == null) {
             return false;
         }
@@ -191,14 +191,14 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     private boolean isDefaultRoleGroup(Integer roleGroupId) {
-        ClusterServiceInstanceRoleGroup roleGroup = this.getById(roleGroupId);
+        ClusterServiceInstanceRoleGroupEntity roleGroup = this.getById(roleGroupId);
         String roleGroupType = roleGroup.getRoleGroupType();
         return DEFAULT.equals(roleGroupType);
     }
 
     @Override
     public List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
-        List<ClusterServiceInstanceRoleGroup> entities = getMapper().selectByServiceInstanceId(serviceInstanceId);
+        List<ClusterServiceInstanceRoleGroupEntity> entities = getMapper().selectByServiceInstanceId(serviceInstanceId);
         return clusterServiceInstanceRoleGroupConverter.entityListToDtoList(entities);
     }
 

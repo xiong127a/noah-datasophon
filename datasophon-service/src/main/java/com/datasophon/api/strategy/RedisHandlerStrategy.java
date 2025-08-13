@@ -26,7 +26,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
         private static final Logger logger = LoggerFactory.getLogger(RedisHandlerStrategy.class);
 
         @Override
-        public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void getConfig(Long clusterId, List<ServiceConfig> list) {
                 List<ServiceConfig> collect = list.stream()
                         .filter(config -> "redisMasterPort".equals(config.getName()) || "redisSlavePort".equals(config.getName())).toList();
                 Map<String, Object> portConfigValues =   collect.stream().collect(Collectors.toMap(
@@ -108,7 +108,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
          */
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         logger.info("开始获取Redis服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

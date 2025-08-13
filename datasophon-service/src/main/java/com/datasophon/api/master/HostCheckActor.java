@@ -20,6 +20,7 @@ package com.datasophon.api.master;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.ManagementStatus;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.AbstractActor;
@@ -36,7 +37,6 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PromInfoUtils;
 
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.HostState;
@@ -89,7 +89,7 @@ public class HostCheckActor extends AbstractActor {
 
       for (ClusterInfoDTO clusterInfoDto : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
-        Integer clusterId = clusterInfoDto.id();
+        Long clusterId = clusterInfoDto.id();
         ClusterType depType = clusterInfoDto.depType();
         String prometheusPort = "9090";
         if (depType == ClusterType.KUBERNETES) {
@@ -100,23 +100,23 @@ public class HostCheckActor extends AbstractActor {
             clusterId);
         if (Objects.nonNull(prometheusInstance)) {
           // 集群正常安装了 Prometheus
-          List<ClusterHostDO> list = clusterHostService.getHostListByClusterId(clusterId);
+          List<ClusterHostEntity> list = clusterHostService.getHostListByClusterId(clusterId);
 
           String promUrl = "http://" + prometheusInstance.hostname() + ":" + prometheusPort + "/api/v1/query";
-          for (ClusterHostDO clusterHostDO : list) {
-            if (hostInfo != null && !StrUtil.equals(clusterHostDO.getHostname(), hostInfo.getIp())) {
+          for (ClusterHostEntity clusterHostEntity : list) {
+            if (hostInfo != null && !StrUtil.equals(clusterHostEntity.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }
             try {
-              String hostname = clusterHostDO.getHostname();
+              String hostname = clusterHostEntity.getHostname();
               // 查询内存总量
               String totalMemPromQl = "node_memory_MemTotal_bytes{job=~\"node\",instance=\"" + hostname
                   + ":9100\"}/1024/1024/1024";
               String totalMemStr = PromInfoUtils.getSinglePrometheusMetric(promUrl, totalMemPromQl);
               if (StringUtils.isNotBlank(totalMemStr)) {
                 int totalMem = Double.valueOf(totalMemStr).intValue();
-                clusterHostDO.setTotalMem(totalMem);
+                clusterHostEntity.setTotalMem(totalMem);
               }
               // 查询内存使用量
               String memAvailablePromQl = "node_memory_MemAvailable_bytes{job=~\"node\",instance=\""
@@ -124,8 +124,8 @@ public class HostCheckActor extends AbstractActor {
               String memAvailableStr = PromInfoUtils.getSinglePrometheusMetric(promUrl, memAvailablePromQl);
               if (StringUtils.isNotBlank(memAvailableStr)) {
                 int memAvailable = Double.valueOf(memAvailableStr).intValue();
-                Integer memUsed = clusterHostDO.getTotalMem() - memAvailable;
-                clusterHostDO.setUsedMem(memUsed);
+                Integer memUsed = clusterHostEntity.getTotalMem() - memAvailable;
+                clusterHostEntity.setUsedMem(memUsed);
               }
               // 总磁盘容量
               String totalDistPromQl = "sum(node_filesystem_size_bytes{instance=\"" + hostname
@@ -133,7 +133,7 @@ public class HostCheckActor extends AbstractActor {
               String totalDiskStr = PromInfoUtils.getSinglePrometheusMetric(promUrl, totalDistPromQl);
               if (StringUtils.isNotBlank(totalDiskStr)) {
                 int totalDisk = Double.valueOf(totalDiskStr).intValue();
-                clusterHostDO.setTotalDisk(totalDisk);
+                clusterHostEntity.setTotalDisk(totalDisk);
               }
               // 查询磁盘使用量
               String diskUsedPromQl = "sum(node_filesystem_size_bytes{instance=\"" + hostname
@@ -142,15 +142,15 @@ public class HostCheckActor extends AbstractActor {
                   + ":9100\",fstype=~\"ext.*|xfs\",mountpoint !~\".*pod.*\"})/1024/1024/1024";
               String diskUsed = PromInfoUtils.getSinglePrometheusMetric(promUrl, diskUsedPromQl);
               if (StringUtils.isNotBlank(diskUsed)) {
-                clusterHostDO.setUsedDisk(Double.valueOf(diskUsed).intValue());
+                clusterHostEntity.setUsedDisk(Double.valueOf(diskUsed).intValue());
               }
               // 查询cpu负载
               String cpuLoadPromQl = "node_load5{job=~\"node\",instance=\"" + hostname + ":9100\"}";
               String cpuLoad = PromInfoUtils.getSinglePrometheusMetric(promUrl, cpuLoadPromQl);
               if (StringUtils.isNotBlank(cpuLoad)) {
-                clusterHostDO.setAverageLoad(cpuLoad);
+                clusterHostEntity.setAverageLoad(cpuLoad);
               }
-              clusterHostDO.setHostState(HostState.RUNNING);
+              clusterHostEntity.setHostState(HostState.RUNNING);
             } catch (Exception e) {
 
               logger.warn("check cluster state error, cause: {}", e.getMessage());
@@ -162,15 +162,15 @@ public class HostCheckActor extends AbstractActor {
           }
         } else {
           // 没有 Prometheus？直接获取节点，通过 rpc 检测是否启动
-          List<ClusterHostDO> hosts = clusterHostService.getHostListByClusterId(clusterId);
-          List<ClusterHostDO> checkedHosts = new ArrayList<>(hosts.size());
-          for (ClusterHostDO host : hosts) {
+          List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterId(clusterId);
+          List<ClusterHostEntity> checkedHosts = new ArrayList<>(hosts.size());
+          for (ClusterHostEntity host : hosts) {
             if (hostInfo != null && !StrUtil.equals(host.getHostname(), hostInfo.getIp())) {
               // 指定了节点，直接只处理这一个节点的
               continue;
             }
             // copy 一个新的，只更新状态
-            ClusterHostDO checkedHost = new ClusterHostDO();
+            ClusterHostEntity checkedHost = new ClusterHostEntity();
             checkedHost.setId(host.getId());
             checkedHost.setCheckTime(new Date());
             try {

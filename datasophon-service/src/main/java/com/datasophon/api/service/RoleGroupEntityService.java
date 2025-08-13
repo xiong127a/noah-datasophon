@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 
 /**
  * 服务角色组实体服务
@@ -35,7 +35,7 @@ public interface RoleGroupEntityService {
      * @param id 角色组ID
      * @return 角色组
      */
-    ClusterServiceInstanceRoleGroup getById(Integer id);
+    ClusterServiceInstanceRoleGroupEntity getById(Integer id);
 
     /**
      * 将角色实例绑定到角色组

@@ -37,5 +37,5 @@ public interface SimpleClusterVariableService {
      * @param key 变量key
      * @param value 变量值
      */
-    void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId, String key, String value);
+    void generateClusterVariable(Map<String, String> globalVariables, Long clusterId, String key, String value);
 }

@@ -23,8 +23,7 @@ import com.datasophon.api.service.host.strategy.model.*;
 
 
 import com.datasophon.api.converter.K8sToClusterHostConverter;
-import com.datasophon.common.enums.ManagementStatus;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.enums.HostState;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
 import com.datasophon.kubernetes.util.KubeUtil;
@@ -53,10 +52,10 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
 
 
     // K8S主机临时存储，替代缓存
-    private final Map<Integer, List<ClusterHostDO>> k8sHostsStorage = new HashMap<>();
+    private final Map<Long, List<ClusterHostEntity>> k8sHostsStorage = new HashMap<>();
 
     // K8S节点信息临时存储
-    private final Map<Integer, List<K8sNodeInfo>> k8sNodeInfoStorage = new HashMap<>();
+    private final Map<Long, List<K8sNodeInfo>> k8sNodeInfoStorage = new HashMap<>();
 
     @Override
     public StrategyType getStrategyType() {
@@ -87,7 +86,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    protected List<ClusterHostDO> doDiscoverHosts(HostDiscoveryRequest request) {
+    protected List<ClusterHostEntity> doDiscoverHosts(HostDiscoveryRequest request) {
         String kubeConfigContent = (String) request.getConnectionParams().get("kubeConfigContent");
         String namespace = (String) request.getConnectionParams().get("namespace");
         
@@ -104,7 +103,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
             k8sNodeInfoStorage.put(request.getClusterId(), validK8sNodes);
             
             // 转换为ClusterHostDO对象（用于传统流程兼容）
-            List<ClusterHostDO> hosts = validK8sNodes.stream()
+            List<ClusterHostEntity> hosts = validK8sNodes.stream()
                     .map(k8sNode -> k8sToClusterHostConverter.convertToClusterHost(k8sNode, request.getClusterId()))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -124,16 +123,16 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     /**
      * 获取K8S节点信息（用于前端展示）
      */
-    public List<K8sNodeInfo> getK8sNodeInfoList(Integer clusterId) {
+    public List<K8sNodeInfo> getK8sNodeInfoList(Long clusterId) {
         return k8sNodeInfoStorage.get(clusterId);
     }
 
     @Override
     protected HostListResult doGetHostList(HostListRequest request) {
-        Integer clusterId = request.getClusterId();
+        Long clusterId = request.getClusterId();
         
         // 优先从临时存储获取
-        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        List<ClusterHostEntity> hosts = k8sHostsStorage.get(clusterId);
         
         if (hosts == null || hosts.isEmpty()) {
             // 如果临时存储没有，尝试从数据库获取已导入的主机
@@ -145,7 +144,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         }
         
         // 应用筛选条件
-        List<ClusterHostDO> filteredHosts = applyFilters(hosts, request);
+        List<ClusterHostEntity> filteredHosts = applyFilters(hosts, request);
         
         // K8S模式不支持分页，返回所有结果
         return HostListResult.builder()
@@ -159,16 +158,16 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    protected void doImportHosts(List<ClusterHostDO> hosts, HostImportRequest request) {
+    protected void doImportHosts(List<ClusterHostEntity> hosts, HostImportRequest request) {
         try {
             log.info("开始导入{}台K8S主机到数据库", hosts.size());
             
             // 1. 检查IP重复
-            List<String> ipList = hosts.stream().map(ClusterHostDO::getIp).toList();
-            List<ClusterHostDO> existingHosts = clusterHostService.getHostsByIpList(request.getClusterId(), ipList);
+            List<String> ipList = hosts.stream().map(ClusterHostEntity::getIp).toList();
+            List<ClusterHostEntity> existingHosts = clusterHostService.getHostsByIpList(request.getClusterId(), ipList);
             
             if (!existingHosts.isEmpty()) {
-                List<String> duplicateIps = existingHosts.stream().map(ClusterHostDO::getIp).toList();
+                List<String> duplicateIps = existingHosts.stream().map(ClusterHostEntity::getIp).toList();
                 log.warn("发现重复IP，将跳过这些主机：{}", duplicateIps);
                 
                 // 过滤掉重复IP的主机
@@ -198,7 +197,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public List<ClusterHostDO> refreshHosts(Integer clusterId, Map<String, Object> connectionParams) {
+    public List<ClusterHostEntity> refreshHosts(Long clusterId, Map<String, Object> connectionParams) {
         HostDiscoveryRequest request = HostDiscoveryRequest.builder()
                 .clusterId(clusterId)
                 .connectionParams(connectionParams)
@@ -244,13 +243,13 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> performHostCheck(Integer clusterId, List<String> hostnames, 
+    public Map<String, Object> performHostCheck(Long clusterId, List<String> hostnames, 
                                               Map<String, Object> connectionParams) {
         // K8S模式下的主机检查逻辑
         Map<String, Object> result = new HashMap<>();
         
         // K8S节点通常不需要传统的SSH检查，主要检查节点状态
-        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        List<ClusterHostEntity> hosts = k8sHostsStorage.get(clusterId);
         if (hosts != null) {
             long readyHosts = hosts.stream()
                     .filter(host -> hostnames.contains(host.getHostname()))
@@ -270,10 +269,10 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> getHostCheckStatus(Integer clusterId) {
+    public Map<String, Object> getHostCheckStatus(Long clusterId) {
         Map<String, Object> result = new HashMap<>();
         
-        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        List<ClusterHostEntity> hosts = k8sHostsStorage.get(clusterId);
         if (hosts != null && !hosts.isEmpty()) {
             long readyHosts = hosts.stream()
                     .filter(host -> HostState.RUNNING.equals(host.getHostState()))
@@ -292,7 +291,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public void cleanup(Integer clusterId) {
+    public void cleanup(Long clusterId) {
         // 清理临时存储
         k8sHostsStorage.remove(clusterId);
         k8sNodeInfoStorage.remove(clusterId);
@@ -300,9 +299,9 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> validateForNextStep(Integer clusterId) {
+    public Map<String, Object> validateForNextStep(Long clusterId) {
         Map<String, Object> result = new HashMap<>();
-        List<ClusterHostDO> hosts = k8sHostsStorage.get(clusterId);
+        List<ClusterHostEntity> hosts = k8sHostsStorage.get(clusterId);
         if (hosts == null || hosts.isEmpty()) {
             // 回退到数据库读取
             hosts = clusterHostService.getAllManagedHostsByClusterId(clusterId);
@@ -361,7 +360,7 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
     /**
      * 应用筛选条件
      */
-    private List<ClusterHostDO> applyFilters(List<ClusterHostDO> hosts, HostListRequest request) {
+    private List<ClusterHostEntity> applyFilters(List<ClusterHostEntity> hosts, HostListRequest request) {
         return hosts.stream()
                 .filter(host -> {
                     // 主机名筛选

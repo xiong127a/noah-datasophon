@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.entity.ClusterAlertQuotaEntity;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.service.IService;
 
@@ -31,41 +31,41 @@ import java.util.Set;
  * @email 635887935@qq.com
  * @date 2025-08-01
  */
-public interface ClusterAlertQuotaService extends IService<ClusterAlertQuota> {
+public interface ClusterAlertQuotaService extends IService<ClusterAlertQuotaEntity> {
 
     /**
      * 获取告警指标分页列表
      */
-    PageResult<ClusterAlertQuota> getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId,
-            String quotaName, Integer page, Integer pageSize);
+    PageResult<ClusterAlertQuotaEntity> getAlertQuotaList(Long clusterId, Integer alertGroupId, Integer noticeGroupId,
+                                                          String quotaName, Integer page, Integer pageSize);
 
     /**
      * 启动告警指标
      */
-    void start(Integer clusterId, String alertQuotaIds);
+    void start(Long clusterId, String alertQuotaIds);
 
     /**
      * 停止告警指标
      */
-    void stop(Integer clusterId, String alertQuotaIds);
+    void stop(Long clusterId, String alertQuotaIds);
 
     /**
      * 保存告警指标
      */
-    ClusterAlertQuota saveAlertQuota(ClusterAlertQuota clusterAlertQuota);
+    ClusterAlertQuotaEntity saveAlertQuota(ClusterAlertQuotaEntity clusterAlertQuotaEntity);
 
     /**
      * 根据服务名称查询告警指标列表
      */
-    List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName);
+    List<ClusterAlertQuotaEntity> listAlertQuotaByServiceName(String serviceName);
 
     /**
      * 根据通知组ID列表查询告警指标
      */
-    List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> groupIds);
+    List<ClusterAlertQuotaEntity> getByNoticeGroupIds(List<Long> groupIds);
 
     /**
      * 根据告警组ID集合查询告警指标
      */
-    List<ClusterAlertQuota> selectByAlertGroupIds(Set<Integer> alertGroupIds);
+    List<ClusterAlertQuotaEntity> selectByAlertGroupIds(Set<Long> alertGroupIds);
 }

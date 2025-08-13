@@ -42,7 +42,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.dto.ClusterInfoDTO;
 
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.mybatisflex.core.query.QueryChain;
@@ -386,10 +386,10 @@ public class LoadServiceMeta implements ApplicationRunner {
             for (ClusterInfoDTO cluster : clusters) {
                 HashMap<String, String> globalVariables = new HashMap<>();
                 // TODO: 需要创建ClusterVariableService来替代直接QueryChain调用
-                List<ClusterVariable> variables = QueryChain.of(ClusterVariable.class)
-                        .where(ClusterVariable::getClusterId).eq(cluster.id())
+                List<ClusterVariableEntity> variables = QueryChain.of(ClusterVariableEntity.class)
+                        .where(ClusterVariableEntity::getClusterId).eq(cluster.id())
                         .list();
-                for (ClusterVariable variable : variables) {
+                for (ClusterVariableEntity variable : variables) {
                     globalVariables.put(variable.getVariableName(), variable.getVariableValue());
                 }
                 globalVariables.put("${apiHost}", InetAddress.getLocalHost().getHostName());

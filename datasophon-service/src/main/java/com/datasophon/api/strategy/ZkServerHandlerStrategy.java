@@ -48,7 +48,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         private static final Logger logger = LoggerFactory.getLogger(ZkServerHandlerStrategy.class);
 
         @Override
-        public void handler(Integer clusterId, List<String> hosts) {
+        public void handler(Long clusterId, List<String> hosts) {
                 // 保存zkUrls到全局变量
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
@@ -61,7 +61,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
         }
 
         @Override
-        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
@@ -128,7 +128,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
          * @param list      服务配置列表
          */
         @Override
-        public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void getConfig(Long clusterId, List<ServiceConfig> list) {
                 // add server.x config
                 ClusterInfoService clusterInfoService = SpringUtil
                                 .getBean(ClusterInfoService.class);
@@ -190,7 +190,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
          */
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         logger.info("开始获取ZooKeeper服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

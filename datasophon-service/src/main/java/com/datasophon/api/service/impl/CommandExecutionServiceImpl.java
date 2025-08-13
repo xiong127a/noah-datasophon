@@ -199,7 +199,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
     @Override
     public void buildExecuteServiceRoleCommand(
-            Integer clusterId,
+            Long clusterId,
             CommandType commandType,
             String clusterCode,
             DAGGraph<String, ServiceNode, String> dag,
@@ -228,7 +228,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     }
 
     @Override
-    public ClusterServiceCommandEntity generateCommandEntity(Integer clusterId, CommandType commandType,
+    public ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType,
             String serviceName) {
         ClusterServiceCommandEntity commandEntity = new ClusterServiceCommandEntity();
         String commandId = IdUtil.simpleUUID();

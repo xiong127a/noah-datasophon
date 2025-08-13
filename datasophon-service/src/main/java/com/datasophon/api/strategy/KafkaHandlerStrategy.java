@@ -44,7 +44,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         private static final Logger log = LoggerFactory.getLogger(KafkaHandlerStrategy.class);
 
         @Override
-        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
                 ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -172,7 +172,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
          */
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         log.info("开始获取Kafka服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

@@ -38,7 +38,7 @@ public interface DocService {
      * @param type      文档类型 (component: 组件介绍, guide: 用户指南, help: 帮助文档)
      * @return 文档DTO对象
      */
-    ServiceDocDTO getServiceDoc(Integer clusterId, Integer serviceId, String type);
+    ServiceDocDTO getServiceDoc(Long clusterId, Long serviceId, String type);
 
     /**
      * 获取文档中引用的图片资源
@@ -56,7 +56,7 @@ public interface DocService {
      * @param type      文档类型
      * @return 是否存在
      */
-    boolean hasServiceDoc(Integer clusterId, Integer serviceId, String type);
+    boolean hasServiceDoc(Long clusterId, Long serviceId, String type);
 
     /**
      * 获取服务名称
@@ -64,5 +64,5 @@ public interface DocService {
      * @param serviceId 服务ID
      * @return 服务名称
      */
-    String getServiceName(Integer serviceId);
+    String getServiceName(Long serviceId);
 }

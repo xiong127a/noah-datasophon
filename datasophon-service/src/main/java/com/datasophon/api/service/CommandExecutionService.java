@@ -90,7 +90,7 @@ public interface CommandExecutionService {
      * @param serviceRoleType       服务角色类型
      */
     void buildExecuteServiceRoleCommand(
-            Integer clusterId,
+            Long clusterId,
             CommandType commandType,
             String clusterCode,
             DAGGraph<String, ServiceNode, String> dag,
@@ -112,7 +112,7 @@ public interface CommandExecutionService {
      * @param serviceName 服务名称
      * @return 命令实体
      */
-    ClusterServiceCommandEntity generateCommandEntity(Integer clusterId, CommandType commandType,
+    ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType,
                                                       String serviceName);
 
     /**

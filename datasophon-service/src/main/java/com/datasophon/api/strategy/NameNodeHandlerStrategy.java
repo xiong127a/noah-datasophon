@@ -48,7 +48,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         private static final String ENABLE_KERBEROS = "enableKerberos";
 
         @Override
-        public void handler(Integer clusterId, List<String> hosts) {
+        public void handler(Long clusterId, List<String> hosts) {
 
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
@@ -58,7 +58,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         }
 
         @Override
-        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -138,7 +138,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+    public ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
                     Map<String, String> configMap) {
         // 直接调用父类的getConnectionInfo方法
         return super.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
@@ -149,7 +149,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
      */
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                    Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                    Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         // 1. 获取全局变量
                         Map<String, String> globalVariables = GlobalVariables.get(clusterId);

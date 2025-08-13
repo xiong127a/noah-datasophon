@@ -22,7 +22,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterTenantDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterTenantVO;
-import com.datasophon.dao.entity.ClusterTenant;
+import com.datasophon.dao.entity.ClusterTenantEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -43,7 +43,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = FormatterUtils.class,
         unmappedSourcePolicy = ReportingPolicy.IGNORE,
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, ClusterTenantDTO, ClusterTenantVO> {
+public interface ClusterTenantConverter extends BaseConverter<ClusterTenantEntity, ClusterTenantDTO, ClusterTenantVO> {
 
     /**
      * Entity转DTO，忽略资源列表映射
@@ -54,7 +54,7 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
     @Mapping(target = "hiveResourceList", ignore = true)
     @Mapping(target = "hbaseResourceList", ignore = true)
     @Mapping(target = "kafkaResourceList", ignore = true)
-    ClusterTenantDTO entityToDto(ClusterTenant entity);
+    ClusterTenantDTO entityToDto(ClusterTenantEntity entity);
 
     /**
      * DTO转Entity，忽略资源列表映射
@@ -65,7 +65,7 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
     @Mapping(target = "hiveResourceList", ignore = true)
     @Mapping(target = "hbaseResourceList", ignore = true)
     @Mapping(target = "kafkaResourceList", ignore = true)
-    ClusterTenant dtoToEntity(ClusterTenantDTO dto);
+    ClusterTenantEntity dtoToEntity(ClusterTenantDTO dto);
 
     /**
      * Entity转VO，忽略资源列表映射，添加统计信息
@@ -78,7 +78,7 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
     @Mapping(target = "kafkaResourceList", ignore = true)
     @Mapping(target = "totalResourceCount", source = ".", qualifiedByName = "calculateTotalResourceCount")
     @Mapping(target = "resourceSummary", source = ".", qualifiedByName = "generateResourceSummary")
-    ClusterTenantVO entityToVo(ClusterTenant entity);
+    ClusterTenantVO entityToVo(ClusterTenantEntity entity);
 
     /**
      * DTO转VO，忽略资源列表映射，添加统计信息
@@ -102,13 +102,13 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
     @Mapping(target = "hiveResourceList", ignore = true)
     @Mapping(target = "hbaseResourceList", ignore = true)
     @Mapping(target = "kafkaResourceList", ignore = true)
-    void updateEntityFromDto(ClusterTenantDTO dto, @MappingTarget ClusterTenant entity);
+    void updateEntityFromDto(ClusterTenantDTO dto, @MappingTarget ClusterTenantEntity entity);
 
     /**
      * 计算总资源数量（基于Entity）
      */
     @Named("calculateTotalResourceCount")
-    default Integer calculateTotalResourceCount(ClusterTenant entity) {
+    default Integer calculateTotalResourceCount(ClusterTenantEntity entity) {
         if (entity == null) {
             return 0;
         }
@@ -125,7 +125,7 @@ public interface ClusterTenantConverter extends BaseConverter<ClusterTenant, Clu
      * 生成资源摘要（基于Entity）
      */
     @Named("generateResourceSummary")
-    default String generateResourceSummary(ClusterTenant entity) {
+    default String generateResourceSummary(ClusterTenantEntity entity) {
         if (entity == null) {
             return "无资源";
         }

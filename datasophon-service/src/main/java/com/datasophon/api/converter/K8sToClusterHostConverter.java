@@ -20,8 +20,8 @@ package com.datasophon.api.converter;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.dto.HostInfoDTO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.HostState;
 import com.datasophon.common.enums.ManagementStatus;
 import org.springframework.stereotype.Component;
@@ -49,12 +49,12 @@ public class K8sToClusterHostConverter {
      * @param clusterId   集群ID
      * @return 集群主机实体
      */
-    public ClusterHostDO convertToClusterHost(K8sNodeInfo k8sNodeInfo, Integer clusterId) {
+    public ClusterHostEntity convertToClusterHost(K8sNodeInfo k8sNodeInfo, Long clusterId) {
         if (k8sNodeInfo == null) {
             return null;
         }
 
-        return ClusterHostDO.builder()
+        return ClusterHostEntity.builder()
                 .clusterId(clusterId)
                 .ip(k8sNodeInfo.getIp())
                 .hostname(k8sNodeInfo.getHostname())
@@ -81,7 +81,7 @@ public class K8sToClusterHostConverter {
      * @param clusterId       集群ID
      * @return 集群主机实体列表
      */
-    public List<ClusterHostDO> convertToClusterHostList(List<K8sNodeInfo> k8sNodeInfoList, Integer clusterId) {
+    public List<ClusterHostEntity> convertToClusterHostList(List<K8sNodeInfo> k8sNodeInfoList, Long clusterId) {
         if (k8sNodeInfoList == null) {
             return null;
         }
@@ -99,7 +99,7 @@ public class K8sToClusterHostConverter {
      * @param clusterId   集群ID
      * @return 主机信息DTO
      */
-    public HostInfoDTO convertToHostInfoDTO(K8sNodeInfo k8sNodeInfo, Integer clusterId) {
+    public HostInfoDTO convertToHostInfoDTO(K8sNodeInfo k8sNodeInfo, Long clusterId) {
         if (k8sNodeInfo == null) {
             return null;
         }
@@ -138,7 +138,7 @@ public class K8sToClusterHostConverter {
      * @param clusterId       集群ID
      * @return 主机信息DTO列表
      */
-    public List<HostInfoDTO> convertToHostInfoDTOList(List<K8sNodeInfo> k8sNodeInfoList, Integer clusterId) {
+    public List<HostInfoDTO> convertToHostInfoDTOList(List<K8sNodeInfo> k8sNodeInfoList, Long clusterId) {
         if (k8sNodeInfoList == null) {
             return null;
         }
@@ -155,7 +155,7 @@ public class K8sToClusterHostConverter {
      * @param clusterHost 集群主机实体
      * @return 主机信息DTO
      */
-    public HostInfoDTO convertClusterHostToDTO(ClusterHostDO clusterHost) {
+    public HostInfoDTO convertClusterHostToDTO(ClusterHostEntity clusterHost) {
         if (clusterHost == null) {
             return null;
         }
@@ -163,7 +163,7 @@ public class K8sToClusterHostConverter {
         HostInfoDTO hostInfoDTO = new HostInfoDTO();
         
         // 复制基础字段
-        hostInfoDTO.setId(clusterHost.getId());
+        hostInfoDTO.setId(clusterHost.getId() != null ? clusterHost.getId().intValue() : null);
         hostInfoDTO.setCreateTime(clusterHost.getCreateTime());
         hostInfoDTO.setHostname(clusterHost.getHostname());
         hostInfoDTO.setIp(clusterHost.getIp());
@@ -195,7 +195,7 @@ public class K8sToClusterHostConverter {
     /**
      * 批量转换ClusterHostDO列表为HostInfoDTO列表
      */
-    public List<HostInfoDTO> convertClusterHostListToDTO(List<ClusterHostDO> clusterHostList) {
+    public List<HostInfoDTO> convertClusterHostListToDTO(List<ClusterHostEntity> clusterHostList) {
         if (clusterHostList == null) {
             return null;
         }

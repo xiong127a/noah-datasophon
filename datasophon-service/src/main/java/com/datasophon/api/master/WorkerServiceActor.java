@@ -32,7 +32,7 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
@@ -84,12 +84,12 @@ public class WorkerServiceActor extends AbstractActor {
                         Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                         ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService
                                 .getConfigByRoleGroupId(roleGroupId);
-                        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDto);
+                        ClusterServiceRoleGroupConfigEntity config = roleGroupConfigConverter.dtoToEntity(configDto);
                         ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     } else if (Objects.equals(NeedRestart.YES.getValue(), serviceRoleInstance.needRestart())) {
                         ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService
                                 .getConfigByRoleGroupId(serviceRoleInstance.roleGroupId());
-                        ClusterServiceRoleGroupConfig config = roleGroupConfigConverter.dtoToEntity(configDto);
+                        ClusterServiceRoleGroupConfigEntity config = roleGroupConfigConverter.dtoToEntity(configDto);
                         ConfigGroupUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                         needReConfig = true;
                     }

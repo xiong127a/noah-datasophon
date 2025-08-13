@@ -20,7 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.dto.ClusterYarnQueueDTO;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterYarnQueue;
+import com.datasophon.dao.entity.ClusterYarnQueueEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -33,12 +33,12 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
+public interface ClusterYarnQueueService extends IService<ClusterYarnQueueEntity> {
 
     /**
      * 分页查询队列列表
      */
-    PageResult<ClusterYarnQueueDTO> listByPage(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterYarnQueueDTO> listByPage(Long clusterId, Integer page, Integer pageSize);
 
     /**
      * 保存队列
@@ -48,12 +48,12 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
     /**
      * 刷新队列到Yarn
      */
-    void refreshQueues(Integer clusterId) throws BusinessException;
+    void refreshQueues(Long clusterId) throws BusinessException;
 
     /**
      * 根据队列名称获取队列
      */
-    ClusterYarnQueueDTO getQueueByName(Integer clusterId, String queueName);
+    ClusterYarnQueueDTO getQueueByName(Long clusterId, String queueName);
 
     /**
      * 根据ID获取队列DTO
@@ -63,7 +63,7 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
     /**
      * 根据集群ID获取所有队列
      */
-    List<ClusterYarnQueueDTO> getQueuesByClusterId(Integer clusterId);
+    List<ClusterYarnQueueDTO> getQueuesByClusterId(Long clusterId);
 
     /**
      * 更新队列

@@ -25,8 +25,8 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.string.validator.GeneralValidator;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterRack;
+import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.dao.entity.ClusterRackEntity;
 import com.datasophon.dao.mapper.ClusterRackMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Service("clusterRackService")
-public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, ClusterRack>
+public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, ClusterRackEntity>
         implements ClusterRackService {
 
     @Autowired
@@ -53,13 +53,13 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
     private ClusterHostService hostService;
 
     @Override
-    public List<ClusterRackDTO> queryClusterRack(Integer clusterId) {
-        List<ClusterRack> entities = getMapper().selectByClusterId(clusterId);
+    public List<ClusterRackDTO> queryClusterRack(Long clusterId) {
+        List<ClusterRackEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterRackConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public ClusterRackDTO saveRack(Integer clusterId, String rack) {
+    public ClusterRackDTO saveRack(Long clusterId, String rack) {
         // 机架名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
         GeneralValidator generalValidator = new GeneralValidator();
@@ -79,21 +79,21 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
             throw new RuntimeException("机架名称重复");
         }
 
-        ClusterRack clusterRack = new ClusterRack();
-        clusterRack.setRack(rack);
-        clusterRack.setClusterId(clusterId);
-        this.save(clusterRack);
+        ClusterRackEntity clusterRackEntity = new ClusterRackEntity();
+        clusterRackEntity.setRack(rack);
+        clusterRackEntity.setClusterId(clusterId);
+        this.save(clusterRackEntity);
         // Service层：Entity → DTO转换
-        return clusterRackConverter.entityToDto(clusterRack);
+        return clusterRackConverter.entityToDto(clusterRackEntity);
     }
 
     @Override
     public boolean deleteRack(Integer rackId) {
-        ClusterRack clusterRack = this.getById(rackId);
-        if (clusterRack == null) {
+        ClusterRackEntity clusterRackEntity = this.getById(rackId);
+        if (clusterRackEntity == null) {
             throw new RuntimeException("Rack not found with id: " + rackId);
         }
-        if (rackInUse(clusterRack)) {
+        if (rackInUse(clusterRackEntity)) {
             throw new RuntimeException(Status.RACK_IS_USING.getMsg());
         }
         this.removeById(rackId);
@@ -101,35 +101,35 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
     }
 
     @Override
-    public void createDefaultRack(Integer clusterId) {
-        ClusterRack clusterRack = new ClusterRack();
-        clusterRack.setRack("/default-rack");
-        clusterRack.setClusterId(clusterId);
-        this.save(clusterRack);
+    public void createDefaultRack(Long clusterId) {
+        ClusterRackEntity clusterRackEntity = new ClusterRackEntity();
+        clusterRackEntity.setRack("/default-rack");
+        clusterRackEntity.setClusterId(clusterId);
+        this.save(clusterRackEntity);
     }
 
-    private boolean rackInUse(ClusterRack clusterRack) {
-        List<ClusterHostDO> list = hostService.getClusterHostByRack(clusterRack.getClusterId(), clusterRack.getRack());
+    private boolean rackInUse(ClusterRackEntity clusterRackEntity) {
+        List<ClusterHostEntity> list = hostService.getClusterHostByRack(clusterRackEntity.getClusterId(), clusterRackEntity.getRack());
         return !list.isEmpty();
     }
 
     // 新增DTO方法实现
     @Override
     public ClusterRackDTO getByIdAsDto(Integer id) {
-        ClusterRack entity = this.getById(id);
+        ClusterRackEntity entity = this.getById(id);
         return clusterRackConverter.entityToDto(entity);
     }
 
     @Override
     public ClusterRackDTO saveRackDto(ClusterRackDTO dto) {
-        ClusterRack entity = clusterRackConverter.dtoToEntity(dto);
+        ClusterRackEntity entity = clusterRackConverter.dtoToEntity(dto);
         this.save(entity);
         return clusterRackConverter.entityToDto(entity);
     }
 
     @Override
     public void updateRack(ClusterRackDTO dto) {
-        ClusterRack entity = clusterRackConverter.dtoToEntity(dto);
+        ClusterRackEntity entity = clusterRackConverter.dtoToEntity(dto);
         this.updateById(entity);
     }
 }

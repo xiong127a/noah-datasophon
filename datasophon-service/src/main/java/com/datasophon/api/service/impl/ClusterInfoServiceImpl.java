@@ -240,7 +240,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public boolean updateClusterState(Integer clusterId, Integer clusterState) {
+    public boolean updateClusterState(Long clusterId, Integer clusterState) {
         ClusterInfoEntity clusterInfo = getById(clusterId);
         ClusterState state = ClusterState.of(clusterState);
         if (state != null) {
@@ -280,8 +280,8 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public void deleteCluster(List<Integer> ids) {
-        Integer id = ids.getFirst();
+    public void deleteCluster(List<Long> ids) {
+        Long id = ids.getFirst();
         ClusterInfoEntity clusterInfo = getById(id);
 
         if (ClusterState.STOP.equals(clusterInfo.getClusterState())) {
@@ -306,7 +306,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public String getKubeConfigByClusterId(Integer clusterId) {
+    public String getKubeConfigByClusterId(Long clusterId) {
         return getById(clusterId).getKubeConfig();
     }
 
@@ -342,7 +342,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public ClusterInfoDTO getClusterById(Integer clusterId) {
+    public ClusterInfoDTO getClusterById(Long clusterId) {
         ClusterInfoEntity clusterInfo = getById(clusterId);
         if (clusterInfo == null) {
             throw new RuntimeException("集群不存在");
@@ -394,7 +394,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public String updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace,
+    public String updateClusterKubeConfig(Long clusterId, String kubeConfig, String namespace,
             String customNamespace) {
         try {
             ClusterInfoEntity clusterInfo = getById(clusterId);
@@ -439,12 +439,12 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     }
 
     @Override
-    public String getKubernetesNamespace(Integer clusterId) {
+    public String getKubernetesNamespace(Long clusterId) {
         return getById(clusterId).getNamespace();
     }
 
     @Override
-    public Map<Integer, ClusterType> getAllClusterIdAndType() {
+    public Map<Long, ClusterType> getAllClusterIdAndType() {
         return list().stream()
                 .collect(java.util.stream.Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
     }

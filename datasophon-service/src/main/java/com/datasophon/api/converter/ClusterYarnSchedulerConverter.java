@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterYarnSchedulerVO;
-import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.dao.entity.ClusterYarnSchedulerEntity;
 import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -37,20 +37,20 @@ import org.mapstruct.Named;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterYarnSchedulerConverter
-        extends BaseConverter<ClusterYarnScheduler, ClusterYarnSchedulerDTO, ClusterYarnSchedulerVO> {
+        extends BaseConverter<ClusterYarnSchedulerEntity, ClusterYarnSchedulerDTO, ClusterYarnSchedulerVO> {
 
     @Override
     @Named("entityToDto")
-    ClusterYarnSchedulerDTO entityToDto(ClusterYarnScheduler entity);
+    ClusterYarnSchedulerDTO entityToDto(ClusterYarnSchedulerEntity entity);
 
     @Override
     @Named("dtoToEntity")
-    ClusterYarnScheduler dtoToEntity(ClusterYarnSchedulerDTO dto);
+    ClusterYarnSchedulerEntity dtoToEntity(ClusterYarnSchedulerDTO dto);
 
     @Override
     @Named("entityToVo")
     @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
-    ClusterYarnSchedulerVO entityToVo(ClusterYarnScheduler entity);
+    ClusterYarnSchedulerVO entityToVo(ClusterYarnSchedulerEntity entity);
 
     @Override
     @Named("dtoToVo")
@@ -59,7 +59,7 @@ public interface ClusterYarnSchedulerConverter
 
     @Override
     @IterableMapping(qualifiedByName = "entityToVo")
-    java.util.List<ClusterYarnSchedulerVO> entityListToVoList(java.util.List<ClusterYarnScheduler> entityList);
+    java.util.List<ClusterYarnSchedulerVO> entityListToVoList(java.util.List<ClusterYarnSchedulerEntity> entityList);
 
     @Override
     @IterableMapping(qualifiedByName = "dtoToVo")

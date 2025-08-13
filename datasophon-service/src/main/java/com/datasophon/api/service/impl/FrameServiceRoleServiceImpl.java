@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 框架服务角色表服务实现
@@ -63,7 +64,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     private final ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
 
     @Override
-    public List<FrameServiceRoleDTO> getServiceRoleList(Integer clusterId, String serviceIds,
+    public List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, String serviceIds,
             Integer serviceRoleType) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
@@ -83,7 +84,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                         return null;
                     }
                 })
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         if (ids.isEmpty()) {
@@ -107,7 +108,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     /**
      * 辅助方法：获取角色的主机列表（保持复杂业务逻辑完整性）
      */
-    private List<String> getHostsForRole(Integer clusterId, String serviceRoleName) {
+    private List<String> getHostsForRole(Long clusterId, String serviceRoleName) {
         try {
             // 查询已安装的角色实例
             List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceMapper
@@ -140,7 +141,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName) {
+    public FrameServiceRoleDTO getServiceRoleByServiceIdAndServiceRoleName(Long serviceId, String roleName) {
         if (serviceId == null) {
             throw new RuntimeException("服务ID不能为空");
         }
@@ -157,7 +158,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Integer serviceId, String roleName) {
+    public java.util.Optional<FrameServiceRoleDTO> findServiceRoleByServiceIdAndServiceRoleName(Long serviceId, String roleName) {
         // JDK 21现代化参数验证
         if (serviceId == null) {
             log.warn("服务角色查找参数验证失败: 服务ID不能为空");
@@ -193,7 +194,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public List<FrameServiceRoleDTO> getNonMasterRoleList(Integer clusterId, String serviceIds) {
+    public List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, String serviceIds) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
         }
@@ -212,7 +213,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                         return null;
                     }
                 })
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         if (ids.isEmpty()) {
@@ -234,7 +235,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public List<FrameServiceRoleDTO> getServiceRoleByServiceName(Integer clusterId, String serviceName) {
+    public List<FrameServiceRoleDTO> getServiceRoleByServiceName(Long clusterId, String serviceName) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
         }
@@ -255,7 +256,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public List<FrameServiceRoleDTO> getAllServiceRoleList(Integer frameServiceId) {
+    public List<FrameServiceRoleDTO> getAllServiceRoleList(Long frameServiceId) {
         if (frameServiceId == null) {
             throw new RuntimeException("框架服务ID不能为空");
         }

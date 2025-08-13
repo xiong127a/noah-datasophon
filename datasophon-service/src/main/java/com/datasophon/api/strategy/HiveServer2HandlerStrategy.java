@@ -43,7 +43,7 @@ import java.util.Map;
 public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         CacheUtils.put("enableHiveServer2HA", false);
@@ -56,7 +56,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -90,7 +90,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         // if enabled hiveserver2 ha
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -125,7 +125,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
      */
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取HiveServer2节点列表
             List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");

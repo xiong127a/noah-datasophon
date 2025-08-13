@@ -56,7 +56,7 @@ public class QueryHostListPageDTO {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 1:正常运行 2：断线 3、存在告警
      */

@@ -11,12 +11,12 @@ import java.util.Map;
 
 public class StarrocksHandlerStrategy implements ServiceRoleStrategy {
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         getConfig(clusterId, list);
     }
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String priority_networks = globalVariables.get("${priority_networks}");
         for (ServiceConfig serviceConfig : list) {

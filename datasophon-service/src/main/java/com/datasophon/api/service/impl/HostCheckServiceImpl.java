@@ -169,7 +169,7 @@
 // * 创建检查日志记录器
 // */
 // public static CheckLogger getCheckLogger(HostCheckServiceImpl service,
-// Integer clusterId, String hostname,
+// Long clusterId, String hostname,
 // Integer itemId) {
 // String logKey = service.getLogKey(clusterId, hostname, itemId);
 // return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(),
@@ -193,13 +193,13 @@
 // }
 //
 // @Override
-// public boolean fixCheckItem(Integer clusterId, String hostname, Integer
+// public boolean fixCheckItem(Long clusterId, String hostname, Integer
 // itemId) {
 // return fixCheckItem(clusterId, hostname, itemId, false);
 // }
 //
 // @Override
-// public boolean fixCheckItem(Integer clusterId, String hostname, Integer
+// public boolean fixCheckItem(Long clusterId, String hostname, Integer
 // itemId, Boolean skipConfirm) {
 // try {
 // logger.info("收到修复检查项请求: clusterId={}, hostname={}, itemId={},
@@ -263,7 +263,7 @@
 // * @param itemIdList 需要修复的检查项ID列表
 // * @return 修复是否成功
 // */
-// public boolean fixSelectedCheckItems(Integer clusterId, HostInfo hostInfo,
+// public boolean fixSelectedCheckItems(Long clusterId, HostInfo hostInfo,
 // List<Integer> itemIdList) {
 // if (Objects.isNull(hostInfo)) {
 // throw new ServiceException("主机不存在");
@@ -320,7 +320,7 @@
 // * 一键修复所有失败项
 // */
 // @Override
-// public boolean fixAllFailedItems(Integer clusterId) {
+// public boolean fixAllFailedItems(Long clusterId) {
 // try {
 // Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
@@ -385,7 +385,7 @@
 // /**
 // * 修复指定主机的失败检查项
 // */
-// private void fixFailedItemsByHost(Integer clusterId, Map<String, HostInfo>
+// private void fixFailedItemsByHost(Long clusterId, Map<String, HostInfo>
 // hostMap,
 // Map<String, List<CheckItem>> failedItemsMap, List<String> sortedIps) {
 // for (String ip : sortedIps) {
@@ -409,7 +409,7 @@
 // * @param hostInfo 主机信息
 // * @param itemsToFix 需要修复的检查项列表
 // */
-// private void fixWaitingItems(Integer clusterId, String ip, HostInfo hostInfo,
+// private void fixWaitingItems(Long clusterId, String ip, HostInfo hostInfo,
 // List<CheckItem> itemsToFix) {
 // try {
 // // 设置主机状态为"修复中"
@@ -449,7 +449,7 @@
 // }
 //
 // @Override
-// public boolean fixAllCheckItems(Integer clusterId, String ip) {
+// public boolean fixAllCheckItems(Long clusterId, String ip) {
 // Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
 //
@@ -488,7 +488,7 @@
 // * @param hostname 主机名
 // */
 // @Override
-// public void checkSingleHost(Integer clusterId, String hostname) {
+// public void checkSingleHost(Long clusterId, String hostname) {
 // Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
 // if (!map.containsKey(hostname)) {
@@ -534,7 +534,7 @@
 // * 执行主机检查流程
 // * 包级别访问权限，允许队列管理器调用
 // */
-// public void processHostCheck(Integer clusterId, HostInfo hostInfo) {
+// public void processHostCheck(Long clusterId, HostInfo hostInfo) {
 // try {
 // logger.info("开始检查主机: {}", hostInfo.getIp());
 //
@@ -603,7 +603,7 @@
 // /**
 // * 异步执行检查项，返回结果为是否成功
 // */
-// private void executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem
+// private void executeHostCheck(Long clusterId, HostInfo hostInfo, CheckItem
 // checkItem) {
 // try {
 // logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}",
@@ -748,7 +748,7 @@
 // }
 //
 // @Override
-// public boolean stopHostCheck(Integer clusterId, String ip) {
+// public boolean stopHostCheck(Long clusterId, String ip) {
 // // 获取主机信息
 // Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
@@ -780,7 +780,7 @@
 // }
 // }
 //
-// private boolean stopCheck(Integer clusterId, String ip, Map<String, HostInfo>
+// private boolean stopCheck(Long clusterId, String ip, Map<String, HostInfo>
 // map) {
 // try {
 // HostInfo hostInfo = map.get(ip);
@@ -844,7 +844,7 @@
 // }
 //
 // @Override
-// public boolean stopItemCheck(Integer clusterId, String hostname, Integer
+// public boolean stopItemCheck(Long clusterId, String hostname, Integer
 // itemId) {
 // try {
 // // 获取主机信息
@@ -915,7 +915,7 @@
 // }
 // }
 //
-// private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem
+// private boolean doFix(Long clusterId, HostInfo hostInfo, CheckItem
 // checkItem) {
 //
 // try {
@@ -942,7 +942,7 @@
 // return item;
 // }
 //
-// private void retriggerHostCheck(HostInfo hostInfo, Integer clusterId) {
+// private void retriggerHostCheck(HostInfo hostInfo, Long clusterId) {
 // // 不再使用HostConnectActor，直接调用processHostCheck
 // CompletableFuture.runAsync(() -> {
 // try {
@@ -984,7 +984,7 @@
 // /**
 // * 获取主机信息
 // */
-// private HostInfo getHostInfo(Integer clusterId, String hostname) {
+// private HostInfo getHostInfo(Long clusterId, String hostname) {
 // Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
 // return map.get(hostname);
@@ -1012,7 +1012,7 @@
 // * @return 操作结果
 // */
 // @Override
-// public boolean batchCheckHosts(Integer clusterId, List<String> ips) {
+// public boolean batchCheckHosts(Long clusterId, List<String> ips) {
 // if (clusterId == null) {
 // throw new ServiceException("集群ID不能为空");
 // }
@@ -1105,7 +1105,7 @@
 // /**
 // * 构建日志缓存键
 // */
-// private String getLogKey(Integer clusterId, String hostname, Integer itemId)
+// private String getLogKey(Long clusterId, String hostname, Integer itemId)
 // {
 // return "CHECK_ITEM_LOG_" + clusterId + "_" + hostname + "_" + itemId;
 // }
@@ -1113,13 +1113,13 @@
 // /**
 // * 获取检查日志的缓存键
 // */
-// private String getCheckLogKey(Integer clusterId, String hostname, Integer
+// private String getCheckLogKey(Long clusterId, String hostname, Integer
 // itemId) {
 // return "CHECK_LOG_" + clusterId + "_" + hostname + "_" + itemId;
 // }
 //
 // @Override
-// public List<LogEntry> getCheckItemLog(Integer clusterId, String hostname,
+// public List<LogEntry> getCheckItemLog(Long clusterId, String hostname,
 // Integer itemId) {
 // // 构建检查日志缓存键
 // String checkLogKey = getCheckLogKey(clusterId, hostname, itemId);
@@ -1194,7 +1194,7 @@
 // * 重试指定的检查项
 // */
 // @Override
-// public boolean retryCheckItems(Integer clusterId, String hostname,
+// public boolean retryCheckItems(Long clusterId, String hostname,
 // List<String> itemNames) {
 // if (clusterId == null) {
 // throw new ServiceException("集群ID不能为空");
@@ -1283,7 +1283,7 @@
 // * 专门用于重试特定检查项的方法
 // * 这个方法直接执行指定的检查项，而不修改主机的完整检查项列表
 // */
-// private void doHostCheckForItems(Integer clusterId, HostInfo hostInfo,
+// private void doHostCheckForItems(Long clusterId, HostInfo hostInfo,
 // List<CheckItem> itemsToCheck) {
 // if (itemsToCheck == null || itemsToCheck.isEmpty()) {
 // logger.warn("没有需要检查的项目");
@@ -1341,7 +1341,7 @@
 // * @param itemId 检查项ID
 // * @return 日志记录器
 // */
-// private CheckLogger createLogger(Integer clusterId, String hostname, Integer
+// private CheckLogger createLogger(Long clusterId, String hostname, Integer
 // itemId) {
 // return LoggerFactory.getLogger(this, clusterId, hostname, itemId);
 // }
@@ -1370,7 +1370,7 @@
 //
 // @Override
 // public CheckItem executeCheckItem(HostInfo hostInfo, CheckItem checkItem,
-// Integer clusterId) {
+// Long clusterId) {
 // try {
 // // 检查项日志键和运行状态键
 // String logKey = getLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
@@ -1460,7 +1460,7 @@
 // * @return 筛选后的LogEntry列表
 // */
 // @Override
-// public List<LogEntry> getLog(Integer clusterId, String hostname, Integer
+// public List<LogEntry> getLog(Long clusterId, String hostname, Integer
 // itemId, String logType, String logLevel,
 // String filterMode) {
 // if (clusterId == null) {
@@ -1544,7 +1544,7 @@
 // /**
 // * 创建默认的日志响应（当没有找到日志时）
 // */
-// private String createDefaultLogResponse(Integer clusterId, String hostname,
+// private String createDefaultLogResponse(Long clusterId, String hostname,
 // Integer itemId) {
 // // 记录日志，便于追踪
 // logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}",
@@ -1562,7 +1562,7 @@
 // * 实现获取格式化后的HTML日志
 // */
 // @Override
-// public String getFormattedLog(Integer clusterId, String hostname, Integer
+// public String getFormattedLog(Long clusterId, String hostname, Integer
 // itemId, String logType, String logLevel,
 // String filterMode) {
 // if (clusterId == null || hostname == null || itemId == null) {
@@ -1858,7 +1858,7 @@
 // * @return 跳过结果
 // */
 // @Override
-// public boolean skipCheckItem(Integer clusterId, String hostname, Integer
+// public boolean skipCheckItem(Long clusterId, String hostname, Integer
 // itemId) {
 // // 获取主机信息
 // HostInfo hostInfo = getHostInfo(clusterId, hostname);
@@ -1896,7 +1896,7 @@
 // }
 //
 // @Override
-// public FixCheckItemDto getCheckItemConfirmInfo(Integer clusterId, String
+// public FixCheckItemDto getCheckItemConfirmInfo(Long clusterId, String
 // hostname, Integer itemId) {
 // String message = "";
 // try {
@@ -1925,7 +1925,7 @@
 // * @return 指定主机的检查项列表
 // */
 // @Override
-// public List<CheckItem> getHostCheckItems(String ip, Integer clusterId) {
+// public List<CheckItem> getHostCheckItems(String ip, Long clusterId) {
 // // 从缓存中获取指定主机的检查项
 // Map<String, HostInfo> hostInfoMap = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
@@ -1954,7 +1954,7 @@
 // * @return 操作结果
 // */
 // @Override
-// public boolean startHostCheck(Integer clusterId) {
+// public boolean startHostCheck(Long clusterId) {
 // try {
 // if (clusterId == null) {
 // throw new ServiceException("集群ID不能为空");
@@ -1998,7 +1998,7 @@
 // * 批量执行主机修复
 // * 使用SSH连接复用功能
 // */
-// public boolean doHostFix(Integer clusterId, HostInfo hostInfo,
+// public boolean doHostFix(Long clusterId, HostInfo hostInfo,
 // List<CheckItem> fixItems) {
 // if (fixItems == null || fixItems.isEmpty()) {
 // logger.info("没有需要修复的检查项");
@@ -2066,7 +2066,7 @@
 // * 批量执行主机检查
 // * 使用SSH连接复用功能
 // */
-// public void doHostCheck(Integer clusterId, HostInfo hostInfo, List<CheckItem>
+// public void doHostCheck(Long clusterId, HostInfo hostInfo, List<CheckItem>
 // checkItems) {
 // if (checkItems == null || checkItems.isEmpty()) {
 // logger.info("没有需要检查的项目");
@@ -2121,7 +2121,7 @@
 // * 更新主机名
 // */
 // @Override
-// public Result updateHostname(Integer clusterId, String ip, String
+// public Result updateHostname(Long clusterId, String ip, String
 // newHostname) {
 // // 默认不同步hosts文件
 // return updateHostname(clusterId, ip, newHostname, false);
@@ -2137,14 +2137,14 @@
 // * @return 操作结果
 // */
 // @Override
-// public Result updateHostname(Integer clusterId, String ip, String
+// public Result updateHostname(Long clusterId, String ip, String
 // newHostname, boolean syncHosts) {
 // return asyncCheckService.updateHostname(clusterId, ip, newHostname,
 // syncHosts);
 // }
 //
 // @Override
-// public boolean updateHostsFile(Integer clusterId, String ip, String
+// public boolean updateHostsFile(Long clusterId, String ip, String
 // hostsFileContent) {
 // logger.info("开始更新hosts文件: clusterId={}, ip={}", clusterId, ip);
 //
@@ -2423,7 +2423,7 @@
 // * @param pageSize 每页显示数量
 // * @return 预览VO对象
 // */
-// private HostsFilePreviewVO generateHostsFilePreviewInner(Integer clusterId,
+// private HostsFilePreviewVO generateHostsFilePreviewInner(Long clusterId,
 // Integer page, Integer pageSize) {
 // logger.info("开始生成hosts文件预览(内部): clusterId={}, page={}, pageSize={}",
 // clusterId, page, pageSize);
@@ -2518,7 +2518,7 @@
 // }
 //
 // @Override
-// public String generateHostsFilePreview(Integer clusterId) {
+// public String generateHostsFilePreview(Long clusterId) {
 // return generateHostsFilePreview(clusterId, 1, 10); // 默认第1页，每页10条
 // }
 //
@@ -2531,7 +2531,7 @@
 // * @return 操作结果
 // */
 // @Override
-// public String generateHostsFilePreview(Integer clusterId, Integer page,
+// public String generateHostsFilePreview(Long clusterId, Integer page,
 // Integer pageSize) {
 // logger.info("开始生成hosts文件预览: clusterId={}, page={}, pageSize={}", clusterId,
 // page, pageSize);
@@ -2561,7 +2561,7 @@
 // }
 //
 // @Override
-// public boolean syncHostsFile(Integer clusterId) {
+// public boolean syncHostsFile(Long clusterId) {
 // try {
 // logger.info("开始同步hosts文件，集群ID：{}", clusterId);
 //
@@ -2634,7 +2634,7 @@
 // * @return 操作结果
 // */
 // @Override
-// public boolean batchSetHostname(Integer clusterId, String prefix, Integer
+// public boolean batchSetHostname(Long clusterId, String prefix, Integer
 // zeroCount, String separator,
 // String suffix) {
 // try {
@@ -2788,7 +2788,7 @@
 // }
 //
 // @Override
-// public Result skipAllFailedItems(Integer clusterId) {
+// public Result skipAllFailedItems(Long clusterId) {
 // Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);
 // if (hostMap.isEmpty()) {
@@ -2863,7 +2863,7 @@
 // * 修复选中的检查项
 // */
 // @Override
-// public Result fixSelectedCheckItems(Integer clusterId, String hostname,
+// public Result fixSelectedCheckItems(Long clusterId, String hostname,
 // String itemIds) {
 // Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId +
 // Constants.HOST_MAP);

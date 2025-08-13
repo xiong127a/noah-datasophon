@@ -42,7 +42,7 @@ public class ServiceRoleHostnameServiceImpl implements ServiceRoleHostnameServic
     private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
 
     @Override
-    public String getServiceRoleHostname(Integer clusterId, String serviceName, String roleName) {
+    public String getServiceRoleHostname(Long clusterId, String serviceName, String roleName) {
         if (clusterId == null || serviceName == null || roleName == null) {
             log.warn("获取服务角色主机名参数为空: clusterId={}, serviceName={}, roleName={}", 
                 clusterId, serviceName, roleName);

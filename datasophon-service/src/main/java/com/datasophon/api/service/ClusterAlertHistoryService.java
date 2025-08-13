@@ -19,7 +19,7 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -32,7 +32,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory> {
+public interface ClusterAlertHistoryService extends IService<ClusterAlertHistoryEntity> {
 
     /**
      * 保存告警历史（异步处理告警消息）
@@ -57,7 +57,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param pageSize  页大小
      * @return 分页DTO结果
      */
-    PageResult<ClusterAlertHistoryDTO> getAllAlertList(Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterAlertHistoryDTO> getAllAlertList(Long clusterId, Integer page, Integer pageSize);
 
     /**
      * 根据角色实例ID列表删除告警（业务逻辑：删除+重新配置Prometheus）

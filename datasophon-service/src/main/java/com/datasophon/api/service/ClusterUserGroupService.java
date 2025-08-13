@@ -20,7 +20,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.dto.ClusterUserGroupDTO;
-import com.datasophon.dao.entity.ClusterUserGroup;
+import com.datasophon.dao.entity.ClusterUserGroupEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -33,7 +33,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterUserGroupService extends IService<ClusterUserGroup> {
+public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity> {
 
     /**
      * 统计指定组的用户数量

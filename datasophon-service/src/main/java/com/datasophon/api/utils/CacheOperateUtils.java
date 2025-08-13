@@ -200,7 +200,7 @@ public class CacheOperateUtils {
     }
 
     // 放入远程变量缓存
-    public static void putRemoteVariableCache(String variableName, String value, Integer clusterId) {
+    public static void putRemoteVariableCache(String variableName, String value, Long clusterId) {
         VariableCacheCommand variableCacheCommand = new VariableCacheCommand(variableName, value, clusterId);
         serviceCacheSyncHandler.serviceCacheSync(variableCacheCommand);
     }

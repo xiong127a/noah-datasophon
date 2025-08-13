@@ -37,7 +37,7 @@ import java.util.Map;
 public class SimpleClusterVariableServiceImpl implements SimpleClusterVariableService {
 
     @Override
-    public void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId, String key, String value) {
+    public void generateClusterVariable(Map<String, String> globalVariables, Long clusterId, String key, String value) {
         if (globalVariables == null) {
             log.warn("全局变量映射为空，无法设置变量 {} = {}", key, value);
             return;

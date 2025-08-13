@@ -123,7 +123,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     /**
      * 获取集群的kubeconfig配置
      */
-    private String getKubeConfig(Integer clusterId) {
+    private String getKubeConfig(Long clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         if (clusterInfo == null) {
             return null;
@@ -132,7 +132,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public List<K8sNamespaceDTO> getNamespaces(Integer clusterId) {
+    public List<K8sNamespaceDTO> getNamespaces(Long clusterId) {
         try {
             if (clusterId == null) {
                 throw new RuntimeException("集群ID不能为空");
@@ -169,7 +169,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getDeployments(Integer clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getDeployments(Long clusterId, Integer serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -191,14 +191,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
     }
 
-    private KubernetesClient getKubernetesClient(Integer clusterId) {
+    private KubernetesClient getKubernetesClient(Long clusterId) {
         String kubeConfig = getKubeConfig(clusterId);
         Config config = Config.fromKubeconfig(kubeConfig);
         return new KubernetesClientBuilder().withConfig(config).build();
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getPods(Integer clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getPods(Long clusterId, Integer serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -221,7 +221,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getServices(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getServices(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -244,7 +244,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getConfigMaps(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getConfigMaps(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -267,7 +267,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getSecrets(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getSecrets(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -290,7 +290,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getPersistentVolumes(Integer clusterId, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getPersistentVolumes(Long clusterId, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -313,7 +313,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getPersistentVolumeClaims(Integer clusterId, String namespace,
+    public PageResult<KubernetesResourceDTO> getPersistentVolumeClaims(Long clusterId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -336,7 +336,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize) {
+    public PageResult<KubernetesResourceDTO> getStorageClasses(Long clusterId, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -358,7 +358,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getIngresses(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getIngresses(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -381,7 +381,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize) {
+    public PageResult<KubernetesResourceDTO> getIngressClasses(Long clusterId, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -403,7 +403,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getDaemonSets(Integer clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Integer serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -426,7 +426,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getStatefulSets(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getStatefulSets(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -449,7 +449,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getReplicaSets(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getReplicaSets(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -472,7 +472,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getReplicationControllers(Integer clusterId, String namespace,
+    public PageResult<KubernetesResourceDTO> getReplicationControllers(Long clusterId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -495,7 +495,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getJobs(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getJobs(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -518,7 +518,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getCronJobs(Integer clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getCronJobs(Long clusterId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -543,7 +543,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     // === 非分页方法 ===
 
     @Override
-    public KubernetesResourceDTO getDeploymentDetail(Integer clusterId, String namespace, String name) {
+    public KubernetesResourceDTO getDeploymentDetail(Long clusterId, String namespace, String name) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
             Deployment deployment = client.apps().deployments().inNamespace(namespace).withName(name).get();
@@ -558,7 +558,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public List<Map<String, Object>> getResourceEvents(Integer clusterId, String namespace, String kind, String name) {
+    public List<Map<String, Object>> getResourceEvents(Long clusterId, String namespace, String kind, String name) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
             return client.v1().events().inNamespace(namespace).list().getItems().stream()
@@ -581,7 +581,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public K8sResourceStatsDTO getResourceStats(Integer clusterId, Integer serviceId, String namespace) {
+    public K8sResourceStatsDTO getResourceStats(Long clusterId, Integer serviceId, String namespace) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
 

@@ -18,6 +18,7 @@
 package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import org.apache.pekko.actor.ActorRef;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -40,7 +41,6 @@ import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.exception.BusinessException;
 import com.mybatisflex.core.paginate.Page;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
@@ -69,7 +69,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service("clusterHostService")
 @Transactional
-public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, ClusterHostDO>
+public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, ClusterHostEntity>
         implements
         ClusterHostService {
 
@@ -85,21 +85,21 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     private ClusterHostMapper clusterHostMapper;
 
     @Override
-    public ClusterHostDO getClusterHostByHostname(String hostname) {
+    public ClusterHostEntity getClusterHostByHostname(String hostname) {
         return clusterHostMapper.selectByHostname(hostname);
     }
 
     @Override
-    public ClusterHostDO getClusterHostByIp(String ip) {
+    public ClusterHostEntity getClusterHostByIp(String ip) {
         return clusterHostMapper.selectByIp(ip);
     }
 
     @Override
-    public PageResult<ClusterHostDO> listByPage(Integer clusterId, String hostname, String ip,
-            String cpuArchitecture, Integer hostState,
-            String orderField, String orderType, Integer page, Integer pageSize) {
-        Page<ClusterHostDO> pageParam = Page.of(page, pageSize);
-        Page<ClusterHostDO> pageResult = clusterHostMapper
+    public PageResult<ClusterHostEntity> listByPage(Long clusterId, String hostname, String ip,
+                                                    String cpuArchitecture, Integer hostState,
+                                                    String orderField, String orderType, Integer page, Integer pageSize) {
+        Page<ClusterHostEntity> pageParam = Page.of(page, pageSize);
+        Page<ClusterHostEntity> pageResult = clusterHostMapper
                 .selectPageByClusterIdAndFilters(pageParam, clusterId, hostname, ip, cpuArchitecture, hostState,
                         orderType);
 
@@ -107,17 +107,17 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterHostDO> getHostListByClusterId(Integer clusterId) {
+    public List<ClusterHostEntity> getHostListByClusterId(Long clusterId) {
         return clusterHostMapper.selectByClusterId(clusterId);
     }
 
     @Override
-    public List<ClusterHostDO> getAllManagedHostsByClusterId(Integer clusterId) {
+    public List<ClusterHostEntity> getAllManagedHostsByClusterId(Long clusterId) {
         return clusterHostMapper.selectManagedHostsByClusterIdOrderByHostname(clusterId);
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getRoleListByHostname(Integer clusterId, String hostname) {
+    public List<ClusterServiceRoleInstanceDTO> getRoleListByHostname(Long clusterId, String hostname) {
         // 直接返回查询结果，DTO应该已经包含正确的状态码
         return roleInstanceQueryService.getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
     }
@@ -135,9 +135,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         // 批量移除
         String[] ids = hostIds.split(Constants.COMMA);
         for (String hostId : ids) {
-            ClusterHostDO host = this.getById(hostId);
+            ClusterHostEntity host = this.getById(hostId);
 
-            Integer clusterId = host.getClusterId();
+            Long clusterId = host.getClusterId();
             List<ClusterServiceRoleInstanceEntity> list = clusterServiceRoleInstanceMapper
                     .selectRunningNonClientRolesByClusterIdAndHostname(clusterId, host.getHostname());
 
@@ -191,43 +191,43 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterRackDTO> getRack(Integer clusterId) {
+    public List<ClusterRackDTO> getRack(Long clusterId) {
         return clusterRackService.queryClusterRack(clusterId);
     }
 
     @Override
-    public void removeHostByClusterId(Integer clusterId) {
+    public void removeHostByClusterId(Long clusterId) {
         clusterHostMapper.deleteByClusterId(clusterId);
     }
 
     @Override
-    public void saveHost(ClusterHostDO clusterHostDO) {
-        this.save(clusterHostDO);
+    public void saveHost(ClusterHostEntity clusterHostEntity) {
+        this.save(clusterHostEntity);
     }
 
     @Override
     public void updateBatchNodeLabel(List<String> hostIds, String nodeLabel) {
-        List<ClusterHostDO> list = clusterHostMapper.selectByIds(hostIds);
-        for (ClusterHostDO clusterHostDO : list) {
-            clusterHostDO.setNodeLabel(nodeLabel);
+        List<ClusterHostEntity> list = clusterHostMapper.selectByIds(hostIds);
+        for (ClusterHostEntity clusterHostEntity : list) {
+            clusterHostEntity.setNodeLabel(nodeLabel);
         }
         this.updateBatch(list);
     }
 
     @Override
-    public List<ClusterHostDO> getHostListByIds(List<String> ids) {
+    public List<ClusterHostEntity> getHostListByIds(List<String> ids) {
 
         // 查询ID匹配的主机
-        List<ClusterHostDO> hostsByIds = clusterHostMapper.selectByIds(ids);
-        List<ClusterHostDO> result = new ArrayList<>(hostsByIds);
+        List<ClusterHostEntity> hostsByIds = clusterHostMapper.selectByIds(ids);
+        List<ClusterHostEntity> result = new ArrayList<>(hostsByIds);
 
         // 查询主机名匹配的主机
-        List<ClusterHostDO> hostsByNames = clusterHostMapper.selectByHostnames(ids);
+        List<ClusterHostEntity> hostsByNames = clusterHostMapper.selectByHostnames(ids);
 
         // 合并去重
-        for (ClusterHostDO host : hostsByNames) {
+        for (ClusterHostEntity host : hostsByNames) {
             boolean exists = false;
-            for (ClusterHostDO existingHost : hostsByIds) {
+            for (ClusterHostEntity existingHost : hostsByIds) {
                 if (existingHost.getId().equals(host.getId())) {
                     exists = true;
                     break;
@@ -242,11 +242,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public void assignRack(Integer clusterId, String rack, String hostIds) throws BusinessException {
+    public void assignRack(Long clusterId, String rack, String hostIds) throws BusinessException {
         List<String> ids = List.of(hostIds.split(","));
-        List<ClusterHostDO> list = clusterHostMapper.selectByIds(ids);
-        for (ClusterHostDO clusterHostDO : list) {
-            clusterHostDO.setRack(rack);
+        List<ClusterHostEntity> list = clusterHostMapper.selectByIds(ids);
+        for (ClusterHostEntity clusterHostEntity : list) {
+            clusterHostEntity.setRack(rack);
         }
         this.updateBatch(list);
 
@@ -257,7 +257,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack) {
+    public List<ClusterHostEntity> getClusterHostByRack(Long clusterId, String rack) {
         return clusterHostMapper.selectByClusterIdAndRack(clusterId, rack);
     }
 
@@ -268,7 +268,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
 
     @Override
-    public void updateBatchHostStatus(List<ClusterHostDO> hosts) {
+    public void updateBatchHostStatus(List<ClusterHostEntity> hosts) {
         if (hosts == null || hosts.isEmpty()) {
             return;
         }
@@ -280,7 +280,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         } catch (Exception e) {
             logger.error("Failed to batch update hosts status", e);
             // 如果批量更新失败，尝试逐个更新
-            for (ClusterHostDO host : hosts) {
+            for (ClusterHostEntity host : hosts) {
                 try {
                     this.updateById(host);
                 } catch (Exception ex) {
@@ -291,7 +291,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public List<ClusterHostDO> getHostsByIpList(Integer clusterId, List<String> ipList) {
+    public List<ClusterHostEntity> getHostsByIpList(Long clusterId, List<String> ipList) {
         return getMapper().selectByClusterIdAndIpList(clusterId, ipList);
     }
 }

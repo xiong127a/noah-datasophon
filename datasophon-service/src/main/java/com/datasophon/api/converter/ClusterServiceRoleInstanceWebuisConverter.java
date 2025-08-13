@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.common.vo.ClusterServiceRoleInstanceWebuisVO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuisEntity;
 import org.mapstruct.Mapper;
 
 /**
@@ -34,19 +34,19 @@ import org.mapstruct.Mapper;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterServiceRoleInstanceWebuisConverter 
-    extends BaseConverter<ClusterServiceRoleInstanceWebuis, ClusterServiceRoleInstanceWebuisDTO, ClusterServiceRoleInstanceWebuisVO> {
+    extends BaseConverter<ClusterServiceRoleInstanceWebuisEntity, ClusterServiceRoleInstanceWebuisDTO, ClusterServiceRoleInstanceWebuisVO> {
     
     /**
      * Entity转DTO - 标准转换
      */
     @Override
-    ClusterServiceRoleInstanceWebuisDTO entityToDto(ClusterServiceRoleInstanceWebuis entity);
+    ClusterServiceRoleInstanceWebuisDTO entityToDto(ClusterServiceRoleInstanceWebuisEntity entity);
     
     /**
      * DTO转Entity - 标准转换
      */
     @Override
-    ClusterServiceRoleInstanceWebuis dtoToEntity(ClusterServiceRoleInstanceWebuisDTO dto);
+    ClusterServiceRoleInstanceWebuisEntity dtoToEntity(ClusterServiceRoleInstanceWebuisDTO dto);
     
     /**
      * DTO转VO - 使用静态工厂方法
@@ -60,7 +60,7 @@ public interface ClusterServiceRoleInstanceWebuisConverter
      * Entity转VO - 通过DTO中转
      */
     @Override
-    default ClusterServiceRoleInstanceWebuisVO entityToVo(ClusterServiceRoleInstanceWebuis entity) {
+    default ClusterServiceRoleInstanceWebuisVO entityToVo(ClusterServiceRoleInstanceWebuisEntity entity) {
         return dtoToVo(entityToDto(entity));
     }
 }

@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class LogstashHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String initMasterNodes = globalVariables.get("${initMasterNodes}");
         String esHttpPort = globalVariables.get("${esHttpPort}");

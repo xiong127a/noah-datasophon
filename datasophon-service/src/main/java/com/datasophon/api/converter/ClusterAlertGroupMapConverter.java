@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
 import com.datasophon.common.vo.ClusterAlertGroupMapVO;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
+import com.datasophon.dao.entity.ClusterAlertGroupMapEntity;
 import org.mapstruct.Mapper;
 
 /**
@@ -33,5 +33,5 @@ import org.mapstruct.Mapper;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterAlertGroupMapConverter extends
-        BaseConverter<ClusterAlertGroupMap, ClusterAlertGroupMapDTO, ClusterAlertGroupMapVO> {
+        BaseConverter<ClusterAlertGroupMapEntity, ClusterAlertGroupMapDTO, ClusterAlertGroupMapVO> {
 }

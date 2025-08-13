@@ -43,7 +43,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceName 服务名称
      * @return 服务实例
      */
-    ClusterServiceInstanceDTO getServiceInstanceByClusterIdAndServiceName(Integer clusterId, String serviceName);
+    ClusterServiceInstanceDTO getServiceInstanceByClusterIdAndServiceName(Long clusterId, String serviceName);
 
     /**
      * 根据集群ID和服务名称获取服务配置
@@ -52,7 +52,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param node 节点
      * @return 配置字符串
      */
-    String getServiceConfigByClusterIdAndServiceName(Integer id, String node);
+    String getServiceConfigByClusterIdAndServiceName(Long id, String node);
 
     /**
      * 获取集群下所有服务实例
@@ -60,7 +60,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param clusterId 集群ID
      * @return 服务实例列表
      */
-    List<ClusterServiceInstanceDTO> listAll(Integer clusterId);
+    List<ClusterServiceInstanceDTO> listAll(Long clusterId);
 
     /**
      * 下载客户端配置
@@ -69,7 +69,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceName 服务名称
      * @return 配置文件路径
      */
-    String downloadClientConfig(Integer clusterId, String serviceName);
+    String downloadClientConfig(Long clusterId, String serviceName);
 
     /**
      * 获取服务角色类型
@@ -104,7 +104,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param clusterId 集群ID
      * @return 运行中的服务实例列表
      */
-    List<ClusterServiceInstanceDTO> listRunningServiceInstance(Integer clusterId);
+    List<ClusterServiceInstanceDTO> listRunningServiceInstance(Long clusterId);
 
     /**
      * 判断服务实例是否有正在运行的角色实例
@@ -121,7 +121,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceName 服务名称
      * @return 是否存在角色实例
      */
-    Boolean hasRoleInstance(Integer clusterId, String serviceName);
+    Boolean hasRoleInstance(Long clusterId, String serviceName);
 
     /**
      * 获取服务连接信息

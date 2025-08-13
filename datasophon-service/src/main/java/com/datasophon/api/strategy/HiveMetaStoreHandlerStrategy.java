@@ -32,7 +32,7 @@ import java.util.Map;
 public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         if(CollUtil.isEmpty(hosts)){
             return;
         }

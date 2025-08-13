@@ -15,7 +15,7 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.TemplatePathUtils;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -958,7 +958,7 @@ public class ConfigGroupUtils {
      * @param clusterId     集群ID
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleGroupConfig config, Integer clusterId) {
+                                             ClusterServiceRoleGroupConfigEntity config, Long clusterId) {
 
         // 1. 解析配置文件JSON
         Map<JSONObject, JSONArray> originalConfigMap = parseConfigJson(config.getConfigFileJson());
@@ -1049,7 +1049,7 @@ public class ConfigGroupUtils {
     private static void processOriginalConfig(
             Map<Generators, List<ServiceConfig>> resultMap,
             Map<JSONObject, JSONArray> originalMap,
-            Integer clusterId) {
+            Long clusterId) {
 
         logger.warn("没有找到任何角色名，无法为Kubernetes配置添加前缀");
 
@@ -1075,7 +1075,7 @@ public class ConfigGroupUtils {
             Map<Generators, List<ServiceConfig>> resultMap,
             Map<JSONObject, JSONArray> originalMap,
             Set<String> roleNames,
-            Integer clusterId) {
+            Long clusterId) {
 
         // 1. 分离Kubernetes和非Kubernetes配置
         Map<String, List<ServiceConfig>> kubernetesConfigsByType = new HashMap<>();
@@ -1102,7 +1102,7 @@ public class ConfigGroupUtils {
             Map<JSONObject, JSONArray> originalMap,
             Map<String, List<ServiceConfig>> kubernetesConfigsByType,
             Map<Generators, List<ServiceConfig>> nonKubernetesConfigs,
-            Integer clusterId) {
+            Long clusterId) {
 
         for (JSONObject fileJson : originalMap.keySet()) {
             Generators generator = fileJson.toJavaObject(Generators.class);
@@ -1149,7 +1149,7 @@ public class ConfigGroupUtils {
             Map<JSONObject, JSONArray> originalMap,
             Map<String, List<ServiceConfig>> kubernetesConfigsByType,
             Set<String> roleNames,
-            Integer clusterId) {
+            Long clusterId) {
 
         // 处理每种类型的Kubernetes配置
         for (Map.Entry<String, List<ServiceConfig>> entry : kubernetesConfigsByType.entrySet()) {
@@ -1241,7 +1241,7 @@ public class ConfigGroupUtils {
      * @param serviceConfigs 配置列表
      * @param clusterId      集群ID
      */
-    private static void replaceVariable(List<ServiceConfig> serviceConfigs, Integer clusterId) {
+    private static void replaceVariable(List<ServiceConfig> serviceConfigs, Long clusterId) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         for (ServiceConfig serviceConfig : serviceConfigs) {
             if (Constants.INPUT.equals(serviceConfig.getType())) {

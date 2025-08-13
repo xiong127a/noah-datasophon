@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 
 import java.util.List;
 
@@ -38,5 +38,5 @@ public interface HostGroupSyncService {
      * @param groupName 组名
      * @param command 执行命令（如groupadd）
      */
-    void syncUserGroupToHosts(List<ClusterHostDO> hostList, String groupName, String command);
+    void syncUserGroupToHosts(List<ClusterHostEntity> hostList, String groupName, String command);
 }

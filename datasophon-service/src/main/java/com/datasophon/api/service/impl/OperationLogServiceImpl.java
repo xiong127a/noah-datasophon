@@ -4,7 +4,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.OperationLogService;
-import com.datasophon.dao.entity.OperationLog;
+import com.datasophon.dao.entity.OperationLogEntity;
 import com.datasophon.dao.mapper.OperationLogMapper;
 import com.datasophon.dao.model.MPage;
 import org.slf4j.Logger;
@@ -23,18 +23,18 @@ import java.util.stream.Collectors;
  * @date 2025-01-01
  */
 @Service("operationLogService")
-public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog>
+public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLogEntity>
         implements OperationLogService {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationLogServiceImpl.class);
 
     @Override
-    public Page<OperationLog> pageOperationLog(MPage<OperationLog> mPage) {
+    public Page<OperationLogEntity> pageOperationLog(MPage<OperationLogEntity> mPage) {
         // 调用Mapper中的分页查询方法
-        Page<OperationLog> page = getMapper().selectPageWithFilters(mPage);
+        Page<OperationLogEntity> page = getMapper().selectPageWithFilters(mPage);
 
         // 后处理查询结果
-        List<OperationLog> records = page.getRecords();
+        List<OperationLogEntity> records = page.getRecords();
 
         // 获取所有状态码与消息的映射
         Map<Integer, String> codeToMessageMap = Arrays.stream(Status.values())

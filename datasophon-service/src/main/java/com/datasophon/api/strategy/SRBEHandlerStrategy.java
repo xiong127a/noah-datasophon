@@ -25,7 +25,7 @@ import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.model.ProcInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.common.enums.ServiceRoleState;
 import org.slf4j.Logger;
@@ -84,10 +84,10 @@ public class SRBEHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    private Map<String, String> getHostMap(Integer clusterId) {
+    private Map<String, String> getHostMap(Long clusterId) {
         ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
-        List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
-        return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
+        List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterId);
+        return hostList.stream().collect(Collectors.toMap(ClusterHostEntity::getIp, ClusterHostEntity::getHostname));
     }
 
 }

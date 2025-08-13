@@ -38,6 +38,6 @@ public interface ClusterVariableManagementService {
      * @param variableName    变量名称
      * @param value           变量值
      */
-    void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
+    void generateClusterVariable(Map<String, String> globalVariables, Long clusterId,
             String variableName, String value);
 }

@@ -25,8 +25,8 @@ import com.datasophon.common.dto.AlertGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.dao.entity.AlertGroupEntity;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
-import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.entity.ClusterAlertGroupMapEntity;
+import com.datasophon.dao.entity.ClusterAlertQuotaEntity;
 import com.datasophon.dao.mapper.AlertGroupMapper;
 import com.datasophon.dao.mapper.ClusterAlertGroupMapMapper;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
@@ -66,18 +66,18 @@ public class AlertGroupServiceImpl
     private AlertGroupConverter alertGroupConverter;
 
     @Override
-    public PageResult<AlertGroupDTO> getAlertGroupList(Integer clusterId, String alertGroupName, Integer page,
+    public PageResult<AlertGroupDTO> getAlertGroupList(Long clusterId, String alertGroupName, Integer page,
             Integer pageSize) {
         // 查询告警组映射关系
-        List<ClusterAlertGroupMap> alertGroupMapList = clusterAlertGroupMapMapper.selectByClusterId(clusterId);
+        List<ClusterAlertGroupMapEntity> alertGroupMapList = clusterAlertGroupMapMapper.selectByClusterId(clusterId);
 
         if (CollectionUtils.isEmpty(alertGroupMapList)) {
             return PageResult.empty(page, pageSize);
         }
 
         // 提取告警组ID集合
-        List<Integer> groupIds = alertGroupMapList.stream()
-                .map(ClusterAlertGroupMap::getAlertGroupId)
+        List<Long> groupIds = alertGroupMapList.stream()
+                .map(ClusterAlertGroupMapEntity::getAlertGroupId)
                 .toList();
 
         // 查询告警组列表和总数
@@ -91,21 +91,21 @@ public class AlertGroupServiceImpl
         }
 
         // 获取告警组ID集合用于后续查询
-        Set<Integer> alertGroupIdSet = alertGroupList.stream()
+        Set<Long> alertGroupIdSet = alertGroupList.stream()
                 .map(AlertGroupEntity::getId)
                 .collect(java.util.stream.Collectors.toSet());
 
         // 查询告警组下告警指标个数
-        List<ClusterAlertQuota> quotaList = clusterAlertQuotaMapper.selectByAlertGroupIds(alertGroupIdSet);
+        List<ClusterAlertQuotaEntity> quotaList = clusterAlertQuotaMapper.selectByAlertGroupIds(alertGroupIdSet);
 
         if (CollectionUtils.isNotEmpty(quotaList)) {
             // 按告警组ID分组统计指标数量
-            Map<Integer, List<ClusterAlertQuota>> quotaGroupMap = quotaList.stream()
-                    .collect(java.util.stream.Collectors.groupingBy(ClusterAlertQuota::getAlertGroupId));
+            Map<Long, List<ClusterAlertQuotaEntity>> quotaGroupMap = quotaList.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(ClusterAlertQuotaEntity::getAlertGroupId));
 
             // 设置告警指标数量
             alertGroupList.forEach(entity -> {
-                List<ClusterAlertQuota> tmpQuotaList = quotaGroupMap.get(entity.getId());
+                List<ClusterAlertQuotaEntity> tmpQuotaList = quotaGroupMap.get(entity.getId());
                 int quotaCnt = CollectionUtils.isEmpty(tmpQuotaList) ? 0 : tmpQuotaList.size();
                 entity.setAlertQuotaNum(quotaCnt);
             });
@@ -131,9 +131,9 @@ public class AlertGroupServiceImpl
         }
 
         // 重复校验
-        List<Integer> existGroupIds = clusterAlertGroupMapMapper.selectByClusterId(alertGroupDTO.clusterId())
+        List<Long> existGroupIds = clusterAlertGroupMapMapper.selectByClusterId(alertGroupDTO.clusterId())
                 .stream()
-                .map(ClusterAlertGroupMap::getAlertGroupId)
+                .map(ClusterAlertGroupMapEntity::getAlertGroupId)
                 .toList();
 
         List<String> existGroupNames = this.getMapper().selectByIds(existGroupIds)
@@ -153,10 +153,10 @@ public class AlertGroupServiceImpl
         this.save(alertGroupEntity);
 
         // 创建映射关系
-        ClusterAlertGroupMap clusterAlertGroupMap = new ClusterAlertGroupMap();
-        clusterAlertGroupMap.setAlertGroupId(alertGroupEntity.getId());
-        clusterAlertGroupMap.setClusterId(alertGroupEntity.getClusterId());
-        clusterAlertGroupMapMapper.insertSelective(clusterAlertGroupMap);
+        ClusterAlertGroupMapEntity clusterAlertGroupMapEntity = new ClusterAlertGroupMapEntity();
+        clusterAlertGroupMapEntity.setAlertGroupId(alertGroupEntity.getId());
+        clusterAlertGroupMapEntity.setClusterId(alertGroupEntity.getClusterId());
+        clusterAlertGroupMapMapper.insertSelective(clusterAlertGroupMapEntity);
 
         // 转换为DTO并返回
         return alertGroupConverter.entityToDto(alertGroupEntity);
@@ -176,7 +176,7 @@ public class AlertGroupServiceImpl
     }
 
     @Override
-    public boolean deleteAlertGroups(List<Integer> ids) {
+    public boolean deleteAlertGroups(List<Long> ids) {
         // 先校验是否可以删除
         validateAlertGroupBeforeDelete(ids);
 
@@ -193,9 +193,9 @@ public class AlertGroupServiceImpl
     }
 
     @Override
-    public void validateAlertGroupBeforeDelete(List<Integer> ids) {
+    public void validateAlertGroupBeforeDelete(List<Long> ids) {
         // 校验是否绑定告警指标
-        List<ClusterAlertQuota> quotaList = clusterAlertQuotaMapper.selectByAlertGroupIds(ids);
+        List<ClusterAlertQuotaEntity> quotaList = clusterAlertQuotaMapper.selectByAlertGroupIds(ids);
 
         if (CollectionUtils.isNotEmpty(quotaList)) {
             logger.warn("告警组删除验证失败，存在 {} 个绑定的告警指标", quotaList.size());

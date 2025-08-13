@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
     @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, List<ServiceConfig> list) {
         ClusterInfoService clusterInfoService = SpringUtil
                 .getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -56,7 +56,7 @@ public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements
 
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取ClickHouse节点列表
             List<String> clickhouseNodes = getRoleHosts(clusterId, serviceInstanceId, "ClickHouse");

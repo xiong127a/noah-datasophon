@@ -127,7 +127,7 @@ public abstract class ServiceHandlerAbstract {
         return commandLines;
     }
 
-    public List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
+    public List<String> getRoleHosts(Long clusterId, Integer serviceInstanceId, String roleName) {
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
         List<ClusterServiceRoleInstanceDTO> roleInstances = clusterServiceRoleInstanceService
@@ -227,7 +227,7 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
-    public boolean isEnableKerberos(Integer clusterId, Map<String, String> globalVariables, boolean enableKerberos,
+    public boolean isEnableKerberos(Long clusterId, Map<String, String> globalVariables, boolean enableKerberos,
             ServiceConfig config, String serviceName) {
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if ((Boolean) config.getValue()) {
@@ -241,7 +241,7 @@ public abstract class ServiceHandlerAbstract {
         return enableKerberos;
     }
 
-    public boolean isEnableHA(Integer clusterId, Map<String, String> globalVariables, boolean enableHA,
+    public boolean isEnableHA(Long clusterId, Map<String, String> globalVariables, boolean enableHA,
             ServiceConfig config, String serviceName) {
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if ((Boolean) config.getValue()) {
@@ -534,7 +534,7 @@ public abstract class ServiceHandlerAbstract {
         return getTemplateContent("shell", serviceName, connectionInfo);
     }
 
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+    public ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
             Map<String, String> configMap) {
         // 提取服务名称（从子类类名）
         String serviceName = getServiceName(serviceInstanceId);
@@ -769,7 +769,7 @@ public abstract class ServiceHandlerAbstract {
      * @return ConnectionInfo.ConnectionInfoBuilder 包含服务特定信息的构建器
      */
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         // 默认实现返回空构建器
         return ConnectionInfo.builder();
     }

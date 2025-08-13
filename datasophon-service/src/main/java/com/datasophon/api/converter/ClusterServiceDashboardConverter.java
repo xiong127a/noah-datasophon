@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.vo.ClusterServiceDashboardVO;
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import org.mapstruct.Mapper;
 
 /**
@@ -33,5 +33,5 @@ import org.mapstruct.Mapper;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterServiceDashboardConverter extends
-        BaseConverter<ClusterServiceDashboard, ClusterServiceDashboardDTO, ClusterServiceDashboardVO> {
+        BaseConverter<ClusterServiceDashboardEntity, ClusterServiceDashboardDTO, ClusterServiceDashboardVO> {
 }

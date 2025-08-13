@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterAlertHistoryVO;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.datasophon.common.enums.AlertLevel;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -37,21 +37,21 @@ import org.mapstruct.Named;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterAlertHistoryConverter extends
-        BaseConverter<ClusterAlertHistory, ClusterAlertHistoryDTO, ClusterAlertHistoryVO> {
+        BaseConverter<ClusterAlertHistoryEntity, ClusterAlertHistoryDTO, ClusterAlertHistoryVO> {
 
     /**
      * Entity转换为DTO时，AlertLevel枚举转Integer
      */
     @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "alertLevelToInteger")
     @Override
-    ClusterAlertHistoryDTO entityToDto(ClusterAlertHistory entity);
+    ClusterAlertHistoryDTO entityToDto(ClusterAlertHistoryEntity entity);
 
     /**
      * DTO转换为Entity时，Integer转AlertLevel枚举
      */
     @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "integerToAlertLevel")
     @Override
-    ClusterAlertHistory dtoToEntity(ClusterAlertHistoryDTO dto);
+    ClusterAlertHistoryEntity dtoToEntity(ClusterAlertHistoryDTO dto);
 
     /**
      * Entity转换为VO时，添加格式化字段和文本字段
@@ -62,7 +62,7 @@ public interface ClusterAlertHistoryConverter extends
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
-    ClusterAlertHistoryVO entityToVo(ClusterAlertHistory entity);
+    ClusterAlertHistoryVO entityToVo(ClusterAlertHistoryEntity entity);
 
     /**
      * DTO转换为VO时，添加格式化字段和文本字段

@@ -44,10 +44,10 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.PlaceholderUtils;
 
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.common.enums.NeedRestart;
@@ -141,19 +141,19 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public ClusterServiceInstanceDTO getServiceInstanceByClusterIdAndServiceName(Integer clusterId,
+    public ClusterServiceInstanceDTO getServiceInstanceByClusterIdAndServiceName(Long clusterId,
             String serviceName) {
         ClusterServiceInstanceEntity entity = getMapper().selectByClusterIdAndServiceName(clusterId, serviceName);
         return clusterServiceInstanceConverter.entityToDto(entity);
     }
 
     @Override
-    public String getServiceConfigByClusterIdAndServiceName(Integer clusterId, String serviceName) {
+    public String getServiceConfigByClusterIdAndServiceName(Long clusterId, String serviceName) {
         return getMapper().getServiceConfigByClusterIdAndServiceName(clusterId, serviceName);
     }
 
     @Override
-    public List<ClusterServiceInstanceDTO> listAll(Integer clusterId) {
+    public List<ClusterServiceInstanceDTO> listAll(Long clusterId) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
         // 查询集群下所有服务实例并按排序号升序排列
@@ -166,7 +166,7 @@ public class ClusterServiceInstanceServiceImpl
             boolean needUpdate = false;
 
             // 查询仪表盘
-            ClusterServiceDashboard dashboard = clusterServiceDashboardService
+            ClusterServiceDashboardEntity dashboard = clusterServiceDashboardService
                     .getByServiceName(serviceInstance.getServiceName());
 
             if (Objects.nonNull(dashboard)) {
@@ -248,7 +248,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public String downloadClientConfig(Integer clusterId, String serviceName) {
+    public String downloadClientConfig(Long clusterId, String serviceName) {
         // 实现下载客户端配置逻辑
         try {
             // 获取集群信息
@@ -278,7 +278,7 @@ public class ClusterServiceInstanceServiceImpl
         if (serviceInstanceEntity == null) {
             throw new RuntimeException("Service instance not found with id: " + serviceInstanceId);
         }
-        Integer frameServiceId = serviceInstanceEntity.getFrameServiceId();
+        Long frameServiceId = serviceInstanceEntity.getFrameServiceId();
         List<FrameServiceRoleDTO> frameServiceRoleDTOList = frameServiceRoleService
                 .getAllServiceRoleList(frameServiceId);
         return frameServiceRoleConverter.dtoListToEntityList(frameServiceRoleDTOList);
@@ -343,7 +343,7 @@ public class ClusterServiceInstanceServiceImpl
     public Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
             Boolean showOnlyDifferences) {
         // 获取最新的两个配置版本进行比较
-        List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
+        List<ClusterServiceRoleGroupConfigEntity> list = roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
 
         // 如果没有足够的版本进行比较，返回空结果
         if (list == null || list.size() < 2) {
@@ -351,8 +351,8 @@ public class ClusterServiceInstanceServiceImpl
         }
 
         // 获取配置版本
-        ClusterServiceRoleGroupConfig configA = list.get(0); // 新版本
-        ClusterServiceRoleGroupConfig configB = list.get(1); // 旧版本
+        ClusterServiceRoleGroupConfigEntity configA = list.get(0); // 新版本
+        ClusterServiceRoleGroupConfigEntity configB = list.get(1); // 旧版本
 
         // 解析配置JSON
         String configJsonA = configA.getConfigJson();
@@ -498,11 +498,11 @@ public class ClusterServiceInstanceServiceImpl
         }
         List<ClusterServiceInstanceRoleGroupDTO> roleGroupDTOList = roleGroupService
                 .listRoleGroupByServiceInstanceId(serviceInstanceId);
-        List<ClusterServiceInstanceRoleGroup> roleGroups = clusterServiceInstanceRoleGroupConverter
+        List<ClusterServiceInstanceRoleGroupEntity> roleGroups = clusterServiceInstanceRoleGroupConverter
                 .dtoListToEntityList(roleGroupDTOList);
-        List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroup::getId)
+        List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroupEntity::getId)
                 .toList();
-        // List<ClusterServiceRoleGroupConfig> roleGroupConfigList =
+        // List<ClusterServiceRoleGroupConfigEntity> roleGroupConfigList =
         // roleGroupConfigService
         // .listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
         List<ClusterServiceRoleInstanceDTO> roleInstanceDTOList = roleInstanceService
@@ -536,7 +536,7 @@ public class ClusterServiceInstanceServiceImpl
         roleGroupService.removeByIds(roleGroupIds);
         // del role group config
         // List<Integer> configIds =
-        // roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId).collect(Collectors.toList());
+        // roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfigEntity::getId).collect(Collectors.toList());
         // roleGroupConfigService.removeByIds(configIds);
         // del service role instance
         if (!roleInstanceList.isEmpty()) {
@@ -553,7 +553,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceInstanceDTO> listRunningServiceInstance(Integer clusterId) {
+    public List<ClusterServiceInstanceDTO> listRunningServiceInstance(Long clusterId) {
         List<ClusterServiceInstanceEntity> entities = getMapper().selectRunningServicesByClusterId(clusterId);
         return clusterServiceInstanceConverter.entityListToDtoList(entities);
     }
@@ -570,7 +570,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public Boolean hasRoleInstance(Integer clusterId, String serviceName) {
+    public Boolean hasRoleInstance(Long clusterId, String serviceName) {
         // 先获取服务实例ID
         ClusterServiceInstanceDTO serviceInstance = getServiceInstanceByClusterIdAndServiceName(clusterId,
                 serviceName);
@@ -629,7 +629,7 @@ public class ClusterServiceInstanceServiceImpl
         }
 
         // 获取集群ID
-        Integer clusterId = serviceInstance.getClusterId();
+        Long clusterId = serviceInstance.getClusterId();
 
         // 获取服务名称
         String serviceName = serviceInstance.getServiceName();

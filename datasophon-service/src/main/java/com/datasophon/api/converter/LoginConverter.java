@@ -82,7 +82,7 @@ public interface LoginConverter {
     default UserInfoVO createUserInfoVO(String username) {
         // TODO: 这里应该从UserInfoDTO转换，当前临时实现
         return UserInfoVO.builder()
-                .id(1) // 临时ID
+                .id(1L) // 临时ID
                 .username(username)
                 .email(username + "@example.com") // 临时邮箱
                 .phone("1234567890") // 临时电话

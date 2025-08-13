@@ -26,11 +26,9 @@ import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import com.datasophon.dao.mapper.ClusterServiceDashboardMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -46,7 +44,7 @@ import java.util.Map;
  */
 @Service("clusterServiceDashboardService")
 public class ClusterServiceDashboardServiceImpl
-                extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboard>
+                extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboardEntity>
                 implements ClusterServiceDashboardService {
         @Autowired
         private ClusterServiceDashboardConverter converter;
@@ -55,7 +53,7 @@ public class ClusterServiceDashboardServiceImpl
         private ClusterInfoService clusterInfoService;
 
         @Override
-        public String getDashboardUrl(Integer clusterId) {
+        public String getDashboardUrl(Long clusterId) {
                 ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
                 ClusterType depType = clusterInfoEntity.getDepType();
                 String serviceName = "TOTAL";
@@ -63,16 +61,16 @@ public class ClusterServiceDashboardServiceImpl
                         serviceName = "KUBERNETES";
                 }
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = getMapper().selectByServiceName(serviceName);
+                ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName(serviceName);
 
             return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                             Constants.REGEX_VARIABLE);
         }
 
         @Override
-        public String getDatasophonDashboard(Integer clusterId) {
+        public String getDatasophonDashboard(Long clusterId) {
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboard dashboard = getMapper().selectByServiceName("DATASOPHON");
+                ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName("DATASOPHON");
 
             return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
                             Constants.REGEX_VARIABLE);
@@ -81,25 +79,25 @@ public class ClusterServiceDashboardServiceImpl
         // DTO相关的CRUD方法实现
         @Override
         public ClusterServiceDashboardDTO getByIdAsDto(Integer id) {
-                ClusterServiceDashboard entity = getById(id);
+                ClusterServiceDashboardEntity entity = getById(id);
                 return entity != null ? converter.entityToDto(entity) : null;
         }
 
         @Override
         public ClusterServiceDashboardDTO saveDashboard(ClusterServiceDashboardDTO dto) {
-                ClusterServiceDashboard entity = converter.dtoToEntity(dto);
+                ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
                 save(entity);
                 return converter.entityToDto(entity);
         }
 
         @Override
         public void updateDashboard(ClusterServiceDashboardDTO dto) {
-                ClusterServiceDashboard entity = converter.dtoToEntity(dto);
+                ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
                 updateById(entity);
         }
 
         @Override
-        public ClusterServiceDashboard getByServiceName(String serviceName) {
+        public ClusterServiceDashboardEntity getByServiceName(String serviceName) {
                 return getMapper().selectByServiceName(serviceName);
         }
 }

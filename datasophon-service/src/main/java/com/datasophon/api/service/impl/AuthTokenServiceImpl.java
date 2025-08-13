@@ -165,7 +165,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void revokeAllUserTokens(Integer userId, String reason) {
+    public void revokeAllUserTokens(Long userId, String reason) {
         List<AuthTokenEntity> tokens = this.getMapper().findValidTokensByUserId(userId);
         tokens.forEach(token -> this.getMapper().revokeToken(token.getId(), reason));
         logger.debug("Revoked all tokens for user: {}, reason: {}", userId, reason);
@@ -297,7 +297,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     }
 
     @Override
-    public List<AuthTokenDTO> getValidTokensByUserId(Integer userId) {
+    public List<AuthTokenDTO> getValidTokensByUserId(Long userId) {
         if (userId == null) {
             return List.of();
         }
@@ -314,7 +314,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     }
 
     @Override
-    public int cleanupExcessiveTokens(Integer userId, int maxTokens) {
+    public int cleanupExcessiveTokens(Long userId, int maxTokens) {
         if (userId == null || maxTokens <= 0) {
             return 0;
         }

@@ -42,7 +42,7 @@ import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
     private static final Logger logger = LoggerFactory.getLogger(RangerAdminHandlerStrategy.class);
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
             String rangerAdminUrl = "http://" + hosts.getFirst() + ":6080";
@@ -69,7 +69,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
@@ -161,7 +161,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
-    private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {
+    private void enableRangerPlugin(Long clusterId, String serviceName, String serviceRoleName) {
         ClusterServiceInstanceService serviceInstanceService = SpringUtil
                 .getBean(ClusterServiceInstanceService.class);
         ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
@@ -192,7 +192,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
 
             ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
             ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-            ClusterServiceRoleGroupConfig config = configConverter.dtoToEntity(configDto);
+            ClusterServiceRoleGroupConfigEntity config = configConverter.dtoToEntity(configDto);
             List<ServiceConfig> serviceConfigs = JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
             Map<String, ServiceConfig> map = serviceConfigs.stream()
                     .collect(Collectors.toMap(ServiceConfig::getName, serviceConfig -> serviceConfig, (v1, v2) -> v1));

@@ -23,7 +23,7 @@ import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.api.service.impl.InstallServiceImpl;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -80,7 +80,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    protected List<ClusterHostDO> doDiscoverHosts(HostDiscoveryRequest request) {
+    protected List<ClusterHostEntity> doDiscoverHosts(HostDiscoveryRequest request) {
         String hosts = (String) request.getConnectionParams().get("hosts");
         String sshUser = (String) request.getConnectionParams().get("sshUser");
         String sshPort = (String) request.getConnectionParams().get("sshPort");
@@ -114,7 +114,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     protected HostListResult doGetHostList(HostListRequest request) {
         try {
             // 调用现有的分页查询方法
-            PageResult<ClusterHostDO> pageResult = clusterHostService.listByPage(
+            PageResult<ClusterHostEntity> pageResult = clusterHostService.listByPage(
                 request.getClusterId(),
                 request.getHostname(),
                 request.getIp(),
@@ -145,12 +145,12 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    protected void doImportHosts(List<ClusterHostDO> hosts, HostImportRequest request) {
+    protected void doImportHosts(List<ClusterHostEntity> hosts, HostImportRequest request) {
         try {
             log.info("开始导入{}台PVM主机", hosts.size());
             
             // PVM模式的主机通常已经在分析阶段保存，这里可能需要更新状态
-            for (ClusterHostDO host : hosts) {
+            for (ClusterHostEntity host : hosts) {
                 // 更新主机为受管状态
                 host.setManagementStatus(ManagementStatus.MANAGED);
                 clusterHostService.updateById(host);
@@ -165,7 +165,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public List<ClusterHostDO> refreshHosts(Integer clusterId, Map<String, Object> connectionParams) {
+    public List<ClusterHostEntity> refreshHosts(Long clusterId, Map<String, Object> connectionParams) {
         // PVM模式刷新主机信息
         HostDiscoveryRequest request = HostDiscoveryRequest.builder()
                 .clusterId(clusterId)
@@ -213,7 +213,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> performHostCheck(Integer clusterId, List<String> hostnames, 
+    public Map<String, Object> performHostCheck(Long clusterId, List<String> hostnames,
                                               Map<String, Object> connectionParams) {
         Map<String, Object> result = new HashMap<>();
         
@@ -244,7 +244,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> getHostCheckStatus(Integer clusterId) {
+    public Map<String, Object> getHostCheckStatus(Long clusterId) {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -266,7 +266,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public void cleanup(Integer clusterId) {
+    public void cleanup(Long clusterId) {
         try {
             // 调用现有的清理方法
             installService.cleanupHostCheckResources(clusterId);
@@ -278,7 +278,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    public Map<String, Object> validateForNextStep(Integer clusterId) {
+    public Map<String, Object> validateForNextStep(Long clusterId) {
         // PVM校验规则可按需实现；这里保持与现有逻辑兼容，简单返回未实现提示
         Map<String, Object> result = new HashMap<>();
         result.put("valid", false);
@@ -289,7 +289,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     /**
      * 获取队列状态信息（PVM模式特有）
      */
-    private Map<String, Object> getQueueStatus(Integer clusterId) {
+    private Map<String, Object> getQueueStatus(Long clusterId) {
         Map<String, Object> queueStatus = new HashMap<>();
         
         try {
@@ -310,7 +310,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     @Override
-    protected Map<String, Object> buildDiscoveryMetadata(List<ClusterHostDO> hosts, HostDiscoveryRequest request) {
+    protected Map<String, Object> buildDiscoveryMetadata(List<ClusterHostEntity> hosts, HostDiscoveryRequest request) {
         Map<String, Object> metadata = super.buildDiscoveryMetadata(hosts, request);
         
         // PVM模式特有的元数据

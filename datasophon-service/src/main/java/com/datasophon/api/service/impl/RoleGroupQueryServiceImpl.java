@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterServiceInstanceRoleGroupConverter;
 import com.datasophon.api.service.RoleGroupQueryService;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Service;
  */
 @Service("roleGroupQueryService")
 public class RoleGroupQueryServiceImpl
-        extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroup>
+        extends ServiceImpl<ClusterServiceInstanceRoleGroupMapper, ClusterServiceInstanceRoleGroupEntity>
         implements RoleGroupQueryService {
 
     @Autowired
@@ -45,7 +45,7 @@ public class RoleGroupQueryServiceImpl
 
     @Override
     public ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Integer id) {
-        ClusterServiceInstanceRoleGroup entity = this.getById(id);
+        ClusterServiceInstanceRoleGroupEntity entity = this.getById(id);
         if (entity == null) {
             return null;
         }

@@ -111,12 +111,12 @@ public interface NoticeGroupConverter extends BaseConverter<NoticeGroupEntity, N
     }
 
     @Named("calculateUserCountFromIds")
-    default Integer calculateUserCountFromIds(List<Integer> userIds) {
+    default Integer calculateUserCountFromIds(List<Long> userIds) {
         return userIds != null ? userIds.size() : 0;
     }
 
     @Named("formatUserCountFromIds")
-    default String formatUserCountFromIds(List<Integer> userIds) {
+    default String formatUserCountFromIds(List<Long> userIds) {
         int count = userIds != null ? userIds.size() : 0;
         return formatUserCount(count);
     }

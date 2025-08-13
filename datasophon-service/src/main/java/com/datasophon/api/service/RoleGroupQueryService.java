@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import com.mybatisflex.core.service.IService;
 
 /**
@@ -29,7 +29,7 @@ import com.mybatisflex.core.service.IService;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface RoleGroupQueryService extends IService<ClusterServiceInstanceRoleGroup> {
+public interface RoleGroupQueryService extends IService<ClusterServiceInstanceRoleGroupEntity> {
 
     /**
      * 根据ID获取角色组DTO

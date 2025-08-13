@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterServiceRoleGroupConfigService extends IService<ClusterServiceRoleGroupConfig> {
+public interface ClusterServiceRoleGroupConfigService extends IService<ClusterServiceRoleGroupConfigEntity> {
 
     /**
      * 根据角色组ID获取配置（最新版本）
@@ -93,7 +93,7 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param roleGroupId 角色组ID
      * @return 配置列表
      */
-    List<ClusterServiceRoleGroupConfig> getConfigVersionsByRoleGroupId(Integer roleGroupId);
+    List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Integer roleGroupId);
 
     /**
      * 根据角色组ID获取最新的两个配置版本（用于版本比较）
@@ -101,5 +101,5 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param roleGroupId 角色组ID
      * @return 最新的两个配置版本列表
      */
-    List<ClusterServiceRoleGroupConfig> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId);
+    List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId);
 }

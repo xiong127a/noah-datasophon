@@ -18,21 +18,21 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuisEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
 
 /**
  * 集群服务角色实例WebUI服务接口
- * 继承IService<ClusterServiceRoleInstanceWebuis>，提供标准CRUD操作
+ * 继承IService<ClusterServiceRoleInstanceWebuisEntity>，提供标准CRUD操作
  * 按照架构重构规范，Service层返回DTO，不返回Result
  *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-08-06
  */
-public interface ClusterServiceRoleInstanceWebuisService extends IService<ClusterServiceRoleInstanceWebuis> {
+public interface ClusterServiceRoleInstanceWebuisService extends IService<ClusterServiceRoleInstanceWebuisEntity> {
 
     /**
      * 根据服务实例ID获取WebUI列表

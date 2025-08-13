@@ -70,7 +70,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     }
 
     @Override
-    public boolean isAutoScaleEnabled(Integer clusterId) {
+    public boolean isAutoScaleEnabled(Long clusterId) {
         if (clusterId == null) {
             return false;
         }
@@ -80,7 +80,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
 
     @Scheduled(cron = "0 0 9 * * MON-FRI")
     public void scaleUp() {
-        int clusterId = PropertyUtils.getInt("clusterId");
+        Long clusterId = PropertyUtils.getLong("clusterId");
         if (BooleanUtil.isFalse(isAutoScaleEnabled(clusterId))) {
             return;
         }
@@ -97,7 +97,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
 
     @Scheduled(cron = "0 0 18 * * MON-FRI")
     public void scaleDown() {
-        int clusterId = PropertyUtils.getInt("clusterId");
+        Long clusterId = PropertyUtils.getLong("clusterId");
         if (BooleanUtil.isFalse(isAutoScaleEnabled(clusterId))) {
             return;
         }
@@ -179,7 +179,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     }
 
     @Override
-    public PageResult<AutoScaleTaskDTO> getAutoScaleTasks(Integer clusterId, Integer page, Integer pageSize) {
+    public PageResult<AutoScaleTaskDTO> getAutoScaleTasks(Long clusterId, Integer page, Integer pageSize) {
         try {
             Page<AutoScaleTaskEntity> result = getMapper().selectPageByClusterId(clusterId, page, pageSize);
 
@@ -193,7 +193,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
     }
 
     @Override
-    public List<AutoScaleTaskDTO> getEnabledTasksByClusterId(Integer clusterId) {
+    public List<AutoScaleTaskDTO> getEnabledTasksByClusterId(Long clusterId) {
         try {
             List<AutoScaleTaskEntity> entities = getMapper().selectEnabledByClusterId(clusterId);
             return autoScaleTaskConverter.entityListToDtoList(entities);
@@ -270,7 +270,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
         }
     }
 
-    private void saveAutoScaleConfig(Integer clusterId, String scaleType) {
+    private void saveAutoScaleConfig(Long clusterId, String scaleType) {
         try {
             Map<String, String> globalVariables = GlobalVariables.get(clusterId);
             SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);

@@ -62,7 +62,7 @@ public class ClusterServiceCommandHostServiceImpl
     private ClusterServiceCommandHostCommandService hostCommandService;
 
     @Override
-    public PageResult<ClusterServiceCommandHostDTO> getCommandHostList(Integer clusterId, String commandId,
+    public PageResult<ClusterServiceCommandHostDTO> getCommandHostList(Long clusterId, String commandId,
             Integer page, Integer pageSize) {
         // 使用mapper的分页查询方法
         PageResult<ClusterServiceCommandHostEntity> entityPageResult = getMapper().selectPageByCommandId(commandId,

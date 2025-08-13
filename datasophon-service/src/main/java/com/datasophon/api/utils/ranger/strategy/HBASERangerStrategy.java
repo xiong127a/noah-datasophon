@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 public class HBASERangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
-    public HBASERangerStrategy(Integer clusterId) throws Exception {
+    public HBASERangerStrategy(Long clusterId) throws Exception {
         super(clusterId);
         logger = LoggerFactory.getLogger("HbaseRangerOperateLogger");
     }

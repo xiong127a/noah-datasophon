@@ -65,12 +65,12 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
         }
 
         // 获取框架ID集合，使用JDK21特性，转换为Set类型
-        Set<Integer> frameInfoIds = frameInfoEntities.stream()
+        Set<Long> frameInfoIds = frameInfoEntities.stream()
                 .map(FrameInfoEntity::getId)
                 .collect(Collectors.toSet());
 
         // 查询关联的服务信息
-        Map<Integer, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper
+        Map<Long, List<FrameServiceEntity>> frameServiceGroupBys = frameServiceMapper
                 .selectByFrameIds(frameInfoIds)
                 .stream()
                 .collect(java.util.stream.Collectors.groupingBy(FrameServiceEntity::getFrameId));

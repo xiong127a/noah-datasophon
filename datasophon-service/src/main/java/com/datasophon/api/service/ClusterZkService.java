@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.ClusterZk;
+import com.datasophon.dao.entity.ClusterZkEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface ClusterZkService extends IService<ClusterZk> {
+public interface ClusterZkService extends IService<ClusterZkEntity> {
 
     /**
      * 获取最大MyId
@@ -37,7 +37,7 @@ public interface ClusterZkService extends IService<ClusterZk> {
      * @param clusterId 集群ID
      * @return 最大MyId
      */
-    Integer getMaxMyId(Integer clusterId);
+    Integer getMaxMyId(Long clusterId);
 
     /**
      * 获取所有ZK服务器
@@ -45,5 +45,5 @@ public interface ClusterZkService extends IService<ClusterZk> {
      * @param clusterId 集群ID
      * @return ZK服务器列表
      */
-    List<ClusterZk> getAllZkServer(Integer clusterId);
+    List<ClusterZkEntity> getAllZkServer(Long clusterId);
 }

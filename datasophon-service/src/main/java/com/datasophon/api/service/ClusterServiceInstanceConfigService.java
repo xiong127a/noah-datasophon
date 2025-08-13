@@ -103,5 +103,5 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @return 分页结果
      */
     PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
-            Integer clusterId, Integer serviceId, Integer page, Integer pageSize);
+            Long clusterId, Integer serviceId, Integer page, Integer pageSize);
 }

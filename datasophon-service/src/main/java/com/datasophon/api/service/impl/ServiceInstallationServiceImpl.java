@@ -156,7 +156,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         }
 
         Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + clusterServiceInstance.getId());
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getById(roleGroupId);
+        ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupService.getById(roleGroupId);
 
         // save role instance
         ClusterServiceRoleInstanceDTO roleInstanceDTO = serviceRoleInstanceService
@@ -179,11 +179,11 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             serviceRoleInstanceService.save(roleInstance);
 
             if (Constants.ZKSERVER.equalsIgnoreCase(roleInstance.getServiceRoleName())) {
-                ClusterZk clusterZk = new ClusterZk();
-                clusterZk.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
-                clusterZk.setClusterId(serviceRoleInfo.getClusterId());
-                clusterZk.setZkServer(roleInstance.getHostname());
-                clusterZkService.save(clusterZk);
+                ClusterZkEntity clusterZkEntity = new ClusterZkEntity();
+                clusterZkEntity.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
+                clusterZkEntity.setClusterId(serviceRoleInfo.getClusterId());
+                clusterZkEntity.setZkServer(roleInstance.getHostname());
+                clusterZkService.save(clusterZkEntity);
             }
 
             handleExternalLink(serviceRoleInfo, clusterInfo, clusterServiceInstance, roleInstance);
@@ -192,21 +192,21 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
     @Override
     public void saveHostInstallInfo(StartWorkerMessage message, String clusterCode) {
-        ClusterHostDO clusterHostDO = new ClusterHostDO();
-        BeanUtil.copyProperties(message, clusterHostDO);
+        ClusterHostEntity clusterHostEntity = new ClusterHostEntity();
+        BeanUtil.copyProperties(message, clusterHostEntity);
 
         ClusterInfoDTO clusterDTO = clusterInfoService.getClusterByClusterCode(clusterCode);
         ClusterInfoEntity cluster = clusterInfoConverter.dtoToEntity(clusterDTO);
 
-        clusterHostDO.setClusterId(cluster.getId());
-        clusterHostDO.setCheckTime(new Date());
-        clusterHostDO.setRack("/default-rack");
-        clusterHostDO.setNodeLabel("default");
-        clusterHostDO.setCreateTime(new Date());
-        clusterHostDO.setIp(HostUtils.getIpByHost(message.getHostname()));
-        clusterHostDO.setHostState(HostState.RUNNING);
-        clusterHostDO.setManagementStatus(ManagementStatus.MANAGED);
-        clusterHostService.saveHost(clusterHostDO);
+        clusterHostEntity.setClusterId(cluster.getId());
+        clusterHostEntity.setCheckTime(new Date());
+        clusterHostEntity.setRack("/default-rack");
+        clusterHostEntity.setNodeLabel("default");
+        clusterHostEntity.setCreateTime(new Date());
+        clusterHostEntity.setIp(HostUtils.getIpByHost(message.getHostname()));
+        clusterHostEntity.setHostState(HostState.RUNNING);
+        clusterHostEntity.setManagementStatus(ManagementStatus.MANAGED);
+        clusterHostService.saveHost(clusterHostEntity);
     }
 
     @Override
@@ -328,7 +328,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
     /**
      * 获取部署模式
      */
-    private ClusterType getDepMode(Integer clusterId) {
+    private ClusterType getDepMode(Long clusterId) {
         ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(clusterId);
         return clusterInfoDTO.depType();
     }

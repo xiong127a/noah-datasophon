@@ -35,5 +35,5 @@ public interface ServiceRoleHostnameService {
      * @param roleName 角色名称
      * @return 主机名，如果未找到返回null
      */
-    String getServiceRoleHostname(Integer clusterId, String serviceName, String roleName);
+    String getServiceRoleHostname(Long clusterId, String serviceName, String roleName);
 }

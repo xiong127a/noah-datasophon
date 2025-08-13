@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterAlertGroupMapConverter;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.common.dto.ClusterAlertGroupMapDTO;
-import com.datasophon.dao.entity.ClusterAlertGroupMap;
+import com.datasophon.dao.entity.ClusterAlertGroupMapEntity;
 import com.datasophon.dao.mapper.ClusterAlertGroupMapMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,16 +37,16 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Service("clusterAlertGroupMapService")
-public class ClusterAlertGroupMapServiceImpl extends ServiceImpl<ClusterAlertGroupMapMapper, ClusterAlertGroupMap>
+public class ClusterAlertGroupMapServiceImpl extends ServiceImpl<ClusterAlertGroupMapMapper, ClusterAlertGroupMapEntity>
         implements ClusterAlertGroupMapService {
 
     @Autowired
     private ClusterAlertGroupMapConverter clusterAlertGroupMapConverter;
 
     @Override
-    public List<ClusterAlertGroupMapDTO> getByClusterId(Integer clusterId) {
+    public List<ClusterAlertGroupMapDTO> getByClusterId(Long clusterId) {
         // DAO层：使用Mapper查询
-        List<ClusterAlertGroupMap> entities = getMapper().selectByClusterId(clusterId);
+        List<ClusterAlertGroupMapEntity> entities = getMapper().selectByClusterId(clusterId);
         // Service层：Entity → DTO转换
         return entities.stream()
                 .map(clusterAlertGroupMapConverter::entityToDto)
@@ -56,21 +56,21 @@ public class ClusterAlertGroupMapServiceImpl extends ServiceImpl<ClusterAlertGro
     @Override
     public ClusterAlertGroupMapDTO getByIdAsDto(Integer id) {
         // Service层：Entity → DTO转换
-        ClusterAlertGroupMap entity = this.getById(id);
+        ClusterAlertGroupMapEntity entity = this.getById(id);
         return clusterAlertGroupMapConverter.entityToDto(entity);
     }
 
     @Override
     public void saveAlertGroupMap(ClusterAlertGroupMapDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterAlertGroupMap entity = clusterAlertGroupMapConverter.dtoToEntity(dto);
+        ClusterAlertGroupMapEntity entity = clusterAlertGroupMapConverter.dtoToEntity(dto);
         this.save(entity);
     }
 
     @Override
     public void updateAlertGroupMap(ClusterAlertGroupMapDTO dto) {
         // Service层：DTO → Entity转换
-        ClusterAlertGroupMap entity = clusterAlertGroupMapConverter.dtoToEntity(dto);
+        ClusterAlertGroupMapEntity entity = clusterAlertGroupMapConverter.dtoToEntity(dto);
         this.updateById(entity);
     }
 }

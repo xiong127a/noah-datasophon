@@ -45,7 +45,7 @@ public interface ServiceInstallService {
      * @param serviceName 服务名称
      * @return 分组后的服务配置DTO
      */
-    ServiceConfigGroupDTO getServiceConfigOption(Integer clusterId, String serviceName);
+    ServiceConfigGroupDTO getServiceConfigOption(Long clusterId, String serviceName);
 
     /**
      * 保存服务角色主机映射
@@ -54,7 +54,7 @@ public interface ServiceInstallService {
      * @param list      服务角色主机映射列表
      * @return 是否创建了新版本
      */
-    boolean saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list);
+    boolean saveServiceRoleHostMapping(Long clusterId, List<ServiceRoleHostMapping> list);
 
     /**
      * 保存服务配置
@@ -68,7 +68,7 @@ public interface ServiceInstallService {
      * @param username    用户名
      * @return 是否创建了新版本
      */
-    boolean saveServiceConfig(Integer clusterId, String serviceName, List<ServiceConfig> configJson,
+    boolean saveServiceConfig(Long clusterId, String serviceName, List<ServiceConfig> configJson,
             Integer roleGroupId, String description, Integer userId, String username);
 
     /**
@@ -77,7 +77,7 @@ public interface ServiceInstallService {
      * @param clusterId 集群ID
      * @param list      主机服务角色映射列表
      */
-    void saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list);
+    void saveHostServiceRoleMapping(Long clusterId, List<HostServiceRoleMapping> list);
 
     /**
      * 获取服务角色部署概览
@@ -85,7 +85,7 @@ public interface ServiceInstallService {
      * @param clusterId 集群ID
      * @return 服务角色主机映射
      */
-    Map<String, List<String>> getServiceRoleDeployOverview(Integer clusterId);
+    Map<String, List<String>> getServiceRoleDeployOverview(Long clusterId);
 
     /**
      * 开始安装服务
@@ -94,7 +94,7 @@ public interface ServiceInstallService {
      * @param commandIds 命令ID列表
      * @return 安装结果映射
      */
-    Map<String, Object> startInstallService(Integer clusterId, List<String> commandIds);
+    Map<String, Object> startInstallService(Long clusterId, List<String> commandIds);
 
     /**
      * 下载包
@@ -110,7 +110,7 @@ public interface ServiceInstallService {
      * 
      * @param clusterId 集群ID
      */
-    void getServiceRoleHostMapping(Integer clusterId);
+    void getServiceRoleHostMapping(Long clusterId);
 
     /**
      * 检查服务依赖
@@ -118,5 +118,5 @@ public interface ServiceInstallService {
      * @param clusterId  集群ID
      * @param serviceIds 服务ID字符串
      */
-    void checkServiceDependency(Integer clusterId, String serviceIds);
+    void checkServiceDependency(Long clusterId, String serviceIds);
 }

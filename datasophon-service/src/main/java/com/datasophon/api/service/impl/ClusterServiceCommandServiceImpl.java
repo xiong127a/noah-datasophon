@@ -132,7 +132,7 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     @Transactional
-    public String generateCommand(Integer clusterId, CommandType commandType, List<String> serviceNames) {
+    public String generateCommand(Long clusterId, CommandType commandType, List<String> serviceNames) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
@@ -215,7 +215,7 @@ public class ClusterServiceCommandServiceImpl
         return String.join(",", commandIds);
     }
 
-    private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
+    private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Long clusterId) {
         ClusterServiceRoleInstanceDTO serviceRoleDto = roleInstanceQueryService.getOneServiceRole(serviceRoleName,
                 hostname,
                 clusterId);
@@ -223,7 +223,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Integer clusterId, Integer page,
+    public PageResult<ClusterServiceCommandDTO> getServiceCommandlist(Long clusterId, Integer page,
                                                                       Integer pageSize) {
         // 使用分页对象
         Page<ClusterServiceCommandEntity> flexPage = new Page<>(
@@ -421,7 +421,7 @@ public class ClusterServiceCommandServiceImpl
      * 3、生产主机上操作指令
      */
     @Override
-    public String generateServiceCommand(Integer clusterId, CommandType commandType,
+    public String generateServiceCommand(Long clusterId, CommandType commandType,
                                          List<String> serviceInstanceIds) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
@@ -475,7 +475,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public String generateServiceRoleCommands(Integer clusterId, CommandType commandType,
+    public String generateServiceRoleCommands(Long clusterId, CommandType commandType,
                                               Map<Integer, List<String>> instanceIdMap) {
         String result = null;
         for (Map.Entry<Integer, List<String>> entry : instanceIdMap.entrySet()) {
@@ -485,7 +485,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public String generateServiceRoleCommand(Integer clusterId, CommandType commandType,
+    public String generateServiceRoleCommand(Long clusterId, CommandType commandType,
                                              Integer serviceInstanceId,
                                              List<String> serviceRoleInstanceIds, RollingRestartInfo rollingRestartInfo) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
@@ -532,7 +532,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public void startExecuteCommand(Integer clusterId, String commandType, String commandIds) {
+    public void startExecuteCommand(Long clusterId, String commandType, String commandIds) {
         List<String> list = Arrays.asList(commandIds.split(","));
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         // 通知commandActor执行命令
@@ -650,7 +650,7 @@ public class ClusterServiceCommandServiceImpl
     /**
      * 生成命令实体
      */
-    private ClusterServiceCommandEntity generateCommandEntity(Integer clusterId, CommandType commandType, String commandName) {
+    private ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType, String commandName) {
         ClusterServiceCommandEntity command = new ClusterServiceCommandEntity();
         command.setCommandId(UUID.randomUUID().toString());
         command.setClusterId(clusterId);

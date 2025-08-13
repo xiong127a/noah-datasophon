@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
-import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.dao.entity.ClusterYarnSchedulerEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -31,17 +31,17 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterYarnSchedulerService extends IService<ClusterYarnScheduler> {
+public interface ClusterYarnSchedulerService extends IService<ClusterYarnSchedulerEntity> {
 
     /**
      * 根据集群ID获取调度器
      */
-    ClusterYarnSchedulerDTO getScheduler(Integer clusterId);
+    ClusterYarnSchedulerDTO getScheduler(Long clusterId);
 
     /**
      * 创建默认Yarn调度器
      */
-    ClusterYarnSchedulerDTO createDefaultYarnScheduler(Integer clusterId);
+    ClusterYarnSchedulerDTO createDefaultYarnScheduler(Long clusterId);
 
     /**
      * 根据ID获取调度器DTO
@@ -51,7 +51,7 @@ public interface ClusterYarnSchedulerService extends IService<ClusterYarnSchedul
     /**
      * 根据集群ID获取所有调度器
      */
-    List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Integer clusterId);
+    List<ClusterYarnSchedulerDTO> getSchedulersByClusterId(Long clusterId);
 
     /**
      * 保存或更新调度器

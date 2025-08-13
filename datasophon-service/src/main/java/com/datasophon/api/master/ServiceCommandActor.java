@@ -29,7 +29,7 @@ import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
 import com.datasophon.common.command.HdfsEcCommand;
 import com.datasophon.common.model.UpdateCommandHostMessage;
-import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.entity.ClusterAlertQuotaEntity;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
@@ -208,16 +208,16 @@ public class ServiceCommandActor extends AbstractActor {
         }
     }
 
-    private void enableAlertConfig(String serviceName, Integer clusterId) {
+    private void enableAlertConfig(String serviceName, Long clusterId) {
         ClusterAlertQuotaService alertQuotaService = SpringUtil
                 .getBean(ClusterAlertQuotaService.class);
-        List<ClusterAlertQuota> list = alertQuotaService.listAlertQuotaByServiceName(serviceName);
-        var ids = list.stream().map(ClusterAlertQuota::getId).toList(); // JDK21特性
+        List<ClusterAlertQuotaEntity> list = alertQuotaService.listAlertQuotaByServiceName(serviceName);
+        var ids = list.stream().map(ClusterAlertQuotaEntity::getId).toList(); // JDK21特性
         String alertQuotaIds = StringUtils.join(ids, ",");
         alertQuotaService.start(clusterId, alertQuotaIds);
     }
 
-    private void updateHDFSWebUi(Integer clusterId, Integer serviceInstanceId) {
+    private void updateHDFSWebUi(Long clusterId, Integer serviceInstanceId) {
         Map<String, String> variables = GlobalVariables.get(clusterId);
         if (variables.containsKey(ENABLE_HDFS_KERBEROS)) {
             ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil

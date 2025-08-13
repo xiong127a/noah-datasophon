@@ -57,11 +57,11 @@ public class TenantResourceDispatcherActor extends AbstractActor {
                 resourceActorRef.tell(tenantFrameResource, ActorRef.noSender());
             }
         } catch (Exception e) {
-            logger.error("Error handling TenantFrameResource", e);
+            logger.error("Error handling TenantFrameResourceEntity", e);
         }
     }
 
-    private Map<String, String> getRoleHostMap(Integer clusterId) {
+    private Map<String, String> getRoleHostMap(Long clusterId) {
         List<ClusterServiceRoleInstanceEntity> roleInstances = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                 .list();

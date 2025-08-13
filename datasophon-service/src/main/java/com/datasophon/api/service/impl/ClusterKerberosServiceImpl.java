@@ -57,7 +57,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
     private static final String KEYTAB_PATH = "/etc/security/keytab";
 
     @Override
-    public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
+    public void downloadUserKeytab(Long clusterId, String username, HttpServletResponse response) throws IOException {
         String keytabName = username + "/user";
         String keytabFileName = username + ".user.keytab";
         String keytabFilePath =
@@ -88,7 +88,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
 
     @Override
     public void downloadKeytab(
-            Integer clusterId,
+            Long clusterId,
             String principal,
             String keytabName,
             String hostname,
@@ -129,7 +129,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
     }
 
     private void kubernetesGenerateKeytabFile(
-            Integer clusterId,
+            Long clusterId,
             String keytabFilePath,
             String principal
     ) {
@@ -150,7 +150,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
     }
 
     private void generateKeytabFile(
-            Integer clusterId,
+            Long clusterId,
             String keytabFilePath,
             String principal) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);

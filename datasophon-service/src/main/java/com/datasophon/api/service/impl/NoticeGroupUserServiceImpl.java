@@ -43,7 +43,7 @@ public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMappe
     private static final Logger logger = LoggerFactory.getLogger(NoticeGroupUserServiceImpl.class);
 
     @Override
-    public void removeByGroupIds(List<Integer> list) {
+    public void removeByGroupIds(List<Long> list) {
         if (CollectionUtil.isEmpty(list)) {
             return;
         }
@@ -51,12 +51,12 @@ public class NoticeGroupUserServiceImpl extends ServiceImpl<NoticeGroupUserMappe
     }
 
     @Override
-    public List<NoticeGroupUserEntity> listByGroupId(Integer id) {
+    public List<NoticeGroupUserEntity> listByGroupId(Long id) {
         return getMapper().selectByGroupId(id);
     }
 
     @Override
-    public List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids) {
+    public List<NoticeGroupUserEntity> listByGroupIds(List<Long> ids) {
         return getMapper().selectByGroupIds(ids);
     }
 }

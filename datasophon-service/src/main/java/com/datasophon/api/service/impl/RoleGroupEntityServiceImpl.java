@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.RoleEntityService;
 import com.datasophon.api.service.RoleGroupEntityService;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.dao.mapper.ClusterServiceInstanceRoleGroupMapper;
@@ -63,7 +63,7 @@ public class RoleGroupEntityServiceImpl implements RoleGroupEntityService {
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     @Override
-    public ClusterServiceInstanceRoleGroup getById(Integer id) {
+    public ClusterServiceInstanceRoleGroupEntity getById(Integer id) {
         return roleGroupMapper.selectOneById(id);
     }
 

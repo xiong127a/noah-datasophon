@@ -40,7 +40,7 @@ public class KyuubiServerHandlerStrategy extends ServiceHandlerAbstract  impleme
 
 
   @Override
-  public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+  public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
 
     Map<String, String> globalVariables = GlobalVariables.get(clusterId);
     boolean enableKerberos = false;

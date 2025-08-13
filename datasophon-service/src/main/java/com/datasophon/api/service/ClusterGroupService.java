@@ -19,7 +19,7 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterGroup;
+import com.datasophon.dao.entity.ClusterGroupEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -32,7 +32,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterGroupService extends IService<ClusterGroup> {
+public interface ClusterGroupService extends IService<ClusterGroupEntity> {
 
     /**
      * 保存集群组
@@ -41,14 +41,14 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * @param groupName 组名
      * @return 保存的集群组DTO
      */
-    ClusterGroupDTO saveClusterGroup(Integer clusterId, String groupName);
+    ClusterGroupDTO saveClusterGroup(Long clusterId, String groupName);
 
     /**
      * 刷新用户组到主机
      * 
      * @param clusterId 集群ID
      */
-    void refreshUserGroupToHost(Integer clusterId);
+    void refreshUserGroupToHost(Long clusterId);
 
     /**
      * 删除用户组
@@ -75,7 +75,7 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * @param pageSize  页大小
      * @return 分页结果DTO
      */
-    PageResult<ClusterGroupDTO> listPage(String groupName, Integer clusterId, Integer page, Integer pageSize);
+    PageResult<ClusterGroupDTO> listPage(String groupName, Long clusterId, Integer page, Integer pageSize);
 
     /**
      * 查询集群下所有用户组
@@ -83,7 +83,7 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * @param clusterId 集群ID
      * @return 用户组DTO列表
      */
-    List<ClusterGroupDTO> listAllUserGroup(Integer clusterId);
+    List<ClusterGroupDTO> listAllUserGroup(Long clusterId);
 
     /**
      * 在主机上创建Unix组
@@ -100,7 +100,7 @@ public interface ClusterGroupService extends IService<ClusterGroup> {
      * @param groupName 组名
      * @return 保存的集群组DTO
      */
-    ClusterGroupDTO saveClusterGroupOnKubernetes(Integer clusterId, String groupName);
+    ClusterGroupDTO saveClusterGroupOnKubernetes(Long clusterId, String groupName);
 
     /**
      * 根据ID获取集群组DTO

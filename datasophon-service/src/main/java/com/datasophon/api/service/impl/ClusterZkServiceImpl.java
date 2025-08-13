@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.ClusterZkService;
-import com.datasophon.dao.entity.ClusterZk;
+import com.datasophon.dao.entity.ClusterZkEntity;
 import com.datasophon.dao.mapper.ClusterZkMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.slf4j.Logger;
@@ -36,17 +36,17 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Service("clusterZkService")
-public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZk> implements ClusterZkService {
+public class ClusterZkServiceImpl extends ServiceImpl<ClusterZkMapper, ClusterZkEntity> implements ClusterZkService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterZkServiceImpl.class);
 
     @Override
-    public Integer getMaxMyId(Integer clusterId) {
+    public Integer getMaxMyId(Long clusterId) {
         return getMapper().getMaxMyId(clusterId);
     }
 
     @Override
-    public List<ClusterZk> getAllZkServer(Integer clusterId) {
+    public List<ClusterZkEntity> getAllZkServer(Long clusterId) {
         return getMapper().selectByClusterId(clusterId);
     }
 }

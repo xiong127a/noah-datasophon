@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterQueueCapacityDTO;
-import com.datasophon.dao.entity.ClusterQueueCapacity;
+import com.datasophon.dao.entity.ClusterQueueCapacityEntity;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 import com.mybatisflex.core.service.IService;
 
@@ -30,22 +30,22 @@ import com.mybatisflex.core.service.IService;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterQueueCapacityService extends IService<ClusterQueueCapacity> {
+public interface ClusterQueueCapacityService extends IService<ClusterQueueCapacityEntity> {
 
     /**
      * 刷新队列配置到YARN
      */
-    boolean refreshToYarn(Integer clusterId) throws Exception;
+    boolean refreshToYarn(Long clusterId) throws Exception;
 
     /**
      * 创建默认队列
      */
-    void createDefaultQueue(Integer clusterId);
+    void createDefaultQueue(Long clusterId);
 
     /**
      * 列表查询队列容量（返回树形结构）
      */
-    ClusterQueueCapacityList listCapacityQueue(Integer clusterId);
+    ClusterQueueCapacityList listCapacityQueue(Long clusterId);
 
     /**
      * 根据ID获取队列容量DTO
@@ -65,5 +65,5 @@ public interface ClusterQueueCapacityService extends IService<ClusterQueueCapaci
     /**
      * 根据集群ID、队列名称和父队列名称获取队列
      */
-    ClusterQueueCapacity getByClusterIdAndQueueName(Integer clusterId, String queueName, String parentQueueName);
+    ClusterQueueCapacityEntity getByClusterIdAndQueueName(Long clusterId, String queueName, String parentQueueName);
 }

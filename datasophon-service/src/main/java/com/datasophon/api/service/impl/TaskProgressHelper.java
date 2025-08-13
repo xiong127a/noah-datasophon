@@ -33,7 +33,7 @@
 //     * @param hostMap   主机信息
 //     * @return 任务ID
 //     */
-//    public static String initSyncHostsFileTask(Integer clusterId, Map<String, HostInfo> hostMap) {
+//    public static String initSyncHostsFileTask(Long clusterId, Map<String, HostInfo> hostMap) {
 //        String taskId = "sync_hosts_" + clusterId + "_" + System.currentTimeMillis();
 //
 //        // 创建任务进度对象
@@ -64,7 +64,7 @@
 //     * @param hostnamePreview 主机名预览信息
 //     * @return 任务ID
 //     */
-//    public static String initBatchSetHostnameTask(Integer clusterId, List<Map<String, String>> hostnamePreview) {
+//    public static String initBatchSetHostnameTask(Long clusterId, List<Map<String, String>> hostnamePreview) {
 //        String taskId = "set_hostname_" + clusterId + "_" + System.currentTimeMillis();
 //
 //        // 创建任务进度对象

@@ -42,7 +42,7 @@ import com.datasophon.common.utils.PlaceholderUtils;
 // Result类已移除 - Service层严格禁止返回Result，只返回DTO/Entity或抛出异常
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
@@ -139,7 +139,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceDTO> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper()
                 .selectStoppedServiceRolesByClusterIdAndHostname(clusterId, hostname);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
@@ -147,7 +147,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceDTO> getServiceRoleListByHostnameAndClusterId(String hostname,
-            Integer clusterId) {
+            Long clusterId) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterIdAndHostname(clusterId, hostname);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
     }
@@ -160,7 +160,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleInstanceDTO getOneServiceRole(String name, String hostname, Integer id) {
+    public ClusterServiceRoleInstanceDTO getOneServiceRole(String name, String hostname, Long id) {
         ClusterServiceRoleInstanceEntity entity = getMapper().selectByServiceRoleNameAndClusterIdAndHostname(name, id,
                 hostname);
 
@@ -197,7 +197,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         List<ClusterServiceRoleInstanceEntity> processedList = cluServiceRoleInstList.stream()
                 .peek(roleInstanceEntity -> {
                     // 设置角色组名称
-                    ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService
+                    ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupEntityService
                             .getById(roleInstanceEntity.getRoleGroupId());
                     if (Objects.nonNull(roleGroup)) {
                         roleInstanceEntity.setRoleGroupName(roleGroup.getRoleGroupName());
@@ -270,7 +270,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterId(int clusterId) {
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterId(Long clusterId) {
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterId(clusterId);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
@@ -287,7 +287,7 @@ public class ClusterServiceRoleInstanceServiceImpl
                 ));
         // is there a running instance
         boolean flag = false;
-        Integer clusterId = null;
+        Long clusterId = null;
         String ServiceName = null;
         ArrayList<Integer> needRemoveList = new ArrayList<>();
         for (ClusterServiceRoleInstanceEntity instance : list) {
@@ -342,7 +342,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByClusterIdAndRoleName(Long clusterId,
             String roleName) {
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterIdAndRoleName(clusterId, roleName);
@@ -360,7 +360,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public void restartObsoleteService(Integer roleGroupId) {
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupEntityService.getById(roleGroupId);
+        ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupEntityService.getById(roleGroupId);
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> list = getMapper()
                 .selectByServiceIdAndNeedRestart(roleGroup.getServiceInstanceId(), NeedRestart.YES);
@@ -434,7 +434,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Integer clusterId, String hostname,
+    public List<ClusterServiceRoleInstanceDTO> getStoppedRoleInstanceOnHost(Long clusterId, String hostname,
             ServiceRoleState state) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByClusterIdAndHostnameAndState(clusterId,
                 hostname, state);
@@ -448,7 +448,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleInstanceDTO getKAdminRoleIns(Integer clusterId) {
+    public ClusterServiceRoleInstanceDTO getKAdminRoleIns(Long clusterId) {
         ClusterServiceRoleInstanceEntity entity = getMapper().selectByClusterIdAndServiceRoleName(clusterId, "KAdmin");
         return clusterServiceRoleInstanceConverter.entityToDto(entity);
     }
@@ -460,7 +460,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleInstanceDTO listServiceRoleByNameAndClusterId(Integer clusterId,
+    public ClusterServiceRoleInstanceDTO listServiceRoleByNameAndClusterId(Long clusterId,
             String serviceRoleName) {
         ClusterServiceRoleInstanceEntity entity = getMapper().selectByClusterIdAndServiceRoleName(clusterId,
                 serviceRoleName);
@@ -483,7 +483,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(
-            Integer clusterId, Integer serviceInstanceId, String roleName) {
+            Long clusterId, Integer serviceInstanceId, String roleName) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper()
                 .selectByClusterIdAndServiceIdAndRoleName(clusterId, serviceInstanceId, roleName);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);

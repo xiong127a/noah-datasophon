@@ -99,7 +99,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param pageSize          每页大小
      * @return 解析后的主机列表分页结果
      */
-    PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort,
+    PageResult<HostInfo> analysisHostList(Long clusterId, String ips, String sshUser, Integer sshPort,
                                           String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
 
     /**
@@ -110,7 +110,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param sshPort   SSH端口
      * @return 主机检查状态
      */
-    HostCheckStatusDto getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);
+    HostCheckStatusDto getHostCheckStatus(Long clusterId, String sshUser, Integer sshPort);
 
     /**
      * 获取主机代理分发列表
@@ -121,7 +121,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param pageSize         每页大小
      * @return 主机代理分发列表分页结果
      */
-    PageResult<HostInfo> dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page,
+    PageResult<HostInfo> dispatcherHostAgentList(Long clusterId, Integer installStateCode, Integer page,
             Integer pageSize);
 
     /**
@@ -131,7 +131,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param ips       主机IP列表
      * @return 操作是否成功
      */
-    boolean reStartDispatcherHostAgent(Integer clusterId, String ips);
+    boolean reStartDispatcherHostAgent(Long clusterId, String ips);
 
     /**
      * 检查主机检查是否完成
@@ -139,7 +139,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param clusterId 集群ID
      * @return 是否完成
      */
-    boolean hostCheckCompleted(Integer clusterId);
+    boolean hostCheckCompleted(Long clusterId);
 
     /**
      * 清理主机检查资源
@@ -149,7 +149,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param clusterId 集群ID
      * @return 清理是否成功
      */
-    boolean cleanupHostCheckResources(Integer clusterId);
+    boolean cleanupHostCheckResources(Long clusterId);
 
     /**
      * 清理主机环境校验缓存
@@ -166,7 +166,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param installStateCode 安装状态码
      * @return 操作是否成功
      */
-    boolean cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode);
+    boolean cancelDispatcherHostAgent(Long clusterId, String ip, Integer installStateCode);
 
     /**
      * 检查主机代理分发是否完成
@@ -174,7 +174,7 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param clusterId 集群ID
      * @return 是否完成
      */
-    boolean dispatcherHostAgentCompleted(Integer clusterId);
+    boolean dispatcherHostAgentCompleted(Long clusterId);
 
     /**
      * 生成主机代理命令
@@ -202,6 +202,6 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @param clusterId 集群ID
      * @return 主机最近日志内容
      */
-    String getWorkerLog(String ip, Integer clusterId);
+    String getWorkerLog(String ip, Long clusterId);
 
 }

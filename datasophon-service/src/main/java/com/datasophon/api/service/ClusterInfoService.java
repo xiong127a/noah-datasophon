@@ -60,7 +60,7 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     /**
      * 更新集群状态
      */
-    boolean updateClusterState(Integer clusterId, Integer clusterState);
+    boolean updateClusterState(Long clusterId, Integer clusterState);
 
     /**
      * 根据框架代码获取集群列表
@@ -75,12 +75,12 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     /**
      * 删除集群
      */
-    void deleteCluster(List<Integer> ids);
+    void deleteCluster(List<Long> ids);
 
     /**
      * 根据集群ID获取Kubernetes配置
      */
-    String getKubeConfigByClusterId(Integer clusterId);
+    String getKubeConfigByClusterId(Long clusterId);
 
     /**
      * 获取服务角色指标信息
@@ -91,7 +91,7 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     /**
      * 根据ID获取集群详细信息
      */
-    ClusterInfoDTO getClusterById(Integer clusterId);
+    ClusterInfoDTO getClusterById(Long clusterId);
 
     /**
      * 获取Kubernetes命名空间列表
@@ -101,17 +101,17 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     /**
      * 更新集群Kubernetes配置
      */
-    String updateClusterKubeConfig(Integer clusterId, String kubeConfig, String namespace, String customNamespace);
+    String updateClusterKubeConfig(Long clusterId, String kubeConfig, String namespace, String customNamespace);
 
     /**
      * 获取集群的Kubernetes命名空间
      */
-    String getKubernetesNamespace(Integer clusterId);
+    String getKubernetesNamespace(Long clusterId);
 
     /**
      * 获取所有集群ID和类型的映射
      *
      * @return 集群ID和类型映射
      */
-    Map<Integer, ClusterType> getAllClusterIdAndType();
+    Map<Long, ClusterType> getAllClusterIdAndType();
 }

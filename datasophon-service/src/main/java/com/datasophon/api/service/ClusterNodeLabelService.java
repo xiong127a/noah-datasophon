@@ -36,7 +36,7 @@ public interface ClusterNodeLabelService extends IService<ClusterNodeLabelEntity
     /**
      * 保存节点标签
      */
-    ClusterNodeLabelDTO saveNodeLabel(Integer clusterId, String nodeLabel);
+    ClusterNodeLabelDTO saveNodeLabel(Long clusterId, String nodeLabel);
 
     /**
      * 删除节点标签
@@ -51,12 +51,12 @@ public interface ClusterNodeLabelService extends IService<ClusterNodeLabelEntity
     /**
      * 查询集群节点标签
      */
-    List<ClusterNodeLabelDTO> queryClusterNodeLabel(Integer clusterId);
+    List<ClusterNodeLabelDTO> queryClusterNodeLabel(Long clusterId);
 
     /**
      * 创建默认节点标签
      */
-    void createDefaultNodeLabel(Integer clusterId);
+    void createDefaultNodeLabel(Long clusterId);
 
     /**
      * 根据ID获取节点标签DTO

@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 public class HDFSRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
-    public HDFSRangerStrategy(Integer clusterId) throws Exception {
+    public HDFSRangerStrategy(Long clusterId) throws Exception {
         super(clusterId);
         logger = LoggerFactory.getLogger("HdfsRangerOperateLogger");
     }

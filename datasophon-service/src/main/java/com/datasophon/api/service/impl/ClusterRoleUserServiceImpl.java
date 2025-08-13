@@ -54,13 +54,13 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
     private UserInfoConverter userInfoConverter;
 
     @Override
-    public boolean isClusterManager(Integer userId, Integer clusterId) {
+    public boolean isClusterManager(Integer userId, Long clusterId) {
         List<ClusterRoleUserEntity> list = getMapper().selectByUserIdAndClusterId(userId, clusterId);
         return Objects.nonNull(list) && !list.isEmpty();
     }
 
     @Override
-    public boolean saveClusterManager(Integer clusterId, String userIds) {
+    public boolean saveClusterManager(Long clusterId, String userIds) {
         // 首先删除原有管理员
         getMapper().removeByClusterId(clusterId);
 
@@ -85,7 +85,7 @@ public class ClusterRoleUserServiceImpl extends ServiceImpl<ClusterRoleUserMappe
     }
 
     @Override
-    public List<UserInfoDTO> getAllClusterManagerByClusterId(Integer clusterId) {
+    public List<UserInfoDTO> getAllClusterManagerByClusterId(Long clusterId) {
         List<UserInfoEntity> entities = getMapper().getAllClusterManagerByClusterId(clusterId);
         return userInfoConverter.entityListToDtoList(entities);
     }

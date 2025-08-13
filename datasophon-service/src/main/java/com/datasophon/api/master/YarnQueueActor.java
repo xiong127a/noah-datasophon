@@ -9,7 +9,7 @@ import com.datasophon.common.dto.ClusterYarnSchedulerDTO;
 import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 import com.datasophon.common.model.tenant.resource.TenantYarnResource;
-import com.datasophon.dao.entity.ClusterQueueCapacity;
+import com.datasophon.dao.entity.ClusterQueueCapacityEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class YarnQueueActor extends AbstractActor {
                 unhandled(message);
             }
         } catch (Exception e) {
-            logger.error("Error handling TenantFrameResource", e);
+            logger.error("Error handling TenantFrameResourceEntity", e);
         }
     }
 
@@ -66,12 +66,12 @@ public class YarnQueueActor extends AbstractActor {
         }
     }
 
-    private void createCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
+    private void createCapacityYarnQueue(TenantYarnResource yarnResource, Long clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
 
         // 通过Service层检查队列是否已存在
         try {
-            ClusterQueueCapacity existingQueue = clusterQueueCapacityService.getByClusterIdAndQueueName(
+            ClusterQueueCapacityEntity existingQueue = clusterQueueCapacityService.getByClusterIdAndQueueName(
                     clusterId, yarnResource.getQueueName(), yarnResource.getParentQueueName());
             if (existingQueue != null) {
                 logger.error("当前队列已经存在");
@@ -81,15 +81,15 @@ public class YarnQueueActor extends AbstractActor {
             logger.debug("队列不存在，可以创建");
         }
 
-        ClusterQueueCapacity clusterQueueCapacity = new ClusterQueueCapacity();
-        clusterQueueCapacity.setQueueName(yarnResource.getQueueName());
-        clusterQueueCapacity.setClusterId(clusterId);
-        clusterQueueCapacity.setParent(yarnResource.getParentQueueName());
-        clusterQueueCapacity.setCapacity(yarnResource.getCapacityPercent());
-        clusterQueueCapacity.setNodeLabel(yarnResource.getNodeLabel());
-        clusterQueueCapacity.setAclUsers("");
+        ClusterQueueCapacityEntity clusterQueueCapacityEntity = new ClusterQueueCapacityEntity();
+        clusterQueueCapacityEntity.setQueueName(yarnResource.getQueueName());
+        clusterQueueCapacityEntity.setClusterId(clusterId);
+        clusterQueueCapacityEntity.setParent(yarnResource.getParentQueueName());
+        clusterQueueCapacityEntity.setCapacity(yarnResource.getCapacityPercent());
+        clusterQueueCapacityEntity.setNodeLabel(yarnResource.getNodeLabel());
+        clusterQueueCapacityEntity.setAclUsers("");
 
-        clusterQueueCapacityService.save(clusterQueueCapacity);
+        clusterQueueCapacityService.save(clusterQueueCapacityEntity);
         boolean refreshResult = clusterQueueCapacityService.refreshToYarn(clusterId);
         if (refreshResult) {
             logger.info("创建yarn队列 {} 成功,请手动去yarn资源页面配置队列", yarnResource.getQueueName());
@@ -98,11 +98,11 @@ public class YarnQueueActor extends AbstractActor {
         }
     }
 
-    private void updateCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
+    private void updateCapacityYarnQueue(TenantYarnResource yarnResource, Long clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
 
         // 通过Service层获取队列
-        ClusterQueueCapacity queue = clusterQueueCapacityService.getByClusterIdAndQueueName(
+        ClusterQueueCapacityEntity queue = clusterQueueCapacityService.getByClusterIdAndQueueName(
                 clusterId, yarnResource.getQueueName(), yarnResource.getParentQueueName());
 
         if (queue == null) {
@@ -122,11 +122,11 @@ public class YarnQueueActor extends AbstractActor {
         }
     }
 
-    private void deleteCapacityYarnQueue(TenantYarnResource yarnResource, Integer clusterId) throws Exception {
+    private void deleteCapacityYarnQueue(TenantYarnResource yarnResource, Long clusterId) throws Exception {
         ClusterQueueCapacityService clusterQueueCapacityService = SpringUtil.getBean(ClusterQueueCapacityService.class);
 
         // 通过Service层获取队列
-        ClusterQueueCapacity queue = clusterQueueCapacityService.getByClusterIdAndQueueName(
+        ClusterQueueCapacityEntity queue = clusterQueueCapacityService.getByClusterIdAndQueueName(
                 clusterId, yarnResource.getQueueName(), yarnResource.getParentQueueName());
 
         if (queue == null) {

@@ -19,7 +19,7 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.HostGroupSyncService;
 import com.datasophon.common.command.ExecuteCmdCommand;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +38,7 @@ import java.util.List;
 public class HostGroupSyncServiceImpl implements HostGroupSyncService {
 
     @Override
-    public void syncUserGroupToHosts(List<ClusterHostDO> hostList, String groupName, String command) {
+    public void syncUserGroupToHosts(List<ClusterHostEntity> hostList, String groupName, String command) {
         if (hostList == null || hostList.isEmpty()) {
             log.warn("主机列表为空，无法同步用户组 {}", groupName);
             return;
@@ -52,7 +52,7 @@ public class HostGroupSyncServiceImpl implements HostGroupSyncService {
         String cmdStr = command + " " + groupName;
         log.info("开始同步用户组 {} 到 {} 个主机", groupName, hostList.size());
         
-        for (ClusterHostDO host : hostList) {
+        for (ClusterHostEntity host : hostList) {
             try {
                 ExecuteCmdCommand execCmdCommand = new ExecuteCmdCommand();
                 execCmdCommand.setCommandLine(cmdStr);

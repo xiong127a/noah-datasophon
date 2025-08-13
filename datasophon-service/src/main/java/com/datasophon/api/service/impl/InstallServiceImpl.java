@@ -33,6 +33,7 @@ import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.common.dto.InstallStepDTO;
 import com.datasophon.common.model.PageResult;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.mapper.InstallStepMapper;
 import com.datasophon.plugins.api.model.CommandResult;
 
@@ -57,7 +58,6 @@ import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.kubernetes.util.KubeUtil;
@@ -251,7 +251,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @return 分页后的主机列表结果
      */
     @Override
-    public PageResult<HostInfo> analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort,
+    public PageResult<HostInfo> analysisHostList(Long clusterId, String ips, String sshUser, Integer sshPort,
                                                  String sshPassword, String kubeConfigContent, Integer page, Integer pageSize) {
         try {
             // 获取集群信息以判断集群类型
@@ -282,7 +282,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     /**
      * 传统集群模式的主机列表解析
      */
-    private PageResult<HostInfo> analysisHostListForTraditional(Integer clusterId, String ips, String sshUser,
+    private PageResult<HostInfo> analysisHostListForTraditional(Long clusterId, String ips, String sshUser,
             Integer sshPort,
             String sshPassword,
             Integer page, Integer pageSize) {
@@ -492,7 +492,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @param page        当前页码
      * @param pageSize    每页大小
      */
-    private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
+    private Map<String, HostInfo> saveHostInfo(Long clusterId, String hosts, String sshUser, Integer sshPort,
             String sshPassword, Integer page, Integer pageSize) {
         // 定义已收集主机集合的缓存键
         String collectedHostsKey = clusterId + "_COLLECTED_HOSTS";
@@ -982,7 +982,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @param sshPassword SSH密码
      * @return 主机信息映射，IP为键
      */
-    private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, Integer sshPort,
+    private Map<String, HostInfo> processHostList(Long clusterId, String hosts, Integer sshPort,
             String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
@@ -1017,7 +1017,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * 处理单个主机信息（不执行异步获取操作系统信息）
      */
     private void processHostWithoutOsInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-            Integer clusterId,
+            Long clusterId,
             Map<String, HostInfo> hostInfoMap) {
         // 1. 处理IP范围，如192.168.1.[1-5]
         if (host.contains("[") && host.contains("]")) {
@@ -1034,7 +1034,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * 处理IP范围（不执行异步获取操作系统信息）
      */
     private void processIpRangeWithoutOsInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-            Integer clusterId,
+            Long clusterId,
             Map<String, HostInfo> hostInfoMap) {
         int start = host.indexOf("[");
         String prefix = host.substring(0, start);
@@ -1057,7 +1057,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      */
     private void processLetterRangeWithoutOsInfo(String prefix, String start, String end, Integer sshPort,
             String sshUser,
-            String sshPassword, Integer clusterId, Map<String, HostInfo> hostInfoMap) {
+            String sshPassword, Long clusterId, Map<String, HostInfo> hostInfoMap) {
         List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
         for (String suffix : hostList) {
             HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterId);
@@ -1067,7 +1067,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
 
     private void processNumberRangeWithoutOsInfo(String prefix, String[] range, Integer sshPort, String sshUser,
             String sshPassword,
-            Integer clusterId, Map<String, HostInfo> hostInfoMap) {
+            Long clusterId, Map<String, HostInfo> hostInfoMap) {
         int start = Integer.parseInt(range[0]);
         int end = Integer.parseInt(range[1]);
         for (int i = start; i <= end; i++) {
@@ -1079,7 +1079,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     /**
      * 检查缓存是否有效
      */
-    private boolean isCacheValid(Integer clusterId) {
+    private boolean isCacheValid(Long clusterId) {
         return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP);
     }
 
@@ -1093,7 +1093,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @return 主机信息对象
      */
     private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-            Integer clusterId) {
+            Long clusterId) {
         HostInfo hostInfo = new HostInfo();
 
         hostInfo.setHostname(HostUtils.getHostName(host));
@@ -1112,7 +1112,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setOsErrorMsg("");
 
         // 2. 检查主机是否已受管
-        ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
+        ClusterHostEntity hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
         if (Objects.nonNull(hostEntity)) {
             setManagedHostInfo(hostInfo);
         } else {
@@ -1166,7 +1166,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public HostCheckStatusDto getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
+    public HostCheckStatusDto getHostCheckStatus(Long clusterId, String sshUser, Integer sshPort) {
         try {
             // 获取检查结果列表
             Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
@@ -1211,7 +1211,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
 
     @Override
     public PageResult<HostInfo> dispatcherHostAgentList(
-            Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
+            Long clusterId, Integer installStateCode, Integer page, Integer pageSize) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             String clusterCode = clusterInfo.getClusterCode();
@@ -1270,7 +1270,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public boolean reStartDispatcherHostAgent(Integer clusterId, String ips) {
+    public boolean reStartDispatcherHostAgent(Long clusterId, String ips) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
@@ -1317,7 +1317,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public boolean hostCheckCompleted(Integer clusterId) {
+    public boolean hostCheckCompleted(Long clusterId) {
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
         // 收集未通过检查的主机信息
@@ -1351,7 +1351,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public boolean cleanupHostCheckResources(Integer clusterId) {
+    public boolean cleanupHostCheckResources(Long clusterId) {
         try {
             if (clusterId == null) {
                 log.error("集群ID为空，无法清理主机检查资源");
@@ -1414,14 +1414,14 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public boolean cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode) {
+    public boolean cancelDispatcherHostAgent(Long clusterId, String ip, Integer installStateCode) {
         // 此方法虽然定义但实际未使用
         log.warn("cancelDispatcherHostAgent方法暂未实现具体逻辑");
         return false;
     }
 
     @Override
-    public boolean dispatcherHostAgentCompleted(Integer clusterId) {
+    public boolean dispatcherHostAgentCompleted(Long clusterId) {
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
@@ -1448,23 +1448,23 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         List<Map<String, Object>> results = new ArrayList<>();
         String[] clusterHostIdArray = clusterHostIds.split(Constants.COMMA);
         List<String> clusterHostIdList = Arrays.asList(clusterHostIdArray);
-        List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(clusterHostIdList);
+        List<ClusterHostEntity> clusterHostList = hostService.getHostListByIds(clusterHostIdList);
 
-        for (ClusterHostDO clusterHostDO : clusterHostList) {
+        for (ClusterHostEntity clusterHostEntity : clusterHostList) {
             Map<String, Object> result = new HashMap<>();
-            result.put("hostname", clusterHostDO.getHostname());
-            result.put("ip", clusterHostDO.getIp());
+            result.put("hostname", clusterHostEntity.getHostname());
+            result.put("ip", clusterHostEntity.getIp());
             result.put("command", "service datasophon-worker " + commandType);
 
-            try (ClientSession session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT))) {
+            try (ClientSession session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostEntity.getIp(), 22, Constants.ROOT))) {
                 String commandResult = MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
                 result.put("success", true);
                 result.put("output", commandResult);
-                log.info("hostAgent command executed successfully on {}: {}", clusterHostDO.getIp(), commandResult);
+                log.info("hostAgent command executed successfully on {}: {}", clusterHostEntity.getIp(), commandResult);
             } catch (Exception e) {
                 result.put("success", false);
                 result.put("error", e.getMessage());
-                log.error("Failed to execute hostAgent command on {}: {}", clusterHostDO.getIp(), e.getMessage());
+                log.error("Failed to execute hostAgent command on {}: {}", clusterHostEntity.getIp(), e.getMessage());
             }
             results.add(result);
         }
@@ -1483,25 +1483,25 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
 
         List<Map<String, Object>> results = new ArrayList<>();
         String[] clusterHostIdArray = clusterHostIds.split(Constants.COMMA);
-        List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(Arrays.asList(clusterHostIdArray));
+        List<ClusterHostEntity> clusterHostList = hostService.getHostListByIds(Arrays.asList(clusterHostIdArray));
 
         CommandType serviceCommandType = "start".equalsIgnoreCase(commandType) ? CommandType.START_SERVICE
                 : CommandType.STOP_SERVICE;
 
-        for (ClusterHostDO clusterHostDO : clusterHostList) {
+        for (ClusterHostEntity clusterHostEntity : clusterHostList) {
             Map<String, Object> result = new HashMap<>();
-            result.put("hostname", clusterHostDO.getHostname());
-            result.put("ip", clusterHostDO.getIp());
+            result.put("hostname", clusterHostEntity.getHostname());
+            result.put("ip", clusterHostEntity.getIp());
             result.put("commandType", serviceCommandType.toString());
 
-            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostDO.getHostname(),
-                    clusterHostDO.getClusterId(), serviceCommandType);
+            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostEntity.getHostname(),
+                    clusterHostEntity.getClusterId(), serviceCommandType);
             try {
                 ActorRef actor = ActorUtils.getLocalActor(WorkerStartActor.class, "workerStartActor");
                 actor.tell(serviceMessage, ActorRef.noSender());
                 result.put("success", true);
                 result.put("message", "服务命令已发送");
-                log.info("Service command sent successfully to {}: {}", clusterHostDO.getHostname(),
+                log.info("Service command sent successfully to {}: {}", clusterHostEntity.getHostname(),
                         serviceCommandType);
             } catch (Exception e) {
                 log.error("launcher worker service error!", e);
@@ -1517,7 +1517,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * Kubernetes集群模式的主机列表解析
      * 从K8S API获取节点信息，包括CPU架构
      */
-    private PageResult<HostInfo> analysisHostListForKubernetes(Integer clusterId, String kubeConfig, Integer page,
+    private PageResult<HostInfo> analysisHostListForKubernetes(Long clusterId, String kubeConfig, Integer page,
             Integer pageSize) {
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -1530,7 +1530,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
 
             // 从Kubernetes集群获取节点列表
             List<K8sNodeInfo> k8sNodeInfoList = KubeUtil.getHostListByConfig(kubeConfig);
-            List<ClusterHostDO> kubernetesHosts = k8sToClusterHostConverter.convertToClusterHostList(k8sNodeInfoList,
+            List<ClusterHostEntity> kubernetesHosts = k8sToClusterHostConverter.convertToClusterHostList(k8sNodeInfoList,
                     clusterId);
 
             if (kubernetesHosts.isEmpty()) {
@@ -1548,9 +1548,9 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             // List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
             List<CheckItem> checkItems = null;
             // 保存从K8S API获取的完整节点信息，用于后续保存
-            List<ClusterHostDO> kubernetesHostsForSave = new ArrayList<>();
+            List<ClusterHostEntity> kubernetesHostsForSave = new ArrayList<>();
 
-            for (ClusterHostDO kubernetesHost : kubernetesHosts) {
+            for (ClusterHostEntity kubernetesHost : kubernetesHosts) {
                 HostInfo hostInfo = new HostInfo();
                 hostInfo.setHostname(kubernetesHost.getHostname());
                 hostInfo.setIp(kubernetesHost.getIp());
@@ -1573,7 +1573,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 hostInfo.setCheckItems(checkItems);
 
                 // Kubernetes模式下检查主机受管状态
-                ClusterHostDO existingHost = hostService.getClusterHostByHostname(kubernetesHost.getHostname());
+                ClusterHostEntity existingHost = hostService.getClusterHostByHostname(kubernetesHost.getHostname());
 
                 if (existingHost != null && existingHost.getClusterId().equals(clusterId)) {
                     // 主机已在当前集群中受管 - 重复添加
@@ -1706,7 +1706,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @return 主机最近日志内容
      */
     @Override
-    public String getWorkerLog(String ip, Integer clusterId) {
+    public String getWorkerLog(String ip, Long clusterId) {
         try {
             // 1. 从缓存中获取主机信息
             Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);

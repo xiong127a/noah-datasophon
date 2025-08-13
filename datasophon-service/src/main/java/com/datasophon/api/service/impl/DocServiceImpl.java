@@ -69,19 +69,17 @@ public class DocServiceImpl implements DocService {
             }
 
             String type = typeStr.toLowerCase();
-            if ("component".equals(type)) {
-                return COMPONENT;
-            } else if ("guide".equals(type)) {
-                return GUIDE;
-            } else if ("help".equals(type)) {
-                return HELP;
-            }
-            return null;
+            return switch (type) {
+                case "component" -> COMPONENT;
+                case "guide" -> GUIDE;
+                case "help" -> HELP;
+                default -> null;
+            };
         }
     }
 
     // 特殊服务ID常量
-    private static final int ALARM_MANAGEMENT_SERVICE_ID = -991;
+    private static final Long ALARM_MANAGEMENT_SERVICE_ID = -991L;
 
     // 文档目录常量
     private static final String DOC_ROOT_DIR = "docs";
@@ -91,7 +89,7 @@ public class DocServiceImpl implements DocService {
     private final ResourceLoader resourceLoader;
 
     @Override
-    public ServiceDocDTO getServiceDoc(Integer clusterId, Integer serviceId, String typeStr) {
+    public ServiceDocDTO getServiceDoc(Long clusterId, Long serviceId, String typeStr) {
         // 检查基本参数
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
@@ -129,7 +127,7 @@ public class DocServiceImpl implements DocService {
     }
 
     @Override
-    public String getServiceName(Integer serviceId) {
+    public String getServiceName(Long serviceId) {
         if (serviceId == null) {
             throw new RuntimeException("服务ID不能为空");
         }
@@ -160,7 +158,7 @@ public class DocServiceImpl implements DocService {
     }
 
     @Override
-    public boolean hasServiceDoc(Integer clusterId, Integer serviceId, String type) {
+    public boolean hasServiceDoc(Long clusterId, Integer serviceId, String type) {
         try {
             // 基本参数检查
             if (clusterId == null || serviceId == null || StrUtil.isBlank(type)) {
@@ -194,7 +192,7 @@ public class DocServiceImpl implements DocService {
      * @param serviceId 服务ID
      * @return 服务实例，不存在则返回null
      */
-    private ClusterServiceInstanceEntity getServiceInstance(Integer serviceId) {
+    private ClusterServiceInstanceEntity getServiceInstance(Long serviceId) {
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceId);
         if (serviceInstance == null) {
             log.warn("服务实例不存在: serviceId={}", serviceId);

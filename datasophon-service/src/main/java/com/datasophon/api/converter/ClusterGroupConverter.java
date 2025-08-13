@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.vo.ClusterGroupVO;
-import com.datasophon.dao.entity.ClusterGroup;
+import com.datasophon.dao.entity.ClusterGroupEntity;
 import org.mapstruct.Mapper;
 
 /**
@@ -33,5 +33,5 @@ import org.mapstruct.Mapper;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterGroupConverter extends
-        BaseConverter<ClusterGroup, ClusterGroupDTO, ClusterGroupVO> {
+        BaseConverter<ClusterGroupEntity, ClusterGroupDTO, ClusterGroupVO> {
 }

@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterAlertRuleDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterAlertRuleVO;
-import com.datasophon.dao.entity.ClusterAlertRule;
+import com.datasophon.dao.entity.ClusterAlertRuleEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -35,7 +35,7 @@ import org.mapstruct.Mapping;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterAlertRuleConverter extends
-        BaseConverter<ClusterAlertRule, ClusterAlertRuleDTO, ClusterAlertRuleVO> {
+        BaseConverter<ClusterAlertRuleEntity, ClusterAlertRuleDTO, ClusterAlertRuleVO> {
 
     /**
      * Entity转换为VO时，添加格式化字段
@@ -43,7 +43,7 @@ public interface ClusterAlertRuleConverter extends
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
-    ClusterAlertRuleVO entityToVo(ClusterAlertRule entity);
+    ClusterAlertRuleVO entityToVo(ClusterAlertRuleEntity entity);
 
     /**
      * DTO转换为VO时，添加格式化字段

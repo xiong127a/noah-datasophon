@@ -20,7 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.converter.ClusterAlertRuleConverter;
 import com.datasophon.api.service.ClusterAlertRuleService;
 import com.datasophon.common.dto.ClusterAlertRuleDTO;
-import com.datasophon.dao.entity.ClusterAlertRule;
+import com.datasophon.dao.entity.ClusterAlertRuleEntity;
 import com.datasophon.dao.mapper.ClusterAlertRuleMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
  * @date 2025-08-04
  */
 @Service("clusterAlertRuleService")
-public class ClusterAlertRuleServiceImpl extends ServiceImpl<ClusterAlertRuleMapper, ClusterAlertRule>
+public class ClusterAlertRuleServiceImpl extends ServiceImpl<ClusterAlertRuleMapper, ClusterAlertRuleEntity>
                 implements ClusterAlertRuleService {
 
         @Autowired
@@ -44,21 +44,21 @@ public class ClusterAlertRuleServiceImpl extends ServiceImpl<ClusterAlertRuleMap
         @Override
         public ClusterAlertRuleDTO getByIdAsDto(Long id) {
                 // Service层：Entity → DTO转换
-                ClusterAlertRule entity = this.getById(id);
+                ClusterAlertRuleEntity entity = this.getById(id);
                 return clusterAlertRuleConverter.entityToDto(entity);
         }
 
         @Override
         public void saveAlertRule(ClusterAlertRuleDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertRule entity = clusterAlertRuleConverter.dtoToEntity(dto);
+                ClusterAlertRuleEntity entity = clusterAlertRuleConverter.dtoToEntity(dto);
                 this.save(entity);
         }
 
         @Override
         public void updateAlertRule(ClusterAlertRuleDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertRule entity = clusterAlertRuleConverter.dtoToEntity(dto);
+                ClusterAlertRuleEntity entity = clusterAlertRuleConverter.dtoToEntity(dto);
                 this.updateById(entity);
         }
 }

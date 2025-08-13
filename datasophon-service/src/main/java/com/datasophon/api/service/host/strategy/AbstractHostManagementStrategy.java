@@ -18,7 +18,7 @@
 package com.datasophon.api.service.host.strategy;
 
 import com.datasophon.api.service.host.strategy.model.*;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -50,10 +50,10 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
             prepareConnection(request.getConnectionParams());
             
             // 3. 执行发现（由子类实现）
-            List<ClusterHostDO> discoveredHosts = doDiscoverHosts(request);
+            List<ClusterHostEntity> discoveredHosts = doDiscoverHosts(request);
             
             // 4. 后处理发现的主机
-            List<ClusterHostDO> processedHosts = postProcessDiscoveredHosts(discoveredHosts, request);
+            List<ClusterHostEntity> processedHosts = postProcessDiscoveredHosts(discoveredHosts, request);
             
             // 5. 构建结果
             long discoveryTime = System.currentTimeMillis() - startTime;
@@ -124,7 +124,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
             validateImportRequest(request);
             
             // 2. 预处理主机数据
-            List<ClusterHostDO> processedHosts = preProcessHostsForImport(request.getSelectedHosts(), request);
+            List<ClusterHostEntity> processedHosts = preProcessHostsForImport(request.getSelectedHosts(), request);
             
             // 3. 执行导入（由子类实现）
             doImportHosts(processedHosts, request);
@@ -145,7 +145,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 执行主机发现的具体逻辑
      */
-    protected abstract List<ClusterHostDO> doDiscoverHosts(HostDiscoveryRequest request);
+    protected abstract List<ClusterHostEntity> doDiscoverHosts(HostDiscoveryRequest request);
 
     /**
      * 执行获取主机列表的具体逻辑
@@ -155,7 +155,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 执行导入主机的具体逻辑
      */
-    protected abstract void doImportHosts(List<ClusterHostDO> hosts, HostImportRequest request);
+    protected abstract void doImportHosts(List<ClusterHostEntity> hosts, HostImportRequest request);
 
     // ==================== 钩子方法，子类可选择性重写 ====================
 
@@ -208,7 +208,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 后处理发现的主机
      */
-    protected List<ClusterHostDO> postProcessDiscoveredHosts(List<ClusterHostDO> hosts, HostDiscoveryRequest request) {
+    protected List<ClusterHostEntity> postProcessDiscoveredHosts(List<ClusterHostEntity> hosts, HostDiscoveryRequest request) {
         // 默认实现：设置集群ID
         hosts.forEach(host -> {
             if (host.getClusterId() == null) {
@@ -221,7 +221,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 预处理要导入的主机
      */
-    protected List<ClusterHostDO> preProcessHostsForImport(List<ClusterHostDO> hosts, HostImportRequest request) {
+    protected List<ClusterHostEntity> preProcessHostsForImport(List<ClusterHostEntity> hosts, HostImportRequest request) {
         // 默认实现：确保集群ID正确
         hosts.forEach(host -> host.setClusterId(request.getClusterId()));
         return hosts;
@@ -230,14 +230,14 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 后处理已导入的主机
      */
-    protected void postProcessImportedHosts(List<ClusterHostDO> hosts, HostImportRequest request) {
+    protected void postProcessImportedHosts(List<ClusterHostEntity> hosts, HostImportRequest request) {
         // 默认实现为空，子类可根据需要重写
     }
 
     /**
      * 构建发现元数据
      */
-    protected Map<String, Object> buildDiscoveryMetadata(List<ClusterHostDO> hosts, HostDiscoveryRequest request) {
+    protected Map<String, Object> buildDiscoveryMetadata(List<ClusterHostEntity> hosts, HostDiscoveryRequest request) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("strategyType", getStrategyType().getCode());
         metadata.put("discoveredCount", hosts.size());
@@ -247,7 +247,7 @@ public abstract class AbstractHostManagementStrategy implements HostManagementSt
     /**
      * 构建列表统计信息
      */
-    protected Map<String, Object> buildListStatistics(List<ClusterHostDO> hosts) {
+    protected Map<String, Object> buildListStatistics(List<ClusterHostEntity> hosts) {
         Map<String, Object> statistics = new HashMap<>();
         statistics.put("totalHosts", hosts.size());
         

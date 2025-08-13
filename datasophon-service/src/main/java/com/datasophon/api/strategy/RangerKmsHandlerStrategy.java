@@ -31,7 +31,7 @@ public class RangerKmsHandlerStrategy extends ServiceHandlerAbstract implements 
     private static final Logger logger = LoggerFactory.getLogger(RangerKmsHandlerStrategy.class);
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
             String rangerKmsHost = hosts.getFirst();

@@ -17,6 +17,8 @@
 
 package com.datasophon.api.master;
 
+import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.core.date.DateUtil;
@@ -34,8 +36,6 @@ import com.datasophon.common.enums.ClusterCommandType;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
@@ -76,7 +76,7 @@ public class ClusterActor extends AbstractActor {
 
     private void handleClusterCommand(ClusterCommand clusterCommand) {
         try {
-            clusterCommand.setClusterId(6);
+            clusterCommand.setClusterId(6L);
             ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                     .getBean(ClusterServiceRoleInstanceService.class);
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
@@ -87,7 +87,7 @@ public class ClusterActor extends AbstractActor {
 
                 for (ClusterInfoDTO clusterInfoEntity : clusterList) {
                     // 获取集群上正在运行的服务
-                    Integer clusterId = clusterInfoEntity.id();
+                    Long clusterId = clusterInfoEntity.id();
                     List<ClusterServiceRoleInstanceDTO> roleInstanceList = roleInstanceService
                             .getServiceRoleInstanceListByClusterId(clusterId);
                     if (ClusterState.NEED_CONFIG.getValue()!=(clusterInfoEntity.clusterState())) {
@@ -110,7 +110,7 @@ public class ClusterActor extends AbstractActor {
                     }
                 }
             } else if (ClusterCommandType.DELETE.equals(clusterCommand.getCommandType())) {
-                Integer clusterId = clusterCommand.getClusterId();
+                Long clusterId = clusterCommand.getClusterId();
                 if (Objects.nonNull(clusterId)) {
                     ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(clusterId);
                     if (Objects.nonNull(clusterInfo)) {
@@ -132,7 +132,7 @@ public class ClusterActor extends AbstractActor {
                                     .getConfigByRoleGroupId(roleInstance.roleGroupId());
                             // 使用MapStruct Converter进行转换 - 符合架构规范
                             ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-                            ClusterServiceRoleGroupConfig config = converter.dtoToEntity(configDto);
+                            ClusterServiceRoleGroupConfigEntity config = converter.dtoToEntity(configDto);
                             Map<Generators, List<ServiceConfig>> configFileMap = new ConcurrentHashMap<>();
                             ConfigGroupUtils.generateConfigFileMap(configFileMap, config, clusterId);
                             for (Map.Entry<Generators, List<ServiceConfig>> configFile : configFileMap.entrySet()) {
@@ -215,7 +215,7 @@ public class ClusterActor extends AbstractActor {
                         }
 
                         if (allInstancesDeleted) {
-                            List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
+                            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterId);
                             String hostIds = hostList.stream()
                                     .map(h -> String.valueOf(h.getId()))
                                     .collect(Collectors.joining(Constants.COMMA));

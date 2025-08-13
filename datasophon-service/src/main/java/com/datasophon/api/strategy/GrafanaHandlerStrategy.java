@@ -37,7 +37,7 @@ import static com.datasophon.common.Constants.KUBERNETES_NODEPORT_MAPPING;
 public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (hosts.size() == 1) {
@@ -76,7 +76,7 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
         String port = "3000";
         for (ServiceConfig serviceConfig : list) {
             if (StrUtil.equals(serviceConfig.getName(), "grafana_" + KUBERNETES_NODEPORT_MAPPING)) {

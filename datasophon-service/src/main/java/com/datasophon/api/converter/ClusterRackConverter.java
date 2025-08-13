@@ -20,7 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterRackDTO;
 import com.datasophon.common.vo.ClusterRackVO;
-import com.datasophon.dao.entity.ClusterRack;
+import com.datasophon.dao.entity.ClusterRackEntity;
 import org.mapstruct.Mapper;
 
 /**
@@ -33,5 +33,5 @@ import org.mapstruct.Mapper;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterRackConverter extends
-        BaseConverter<ClusterRack, ClusterRackDTO, ClusterRackVO> {
+        BaseConverter<ClusterRackEntity, ClusterRackDTO, ClusterRackVO> {
 }

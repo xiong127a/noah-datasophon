@@ -40,7 +40,7 @@ public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> 
      * @param clusterId 集群ID
      * @return 是否为管理员
      */
-    boolean isClusterManager(Integer userId, Integer clusterId);
+    boolean isClusterManager(Integer userId, Long clusterId);
 
     /**
      * 保存集群管理员
@@ -49,7 +49,7 @@ public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> 
      * @param userIds   用户ID列表（逗号分隔）
      * @return 是否保存成功
      */
-    boolean saveClusterManager(Integer clusterId, String userIds);
+    boolean saveClusterManager(Long clusterId, String userIds);
 
     /**
      * 获取集群下所有管理员
@@ -57,7 +57,7 @@ public interface ClusterRoleUserService extends IService<ClusterRoleUserEntity> 
      * @param clusterId 集群ID
      * @return 管理员用户列表
      */
-    List<UserInfoDTO> getAllClusterManagerByClusterId(Integer clusterId);
+    List<UserInfoDTO> getAllClusterManagerByClusterId(Long clusterId);
 
     /**
      * 获取所有集群角色用户

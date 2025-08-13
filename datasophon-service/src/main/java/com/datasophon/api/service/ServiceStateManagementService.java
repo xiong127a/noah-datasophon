@@ -42,7 +42,7 @@ public interface ServiceStateManagementService {
      * @param serviceRoleState 服务角色状态
      */
     void updateServiceRoleState(CommandType commandType, String serviceRoleName, String hostname,
-            Integer clusterId, ServiceRoleState serviceRoleState);
+            Long clusterId, ServiceRoleState serviceRoleState);
 
     /**
      * 保存告警信息

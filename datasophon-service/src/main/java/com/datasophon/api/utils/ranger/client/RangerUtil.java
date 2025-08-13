@@ -24,13 +24,13 @@ import java.util.Map;
 public class RangerUtil {
 
 
-    private static String SUPER_USER = "admin";
+    private static final String SUPER_USER = "admin";
 
-    private static String SUPER_ROLE_NAME = "admin";
+    private static final String SUPER_ROLE_NAME = "admin";
 
     // 创建一个缓存对象
-    private static final Cache<Integer, RangerClient> clientAdminCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
-    private static final Cache<Integer, RangerClient> clientKmsCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
+    private static final Cache<Long, RangerClient> clientAdminCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
+    private static final Cache<Long, RangerClient> clientKmsCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
 
     public static void updateDefaultPolicy(RangerClient rangerClient, String serviceName) {
         List<String> accessTypeList;
@@ -130,16 +130,16 @@ public class RangerUtil {
         rangerClient.getRoles().addUserAndGroups(role.getId(), role);
     }
 
-    public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
+    public static RangerClient getRangerClient(Long clusterTenant) {
         return getCachedOrNewClient(clusterTenant, "admin", clientAdminCache);
     }
 
-    public static RangerClient getRangerKmsClient(Integer clusterTenant) throws Exception {
+    public static RangerClient getRangerKmsClient(Long clusterTenant) {
         return getCachedOrNewClient(clusterTenant, "keyadmin", clientKmsCache);
     }
 
-    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username,
-                                                     Cache<Integer, RangerClient> clientCache) {
+    private static RangerClient getCachedOrNewClient(Long clusterTenant, String username,
+                                                     Cache<Long, RangerClient> clientCache) {
         if (clusterTenant == null) {
             throw new IllegalArgumentException("Cluster tenant cannot be null");
         }

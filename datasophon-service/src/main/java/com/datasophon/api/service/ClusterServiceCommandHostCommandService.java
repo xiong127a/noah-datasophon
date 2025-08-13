@@ -70,7 +70,7 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
     /**
      * 获取主机命令日志
      */
-    String getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception;
+    String getHostCommandLog(Long clusterId, String hostCommandId) throws Exception;
 
     /**
      * 查找失败的主机命令

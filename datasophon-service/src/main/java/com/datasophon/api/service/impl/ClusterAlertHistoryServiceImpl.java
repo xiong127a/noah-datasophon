@@ -27,7 +27,7 @@ import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
@@ -53,7 +53,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service("clusterAlertHistoryService")
 @Transactional
-public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistory>
+public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHistoryMapper, ClusterAlertHistoryEntity>
                 implements ClusterAlertHistoryService {
 
         private static final Logger logger = LoggerFactory.getLogger(ClusterAlertHistoryServiceImpl.class);
@@ -82,7 +82,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         public List<ClusterAlertHistoryDTO> getAlertList(Integer serviceInstanceId) {
                 try {
                         // DAO层：使用Mapper查询
-                        List<ClusterAlertHistory> entities = getMapper()
+                        List<ClusterAlertHistoryEntity> entities = getMapper()
                                         .selectEnabledByServiceInstanceId(serviceInstanceId);
                         // Service层：Entity → DTO转换
                         return entities.stream()
@@ -95,10 +95,10 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public PageResult<ClusterAlertHistoryDTO> getAllAlertList(Integer clusterId, Integer page, Integer pageSize) {
+        public PageResult<ClusterAlertHistoryDTO> getAllAlertList(Long clusterId, Integer page, Integer pageSize) {
                 try {
                         // DAO层：使用Mapper分页查询
-                        PageResult<ClusterAlertHistory> entityPageResult = getMapper()
+                        PageResult<ClusterAlertHistoryEntity> entityPageResult = getMapper()
                                         .selectEnabledByClusterIdWithPage(clusterId, page, pageSize);
 
                         // Service层：Entity → DTO转换
@@ -151,21 +151,21 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         @Override
         public ClusterAlertHistoryDTO getByIdAsDto(Integer id) {
                 // Service层：Entity → DTO转换
-                ClusterAlertHistory entity = this.getById(id);
+                ClusterAlertHistoryEntity entity = this.getById(id);
                 return clusterAlertHistoryConverter.entityToDto(entity);
         }
 
         @Override
         public void saveAlertHistoryDto(ClusterAlertHistoryDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertHistory entity = clusterAlertHistoryConverter.dtoToEntity(dto);
+                ClusterAlertHistoryEntity entity = clusterAlertHistoryConverter.dtoToEntity(dto);
                 this.save(entity);
         }
 
         @Override
         public void updateAlertHistory(ClusterAlertHistoryDTO dto) {
                 // Service层：DTO → Entity转换
-                ClusterAlertHistory entity = clusterAlertHistoryConverter.dtoToEntity(dto);
+                ClusterAlertHistoryEntity entity = clusterAlertHistoryConverter.dtoToEntity(dto);
                 this.updateById(entity);
         }
 
@@ -184,7 +184,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                 try {
                         // 这里假设我们有一个mapper方法来查询停止状态的角色
                         // 实际实现时需要根据具体的数据模型来调整
-                        List<ClusterAlertHistory> entities = getMapper()
+                        List<ClusterAlertHistoryEntity> entities = getMapper()
                                         .selectStoppedRolesByServiceId(serviceInstanceId);
                         return entities.stream()
                                         .map(clusterAlertHistoryConverter::entityToDto)
@@ -200,7 +200,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                 try {
                         // 这里假设我们有一个mapper方法来查询告警状态的角色
                         // 实际实现时需要根据具体的数据模型来调整
-                        List<ClusterAlertHistory> entities = getMapper().selectAlarmRolesByServiceId(serviceInstanceId);
+                        List<ClusterAlertHistoryEntity> entities = getMapper().selectAlarmRolesByServiceId(serviceInstanceId);
                         return entities.stream()
                                         .map(clusterAlertHistoryConverter::entityToDto)
                                         .toList();

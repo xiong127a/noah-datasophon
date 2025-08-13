@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterVariableVO;
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Named;
 
@@ -35,19 +35,19 @@ import org.mapstruct.Named;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterVariableConverter
-        extends BaseConverter<ClusterVariable, ClusterVariableDTO, ClusterVariableVO> {
+        extends BaseConverter<ClusterVariableEntity, ClusterVariableDTO, ClusterVariableVO> {
 
     @Override
     @Named("entityToDto")
-    ClusterVariableDTO entityToDto(ClusterVariable entity);
+    ClusterVariableDTO entityToDto(ClusterVariableEntity entity);
 
     @Override
     @Named("dtoToEntity")
-    ClusterVariable dtoToEntity(ClusterVariableDTO dto);
+    ClusterVariableEntity dtoToEntity(ClusterVariableDTO dto);
 
     @Override
     @Named("entityToVo")
-    ClusterVariableVO entityToVo(ClusterVariable entity);
+    ClusterVariableVO entityToVo(ClusterVariableEntity entity);
 
     @Override
     @Named("dtoToVo")

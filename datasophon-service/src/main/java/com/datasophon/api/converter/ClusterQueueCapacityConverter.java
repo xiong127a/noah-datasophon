@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterQueueCapacityDTO;
 import com.datasophon.common.vo.ClusterQueueCapacityVO;
 import com.datasophon.common.vo.ClusterQueueCapacityListVO;
-import com.datasophon.dao.entity.ClusterQueueCapacity;
+import com.datasophon.dao.entity.ClusterQueueCapacityEntity;
 import com.datasophon.dao.model.ClusterQueueCapacityList;
 import com.datasophon.dao.model.Links;
 import org.mapstruct.Mapper;
@@ -39,7 +39,7 @@ import java.util.List;
  */
 @Mapper(componentModel = "spring")
 public interface ClusterQueueCapacityConverter extends
-        BaseConverter<ClusterQueueCapacity, ClusterQueueCapacityDTO, ClusterQueueCapacityVO> {
+        BaseConverter<ClusterQueueCapacityEntity, ClusterQueueCapacityDTO, ClusterQueueCapacityVO> {
 
     /**
      * ClusterQueueCapacityList 转换为 ClusterQueueCapacityListVO

@@ -53,7 +53,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         private static final Logger logger = LoggerFactory.getLogger(RMHandlerStrategy.class);
 
         @Override
-        public void handler(Integer clusterId, List<String> hosts) {
+        public void handler(Long clusterId, List<String> hosts) {
 
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
@@ -65,7 +65,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         }
 
         @Override
-        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+        public void handlerConfig(Long clusterId, List<ServiceConfig> list) {
                 ClusterYarnSchedulerService schedulerService = SpringUtil
                                 .getBean(ClusterYarnSchedulerService.class);
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -138,7 +138,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
 
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
                 try {
                         logger.info("开始获取ResourceManager服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

@@ -21,7 +21,7 @@ public abstract class AbstractRangerStrategy implements RangerStrategy{
 
     public Logger logger;
 
-    public AbstractRangerStrategy(Integer clusterId) throws Exception {
+    public AbstractRangerStrategy(Long clusterId) throws Exception {
         this.rangerClient = RangerUtil.getRangerClient(clusterId);
         this.rangerKmsClient = RangerUtil.getRangerKmsClient(clusterId);
         this.globalVariables = GlobalVariables.get(clusterId);

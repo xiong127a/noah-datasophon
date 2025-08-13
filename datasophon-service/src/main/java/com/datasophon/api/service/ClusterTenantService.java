@@ -2,7 +2,7 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterTenantDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterTenant;
+import com.datasophon.dao.entity.ClusterTenantEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -15,12 +15,12 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterTenantService extends IService<ClusterTenant> {
+public interface ClusterTenantService extends IService<ClusterTenantEntity> {
 
     /**
      * 分页查询租户列表
      */
-    PageResult<ClusterTenantDTO> listTenant(Integer clusterId, Integer page, Integer size, String tenantName);
+    PageResult<ClusterTenantDTO> listTenant(Long clusterId, Integer page, Integer size, String tenantName);
 
     /**
      * 保存或更新租户
@@ -40,12 +40,12 @@ public interface ClusterTenantService extends IService<ClusterTenant> {
     /**
      * 根据集群ID获取所有租户
      */
-    List<ClusterTenantDTO> getTenantsByClusterId(Integer clusterId);
+    List<ClusterTenantDTO> getTenantsByClusterId(Long clusterId);
 
     /**
      * 根据租户名称获取租户
      */
-    ClusterTenantDTO getTenantByName(Integer clusterId, String tenantName);
+    ClusterTenantDTO getTenantByName(Long clusterId, String tenantName);
 
     /**
      * 更新租户

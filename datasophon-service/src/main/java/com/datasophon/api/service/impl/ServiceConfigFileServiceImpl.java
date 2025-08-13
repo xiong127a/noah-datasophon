@@ -45,7 +45,7 @@ import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import freemarker.template.Template;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -166,7 +166,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 log.warn("未找到服务实例ID{}对应的角色组", serviceInstanceId);
                 return null;
             }
-            ClusterServiceInstanceRoleGroup roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+            ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
 
             // 获取集群信息
             ClusterInfoService clusterInfoService = SpringUtil
@@ -395,9 +395,9 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     private static class ServiceMetaInfo {
         private String serviceName;
         private String frameCode;
-        private Integer clusterId;
+        private Long clusterId;
         private JSONArray generators;
-        private ClusterServiceInstanceRoleGroup roleGroup;
+        private ClusterServiceInstanceRoleGroupEntity roleGroup;
     }
 
 }

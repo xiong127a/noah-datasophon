@@ -67,13 +67,13 @@ public interface ServiceRoleStrategy {
     /**
      * 保存角色host映射关系时根据roleName调用
      */
-    default void handler(Integer clusterId, List<String> hosts) {
+    default void handler(Long clusterId, List<String> hosts) {
     }
 
     /**
      * 保存服务配置时根据ServiceName调用
      */
-    default void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    default void handlerConfig(Long clusterId, List<ServiceConfig> list) {
     }
 
     /**
@@ -81,7 +81,7 @@ public interface ServiceRoleStrategy {
      * handler之后handlerConfig之前调用
      * 提取角色本身配置和handler中自定义的变量
      */
-    default void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    default void getConfig(Long clusterId, List<ServiceConfig> list) {
     }
 
     /**
@@ -106,7 +106,7 @@ public interface ServiceRoleStrategy {
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息对象
      */
-    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+    default ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
             Map<String, String> configMap) {
         // 默认返回空对象，具体组件在各自实现中提供连接信息
         return ConnectionInfo.builder().build();
@@ -121,7 +121,7 @@ public interface ServiceRoleStrategy {
     }
 
     default ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceDTO roleInstanceDto) {
-        Integer clusterId = roleInstanceDto.clusterId();
+        Long clusterId = roleInstanceDto.clusterId();
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
         String frameCode = cluster.getClusterFrame();
@@ -218,7 +218,7 @@ public interface ServiceRoleStrategy {
         return SpringTool.listServiceConfigByServiceInstance(serviceInstanceId);
     }
 
-    default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
+    default List<String> getRoleHosts(Long clusterId, Integer serviceInstanceId, String roleName) {
         return CollUtil.empty(List.class);
     }
 

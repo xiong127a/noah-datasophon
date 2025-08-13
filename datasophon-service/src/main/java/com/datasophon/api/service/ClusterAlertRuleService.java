@@ -18,7 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterAlertRuleDTO;
-import com.datasophon.dao.entity.ClusterAlertRule;
+import com.datasophon.dao.entity.ClusterAlertRuleEntity;
 import com.mybatisflex.core.service.IService;
 
 /**
@@ -29,7 +29,7 @@ import com.mybatisflex.core.service.IService;
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
-public interface ClusterAlertRuleService extends IService<ClusterAlertRule> {
+public interface ClusterAlertRuleService extends IService<ClusterAlertRuleEntity> {
 
     /**
      * 根据ID获取告警规则DTO

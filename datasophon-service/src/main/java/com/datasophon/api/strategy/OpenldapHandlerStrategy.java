@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class OpenldapHandlerStrategy implements ServiceRoleStrategy {
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         SimpleClusterVariableService simpleClusterVariableService = SpringUtil.getBean(SimpleClusterVariableService.class);
         if (!hosts.isEmpty()) {

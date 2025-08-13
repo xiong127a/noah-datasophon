@@ -38,7 +38,7 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
     private static final Logger logger = LoggerFactory.getLogger(FEHandlerStartegy.class);
 
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+    public void handler(Long clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         // if feMaster is null, set the first host as feMaster
         //Prevent FE Observer nodes from starting and FE Master nodes from changing

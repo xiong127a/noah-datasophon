@@ -17,6 +17,7 @@
 
 package com.datasophon.api.master;
 
+import com.datasophon.dao.entity.ClusterHostEntity;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 import cn.hutool.extra.spring.SpringUtil;
@@ -31,7 +32,6 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import org.slf4j.Logger;
@@ -105,7 +105,7 @@ public class RackActor extends AbstractActor {
      * @param hostList 主机列表
      * @return 配置文件映射
      */
-    private Map<Generators, List<ServiceConfig>> buildRackConfigFileMap(List<ClusterHostDO> hostList) {
+    private Map<Generators, List<ServiceConfig>> buildRackConfigFileMap(List<ClusterHostEntity> hostList) {
         Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
         // 创建配置生成器
@@ -116,7 +116,7 @@ public class RackActor extends AbstractActor {
 
         // 为每个主机创建机架配置
         List<ServiceConfig> serviceConfigs = new ArrayList<>();
-        for (ClusterHostDO host : hostList) {
+        for (ClusterHostEntity host : hostList) {
             ServiceConfig config = ProcessUtils.createServiceConfig(
                     host.getIp(),
                     SLASH + host.getRack(),

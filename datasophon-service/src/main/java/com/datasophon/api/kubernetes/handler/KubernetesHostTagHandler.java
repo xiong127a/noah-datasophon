@@ -53,7 +53,7 @@ public class KubernetesHostTagHandler extends ServiceHandler {
         kubernetesGenerateHostTagCommand.setServiceName(serviceRoleInfo.getParentName());
         kubernetesGenerateHostTagCommand.setServiceRoleName(serviceRoleInfo.getName());
         kubernetesGenerateHostTagCommand.setCommandType(serviceRoleInfo.getCommandType());
-        Integer clusterId = serviceRoleInfo.getClusterId();
+        Long clusterId = serviceRoleInfo.getClusterId();
         ClusterInfoService clusterInfoService =
                 SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);

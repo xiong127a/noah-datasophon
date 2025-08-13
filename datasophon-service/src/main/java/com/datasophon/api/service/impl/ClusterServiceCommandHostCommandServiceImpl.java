@@ -151,7 +151,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public String getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception {
+    public String getHostCommandLog(Long clusterId, String hostCommandId) throws Exception {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ClusterServiceCommandHostCommandEntity hostCommand = getMapper().selectByHostCommandId(hostCommandId);
 

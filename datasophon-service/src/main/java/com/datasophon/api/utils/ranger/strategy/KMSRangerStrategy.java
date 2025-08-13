@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
-    public KMSRangerStrategy(Integer clusterId) throws Exception {
+    public KMSRangerStrategy(Long clusterId) throws Exception {
         super(clusterId);
         logger = LoggerFactory.getLogger("KmsRangerOperateLogger");
     }

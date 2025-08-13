@@ -36,7 +36,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import org.slf4j.Logger;
@@ -79,9 +79,9 @@ public class AlertManagersActor extends AbstractActor {
             }
 
             // 分集群更新
-            Map<Integer, List<ClusterServiceRoleInstanceDTO>> clusterRoules = roleInstanceEntitys.stream()
+            Map<Long, List<ClusterServiceRoleInstanceDTO>> clusterRoules = roleInstanceEntitys.stream()
                     .collect(Collectors.groupingBy(ClusterServiceRoleInstanceDTO::clusterId));
-            for (Integer clusterId : clusterRoules.keySet()) {
+            for (Long clusterId : clusterRoules.keySet()) {
 
                 // 查询集群框架
                 ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
@@ -100,7 +100,7 @@ public class AlertManagersActor extends AbstractActor {
                     
                     // 使用MapStruct Converter进行转换 - 符合架构规范
                     ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
-                    ClusterServiceRoleGroupConfig roleGroupConfig = converter.dtoToEntity(roleGroupConfigDto);
+                    ClusterServiceRoleGroupConfigEntity roleGroupConfig = converter.dtoToEntity(roleGroupConfigDto);
 
                     // 准备配置参数· ·
                     Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();

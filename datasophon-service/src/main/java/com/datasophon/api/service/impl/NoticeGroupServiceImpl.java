@@ -33,7 +33,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.dto.NoticeGroupDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.utils.CollectionUtils;
-import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.entity.ClusterAlertQuotaEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
@@ -87,12 +87,12 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
 
         // 查询通知组关联的用户信息
-        List<Integer> groupIds = noticeGroupList.stream()
+        List<Long> groupIds = noticeGroupList.stream()
                 .map(NoticeGroupEntity::getId)
                 .toList();
 
         // 获取用户关联信息
-        Map<Integer, List<Integer>> groupUserMap = noticeGroupUserService.listByGroupIds(groupIds).stream()
+        Map<Long, List<Long>> groupUserMap = noticeGroupUserService.listByGroupIds(groupIds).stream()
                 .collect(Collectors.groupingBy(
                         NoticeGroupUserEntity::getNoticeGroupId,
                         Collectors.mapping(NoticeGroupUserEntity::getUserId, Collectors.toList())));
@@ -100,7 +100,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         // 转换为DTO
         List<NoticeGroupDTO> dtoList = noticeGroupList.stream()
                 .map(entity -> {
-                    List<Integer> userIds = groupUserMap.getOrDefault(entity.getId(), List.of());
+                    List<Long> userIds = groupUserMap.getOrDefault(entity.getId(), List.of());
                     return entityToDto(entity).withUserIds(userIds);
                 })
                 .toList();
@@ -150,14 +150,14 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     }
 
     @Override
-    public NoticeGroupDTO getNoticeGroupById(Integer id) {
+    public NoticeGroupDTO getNoticeGroupById(Long id) {
         NoticeGroupEntity entity = this.getById(id);
         if (entity == null) {
             return null;
         }
 
         // 查询关联的用户ID
-        List<Integer> userIds = noticeGroupUserService.listByGroupIds(List.of(id)).stream()
+        List<Long> userIds = noticeGroupUserService.listByGroupIds(List.of(id)).stream()
                 .map(NoticeGroupUserEntity::getUserId)
                 .toList();
 
@@ -207,7 +207,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     }
 
     @Override
-    public boolean deleteNoticeGroups(List<Integer> ids) {
+    public boolean deleteNoticeGroups(List<Long> ids) {
         validateNoticeGroupBeforeDelete(ids);
 
         // 删除通知组
@@ -230,15 +230,15 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     }
 
     @Override
-    public void validateNoticeGroupBeforeDelete(List<Integer> ids) {
-        List<ClusterAlertQuota> quotaList = clusterAlertQuotaService.getByNoticeGroupIds(ids);
+    public void validateNoticeGroupBeforeDelete(List<Long> ids) {
+        List<ClusterAlertQuotaEntity> quotaList = clusterAlertQuotaService.getByNoticeGroupIds(ids);
         if (CollectionUtils.isNotEmpty(quotaList)) {
             throw new ServiceException("该通知组被告警指标使用，无法删除");
         }
     }
 
     @Override
-    public List<NoticeGroupDTO> getByIds(List<Integer> ids) {
+    public List<NoticeGroupDTO> getByIds(List<Long> ids) {
         List<NoticeGroupEntity> entities = this.listByIds(ids);
         return entities.stream()
                 .map(this::entityToDto)

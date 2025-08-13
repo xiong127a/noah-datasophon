@@ -46,7 +46,7 @@ public interface NoticeGroupService extends IService<NoticeGroupEntity> {
     /**
      * 根据ID获取通知组
      */
-    NoticeGroupDTO getNoticeGroupById(Integer id);
+    NoticeGroupDTO getNoticeGroupById(Long id);
 
     /**
      * 更新通知组
@@ -56,7 +56,7 @@ public interface NoticeGroupService extends IService<NoticeGroupEntity> {
     /**
      * 删除通知组
      */
-    boolean deleteNoticeGroups(List<Integer> ids);
+    boolean deleteNoticeGroups(List<Long> ids);
 
     /**
      * 获取所有通知组
@@ -66,10 +66,10 @@ public interface NoticeGroupService extends IService<NoticeGroupEntity> {
     /**
      * 校验通知组删除前是否被告警指标使用
      */
-    void validateNoticeGroupBeforeDelete(List<Integer> ids);
+    void validateNoticeGroupBeforeDelete(List<Long> ids);
 
     /**
      * 根据通知组ID列表获取通知组
      */
-    List<NoticeGroupDTO> getByIds(List<Integer> ids);
+    List<NoticeGroupDTO> getByIds(List<Long> ids);
 }

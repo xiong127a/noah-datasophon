@@ -26,9 +26,9 @@ import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.common.enums.ServiceRoleState;
 import com.mybatisflex.core.query.QueryChain;
@@ -76,7 +76,7 @@ public class ProcessUtils {
     /**
      * 获取服务配置
      */
-    public static List<ServiceConfig> getServiceConfig(ClusterServiceRoleGroupConfig config) {
+    public static List<ServiceConfig> getServiceConfig(ClusterServiceRoleGroupConfigEntity config) {
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 
@@ -107,7 +107,7 @@ public class ProcessUtils {
     /**
      * 获取所有集群ID和类型的映射
      */
-    public static Map<Integer, ClusterType> getAllClusterIdAndType() {
+    public static Map<Long, ClusterType> getAllClusterIdAndType() {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.list().stream()
                 .collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
@@ -150,7 +150,7 @@ public class ProcessUtils {
     /**
      * 获取部署模式
      */
-    public static ClusterType getDepMode(Integer clusterId) {
+    public static ClusterType getDepMode(Long clusterId) {
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.getById(clusterId).getDepType();
     }
@@ -158,7 +158,7 @@ public class ProcessUtils {
     /**
      * 是否启用Kerberos
      */
-    public static Boolean enableKerberos(Integer clusterId, String serviceParentName) {
+    public static Boolean enableKerberos(Long clusterId, String serviceParentName) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Kerberos}"));
     }
@@ -166,7 +166,7 @@ public class ProcessUtils {
     /**
      * 是否启用Ranger插件
      */
-    public static boolean enableRangerPlugin(Integer clusterId, String serviceParentName) {
+    public static boolean enableRangerPlugin(Long clusterId, String serviceParentName) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Plugin}"));
     }
@@ -175,7 +175,7 @@ public class ProcessUtils {
      * 获取指定服务角色的主机名
      * 如果有多个实例，返回第一个运行中的实例
      */
-    public static String getServiceRoleHostname(Integer clusterId, String serviceName, String servicRoleName) {
+    public static String getServiceRoleHostname(Long clusterId, String serviceName, String servicRoleName) {
         // 查询指定服务角色的实例
         List<ClusterServiceRoleInstanceEntity> serviceRoles = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -253,9 +253,9 @@ public class ProcessUtils {
             ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
 
             // 获取集群中所有管理的主机
-            List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterInfo.getId());
+            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterInfo.getId());
 
-            for (ClusterHostDO host : hostList) {
+            for (ClusterHostEntity host : hostList) {
                 if (ManagementStatus.MANAGED.equals(host.getManagementStatus())) { // 只为受管理的主机创建Actor
                     String actorName = clusterInfo.getClusterCode() + "-serviceActor-" + host.getHostname();
 

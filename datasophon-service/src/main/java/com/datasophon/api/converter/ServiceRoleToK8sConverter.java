@@ -63,7 +63,7 @@ public class ServiceRoleToK8sConverter {
      * @return K8S服务角色信息
      */
     public K8sServiceRoleInfo createK8sServiceRoleInfo(
-            Integer clusterId,
+            Long clusterId,
             String serviceName,
             String serviceRoleName,
             String hostname,

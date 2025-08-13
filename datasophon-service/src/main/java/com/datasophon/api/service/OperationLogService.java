@@ -2,7 +2,7 @@ package com.datasophon.api.service;
 
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
-import com.datasophon.dao.entity.OperationLog;
+import com.datasophon.dao.entity.OperationLogEntity;
 import com.datasophon.dao.model.MPage;
 
 /**
@@ -12,7 +12,7 @@ import com.datasophon.dao.model.MPage;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface OperationLogService extends IService<OperationLog> {
+public interface OperationLogService extends IService<OperationLogEntity> {
 
     /**
      * 分页查询操作日志
@@ -20,5 +20,5 @@ public interface OperationLogService extends IService<OperationLog> {
      * @param mPage 分页参数
      * @return 分页结果
      */
-    Page<OperationLog> pageOperationLog(MPage<OperationLog> mPage);
+    Page<OperationLogEntity> pageOperationLog(MPage<OperationLogEntity> mPage);
 }

@@ -19,7 +19,7 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.model.PageResult;
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.dao.entity.ClusterUserEntity;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.List;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-public interface ClusterUserService extends IService<ClusterUser> {
+public interface ClusterUserService extends IService<ClusterUserEntity> {
 
     /**
      * 创建集群用户
@@ -42,7 +42,7 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param otherGroupIds 其他组ID
      * @return 创建的用户
      */
-    ClusterUserDTO createClusterUser(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
+    ClusterUserDTO createClusterUser(Long clusterId, String username, Integer mainGroupId, String otherGroupIds);
 
     /**
      * 在Kubernetes上创建集群用户
@@ -53,7 +53,7 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param otherGroupIds 其他组ID
      * @return 创建的用户
      */
-    ClusterUserDTO createClusterUserOnKubernetes(Integer clusterId, String username, Integer mainGroupId,
+    ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Integer mainGroupId,
             String otherGroupIds);
 
     /**
@@ -65,7 +65,7 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param pageSize  页大小
      * @return 分页结果
      */
-    PageResult<ClusterUserDTO> listPagedUsers(Integer clusterId, String username, Integer page, Integer pageSize);
+    PageResult<ClusterUserDTO> listPagedUsers(Long clusterId, String username, Integer page, Integer pageSize);
 
     /**
      * 删除集群用户
@@ -89,7 +89,7 @@ public interface ClusterUserService extends IService<ClusterUser> {
      * @param clusterId 集群ID
      * @return 用户列表
      */
-    List<ClusterUserDTO> listAllUser(Integer clusterId);
+    List<ClusterUserDTO> listAllUser(Long clusterId);
 
     /**
      * 在主机上创建Unix用户

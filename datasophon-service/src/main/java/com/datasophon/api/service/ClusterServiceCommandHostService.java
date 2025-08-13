@@ -38,7 +38,7 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
     /**
      * 获取命令主机列表（分页）
      */
-    PageResult<ClusterServiceCommandHostDTO> getCommandHostList(Integer clusterId, String commandId, Integer page,
+    PageResult<ClusterServiceCommandHostDTO> getCommandHostList(Long clusterId, String commandId, Integer page,
             Integer pageSize);
 
     /**

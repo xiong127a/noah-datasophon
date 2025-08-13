@@ -21,7 +21,7 @@ import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterServiceRoleGroupConfigVO;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -35,7 +35,7 @@ import org.mapstruct.Mapping;
  */
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterServiceRoleGroupConfigConverter extends
-        BaseConverter<ClusterServiceRoleGroupConfig, ClusterServiceRoleGroupConfigDTO, ClusterServiceRoleGroupConfigVO> {
+        BaseConverter<ClusterServiceRoleGroupConfigEntity, ClusterServiceRoleGroupConfigDTO, ClusterServiceRoleGroupConfigVO> {
 
     /**
      * Entity转换为VO时，添加格式化字段
@@ -43,7 +43,7 @@ public interface ClusterServiceRoleGroupConfigConverter extends
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
-    ClusterServiceRoleGroupConfigVO entityToVo(ClusterServiceRoleGroupConfig entity);
+    ClusterServiceRoleGroupConfigVO entityToVo(ClusterServiceRoleGroupConfigEntity entity);
 
     /**
      * DTO转换为VO时，添加格式化字段

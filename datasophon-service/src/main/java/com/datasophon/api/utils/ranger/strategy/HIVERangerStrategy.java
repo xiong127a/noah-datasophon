@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 public class HIVERangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
-    public HIVERangerStrategy(Integer clusterId) throws Exception {
+    public HIVERangerStrategy(Long clusterId) throws Exception {
         super(clusterId);
         logger = LoggerFactory.getLogger("HiveRangerOperateLogger");
     }
