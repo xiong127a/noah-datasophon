@@ -77,17 +77,16 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
 
           {/* 右侧内容区域 */}
           <div className="flex-1 flex flex-col h-full">
-            {/* 顶栏描述区域 - 框架化样式 */}
+            {/* 顶栏描述区域 - 简洁现代样式 */}
             {stepDescription && (
-              <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-lg flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-white/90 to-purple-50/80" />
-                <div className="relative w-full px-8 py-8">
-                  <div className="space-y-2">
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent">
+              <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+                <div className="w-full px-4 py-3 sm:px-6 sm:py-4">
+                  <div className="space-y-1">
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
                       {stepDescription.split(' - ')[0]}
                     </h1>
                     {stepDescription.includes(' - ') && (
-                      <p className="text-lg text-gray-600">
+                      <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                         {stepDescription.split(' - ')[1]}
                       </p>
                     )}
