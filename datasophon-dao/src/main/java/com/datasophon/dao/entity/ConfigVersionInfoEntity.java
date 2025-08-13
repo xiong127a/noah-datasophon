@@ -17,21 +17,31 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
  * 配置版本详情表
  *
- * @author datasophon
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_config_version_info")
-public class ConfigVersionInfoEntity implements Serializable {
+public class ConfigVersionInfoEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
