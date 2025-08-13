@@ -7,7 +7,6 @@ import {
 import { toast } from 'sonner'
 import { Dialog, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
 
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
@@ -32,7 +31,6 @@ import type { Step6Data } from '@/types/worker-role-assign'
 // 子组件导入
 import ServiceConfigNavigation from './service-config/service-config-navigation'
 import ServiceConfigContent from './service-config/service-config-content'
-import ConfigurationSummary from './service-config/configuration-summary'
 
 /**
  * 服务配置对话框 - 重构版本（现代化设计）
@@ -73,10 +71,8 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   // 表单状态
   const [formData, setFormData] = useState<FormData>({})
   const [validationErrors] = useState<ValidationErrors>({})
-  const [configurationStatus, setConfigurationStatus] = useState<Record<string, 'pending' | 'configured' | 'saved'>>({})
   
   // UI状态
-  const [showSummary] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // 计算步骤信息
@@ -109,12 +105,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       if (!activeService) {
         setActiveService(extractedServices[0])
       }
-      // 初始化配置状态
-      const initialStatus: Record<string, 'pending' | 'configured' | 'saved'> = {}
-      extractedServices.forEach(service => {
-        initialStatus[service] = 'pending'
-      })
-      setConfigurationStatus(initialStatus)
     } else {
       setError('无法获取服务列表，请检查前面步骤的数据')
     }
@@ -158,12 +148,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
         // 初始化表单数据
         initializeFormData(serviceName, allConfigs)
-        
-        // 更新配置状态
-        setConfigurationStatus(prev => ({
-          ...prev,
-          [serviceName]: 'configured'
-        }))
 
       } else {
         throw new Error(response.data?.message || '获取服务配置失败')
@@ -230,12 +214,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
     const headers = createClusterHeaders(cluster.id)
     const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, params, { headers })
-    
-    // 更新保存状态
-    setConfigurationStatus(prev => ({
-      ...prev,
-      [activeService]: 'saved'
-    }))
     
     return {
       ...response.data,
@@ -337,13 +315,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
   }
 
-  // 计算配置进度
-  const configurationProgress = () => {
-    const total = services.length
-    const configured = Object.values(configurationStatus).filter(status => status !== 'pending').length
-    return total > 0 ? (configured / total) * 100 : 0
-  }
-
   // 初始加载活动服务配置
   useEffect(() => {
     if (open && activeService && cluster?.id) {
@@ -354,17 +325,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   // 动作栏配置
   const actionBar = (
     <ClusterWizardActionBar
-      statusInfo={{
-        text: "配置进度",
-        value: Math.round(configurationProgress()),
-        total: `${services.length} 个服务`,
-        pulse: saving
-      }}
-      statusBadge={{
-        text: configurationProgress() === 100 ? "配置完成" : "配置中",
-        variant: configurationProgress() === 100 ? "success" : "info",
-        show: true
-      }}
       buttons={[
         ...(onPrevious ? [{
           text: "上一步",
@@ -375,7 +335,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
         {
           text: "保存配置并继续",
           onClick: handleNext,
-          disabled: saving || configurationProgress() < 100,
+          disabled: saving,
           loading: saving,
           loadingText: "保存中...",
           variant: "primary" as const,
@@ -407,13 +367,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
-
-
-          {/* 简洁的进度条 */}
-          <div className="mb-4">
-            <Progress value={configurationProgress()} className="h-2" />
-          </div>
 
           {/* 主要内容区域 */}
           <div className="flex-1 flex gap-6 min-h-0">
@@ -458,18 +411,6 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
               )}
             </div>
           </div>
-
-          {/* 配置摘要（可选） */}
-          {showSummary && (
-            <div className="mt-6 border-t pt-6">
-              <ConfigurationSummary
-                services={services}
-                configurationStatus={configurationStatus}
-                serviceTemplates={serviceTemplates}
-                formData={formData}
-              />
-            </div>
-          )}
         </div>
       </ClusterWizardLayout>
     </Dialog>
