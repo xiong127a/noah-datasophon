@@ -26,6 +26,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -108,7 +109,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
         return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getIsRevoked, true)
                 .set(AuthTokenEntity::getRevokedReason, reason)
-                .set(AuthTokenEntity::getUpdatedAt, new Date())
+                .set(AuthTokenEntity::getUpdateTime, LocalDateTime.now())
                 .where(AuthTokenEntity::getId).eq(id)
                 .update();
     }
@@ -151,7 +152,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
     default boolean updateLastAccessTime(@Param("id") Long id, @Param("lastAccessTime") Date lastAccessTime) {
         return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getLastAccessTime, lastAccessTime)
-                .set(AuthTokenEntity::getUpdatedAt, new Date())
+                .set(AuthTokenEntity::getUpdateTime, LocalDateTime.now())
                 .where(AuthTokenEntity::getId).eq(id)
                 .update();
     }

@@ -1,32 +1,42 @@
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.datasophon.dao.entity.tenantResource.TenantHbaseResourceEntity;
 import com.datasophon.dao.entity.tenantResource.TenantHdfsResourceEntity;
 import com.datasophon.dao.entity.tenantResource.TenantHiveResourceEntity;
 import com.datasophon.dao.entity.tenantResource.TenantKafkaResourceEntity;
 import com.datasophon.dao.entity.tenantResource.TenantYarnResourceEntity;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 import com.mybatisflex.core.handler.JacksonTypeHandler;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.List;
 
+/**
+ * 集群租户实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(value = "t_ddh_cluster_tenant")
-public class ClusterTenantEntity implements Serializable {
+public class ClusterTenantEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
 
     /**
      * 集群id
