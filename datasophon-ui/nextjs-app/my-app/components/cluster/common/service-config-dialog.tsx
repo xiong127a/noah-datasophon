@@ -197,11 +197,9 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const handleServiceChange = useCallback(async (serviceName: string) => {
     setActiveService(serviceName)
     
-    // 如果该服务配置尚未加载，则加载
-    if (!serviceTemplates[serviceName]) {
-      await getServiceConfigOption(serviceName)
-    }
-  }, [serviceTemplates, getServiceConfigOption])
+    // 每次切换都重新获取最新配置数据
+    await getServiceConfigOption(serviceName)
+  }, [getServiceConfigOption])
 
   // 保存当前服务配置
   const saveCurrentServiceConfig = async (): Promise<SaveConfigResponse> => {
@@ -252,14 +250,14 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
     try {
       for (const serviceName of services) {
-        // 确保该服务的配置已加载
-        if (!serviceTemplates[serviceName]) {
-          await getServiceConfigOption(serviceName)
-        }
-        
         // 临时设置为当前服务以便保存
         const originalActive = activeService
         setActiveService(serviceName)
+        
+        // 确保该服务的配置已加载（如果当前服务没有配置数据）
+        if (!serviceTemplates[serviceName]) {
+          await getServiceConfigOption(serviceName)
+        }
         
         const result = await saveCurrentServiceConfig()
         results.push(result)
@@ -348,10 +346,10 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
   // 初始加载活动服务配置
   useEffect(() => {
-    if (open && activeService && cluster?.id && !serviceTemplates[activeService]) {
+    if (open && activeService && cluster?.id) {
       getServiceConfigOption(activeService)
     }
-  }, [open, activeService, cluster?.id, serviceTemplates, getServiceConfigOption])
+  }, [open, activeService, cluster?.id, getServiceConfigOption])
 
   // 动作栏配置
   const actionBar = (

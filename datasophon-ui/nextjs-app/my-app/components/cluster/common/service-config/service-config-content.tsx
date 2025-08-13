@@ -243,65 +243,69 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
   const allGroupsExpanded = expandedGroups.size === Object.keys(configGroups.groups).length
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 苹果风格的操作栏 */}
-      <div className="
-        flex items-center justify-between mb-6 p-4 
-        bg-gradient-to-r from-white via-gray-50/50 to-white
-        border border-gray-200/40 rounded-2xl shadow-sm
-        backdrop-blur-sm
-      ">
-        <h3 className="font-semibold text-gray-800 text-lg">{serviceName}</h3>
+    <div className="h-full flex flex-col relative">
+      {/* 浮动操作按钮组 */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleAllGroups}
+          className="
+            h-9 px-3 
+            bg-white/80 backdrop-blur-xl border border-gray-200/60
+            hover:bg-gray-50/90 hover:border-blue-200/70
+            text-gray-700 hover:text-blue-700
+            rounded-xl shadow-lg hover:shadow-xl
+            transition-all duration-300 transform hover:scale-[1.02]
+            ring-1 ring-gray-100/40 hover:ring-blue-100/60
+          "
+        >
+          {allGroupsExpanded ? (
+            <>
+              <ChevronUp className="h-3.5 w-3.5 mr-1" />
+              <span className="text-xs font-medium">折叠</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3.5 w-3.5 mr-1" />
+              <span className="text-xs font-medium">展开</span>
+            </>
+          )}
+        </Button>
         
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleAllGroups}
-            className="
-              border-gray-200/60 bg-white/80 hover:bg-gray-50/80 
-              hover:border-blue-200/60 transition-all duration-300
-              rounded-xl shadow-sm hover:shadow-md
-            "
-          >
-            {allGroupsExpanded ? (
-              <>
-                <ChevronUp className="h-4 w-4 mr-1.5" />
-                折叠全部
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4 mr-1.5" />
-                展开全部
-              </>
-            )}
-          </Button>
-          
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSave}
-            disabled={saving}
-            className="
-              bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
-              border-0 shadow-md hover:shadow-lg
-              rounded-xl transition-all duration-300
-            "
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-1.5" />
-            )}
-            保存配置
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving}
+          className="
+            h-9 px-3 text-xs font-medium
+            bg-gradient-to-r from-blue-500/90 via-blue-600/90 to-indigo-600/90
+            hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700
+            backdrop-blur-xl border-0 text-white
+            rounded-xl shadow-lg hover:shadow-xl
+            transition-all duration-300 transform hover:scale-[1.02]
+            ring-1 ring-blue-400/30 hover:ring-blue-300/50
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
+          "
+        >
+          {saving ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              保存中
+            </>
+          ) : (
+            <>
+              <Save className="h-3.5 w-3.5 mr-1" />
+              保存
+            </>
+          )}
+        </Button>
       </div>
 
       {/* 配置组列表 */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 pt-2">
         <div className="h-full overflow-y-auto">
-          <div className="space-y-4 pr-4">
+          <div className="space-y-4 pr-4 pt-12">
             {sortedGroups.map(([groupName, group]) => 
               renderConfigGroup(groupName, group)
             )}
