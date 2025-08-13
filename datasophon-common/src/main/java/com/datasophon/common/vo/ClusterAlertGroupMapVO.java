@@ -29,6 +29,6 @@ import java.io.Serializable;
  */
 public record ClusterAlertGroupMapVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         Integer alertGroupId) implements Serializable {
 }

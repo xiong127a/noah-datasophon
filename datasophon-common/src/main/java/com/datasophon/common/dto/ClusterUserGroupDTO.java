@@ -31,6 +31,6 @@ public record ClusterUserGroupDTO(
         Integer id,
         Integer userId,
         Integer groupId,
-        Integer clusterId,
+        Long clusterId,
         Integer userGroupType) implements Serializable {
 }

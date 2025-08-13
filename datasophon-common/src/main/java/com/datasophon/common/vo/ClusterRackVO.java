@@ -30,5 +30,5 @@ import java.io.Serializable;
 public record ClusterRackVO(
         Integer id,
         String rack,
-        Integer clusterId) implements Serializable {
+        Long clusterId) implements Serializable {
 }

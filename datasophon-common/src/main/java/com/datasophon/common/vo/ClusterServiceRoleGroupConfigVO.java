@@ -36,7 +36,7 @@ public record ClusterServiceRoleGroupConfigVO(
         Integer configVersion,
         String configFileJson,
         String configFileJsonMd5,
-        Integer clusterId,
+        Long clusterId,
         Date createTime,
         String createTimeFormatted,
         Date updateTime,

@@ -35,7 +35,7 @@ public record ClusterServiceInstanceConfigDTO(
     LocalDateTime updateTime,
     String configJsonMd5,
     Integer configVersion,
-    Integer clusterId,
+    Long clusterId,
     String configFileJson,
     String configFileJsonMd5
 ) {
@@ -45,7 +45,7 @@ public record ClusterServiceInstanceConfigDTO(
      */
     public static ClusterServiceInstanceConfigDTO create(
             Integer serviceId,
-            Integer clusterId,
+            Long clusterId,
             String configJson,
             String configFileJson) {
         var now = LocalDateTime.now();

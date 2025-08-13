@@ -36,7 +36,7 @@ public class SubmitActiveTaskNodeCommand implements Serializable {
     private static final long serialVersionUID = 3733897759707096649L;
 
     private CommandType commandType;
-    private Integer clusterId;
+    private Long clusterId;
     private String clusterCode;
     private DAGGraph<String, ServiceNode, String> dag;
     private Map<String, String> errorTaskList;

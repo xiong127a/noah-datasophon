@@ -29,6 +29,6 @@ import java.io.Serializable;
  */
 public record ClusterNodeLabelVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String nodeLabel) implements Serializable {
 }

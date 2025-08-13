@@ -28,16 +28,16 @@ import java.util.List;
  * @date 2025-08-01
  */
 public record NoticeGroupDTO(
-        Integer id,
-        Integer clusterId,
+        Long id,
+        Long clusterId,
         String noticeGroupName,
         Date createTime,
-        List<Integer> userIds) {
+        List<Long> userIds) {
 
     /**
      * 创建新的NoticeGroupDTO
      */
-    public static NoticeGroupDTO create(String noticeGroupName, Integer clusterId, List<Integer> userIds) {
+    public static NoticeGroupDTO create(String noticeGroupName, Long clusterId, List<Long> userIds) {
         return new NoticeGroupDTO(
                 null,
                 clusterId,
@@ -49,7 +49,7 @@ public record NoticeGroupDTO(
     /**
      * 更新用户ID列表
      */
-    public NoticeGroupDTO withUserIds(List<Integer> userIds) {
+    public NoticeGroupDTO withUserIds(List<Long> userIds) {
         return new NoticeGroupDTO(
                 this.id,
                 this.clusterId,
@@ -61,7 +61,7 @@ public record NoticeGroupDTO(
     /**
      * 设置集群ID
      */
-    public NoticeGroupDTO withClusterId(Integer clusterId) {
+    public NoticeGroupDTO withClusterId(Long clusterId) {
         return new NoticeGroupDTO(
                 this.id,
                 clusterId,

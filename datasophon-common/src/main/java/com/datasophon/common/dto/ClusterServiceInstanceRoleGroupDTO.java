@@ -32,7 +32,7 @@ public record ClusterServiceInstanceRoleGroupDTO(
         String roleGroupName,
         Integer serviceInstanceId,
         String serviceName,
-        Integer clusterId,
+        Long clusterId,
         String roleGroupType,
         Integer needRestart
 ) implements Serializable {

@@ -10,7 +10,7 @@ import lombok.Data;
 public class QueueTaskInfo {
     // 任务基本信息
     private String taskId;
-    private Integer clusterId;
+    private Long clusterId;
     private String hostname;
     private Integer itemId;
     private String status;

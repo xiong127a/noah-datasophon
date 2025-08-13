@@ -26,7 +26,7 @@ public class AlertItem implements Serializable {
 
     private String alertName;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String alertExpr;
 

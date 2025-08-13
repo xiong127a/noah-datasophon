@@ -38,7 +38,7 @@ public record ClusterServiceCommandVO(
         String commandStateText,
         Integer commandStateCode,
         Long commandProgress,
-        Integer clusterId,
+        Long clusterId,
         String serviceName,
         Integer commandType,
         String commandTypeText,

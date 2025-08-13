@@ -29,7 +29,7 @@ import java.io.Serializable;
  */
 public record ClusterVariableDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String variableName,
         String variableValue) implements Serializable {
 }

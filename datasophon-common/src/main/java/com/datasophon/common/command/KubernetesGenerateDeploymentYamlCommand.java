@@ -18,7 +18,7 @@ public class KubernetesGenerateDeploymentYamlCommand implements Serializable {
     @Serial
     private static final long serialVersionUID = -4211566568993105684L;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String namespace;
 

@@ -26,5 +26,5 @@ public class GenerateStarRocksHAMessage implements Serializable {
 
     private Integer serviceInstanceId;
 
-    private Integer clusterId;
+    private Long clusterId;
 }

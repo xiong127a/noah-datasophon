@@ -43,7 +43,7 @@ public class UserInfoVO implements Serializable {
     /**
      * 用户ID
      */
-    private Integer id;
+    private Long id;
 
     /**
      * 用户名

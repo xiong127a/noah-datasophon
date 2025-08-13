@@ -29,7 +29,7 @@ import java.io.Serializable;
  */
 public record ClusterQueueCapacityDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String queueName,
         String capacity,
         String nodeLabel,

@@ -40,7 +40,7 @@ public class BaseCommand implements Serializable {
 
     private String packageName;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private ServiceRoleRunner startRunner;
 

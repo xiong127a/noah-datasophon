@@ -42,7 +42,7 @@ public class StepDataDTO implements Serializable {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
     
     /**
      * 步骤号 (1-8)
@@ -375,7 +375,7 @@ public class StepDataDTO implements Serializable {
      * @param operatedBy 操作人
      * @return StepDataDTO
      */
-    public static StepDataDTO of(Integer clusterId, Integer stepNumber, String stepName, 
+    public static StepDataDTO of(Long clusterId, Integer stepNumber, String stepName,
                                 String stepData, String operatedBy) {
         StepDataDTO dto = new StepDataDTO();
         dto.setClusterId(clusterId);
@@ -398,7 +398,7 @@ public class StepDataDTO implements Serializable {
      * @param operatedBy 操作人
      * @return StepDataDTO
      */
-    public static StepDataDTO completed(Integer clusterId, Integer stepNumber, String stepName, 
+    public static StepDataDTO completed(Long clusterId, Integer stepNumber, String stepName,
                                        String stepData, String operatedBy) {
         StepDataDTO dto = of(clusterId, stepNumber, stepName, stepData, operatedBy);
         dto.setStepStatus("completed");

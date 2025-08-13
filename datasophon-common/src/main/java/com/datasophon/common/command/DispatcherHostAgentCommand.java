@@ -26,11 +26,11 @@ public class DispatcherHostAgentCommand {
 
     private HostInfo hostInfo;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String clusterFrame;
 
-    public DispatcherHostAgentCommand(HostInfo hostInfo, Integer clusterId, String clusterFrame) {
+    public DispatcherHostAgentCommand(HostInfo hostInfo, Long clusterId, String clusterFrame) {
         this.hostInfo = hostInfo;
         this.clusterId = clusterId;
         this.clusterFrame = clusterFrame;

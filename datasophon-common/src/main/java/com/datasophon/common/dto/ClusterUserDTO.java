@@ -30,7 +30,7 @@ import java.util.Date;
  */
 public record ClusterUserDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String username,
         String mainGroup,
         String otherGroups,

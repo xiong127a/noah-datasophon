@@ -42,7 +42,7 @@ public record ClusterServiceRoleInstanceVO(
         Integer serviceId,
         Integer roleType,
         String roleTypeText,
-        Integer clusterId,
+        Long clusterId,
         String serviceName,
         Integer roleGroupId,
         Integer needRestart,

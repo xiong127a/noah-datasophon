@@ -28,13 +28,13 @@ public class ClusterCommand implements Serializable {
 
     private final ClusterCommandType commandType;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     public ClusterCommand(ClusterCommandType commandType) {
         this.commandType = commandType;
     }
 
-    public ClusterCommand(ClusterCommandType commandType, Integer clusterId) {
+    public ClusterCommand(ClusterCommandType commandType, Long clusterId) {
         this.commandType = commandType;
         this.clusterId = clusterId;
     }

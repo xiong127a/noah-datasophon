@@ -33,7 +33,7 @@ public class StartWorkerMessage implements Serializable {
     private double memUsedPersent;
     private double diskUsedPersent;
     private double averageLoad;
-    private Integer clusterId;
+    private Long clusterId;
     private String ip;
     private String cpuArchitecture;
 

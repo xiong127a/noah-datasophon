@@ -32,7 +32,7 @@ public record AlertGroupVO(
         Integer id,
         String alertGroupName,
         String alertGroupCategory,
-        Integer clusterId,
+        Long clusterId,
         String clusterName,
         Integer alertQuotaNum,
         String alertQuotaNumFormatted,

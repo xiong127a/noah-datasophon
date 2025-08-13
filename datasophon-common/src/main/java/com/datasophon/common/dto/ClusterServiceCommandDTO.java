@@ -36,7 +36,7 @@ public record ClusterServiceCommandDTO(
         Integer commandState,
         Integer commandStateCode,
         Long commandProgress,
-        Integer clusterId,
+        Long clusterId,
         String serviceName,
         Integer commandType,
         String durationTime,

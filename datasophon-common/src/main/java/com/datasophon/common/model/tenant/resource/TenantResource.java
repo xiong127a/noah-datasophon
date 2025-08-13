@@ -26,7 +26,7 @@ public class TenantResource implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 租户名称

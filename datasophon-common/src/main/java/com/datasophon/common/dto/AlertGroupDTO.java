@@ -30,14 +30,14 @@ public record AlertGroupDTO(
         Integer id,
         String alertGroupName,
         String alertGroupCategory,
-        Integer clusterId,
+        Long clusterId,
         Integer alertQuotaNum,
         Date createTime) {
 
     /**
      * 创建新的AlertGroupDTO
      */
-    public static AlertGroupDTO create(String alertGroupName, String alertGroupCategory, Integer clusterId) {
+    public static AlertGroupDTO create(String alertGroupName, String alertGroupCategory, Long clusterId) {
         return new AlertGroupDTO(
                 null,
                 alertGroupName,

@@ -29,5 +29,5 @@ import java.util.Map;
 public class GenerateAlertConfigCommand implements Serializable {
 
     Map<Generators, List<AlertItem>> configFileMap;
-    Integer clusterId;
+    Long clusterId;
 }

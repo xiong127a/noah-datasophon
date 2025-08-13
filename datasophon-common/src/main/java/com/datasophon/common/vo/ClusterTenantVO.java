@@ -30,7 +30,7 @@ import java.util.Map;
  */
 public record ClusterTenantVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String tenantName,
         Map<String, Object> hdfsResourceList,
         Map<String, Object> yarnResourceList,

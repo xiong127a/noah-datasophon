@@ -30,19 +30,19 @@ public class StartExecuteCommandCommand implements Serializable {
 
     private List<String> commandIds;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private CommandType commandType;
 
     private RollingRestartInfo rollingRestartInfo;
 
-    public StartExecuteCommandCommand(List<String> list, Integer clusterId, CommandType commandType) {
+    public StartExecuteCommandCommand(List<String> list, Long clusterId, CommandType commandType) {
         this.commandIds = list;
         this.clusterId = clusterId;
         this.commandType = commandType;
     }
 
-    public StartExecuteCommandCommand(List<String> commandIds, Integer clusterId, CommandType commandType, RollingRestartInfo rollingRestartInfo) {
+    public StartExecuteCommandCommand(List<String> commandIds, Long clusterId, CommandType commandType, RollingRestartInfo rollingRestartInfo) {
         this.commandIds = commandIds;
         this.clusterId = clusterId;
         this.commandType = commandType;

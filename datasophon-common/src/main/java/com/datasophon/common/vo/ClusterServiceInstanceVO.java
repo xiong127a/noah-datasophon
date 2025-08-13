@@ -30,7 +30,7 @@ import java.util.Date;
  */
 public record ClusterServiceInstanceVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String serviceName,
         String label,
         Integer serviceState,

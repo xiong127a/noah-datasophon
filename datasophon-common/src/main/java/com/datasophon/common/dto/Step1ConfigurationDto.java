@@ -15,7 +15,7 @@ public class Step1ConfigurationDto {
     /**
      * 集群ID（由Controller层从请求头设置）
      */
-    private Integer clusterId;
+    private Long clusterId;
     
     /**
      * 集群类型枚举

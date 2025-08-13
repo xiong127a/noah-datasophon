@@ -36,7 +36,7 @@ public record ClusterServiceRoleGroupConfigDTO(
         Integer configVersion,
         String configFileJson,
         String configFileJsonMd5,
-        Integer clusterId,
+        Long clusterId,
         Date createTime,
         Date updateTime,
         String serviceName

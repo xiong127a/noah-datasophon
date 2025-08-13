@@ -30,6 +30,6 @@ public class GeneratePrometheusConfigCommand implements Serializable {
 
     private String clusterFrame;
 
-    private Integer clusterId;
+    private Long clusterId;
 
 }

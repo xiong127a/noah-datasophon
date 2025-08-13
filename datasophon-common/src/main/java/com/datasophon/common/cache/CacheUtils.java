@@ -180,7 +180,7 @@ public class CacheUtils {
      * @param ip        主机IP
      * @param hostInfo  主机信息对象
      */
-    public static void putHostInfo(Integer clusterId, String ip, HostInfo hostInfo) {
+    public static void putHostInfo(Long clusterId, String ip, HostInfo hostInfo) {
         if (clusterId == null || StringUtils.isBlank(ip) || hostInfo == null) {
             logger.warn("更新主机缓存参数无效: clusterId={}, ip={}", clusterId, ip);
             return;

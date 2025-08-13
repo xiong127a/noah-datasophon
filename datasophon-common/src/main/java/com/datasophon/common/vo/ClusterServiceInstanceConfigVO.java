@@ -35,7 +35,7 @@ public record ClusterServiceInstanceConfigVO(
     String updateTimeFormatted,
     String configJsonMd5,
     Integer configVersion,
-    Integer clusterId,
+    Long clusterId,
     String configFileJson,
     String configFileJsonMd5,
     boolean isValidConfig,

@@ -32,7 +32,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 public record ClusterInfoDTO(
-        Integer id,
+        Long id,
         String createBy,
         Date createTime,
         String clusterName,

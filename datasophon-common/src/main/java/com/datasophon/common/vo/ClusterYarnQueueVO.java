@@ -39,7 +39,7 @@ public record ClusterYarnQueueVO(
         String schedulePolicy,
         Integer allowPreemption,
         String allowPreemptionText,
-        Integer clusterId,
+        Long clusterId,
         String createTimeFormatted,
         String amShare,
         String minResources,

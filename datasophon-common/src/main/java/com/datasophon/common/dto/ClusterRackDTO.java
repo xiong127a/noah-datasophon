@@ -30,5 +30,5 @@ import java.io.Serializable;
 public record ClusterRackDTO(
         Integer id,
         String rack,
-        Integer clusterId) implements Serializable {
+        Long clusterId) implements Serializable {
 }

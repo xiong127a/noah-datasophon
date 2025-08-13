@@ -29,7 +29,7 @@ import java.io.Serializable;
  */
 public record ClusterRoleUserDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         Integer userType,
         Integer userId,
         UserInfoDTO userInfo) implements Serializable {

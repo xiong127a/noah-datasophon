@@ -29,6 +29,6 @@ import java.io.Serializable;
  */
 public record ClusterNodeLabelDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String nodeLabel) implements Serializable {
 }

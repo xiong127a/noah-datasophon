@@ -38,7 +38,7 @@ public record ClusterServiceRoleInstanceDTO(
         Date createTime,
         Integer serviceId,
         Integer roleType,
-        Integer clusterId,
+        Long clusterId,
         String serviceName,
         Integer roleGroupId,
         Integer needRestart,

@@ -12,7 +12,7 @@ import java.util.Date;
 public record AutoScaleTaskVO(
         Long id,
         String taskName,
-        Integer clusterId,
+        Long clusterId,
         String clusterName,
         Integer serviceId,
         String serviceName,

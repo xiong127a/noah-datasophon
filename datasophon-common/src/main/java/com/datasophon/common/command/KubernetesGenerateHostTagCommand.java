@@ -19,7 +19,7 @@ public class KubernetesGenerateHostTagCommand implements Serializable {
     private String serviceRoleName;
 
     private String hostName;
-    private Integer clusterId;
+    private Long clusterId;
     private String namespace;
 
     private CommandType commandType;

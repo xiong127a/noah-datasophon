@@ -107,7 +107,7 @@ public class HostInfoDTO implements Serializable {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 主机状态枚举

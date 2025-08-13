@@ -31,7 +31,7 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FrameServiceDTO(
-        Integer id,
+        Long id,
         Integer frameId,
         String serviceName,
         String label,
@@ -57,7 +57,7 @@ public record FrameServiceDTO(
     /**
      * 创建基础FrameServiceDTO，不包含运行时计算字段
      */
-    public static FrameServiceDTO of(Integer id, Integer frameId, String serviceName, String serviceVersion) {
+    public static FrameServiceDTO of(Long id, Integer frameId, String serviceName, String serviceVersion) {
         return new FrameServiceDTO(id, frameId, serviceName, null, serviceVersion, null, null, null,
                 null, null, null, null, null, null, null, null, null, null);
     }
@@ -65,7 +65,7 @@ public record FrameServiceDTO(
     /**
      * 创建包含安装状态的FrameServiceDTO
      */
-    public static FrameServiceDTO withInstallStatus(Integer id, Integer frameId, String serviceName,
+    public static FrameServiceDTO withInstallStatus(Long id, Integer frameId, String serviceName,
             String serviceVersion, Boolean installed, Boolean isRequired) {
         return new FrameServiceDTO(id, frameId, serviceName, null, serviceVersion, null, null, null,
                 null, null, null, null, null, null, null, null, installed, isRequired);

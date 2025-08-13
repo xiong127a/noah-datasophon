@@ -35,7 +35,7 @@ public class HostInfo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String ip;
 

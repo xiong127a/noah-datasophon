@@ -19,7 +19,7 @@ public record AutoScaleTaskDTO(
 
         @NotBlank(message = "任务名称不能为空") String taskName,
 
-        @NotNull(message = "集群ID不能为空") Integer clusterId,
+        @NotNull(message = "集群ID不能为空") Long clusterId,
 
         @NotNull(message = "服务ID不能为空") Integer serviceId,
 

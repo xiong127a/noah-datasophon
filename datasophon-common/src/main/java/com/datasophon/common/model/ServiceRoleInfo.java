@@ -51,7 +51,7 @@ public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo
 
     private String hostCommandId;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String parentName;
 

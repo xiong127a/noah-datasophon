@@ -29,7 +29,7 @@ import java.io.Serializable;
  */
 public record ClusterRoleUserVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         Integer userType,
         String userTypeText,
         Integer userId,

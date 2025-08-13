@@ -35,7 +35,7 @@ public class ServiceExecuteResultMessage implements Serializable {
 
     private ServiceRoleType serviceRoleType;
 
-    private Integer clusterId;
+    private Long clusterId;
     private String clusterCode;
     private CommandType commandType;
 

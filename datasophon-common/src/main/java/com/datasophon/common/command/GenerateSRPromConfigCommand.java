@@ -28,7 +28,7 @@ public class GenerateSRPromConfigCommand implements Serializable {
 
     private String clusterFrame;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String filename;
 

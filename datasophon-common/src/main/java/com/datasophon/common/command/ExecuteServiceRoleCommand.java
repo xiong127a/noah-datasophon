@@ -32,7 +32,7 @@ import lombok.Data;
 @Data
 public class ExecuteServiceRoleCommand {
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String clusterCode;
 
@@ -53,7 +53,7 @@ public class ExecuteServiceRoleCommand {
     private Map<String, String> readyToSubmitTaskList;
     private Map<String, String> completeTaskList;
 
-    public ExecuteServiceRoleCommand(Integer clusterId, String serviceName, List<ServiceRoleInfo> serviceRoles) {
+    public ExecuteServiceRoleCommand(Long clusterId, String serviceName, List<ServiceRoleInfo> serviceRoles) {
         this.clusterId = clusterId;
         this.serviceName = serviceName;
         this.masterRoles = serviceRoles;

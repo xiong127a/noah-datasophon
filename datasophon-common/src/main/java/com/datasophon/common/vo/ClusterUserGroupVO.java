@@ -31,7 +31,7 @@ public record ClusterUserGroupVO(
         Integer id,
         Integer userId,
         Integer groupId,
-        Integer clusterId,
+        Long clusterId,
         Integer userGroupType,
         String userGroupTypeText) implements Serializable {
 }

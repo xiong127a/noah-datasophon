@@ -30,6 +30,6 @@ import java.io.Serializable;
 public record ClusterGroupVO(
         Integer id,
         String groupName,
-        Integer clusterId,
+        Long clusterId,
         String clusterUsers) implements Serializable {
 }

@@ -38,7 +38,7 @@ public class WorkerServiceMessage implements Serializable {
     /**
      * Cluster ID
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 节点 IP
@@ -50,7 +50,7 @@ public class WorkerServiceMessage implements Serializable {
     public WorkerServiceMessage() {
     }
 
-    public WorkerServiceMessage(String hostname, Integer clusterId,CommandType commandType) {
+    public WorkerServiceMessage(String hostname, Long clusterId,CommandType commandType) {
         this.hostname = hostname;
         this.clusterId = clusterId;
         this.commandType = commandType;

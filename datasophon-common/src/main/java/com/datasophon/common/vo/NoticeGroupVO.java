@@ -30,7 +30,7 @@ import java.util.List;
  */
 public record NoticeGroupVO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String noticeGroupName,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createTime,
         String createTimeFormatted,

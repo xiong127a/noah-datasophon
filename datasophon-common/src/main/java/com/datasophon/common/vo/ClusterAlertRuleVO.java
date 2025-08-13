@@ -46,5 +46,5 @@ public record ClusterAlertRuleVO(
         String createTimeFormatted,
         Date updateTime,
         String updateTimeFormatted,
-        Integer clusterId) implements Serializable {
+        Long clusterId) implements Serializable {
 }

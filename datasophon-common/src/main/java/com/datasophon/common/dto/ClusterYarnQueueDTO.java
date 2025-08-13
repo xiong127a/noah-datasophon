@@ -39,7 +39,7 @@ public record ClusterYarnQueueDTO(
         Integer weight,
         String schedulePolicy,
         Integer allowPreemption,
-        Integer clusterId,
+        Long clusterId,
         Date createTime,
         String amShare,
         String minResources,

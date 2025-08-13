@@ -29,7 +29,7 @@ import java.io.Serializable;
  */
 public record ClusterYarnSchedulerDTO(
         Integer id,
-        Integer clusterId,
+        Long clusterId,
         String scheduler,
         Integer inUse) implements Serializable {
 }

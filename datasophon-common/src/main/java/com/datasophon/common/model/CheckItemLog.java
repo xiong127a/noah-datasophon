@@ -28,7 +28,7 @@ public class CheckItemLog implements Serializable {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 主机名

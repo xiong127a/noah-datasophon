@@ -24,5 +24,5 @@ import lombok.Data;
 @Data
 public class GenerateHostPrometheusConfig implements Serializable {
 
-    private Integer clusterId;
+    private Long clusterId;
 }

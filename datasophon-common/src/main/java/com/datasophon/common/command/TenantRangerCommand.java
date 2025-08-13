@@ -18,7 +18,7 @@ public class TenantRangerCommand implements Serializable {
     // 操作类型 createService addUser deletePolicy
     RangerOpType operateType;
 
-    Integer clusterId;
+    Long clusterId;
     String serviceName;
     String roleName;
     List<String> userList;
