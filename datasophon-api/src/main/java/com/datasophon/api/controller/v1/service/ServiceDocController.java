@@ -62,7 +62,7 @@ public class ServiceDocController {
 
             // 参数解析和验证
             Long clusterId = parseIntegerParam(params, "clusterId", "集群ID");
-            Integer serviceId = parseIntegerParam(params, "serviceId", "服务ID");
+            Long serviceId = parseIntegerParam(params, "serviceId", "服务ID");
             String type = parseStringParam(params, "type", "文档类型");
 
             // 获取文档DTO
@@ -85,7 +85,7 @@ public class ServiceDocController {
     @GetMapping("/hasServiceDoc")
     public Result<Boolean> hasServiceDoc(
             @ClusterId Long clusterId,
-            @RequestParam("serviceId") Integer serviceId,
+            @RequestParam("serviceId") Long serviceId,
             @RequestParam("type") String type) {
         try {
             boolean exists = docService.hasServiceDoc(clusterId, serviceId, type);
@@ -100,7 +100,7 @@ public class ServiceDocController {
      * 获取服务名称
      */
     @GetMapping("/serviceName/{serviceId}")
-    public Result<String> getServiceName(@PathVariable("serviceId") Integer serviceId) {
+    public Result<String> getServiceName(@PathVariable("serviceId") Long serviceId) {
         try {
             String serviceName = docService.getServiceName(serviceId);
             return Result.success(serviceName);
@@ -135,14 +135,14 @@ public class ServiceDocController {
     /**
      * 解析整数参数
      */
-    private Integer parseIntegerParam(Map<String, Object> params, String key, String paramName) {
+    private Long parseIntegerParam(Map<String, Object> params, String key, String paramName) {
         Object value = params.get(key);
         if (value == null) {
             throw new IllegalArgumentException(paramName + "不能为空");
         }
         
         try {
-            return Integer.parseInt(value.toString());
+            return Long.parseLong(value.toString());
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(paramName + "格式错误");
         }
