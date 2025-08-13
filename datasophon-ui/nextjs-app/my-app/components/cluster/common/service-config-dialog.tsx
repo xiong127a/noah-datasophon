@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { 
-  Loader2, Save, AlertTriangle, Package
+  Loader2, AlertTriangle, Package, ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogTitle } from '@/components/ui/dialog'
@@ -333,13 +333,13 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
           variant: "secondary" as const
         }] : []),
         {
-          text: "保存配置并继续",
+          text: "下一步",
           onClick: handleNext,
           disabled: saving,
           loading: saving,
-          loadingText: "保存中...",
+          loadingText: "处理中...",
           variant: "primary" as const,
-          icon: Save
+          icon: ChevronRight
         }
       ]}
     />
