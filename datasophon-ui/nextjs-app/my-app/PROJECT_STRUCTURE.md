@@ -45,7 +45,13 @@ components/
 │       ├── service-selection-dialog.tsx # 服务选择对话框
 │       ├── master-role-assign-dialog.tsx # Master角色分配对话框
 │       ├── worker-role-assign-dialog.tsx # Worker角色分配对话框
-│       └── service-config-dialog.tsx # 服务配置对话框
+│       ├── service-config-dialog.tsx # 服务配置对话框（重构版本）
+│       ├── service-config-dialog-old.tsx # 旧版本备份文件
+│       └── service-config/ # 服务配置子组件
+│           ├── service-config-navigation.tsx # 服务导航组件
+│           ├── service-config-content.tsx # 配置内容组件
+│           ├── config-item-renderer.tsx # 配置项渲染器
+│           └── configuration-summary.tsx # 配置摘要组件
 │   ├── cluster-wizard-sidebar.tsx # 集群创建向导侧边栏
 │   └── index.ts              # 导出索引
 ├── host/                      # 主机相关组件
