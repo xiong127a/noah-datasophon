@@ -2,14 +2,13 @@
 
 import React, { useCallback, useMemo } from 'react'
 import { 
-  ChevronDown, ChevronUp, Save, Package, Database, 
-  Settings, AlertTriangle, Info, Loader2
+  ChevronDown, ChevronUp, Save, Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { ScrollArea } from '@/components/ui/scroll-area' // 暂时注释，使用div代替
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 
@@ -121,70 +120,113 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
     const hasKubernetesConfig = group.subGroups && Object.keys(group.subGroups).length > 0
 
     return (
-      <Card key={groupName} className="border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 backdrop-blur-sm rounded-xl">
+      <Card key={groupName} className="
+        relative overflow-hidden border-0 shadow-lg hover:shadow-xl 
+        transition-all duration-500 ease-out rounded-2xl
+        bg-gradient-to-br from-white via-gray-50/30 to-white
+        ring-1 ring-gray-200/40 hover:ring-blue-200/60
+        backdrop-blur-xl
+      ">
         <CardHeader 
-          className="cursor-pointer hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-blue-50/30 transition-all duration-300 pb-3 rounded-t-xl"
+          className="
+            cursor-pointer transition-all duration-500 pb-4 rounded-t-2xl
+            hover:bg-gradient-to-r hover:from-blue-50/60 hover:via-indigo-50/40 hover:to-purple-50/30
+            border-b border-gray-100/60
+          "
           onClick={() => handleGroupToggle(groupName)}
         >
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Package className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-base font-semibold text-gray-800">
               {group.displayName}
             </CardTitle>
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-gray-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            )}
+            <div className={`
+              p-1.5 rounded-lg transition-all duration-300
+              ${isExpanded 
+                ? 'bg-blue-100/80 text-blue-600 rotate-180' 
+                : 'bg-gray-100/60 text-gray-500 hover:bg-blue-50/80 hover:text-blue-500'
+              }
+            `}>
+              <ChevronDown className="h-4 w-4" />
+            </div>
           </div>
         </CardHeader>
         
         {isExpanded && (
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 pb-6 bg-gradient-to-b from-transparent to-gray-50/20">
             {/* 普通配置项 */}
             {group.configs && group.configs.length > 0 && (
-              <div className="space-y-6">
+              <div className="space-y-5 p-4 rounded-xl bg-white/40 backdrop-blur-sm border border-white/60">
                 {group.configs.map((config: ConfigItem) => (
-                  <ConfigItemRenderer
-                    key={config.name}
-                    config={config}
-                    value={formData[(config.name || '').replace(/\./g, '!')] ?? config.value ?? config.defaultValue ?? ''}
-                    error={validationErrors[config.name!]}
-                    onChange={(value) => handleFieldChange((config.name || '').replace(/\./g, '!'), value)}
-                  />
+                  <div key={config.name} className="
+                    p-4 rounded-xl 
+                    bg-gradient-to-r from-white/80 to-gray-50/40
+                    border border-gray-200/30
+                    hover:shadow-md hover:border-blue-200/50
+                    transition-all duration-300
+                  ">
+                    <ConfigItemRenderer
+                      config={config}
+                      value={formData[(config.name || '').replace(/\./g, '!')] ?? config.value ?? config.defaultValue ?? ''}
+                      error={validationErrors[config.name!]}
+                      onChange={(value) => handleFieldChange((config.name || '').replace(/\./g, '!'), value)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
 
             {/* Kubernetes配置 */}
             {hasKubernetesConfig && (
-              <div className="mt-6">
-                <Separator className="mb-4" />
-                <div className="flex items-center gap-2 mb-4">
-                  <Database className="h-4 w-4 text-blue-600" />
-                  <h4 className="text-sm font-medium text-gray-900">Kubernetes 配置</h4>
+              <div className="mt-8">
+                <div className="relative">
+                  <Separator className="mb-6 bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
+                  <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-1/2 px-4 bg-white">
+                    <div className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/40">
+                      <h4 className="text-sm font-semibold text-blue-800">Kubernetes 配置</h4>
+                    </div>
+                  </div>
                 </div>
                 
                 <Tabs defaultValue={Object.keys(group.subGroups)[0]} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3 mb-4">
+                  <TabsList className="
+                    grid w-full grid-cols-2 lg:grid-cols-3 mb-6 
+                    bg-gradient-to-r from-gray-50/80 to-blue-50/60
+                    border border-gray-200/40 rounded-xl p-1
+                    backdrop-blur-sm
+                  ">
                     {Object.entries(group.subGroups).map(([subGroupName, subGroup]: [string, any]) => (
-                      <TabsTrigger key={subGroupName} value={subGroupName} className="text-xs">
+                      <TabsTrigger 
+                        key={subGroupName} 
+                        value={subGroupName} 
+                        className="
+                          text-sm font-medium rounded-lg
+                          data-[state=active]:bg-white data-[state=active]:shadow-md
+                          data-[state=active]:text-blue-700
+                          hover:bg-white/60 transition-all duration-300
+                        "
+                      >
                         {subGroup.displayName}
                       </TabsTrigger>
                     ))}
                   </TabsList>
                   
                   {Object.entries(group.subGroups).map(([subGroupName, subGroup]: [string, any]) => (
-                    <TabsContent key={subGroupName} value={subGroupName} className="mt-4">
-                      <div className="space-y-6">
+                    <TabsContent key={subGroupName} value={subGroupName} className="mt-0">
+                      <div className="space-y-4 p-4 rounded-xl bg-gradient-to-br from-white/60 to-blue-50/20 border border-blue-200/30 backdrop-blur-sm">
                         {subGroup.configs?.map((config: ConfigItem) => (
-                          <ConfigItemRenderer
-                            key={config.name}
-                            config={config}
-                            value={formData[(config.name || '').replace(/\./g, '!')] ?? config.value ?? config.defaultValue ?? ''}
-                            error={validationErrors[config.name!]}
-                            onChange={(value) => handleFieldChange((config.name || '').replace(/\./g, '!'), value)}
-                          />
+                          <div key={config.name} className="
+                            p-4 rounded-lg 
+                            bg-white/80 border border-white/60
+                            hover:shadow-md hover:border-blue-200/40
+                            transition-all duration-300
+                          ">
+                            <ConfigItemRenderer
+                              config={config}
+                              value={formData[(config.name || '').replace(/\./g, '!')] ?? config.value ?? config.defaultValue ?? ''}
+                              error={validationErrors[config.name!]}
+                              onChange={(value) => handleFieldChange((config.name || '').replace(/\./g, '!'), value)}
+                            />
+                          </div>
                         ))}
                       </div>
                     </TabsContent>
@@ -202,17 +244,37 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* 简洁的操作栏 */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-gray-900">{serviceName}</h3>
+      {/* 苹果风格的操作栏 */}
+      <div className="
+        flex items-center justify-between mb-6 p-4 
+        bg-gradient-to-r from-white via-gray-50/50 to-white
+        border border-gray-200/40 rounded-2xl shadow-sm
+        backdrop-blur-sm
+      ">
+        <h3 className="font-semibold text-gray-800 text-lg">{serviceName}</h3>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={toggleAllGroups}
+            className="
+              border-gray-200/60 bg-white/80 hover:bg-gray-50/80 
+              hover:border-blue-200/60 transition-all duration-300
+              rounded-xl shadow-sm hover:shadow-md
+            "
           >
-            {allGroupsExpanded ? '折叠全部' : '展开全部'}
+            {allGroupsExpanded ? (
+              <>
+                <ChevronUp className="h-4 w-4 mr-1.5" />
+                折叠全部
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4 mr-1.5" />
+                展开全部
+              </>
+            )}
           </Button>
           
           <Button
@@ -220,13 +282,18 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
             size="sm"
             onClick={handleSave}
             disabled={saving}
+            className="
+              bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
+              border-0 shadow-md hover:shadow-lg
+              rounded-xl transition-all duration-300
+            "
           >
             {saving ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="h-4 w-4 mr-1.5" />
             )}
-            保存
+            保存配置
           </Button>
         </div>
       </div>

@@ -63,9 +63,14 @@ const ServiceConfigNavigation: React.FC<ServiceConfigNavigationProps> = ({
 
 
   return (
-    <Card className="h-full flex flex-col border-gray-200/60 shadow-lg bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-gray-50/50 to-blue-50/30 border-b border-gray-100">
-        <CardTitle className="text-base font-medium text-gray-800">
+    <Card className="
+      h-full flex flex-col border-0 shadow-xl 
+      bg-gradient-to-b from-white via-gray-50/30 to-white
+      ring-1 ring-gray-200/40
+      rounded-2xl overflow-hidden backdrop-blur-xl
+    ">
+      <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/60 via-indigo-50/40 to-purple-50/30 border-b border-gray-200/40">
+        <CardTitle className="text-lg font-semibold text-gray-800">
           服务列表
         </CardTitle>
       </CardHeader>
@@ -86,42 +91,48 @@ const ServiceConfigNavigation: React.FC<ServiceConfigNavigationProps> = ({
                     isActive ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                   }`}
                 >
-                  <div className={`w-full p-3 rounded-xl border transition-all duration-300 ${
+                  <div className={`w-full p-4 rounded-2xl border-0 transition-all duration-400 ${
                     isActive 
-                      ? 'bg-gradient-to-br from-blue-50 to-indigo-50/80 border-blue-200/80 shadow-lg shadow-blue-100/50 scale-[1.02]'
-                      : 'bg-white/80 border-gray-200/60 hover:border-blue-200/60 hover:shadow-md hover:bg-gradient-to-br hover:from-white hover:to-blue-50/20 hover:scale-[1.01]'
+                      ? 'bg-gradient-to-br from-blue-600/10 via-indigo-500/8 to-purple-500/10 ring-2 ring-blue-300/60 shadow-xl shadow-blue-200/30 scale-[1.03]'
+                      : 'bg-gradient-to-br from-white/90 via-gray-50/40 to-white/90 ring-1 ring-gray-200/40 hover:ring-blue-200/50 hover:shadow-lg hover:bg-gradient-to-br hover:from-blue-50/30 hover:to-indigo-50/20 hover:scale-[1.02]'
                   }`}>
                     <div className="flex items-center gap-3">
                       {/* 服务图标 */}
-                      <div className={`w-8 h-8 flex-shrink-0 relative p-1 rounded-lg transition-all duration-300 ${
+                      <div className={`w-10 h-10 flex-shrink-0 relative p-2 rounded-xl transition-all duration-300 ${
                         isActive 
-                          ? 'bg-white/60 shadow-sm' 
-                          : 'group-hover:bg-white/40'
+                          ? 'bg-gradient-to-br from-white/80 to-blue-50/60 shadow-lg ring-1 ring-blue-200/40' 
+                          : 'bg-gradient-to-br from-white/60 to-gray-50/40 group-hover:bg-gradient-to-br group-hover:from-white/80 group-hover:to-blue-50/40 group-hover:shadow-md'
                       }`}>
                         <Image
                           src={getServiceIcon(serviceName)}
                           alt={serviceName}
-                          width={32}
-                          height={32}
+                          width={24}
+                          height={24}
                           className="w-full h-full object-contain filter transition-all duration-300"
                         />
                       </div>
                       
                       {/* 服务信息 */}
                       <div className="flex-1 min-w-0 text-left">
-                        <div className="font-medium text-sm text-gray-900 truncate">
+                        <div className={`font-semibold text-sm truncate transition-colors duration-300 ${
+                          isActive ? 'text-blue-800' : 'text-gray-800 group-hover:text-blue-700'
+                        }`}>
                           {serviceName}
                         </div>
                       </div>
                       
                       {/* 选中指示器 */}
-                      {isActive && (
-                        <ChevronRight className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      {isActive && !loading && (
+                        <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/20 ring-1 ring-blue-200/30">
+                          <ChevronRight className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                        </div>
                       )}
                       
                       {/* 加载指示器 */}
                       {loading && isActive && (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 flex-shrink-0" />
+                        <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/20 ring-1 ring-blue-200/30">
+                          <Loader2 className="h-3 w-3 animate-spin text-blue-600 flex-shrink-0" />
+                        </div>
                       )}
                     </div>
                   </div>

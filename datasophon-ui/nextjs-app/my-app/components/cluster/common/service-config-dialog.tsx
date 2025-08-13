@@ -401,7 +401,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
         dialogTitle={`服务配置 - ${cluster?.clusterName}`}
         actionBar={actionBar}
       >
-        <div className="flex-1 flex flex-col min-h-0 p-6">
+        <div className="flex-1 flex flex-col min-h-0 p-6 bg-gradient-to-br from-gray-50/30 via-white/50 to-blue-50/20">
           {/* 错误提示 */}
           {error && (
             <Alert variant="destructive" className="mb-6">
@@ -410,13 +410,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
             </Alert>
           )}
 
-          {/* 使用提示 */}
-          <div className="mb-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/60 rounded-xl p-3">
-            <div className="flex items-center gap-2 text-sm text-blue-700">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="font-medium">提示：悬停配置项标签可查看详细说明</span>
-            </div>
-          </div>
+
 
           {/* 简洁的进度条 */}
           <div className="mb-4">

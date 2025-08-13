@@ -40,8 +40,8 @@ const ConfigItemRenderer: React.FC<ConfigItemRendererProps> = ({
       placeholder: config.placeholder || `请输入${config.label}`,
       disabled: config.disabled,
       className: error 
-        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20 shadow-red-100' 
-        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md'
+        ? 'border-red-400 focus:border-red-500 focus:ring-red-400/20 shadow-red-100/60 bg-red-50/30' 
+        : 'border-gray-200/60 focus:border-blue-400 focus:ring-blue-400/20 hover:border-blue-300/60 transition-all duration-300 shadow-sm hover:shadow-lg bg-white/80 backdrop-blur-sm rounded-xl'
     }
 
     switch (config.type) {
@@ -182,7 +182,7 @@ const ConfigItemRenderer: React.FC<ConfigItemRendererProps> = ({
       <AppleTooltip 
         content={buildTooltipContent()}
         placement="top"
-        maxWidth={380}
+        maxWidth={700}
         showIcon={true}
       >
         <label className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors duration-200">
