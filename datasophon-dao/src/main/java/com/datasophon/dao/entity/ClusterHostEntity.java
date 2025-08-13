@@ -19,38 +19,36 @@ package com.datasophon.dao.entity;
 
 import com.datasophon.common.enums.HostState;
 import com.datasophon.common.enums.ManagementStatus;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * 集群主机实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_cluster_host")
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ClusterHostDO implements Serializable {
+public class ClusterHostEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
-    /**
-     * 创建时间
-     */
-    private Date createTime;
     /**
      * 主机名
      */
