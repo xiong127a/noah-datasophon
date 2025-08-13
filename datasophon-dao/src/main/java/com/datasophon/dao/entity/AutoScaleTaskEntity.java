@@ -1,24 +1,34 @@
 package com.datasophon.dao.entity;
 
-import com.mybatisflex.annotation.Id;
-import com.mybatisflex.annotation.KeyType;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.io.Serial;
 
 /**
- * 自动伸缩任务实体
+ * 自动伸缩任务实体类
+ * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-01
+ * @date 2025-08-13
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("auto_scale_task")
-public class AutoScaleTaskEntity {
+public class AutoScaleTaskEntity extends BaseEntity {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
     
-    @Id(keyType = KeyType.Auto)
-    private Long id;
+
     
     private String taskName;
     

@@ -25,6 +25,8 @@ import org.apache.ibatis.annotations.Mapper;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 
+import java.time.LocalDateTime;
+
 /**
  * 集群服务命令数据访问对象
  * 提供集群服务命令的数据库操作
@@ -72,7 +74,7 @@ public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCo
     /**
      * 更新命令状态和结束时间
      */
-    default void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime) {
+    default void updateCommandStateAndEndTime(String commandId, CommandState commandState, LocalDateTime endTime) {
         ClusterServiceCommandEntity entity = selectByCommandId(commandId);
         if (entity != null) {
             entity.setCommandState(commandState);

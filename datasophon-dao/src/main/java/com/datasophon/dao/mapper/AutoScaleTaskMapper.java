@@ -32,7 +32,7 @@ public interface AutoScaleTaskMapper extends BaseMapper<AutoScaleTaskEntity> {
     default Page<AutoScaleTaskEntity> selectPageByClusterId(Long clusterId, Integer page, Integer pageSize) {
         QueryWrapper query = QueryWrapper.create()
             .where(AUTO_SCALE_TASK_ENTITY.CLUSTER_ID.eq(clusterId))
-            .orderBy(AUTO_SCALE_TASK_ENTITY.CREATED_AT.desc());
+            .orderBy(AUTO_SCALE_TASK_ENTITY.CREATE_TIME.desc());
         return this.paginate(Page.of(page, pageSize), query);
     }
 
@@ -46,7 +46,7 @@ public interface AutoScaleTaskMapper extends BaseMapper<AutoScaleTaskEntity> {
         QueryWrapper query = QueryWrapper.create()
             .where(AUTO_SCALE_TASK_ENTITY.CLUSTER_ID.eq(clusterId))
             .and(AUTO_SCALE_TASK_ENTITY.ENABLED.eq(true))
-            .orderBy(AUTO_SCALE_TASK_ENTITY.CREATED_AT.desc());
+            .orderBy(AUTO_SCALE_TASK_ENTITY.CREATE_TIME.desc());
         return this.selectListByQuery(query);
     }
 }
