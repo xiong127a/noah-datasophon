@@ -247,6 +247,7 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
       {/* 浮动操作按钮组 */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleAllGroups}
@@ -274,6 +275,7 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
         </Button>
         
         <Button
+          type="button"
           size="sm"
           onClick={handleSave}
           disabled={saving}

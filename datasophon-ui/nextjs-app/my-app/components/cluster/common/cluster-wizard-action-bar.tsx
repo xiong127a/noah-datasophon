@@ -169,6 +169,7 @@ const ClusterWizardActionBar: React.FC<ClusterWizardActionBarProps> = ({
           {buttons.map((button, index) => (
             <Button
               key={index}
+              type="button"
               onClick={button.onClick}
               disabled={button.disabled || button.loading}
               variant={button.variant === 'secondary' || button.text.includes('上一步') ? 'outline' : 'default'}

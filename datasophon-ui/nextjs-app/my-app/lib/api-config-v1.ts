@@ -199,12 +199,29 @@ export const apiV1 = {
     }
   },
   post: (url: string, data: any, config?: any) => {
-    return apiClientV1.post(url, data, {
+    // 根据数据类型设置Content-Type
+    let contentTypeHeaders = {}
+    if (data instanceof FormData) {
+      // FormData 让浏览器自动设置multipart/form-data
+      contentTypeHeaders = {}
+    } else if (data instanceof URLSearchParams) {
+      // URLSearchParams 设置为表单编码
+      contentTypeHeaders = { 'Content-Type': 'application/x-www-form-urlencoded' }
+    } else {
+      // 普通对象设置为JSON
+      contentTypeHeaders = { 'Content-Type': 'application/json' }
+    }
+    
+    // 合并headers，用户传入的headers优先级更高
+    const mergedConfig = {
+      ...config,
       headers: {
-        'Content-Type': 'application/json'
-      },
-      ...config
-    })
+        ...contentTypeHeaders,
+        ...(config?.headers || {})
+      }
+    }
+    
+    return apiClientV1.post(url, data, mergedConfig)
   },
   put: (url: string, data: any, config?: any) => 
     apiClientV1.put(url, data, config),

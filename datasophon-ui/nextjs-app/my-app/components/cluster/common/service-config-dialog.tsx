@@ -20,7 +20,6 @@ import type {
   FormData,
   ValidationErrors,
   Step7Data,
-  SaveConfigParams,
   SaveConfigResponse,
   GenerateCommandParams,
   ServiceConfigGroupData
@@ -185,13 +184,13 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     await getServiceConfigOption(serviceName)
   }, [getServiceConfigOption])
 
-  // 保存当前服务配置
-  const saveCurrentServiceConfig = async (): Promise<SaveConfigResponse> => {
-    if (!activeService || !cluster?.id) {
+  // 保存指定服务配置
+  const saveServiceConfig = async (serviceName: string): Promise<SaveConfigResponse> => {
+    if (!serviceName || !cluster?.id) {
       throw new Error('缺少必要参数')
     }
 
-    const configs = serviceTemplates[activeService] || []
+    const configs = serviceTemplates[serviceName] || []
     const updatedConfigs = configs.map(config => {
       const fieldName = (config.name || '').replace(/\./g, '!')
       return {
@@ -206,19 +205,26 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       !(config.hidden && !config.required)
     )
 
-    const params: SaveConfigParams = {
-      clusterId: cluster.id,
-      serviceName: activeService,
-      serviceConfig: JSON.stringify(filteredConfigs)
-    }
+    // 根据新项目的后端接口适配：
+    // @ClusterId Integer clusterId - 从请求头获取，无需在参数中传递
+    // @RequestParam("serviceName") - 需要作为请求参数
+    // @RequestParam("serviceConfig") - 需要作为请求参数
+    const requestData = new URLSearchParams()
+    requestData.append('serviceName', serviceName)
+    requestData.append('serviceConfig', JSON.stringify(filteredConfigs))
 
     const headers = createClusterHeaders(cluster.id)
-    const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, params, { headers })
+    const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, requestData, { headers })
     
     return {
       ...response.data,
-      name: activeService
+      name: serviceName
     }
+  }
+
+  // 保存当前活动服务配置（为了保持向后兼容）
+  const saveCurrentServiceConfig = async (): Promise<SaveConfigResponse> => {
+    return await saveServiceConfig(activeService)
   }
 
   // 保存所有服务配置
@@ -228,20 +234,14 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
     try {
       for (const serviceName of services) {
-        // 临时设置为当前服务以便保存
-        const originalActive = activeService
-        setActiveService(serviceName)
-        
-        // 确保该服务的配置已加载（如果当前服务没有配置数据）
+        // 确保该服务的配置已加载
         if (!serviceTemplates[serviceName]) {
           await getServiceConfigOption(serviceName)
         }
         
-        const result = await saveCurrentServiceConfig()
+        // 直接保存指定服务，不依赖activeService状态更新
+        const result = await saveServiceConfig(serviceName)
         results.push(result)
-        
-        // 恢复原来的活动服务
-        setActiveService(originalActive)
       }
 
       const failedServices = results.filter(r => r.code !== 200)

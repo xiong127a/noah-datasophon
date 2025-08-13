@@ -84,6 +84,7 @@ const ServiceConfigNavigation: React.FC<ServiceConfigNavigationProps> = ({
               return (
                 <Button
                   key={serviceName}
+                  type="button"
                   variant="ghost"
                   onClick={() => onServiceChange(serviceName)}
                   disabled={loading}

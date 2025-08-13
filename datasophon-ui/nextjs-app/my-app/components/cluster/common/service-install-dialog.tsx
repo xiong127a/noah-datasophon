@@ -335,6 +335,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         render: (text: string, row: DataItem) => {
           return currentPage !== 3 ? (
             <button
+              type="button"
               onClick={() => seeDetail(row)}
               className="text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
             >
@@ -419,6 +420,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         dataIndex: "resultMsg",
         render: (_: unknown, row: DataItem) => (
           <button
+            type="button"
             onClick={() => seeDetail(row)}
             className="text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
           >
