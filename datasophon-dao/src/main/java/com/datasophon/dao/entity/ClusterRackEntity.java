@@ -35,7 +35,7 @@ public class ClusterRackEntity implements Serializable {
      * 
      */
     @Id
-    private Integer id;
+    private Long id;
     /**
      * 
      */

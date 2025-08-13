@@ -20,10 +20,10 @@ package com.datasophon.dao.entity;
 import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.util.Date;
@@ -38,7 +38,7 @@ import java.util.Date;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Table("t_ddh_user_info")
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserInfoEntity extends BaseEntity {

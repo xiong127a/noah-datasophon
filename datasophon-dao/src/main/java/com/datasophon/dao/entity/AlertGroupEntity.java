@@ -23,6 +23,9 @@ import java.io.Serial;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
@@ -37,6 +40,9 @@ import com.mybatisflex.annotation.Table;
 @Table("t_ddh_alert_group")
 @Data
 @EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 public class AlertGroupEntity extends BaseEntity {
 
     @Serial

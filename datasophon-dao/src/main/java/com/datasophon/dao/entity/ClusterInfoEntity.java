@@ -26,6 +26,9 @@ import java.util.List;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
@@ -39,6 +42,9 @@ import com.mybatisflex.annotation.Table;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_cluster_info")
 public class ClusterInfoEntity extends BaseEntity {
 

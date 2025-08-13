@@ -61,7 +61,7 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
     /**
      * 根据用户ID和集群ID查询角色用户关系
      */
-    default List<ClusterRoleUserEntity> selectByUserIdAndClusterId(Integer userId, Long clusterId) {
+    default List<ClusterRoleUserEntity> selectByUserIdAndClusterId(Long userId, Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterRoleUserEntity::getUserId).eq(userId)
                 .and(ClusterRoleUserEntity::getClusterId).eq(clusterId);

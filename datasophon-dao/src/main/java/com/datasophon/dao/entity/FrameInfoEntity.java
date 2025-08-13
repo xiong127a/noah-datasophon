@@ -22,6 +22,9 @@ import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.util.List;
@@ -35,6 +38,9 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_frame_info")
 public class FrameInfoEntity extends BaseEntity {
 

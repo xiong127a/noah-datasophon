@@ -23,6 +23,9 @@ import com.mybatisflex.annotation.Table;
 import com.datasophon.common.enums.CommandState;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.util.Date;
@@ -37,6 +40,9 @@ import java.util.Date;
 @Table("t_ddh_cluster_service_command")
 @Data
 @EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ClusterServiceCommandEntity extends BaseEntity {
 
     @Serial
