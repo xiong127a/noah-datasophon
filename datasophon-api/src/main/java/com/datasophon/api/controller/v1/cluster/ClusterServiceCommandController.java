@@ -18,6 +18,7 @@
 package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
@@ -58,7 +59,7 @@ public class ClusterServiceCommandController {
      */
     @GetMapping("/list")
     public Result<PageResult<ClusterServiceCommandVO>> getServiceCommandList(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
@@ -81,7 +82,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate")
     public Result<String> generateCommand(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam CommandType commandType,
             @RequestBody List<String> serviceNames) {
         try {
@@ -97,7 +98,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/service")
     public Result<String> generateServiceCommand(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam CommandType commandType,
             @RequestBody List<String> serviceInstanceIds) {
         try {
@@ -114,7 +115,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/role/batch")
     public Result<String> generateServiceRoleCommands(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam CommandType commandType,
             @RequestBody Map<Integer, List<String>> instanceIdMap) {
         try {
@@ -131,7 +132,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/role")
     public Result<String> generateServiceRoleCommand(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam CommandType commandType,
             @RequestParam Integer serviceInstanceId,
             @RequestBody List<String> serviceRoleInstanceIds,
@@ -150,7 +151,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/execute")
     public Result<Void> startExecuteCommand(
-            @RequestParam Integer clusterId,
+            @ClusterId Integer clusterId,
             @RequestParam String commandType,
             @RequestParam String commandIds) {
         try {

@@ -293,20 +293,56 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
     },
     {
       text: "下一步",
-      onClick: () => {
-        // TODO: 实现保存功能
-        if (onComplete) {
-          const roleHostMappings: ServiceRoleHostMapping[] = Object.entries(formData).map(([serviceRole, hosts]) => ({
+      onClick: async () => {
+        if (!cluster?.id || !onComplete) return
+        
+        try {
+          setLoading(true)
+          
+          // 构建保存数据格式（参考Vue2项目）
+          const mappings = Object.entries(formData).map(([serviceRole, hosts]) => ({
             serviceRole,
             hosts
           }))
           
-          const step6Data: Step6Data = {
-            roleHostMappings,
-            selectedRoles: Object.keys(formData),
-            assignedHosts: []
+          console.log('=== 保存Worker角色分配 ===')
+          console.log('clusterId:', cluster.id)
+          console.log('mappings:', mappings)
+          
+          // 调用保存接口（关键步骤：保存到缓存中）
+          const response = await clusterApiV1.serviceRole.saveMapping(cluster.id, mappings)
+          
+          console.log('保存响应:', response)
+          
+          if (response?.success) {
+            toast.success('Worker角色分配保存成功')
+            
+            // 构建步骤数据
+            const roleHostMappings: ServiceRoleHostMapping[] = mappings.map(({serviceRole, hosts}) => ({
+              serviceRole,
+              hosts
+            }))
+            
+            const step6Data: Step6Data = {
+              roleHostMappings,
+              selectedRoles: Object.keys(formData),
+              assignedHosts: [],
+              // 添加服务名称列表（用于后续步骤）
+              serviceNames: [...new Set(mappings.map(m => m.serviceRole.split('_')[0]))].map(serviceName => ({
+                serviceName
+              }))
+            }
+            
+            onComplete(step6Data)
+          } else {
+            throw new Error(response?.message || '保存失败')
           }
-          onComplete(step6Data)
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '保存Worker角色分配失败'
+          console.error('保存Worker角色分配失败:', error)
+          toast.error(errorMessage)
+        } finally {
+          setLoading(false)
         }
       },
       disabled: loading || stats.assignedRoles !== stats.totalRoles,

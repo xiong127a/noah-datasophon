@@ -21,7 +21,6 @@ import type {
   ValidationErrors,
   Step7Data,
   SaveConfigResponse,
-  GenerateCommandParams,
   ServiceConfigGroupData
 } from '@/types/service-config'
 import { CommandType } from '@/types/service-config'
@@ -271,17 +270,23 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       throw new Error('缺少集群ID')
     }
 
-    const params: GenerateCommandParams = {
-      clusterId: cluster.id,
-      serviceNames: services,
-      commandType: CommandType.INSTALL_SERVICE
+    // 检查services是否为空
+    if (!services || services.length === 0) {
+      throw new Error('没有可安装的服务，请检查服务选择步骤')
     }
 
+    // 根据新项目规范：
+    // @ClusterId Integer clusterId - 从请求头获取
+    // @RequestParam CommandType commandType - 查询参数
+    // @RequestBody List<String> serviceNames - 请求体（JSON数组）
+    const url = `${API_PATHS_V1.GENERATE_SERVICE_INSTALL_COMMAND}?commandType=${CommandType.INSTALL_SERVICE}`
+    const requestBody = services  // 服务名称列表作为JSON数组
     const headers = createClusterHeaders(cluster.id)
-    const response = await apiV1.post(API_PATHS_V1.GENERATE_SERVICE_INSTALL_COMMAND, params, { headers })
+
+    const response = await apiV1.post(url, requestBody, { headers })
     
     if (response.data?.code === 200) {
-      return response.data.data?.commandIds || ''
+      return response.data.data || ''
     } else {
       throw new Error(response.data?.message || '生成命令失败')
     }

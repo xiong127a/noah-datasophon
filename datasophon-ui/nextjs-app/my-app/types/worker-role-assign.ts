@@ -20,6 +20,7 @@ export interface Step6Data {
   roleHostMappings: ServiceRoleHostMapping[]
   selectedRoles: string[]
   assignedHosts: HostRoleAssignment[]
+  serviceNames?: { serviceName: string }[] // 可选：用于后续步骤的服务名称列表
 }
 
 export interface ServiceRoleHostMapping {

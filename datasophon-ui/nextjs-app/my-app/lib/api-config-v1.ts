@@ -130,7 +130,7 @@ export const API_PATHS_V1 = {
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
   SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
-  GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generateCommand`,
+  GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generate`,
   
   // 服务安装监控相关 - v1 (Step8)
   GET_SERVICE_COMMAND_LIST: `${API_BASE}/service/install/getServiceCommandlist`,
