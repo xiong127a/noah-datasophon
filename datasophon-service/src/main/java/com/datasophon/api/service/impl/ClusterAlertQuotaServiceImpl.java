@@ -93,7 +93,7 @@ public class ClusterAlertQuotaServiceImpl
                 .collect(Collectors.toSet());
 
         // 查询通知组 - ✅ NoticeGroupService已完成改造，启用代码
-        Set<Integer> noticeGroupIdList = alertQuotaList.stream()
+        Set<Long> noticeGroupIdList = alertQuotaList.stream()
                 .map(ClusterAlertQuotaEntity::getNoticeGroupId)
                 .collect(Collectors.toSet());
 

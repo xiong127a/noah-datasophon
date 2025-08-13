@@ -158,7 +158,7 @@ public class DocServiceImpl implements DocService {
     }
 
     @Override
-    public boolean hasServiceDoc(Long clusterId, Integer serviceId, String type) {
+    public boolean hasServiceDoc(Long clusterId, Long serviceId, String type) {
         try {
             // 基本参数检查
             if (clusterId == null || serviceId == null || StrUtil.isBlank(type)) {
