@@ -32,7 +32,7 @@ import java.io.Serializable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ServiceDocVO(
         Long clusterId,
-        Integer serviceId,
+        Long serviceId,
         String serviceName,
         String docType,
         String docTypeDisplayName,
@@ -98,7 +98,7 @@ public record ServiceDocVO(
     /**
      * 创建基础文档VO
      */
-    public static ServiceDocVO of(Long clusterId, Integer serviceId, String serviceName, String docType) {
+    public static ServiceDocVO of(Long clusterId, Long serviceId, String serviceName, String docType) {
         String docTypeDisplayName = getDisplayNameByType(docType);
         return new ServiceDocVO(clusterId, serviceId, serviceName, docType, docTypeDisplayName,
                 null, null, null, 0L, "0 字节", "UTF-8", false, null);
@@ -107,7 +107,7 @@ public record ServiceDocVO(
     /**
      * 创建包含内容的文档VO
      */
-    public static ServiceDocVO withContent(Long clusterId, Integer serviceId, String serviceName,
+    public static ServiceDocVO withContent(Long clusterId, Long serviceId, String serviceName,
             String docType, String docContent, String formattedContent, String docPath, String lastModified) {
         String docTypeDisplayName = getDisplayNameByType(docType);
         Long contentLength = docContent != null ? (long) docContent.length() : 0L;

@@ -32,7 +32,7 @@ import java.io.Serializable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ServiceDocDTO(
         Long clusterId,
-        Integer serviceId,
+        Long serviceId,
         String serviceName,
         String docType,
         String docContent,
@@ -46,14 +46,14 @@ public record ServiceDocDTO(
     /**
      * 创建基础文档DTO
      */
-    public static ServiceDocDTO of(Long clusterId, Integer serviceId, String serviceName, String docType) {
+    public static ServiceDocDTO of(Long clusterId, Long serviceId, String serviceName, String docType) {
         return new ServiceDocDTO(clusterId, serviceId, serviceName, docType, null, null, null, "UTF-8");
     }
 
     /**
      * 创建包含内容的文档DTO
      */
-    public static ServiceDocDTO withContent(Long clusterId, Integer serviceId, String serviceName,
+    public static ServiceDocDTO withContent(Long clusterId, Long serviceId, String serviceName,
             String docType, String docContent, String docPath) {
         Long contentLength = docContent != null ? (long) docContent.length() : 0L;
         return new ServiceDocDTO(clusterId, serviceId, serviceName, docType, docContent, docPath, contentLength,
