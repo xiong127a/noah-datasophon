@@ -17,8 +17,8 @@
 
 package com.datasophon.dao.mapper;
 
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.mybatisflex.core.BaseMapper;
-import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.common.enums.ManagementStatus;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -41,38 +41,38 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
+public interface ClusterHostMapper extends BaseMapper<ClusterHostEntity> {
 
     /**
      * 根据主机名查询主机
      */
-    default ClusterHostDO selectByHostname(@Param("hostname") String hostname) {
+    default ClusterHostEntity selectByHostname(@Param("hostname") String hostname) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getHostname).eq(hostname);
+                .where(ClusterHostEntity::getHostname).eq(hostname);
         return this.selectOneByQuery(query);
     }
 
     /**
      * 根据IP查询主机
      */
-    default ClusterHostDO selectByIp(@Param("ip") String ip) {
+    default ClusterHostEntity selectByIp(@Param("ip") String ip) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getIp).eq(ip);
+                .where(ClusterHostEntity::getIp).eq(ip);
         return this.selectOneByQuery(query);
     }
 
     /**
      * 根据IP列表查询指定集群的主机（用于检查IP重复）
      */
-    default List<ClusterHostDO> selectByClusterIdAndIpList(@Param("clusterId") Integer clusterId,
-                                                           @Param("ipList") List<String> ipList) {
+    default List<ClusterHostEntity> selectByClusterIdAndIpList(@Param("clusterId") Long clusterId,
+                                                               @Param("ipList") List<String> ipList) {
         if (ipList == null || ipList.isEmpty()) {
             return new ArrayList<>();
         }
         
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getIp).in(ipList);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getIp).in(ipList);
         return this.selectListByQuery(query);
     }
 
@@ -80,19 +80,19 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
      * 根据集群ID查询所有受管理的主机
      * 注意：配置中状态的主机不计入受管统计
      */
-    default List<ClusterHostDO> selectByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<ClusterHostEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.MANAGED);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getManagementStatus).eq(ManagementStatus.MANAGED);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID查询所有主机（包括未受管和配置中状态）
      */
-    default List<ClusterHostDO> selectAllByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<ClusterHostEntity> selectAllByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
@@ -100,11 +100,11 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
      * 根据集群ID查询所有受管理的主机，按主机名排序
      * 注意：配置中状态的主机不计入受管统计
      */
-    default List<ClusterHostDO> selectManagedHostsByClusterIdOrderByHostname(@Param("clusterId") Integer clusterId) {
+    default List<ClusterHostEntity> selectManagedHostsByClusterIdOrderByHostname(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManagementStatus).eq(ManagementStatus.CONFIGURING)
-                .orderBy(ClusterHostDO::getHostname, true);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getManagementStatus).eq(ManagementStatus.CONFIGURING)
+                .orderBy(ClusterHostEntity::getHostname, true);
         return this.selectListByQuery(query);
     }
 
@@ -114,34 +114,34 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
      * 分页查询主机，支持主机名筛选
      * 查询可配置状态的主机（未受管和配置中状态）
      */
-    default Page<ClusterHostDO> selectPageByClusterIdAndFilters(Page<ClusterHostDO> page,
-            @Param("clusterId") Integer clusterId,
-            @Param("hostname") String hostname,
-            @Param("ip") String ip,
-            @Param("cpuArchitecture") String cpuArchitecture,
-            @Param("hostState") Integer hostState,
-            @Param("orderType") String orderType) {
+    default Page<ClusterHostEntity> selectPageByClusterIdAndFilters(Page<ClusterHostEntity> page,
+                                                                    @Param("clusterId") Long clusterId,
+                                                                    @Param("hostname") String hostname,
+                                                                    @Param("ip") String ip,
+                                                                    @Param("cpuArchitecture") String cpuArchitecture,
+                                                                    @Param("hostState") Integer hostState,
+                                                                    @Param("orderType") String orderType) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getManagementStatus).in(ManagementStatus.UNMANAGED, ManagementStatus.CONFIGURING);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getManagementStatus).in(ManagementStatus.UNMANAGED, ManagementStatus.CONFIGURING);
 
         if (StringUtils.isNotBlank(cpuArchitecture)) {
-            query.and(ClusterHostDO::getCpuArchitecture).eq(cpuArchitecture);
+            query.and(ClusterHostEntity::getCpuArchitecture).eq(cpuArchitecture);
         }
 
         if (hostState != null) {
-            query.and(ClusterHostDO::getHostState).eq(hostState);
+            query.and(ClusterHostEntity::getHostState).eq(hostState);
         }
 
         if (StringUtils.isNotBlank(ip)) {
-            query.and(ClusterHostDO::getIp).like("%" + ip + "%");
+            query.and(ClusterHostEntity::getIp).like("%" + ip + "%");
         }
 
         if (StringUtils.isNotBlank(hostname)) {
-            query.and(ClusterHostDO::getHostname).like("%" + hostname + "%");
+            query.and(ClusterHostEntity::getHostname).like("%" + hostname + "%");
         }
 
-        query.orderBy(ClusterHostDO::getHostname, "asc".equals(orderType));
+        query.orderBy(ClusterHostEntity::getHostname, "asc".equals(orderType));
 
         return this.paginate(page, query);
     }
@@ -149,38 +149,38 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
     /**
      * 根据ID列表查询主机
      */
-    default List<ClusterHostDO> selectByIds(@Param("ids") List<String> ids) {
+    default List<ClusterHostEntity> selectByIds(@Param("ids") List<String> ids) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getId).in(ids);
+                .where(ClusterHostEntity::getId).in(ids);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据主机名列表查询主机
      */
-    default List<ClusterHostDO> selectByHostnames(@Param("hostnames") List<String> hostnames) {
+    default List<ClusterHostEntity> selectByHostnames(@Param("hostnames") List<String> hostnames) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getHostname).in(hostnames);
+                .where(ClusterHostEntity::getHostname).in(hostnames);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID和机架查询主机
      */
-    default List<ClusterHostDO> selectByClusterIdAndRack(@Param("clusterId") Integer clusterId,
-            @Param("rack") String rack) {
+    default List<ClusterHostEntity> selectByClusterIdAndRack(@Param("clusterId") Long clusterId,
+                                                             @Param("rack") String rack) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId)
-                .and(ClusterHostDO::getRack).eq(rack);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getRack).eq(rack);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID删除主机
      */
-    default void deleteByClusterId(@Param("clusterId") Integer clusterId) {
+    default void deleteByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterHostDO::getClusterId).eq(clusterId);
+                .where(ClusterHostEntity::getClusterId).eq(clusterId);
         this.deleteByQuery(query);
     }
 }

@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -36,7 +36,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<ClusterServiceInstanceRoleGroup> {
+public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<ClusterServiceInstanceRoleGroupEntity> {
 
     /**
      * 根据服务实例ID和角色组类型查询角色组
@@ -45,12 +45,12 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      * @param roleGroupType     角色组类型
      * @return 角色组实体
      */
-    default ClusterServiceInstanceRoleGroup selectByServiceInstanceIdAndRoleGroupType(
+    default ClusterServiceInstanceRoleGroupEntity selectByServiceInstanceIdAndRoleGroupType(
             @Param("serviceInstanceId") Integer serviceInstanceId,
             @Param("roleGroupType") String roleGroupType) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq(roleGroupType);
+                .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterServiceInstanceRoleGroupEntity::getRoleGroupType).eq(roleGroupType);
 
         return this.selectOneByQuery(query);
     }
@@ -65,8 +65,8 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
     default long countByServiceInstanceIdAndRoleGroupName(@Param("serviceInstanceId") Integer serviceInstanceId,
             @Param("roleGroupName") String roleGroupName) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterServiceInstanceRoleGroup::getRoleGroupName).eq(roleGroupName);
+                .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterServiceInstanceRoleGroupEntity::getRoleGroupName).eq(roleGroupName);
 
         return this.selectCountByQuery(query);
     }
@@ -77,10 +77,10 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      * @param serviceInstanceId 服务实例ID
      * @return 角色组列表
      */
-    default List<ClusterServiceInstanceRoleGroup> selectByServiceInstanceId(
+    default List<ClusterServiceInstanceRoleGroupEntity> selectByServiceInstanceId(
             @Param("serviceInstanceId") Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId);
+                .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId);
 
         return this.selectListByQuery(query);
     }
@@ -97,8 +97,8 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
             @Param("roleGroupType") String roleGroupType,
             @Param("serviceInstanceId") Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceInstanceRoleGroup::getRoleGroupType).eq(roleGroupType)
-                .and(ClusterServiceInstanceRoleGroup::getServiceInstanceId).eq(serviceInstanceId);
+                .where(ClusterServiceInstanceRoleGroupEntity::getRoleGroupType).eq(roleGroupType)
+                .and(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId);
 
         return this.selectCountByQuery(query);
     }

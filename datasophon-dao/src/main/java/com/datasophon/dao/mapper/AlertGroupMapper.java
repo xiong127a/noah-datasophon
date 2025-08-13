@@ -40,7 +40,7 @@ public interface AlertGroupMapper extends BaseMapper<AlertGroupEntity> {
     /**
      * 根据ID列表和名称查询告警组(带分页)
      */
-    default PageResult<AlertGroupEntity> selectAlertGroupsByIdsWithName(List<Integer> groupIds, String alertGroupName,
+    default PageResult<AlertGroupEntity> selectAlertGroupsByIdsWithName(List<Long> groupIds, String alertGroupName,
             Integer page, Integer pageSize) {
         QueryWrapper query = QueryWrapper.create()
                 .where(AlertGroupEntity::getId).in(groupIds);
@@ -66,7 +66,7 @@ public interface AlertGroupMapper extends BaseMapper<AlertGroupEntity> {
     /**
      * 根据ID列表查询
      */
-    default List<AlertGroupEntity> selectByIds(List<Integer> ids) {
+    default List<AlertGroupEntity> selectByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return java.util.Collections.emptyList();
         }
@@ -78,7 +78,7 @@ public interface AlertGroupMapper extends BaseMapper<AlertGroupEntity> {
     /**
      * 根据ID查询单个实体
      */
-    default AlertGroupEntity selectById(Integer id) {
+    default AlertGroupEntity selectById(Long id) {
         return this.selectOneById(id);
     }
 

@@ -36,7 +36,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OperationLog implements Serializable {
+public class OperationLogEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -78,7 +78,7 @@ public class OperationLog implements Serializable {
     private Map<String,Object> paramMap;
 
     //集群id
-    private Integer clusterId;
+    private Long clusterId;
 
     //主机
     private String hostIds;

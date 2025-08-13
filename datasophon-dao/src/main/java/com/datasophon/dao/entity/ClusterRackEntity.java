@@ -26,7 +26,7 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_rack")
-public class ClusterRack implements Serializable {
+public class ClusterRackEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -43,6 +43,6 @@ public class ClusterRack implements Serializable {
     /**
      * 
      */
-    private Integer clusterId;
+    private Long clusterId;
 
 }

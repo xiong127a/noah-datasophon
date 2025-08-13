@@ -60,7 +60,7 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
          * @param roleName  角色名称
          * @return 服务角色实体
          */
-        default FrameServiceRoleEntity selectByServiceIdAndRoleName(@Param("serviceId") Integer serviceId,
+        default FrameServiceRoleEntity selectByServiceIdAndRoleName(@Param("serviceId") Long serviceId,
                         @Param("roleName") String roleName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceId).eq(serviceId)
@@ -105,7 +105,7 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
          * @param serviceId 服务ID
          * @return 角色列表
          */
-        default List<FrameServiceRoleEntity> selectByServiceId(@Param("serviceId") Integer serviceId) {
+        default List<FrameServiceRoleEntity> selectByServiceId(@Param("serviceId") Long serviceId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceId).eq(serviceId);
 

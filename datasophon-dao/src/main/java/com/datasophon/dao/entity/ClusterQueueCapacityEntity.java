@@ -26,7 +26,7 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_queue_capacity")
-public class ClusterQueueCapacity implements Serializable {
+public class ClusterQueueCapacityEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -37,7 +37,7 @@ public class ClusterQueueCapacity implements Serializable {
     @Id
     private Integer id;
 
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 
      */

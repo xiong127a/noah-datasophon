@@ -39,7 +39,7 @@ public interface NoticeGroupUserMapper extends BaseMapper<NoticeGroupUserEntity>
     /**
      * 根据通知组ID列表删除用户关联关系
      */
-    default int deleteByGroupIds(List<Integer> groupIds) {
+    default int deleteByGroupIds(List<Long> groupIds) {
         if (groupIds == null || groupIds.isEmpty()) {
             return 0;
         }
@@ -50,7 +50,7 @@ public interface NoticeGroupUserMapper extends BaseMapper<NoticeGroupUserEntity>
     /**
      * 根据通知组ID查询用户关联关系列表
      */
-    default List<NoticeGroupUserEntity> selectByGroupId(Integer groupId) {
+    default List<NoticeGroupUserEntity> selectByGroupId(Long groupId) {
         return selectListByQuery(QueryWrapper.create()
                 .where(NOTICE_GROUP_USER_ENTITY.NOTICE_GROUP_ID.eq(groupId)));
     }
@@ -58,7 +58,7 @@ public interface NoticeGroupUserMapper extends BaseMapper<NoticeGroupUserEntity>
     /**
      * 根据通知组ID列表查询用户关联关系列表
      */
-    default List<NoticeGroupUserEntity> selectByGroupIds(List<Integer> groupIds) {
+    default List<NoticeGroupUserEntity> selectByGroupIds(List<Long> groupIds) {
         if (groupIds == null || groupIds.isEmpty()) {
             return List.of(); // JDK21现代特性：使用List.of()替代Collections.emptyList()
         }

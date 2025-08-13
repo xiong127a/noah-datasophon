@@ -48,7 +48,7 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
      * @param clusterId 集群ID
      * @return 管理员用户列表
      */
-    default List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Long clusterId) {
         // 使用表定义常量和类型安全的QueryChain构建优雅的SQL
         return QueryChain.of(ClusterRoleUserEntity.class)
                 .select(USER_INFO_ENTITY.ALL_COLUMNS)
@@ -61,7 +61,7 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
     /**
      * 根据用户ID和集群ID查询角色用户关系
      */
-    default List<ClusterRoleUserEntity> selectByUserIdAndClusterId(Integer userId, Integer clusterId) {
+    default List<ClusterRoleUserEntity> selectByUserIdAndClusterId(Integer userId, Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterRoleUserEntity::getUserId).eq(userId)
                 .and(ClusterRoleUserEntity::getClusterId).eq(clusterId);
@@ -71,7 +71,7 @@ public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity>
     /**
      * 根据集群ID删除角色用户关系
      */
-    default int removeByClusterId(Integer clusterId) {
+    default int removeByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterRoleUserEntity::getClusterId).eq(clusterId);
         return this.deleteByQuery(query);

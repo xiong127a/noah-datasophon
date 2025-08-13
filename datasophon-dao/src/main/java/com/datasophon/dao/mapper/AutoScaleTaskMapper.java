@@ -29,7 +29,7 @@ public interface AutoScaleTaskMapper extends BaseMapper<AutoScaleTaskEntity> {
      * @param pageSize 页大小
      * @return 分页结果
      */
-    default Page<AutoScaleTaskEntity> selectPageByClusterId(Integer clusterId, Integer page, Integer pageSize) {
+    default Page<AutoScaleTaskEntity> selectPageByClusterId(Long clusterId, Integer page, Integer pageSize) {
         QueryWrapper query = QueryWrapper.create()
             .where(AUTO_SCALE_TASK_ENTITY.CLUSTER_ID.eq(clusterId))
             .orderBy(AUTO_SCALE_TASK_ENTITY.CREATED_AT.desc());
@@ -42,7 +42,7 @@ public interface AutoScaleTaskMapper extends BaseMapper<AutoScaleTaskEntity> {
      * @param clusterId 集群ID
      * @return 任务列表
      */
-    default List<AutoScaleTaskEntity> selectEnabledByClusterId(Integer clusterId) {
+    default List<AutoScaleTaskEntity> selectEnabledByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
             .where(AUTO_SCALE_TASK_ENTITY.CLUSTER_ID.eq(clusterId))
             .and(AUTO_SCALE_TASK_ENTITY.ENABLED.eq(true))

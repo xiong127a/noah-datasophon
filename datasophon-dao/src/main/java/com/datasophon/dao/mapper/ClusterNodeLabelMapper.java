@@ -38,7 +38,7 @@ public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntit
     /**
      * 根据集群ID查询节点标签
      */
-    default List<ClusterNodeLabelEntity> selectByClusterId(Integer clusterId) {
+    default List<ClusterNodeLabelEntity> selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
@@ -47,7 +47,7 @@ public interface ClusterNodeLabelMapper extends BaseMapper<ClusterNodeLabelEntit
     /**
      * 根据集群ID和节点标签查询
      */
-    default List<ClusterNodeLabelEntity> selectByClusterIdAndNodeLabel(Integer clusterId, String nodeLabel) {
+    default List<ClusterNodeLabelEntity> selectByClusterIdAndNodeLabel(Long clusterId, String nodeLabel) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterNodeLabelEntity::getClusterId).eq(clusterId)
                 .and(ClusterNodeLabelEntity::getNodeLabel).eq(nodeLabel);

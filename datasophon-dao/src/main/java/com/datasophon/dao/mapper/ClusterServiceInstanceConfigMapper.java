@@ -53,7 +53,7 @@ public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterSe
      * 支持按集群ID和服务ID过滤
      */
     default Page<ClusterServiceInstanceConfigEntity> selectConfigPageByConditions(
-            Integer clusterId, Integer serviceId, Integer page, Integer pageSize) {
+            Long clusterId, Integer serviceId, Integer page, Integer pageSize) {
         var queryChain = QueryChain.of(ClusterServiceInstanceConfigEntity.class)
                 .from(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY);
         

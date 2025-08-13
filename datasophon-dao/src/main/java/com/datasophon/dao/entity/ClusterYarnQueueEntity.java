@@ -29,7 +29,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_yarn_queue")
-public class ClusterYarnQueue implements Serializable {
+public class ClusterYarnQueueEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -76,7 +76,7 @@ public class ClusterYarnQueue implements Serializable {
      */
     private Integer allowPreemption;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private Date createTime;
 

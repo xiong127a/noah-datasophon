@@ -46,7 +46,7 @@ public class FrameServiceRoleEntity implements Serializable {
     /**
      * 服务id
      */
-    private Integer serviceId;
+    private Long serviceId;
     /**
      * 角色名称
      */

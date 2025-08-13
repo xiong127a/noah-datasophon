@@ -73,7 +73,7 @@ public interface NoticeGroupMapper extends BaseMapper<NoticeGroupEntity> {
      * @return 通知组列表
      */
     default List<NoticeGroupEntity> selectByNameExcludingId(@Param("noticeGroupName") String noticeGroupName,
-            @Param("excludeId") Integer excludeId) {
+            @Param("excludeId") Long excludeId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(NoticeGroupEntity::getNoticeGroupName).eq(noticeGroupName);
 

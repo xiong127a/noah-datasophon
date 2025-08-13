@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterZk;
+import com.datasophon.dao.entity.ClusterZkEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -36,7 +36,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
+public interface ClusterZkMapper extends BaseMapper<ClusterZkEntity> {
 
     /**
      * 获取指定集群的最大myid值
@@ -44,11 +44,11 @@ public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
      * @param clusterId 集群ID
      * @return 最大myid值
      */
-    default Integer getMaxMyId(@Param("clusterId") Integer clusterId) {
+    default Integer getMaxMyId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .select("MAX(myid)")
                 .from("t_ddh_cluster_zk")
-                .where(ClusterZk::getClusterId).eq(clusterId);
+                .where(ClusterZkEntity::getClusterId).eq(clusterId);
 
         // 使用selectObjectByQuery查询单个聚合结果
         Object result = this.selectObjectByQuery(query);
@@ -61,9 +61,9 @@ public interface ClusterZkMapper extends BaseMapper<ClusterZk> {
      * @param clusterId 集群ID
      * @return ZK服务器列表
      */
-    default List<ClusterZk> selectByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<ClusterZkEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterZk::getClusterId).eq(clusterId);
+                .where(ClusterZkEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 }

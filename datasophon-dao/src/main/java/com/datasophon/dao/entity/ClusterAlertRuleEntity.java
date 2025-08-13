@@ -28,7 +28,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_alert_rule")
-public class ClusterAlertRule implements Serializable {
+public class ClusterAlertRuleEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -97,6 +97,6 @@ public class ClusterAlertRule implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
 }

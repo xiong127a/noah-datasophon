@@ -24,10 +24,10 @@ import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.util.Date;
@@ -42,7 +42,7 @@ import java.util.Date;
 @Table("t_ddh_cluster_host")
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Builder
+@SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ClusterHostEntity extends BaseEntity {
@@ -92,7 +92,7 @@ public class ClusterHostEntity extends BaseEntity {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 1:正常运行 2：断线 3、存在告警
      */

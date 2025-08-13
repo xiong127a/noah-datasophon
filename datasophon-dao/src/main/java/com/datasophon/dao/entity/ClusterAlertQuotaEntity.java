@@ -32,7 +32,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_alert_quota")
-public class ClusterAlertQuota implements Serializable {
+public class ClusterAlertQuotaEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -61,11 +61,11 @@ public class ClusterAlertQuota implements Serializable {
     /**
      * 告警组
      */
-    private Integer alertGroupId;
+    private Long alertGroupId;
     /**
      * 通知组
      */
-    private Integer noticeGroupId;
+    private Long noticeGroupId;
     /**
      * 告警建议
      */

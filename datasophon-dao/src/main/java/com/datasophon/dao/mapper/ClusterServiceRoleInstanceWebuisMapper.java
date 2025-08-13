@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuisEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -25,7 +25,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceWebuisTableDef.CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS;
+import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceWebuisEntityTableDef.CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY;
 
 /**
  * 集群服务角色对应web ui表
@@ -35,14 +35,14 @@ import static com.datasophon.dao.entity.table.ClusterServiceRoleInstanceWebuisTa
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<ClusterServiceRoleInstanceWebuis> {
+public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<ClusterServiceRoleInstanceWebuisEntity> {
 
     /**
      * 根据服务实例ID查询WebUI列表
      */
-    default List<ClusterServiceRoleInstanceWebuis> selectByServiceInstanceId(Integer serviceInstanceId) {
+    default List<ClusterServiceRoleInstanceWebuisEntity> selectByServiceInstanceId(Integer serviceInstanceId) {
         return selectListByQuery(QueryWrapper.create()
-                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
 
     /**
@@ -50,15 +50,15 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
      */
     default int deleteByServiceInstanceId(Integer serviceInstanceId) {
         return deleteByQuery(QueryWrapper.create()
-                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
 
     /**
      * 根据角色实例ID查询单个WebUI
      */
-    default ClusterServiceRoleInstanceWebuis selectByServiceRoleInstanceId(Integer roleInstanceId) {
+    default ClusterServiceRoleInstanceWebuisEntity selectByServiceRoleInstanceId(Integer roleInstanceId) {
         return selectOneByQuery(QueryWrapper.create()
-                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }
 
     /**
@@ -69,14 +69,14 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
             return 0;
         }
         return deleteByQuery(QueryWrapper.create()
-                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.in(roleInstanceIds)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_ROLE_INSTANCE_ID.in(roleInstanceIds)));
     }
 
     /**
      * 根据角色实例ID查询WebUI列表（用于状态更新）
      */
-    default List<ClusterServiceRoleInstanceWebuis> selectListByServiceRoleInstanceId(Integer roleInstanceId) {
+    default List<ClusterServiceRoleInstanceWebuisEntity> selectListByServiceRoleInstanceId(Integer roleInstanceId) {
         return selectListByQuery(QueryWrapper.create()
-                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
+                .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }
 }

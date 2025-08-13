@@ -44,9 +44,9 @@ public class NoticeGroupEntity implements Serializable {
      * 主键
      */
     @Id
-    private Integer id;
+    private Long id;
     @Column(ignore = true)
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 通知组名称
      */

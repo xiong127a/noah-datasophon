@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.dao.entity.ClusterUserEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -34,7 +34,7 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
+public interface ClusterUserMapper extends BaseMapper<ClusterUserEntity> {
 
     /**
      * 根据集群ID和用户名查询用户列表（检查重复用户名）
@@ -43,11 +43,11 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
      * @param username  用户名
      * @return 用户列表
      */
-    default List<ClusterUser> selectByClusterIdAndUsername(@Param("clusterId") Integer clusterId,
-            @Param("username") String username) {
+    default List<ClusterUserEntity> selectByClusterIdAndUsername(@Param("clusterId") Long clusterId,
+                                                                 @Param("username") String username) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUser::getClusterId).eq(clusterId)
-                .and(ClusterUser::getUsername).eq(username);
+                .where(ClusterUserEntity::getClusterId).eq(clusterId)
+                .and(ClusterUserEntity::getUsername).eq(username);
         return this.selectListByQuery(query);
     }
 
@@ -60,15 +60,15 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
      * @param pageSize  每页大小
      * @return 用户列表
      */
-    default List<ClusterUser> selectByClusterIdWithPagination(@Param("clusterId") Integer clusterId,
-            @Param("username") String username,
-            @Param("offset") Integer offset,
-            @Param("pageSize") Integer pageSize) {
+    default List<ClusterUserEntity> selectByClusterIdWithPagination(@Param("clusterId") Long clusterId,
+                                                                    @Param("username") String username,
+                                                                    @Param("offset") Integer offset,
+                                                                    @Param("pageSize") Integer pageSize) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUser::getClusterId).eq(clusterId);
+                .where(ClusterUserEntity::getClusterId).eq(clusterId);
 
         if (username != null && !username.trim().isEmpty()) {
-            query.and(ClusterUser::getUsername).like("%" + username + "%");
+            query.and(ClusterUserEntity::getUsername).like("%" + username + "%");
         }
 
         return this.selectListByQuery(query.limit(offset, pageSize));
@@ -80,9 +80,9 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
      * @param clusterId 集群ID
      * @return 用户列表
      */
-    default List<ClusterUser> selectByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<ClusterUserEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUser::getClusterId).eq(clusterId);
+                .where(ClusterUserEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
@@ -93,13 +93,13 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
      * @param username  用户名（可为null）
      * @return 用户总数
      */
-    default long countByClusterIdAndUsername(@Param("clusterId") Integer clusterId,
+    default long countByClusterIdAndUsername(@Param("clusterId") Long clusterId,
             @Param("username") String username) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUser::getClusterId).eq(clusterId);
+                .where(ClusterUserEntity::getClusterId).eq(clusterId);
 
         if (username != null && !username.trim().isEmpty()) {
-            query.and(ClusterUser::getUsername).like("%" + username + "%");
+            query.and(ClusterUserEntity::getUsername).like("%" + username + "%");
         }
 
         return this.selectCountByQuery(query);
@@ -116,10 +116,10 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUser> {
             return List.of();
         }
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUser::getId).in(userIds);
+                .where(ClusterUserEntity::getId).in(userIds);
         return this.selectListByQuery(query)
                 .stream()
-                .map(ClusterUser::getUsername)
+                .map(ClusterUserEntity::getUsername)
                 .toList(); // JDK21现代特性
     }
 }

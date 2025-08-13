@@ -20,6 +20,7 @@ package com.datasophon.dao.entity;
 import java.io.Serial;
 import java.io.Serializable;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import lombok.Data;
 
 import com.mybatisflex.annotation.Id;
@@ -27,7 +28,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_alert_group_map")
-public class ClusterAlertGroupMap implements Serializable {
+public class ClusterAlertGroupMapEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -35,15 +36,10 @@ public class ClusterAlertGroupMap implements Serializable {
     /**
      * 
      */
-    @Id
-    private Integer id;
+    private Long clusterId;
     /**
      * 
      */
-    private Integer clusterId;
-    /**
-     * 
-     */
-    private Integer alertGroupId;
+    private Long alertGroupId;
 
 }

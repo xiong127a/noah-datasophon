@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantHbaseResource extends TenantFrameResource {
+public class TenantHbaseResourceEntity extends TenantFrameResourceEntity {
     /**
      * hbase 命名空间
      */

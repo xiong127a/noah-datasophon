@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterAlertHistoryEntity;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -35,17 +35,17 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistory> {
+public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistoryEntity> {
 
     /**
      * 根据服务实例ID查询启用的告警历史
      */
-    default List<ClusterAlertHistory> selectEnabledByServiceInstanceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectEnabledByServiceInstanceId(Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getIsEnabled).eq(1);
+                .where(ClusterAlertHistoryEntity::getIsEnabled).eq(1);
 
         if (serviceInstanceId != null) {
-            query.and(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId);
+            query.and(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId);
         }
 
         return this.selectListByQuery(query);
@@ -54,13 +54,13 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
     /**
      * 根据集群ID分页查询启用的告警历史
      */
-    default PageResult<ClusterAlertHistory> selectEnabledByClusterIdWithPage(Integer clusterId, Integer page,
-            Integer pageSize) {
+    default PageResult<ClusterAlertHistoryEntity> selectEnabledByClusterIdWithPage(Long clusterId, Integer page,
+                                                                                   Integer pageSize) {
         // 构建查询条件
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .orderBy(ClusterAlertHistory::getCreateTime, false);
+                .where(ClusterAlertHistoryEntity::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1)
+                .orderBy(ClusterAlertHistoryEntity::getCreateTime, false);
 
         // 获取总数
         long count = this.selectCountByQuery(query);
@@ -70,8 +70,8 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
         }
 
         // 分页查询
-        Page<ClusterAlertHistory> flexPage = new Page<>(page, pageSize);
-        Page<ClusterAlertHistory> resultPage = this.paginate(flexPage, query);
+        Page<ClusterAlertHistoryEntity> flexPage = new Page<>(page, pageSize);
+        Page<ClusterAlertHistoryEntity> resultPage = this.paginate(flexPage, query);
 
         return PageResult.of(resultPage.getRecords(), count, page, pageSize);
     }
@@ -84,8 +84,8 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
             return 0;
         }
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getIsEnabled).eq(1)
-                .and(ClusterAlertHistory::getServiceRoleInstanceId).in(ids);
+                .where(ClusterAlertHistoryEntity::getIsEnabled).eq(1)
+                .and(ClusterAlertHistoryEntity::getServiceRoleInstanceId).in(ids);
         return this.deleteByQuery(query);
     }
 
@@ -94,8 +94,8 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      */
     default long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1);
+                .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1);
         return this.selectCountByQuery(query);
     }
 
@@ -105,11 +105,11 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      * @param serviceInstanceId 服务实例ID
      * @return 停止状态的告警历史列表
      */
-    default List<ClusterAlertHistory> selectStoppedRolesByServiceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectStoppedRolesByServiceId(Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .and(ClusterAlertHistory::getAlertInfo).like("%停止%");
+                .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1)
+                .and(ClusterAlertHistoryEntity::getAlertInfo).like("%停止%");
         return this.selectListByQuery(query);
     }
 
@@ -119,11 +119,11 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      * @param serviceInstanceId 服务实例ID
      * @return 告警状态的告警历史列表
      */
-    default List<ClusterAlertHistory> selectAlarmRolesByServiceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectAlarmRolesByServiceId(Integer serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getServiceInstanceId).eq(serviceInstanceId)
-                .and(ClusterAlertHistory::getIsEnabled).eq(1)
-                .and(ClusterAlertHistory::getAlertLevel).in("WARNING", "ERROR", "CRITICAL");
+                .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1)
+                .and(ClusterAlertHistoryEntity::getAlertLevel).in("WARNING", "ERROR", "CRITICAL");
         return this.selectListByQuery(query);
     }
 
@@ -137,13 +137,13 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      * @param isEnabled       是否启用（1-启用，2-禁用）
      * @return 告警历史
      */
-    default ClusterAlertHistory selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
-            String alertTargetName, Integer clusterId, String hostname, Integer isEnabled) {
+    default ClusterAlertHistoryEntity selectByAlertTargetNameAndClusterIdAndHostnameAndEnabled(
+            String alertTargetName, Long clusterId, String hostname, Integer isEnabled) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterAlertHistory::getAlertTargetName).eq(alertTargetName)
-                .and(ClusterAlertHistory::getClusterId).eq(clusterId)
-                .and(ClusterAlertHistory::getHostname).eq(hostname)
-                .and(ClusterAlertHistory::getIsEnabled).eq(isEnabled);
+                .where(ClusterAlertHistoryEntity::getAlertTargetName).eq(alertTargetName)
+                .and(ClusterAlertHistoryEntity::getClusterId).eq(clusterId)
+                .and(ClusterAlertHistoryEntity::getHostname).eq(hostname)
+                .and(ClusterAlertHistoryEntity::getIsEnabled).eq(isEnabled);
         return this.selectOneByQuery(query);
     }
 

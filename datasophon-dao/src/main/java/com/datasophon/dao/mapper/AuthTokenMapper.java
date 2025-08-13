@@ -76,7 +76,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @param userId 用户ID
      * @return 有效的令牌列表
      */
-    default List<AuthTokenEntity> findValidTokensByUserId(@Param("userId") Integer userId) {
+    default List<AuthTokenEntity> findValidTokensByUserId(@Param("userId") Long userId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
@@ -119,7 +119,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @param userId           用户ID
      * @param maxTokensPerUser 每个用户保留的最大令牌数
      */
-    default void cleanupOldTokens(@Param("userId") Integer userId, @Param("maxTokens") int maxTokensPerUser) {
+    default void cleanupOldTokens(@Param("userId") Long userId, @Param("maxTokens") int maxTokensPerUser) {
         List<AuthTokenEntity> allTokens = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .orderBy(AuthTokenEntity::getIssuedAt, false)

@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterRack;
+import com.datasophon.dao.entity.ClusterRackEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -33,24 +33,24 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterRackMapper extends BaseMapper<ClusterRack> {
+public interface ClusterRackMapper extends BaseMapper<ClusterRackEntity> {
 
     /**
      * 根据集群ID查询机架
      */
-    default List<ClusterRack> selectByClusterId(Integer clusterId) {
+    default List<ClusterRackEntity> selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterRack::getClusterId).eq(clusterId);
+                .where(ClusterRackEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
     /**
      * 检查集群ID和机架名是否存在
      */
-    default boolean existsByClusterIdAndRack(Integer clusterId, String rack) {
+    default boolean existsByClusterIdAndRack(Long clusterId, String rack) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterRack::getClusterId).eq(clusterId)
-                .and(ClusterRack::getRack).eq(rack);
+                .where(ClusterRackEntity::getClusterId).eq(clusterId)
+                .and(ClusterRackEntity::getRack).eq(rack);
         return this.selectOneByQuery(query) != null;
     }
 }

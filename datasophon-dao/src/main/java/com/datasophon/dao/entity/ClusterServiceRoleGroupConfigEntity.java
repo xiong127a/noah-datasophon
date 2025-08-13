@@ -28,7 +28,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_service_role_group_config")
-public class ClusterServiceRoleGroupConfig implements Serializable {
+public class ClusterServiceRoleGroupConfigEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -65,7 +65,7 @@ public class ClusterServiceRoleGroupConfig implements Serializable {
     /**
      * 
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 
      */

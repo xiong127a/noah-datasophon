@@ -39,11 +39,11 @@ public class FrameServiceEntity implements Serializable {
      * 主键
      */
     @Id
-    private Integer id;
+    private Long id;
     /**
      * 框架id
      */
-    private Integer frameId;
+    private Long frameId;
     /**
      * 服务名称
      */

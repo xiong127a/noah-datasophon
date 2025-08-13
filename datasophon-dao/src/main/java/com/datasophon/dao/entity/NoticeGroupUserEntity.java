@@ -41,14 +41,14 @@ public class NoticeGroupUserEntity implements Serializable {
      * 主键
      */
     @Id
-    private Integer id;
+    private Long id;
     /**
      * 通知组id
      */
-    private Integer noticeGroupId;
+    private Long noticeGroupId;
     /**
      * 用户id
      */
-    private Integer userId;
+    private Long userId;
 
 }

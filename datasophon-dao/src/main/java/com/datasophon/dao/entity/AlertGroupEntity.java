@@ -17,28 +17,31 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
+
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 
+/**
+ * 告警组实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_alert_group")
 @Data
-public class AlertGroupEntity implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class AlertGroupEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
     /**
      * 告警组名称
      */
@@ -48,12 +51,10 @@ public class AlertGroupEntity implements Serializable {
      */
     private String alertGroupCategory;
 
-    private Date createTime;
-
     @Column(ignore = true)
     private Integer alertQuotaNum;
 
     @Column(ignore = true)
-    private Integer clusterId;
+    private Long clusterId;
 
 }

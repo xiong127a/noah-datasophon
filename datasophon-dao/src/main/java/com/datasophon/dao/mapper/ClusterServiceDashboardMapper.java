@@ -17,12 +17,12 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
-import static com.datasophon.dao.entity.table.ClusterServiceDashboardTableDef.CLUSTER_SERVICE_DASHBOARD;
+import static com.datasophon.dao.entity.table.ClusterServiceDashboardEntityTableDef.CLUSTER_SERVICE_DASHBOARD_ENTITY;
 
 /**
  * 集群服务仪表盘数据访问对象
@@ -33,7 +33,7 @@ import static com.datasophon.dao.entity.table.ClusterServiceDashboardTableDef.CL
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterServiceDashboardMapper extends BaseMapper<ClusterServiceDashboard> {
+public interface ClusterServiceDashboardMapper extends BaseMapper<ClusterServiceDashboardEntity> {
 
     /**
      * 根据服务名称查询仪表盘配置
@@ -41,8 +41,8 @@ public interface ClusterServiceDashboardMapper extends BaseMapper<ClusterService
      * @param serviceName 服务名称
      * @return 仪表盘配置
      */
-    default ClusterServiceDashboard selectByServiceName(String serviceName) {
+    default ClusterServiceDashboardEntity selectByServiceName(String serviceName) {
         return selectOneByQuery(QueryWrapper.create()
-            .where(CLUSTER_SERVICE_DASHBOARD.SERVICE_NAME.eq(serviceName)));
+            .where(CLUSTER_SERVICE_DASHBOARD_ENTITY.SERVICE_NAME.eq(serviceName)));
     }
 }

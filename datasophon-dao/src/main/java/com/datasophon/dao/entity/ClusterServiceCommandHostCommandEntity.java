@@ -17,28 +17,35 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.enums.RoleType;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * 集群服务命令主机命令实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_cluster_service_command_host_command")
 @Data
-public class ClusterServiceCommandHostCommandEntity implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class ClusterServiceCommandHostCommandEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+     * 主机命令标识（原主键字段，保留作为业务标识）
      */
-    @Id
     private String hostCommandId;
     /**
      * 指令名称
@@ -72,7 +79,7 @@ public class ClusterServiceCommandHostCommandEntity implements Serializable {
 
     private String resultMsg;
 
-    private Date createTime;
+
 
     private Integer commandType;
 

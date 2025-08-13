@@ -34,7 +34,7 @@ import java.util.Date;
 @Table("t_ddh_cluster_alert_history")
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClusterAlertHistory implements Serializable {
+public class ClusterAlertHistoryEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -91,6 +91,6 @@ public class ClusterAlertHistory implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
 }

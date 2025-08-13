@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterQueueCapacity;
+import com.datasophon.dao.entity.ClusterQueueCapacityEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -33,26 +33,26 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapacity> {
+public interface ClusterQueueCapacityMapper extends BaseMapper<ClusterQueueCapacityEntity> {
 
     /**
      * 根据集群ID查询队列容量
      */
-    default List<ClusterQueueCapacity> selectByClusterId(Integer clusterId) {
+    default List<ClusterQueueCapacityEntity> selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterQueueCapacity::getClusterId).eq(clusterId);
+                .where(ClusterQueueCapacityEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID、队列名称和父队列名称查询队列
      */
-    default ClusterQueueCapacity selectByClusterIdAndQueueName(Integer clusterId, String queueName,
-            String parentQueueName) {
+    default ClusterQueueCapacityEntity selectByClusterIdAndQueueName(Long clusterId, String queueName,
+                                                                     String parentQueueName) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterQueueCapacity::getClusterId).eq(clusterId)
-                .and(ClusterQueueCapacity::getQueueName).eq(queueName)
-                .and(ClusterQueueCapacity::getParent).eq(parentQueueName);
+                .where(ClusterQueueCapacityEntity::getClusterId).eq(clusterId)
+                .and(ClusterQueueCapacityEntity::getQueueName).eq(queueName)
+                .and(ClusterQueueCapacityEntity::getParent).eq(parentQueueName);
         return this.selectOneByQuery(query);
     }
 }

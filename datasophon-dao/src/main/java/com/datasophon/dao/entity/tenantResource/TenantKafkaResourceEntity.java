@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantKafkaResource extends TenantFrameResource {
+public class TenantKafkaResourceEntity extends TenantFrameResourceEntity {
     /**
      * kafka topic名称
      */

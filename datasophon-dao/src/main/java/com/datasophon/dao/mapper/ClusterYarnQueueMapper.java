@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterYarnQueue;
+import com.datasophon.dao.entity.ClusterYarnQueueEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -36,16 +36,16 @@ import java.util.List;
  * @date 2022-07-13 19:34:14
  */
 @Mapper
-public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueue> {
+public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueueEntity> {
 
     /**
      * 分页查询集群Yarn队列
      */
-    default Page<ClusterYarnQueue> selectPageByClusterId(Page<ClusterYarnQueue> page,
-            @Param("clusterId") Integer clusterId) {
+    default Page<ClusterYarnQueueEntity> selectPageByClusterId(Page<ClusterYarnQueueEntity> page,
+                                                               @Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId)
-                .orderBy(ClusterYarnQueue::getCreateTime).desc();
+                .where(ClusterYarnQueueEntity::getClusterId).eq(clusterId)
+                .orderBy(ClusterYarnQueueEntity::getCreateTime).desc();
         return this.paginate(page, query);
     }
 
@@ -54,27 +54,27 @@ public interface ClusterYarnQueueMapper extends BaseMapper<ClusterYarnQueue> {
      */
     default boolean existsByQueueName(@Param("queueName") String queueName) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnQueue::getQueueName).eq(queueName);
+                .where(ClusterYarnQueueEntity::getQueueName).eq(queueName);
         return this.selectCountByQuery(query) > 0;
     }
 
     /**
      * 根据集群ID查询所有队列
      */
-    default List<ClusterYarnQueue> selectByClusterId(@Param("clusterId") Integer clusterId) {
+    default List<ClusterYarnQueueEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnQueue::getClusterId).eq(clusterId);
+                .where(ClusterYarnQueueEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
     /**
      * 根据集群ID和队列名称查询队列
      */
-    default ClusterYarnQueue selectByClusterIdAndQueueName(@Param("clusterId") Integer clusterId,
-            @Param("queueName") String queueName) {
+    default ClusterYarnQueueEntity selectByClusterIdAndQueueName(@Param("clusterId") Long clusterId,
+                                                                 @Param("queueName") String queueName) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnQueue::getQueueName).eq(queueName)
-                .and(ClusterYarnQueue::getClusterId).eq(clusterId);
+                .where(ClusterYarnQueueEntity::getQueueName).eq(queueName)
+                .and(ClusterYarnQueueEntity::getClusterId).eq(clusterId);
         return this.selectOneByQuery(query);
     }
 }

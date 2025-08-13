@@ -36,7 +36,7 @@ public class Host {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     private String cpuArchitecture;
 

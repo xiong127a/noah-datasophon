@@ -43,7 +43,7 @@ public class ClusterServiceInstanceEntity implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 服务名称
      */
@@ -68,7 +68,7 @@ public class ClusterServiceInstanceEntity implements Serializable {
 
     private NeedRestart needRestart;
 
-    private Integer frameServiceId;
+    private Long frameServiceId;
 
     @Column(ignore = true)
     private String dashboardUrl;

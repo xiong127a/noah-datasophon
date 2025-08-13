@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantYarnResource extends TenantFrameResource {
+public class TenantYarnResourceEntity extends TenantFrameResourceEntity {
 
     /**
      * 父队列名称

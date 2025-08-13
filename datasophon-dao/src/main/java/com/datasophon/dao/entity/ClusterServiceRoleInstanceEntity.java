@@ -77,7 +77,7 @@ public class ClusterServiceRoleInstanceEntity implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 服务名称
      */

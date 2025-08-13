@@ -29,7 +29,7 @@ public class ClusterNodeLabelEntity {
     @Id
     private Integer id;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private String nodeLabel;
 }

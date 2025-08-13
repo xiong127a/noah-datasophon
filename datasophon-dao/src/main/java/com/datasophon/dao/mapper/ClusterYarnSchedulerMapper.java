@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.dao.entity.ClusterYarnSchedulerEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
@@ -35,7 +35,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterYarnSchedulerMapper extends BaseMapper<ClusterYarnScheduler> {
+public interface ClusterYarnSchedulerMapper extends BaseMapper<ClusterYarnSchedulerEntity> {
 
     /**
      * 根据集群ID查询调度器
@@ -43,9 +43,9 @@ public interface ClusterYarnSchedulerMapper extends BaseMapper<ClusterYarnSchedu
      * @param clusterId 集群ID
      * @return 调度器实体
      */
-    default ClusterYarnScheduler selectByClusterId(Integer clusterId) {
+    default ClusterYarnSchedulerEntity selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnScheduler::getClusterId).eq(clusterId);
+                .where(ClusterYarnSchedulerEntity::getClusterId).eq(clusterId);
         return this.selectOneByQuery(query);
     }
 
@@ -55,9 +55,9 @@ public interface ClusterYarnSchedulerMapper extends BaseMapper<ClusterYarnSchedu
      * @param clusterId 集群ID
      * @return 调度器列表
      */
-    default List<ClusterYarnScheduler> selectAllByClusterId(Integer clusterId) {
+    default List<ClusterYarnSchedulerEntity> selectAllByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterYarnScheduler::getClusterId).eq(clusterId);
+                .where(ClusterYarnSchedulerEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 }

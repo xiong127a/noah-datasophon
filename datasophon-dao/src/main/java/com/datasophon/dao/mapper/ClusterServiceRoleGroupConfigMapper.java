@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfigEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -34,7 +34,7 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterServiceRoleGroupConfig> {
+public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterServiceRoleGroupConfigEntity> {
 
         /**
          * 根据角色组ID获取配置（最新版本）
@@ -42,12 +42,12 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupId 角色组ID
          * @return 配置实体
          */
-        default ClusterServiceRoleGroupConfig selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        default ClusterServiceRoleGroupConfigEntity selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc()
                                 .limit(1);
-                List<ClusterServiceRoleGroupConfig> results = this.selectListByQuery(query);
+                List<ClusterServiceRoleGroupConfigEntity> results = this.selectListByQuery(query);
                 return results.isEmpty() ? null : results.get(0);
         }
 
@@ -58,12 +58,12 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param version     版本号
          * @return 配置实体
          */
-        default ClusterServiceRoleGroupConfig selectByRoleGroupIdAndVersion(
+        default ClusterServiceRoleGroupConfigEntity selectByRoleGroupIdAndVersion(
                         @Param("roleGroupId") Integer roleGroupId,
                         @Param("version") Integer version) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                                .and(ClusterServiceRoleGroupConfig::getConfigVersion).eq(version);
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
+                                .and(ClusterServiceRoleGroupConfigEntity::getConfigVersion).eq(version);
                 return this.selectOneByQuery(query);
         }
 
@@ -75,7 +75,7 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          */
         default int deleteByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId);
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId);
                 return this.deleteByQuery(query);
         }
 
@@ -85,10 +85,10 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupIds 角色组ID列表
          * @return 配置实体列表
          */
-        default List<ClusterServiceRoleGroupConfig> selectByRoleGroupIds(
+        default List<ClusterServiceRoleGroupConfigEntity> selectByRoleGroupIds(
                         @Param("roleGroupIds") List<Integer> roleGroupIds) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).in(roleGroupIds);
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).in(roleGroupIds);
                 return this.selectListByQuery(query);
         }
 
@@ -98,11 +98,11 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupId 角色组ID
          * @return 配置版本列表
          */
-        default List<ClusterServiceRoleGroupConfig> selectConfigVersionsByRoleGroupId(
+        default List<ClusterServiceRoleGroupConfigEntity> selectConfigVersionsByRoleGroupId(
                         @Param("roleGroupId") Integer roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc();
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc();
                 return this.selectListByQuery(query);
         }
 
@@ -112,11 +112,11 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupId 角色组ID
          * @return 最新的两个配置版本列表
          */
-        default List<ClusterServiceRoleGroupConfig> selectLatestTwoConfigsByRoleGroupId(
+        default List<ClusterServiceRoleGroupConfigEntity> selectLatestTwoConfigsByRoleGroupId(
                         @Param("roleGroupId") Integer roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
-                                .where(ClusterServiceRoleGroupConfig::getRoleGroupId).eq(roleGroupId)
-                                .orderBy(ClusterServiceRoleGroupConfig::getConfigVersion).desc()
+                                .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
+                                .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc()
                                 .limit(2);
                 return this.selectListByQuery(query);
         }

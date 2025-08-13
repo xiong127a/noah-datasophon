@@ -26,7 +26,7 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_yarn_scheduler")
-public class ClusterYarnScheduler implements Serializable {
+public class ClusterYarnSchedulerEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -39,7 +39,7 @@ public class ClusterYarnScheduler implements Serializable {
     /**
      * 
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 
      */

@@ -26,7 +26,7 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_variable")
-public class ClusterVariable implements Serializable {
+public class ClusterVariableEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -39,7 +39,7 @@ public class ClusterVariable implements Serializable {
     /**
      * 
      */
-    private Integer clusterId;
+    private Long clusterId;
     /**
      * 
      */

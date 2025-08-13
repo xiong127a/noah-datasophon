@@ -27,7 +27,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_service_role_instance_webuis")
-public class ClusterServiceRoleInstanceWebuis implements Serializable {
+public class ClusterServiceRoleInstanceWebuisEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

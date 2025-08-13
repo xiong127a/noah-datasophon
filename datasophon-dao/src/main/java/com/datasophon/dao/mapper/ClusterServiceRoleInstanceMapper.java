@@ -49,7 +49,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceNameAndServiceRoleName(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("serviceName") String serviceName,
                         @Param("serviceRoleName") String serviceRoleName) {
                 QueryWrapper query = QueryWrapper.create()
@@ -125,7 +125,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 正在运行的服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectRunningNonClientRolesByClusterIdAndHostname(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("hostname") String hostname) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -143,7 +143,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 已停止的服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectStoppedServiceRolesByClusterIdAndHostname(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("hostname") String hostname) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -160,7 +160,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndHostname(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("hostname") String hostname) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -194,7 +194,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          */
         default ClusterServiceRoleInstanceEntity selectByServiceRoleNameAndClusterIdAndHostname(
                         @Param("serviceRoleName") String serviceRoleName,
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("hostname") String hostname) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
@@ -222,7 +222,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID、主机名和状态查询
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndHostnameAndState(
-                        @Param("clusterId") Integer clusterId, @Param("hostname") String hostname,
+                        @Param("clusterId") Long clusterId, @Param("hostname") String hostname,
                         @Param("state") ServiceRoleState state) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -235,7 +235,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID和服务角色名称查询
          */
         default ClusterServiceRoleInstanceEntity selectByClusterIdAndServiceRoleName(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("serviceRoleName") String serviceRoleName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -280,7 +280,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID、服务ID和角色名称查询
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceIdAndRoleName(
-                        @Param("clusterId") Integer clusterId, @Param("serviceId") Integer serviceId,
+                        @Param("clusterId") Long clusterId, @Param("serviceId") Integer serviceId,
                         @Param("roleName") String roleName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
@@ -306,7 +306,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID、服务角色名称和主机名查询服务角色实例
          */
         default ClusterServiceRoleInstanceEntity selectByClusterIdAndServiceRoleNameAndHostname(
-                        @Param("clusterId") Integer clusterId,
+                        @Param("clusterId") Long clusterId,
                         @Param("serviceRoleName") String serviceRoleName,
                         @Param("hostname") String hostname) {
                 QueryWrapper query = QueryWrapper.create()
@@ -319,7 +319,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
         /**
          * 根据集群ID查询所有服务角色实例
          */
-        default List<ClusterServiceRoleInstanceEntity> selectByClusterId(@Param("clusterId") Integer clusterId) {
+        default List<ClusterServiceRoleInstanceEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);
                 return this.selectListByQuery(query);
@@ -329,7 +329,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID和服务角色名称查询服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndRoleName(
-                        @Param("clusterId") Integer clusterId, @Param("roleName") String roleName) {
+                        @Param("clusterId") Long clusterId, @Param("roleName") String roleName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
                                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(roleName);
@@ -382,7 +382,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据主机名和集群ID查询服务角色实例列表（RoleEntityService专用）
          */
         default List<ClusterServiceRoleInstanceEntity> selectByHostnameAndClusterId(String hostname,
-                        Integer clusterId) {
+                        Long clusterId) {
                 return selectListByQuery(QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getHostname).eq(hostname)
                                 .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId));
@@ -392,7 +392,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据服务角色名称和集群ID查询服务角色实例列表（可选主机名过滤）
          */
         default List<ClusterServiceRoleInstanceEntity> selectByServiceRoleNameAndClusterId(String serviceRoleName,
-                        Integer clusterId, String hostname) {
+                        Long clusterId, String hostname) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(serviceRoleName)
                                 .and(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId);

@@ -37,7 +37,7 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
     /**
      * 根据框架ID查询服务列表，按排序号升序
      */
-    default List<FrameServiceEntity> selectByFrameIdOrderBySortNum(Integer frameId) {
+    default List<FrameServiceEntity> selectByFrameIdOrderBySortNum(Long frameId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(FrameServiceEntity::getFrameId).eq(frameId)
                 .orderBy(FrameServiceEntity::getSortNum).asc();
@@ -47,7 +47,7 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
     /**
      * 根据ID列表查询
      */
-    default List<FrameServiceEntity> selectByIds(List<Integer> ids) {
+    default List<FrameServiceEntity> selectByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return java.util.Collections.emptyList();
         }
@@ -59,7 +59,7 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
     /**
      * 根据框架ID和服务名查询
      */
-    default FrameServiceEntity selectByFrameIdAndServiceName(Integer frameId, String serviceName) {
+    default FrameServiceEntity selectByFrameIdAndServiceName(Long frameId, String serviceName) {
         QueryWrapper query = QueryWrapper.create()
                 .where(FrameServiceEntity::getFrameId).eq(frameId)
                 .and(FrameServiceEntity::getServiceName).eq(serviceName);
@@ -131,7 +131,7 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
     /**
      * 根据框架ID集合查询服务列表
      */
-    default List<FrameServiceEntity> selectByFrameIds(java.util.Set<Integer> frameIds) {
+    default List<FrameServiceEntity> selectByFrameIds(java.util.Set<Long> frameIds) {
         if (frameIds == null || frameIds.isEmpty()) {
             return java.util.Collections.emptyList();
         }

@@ -27,7 +27,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_user_group")
-public class ClusterUserGroup implements Serializable {
+public class ClusterUserGroupEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -46,7 +46,7 @@ public class ClusterUserGroup implements Serializable {
      */
     private Integer groupId;
 
-    private Integer clusterId;
+    private Long clusterId;
 
     private Integer userGroupType;
 

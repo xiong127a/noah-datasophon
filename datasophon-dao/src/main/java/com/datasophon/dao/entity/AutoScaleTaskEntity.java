@@ -22,7 +22,7 @@ public class AutoScaleTaskEntity {
     
     private String taskName;
     
-    private Integer clusterId;
+    private Long clusterId;
     
     private Integer serviceId;
     

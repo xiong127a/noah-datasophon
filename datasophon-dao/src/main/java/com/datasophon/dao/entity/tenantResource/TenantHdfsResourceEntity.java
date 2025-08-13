@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantHdfsResource extends TenantFrameResource {
+public class TenantHdfsResourceEntity extends TenantFrameResourceEntity {
 
     /**
      * hdfs路径

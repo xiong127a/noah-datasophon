@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantHiveResource extends TenantFrameResource {
+public class TenantHiveResourceEntity extends TenantFrameResourceEntity {
     /**
      * hive数据库名称
      */

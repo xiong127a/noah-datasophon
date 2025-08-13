@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterUserGroup;
+import com.datasophon.dao.entity.ClusterUserGroupEntity;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -34,7 +34,7 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroup> {
+public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroupEntity> {
 
     /**
      * 统计指定组的用户数量
@@ -44,7 +44,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroup> {
      */
     default long countByGroupId(@Param("groupId") Integer groupId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUserGroup::getGroupId).eq(groupId);
+                .where(ClusterUserGroupEntity::getGroupId).eq(groupId);
         return this.selectCountByQuery(query);
     }
 
@@ -56,7 +56,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroup> {
      */
     default int deleteByUserId(@Param("userId") Integer userId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUserGroup::getUserId).eq(userId);
+                .where(ClusterUserGroupEntity::getUserId).eq(userId);
         return this.deleteByQuery(query);
     }
 
@@ -67,12 +67,12 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroup> {
      * @param userGroupType 用户组类型
      * @return 用户组关联列表
      */
-    default List<ClusterUserGroup> selectByUserIdAndType(
+    default List<ClusterUserGroupEntity> selectByUserIdAndType(
             @Param("userId") Integer userId,
             @Param("userGroupType") Integer userGroupType) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUserGroup::getUserId).eq(userId)
-                .and(ClusterUserGroup::getUserGroupType).eq(userGroupType);
+                .where(ClusterUserGroupEntity::getUserId).eq(userId)
+                .and(ClusterUserGroupEntity::getUserGroupType).eq(userGroupType);
         return this.selectListByQuery(query);
     }
 
@@ -82,9 +82,9 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroup> {
      * @param groupId 组ID
      * @return 用户组关联列表
      */
-    default List<ClusterUserGroup> selectByGroupId(@Param("groupId") Integer groupId) {
+    default List<ClusterUserGroupEntity> selectByGroupId(@Param("groupId") Integer groupId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterUserGroup::getGroupId).eq(groupId);
+                .where(ClusterUserGroupEntity::getGroupId).eq(groupId);
         return this.selectListByQuery(query);
     }
 }

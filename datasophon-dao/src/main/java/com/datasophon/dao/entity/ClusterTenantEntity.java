@@ -1,10 +1,10 @@
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.entity.tenantResource.TenantHbaseResource;
-import com.datasophon.dao.entity.tenantResource.TenantHdfsResource;
-import com.datasophon.dao.entity.tenantResource.TenantHiveResource;
-import com.datasophon.dao.entity.tenantResource.TenantKafkaResource;
-import com.datasophon.dao.entity.tenantResource.TenantYarnResource;
+import com.datasophon.dao.entity.tenantResource.TenantHbaseResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantHdfsResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantHiveResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantKafkaResourceEntity;
+import com.datasophon.dao.entity.tenantResource.TenantYarnResourceEntity;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
@@ -17,7 +17,7 @@ import java.util.List;
 
 @Data
 @Table(value = "t_ddh_cluster_tenant")
-public class ClusterTenant implements Serializable {
+public class ClusterTenantEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -31,7 +31,7 @@ public class ClusterTenant implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 租户名称
@@ -42,30 +42,30 @@ public class ClusterTenant implements Serializable {
      * hdfs资源列表
      */
     @Column(typeHandler = JacksonTypeHandler.class)
-    private List<TenantHdfsResource> hdfsResourceList;
+    private List<TenantHdfsResourceEntity> hdfsResourceList;
 
     /**
      * yarn资源列表
      */
     @Column(typeHandler = JacksonTypeHandler.class)
-    private List<TenantYarnResource> yarnResourceList;
+    private List<TenantYarnResourceEntity> yarnResourceList;
 
     /**
      * hive资源列表
      */
     @Column(typeHandler = JacksonTypeHandler.class)
-    private List<TenantHiveResource> hiveResourceList;
+    private List<TenantHiveResourceEntity> hiveResourceList;
 
     /**
      * hbase资源列表
      */
     @Column(typeHandler = JacksonTypeHandler.class)
-    private List<TenantHbaseResource> hbaseResourceList;
+    private List<TenantHbaseResourceEntity> hbaseResourceList;
 
     /**
      * kafka资源列表
      */
     @Column(typeHandler = JacksonTypeHandler.class)
-    private List<TenantKafkaResource> kafkaResourceList;
+    private List<TenantKafkaResourceEntity> kafkaResourceList;
 }
 

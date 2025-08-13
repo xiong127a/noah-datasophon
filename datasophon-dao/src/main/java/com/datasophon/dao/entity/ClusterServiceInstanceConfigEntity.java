@@ -65,7 +65,7 @@ public class ClusterServiceInstanceConfigEntity implements Serializable {
     /**
      *
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     private String configFileJson;
 

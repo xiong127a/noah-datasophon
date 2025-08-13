@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterAlertRule;
+import com.datasophon.dao.entity.ClusterAlertRuleEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
@@ -32,6 +32,6 @@ import com.mybatisflex.core.BaseMapper;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterAlertRuleMapper extends BaseMapper<ClusterAlertRule> {
+public interface ClusterAlertRuleMapper extends BaseMapper<ClusterAlertRuleEntity> {
 
 }

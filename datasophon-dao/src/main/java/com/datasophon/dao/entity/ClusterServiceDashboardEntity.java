@@ -27,7 +27,7 @@ import com.mybatisflex.annotation.Table;
 
 @Data
 @Table("t_ddh_cluster_service_dashboard")
-public class ClusterServiceDashboard implements Serializable {
+public class ClusterServiceDashboardEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

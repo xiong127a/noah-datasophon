@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterGroup;
+import com.datasophon.dao.entity.ClusterGroupEntity;
 import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.BaseMapper;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -36,7 +36,7 @@ import java.util.List;
  * @date 2025-08-04
  */
 @Mapper
-public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
+public interface ClusterGroupMapper extends BaseMapper<ClusterGroupEntity> {
 
     /**
      * 根据集群ID和组名查询集群组
@@ -45,10 +45,10 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
      * @param groupName 组名
      * @return 集群组列表
      */
-    default List<ClusterGroup> selectByClusterIdAndGroupName(Integer clusterId, String groupName) {
+    default List<ClusterGroupEntity> selectByClusterIdAndGroupName(Long clusterId, String groupName) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterGroup::getClusterId).eq(clusterId)
-                .and(ClusterGroup::getGroupName).eq(groupName);
+                .where(ClusterGroupEntity::getClusterId).eq(clusterId)
+                .and(ClusterGroupEntity::getGroupName).eq(groupName);
         return this.selectListByQuery(query);
     }
 
@@ -58,9 +58,9 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
      * @param clusterId 集群ID
      * @return 集群组列表
      */
-    default List<ClusterGroup> selectByClusterId(Integer clusterId) {
+    default List<ClusterGroupEntity> selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterGroup::getClusterId).eq(clusterId);
+                .where(ClusterGroupEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
@@ -73,13 +73,13 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
      * @param pageSize  页大小
      * @return 分页结果
      */
-    default PageResult<ClusterGroup> selectPageByClusterIdAndGroupName(Integer clusterId, String groupName,
-            Integer page, Integer pageSize) {
+    default PageResult<ClusterGroupEntity> selectPageByClusterIdAndGroupName(Long clusterId, String groupName,
+                                                                             Integer page, Integer pageSize) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterGroup::getClusterId).eq(clusterId);
+                .where(ClusterGroupEntity::getClusterId).eq(clusterId);
 
         if (StringUtils.isNotBlank(groupName)) {
-            query.and(ClusterGroup::getGroupName).like("%" + groupName + "%");
+            query.and(ClusterGroupEntity::getGroupName).like("%" + groupName + "%");
         }
 
         // 获取总数
@@ -90,8 +90,8 @@ public interface ClusterGroupMapper extends BaseMapper<ClusterGroup> {
         }
 
         // 分页查询
-        Page<ClusterGroup> flexPage = new Page<>(page, pageSize);
-        Page<ClusterGroup> resultPage = this.paginate(flexPage, query);
+        Page<ClusterGroupEntity> flexPage = new Page<>(page, pageSize);
+        Page<ClusterGroupEntity> resultPage = this.paginate(flexPage, query);
 
         return PageResult.of(resultPage.getRecords(), count, page, pageSize);
     }

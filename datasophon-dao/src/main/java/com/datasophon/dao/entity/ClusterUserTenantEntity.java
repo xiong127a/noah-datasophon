@@ -16,7 +16,7 @@ import java.io.Serializable;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ClusterUserTenant implements Serializable {
+public class ClusterUserTenantEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -30,7 +30,7 @@ public class ClusterUserTenant implements Serializable {
     /**
      * 集群id
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     private Integer userId;
 

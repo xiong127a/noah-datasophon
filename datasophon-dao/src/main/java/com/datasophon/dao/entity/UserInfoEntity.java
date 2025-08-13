@@ -17,32 +17,35 @@
 
 package com.datasophon.dao.entity;
 
-import com.mybatisflex.annotation.Id;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * 用户信息实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Table("t_ddh_user_info")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserInfoEntity implements Serializable {
+public class UserInfoEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
     /**
      * 用户名
      */
@@ -59,10 +62,6 @@ public class UserInfoEntity implements Serializable {
      * 手机号
      */
     private String phone;
-    /**
-     * 创建时间
-     */
-    private Date createTime;
     
     /**
      * 用户类型: 1-管理员, 2-普通用户

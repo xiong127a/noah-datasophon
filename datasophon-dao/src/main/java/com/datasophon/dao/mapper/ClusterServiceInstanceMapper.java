@@ -44,7 +44,7 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
          * @param serviceName 服务名称
          * @return 服务配置文件JSON字符串
          */
-        default String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
+        default String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Long clusterId,
                         @Param("serviceName") String serviceName) {
                 // 对于复杂的JOIN查询，使用原生查询方式保持数据库兼容性
                 QueryWrapper query = QueryWrapper.create()
@@ -63,7 +63,7 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
         /**
          * 根据集群ID和服务名称查询服务实例
          */
-        default ClusterServiceInstanceEntity selectByClusterIdAndServiceName(Integer clusterId, String serviceName) {
+        default ClusterServiceInstanceEntity selectByClusterIdAndServiceName(Long clusterId, String serviceName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
                                 .and(ClusterServiceInstanceEntity::getServiceName).eq(serviceName);
@@ -73,7 +73,7 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
         /**
          * 根据集群ID查询所有服务实例，按排序号升序
          */
-        default List<ClusterServiceInstanceEntity> selectByClusterIdOrderBySortNum(Integer clusterId) {
+        default List<ClusterServiceInstanceEntity> selectByClusterIdOrderBySortNum(Long clusterId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
                                 .orderBy(ClusterServiceInstanceEntity::getSortNum).asc();
@@ -83,7 +83,7 @@ public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceI
         /**
          * 根据集群ID查询运行中的服务实例
          */
-        default List<ClusterServiceInstanceEntity> selectRunningServicesByClusterId(Integer clusterId) {
+        default List<ClusterServiceInstanceEntity> selectRunningServicesByClusterId(Long clusterId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceInstanceEntity::getClusterId).eq(clusterId)
                                 .and(ClusterServiceInstanceEntity::getServiceState).eq(ServiceState.RUNNING);

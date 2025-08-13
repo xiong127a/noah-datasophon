@@ -17,7 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
-import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.ClusterVariableEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
@@ -35,7 +35,7 @@ import java.util.List;
  * @date 2025-01-01
  */
 @Mapper
-public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
+public interface ClusterVariableMapper extends BaseMapper<ClusterVariableEntity> {
 
     /**
      * 根据变量名和集群ID查询集群变量
@@ -44,10 +44,10 @@ public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
      * @param clusterId    集群ID
      * @return 集群变量列表
      */
-    default List<ClusterVariable> selectByVariableNameAndClusterId(String variableName, Integer clusterId) {
+    default List<ClusterVariableEntity> selectByVariableNameAndClusterId(String variableName, Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterVariable::getVariableName).eq(variableName)
-                .and(ClusterVariable::getClusterId).eq(clusterId);
+                .where(ClusterVariableEntity::getVariableName).eq(variableName)
+                .and(ClusterVariableEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
@@ -57,9 +57,9 @@ public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
      * @param clusterId 集群ID
      * @return 集群变量列表
      */
-    default List<ClusterVariable> selectByClusterId(Integer clusterId) {
+    default List<ClusterVariableEntity> selectByClusterId(Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterVariable::getClusterId).eq(clusterId);
+                .where(ClusterVariableEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 
@@ -70,10 +70,10 @@ public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
      * @param clusterId 集群ID
      * @return 集群变量，如果不存在返回null
      */
-    default ClusterVariable getVariableByVariableName(String variableName, Integer clusterId) {
+    default ClusterVariableEntity getVariableByVariableName(String variableName, Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterVariable::getVariableName).eq(variableName)
-                .and(ClusterVariable::getClusterId).eq(clusterId);
+                .where(ClusterVariableEntity::getVariableName).eq(variableName)
+                .and(ClusterVariableEntity::getClusterId).eq(clusterId);
         return this.selectOneByQuery(query);
     }
 }

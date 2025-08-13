@@ -29,7 +29,7 @@ import java.io.Serializable;
 
 @Data
 @Table("t_ddh_cluster_service_instance_role_group")
-public class ClusterServiceInstanceRoleGroup implements Serializable {
+public class ClusterServiceInstanceRoleGroupEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -44,7 +44,7 @@ public class ClusterServiceInstanceRoleGroup implements Serializable {
     /** */
     private String serviceName;
     /** */
-    private Integer clusterId;
+    private Long clusterId;
 
     private String roleGroupType;
 
