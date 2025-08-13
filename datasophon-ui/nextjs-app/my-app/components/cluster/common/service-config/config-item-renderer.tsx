@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import AppleTooltip from '@/components/ui/apple-tooltip'
 import MultipleWithKeyInput from '@/components/config/multiple-with-key-input'
+import PortMappingInput, { type PortMappingType } from '@/components/config/port-mapping-input'
 
 import type { ConfigItem } from '@/types/service-config'
 import { ConfigType } from '@/types/service-config'
@@ -32,8 +33,37 @@ const ConfigItemRenderer: React.FC<ConfigItemRendererProps> = ({
   error,
   onChange
 }) => {
+  // 检测是否为端口映射配置
+  const detectPortMappingType = (configName: string): PortMappingType | null => {
+    const name = configName.toLowerCase()
+    if (name.includes('_node_port_mappings')) {
+      return 'node_port'
+    }
+    if (name.includes('_cluster_port_mappings')) {
+      return 'cluster_port'
+    }
+    if (name.includes('_load_balancer_port_mappings')) {
+      return 'load_balancer'
+    }
+    return null
+  }
+
   // 渲染不同类型的配置项
   const renderInput = () => {
+    // 优先检测是否为Kubernetes端口映射配置
+    const portMappingType = detectPortMappingType(config.name || '')
+    if (portMappingType) {
+      return (
+        <PortMappingInput
+          mappingType={portMappingType}
+          value={value}
+          onChange={onChange}
+          disabled={config.disabled}
+          className={error ? 'ring-2 ring-red-400/30 border-red-300' : ''}
+        />
+      )
+    }
+
     const commonProps = {
       value: value as string,
       onChange: (newValue: unknown) => onChange(newValue),
@@ -139,23 +169,60 @@ const ConfigItemRenderer: React.FC<ConfigItemRendererProps> = ({
     }
   }
 
+  // 获取端口映射的友好显示名称
+  const getPortMappingDisplayName = (mappingType: PortMappingType): string => {
+    switch (mappingType) {
+      case 'node_port':
+        return 'NodePort 端口映射'
+      case 'cluster_port':
+        return '集群内部端口映射'
+      case 'load_balancer':
+        return '负载均衡端口映射'
+      default:
+        return '端口映射'
+    }
+  }
+
   // 构建详细信息的悬浮提示内容
   const buildTooltipContent = () => {
     const parts = []
     
-    // 配置key
-    if (config.name) {
+    // 检测端口映射类型并优化显示
+    const portMappingType = detectPortMappingType(config.name || '')
+    if (portMappingType) {
+      parts.push(`配置类型: ${getPortMappingDisplayName(portMappingType)}`)
       parts.push(`配置项: ${config.name}`)
-    }
-    
-    // 配置类型
-    if (config.type) {
-      parts.push(`类型: ${config.type}`)
-    }
-    
-    // 描述
-    if (config.description) {
-      parts.push(`说明: ${config.description}`)
+      
+      // 端口映射的特殊说明
+      switch (portMappingType) {
+        case 'node_port':
+          parts.push(`说明: 将容器端口映射到集群节点的指定端口，支持外部访问`)
+          parts.push(`格式: 容器端口:节点端口（如 8080:30080）`)
+          break
+        case 'cluster_port':
+          parts.push(`说明: 配置集群内部服务间的端口映射关系`)
+          parts.push(`格式: 源端口:目标端口（如 80:8080）`)
+          break
+        case 'load_balancer':
+          parts.push(`说明: 配置负载均衡器的端口映射和流量分发规则`)
+          parts.push(`格式: 外部端口:服务端口（如 443:8443）`)
+          break
+      }
+    } else {
+      // 普通配置项的信息
+      if (config.name) {
+        parts.push(`配置项: ${config.name}`)
+      }
+      
+      // 配置类型
+      if (config.type) {
+        parts.push(`类型: ${config.type}`)
+      }
+      
+      // 描述
+      if (config.description) {
+        parts.push(`说明: ${config.description}`)
+      }
     }
     
     // 默认值
@@ -186,7 +253,14 @@ const ConfigItemRenderer: React.FC<ConfigItemRendererProps> = ({
         showIcon={true}
       >
         <label className="text-sm font-medium text-gray-800 hover:text-blue-600 transition-colors duration-200">
-          {config.label || config.name}
+          {(() => {
+            // 为端口映射配置显示友好名称
+            const portMappingType = detectPortMappingType(config.name || '')
+            if (portMappingType) {
+              return getPortMappingDisplayName(portMappingType)
+            }
+            return config.label || config.name
+          })()}
           {config.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       </AppleTooltip>

@@ -85,18 +85,26 @@ const MultipleWithKeyInput: React.FC<MultipleWithKeyInputProps> = ({
 
 
 
+  // 触发onChange的安全方法，避免渲染期间的状态更新
+  const triggerChange = useCallback((items: KeyValuePair[]) => {
+    // 只有包含实际内容的项才传递给父组件
+    const filteredItems = items.filter(item => item.key.trim() || item.value.trim())
+    // 使用setTimeout延迟到下一个事件循环，避免渲染期间的状态更新
+    setTimeout(() => {
+      onChange?.(filteredItems)
+    }, 0)
+  }, [onChange])
+
   // 添加新的键值对 - 使用函数式更新避免items依赖
   const addItem = useCallback(() => {
     setItems(currentItems => {
       if (currentItems.length >= maxItems) return currentItems
       
       const newItems = [...currentItems, { key: '', value: '' }]
-      // 过滤掉空的键值对并触发onChange
-      const filteredItems = newItems.filter(item => item.key.trim() || item.value.trim())
-      onChange?.(filteredItems)
+      // 添加新项时不立即触发onChange，避免空项被过滤掉
       return newItems
     })
-  }, [maxItems, onChange])
+  }, [maxItems])
 
   // 删除键值对 - 使用函数式更新避免items依赖  
   const removeItem = useCallback((index: number) => {
@@ -104,36 +112,31 @@ const MultipleWithKeyInput: React.FC<MultipleWithKeyInputProps> = ({
       if (currentItems.length <= Math.max(1, minItems)) return currentItems
       
       const newItems = currentItems.filter((_, i) => i !== index)
-      // 过滤掉空的键值对并触发onChange
-      const filteredItems = newItems.filter(item => item.key.trim() || item.value.trim())
-      onChange?.(filteredItems)
+      // 删除时要触发onChange，更新父组件状态
+      triggerChange(newItems)
       return newItems
     })
-  }, [minItems, onChange])
+  }, [minItems, triggerChange])
 
   // 更新键值对的键 - 使用函数式更新避免items依赖
   const updateKey = useCallback((index: number, key: string) => {
     setItems(currentItems => {
       const newItems = [...currentItems]
       newItems[index] = { ...newItems[index], key }
-      // 过滤掉空的键值对并触发onChange
-      const filteredItems = newItems.filter(item => item.key.trim() || item.value.trim())
-      onChange?.(filteredItems)
+      triggerChange(newItems)
       return newItems
     })
-  }, [onChange])
+  }, [triggerChange])
 
   // 更新键值对的值 - 使用函数式更新避免items依赖
   const updateValue = useCallback((index: number, value: string) => {
     setItems(currentItems => {
       const newItems = [...currentItems]
       newItems[index] = { ...newItems[index], value }
-      // 过滤掉空的键值对并触发onChange
-      const filteredItems = newItems.filter(item => item.key.trim() || item.value.trim())
-      onChange?.(filteredItems)
+      triggerChange(newItems)
       return newItems
     })
-  }, [onChange])
+  }, [triggerChange])
 
   return (
     <div className={cn("space-y-3", className)}>
