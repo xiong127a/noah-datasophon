@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterRackVO(
-        Integer id,
+        Long id,
         String rack,
         Long clusterId) implements Serializable {
 }

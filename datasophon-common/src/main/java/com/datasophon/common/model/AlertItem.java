@@ -38,5 +38,5 @@ public class AlertItem implements Serializable {
 
     private Integer triggerDuration;
 
-    private Integer noticeGroupId;
+    private Long noticeGroupId;
 }
