@@ -41,7 +41,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
     public ExecResult handler(KubernetesServiceRoleOperateCommand command) {
         ExecResult startResult;
         logger.info("FEHandlerStrategy start fe");
-        Integer clusterId = command.getClusterId();
+        Long clusterId = command.getClusterId();
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         startResult = serviceHandler.start(command);
@@ -148,7 +148,7 @@ public class KubernetesSRFEHandlerStrategy extends KubernetesAbstractHandlerStra
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         // 移除在Kubernetes环境中不需要的参数
         logger.info("开始移除StarRocks在Kubernetes环境下不需要的参数...");
 

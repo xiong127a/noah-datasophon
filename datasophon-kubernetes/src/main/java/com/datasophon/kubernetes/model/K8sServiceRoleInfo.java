@@ -31,7 +31,7 @@ public class K8sServiceRoleInfo {
     /**
      * 集群ID
      */
-    private Integer clusterId;
+    private Long clusterId;
 
     /**
      * 服务名称

@@ -66,11 +66,11 @@ public class KubernetesAbstractHandlerStrategy {
      * @param clusterId 集群ID
      * @return 角色安装数量
      */
-    public Integer getRoleInstallCount(Integer clusterId) {
+    public Integer getRoleInstallCount(Long clusterId) {
         return getRoleInstallCount(clusterId, serviceRoleName);
     }
 
-    public Integer getRoleInstallCount(Integer clusterId, String serviceRoleName) {
+    public Integer getRoleInstallCount(Long clusterId, String serviceRoleName) {
         final String serviceRoleHostMappingKey = clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         Object mappingObj = CacheUtils.get(serviceRoleHostMappingKey);
         if (Objects.nonNull(mappingObj)) {

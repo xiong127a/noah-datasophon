@@ -53,7 +53,7 @@ public class KubernetesKafkaHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新服务配置");
             return;

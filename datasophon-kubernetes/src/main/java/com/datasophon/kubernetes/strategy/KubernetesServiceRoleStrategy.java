@@ -19,6 +19,6 @@ public interface KubernetesServiceRoleStrategy {
      * @param namespace Kubernetes命名空间
      * @param list      服务配置列表
      */
-    default void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    default void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
     }
 }

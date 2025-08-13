@@ -64,7 +64,7 @@ public class KubernetesRedisHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             logger.warn("Redis配置列表为空，无法更新服务地址");
             return;

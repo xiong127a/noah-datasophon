@@ -27,7 +27,7 @@ public class KubernetesTrinoHandlerStrategy extends KubernetesAbstractHandlerStr
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             return;
         }

@@ -43,7 +43,7 @@ public class KubernetesNameNodeHandlerStrategy extends KubernetesAbstractHandler
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list.isEmpty()) {
             return;
         }

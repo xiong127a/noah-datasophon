@@ -67,7 +67,7 @@ public class KubernetesTagHostHandler {
      * @param commandType 标签操作类型
      * @return 执行结果
      */
-    public ExecResult operateTag(Integer clusterId, String hostName, String kubeConfig,
+    public ExecResult operateTag(Long clusterId, String hostName, String kubeConfig,
             CommandType commandType) {
         ExecResult execResult = new ExecResult();
 
@@ -191,7 +191,7 @@ public class KubernetesTagHostHandler {
     /**
      * 获取目标主机列表
      */
-    private JSONArray getTargetHosts(Integer clusterId) {
+    private JSONArray getTargetHosts(Long clusterId) {
         Object obj = CacheUtils.get(clusterId + UNDERLINE + SERVICE_ROLE_HOST_MAPPING);
         if (obj == null) {
             return null;

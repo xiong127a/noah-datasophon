@@ -42,7 +42,7 @@ public class KubernetesZkServerHandlerStrategy extends KubernetesAbstractHandler
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             return;
         }

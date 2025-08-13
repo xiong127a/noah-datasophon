@@ -29,7 +29,7 @@ public class KubernetesHiveServer2HandlerStrategy extends KubernetesAbstractHand
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (Objects.isNull(list) || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新HiveMetaStore服务地址");
             return;

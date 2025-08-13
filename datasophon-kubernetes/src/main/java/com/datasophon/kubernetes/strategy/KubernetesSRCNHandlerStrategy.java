@@ -42,7 +42,7 @@ public class KubernetesSRCNHandlerStrategy extends KubernetesAbstractHandlerStra
         KubernetesServiceHandler serviceHandler = new KubernetesServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
         startResult = serviceHandler.start(command);
-        Integer clusterId = command.getClusterId();
+        Long clusterId = command.getClusterId();
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("add cn to cluster");
             if (startResult.getExecResult()) {

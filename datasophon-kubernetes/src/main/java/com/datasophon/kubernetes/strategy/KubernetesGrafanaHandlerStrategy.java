@@ -43,7 +43,7 @@ public class KubernetesGrafanaHandlerStrategy extends KubernetesAbstractHandlerS
     }
 
     @Override
-    public void getConfig(Integer clusterId, String namespace, List<ServiceConfig> list) {
+    public void getConfig(Long clusterId, String namespace, List<ServiceConfig> list) {
         if (list == null || list.isEmpty()) {
             logger.warn("配置列表为空，无法更新Grafana服务配置");
             return;
