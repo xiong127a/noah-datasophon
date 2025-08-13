@@ -61,7 +61,7 @@ public class ServiceDocController {
             log.debug("获取服务文档, 参数: {}", params);
 
             // 参数解析和验证
-            Integer clusterId = parseIntegerParam(params, "clusterId", "集群ID");
+            Long clusterId = parseIntegerParam(params, "clusterId", "集群ID");
             Integer serviceId = parseIntegerParam(params, "serviceId", "服务ID");
             String type = parseStringParam(params, "type", "文档类型");
 
@@ -84,7 +84,7 @@ public class ServiceDocController {
      */
     @GetMapping("/hasServiceDoc")
     public Result<Boolean> hasServiceDoc(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("serviceId") Integer serviceId,
             @RequestParam("type") String type) {
         try {

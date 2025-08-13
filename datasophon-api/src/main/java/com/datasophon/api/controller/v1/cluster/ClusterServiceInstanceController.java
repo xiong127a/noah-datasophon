@@ -55,7 +55,7 @@ public class ClusterServiceInstanceController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterServiceInstanceVO>> list(@ClusterId Integer clusterId) {
+    public Result<List<ClusterServiceInstanceVO>> list(@ClusterId Long clusterId) {
         List<ClusterServiceInstanceDTO> dtoList = clusterServiceInstanceService.listAll(clusterId);
         List<ClusterServiceInstanceVO> voList = clusterServiceInstanceConverter.dtoListToVoList(dtoList);
         return Result.success(voList);
@@ -101,7 +101,7 @@ public class ClusterServiceInstanceController {
      */
     @RequestMapping("/downloadClientConfig")
     public Result<String> downloadClientConfig(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("serviceName") String serviceName) {
         String configPath = clusterServiceInstanceService.downloadClientConfig(clusterId, serviceName);
         return Result.success(configPath);

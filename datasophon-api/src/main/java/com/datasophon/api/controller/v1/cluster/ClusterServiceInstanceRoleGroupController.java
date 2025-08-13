@@ -22,7 +22,7 @@ import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,7 +63,7 @@ public class ClusterServiceInstanceRoleGroupController {
      */
     @RequestMapping("/info/{id}")
     public Result<ClusterServiceInstanceRoleGroupVO> info(@PathVariable("id") Integer id) {
-        ClusterServiceInstanceRoleGroup entity = clusterServiceInstanceRoleGroupService.getById(id);
+        ClusterServiceInstanceRoleGroupEntity entity = clusterServiceInstanceRoleGroupService.getById(id);
         ClusterServiceInstanceRoleGroupVO vo = clusterServiceInstanceRoleGroupConverter.entityToVo(entity);
         return Result.success(vo);
     }

@@ -70,7 +70,7 @@
 //    @GetMapping("/getHostCheckItems")
 //    @UserPermission
 //    public Result<Object> getHostCheckItems(@RequestParam(name = "ip") String ip,
-//            @RequestParam(name = "clusterId") Integer clusterId) {
+//            @RequestParam(name = "clusterId") Long clusterId) {
 //        // 委托给服务层处理业务逻辑
 //        try {
 //            var checkItems = hostCheckService.getHostCheckItems(ip, clusterId);
@@ -109,7 +109,7 @@
 //    @PostMapping("/stopHostCheck")
 //    @UserPermission
 //    public Result<String> stopHostCheck(
-//            @RequestParam(name = "clusterId") Integer clusterId,
+//            @RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "ip", required = false, defaultValue = "-1") String ip) {
 //        log.info("收到终止主机检查请求，clusterId: {}, ip: {}", clusterId, ip);
 //
@@ -132,7 +132,7 @@
 //    @PostMapping("/stopCheckItem")
 //    @UserPermission
 //    public Result<String> stopCheckItem(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemId") Integer itemId) {
 //        try {
@@ -150,7 +150,7 @@
 //    @PostMapping("/fixCheckItem")
 //    @UserPermission
 //    public Result<String> fixCheckItem(
-//            @ClusterId @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @ClusterId @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam("ip") String ip,
 //            @RequestParam("itemId") Integer itemId,
 //            @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
@@ -169,7 +169,7 @@
 //    @PostMapping("/fixSelectedCheckItems")
 //    @UserPermission
 //    public Result<String> fixSelectedCheckItems(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemIds") String itemIds) {
 //        try {
@@ -187,7 +187,7 @@
 //    @PostMapping("/fixAllCheckItems")
 //    @UserPermission
 //    public Result<String> fixAllCheckItems(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip) {
 //        try {
 //            boolean success = hostCheckService.fixAllCheckItems(clusterId, ip);
@@ -205,7 +205,7 @@
 //    @PostMapping("/batchCheckHosts")
 //    @UserPermission
 //    public Result<String> batchCheckHosts(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestBody List<String> ips) {
 //        try {
 //            boolean success = hostCheckService.batchCheckHosts(clusterId, ips);
@@ -223,7 +223,7 @@
 //    @PostMapping("/rehostCheck")
 //    @UserPermission
 //    public Result<String> rehostCheck(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ips") String ips,
 //            @RequestParam(name = "sshUser", required = false) String sshUser,
 //            @RequestParam(name = "sshPort", required = false) Integer sshPort) {
@@ -246,7 +246,7 @@
 //     */
 //    @PostMapping("/startHostCheck")
 //    @UserPermission
-//    public Result<String> startHostCheck(@RequestParam(name = "clusterId") Integer clusterId) {
+//    public Result<String> startHostCheck(@RequestParam(name = "clusterId") Long clusterId) {
 //        try {
 //            boolean success = hostCheckService.startHostCheck(clusterId);
 //            return success ? Result.success("开始主机检查成功") : Result.error("开始主机检查失败");
@@ -262,7 +262,7 @@
 //    @PostMapping("/getCheckItemLog")
 //    @UserPermission
 //    public Result<Object> getCheckItemLog(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemId") Integer itemId) {
 //        try {
@@ -285,7 +285,7 @@
 //    @PostMapping("/retryCheckItems")
 //    @UserPermission
 //    public Result<String> retryCheckItems(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemNames") String itemNamesStr) {
 //        if (clusterId == null) {
@@ -327,7 +327,7 @@
 //    @PostMapping(value = "/getLog", produces = MediaType.APPLICATION_JSON_VALUE)
 //    @UserPermission
 //    public Result<String> getLog(
-//            @RequestParam(name = "clusterId") Integer clusterId,
+//            @RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemId") Integer itemId,
 //            @RequestParam(name = "logType", required = false) String logType,
@@ -360,7 +360,7 @@
 //    @PostMapping("/skipCheckItem")
 //    @UserPermission
 //    public Result<String> skipCheckItem(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemId") Integer itemId) {
 //        try {
@@ -389,7 +389,7 @@
 //    @GetMapping("/getCheckItemConfirmInfo")
 //    @UserPermission
 //    public Result<Object> getCheckItemConfirmInfo(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "itemId") Integer itemId) {
 //        try {
@@ -581,7 +581,7 @@
 //    @PostMapping("/updateHostname")
 //    @UserPermission
 //    public Result<String> updateHostname(
-//            @RequestParam(name = "clusterId") Integer clusterId,
+//            @RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "hostname") String hostname,
 //            @RequestParam(name = "syncHosts", required = false, defaultValue = "false") Boolean syncHosts) {
@@ -605,7 +605,7 @@
 //    @PostMapping("/updateHostsFile")
 //    @UserPermission
 //    public Result<String> updateHostsFile(
-//            @RequestParam(name = "clusterId") Integer clusterId,
+//            @RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "ip") String ip,
 //            @RequestParam(name = "hostsFileContent") String hostsFileContent) {
 //        try {
@@ -627,7 +627,7 @@
 //     */
 //    @GetMapping("/generateHostsFilePreview")
 //    @UserPermission
-//    public Result<String> generateHostsFilePreview(@RequestParam(name = "clusterId") Integer clusterId,
+//    public Result<String> generateHostsFilePreview(@RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "page", required = false, defaultValue = "1") Integer page,
 //            @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 //        try {
@@ -647,7 +647,7 @@
 //     */
 //    @PostMapping("/syncHostsFile")
 //    @UserPermission
-//    public Result<String> syncHostsFile(@RequestParam(name = "clusterId") Integer clusterId) {
+//    public Result<String> syncHostsFile(@RequestParam(name = "clusterId") Long clusterId) {
 //        try {
 //            boolean success = hostCheckService.syncHostsFile(clusterId);
 //            return success ? Result.success("同步hosts文件成功") : Result.error("同步hosts文件失败");
@@ -670,7 +670,7 @@
 //    @PostMapping("/batchSetHostname")
 //    @UserPermission
 //    public Result<String> batchSetHostname(
-//            @RequestParam(name = "clusterId") Integer clusterId,
+//            @RequestParam(name = "clusterId") Long clusterId,
 //            @RequestParam(name = "prefix") String prefix,
 //            @RequestParam(name = "zeroCount") Integer zeroCount,
 //            @RequestParam(name = "separator", required = false) String separator,
@@ -708,7 +708,7 @@
 //    @PostMapping("/fixAllFailedItems")
 //    @UserPermission
 //    public Result<String> fixAllFailedItems(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId) {
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId) {
 //        log.info("收到修复所有失败项请求: clusterId={}", clusterId);
 //        try {
 //            boolean success = hostCheckService.fixAllFailedItems(clusterId);
@@ -725,7 +725,7 @@
 //    @PostMapping("/skipAllFailedItems")
 //    @UserPermission
 //    public Result<String> skipAllFailedItems(
-//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId) {
+//            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Long clusterId) {
 //        log.info("收到跳过所有失败项请求: clusterId={}", clusterId);
 //        try {
 //            boolean success = hostCheckService.skipAllFailedItems(clusterId);

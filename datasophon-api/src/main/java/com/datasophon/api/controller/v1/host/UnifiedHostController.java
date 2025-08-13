@@ -75,7 +75,7 @@ public class UnifiedHostController {
     @PostMapping("discover-from-step1")
     public Result<HostDiscoveryResultDTO> discoverHostsFromStep1Configuration(
             @RequestBody Step1ConfigurationDto step1Config,
-            @ClusterId Integer clusterId) {
+            @ClusterId Long clusterId) {
         
         log.info("开始从Step1配置发现主机，集群ID: {}, 集群类型: {}", clusterId, step1Config.getClusterType());
         
@@ -252,7 +252,7 @@ public class UnifiedHostController {
      * 将内部结果转换为前端需要的DTO格式 - 使用Java 21 Pattern Matching
      */
     private HostDiscoveryResultDTO convertToHostDiscoveryResultDTO(
-            HostDiscoveryResult result, Integer clusterId, ClusterType clusterType) {
+            HostDiscoveryResult result, Long clusterId, ClusterType clusterType) {
         
         // 转换ClusterHostDO到HostInfoDTO
         List<HostInfoDTO> hostDtos = result.getHosts().stream()
@@ -309,7 +309,7 @@ public class UnifiedHostController {
      * 2. PVM集群：根据具体业务逻辑校验
      */
     @GetMapping("check-hosts")
-    public Result<Map<String, Object>> checkHosts(@ClusterId Integer clusterId) {
+    public Result<Map<String, Object>> checkHosts(@ClusterId Long clusterId) {
         log.info("开始校验集群主机状态，集群ID: {}", clusterId);
         try {
             // 由门面服务自动选择策略执行校验
@@ -329,7 +329,7 @@ public class UnifiedHostController {
      * 完成所有配置步骤后，将集群状态从"配置中"切换为"正在运行"
      */
     @PostMapping("mark-config-completed")
-    public Result<String> markConfigCompleted(@ClusterId Integer clusterId) {
+    public Result<String> markConfigCompleted(@ClusterId Long clusterId) {
         log.info("标记集群配置完成，集群ID: {}", clusterId);
         
         try {
@@ -353,7 +353,7 @@ public class UnifiedHostController {
      * 将集群状态重置为"待配置"，用于重新开始配置流程
      */
     @PostMapping("reset-config-status")
-    public Result<String> resetConfigStatus(@ClusterId Integer clusterId) {
+    public Result<String> resetConfigStatus(@ClusterId Long clusterId) {
         log.info("重置集群配置状态，集群ID: {}", clusterId);
         
         try {
@@ -377,7 +377,7 @@ public class UnifiedHostController {
      * 将集群状态从"正在运行"切换为"停止"
      */
     @PostMapping("stop-cluster")
-    public Result<String> stopCluster(@ClusterId Integer clusterId) {
+    public Result<String> stopCluster(@ClusterId Long clusterId) {
         log.info("停止集群，集群ID: {}", clusterId);
         
         try {
@@ -401,7 +401,7 @@ public class UnifiedHostController {
      * 将集群状态从"停止"切换为"正在运行"
      */
     @PostMapping("start-cluster")
-    public Result<String> startCluster(@ClusterId Integer clusterId) {
+    public Result<String> startCluster(@ClusterId Long clusterId) {
         log.info("启动集群，集群ID: {}", clusterId);
         
         try {

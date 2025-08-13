@@ -19,7 +19,7 @@ package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,12 +49,12 @@ public class ClusterHostController {
      */
     @GetMapping("/all")
     @Timed(value = "cluster.host.all", description = "获取集群所有主机的时间")
-    public Result<List<ClusterHostDO>> all(@ClusterId Integer clusterId) {
+    public Result<List<ClusterHostEntity>> all(@ClusterId Long clusterId) {
         var threadInfo = getCurrentThreadInfo();
         log.debug("查询集群{}的所有主机 - {}", clusterId, threadInfo);
         
         // 将Integer类型的clusterId转换为String传递给Service层
-        List<ClusterHostDO> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+        List<ClusterHostEntity> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
         return Result.success(list);
     }
 
@@ -74,20 +74,20 @@ public class ClusterHostController {
 
     @GetMapping("/getRoleListByHostname")
     public Result<Object> getRoleListByHostname(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("hostname") String hostname) {
         var roleList = clusterHostService.getRoleListByHostname(clusterId, hostname);
         return Result.success(roleList);
     }
 
     @GetMapping("/getRack")
-    public Result<Object> getRack(@ClusterId Integer clusterId) {
+    public Result<Object> getRack(@ClusterId Long clusterId) {
         var rackList = clusterHostService.getRack(clusterId);
         return Result.success(rackList);
     }
 
     @PostMapping("/assignRack")
-    public Result<Void> assignRack(@ClusterId Integer clusterId,
+    public Result<Void> assignRack(@ClusterId Long clusterId,
             @RequestParam("rack") String rack,
             @RequestParam("hostIds") String hostIds) {
         clusterHostService.assignRack(clusterId, rack, hostIds);
@@ -98,8 +98,8 @@ public class ClusterHostController {
      * 信息
      */
     @GetMapping("/info/{id}")
-    public Result<ClusterHostDO> info(@PathVariable("id") Integer id) {
-        ClusterHostDO clusterHost = clusterHostService.getById(id);
+    public Result<ClusterHostEntity> info(@PathVariable("id") Integer id) {
+        ClusterHostEntity clusterHost = clusterHostService.getById(id);
 
         return Result.success(clusterHost);
     }
@@ -108,7 +108,7 @@ public class ClusterHostController {
      * 保存
      */
     @PostMapping("/save")
-    public Result<Void> save(@RequestBody ClusterHostDO clusterHost) {
+    public Result<Void> save(@RequestBody ClusterHostEntity clusterHost) {
         clusterHostService.save(clusterHost);
 
         return Result.success();
@@ -118,7 +118,7 @@ public class ClusterHostController {
      * 修改
      */
     @PutMapping("/update")
-    public Result<Void> update(@RequestBody ClusterHostDO clusterHost) {
+    public Result<Void> update(@RequestBody ClusterHostEntity clusterHost) {
         clusterHostService.updateById(clusterHost);
 
         return Result.success();

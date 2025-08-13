@@ -111,7 +111,7 @@ public class ClusterInfoController {
     }
 
     @RequestMapping("/updateClusterState")
-    public Result<String> updateClusterState(@ClusterId Integer clusterId,
+    public Result<String> updateClusterState(@ClusterId Long clusterId,
             @RequestParam("clusterState") Integer clusterState) {
         try {
             boolean success = clusterInfoService.updateClusterState(clusterId, clusterState);
@@ -145,7 +145,7 @@ public class ClusterInfoController {
      */
     @RequestMapping("/delete")
     @UserPermission
-    public Result<String> delete(@RequestBody Integer[] ids) {
+    public Result<String> delete(@RequestBody Long[] ids) {
         try {
             clusterInfoService.deleteCluster(List.of(ids));
             return Result.success("删除集群成功");
@@ -163,7 +163,7 @@ public class ClusterInfoController {
      * 获取集群详细信息
      */
     @RequestMapping("/detail")
-    public Result<ClusterInfoVO> getClusterDetail(@ClusterId Integer clusterId) {
+    public Result<ClusterInfoVO> getClusterDetail(@ClusterId Long clusterId) {
         try {
             ClusterInfoDTO clusterDetailDTO = clusterInfoService.getClusterById(clusterId);
             ClusterInfoVO clusterDetailVO = clusterInfoConverter.dtoToVo(clusterDetailDTO);
@@ -191,7 +191,7 @@ public class ClusterInfoController {
      * 更新集群Kubernetes配置
      */
     @PostMapping("/kube-config")
-    public Result<String> updateClusterKubeConfig(@ClusterId Integer clusterId,
+    public Result<String> updateClusterKubeConfig(@ClusterId Long clusterId,
             @RequestBody KubeConfigUpdateRequest request) {
         try {
             String result = clusterInfoService.updateClusterKubeConfig(

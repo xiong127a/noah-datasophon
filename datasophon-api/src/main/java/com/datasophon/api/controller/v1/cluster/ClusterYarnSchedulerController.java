@@ -53,7 +53,7 @@ public class ClusterYarnSchedulerController {
      * 根据集群ID获取调度器信息
      */
     @RequestMapping("/get")
-    public Result<ClusterYarnSchedulerVO> getScheduler(@ClusterId Integer clusterId) {
+    public Result<ClusterYarnSchedulerVO> getScheduler(@ClusterId Long clusterId) {
         try {
             ClusterYarnSchedulerDTO dto = clusterYarnSchedulerService.getScheduler(clusterId);
             if (dto != null) {
@@ -71,7 +71,7 @@ public class ClusterYarnSchedulerController {
      * 根据集群ID获取所有调度器列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterYarnSchedulerVO>> list(@ClusterId Integer clusterId) {
+    public Result<List<ClusterYarnSchedulerVO>> list(@ClusterId Long clusterId) {
         try {
             List<ClusterYarnSchedulerDTO> dtoList = clusterYarnSchedulerService.getSchedulersByClusterId(clusterId);
             List<ClusterYarnSchedulerVO> voList = clusterYarnSchedulerConverter.dtoListToVoList(dtoList);
@@ -150,7 +150,7 @@ public class ClusterYarnSchedulerController {
      * 创建默认调度器
      */
     @RequestMapping("/createDefault")
-    public Result<ClusterYarnSchedulerVO> createDefault(@ClusterId Integer clusterId) {
+    public Result<ClusterYarnSchedulerVO> createDefault(@ClusterId Long clusterId) {
         try {
             ClusterYarnSchedulerDTO createdDTO = clusterYarnSchedulerService.createDefaultYarnScheduler(clusterId);
             ClusterYarnSchedulerVO createdVO = clusterYarnSchedulerConverter.dtoToVo(createdDTO);

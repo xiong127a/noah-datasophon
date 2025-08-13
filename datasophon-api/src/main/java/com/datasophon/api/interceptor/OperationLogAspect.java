@@ -15,7 +15,7 @@ import com.datasophon.api.service.OperationLogService;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.model.OperationLogProp;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.OperationLog;
+import com.datasophon.dao.entity.OperationLogEntity;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -149,11 +149,11 @@ public class OperationLogAspect {
 
     private Object around(ProceedingJoinPoint joinPoint, HttpServletRequest request, String requestURI) throws Throwable {
         Object object;
-        OperationLog op = null;
+        OperationLogEntity op = null;
 
         try {
             //构建日志对象
-            op = OperationLog.builder()
+            op = OperationLogEntity.builder()
                     .url(requestURI)
                     .ip(request.getRemoteAddr())
                     .startTime(new Date()) // 设置开始时间
@@ -200,7 +200,7 @@ public class OperationLogAspect {
         return object;
     }
 
-    private void setProp(ProceedingJoinPoint joinPoint, HttpServletRequest request, String requestURI, OperationLog op) {
+    private void setProp(ProceedingJoinPoint joinPoint, HttpServletRequest request, String requestURI, OperationLogEntity op) {
         try {
 
             //方法参数
@@ -220,13 +220,13 @@ public class OperationLogAspect {
      * 解析和设置请求参数
      *
      */
-    private void setParams(ProceedingJoinPoint point, HttpServletRequest request, OperationLog op) {
+    private void setParams(ProceedingJoinPoint point, HttpServletRequest request, OperationLogEntity op) {
         //操作用户
         String username = Objects.isNull(SecurityUtils.getAuthUser()) ? request.getParameter("username") : SecurityUtils.getAuthUser().getUsername();
         op.setOperateUser(username);
 
         //从header中获取集群 id
-        Integer clusterId = request.getIntHeader("Clusterid");
+        Long clusterId = request.getIntHeader("Clusterid");
         if (ObjUtil.isNotNull(clusterId)) {
             op.setClusterId(clusterId);
         }
@@ -273,7 +273,7 @@ public class OperationLogAspect {
     /**
      * 集群参数
      */
-    private static void clusterParam(OperationLog op, Object arg) {
+    private static void clusterParam(OperationLogEntity op, Object arg) {
         Object parse = JSON.parse(JSONObject.toJSONString(arg));
         if (!(parse instanceof JSONObject param)) {
             return;
@@ -334,7 +334,7 @@ public class OperationLogAspect {
     /**
      * 设置业务日志
      */
-    private void setOperationType(OperationLog op, String requestURI) {
+    private void setOperationType(OperationLogEntity op, String requestURI) {
 
         //设置操作类型
         String operationType = operationLogUrlMap.get(requestURI);
@@ -354,7 +354,7 @@ public class OperationLogAspect {
      * 解析并设置操作类型取值
      *
      */
-    private void parserAndSetOperationType(OperationLog op, String operationType) {
+    private void parserAndSetOperationType(OperationLogEntity op, String operationType) {
         if (StrUtil.isNotEmpty(operationType) && operationType.contains("${") && MapUtil.isNotEmpty(op.getParamMap())) {
             Map<String, String> collect = null;
             String key = null;
@@ -376,7 +376,7 @@ public class OperationLogAspect {
         }
     }
 
-    private static void getDeleteData(ProceedingJoinPoint joinPoint, OperationLog op) {
+    private static void getDeleteData(ProceedingJoinPoint joinPoint, OperationLogEntity op) {
         if (!op.getUrl().endsWith("delete")) {
             return;
         }

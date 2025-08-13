@@ -10,7 +10,7 @@ import java.lang.annotation.*;
  * <pre>
  * {@code
  * @GetMapping("/cluster/info")
- * public Result getClusterInfo(@ClusterId Integer clusterId) {
+ * public Result getClusterInfo(@ClusterId Long clusterId) {
  *     // clusterId 会自动从请求头 X-Cluster-Id 中获取
  *     return Result.success(clusterInfo);
  * }

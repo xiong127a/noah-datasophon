@@ -81,7 +81,7 @@ public class AutoScaleController {
      */
     @GetMapping("/getAutoScaleTasks")
     public Result<PageResult<AutoScaleTaskVO>> getAutoScaleTasks(
-            @RequestParam Integer clusterId,
+            @RequestParam Long clusterId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
@@ -105,7 +105,7 @@ public class AutoScaleController {
      * 获取集群启用的自动伸缩任务
      */
     @GetMapping("/getEnabledTasks")
-    public Result<List<AutoScaleTaskVO>> getEnabledTasks(@RequestParam Integer clusterId) {
+    public Result<List<AutoScaleTaskVO>> getEnabledTasks(@RequestParam Long clusterId) {
         try {
             logger.info("查询集群启用的自动伸缩任务，集群ID: {}", clusterId);
 
@@ -172,7 +172,7 @@ public class AutoScaleController {
      * 检查集群自动伸缩状态
      */
     @GetMapping("/checkAutoScaleStatus")
-    public Result<Boolean> checkAutoScaleStatus(@RequestParam Integer clusterId) {
+    public Result<Boolean> checkAutoScaleStatus(@RequestParam Long clusterId) {
         try {
             logger.info("检查集群自动伸缩状态，集群ID: {}", clusterId);
 

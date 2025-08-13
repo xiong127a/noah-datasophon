@@ -76,7 +76,7 @@ public class ClusterRoleUserController {
      */
     @RequestMapping("/saveClusterManager")
     @UserPermission
-    public Result<String> saveClusterManager(@ClusterId Integer clusterId,
+    public Result<String> saveClusterManager(@ClusterId Long clusterId,
             @RequestParam("userIds") String userIds) {
         boolean success = clusterRoleUserService.saveClusterManager(clusterId, userIds);
         return success ? Result.success("保存成功") : Result.error("保存失败");

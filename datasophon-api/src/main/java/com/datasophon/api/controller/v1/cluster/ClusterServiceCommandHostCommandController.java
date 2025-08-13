@@ -92,7 +92,7 @@ public class ClusterServiceCommandHostCommandController {
     @GetMapping("/getHostCommandLog")
     @Timed(value = "command.host.command.log", description = "获取主机命令日志的时间")
     public Result<String> getHostCommandLog(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("hostCommandId") String hostCommandId) throws Exception {
         
         log.debug("获取主机命令日志: clusterId={}, hostCommandId={}", clusterId, hostCommandId);

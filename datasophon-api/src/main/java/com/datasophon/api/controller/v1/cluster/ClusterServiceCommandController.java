@@ -59,7 +59,7 @@ public class ClusterServiceCommandController {
      */
     @GetMapping("/list")
     public Result<PageResult<ClusterServiceCommandVO>> getServiceCommandList(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
@@ -82,7 +82,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate")
     public Result<String> generateCommand(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
             @RequestBody List<String> serviceNames) {
         try {
@@ -98,7 +98,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/service")
     public Result<String> generateServiceCommand(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
             @RequestBody List<String> serviceInstanceIds) {
         try {
@@ -115,7 +115,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/role/batch")
     public Result<String> generateServiceRoleCommands(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
             @RequestBody Map<Integer, List<String>> instanceIdMap) {
         try {
@@ -132,7 +132,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/generate/role")
     public Result<String> generateServiceRoleCommand(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
             @RequestParam Integer serviceInstanceId,
             @RequestBody List<String> serviceRoleInstanceIds,
@@ -151,7 +151,7 @@ public class ClusterServiceCommandController {
      */
     @PostMapping("/execute")
     public Result<Void> startExecuteCommand(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam String commandType,
             @RequestParam String commandIds) {
         try {

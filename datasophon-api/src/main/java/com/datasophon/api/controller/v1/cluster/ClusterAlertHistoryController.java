@@ -73,7 +73,7 @@ public class ClusterAlertHistoryController {
      * 分页查询所有告警历史
      */
     @RequestMapping("/getAllAlertList")
-    public Result<PageResult<ClusterAlertHistoryVO>> getAllAlertList(@ClusterId Integer clusterId,
+    public Result<PageResult<ClusterAlertHistoryVO>> getAllAlertList(@ClusterId Long clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         try {

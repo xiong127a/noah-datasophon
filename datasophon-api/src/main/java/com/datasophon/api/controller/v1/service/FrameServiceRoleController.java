@@ -52,7 +52,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getServiceRoleList")
     public Result<List<FrameServiceRoleVO>> getServiceRoleOfMaster(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("serviceIds") String serviceIds,
             @RequestParam("serviceRoleType") Integer serviceRoleType) {
         try {
@@ -71,7 +71,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getNonMasterRoleList")
     public Result<List<FrameServiceRoleVO>> getNonMasterRoleList(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("serviceIds") String serviceIds) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
@@ -88,7 +88,7 @@ public class FrameServiceRoleController {
      */
     @GetMapping("/getServiceRoleByServiceName")
     public Result<List<FrameServiceRoleVO>> getServiceRoleByServiceName(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("serviceName") String serviceName) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getServiceRoleByServiceName(clusterId,

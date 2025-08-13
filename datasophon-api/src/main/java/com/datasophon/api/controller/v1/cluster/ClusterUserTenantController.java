@@ -20,7 +20,7 @@ package com.datasophon.api.controller.v1.cluster;
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterUserTenant;
+import com.datasophon.dao.entity.ClusterUserTenantEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,7 +45,7 @@ public class ClusterUserTenantController {
      */
     @PostMapping("/add")
     public Result<Void> addUserToTenant(
-            @RequestParam Integer clusterId,
+            @RequestParam Long clusterId,
             @RequestParam Integer userId,
             @RequestParam String tenantIds) {
         try {
@@ -63,7 +63,7 @@ public class ClusterUserTenantController {
      */
     @DeleteMapping("/delete")
     public Result<Void> deleteUser(
-            @RequestParam Integer clusterId,
+            @RequestParam Long clusterId,
             @RequestParam Integer userId,
             @RequestParam String tenantIds) {
         try {
@@ -78,11 +78,11 @@ public class ClusterUserTenantController {
      * 根据用户ID获取授权租户列表
      */
     @GetMapping("/list")
-    public Result<List<ClusterUserTenant>> getListByUserId(
-            @RequestParam Integer clusterId,
+    public Result<List<ClusterUserTenantEntity>> getListByUserId(
+            @RequestParam Long clusterId,
             @RequestParam Integer userId) {
         try {
-            List<ClusterUserTenant> userTenantList = clusterUserTenantService.getListByUserId(clusterId, userId);
+            List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.getListByUserId(clusterId, userId);
             return Result.success(userTenantList);
         } catch (Exception e) {
             return Result.error("获取用户租户授权列表失败: " + e.getMessage());
@@ -93,9 +93,9 @@ public class ClusterUserTenantController {
      * 根据ID获取用户租户关系详情
      */
     @GetMapping("/{id}")
-    public Result<ClusterUserTenant> getUserTenantById(@PathVariable Integer id) {
+    public Result<ClusterUserTenantEntity> getUserTenantById(@PathVariable Integer id) {
         try {
-            ClusterUserTenant userTenant = clusterUserTenantService.getById(id);
+            ClusterUserTenantEntity userTenant = clusterUserTenantService.getById(id);
             if (userTenant == null) {
                 return Result.error("用户租户关系不存在");
             }
@@ -109,7 +109,7 @@ public class ClusterUserTenantController {
      * 创建用户租户关系
      */
     @PostMapping
-    public Result<ClusterUserTenant> createUserTenant(@RequestBody ClusterUserTenant userTenant) {
+    public Result<ClusterUserTenantEntity> createUserTenant(@RequestBody ClusterUserTenantEntity userTenant) {
         try {
             boolean saved = clusterUserTenantService.save(userTenant);
             if (saved) {
@@ -126,8 +126,8 @@ public class ClusterUserTenantController {
      * 更新用户租户关系
      */
     @PutMapping("/{id}")
-    public Result<ClusterUserTenant> updateUserTenant(
-            @PathVariable Integer id, @RequestBody ClusterUserTenant userTenant) {
+    public Result<ClusterUserTenantEntity> updateUserTenant(
+            @PathVariable Integer id, @RequestBody ClusterUserTenantEntity userTenant) {
         try {
             userTenant.setId(id);
             boolean updated = clusterUserTenantService.updateById(userTenant);
@@ -179,9 +179,9 @@ public class ClusterUserTenantController {
      * 获取所有用户租户关系
      */
     @GetMapping("/all")
-    public Result<List<ClusterUserTenant>> getAllUserTenants() {
+    public Result<List<ClusterUserTenantEntity>> getAllUserTenants() {
         try {
-            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list();
+            List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.list();
             return Result.success(userTenantList);
         } catch (Exception e) {
             return Result.error("获取所有用户租户关系失败: " + e.getMessage());
@@ -192,10 +192,10 @@ public class ClusterUserTenantController {
      * 根据集群ID获取用户租户关系
      */
     @GetMapping("/cluster/{clusterId}")
-    public Result<List<ClusterUserTenant>> getUserTenantsByClusterId(@PathVariable Integer clusterId) {
+    public Result<List<ClusterUserTenantEntity>> getUserTenantsByClusterId(@PathVariable Long clusterId) {
         try {
             // 暂时简化实现
-            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list().stream()
+            List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.list().stream()
                     .filter(ut -> ut.getClusterId().equals(clusterId))
                     .toList();
             return Result.success(userTenantList);
@@ -208,10 +208,10 @@ public class ClusterUserTenantController {
      * 根据租户ID获取用户租户关系
      */
     @GetMapping("/tenant/{tenantId}")
-    public Result<List<ClusterUserTenant>> getUserTenantsByTenantId(@PathVariable Integer tenantId) {
+    public Result<List<ClusterUserTenantEntity>> getUserTenantsByTenantId(@PathVariable Integer tenantId) {
         try {
             // 暂时简化实现
-            List<ClusterUserTenant> userTenantList = clusterUserTenantService.list().stream()
+            List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.list().stream()
                     .filter(ut -> ut.getTenantId().equals(tenantId))
                     .toList();
             return Result.success(userTenantList);

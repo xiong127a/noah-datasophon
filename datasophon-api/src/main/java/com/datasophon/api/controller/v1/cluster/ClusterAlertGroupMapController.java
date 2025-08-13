@@ -53,7 +53,7 @@ public class ClusterAlertGroupMapController {
      * 根据集群ID获取告警组映射列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterAlertGroupMapVO>> list(@ClusterId Integer clusterId) {
+    public Result<List<ClusterAlertGroupMapVO>> list(@ClusterId Long clusterId) {
         // 调用Service层方法，获取DTO列表
         List<ClusterAlertGroupMapDTO> dtoList = clusterAlertGroupMapService.getByClusterId(clusterId);
         // Controller层：DTO → VO转换

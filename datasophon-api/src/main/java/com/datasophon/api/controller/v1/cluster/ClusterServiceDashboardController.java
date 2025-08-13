@@ -23,7 +23,7 @@ import com.datasophon.api.service.ClusterServiceDashboardService;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.vo.ClusterServiceDashboardVO;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceDashboardEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,6 @@ import com.datasophon.api.annotation.ApiVersion;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -61,7 +60,7 @@ public class ClusterServiceDashboardController {
      * @return Result<String>
      */
     @RequestMapping("/getDashboardUrl")
-    public Result<String> getDashboardUrl(@ClusterId Integer clusterId) {
+    public Result<String> getDashboardUrl(@ClusterId Long clusterId) {
         String dashboardUrl = clusterServiceDashboardService.getDashboardUrl(clusterId);
         return Result.success(dashboardUrl);
     }
@@ -73,7 +72,7 @@ public class ClusterServiceDashboardController {
      * @return Result<String>
      */
     @RequestMapping("/getDatasophonDashboard")
-    public Result<String> getDatasophonDashboard(@ClusterId Integer clusterId) {
+    public Result<String> getDatasophonDashboard(@ClusterId Long clusterId) {
         String dashboardUrl = clusterServiceDashboardService.getDatasophonDashboard(clusterId);
         return Result.success(dashboardUrl);
     }
@@ -125,7 +124,7 @@ public class ClusterServiceDashboardController {
     @RequestMapping("/list")
     public Result<List<ClusterServiceDashboardVO>> getAllDashboards() {
         try {
-            List<ClusterServiceDashboard> entities = clusterServiceDashboardService.list();
+            List<ClusterServiceDashboardEntity> entities = clusterServiceDashboardService.list();
             List<ClusterServiceDashboardVO> vos = converter.entityListToVoList(entities);
             return Result.success(vos);
         } catch (Exception e) {

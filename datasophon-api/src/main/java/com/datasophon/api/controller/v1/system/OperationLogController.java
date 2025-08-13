@@ -11,7 +11,7 @@ import com.datasophon.api.dto.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.dao.entity.OperationLog;
+import com.datasophon.dao.entity.OperationLogEntity;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.model.MPage;
 import com.mybatisflex.core.query.QueryChain;
@@ -21,7 +21,6 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,7 +44,7 @@ public class OperationLogController {
      * 列表带分页
      */
     @RequestMapping(value = "/list", method = RequestMethod.POST)
-    public Result list(@RequestBody MPage<OperationLog> mPage) {
+    public Result list(@RequestBody MPage<OperationLogEntity> mPage) {
         return Result.success(operationLogService.pageOperationLog(mPage));
     }
 
@@ -53,7 +52,7 @@ public class OperationLogController {
      * 当前集群所有服务名称
      */
     @RequestMapping("/serviceNameList")
-    public Result serviceNameList(@ClusterId Integer clusterId) {
+    public Result serviceNameList(@ClusterId Long clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
         List<FrameServiceEntity> list = QueryChain.of(FrameServiceEntity.class)

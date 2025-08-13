@@ -35,7 +35,7 @@ public class ClusterTenantController {
      * 查询租户列表
      */
     @RequestMapping("/listTenant")
-    public Result<PageResult<ClusterTenantVO>> listTenant(@ClusterId Integer clusterId,
+    public Result<PageResult<ClusterTenantVO>> listTenant(@ClusterId Long clusterId,
             @RequestParam("page") Integer page,
             @RequestParam("size") Integer size,
             @RequestParam(value = "tenantName", required = false) String tenantName) {

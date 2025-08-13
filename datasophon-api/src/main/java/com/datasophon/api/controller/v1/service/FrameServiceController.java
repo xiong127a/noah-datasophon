@@ -59,7 +59,7 @@ public class FrameServiceController {
      * 集群ID从请求头获取，保持API设计一致性
      */
     @GetMapping("/list")
-    public Result<List<FrameServiceVO>> list(@ClusterId Integer clusterId) {
+    public Result<List<FrameServiceVO>> list(@ClusterId Long clusterId) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameService(clusterId);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);
@@ -71,7 +71,7 @@ public class FrameServiceController {
      */
     @GetMapping("/listWithRequired")
     public Result<List<FrameServiceVO>> listWithRequired(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("type") ServiceType type) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getAllFrameServiceWithRequired(clusterId, type);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
@@ -84,7 +84,7 @@ public class FrameServiceController {
 
     @GetMapping("/getServiceListByServiceIds")
     public Result<List<FrameServiceVO>> getServiceListByServiceIds(
-            @RequestParam("serviceIds") List<Integer> serviceIds) {
+            @RequestParam("serviceIds") List<Long> serviceIds) {
         List<FrameServiceDTO> frameServiceDTOs = frameServiceService.getServiceListByServiceIds(serviceIds);
         List<FrameServiceVO> frameServiceVOs = frameServiceConverter.dtoListToVoList(frameServiceDTOs);
         return Result.success(frameServiceVOs);

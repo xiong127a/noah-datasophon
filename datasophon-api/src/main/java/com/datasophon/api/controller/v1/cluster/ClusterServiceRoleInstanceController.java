@@ -100,7 +100,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/cluster/{clusterId}")
     public Result<List<ClusterServiceRoleInstanceVO>> getServiceRoleInstanceListByClusterId(
-            @PathVariable Integer clusterId) {
+            @PathVariable Long clusterId) {
         try {
             List<ClusterServiceRoleInstanceDTO> dtoList = clusterServiceRoleInstanceService
                     .getServiceRoleInstanceListByClusterId(clusterId);
@@ -116,7 +116,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/cluster/{clusterId}/role/{roleName}")
     public Result<List<ClusterServiceRoleInstanceVO>> getServiceRoleInstanceListByClusterIdAndRoleName(
-            @PathVariable Integer clusterId, @PathVariable String roleName) {
+            @PathVariable Long clusterId, @PathVariable String roleName) {
         try {
             List<ClusterServiceRoleInstanceDTO> dtoList = clusterServiceRoleInstanceService
                     .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, roleName);
@@ -148,7 +148,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/cluster/{clusterId}/host/{hostname}/state/{state}")
     public Result<List<ClusterServiceRoleInstanceVO>> getServiceRoleInstanceListByClusterIdAndHostnameAndState(
-            @PathVariable Integer clusterId, @PathVariable String hostname, @PathVariable ServiceRoleState state) {
+            @PathVariable Long clusterId, @PathVariable String hostname, @PathVariable ServiceRoleState state) {
         try {
             // 暂时移除未实现的方法，返回空列表
             List<ClusterServiceRoleInstanceDTO> dtoList = List.of();
@@ -178,7 +178,7 @@ public class ClusterServiceRoleInstanceController {
      * 获取KAdmin角色实例
      */
     @GetMapping("/kadmin/{clusterId}")
-    public Result<ClusterServiceRoleInstanceVO> getKAdminRoleIns(@PathVariable Integer clusterId) {
+    public Result<ClusterServiceRoleInstanceVO> getKAdminRoleIns(@PathVariable Long clusterId) {
         try {
             ClusterServiceRoleInstanceDTO dto = clusterServiceRoleInstanceService.getKAdminRoleIns(clusterId);
             if (dto == null) {

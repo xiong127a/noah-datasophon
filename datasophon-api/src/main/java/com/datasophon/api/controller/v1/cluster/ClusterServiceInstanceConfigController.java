@@ -104,7 +104,7 @@ public class ClusterServiceInstanceConfigController {
     @GetMapping("/list")
     @Timed(value = "config.instance.list", description = "分页查询服务实例配置列表的时间")
     public Result<Object> list(
-            @RequestParam(value = "clusterId", required = false) Integer clusterId,
+            @RequestParam(value = "clusterId", required = false) Long clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {

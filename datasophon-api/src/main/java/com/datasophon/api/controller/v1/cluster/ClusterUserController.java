@@ -20,13 +20,12 @@ package com.datasophon.api.controller.v1.cluster;
 import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterUserConverter;
 import com.datasophon.api.service.ClusterUserService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterUserDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.vo.ClusterUserVO;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterUser;
+import com.datasophon.dao.entity.ClusterUserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -58,7 +57,7 @@ public class ClusterUserController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<PageResult<ClusterUserVO>> list(@ClusterId Integer clusterId,
+    public Result<PageResult<ClusterUserVO>> list(@ClusterId Long clusterId,
             @RequestParam("username") String username,
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
@@ -75,8 +74,8 @@ public class ClusterUserController {
     @RequestMapping("/info/{id}")
     public Result<ClusterUserVO> info(@PathVariable("id") Integer id) {
         // 直接从Service获取Entity，然后转换为VO
-        ClusterUser clusterUser = clusterUserService.getById(id);
-        ClusterUserVO clusterUserVO = clusterUserConverter.entityToVo(clusterUser);
+        ClusterUserEntity clusterUserEntity = clusterUserService.getById(id);
+        ClusterUserVO clusterUserVO = clusterUserConverter.entityToVo(clusterUserEntity);
 
         return Result.success(clusterUserVO);
     }
@@ -85,7 +84,7 @@ public class ClusterUserController {
      * 保存
      */
     @RequestMapping("/create")
-    public Result<ClusterUserVO> save(@ClusterId Integer clusterId,
+    public Result<ClusterUserVO> save(@ClusterId Long clusterId,
             @RequestParam("username") String username,
             @RequestParam("mainGroupId") Integer mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
@@ -102,8 +101,8 @@ public class ClusterUserController {
     @RequestMapping("/update")
     public Result<String> update(@RequestBody ClusterUserDTO clusterUserDTO) {
         // 使用Entity层面的更新，因为当前Service继承IService<Entity>
-        ClusterUser clusterUser = clusterUserConverter.dtoToEntity(clusterUserDTO);
-        clusterUserService.updateById(clusterUser);
+        ClusterUserEntity clusterUserEntity = clusterUserConverter.dtoToEntity(clusterUserDTO);
+        clusterUserService.updateById(clusterUserEntity);
 
         return Result.success("更新成功");
     }
@@ -112,7 +111,7 @@ public class ClusterUserController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@ClusterId Integer clusterId,
+    public Result<String> delete(@ClusterId Long clusterId,
             @RequestParam("id") Integer id) {
         boolean success = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.deleteClusterUser(id)

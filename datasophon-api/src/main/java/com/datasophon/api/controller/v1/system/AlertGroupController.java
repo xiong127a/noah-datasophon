@@ -53,7 +53,7 @@ public class AlertGroupController {
      */
     @GetMapping("/list")
     public Result<PageResult<AlertGroupVO>> list(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam(value = "alertGroupName", required = false) String alertGroupName,
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
@@ -106,9 +106,9 @@ public class AlertGroupController {
      * 删除告警组
      */
     @DeleteMapping("/delete")
-    public Result<String> delete(@RequestBody Integer[] ids) {
+    public Result<String> delete(@RequestBody Long[] ids) {
         try {
-            List<Integer> idList = Arrays.asList(ids);
+            List<Long> idList = Arrays.asList(ids);
             boolean deleted = alertGroupService.deleteAlertGroups(idList);
 
             return deleted ? Result.success("删除成功") : Result.error("删除失败");

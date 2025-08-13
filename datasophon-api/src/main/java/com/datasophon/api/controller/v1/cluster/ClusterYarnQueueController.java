@@ -55,7 +55,7 @@ public class ClusterYarnQueueController {
      */
     @GetMapping("/list")
     public Result<PageResult<ClusterYarnQueueVO>> getYarnQueueList(
-            @RequestParam Integer clusterId,
+            @RequestParam Long clusterId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
@@ -77,7 +77,7 @@ public class ClusterYarnQueueController {
      * 根据集群ID获取所有Yarn队列
      */
     @GetMapping("/all/{clusterId}")
-    public Result<List<ClusterYarnQueueVO>> getQueuesByClusterId(@PathVariable Integer clusterId) {
+    public Result<List<ClusterYarnQueueVO>> getQueuesByClusterId(@PathVariable Long clusterId) {
         try {
             List<ClusterYarnQueueDTO> dtoList = clusterYarnQueueService.getQueuesByClusterId(clusterId);
             List<ClusterYarnQueueVO> voList = clusterYarnQueueConverter.dtoListToVoList(dtoList);
@@ -154,7 +154,7 @@ public class ClusterYarnQueueController {
      * 刷新Yarn队列
      */
     @PostMapping("/refresh/{clusterId}")
-    public Result<Void> refreshYarnQueues(@PathVariable Integer clusterId) {
+    public Result<Void> refreshYarnQueues(@PathVariable Long clusterId) {
         try {
             // 暂时移除未实现的方法，返回成功
             logger.info("刷新Yarn队列操作: {}", clusterId);

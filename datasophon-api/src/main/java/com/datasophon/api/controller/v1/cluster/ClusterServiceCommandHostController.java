@@ -64,7 +64,7 @@ public class ClusterServiceCommandHostController {
     @GetMapping("/list")
     @Timed(value = "command.host.list", description = "获取命令主机列表的时间")
     public Result<PageResult<ClusterServiceCommandHostVO>> list(
-            @ClusterId Integer clusterId,
+            @ClusterId Long clusterId,
             @RequestParam("commandId") String commandId, 
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {

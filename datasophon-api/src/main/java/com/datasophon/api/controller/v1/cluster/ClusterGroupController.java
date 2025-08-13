@@ -58,7 +58,7 @@ public class ClusterGroupController {
      */
     @RequestMapping("/list")
     public Result<PageResult<ClusterGroupVO>> list(@RequestParam("groupName") String groupName,
-            @ClusterId Integer clusterId, @RequestParam("page") Integer page,
+            @ClusterId Long clusterId, @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         PageResult<ClusterGroupDTO> dtoPageResult = clusterGroupService.listPage(groupName, clusterId, page, pageSize);
         // Controller层：DTO → VO转换
@@ -86,7 +86,7 @@ public class ClusterGroupController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result<ClusterGroupVO> save(@ClusterId Integer clusterId,
+    public Result<ClusterGroupVO> save(@ClusterId Long clusterId,
             @RequestParam("groupName") String groupName) {
         ClusterGroupDTO dto = ProcessUtils.getDepMode(clusterId)== ClusterType.PVM
                 ? clusterGroupService.saveClusterGroup(clusterId, groupName)
@@ -120,7 +120,7 @@ public class ClusterGroupController {
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@ClusterId Integer clusterId, @RequestParam("id") Integer id) {
+    public Result<String> delete(@ClusterId Long clusterId, @RequestParam("id") Integer id) {
         boolean success = ProcessUtils.getDepMode(clusterId)== ClusterType.PVM
                 ? clusterGroupService.deleteUserGroup(id)
                 : clusterGroupService.deleteUserGroupOnKubernetes(id);
@@ -131,7 +131,7 @@ public class ClusterGroupController {
      * 刷新用户组到主机
      */
     @RequestMapping("/refreshUserGroupToHost")
-    public Result<String> refreshUserGroupToHost(@ClusterId Integer clusterId) {
+    public Result<String> refreshUserGroupToHost(@ClusterId Long clusterId) {
         clusterGroupService.refreshUserGroupToHost(clusterId);
         return Result.success("刷新成功");
     }

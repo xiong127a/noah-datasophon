@@ -55,7 +55,7 @@ public class ClusterQueueCapacityController {
      * 列表（树形结构）
      */
     @RequestMapping("/list")
-    public Result<ClusterQueueCapacityListVO> list(@ClusterId Integer clusterId) {
+    public Result<ClusterQueueCapacityListVO> list(@ClusterId Long clusterId) {
         // 调用Service层方法，获取ClusterQueueCapacityList
         ClusterQueueCapacityList capacityList = clusterQueueCapacityService.listCapacityQueue(clusterId);
         // Controller层：Model → VO转换
@@ -119,7 +119,7 @@ public class ClusterQueueCapacityController {
      * 刷新队列配置到YARN
      */
     @RequestMapping("/refreshToYarn")
-    public Result<String> refreshToYarn(@ClusterId Integer clusterId) throws Exception {
+    public Result<String> refreshToYarn(@ClusterId Long clusterId) throws Exception {
         boolean result = clusterQueueCapacityService.refreshToYarn(clusterId);
         return result ? Result.success("刷新成功") : Result.error("刷新失败");
     }

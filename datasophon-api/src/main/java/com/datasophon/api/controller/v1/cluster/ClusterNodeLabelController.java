@@ -53,7 +53,7 @@ public class ClusterNodeLabelController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterNodeLabelVO>> list(@ClusterId Integer clusterId) {
+    public Result<List<ClusterNodeLabelVO>> list(@ClusterId Long clusterId) {
         // 调用Service层方法，获取DTO列表
         List<ClusterNodeLabelDTO> dtoList = nodeLabelService.queryClusterNodeLabel(clusterId);
         // Controller层：DTO → VO转换
@@ -77,7 +77,7 @@ public class ClusterNodeLabelController {
      * 保存节点标签
      */
     @RequestMapping("/save")
-    public Result<ClusterNodeLabelVO> save(@ClusterId Integer clusterId,
+    public Result<ClusterNodeLabelVO> save(@ClusterId Long clusterId,
             @RequestParam("nodeLabel") String nodeLabel) {
         // 调用Service层方法，获取DTO
         ClusterNodeLabelDTO dto = nodeLabelService.saveNodeLabel(clusterId, nodeLabel);

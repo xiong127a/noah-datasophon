@@ -77,7 +77,7 @@ public class HostInstallController {
      */
     @PostMapping("/analysisHostList")
     @UserPermission
-    public Result<PageResult<HostInfo>> analysisHostList(@ClusterId Integer clusterId,
+    public Result<PageResult<HostInfo>> analysisHostList(@ClusterId Long clusterId,
             @RequestParam(name = "kubeConfigContent", required = false) String kubeConfigContent,
             @RequestParam(name = "hosts", required = false) String hosts,
             @RequestParam(name = "sshUser", required = false) String sshUser,
@@ -111,7 +111,7 @@ public class HostInstallController {
      */
     @PostMapping("/getHostCheckStatus")
     @UserPermission
-    public Result<HostCheckStatusDto> getHostCheckStatus(@ClusterId Integer clusterId,
+    public Result<HostCheckStatusDto> getHostCheckStatus(@ClusterId Long clusterId,
             @RequestParam("sshUser") String sshUser,
             @RequestParam("sshPort") Integer sshPort) {
         try {
@@ -132,7 +132,7 @@ public class HostInstallController {
      */
     @PostMapping("/hostCheckCompleted")
     @UserPermission
-    public Result<Boolean> hostCheckCompleted(@ClusterId Integer clusterId) {
+    public Result<Boolean> hostCheckCompleted(@ClusterId Long clusterId) {
         try {
             boolean completed = installService.hostCheckCompleted(clusterId);
             return Result.success(completed);
@@ -151,7 +151,7 @@ public class HostInstallController {
      */
     @PostMapping("/cleanupHostCheckResources")
     @UserPermission
-    public Result<Boolean> cleanupHostCheckResources(@ClusterId Integer clusterId) {
+    public Result<Boolean> cleanupHostCheckResources(@ClusterId Long clusterId) {
         try {
             boolean success = installService.cleanupHostCheckResources(clusterId);
             if (success) {
@@ -189,7 +189,7 @@ public class HostInstallController {
      */
     @PostMapping("/dispatcherHostAgentList")
     @UserPermission
-    public Result<PageResult<HostInfo>> dispatcherHostAgentList(@ClusterId Integer clusterId,
+    public Result<PageResult<HostInfo>> dispatcherHostAgentList(@ClusterId Long clusterId,
             @RequestParam("installStateCode") Integer installStateCode, @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         try {
@@ -202,7 +202,7 @@ public class HostInstallController {
     }
 
     @PostMapping("/dispatcherHostAgentCompleted")
-    public Result<Boolean> dispatcherHostAgentCompleted(@ClusterId Integer clusterId) {
+    public Result<Boolean> dispatcherHostAgentCompleted(@ClusterId Long clusterId) {
         try {
             boolean completed = installService.dispatcherHostAgentCompleted(clusterId);
             return Result.success(completed);
@@ -215,7 +215,7 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result<Boolean> cancelDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ip") String ip,
+    public Result<Boolean> cancelDispatcherHostAgent(@ClusterId Long clusterId, @RequestParam("ip") String ip,
             @RequestParam("installStateCode") Integer installStateCode) {
         try {
             boolean success = installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
@@ -234,7 +234,7 @@ public class HostInstallController {
      *
      */
     @PostMapping("/reStartDispatcherHostAgent")
-    public Result<Boolean> reStartDispatcherHostAgent(@ClusterId Integer clusterId, @RequestParam("ips") String ips) {
+    public Result<Boolean> reStartDispatcherHostAgent(@ClusterId Long clusterId, @RequestParam("ips") String ips) {
         try {
             boolean success = installService.reStartDispatcherHostAgent(clusterId, ips);
             if (success) {
@@ -287,7 +287,7 @@ public class HostInstallController {
      */
     @PostMapping("/startHostCheck")
     @UserPermission
-    public Result<Boolean> startHostCheck(@ClusterId Integer clusterId) {
+    public Result<Boolean> startHostCheck(@ClusterId Long clusterId) {
         try {
             boolean success = hostCheckService.startHostCheck(clusterId);
             if (success) {
@@ -311,7 +311,7 @@ public class HostInstallController {
     @GetMapping("/getWorkerLog")
     @UserPermission
     public Result<String> getWorkerLog(@RequestParam("ip") String ip,
-            @ClusterId Integer clusterId) {
+            @ClusterId Long clusterId) {
         try {
             String logContent = installService.getWorkerLog(ip, clusterId);
             return Result.success(logContent);
