@@ -111,6 +111,8 @@ import ServiceSelectionDialog from "./common/service-selection-dialog"
 import MasterRoleAssignDialog from "./common/master-role-assign-dialog"
 import WorkerRoleAssignDialog from "./common/worker-role-assign-dialog"
 import ServiceConfigDialog from "./common/service-config-dialog"
+import ServiceInstallDialog from "./common/service-install-dialog"
+import { Step7Data } from '@/types/service-config'
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -510,6 +512,7 @@ export default function ClusterListEnhanced() {
   const [masterRoleAssignDialogOpen, setMasterRoleAssignDialogOpen] = useState(false);
   const [workerRoleAssignDialogOpen, setWorkerRoleAssignDialogOpen] = useState(false);
   const [serviceConfigDialogOpen, setServiceConfigDialogOpen] = useState(false);
+  const [serviceInstallDialogOpen, setServiceInstallDialogOpen] = useState(false);
   const [editingCluster, setEditingCluster] = useState<ClusterItem | null>(null);
   const [setupCluster, setSetupCluster] = useState<ClusterItem | null>(null);
   // K8S专用状态
@@ -522,6 +525,7 @@ export default function ClusterListEnhanced() {
   const [serviceSelectionData, setServiceSelectionData] = useState<Step3Data | null>(null);
   const [, setMasterRoleAssignData] = useState<Step5Data | null>(null);
   const [workerRoleAssignData, setWorkerRoleAssignData] = useState<Step6Data | null>(null);
+  const [serviceConfigData, setServiceConfigData] = useState<Step7Data | null>(null);
   const router = useRouter();
 
   // 获取集群列表
@@ -680,10 +684,19 @@ export default function ClusterListEnhanced() {
   };
 
   // 处理服务配置完成
-  const handleServiceConfigComplete = () => {
+  const handleServiceConfigComplete = (step7Data: Step7Data) => {
     setServiceConfigDialogOpen(false);
+    setServiceConfigData(step7Data);
     
-    // 配置完成，重置状态并刷新列表
+    // 进入服务安装步骤
+    setServiceInstallDialogOpen(true);
+  };
+
+  // 处理服务安装完成
+  const handleServiceInstallComplete = () => {
+    setServiceInstallDialogOpen(false);
+    
+    // 安装完成，重置状态并刷新列表
     handleFlowComplete();
   };
 
@@ -696,6 +709,7 @@ export default function ClusterListEnhanced() {
     setServiceSelectionData(null);
     setMasterRoleAssignData(null);
     setWorkerRoleAssignData(null);
+    setServiceConfigData(null);
     setSetupCluster(null);
     handleClusterSuccess();
   };
@@ -1004,6 +1018,26 @@ export default function ClusterListEnhanced() {
           onPrevious={() => {
             setServiceConfigDialogOpen(false);
             setWorkerRoleAssignDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* 服务安装弹窗 */}
+      {setupCluster && serviceConfigData && (
+        <ServiceInstallDialog
+          open={serviceInstallDialogOpen}
+          onOpenChange={setServiceInstallDialogOpen}
+          cluster={{
+            id: typeof setupCluster!.id === 'string' ? parseInt(setupCluster!.id) : setupCluster!.id,
+            clusterName: setupCluster!.clusterName,
+            depType: setupCluster!.depType || ''
+          }}
+          clusterType={setupCluster!.depType || ''}
+          serviceConfigData={serviceConfigData}
+          onComplete={handleServiceInstallComplete}
+          onPrevious={() => {
+            setServiceInstallDialogOpen(false);
+            setServiceConfigDialogOpen(true);
           }}
         />
       )}

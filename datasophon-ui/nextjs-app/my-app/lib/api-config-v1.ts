@@ -131,6 +131,13 @@ export const API_PATHS_V1 = {
   SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
   GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generateCommand`,
+  
+  // 服务安装监控相关 - v1 (Step8)
+  GET_SERVICE_COMMAND_LIST: `${API_BASE}/service/install/getServiceCommandlist`,
+  GET_SERVICE_HOST_LIST: `${API_BASE}/service/install/getServiceHostList`,
+  GET_SERVICE_ROLE_ORDER_LIST: `${API_BASE}/service/install/getServiceRoleOrderList`,
+  GET_HOST_COMMAND_LOG: `${API_BASE}/service/install/getHostCommandLog`,
+  START_EXECUTE_COMMAND: `${API_BASE}/service/install/startExecuteCommand`,
 };
 
 // 创建版本化的axios实例
