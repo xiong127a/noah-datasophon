@@ -17,33 +17,37 @@
 
 package com.datasophon.dao.entity;
 
-import com.mybatisflex.annotation.Id;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import com.datasophon.common.enums.AlertLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
+/**
+ * 集群告警历史实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
-@Builder
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
 @Table("t_ddh_cluster_alert_history")
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClusterAlertHistoryEntity implements Serializable {
+public class ClusterAlertHistoryEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
     /**
      * 告警组
      */
@@ -80,14 +84,7 @@ public class ClusterAlertHistoryEntity implements Serializable {
      * 集群服务实例id
      */
     private Integer serviceInstanceId;
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
+
     /**
      * 集群id
      */

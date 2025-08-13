@@ -19,33 +19,37 @@ package com.datasophon.dao.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
+import com.datasophon.dao.entity.base.BaseEntity;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * 操作日志实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_operation_log")
 @Data
-@Builder
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OperationLogEntity implements Serializable {
+public class OperationLogEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
 
     /**
      * 请求地址
@@ -104,11 +108,11 @@ public class OperationLogEntity implements Serializable {
 
     //操作开始时间
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date startTime;
+    private LocalDateTime startTime;
 
     //操作结束时间
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date endTime;
+    private LocalDateTime endTime;
 
 
 }

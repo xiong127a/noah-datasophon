@@ -17,27 +17,32 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
-
 import lombok.Data;
-
-import com.mybatisflex.annotation.Id;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import com.mybatisflex.annotation.Table;
 
+/**
+ * 集群告警表达式实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_cluster_alert_expression")
-public class ClusterAlertExpressionEntity implements Serializable {
+public class ClusterAlertExpressionEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 自增 ID
-     */
-    @Id
-    private Long id;
     /**
      * 指标名称
      */
@@ -66,13 +71,6 @@ public class ClusterAlertExpressionEntity implements Serializable {
      * 是否删除
      */
     private String isDelete;
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-    /**
-     * 修改时间
-     */
-    private Date updateTime;
+
 
 }

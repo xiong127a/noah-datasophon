@@ -30,7 +30,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群主机实体类
@@ -88,7 +88,7 @@ public class ClusterHostEntity extends BaseEntity {
     /**
      * 检测时间
      */
-    private Date checkTime;
+    private LocalDateTime checkTime;
     /**
      * 集群id
      */

@@ -37,11 +37,7 @@ public class ClusterAlertQuotaEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
     /**
      * 告警指标名称
      */
@@ -95,7 +91,7 @@ public class ClusterAlertQuotaEntity implements Serializable {
 
     private QuotaState quotaState;
 
-    private Date createTime;
+
 
     @Column(ignore = true)
     private Integer quotaStateCode;

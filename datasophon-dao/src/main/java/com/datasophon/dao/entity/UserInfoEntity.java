@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 用户信息实体类
@@ -76,12 +76,12 @@ public class UserInfoEntity extends BaseEntity {
     /**
      * 最后登录时间
      */
-    private Date lastLoginTime;
+    private LocalDateTime lastLoginTime;
     
     /**
      * 上次登录时间
      */
-    private Date previousLoginTime;
+    private LocalDateTime previousLoginTime;
     
     /**
      * 用户头像（Base64编码）

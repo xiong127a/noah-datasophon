@@ -26,7 +26,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 统一的基础实体类，包含所有审计字段
@@ -55,13 +55,13 @@ public abstract class BaseEntity implements Serializable {
      * 创建时间
      */
     @Column("create_time")
-    private Date createTime;
+    private LocalDateTime createTime;
     
     /**
      * 更新时间  
      */
     @Column("update_time")
-    private Date updateTime;
+    private LocalDateTime updateTime;
     
     /**
      * 创建人

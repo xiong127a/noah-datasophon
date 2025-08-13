@@ -17,32 +17,42 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.datasophon.common.enums.RoleType;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.List;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 
+/**
+ * 框架服务角色实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_frame_service_role")
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Accessors(chain = true)
-public class FrameServiceRoleEntity implements Serializable {
+public class FrameServiceRoleEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
     /**
      * 服务id
      */

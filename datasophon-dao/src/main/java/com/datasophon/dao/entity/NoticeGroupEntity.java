@@ -19,11 +19,9 @@ package com.datasophon.dao.entity;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
 import java.util.List;
 
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,11 +38,7 @@ public class NoticeGroupEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Long id;
+
     @Column(ignore = true)
     private Long clusterId;
     /**
@@ -52,10 +46,7 @@ public class NoticeGroupEntity implements Serializable {
      */
     private String noticeGroupName;
 
-    /**
-     * 创建时间
-     */
-    private Date createTime;
+
 
     @Column(ignore = true)
     private List<UserInfoEntity> userIds;

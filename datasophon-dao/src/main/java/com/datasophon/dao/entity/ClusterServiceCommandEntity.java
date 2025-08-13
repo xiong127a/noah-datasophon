@@ -28,7 +28,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务命令实体类
@@ -83,7 +83,7 @@ public class ClusterServiceCommandEntity extends BaseEntity {
     @Column(ignore = true)
     private String durationTime;
 
-    private Date endTime;
+    private LocalDateTime endTime;
 
     private Integer serviceInstanceId;
 

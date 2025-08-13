@@ -42,7 +42,5 @@ public class AutoScaleTaskEntity {
     
     private String description;
     
-    private Date createdAt;
-    
-    private Date updatedAt;
+
 }

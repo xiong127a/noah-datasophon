@@ -17,29 +17,38 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 import com.datasophon.common.enums.NeedRestart;
 import com.datasophon.common.enums.ServiceState;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
 
+/**
+ * 集群服务实例实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_cluster_service_instance")
 @Data
-public class ClusterServiceInstanceEntity implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ClusterServiceInstanceEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
     /**
      * 集群id
      */
@@ -57,14 +66,14 @@ public class ClusterServiceInstanceEntity implements Serializable {
 
     @Column(ignore = true)
     private Integer serviceStateCode;
-    /**
-     * 更新时间
+    /*
+      更新时间
      */
-    private Date updateTime;
+
     /**
      * 创建时间
      */
-    private Date createTime;
+
 
     private NeedRestart needRestart;
 

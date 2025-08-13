@@ -17,43 +17,52 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 
+/**
+ * 集群服务实例配置实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Table("t_ddh_cluster_service_instance_config")
 @Data
-public class ClusterServiceInstanceConfigEntity implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ClusterServiceInstanceConfigEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主机
-     */
-    @Id
-    private Integer id;
+
     /**
      * 服务角色实例id
      */
     private Integer serviceId;
-    /**
-     * 创建时间
+    /*
+      创建时间
      */
-    private Date createTime;
+
     /**
      * 配置json
      */
     private String configJson;
-    /**
-     * 更新时间
+    /*
+      更新时间
      */
-    private Date updateTime;
+
     /**
      * 配置json md5
      */

@@ -17,27 +17,36 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.Table;
 
+/**
+ * 角色信息实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_role_info")
-public class RoleInfoEntity implements Serializable {
+public class RoleInfoEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
-    @Id
-    private Integer id;
+
     /**
      * 角色名称
      */
@@ -46,9 +55,9 @@ public class RoleInfoEntity implements Serializable {
      * 角色编码
      */
     private String roleCode;
-    /**
-     * 创建时间
+    /*
+      创建时间
      */
-    private Date createTime;
+
 
 }

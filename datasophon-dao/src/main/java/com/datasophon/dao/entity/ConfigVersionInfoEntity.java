@@ -17,14 +17,12 @@
 
 package com.datasophon.dao.entity;
 
-import com.mybatisflex.annotation.Id;
-import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 配置版本详情表
@@ -39,9 +37,8 @@ public class ConfigVersionInfoEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 版本号
+     * 版本号（业务主键）
      */
-    @Id(keyType = KeyType.None)
     private Integer version;
 
     /**
@@ -67,7 +64,7 @@ public class ConfigVersionInfoEntity implements Serializable {
     /**
      * 编辑时间
      */
-    private Date editTime;
+    private LocalDateTime editTime;
 
     /**
      * 是否当前使用版本

@@ -17,23 +17,34 @@
 
 package com.datasophon.dao.entity;
 
+import com.datasophon.dao.entity.base.BaseEntity;
 import java.io.Serial;
-import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
-import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 
 /**
  * JWT认证令牌实体类
  * 用于存储用户登录后生成的JWT令牌及相关信息
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_auth_token")
-public class AuthTokenEntity implements Serializable {
+public class AuthTokenEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -41,8 +52,7 @@ public class AuthTokenEntity implements Serializable {
     /**
      * 主键ID
      */
-    @Id(keyType = KeyType.Generator, value = "snowflakeId")
-    private Long id;
+
 
     /**
      * 关联的用户ID
@@ -77,17 +87,17 @@ public class AuthTokenEntity implements Serializable {
     /**
      * 令牌颁发时间
      */
-    private Date issuedAt;
+    private LocalDateTime issuedAt;
 
     /**
      * 令牌过期时间
      */
-    private Date expiresAt;
+    private LocalDateTime expiresAt;
 
     /**
      * 最后访问时间
      */
-    private Date lastAccessTime;
+    private LocalDateTime lastAccessTime;
 
     /**
      * 是否已被撤销
@@ -101,13 +111,7 @@ public class AuthTokenEntity implements Serializable {
      */
     private String revokedReason;
 
-    /**
-     * 记录创建时间
-     */
-    private Date createdAt;
 
-    /**
-     * 记录更新时间
-     */
-    private Date updatedAt;
+
+
 }

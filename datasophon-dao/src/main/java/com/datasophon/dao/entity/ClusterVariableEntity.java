@@ -17,25 +17,35 @@
 
 package com.datasophon.dao.entity;
 
-import com.mybatisflex.annotation.Id;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.io.Serializable;
 
+/**
+ * 集群变量实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-13
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_cluster_variable")
-public class ClusterVariableEntity implements Serializable {
+public class ClusterVariableEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 
-     */
-    @Id
-    private Integer id;
+
     /**
      * 
      */
