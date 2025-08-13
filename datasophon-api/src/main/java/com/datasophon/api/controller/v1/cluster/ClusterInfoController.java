@@ -85,7 +85,7 @@ public class ClusterInfoController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterInfoVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterInfoVO> info(@PathVariable("id") Long id) {
         try {
             ClusterInfoDTO clusterInfoDTO = clusterInfoService.getClusterById(id);
             ClusterInfoVO clusterInfoVO = clusterInfoConverter.dtoToVo(clusterInfoDTO);

@@ -69,7 +69,7 @@ public class NoticeGroupController {
      * 获取通知组详情
      */
     @GetMapping("/info/{id}")
-    public Result<NoticeGroupVO> info(@PathVariable("id") Integer id) {
+    public Result<NoticeGroupVO> info(@PathVariable("id") Long id) {
         NoticeGroupDTO noticeGroupDTO = noticeGroupService.getNoticeGroupById(id);
 
         if (noticeGroupDTO == null) {
@@ -112,9 +112,9 @@ public class NoticeGroupController {
      * 删除通知组
      */
     @DeleteMapping("/delete")
-    public Result<String> delete(@RequestBody Integer[] ids) {
+    public Result<String> delete(@RequestBody Long[] ids) {
         try {
-            List<Integer> idList = Arrays.asList(ids);
+            List<Long> idList = Arrays.asList(ids);
             boolean deleted = noticeGroupService.deleteNoticeGroups(idList);
 
             return deleted ? Result.success("删除成功") : Result.error("删除失败");

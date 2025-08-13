@@ -226,7 +226,7 @@ public class OperationLogAspect {
         op.setOperateUser(username);
 
         //从header中获取集群 id
-        Long clusterId = request.getIntHeader("Clusterid");
+        Long clusterId = (long) request.getIntHeader("X-Cluster-Id");
         if (ObjUtil.isNotNull(clusterId)) {
             op.setClusterId(clusterId);
         }
@@ -282,7 +282,7 @@ public class OperationLogAspect {
         if (Objects.isNull(op.getClusterId())) {
             Object cId = param.get("clusterId");
             if (Objects.nonNull(cId) && cId instanceof Integer) {
-                op.setClusterId(Integer.valueOf(cId.toString()));
+                op.setClusterId(Long.valueOf(cId.toString()));
             }
         }
 
