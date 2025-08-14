@@ -20,6 +20,8 @@ package com.datasophon.dao.entity.base;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,9 +49,11 @@ public abstract class BaseEntity implements Serializable {
     
     /**
      * 主键 - 统一使用Long类型，通过雪花算法生成
+     * 序列化为字符串避免前端精度丢失
      */
     @Id(keyType = KeyType.Generator, value = "snowflakeId")
     @Column("id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
     
     /**
