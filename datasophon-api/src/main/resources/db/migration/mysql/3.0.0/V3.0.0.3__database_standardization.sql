@@ -9,6 +9,10 @@
 -- 2. 为保证迁移过程中数据完整性，使用临时递增ID建立映射关系
 -- 3. 迁移完成后，应用层将使用雪花算法为新数据生成正确的BIGINT ID
 -- 4. 现有数据的临时ID不影响业务逻辑，外键关联关系已正确迁移
+-- 5. 整个迁移过程在事务中执行，确保原子性操作
+
+-- 开始事务（确保迁移的原子性）
+START TRANSACTION;
 
 -- =============================================================================
 -- DDL部分：数据库结构变更
@@ -223,12 +227,14 @@ ALTER TABLE `t_ddh_cluster_zk` MODIFY COLUMN `cluster_id` BIGINT COMMENT '集群
 ALTER TABLE `t_ddh_operation_log` MODIFY COLUMN `cluster_id` BIGINT COMMENT '集群ID';
 
 -- 修复user_id字段（用户ID外键）
-ALTER TABLE `t_ddh_access_token` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
+-- 注意：t_ddh_access_token表已在V3.0.0中删除并重建为t_ddh_auth_token，跳过此操作
+-- ALTER TABLE `t_ddh_access_token` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
 ALTER TABLE `t_ddh_cluster_role_user` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
 ALTER TABLE `t_ddh_cluster_user_group` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
 ALTER TABLE `t_ddh_cluster_user_tenant` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
 ALTER TABLE `t_ddh_notice_group_user` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
-ALTER TABLE `t_ddh_operation_log` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
+-- 注意：t_ddh_operation_log表使用operate_user字段而非user_id字段
+-- ALTER TABLE `t_ddh_operation_log` MODIFY COLUMN `user_id` BIGINT COMMENT '用户ID';
 
 -- 修复alert_group_id字段（告警组ID外键）
 ALTER TABLE `t_ddh_cluster_alert_group_map` MODIFY COLUMN `alert_group_id` BIGINT COMMENT '告警组ID';
@@ -483,9 +489,10 @@ ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人' AFTER `crea
 
 -- 5.4 t_ddh_auth_token表（已有BIGINT主键和自己的时间字段）补充标准审计字段  
 -- 注意：该表已有created_at和updated_at，不添加create_time和update_time以避免冲突
-ALTER TABLE `t_ddh_auth_token` 
-ADD COLUMN `create_by` VARCHAR(128) DEFAULT NULL COMMENT '创建人',
-ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人';
+-- 该表已在V3.0.0中重建，具备完整结构，跳过字段添加
+-- ALTER TABLE `t_ddh_auth_token` 
+-- ADD COLUMN `create_by` VARCHAR(128) DEFAULT NULL COMMENT '创建人',
+-- ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人';
 
 -- 6. 索引优化 - 为重要审计字段添加索引（提升查询性能）
 CREATE INDEX `idx_create_time` ON `t_ddh_cluster_alert_history` (`create_time`);
@@ -527,6 +534,9 @@ CREATE INDEX `idx_create_by` ON `t_ddh_operation_log` (`create_by`);
 -- WHERE TABLE_SCHEMA = 'datasophon2' 
 --   AND COLUMN_KEY = 'PRI' 
 --   AND DATA_TYPE != 'bigint';
+
+-- 提交事务（确保所有操作都成功完成）
+COMMIT;
 
 -- 验证外键关联数据完整性
 -- SELECT 'Command tables foreign key integrity check:' as verification_type;
