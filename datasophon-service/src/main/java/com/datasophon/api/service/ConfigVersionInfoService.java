@@ -38,7 +38,7 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @param refId   关联对象ID
      * @return 配置版本详情列表
      */
-    List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Integer refId);
+    List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Long refId);
 
     /**
      * 根据版本号、引用类型和引用ID获取配置版本详情
@@ -48,7 +48,7 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @param refId   关联对象ID
      * @return 配置版本详情
      */
-    ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Integer refId);
+    ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Long refId);
 
     /**
      * 更新当前使用版本状态
@@ -57,7 +57,7 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @param refType 引用类型(SERVICE/ROLE_GROUP)
      * @param refId   关联对象ID
      */
-    void updateCurrentVersion(Integer version, String refType, Integer refId);
+    void updateCurrentVersion(Integer version, String refType, Long refId);
 
     /**
      * 获取指定引用类型的最大版本号
@@ -66,5 +66,5 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @param refId   引用ID
      * @return 最大版本号，如果没有记录则返回0
      */
-    Integer getMaxVersion(String refType, Integer refId);
+    Integer getMaxVersion(String refType, Long refId);
 }

@@ -43,6 +43,7 @@ import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -130,7 +131,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
         // 转换并保存
         NoticeGroupEntity entity = dtoToEntity(noticeGroupDTO);
-        entity.setCreateTime(new Date());
+        entity.setCreateTime(LocalDateTime.now());
         this.save(entity);
 
         // 处理用户关联
@@ -140,7 +141,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                             .noticeGroupId(entity.getId())
                             .userId(userId)
                             .build())
-                    .toList();
+                    .collect(Collectors.toList());
             noticeGroupUserService.saveBatch(userRelations);
         }
 
@@ -197,7 +198,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                             .noticeGroupId(noticeGroupDTO.id())
                             .userId(userId)
                             .build())
-                    .toList();
+                    .collect(Collectors.toList());
             noticeGroupUserService.saveBatch(userRelations);
         }
 
@@ -259,7 +260,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                     .getConfigByRoleGroupId(roleInstanceDto.roleGroupId());
             List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
             serviceInstallService.saveServiceConfig(roleInstanceDto.clusterId(), "ALERTMANAGER", serviceConfig,
-                    roleGroupConfig.roleGroupId(), "(AUTO) 生成alertManager 配置信息", -1, "system");
+                    roleGroupConfig.roleGroupId(), "(AUTO) 生成alertManager 配置信息", -1L, "system");
         }
 
         // 调用配置生成

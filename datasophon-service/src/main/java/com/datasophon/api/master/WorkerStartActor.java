@@ -198,7 +198,7 @@ public class WorkerStartActor extends AbstractActor {
         }
 
         // 构建服务角色映射(服务ID -> 角色ID列表)
-        Map<Integer, List<String>> serviceRoleMap = serviceRoleList.stream()
+        Map<Long, List<String>> serviceRoleMap = serviceRoleList.stream()
                 .collect(
                         groupingBy(
                                 ClusterServiceRoleInstanceDTO::serviceId,

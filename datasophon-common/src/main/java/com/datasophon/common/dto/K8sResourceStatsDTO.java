@@ -52,11 +52,11 @@ public record K8sResourceStatsDTO(
      * 获取Pod健康率
      */
     public Double getPodHealthRate() {
-        Integer total = getTotalPodCount();
+        int total = getTotalPodCount();
         if (total == 0) {
             return 100.0;
         }
-        Integer running = runningPodCount != null ? runningPodCount : 0;
+        int running = runningPodCount != null ? runningPodCount : 0;
         return (double) running / total * 100;
     }
 

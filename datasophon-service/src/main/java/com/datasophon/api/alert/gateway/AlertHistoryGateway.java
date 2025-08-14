@@ -7,7 +7,7 @@ public interface AlertHistoryGateway {
 
     AlertHistory getEnabledAlertHistory(String alertname, Long clusterId, String hostname);
 
-    void updateAlertHistoryToDisabled(Integer id);
+    void updateAlertHistoryToDisabled(Long id);
 
-    boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Integer id);
+    boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Long id);
 }

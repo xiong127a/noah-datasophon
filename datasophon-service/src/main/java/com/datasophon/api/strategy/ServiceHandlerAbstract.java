@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -85,7 +86,7 @@ public abstract class ServiceHandlerAbstract {
         sshCommand.setValue("ssh root@" + hostname);
         sshCommand.setCommandPrompt("[user@localhost ~]$ ");
         sshCommand.setCommandResult(
-                "Last login: " + new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy", Locale.CHINA).format(new Date())
+                "Last login: " + new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy", Locale.CHINA).format(LocalDateTime.now())
                         + " from 192.168.x.x\n" +
                         "Welcome to CentOS Linux 7 (Core)");
 

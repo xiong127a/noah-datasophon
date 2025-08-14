@@ -117,7 +117,7 @@ public class ClusterServiceCommandController {
     public Result<String> generateServiceRoleCommands(
             @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
-            @RequestBody Map<Integer, List<String>> instanceIdMap) {
+            @RequestBody Map<Long, List<String>> instanceIdMap) {
         try {
             String commandIds = clusterServiceCommandService.generateServiceRoleCommands(clusterId, commandType,
                     instanceIdMap);
@@ -134,7 +134,7 @@ public class ClusterServiceCommandController {
     public Result<String> generateServiceRoleCommand(
             @ClusterId Long clusterId,
             @RequestParam CommandType commandType,
-            @RequestParam Integer serviceInstanceId,
+            @RequestParam Long serviceInstanceId,
             @RequestBody List<String> serviceRoleInstanceIds,
             @RequestBody(required = false) RollingRestartInfo rollingRestartInfo) {
         try {
@@ -196,7 +196,7 @@ public class ClusterServiceCommandController {
      * 获取最后重启命令
      */
     @GetMapping("/last-restart/{serviceInstanceId}")
-    public Result<ClusterServiceCommandVO> getLastRestartCommand(@PathVariable Integer serviceInstanceId) {
+    public Result<ClusterServiceCommandVO> getLastRestartCommand(@PathVariable Long serviceInstanceId) {
         try {
             ClusterServiceCommandDTO dto = clusterServiceCommandService.getLastRestartCommand(serviceInstanceId);
             if (dto == null) {

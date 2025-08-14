@@ -46,7 +46,7 @@ public interface ClusterYarnSchedulerService extends IService<ClusterYarnSchedul
     /**
      * 根据ID获取调度器DTO
      */
-    ClusterYarnSchedulerDTO getByIdAsDto(Integer id);
+    ClusterYarnSchedulerDTO getByIdAsDto(Long id);
 
     /**
      * 根据集群ID获取所有调度器
@@ -61,5 +61,5 @@ public interface ClusterYarnSchedulerService extends IService<ClusterYarnSchedul
     /**
      * 删除调度器
      */
-    boolean deleteScheduler(Integer id);
+    boolean deleteScheduler(Long id);
 }

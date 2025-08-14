@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-01-01
  */
 public record ClusterServiceInstanceRoleGroupDTO(
-        Integer id,
+        Long id,
         String roleGroupName,
         Integer serviceInstanceId,
         String serviceName,

@@ -32,7 +32,7 @@ import java.util.List;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FrameInfoVO(
-        Integer id,
+        Long id,
         String frameName,
         String frameCode,
         String frameVersion,
@@ -57,7 +57,7 @@ public record FrameInfoVO(
     /**
      * 创建基础FrameInfoVO，不包含服务列表
      */
-    public static FrameInfoVO of(Integer id, String frameName, String frameCode, String frameVersion) {
+    public static FrameInfoVO of(Long id, String frameName, String frameCode, String frameVersion) {
         String displayName = frameName != null && frameVersion != null
                 ? frameName + " " + frameVersion
                 : frameName;
@@ -67,7 +67,7 @@ public record FrameInfoVO(
     /**
      * 创建完整FrameInfoVO，包含服务列表
      */
-    public static FrameInfoVO withServices(Integer id, String frameName, String frameCode, String frameVersion,
+    public static FrameInfoVO withServices(Long id, String frameName, String frameCode, String frameVersion,
             Object frameServiceList) {
         String displayName = frameName != null && frameVersion != null
                 ? frameName + " " + frameVersion

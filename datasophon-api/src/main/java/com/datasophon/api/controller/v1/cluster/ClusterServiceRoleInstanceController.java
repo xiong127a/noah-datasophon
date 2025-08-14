@@ -84,7 +84,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/service/{serviceId}")
     public Result<List<ClusterServiceRoleInstanceVO>> getServiceRoleInstanceListByServiceId(
-            @PathVariable Integer serviceId) {
+            @PathVariable Long serviceId) {
         try {
             List<ClusterServiceRoleInstanceDTO> dtoList = clusterServiceRoleInstanceService
                     .getServiceRoleInstanceListByServiceId(serviceId);
@@ -132,7 +132,7 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/running/service/{serviceInstanceId}")
     public Result<List<ClusterServiceRoleInstanceVO>> getRunningServiceRoleInstanceListByServiceId(
-            @PathVariable Integer serviceInstanceId) {
+            @PathVariable Long serviceInstanceId) {
         try {
             List<ClusterServiceRoleInstanceDTO> dtoList = clusterServiceRoleInstanceService
                     .getRunningServiceRoleInstanceListByServiceId(serviceInstanceId);
@@ -195,7 +195,7 @@ public class ClusterServiceRoleInstanceController {
      * 根据ID获取服务角色实例详情
      */
     @GetMapping("/{id}")
-    public Result<ClusterServiceRoleInstanceVO> getServiceRoleInstanceById(@PathVariable Integer id) {
+    public Result<ClusterServiceRoleInstanceVO> getServiceRoleInstanceById(@PathVariable Long id) {
         try {
             // 暂时简化实现，使用基础CRUD方法
             ClusterServiceRoleInstanceDTO dto = clusterServiceRoleInstanceConverter.entityToDto(
@@ -227,7 +227,7 @@ public class ClusterServiceRoleInstanceController {
      * 重启过时服务
      */
     @PostMapping("/restart-obsolete/{roleGroupId}")
-    public Result<Void> restartObsoleteService(@PathVariable Integer roleGroupId) {
+    public Result<Void> restartObsoleteService(@PathVariable Long roleGroupId) {
         try {
             clusterServiceRoleInstanceService.restartObsoleteService(roleGroupId);
             return Result.success();

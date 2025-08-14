@@ -85,7 +85,7 @@ public class ClusterYarnSchedulerController {
      * 根据ID获取调度器信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterYarnSchedulerVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterYarnSchedulerVO> info(@PathVariable("id") Long id) {
         try {
             ClusterYarnSchedulerDTO dto = clusterYarnSchedulerService.getByIdAsDto(id);
             if (dto != null) {
@@ -133,7 +133,7 @@ public class ClusterYarnSchedulerController {
      * 删除调度器
      */
     @RequestMapping("/delete/{id}")
-    public Result<String> delete(@PathVariable("id") Integer id) {
+    public Result<String> delete(@PathVariable("id") Long id) {
         try {
             boolean success = clusterYarnSchedulerService.deleteScheduler(id);
             if (success) {

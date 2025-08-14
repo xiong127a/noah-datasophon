@@ -33,7 +33,7 @@ public class OsInfo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private Integer id;
+    private Long id;
 
     /**
      * 操作系统发行版本(CentOS/Ubuntu等)

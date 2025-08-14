@@ -58,7 +58,7 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueueEntity
     /**
      * 根据ID获取队列DTO
      */
-    ClusterYarnQueueDTO getByIdAsDto(Integer id);
+    ClusterYarnQueueDTO getByIdAsDto(Long id);
 
     /**
      * 根据集群ID获取所有队列
@@ -73,5 +73,5 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueueEntity
     /**
      * 删除队列
      */
-    boolean deleteQueue(Integer id);
+    boolean deleteQueue(Long id);
 }

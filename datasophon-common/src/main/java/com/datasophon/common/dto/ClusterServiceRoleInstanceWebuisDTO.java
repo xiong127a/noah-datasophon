@@ -26,10 +26,10 @@ package com.datasophon.common.dto;
  * @date 2025-08-06
  */
 public record ClusterServiceRoleInstanceWebuisDTO(
-    Integer id,
-    Integer serviceRoleInstanceId,
+    Long id,
+    Long serviceRoleInstanceId,
     String webUrl,
-    Integer serviceInstanceId,
+    Long serviceInstanceId,
     String name
 ) {
     
@@ -37,9 +37,9 @@ public record ClusterServiceRoleInstanceWebuisDTO(
      * 创建新WebUI DTO的静态工厂方法
      */
     public static ClusterServiceRoleInstanceWebuisDTO create(
-            Integer serviceRoleInstanceId,
+            Long serviceRoleInstanceId,
             String webUrl,
-            Integer serviceInstanceId,
+            Long serviceInstanceId,
             String name) {
         return new ClusterServiceRoleInstanceWebuisDTO(
             null, serviceRoleInstanceId, webUrl, serviceInstanceId, name);

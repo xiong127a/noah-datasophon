@@ -87,7 +87,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param showOnlyDifferences 是否仅显示差异
      * @return 比较结果
      */
-    Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
+    Map<String, List<Map<String, Object>>> configVersionCompare(Long serviceInstanceId, Long roleGroupId,
             Boolean showOnlyDifferences);
 
     /**
@@ -96,7 +96,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @return 是否删除成功
      */
-    boolean delServiceInstance(Integer serviceInstanceId);
+    boolean delServiceInstance(Long serviceInstanceId);
 
     /**
      * 获取集群下正在运行的服务实例
@@ -112,7 +112,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @return 是否有运行中的角色实例
      */
-    boolean hasRunningRoleInstance(Integer serviceInstanceId);
+    boolean hasRunningRoleInstance(Long serviceInstanceId);
 
     /**
      * 判断集群中是否存在指定服务的角色实例
@@ -129,7 +129,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息
      */
-    ConnectionInfo getConnectionInfo(Integer serviceInstanceId);
+    ConnectionInfo getConnectionInfo(Long serviceInstanceId);
 
     /**
      * 获取所有服务实例
@@ -144,7 +144,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @param serviceState 新的服务状态
      */
-    void updateServiceInstanceState(Integer serviceInstanceId, ServiceState serviceState);
+    void updateServiceInstanceState(Long serviceInstanceId, ServiceState serviceState);
 
     /**
      * 检查是否存在使用指定框架服务的集群服务实例
@@ -152,5 +152,5 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param frameServiceId 框架服务ID
      * @return 如果存在返回true，否则返回false
      */
-    boolean existsByFrameServiceId(Integer frameServiceId);
+    boolean existsByFrameServiceId(Long frameServiceId);
 }

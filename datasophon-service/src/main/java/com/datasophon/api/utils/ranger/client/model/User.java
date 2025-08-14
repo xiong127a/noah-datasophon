@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
-    private Integer id;
+    private Long id;
     private String createDate;
     private String updateDate;
     private String owner;

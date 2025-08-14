@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -65,7 +66,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         UserInfoEntity userInfo = dtoToEntity(userInfoDTO);
 
         // 设置基本信息
-        userInfo.setCreateTime(new Date());
+        userInfo.setCreateTime(LocalDateTime.now());
         userInfo.setPassword(passwordEncoder.encode(userInfo.getPassword()));
 
         // 设置新字段的默认值
@@ -149,7 +150,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     }
 
     @Override
-    public boolean checkUsernameExists(String username, Integer excludeId) {
+    public boolean checkUsernameExists(String username, Long excludeId) {
         if (excludeId != null) {
             return userInfoMapper.existsByUsernameExcludeId(username, excludeId);
         } else {
@@ -158,7 +159,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     }
 
     @Override
-    public UserInfoEntity getById(Integer id) {
+    public UserInfoEntity getById(Long id) {
         return super.getById(id);
     }
 

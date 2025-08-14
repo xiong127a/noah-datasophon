@@ -63,16 +63,16 @@ public class RoleGroupEntityServiceImpl implements RoleGroupEntityService {
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     @Override
-    public ClusterServiceInstanceRoleGroupEntity getById(Integer id) {
+    public ClusterServiceInstanceRoleGroupEntity getById(Long id) {
         return roleGroupMapper.selectOneById(id);
     }
 
     @Override
-    public void bindRoleInstances(String roleInstanceIds, Integer roleGroupId) {
+    public void bindRoleInstances(String roleInstanceIds, Long roleGroupId) {
         String[] ids = roleInstanceIds.split(",");
         for (String id : ids) {
             ClusterServiceRoleInstanceEntity roleInstanceEntity = roleEntityService
-                    .getById(Integer.parseInt(id));
+                    .getById(Long.parseLong(id));
 
             if (!isSameRoleGroup(roleInstanceEntity, Arrays.asList(ids))) {
                 throw new RuntimeException(Status.NEED_SAME_ROLE_GROUP.getMsg());
@@ -88,7 +88,7 @@ public class RoleGroupEntityServiceImpl implements RoleGroupEntityService {
     }
 
     @Override
-    public boolean updateToNeedRestart(Integer roleGroupId) {
+    public boolean updateToNeedRestart(Long roleGroupId) {
         List<ClusterServiceRoleInstanceEntity> list = roleInstanceMapper.selectByRoleGroupId(roleGroupId);
 
         if (list != null && !list.isEmpty()) {
@@ -112,7 +112,7 @@ public class RoleGroupEntityServiceImpl implements RoleGroupEntityService {
         return new HashSet<>(ids).containsAll(listIds);
     }
 
-    private boolean isSameConfig(Integer oldRoleGroupId, Integer newRoleGroupId) {
+    private boolean isSameConfig(Long oldRoleGroupId, Long newRoleGroupId) {
         try {
             // 通过Service获取配置DTO并比较
             ClusterServiceRoleGroupConfigDTO oldConfig = roleGroupConfigService.getConfigByRoleGroupId(oldRoleGroupId);

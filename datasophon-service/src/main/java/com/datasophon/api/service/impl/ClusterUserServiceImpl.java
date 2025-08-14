@@ -101,7 +101,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     private ClusterUserConverter clusterUserConverter;
 
     @Override
-    public ClusterUserDTO createClusterUser(Long clusterId, String username, Integer mainGroupId, String groupIds) {
+    public ClusterUserDTO createClusterUser(Long clusterId, String username, Long mainGroupId, String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -128,9 +128,9 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
-            List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
+            List<Long> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Long::parseLong)
                     .toList();
-            for (Integer id : otherGroupIds) {
+            for (Long id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUserEntity.getId(), id, 2);
             }
             Collection<ClusterGroupEntity> clusterGroupEntities = groupService.listByIds(otherGroupIds);
@@ -215,7 +215,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Integer mainGroupId,
+    public ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Long mainGroupId,
             String groupIds) {
 
         // 用户名校验
@@ -243,9 +243,9 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         String otherGroup = null;
         if (StringUtils.isNotBlank(groupIds)) {
-            List<Integer> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Integer::parseInt)
+            List<Long> otherGroupIds = Arrays.stream(groupIds.split(",")).map(Long::parseLong)
                     .toList();
-            for (Integer id : otherGroupIds) {
+            for (Long id : otherGroupIds) {
                 buildClusterUserGroup(clusterId, clusterUserEntity.getId(), id, 2);
             }
             Collection<ClusterGroupEntity> clusterGroupEntities = groupService.listByIds(otherGroupIds);
@@ -332,7 +332,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         return clusterUserConverter.entityToDto(clusterUserEntity);
     }
 
-    private void buildClusterUserGroup(Long clusterId, Integer userId, Integer groupId, Integer userGroupType) {
+    private void buildClusterUserGroup(Long clusterId, Long userId, Long groupId, Integer userGroupType) {
         ClusterUserGroupEntity clusterUserGroupEntity = new ClusterUserGroupEntity();
         clusterUserGroupEntity.setUserId(userId);
         clusterUserGroupEntity.setGroupId(groupId);
@@ -370,7 +370,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public boolean deleteClusterUser(Integer id) {
+    public boolean deleteClusterUser(Long id) {
         ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
@@ -430,7 +430,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public boolean deleteClusterUserOnKubernetes(Integer id) {
+    public boolean deleteClusterUserOnKubernetes(Long id) {
         ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
@@ -556,7 +556,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public List<String> getUsernamesByIds(List<Integer> userIds) {
+    public List<String> getUsernamesByIds(List<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return List.of();
         }

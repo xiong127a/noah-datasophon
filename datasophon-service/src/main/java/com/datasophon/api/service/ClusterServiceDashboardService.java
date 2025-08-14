@@ -44,7 +44,7 @@ public interface ClusterServiceDashboardService extends IService<ClusterServiceD
     /**
      * 根据ID获取仪表盘DTO
      */
-    ClusterServiceDashboardDTO getByIdAsDto(Integer id);
+    ClusterServiceDashboardDTO getByIdAsDto(Long id);
 
     /**
      * 保存仪表盘DTO

@@ -31,6 +31,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -83,7 +84,7 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
         String refreshToken = createRefreshToken(username);
 
         // 获取令牌过期时间
-        Date validity = getExpirationDateFromToken(token);
+        LocalDateTime validity = getExpirationDateFromToken(token);
 
         // 保存令牌到数据库
         try {
@@ -116,7 +117,7 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
      * @return 令牌实体
      */
     private AuthTokenEntity createTokenRecord(UserInfoEntity user, String token, String refreshToken,
-            HttpServletRequest request, Date expiresAt) {
+            HttpServletRequest request, LocalDateTime expiresAt) {
         try {
             // 清理用户过多的令牌，保持在限制数量内
             int cleanupCount = authTokenService.cleanupExcessiveTokens(user.getId(), maxTokensPerUser);
@@ -132,11 +133,11 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
             authToken.setTokenType("Bearer");
             authToken.setExpiresAt(expiresAt);
 
-            Date now = new Date();
+            var now = LocalDateTime.now();
             authToken.setIssuedAt(now);
             authToken.setLastAccessTime(now);
-            authToken.setCreatedAt(now);
-            authToken.setUpdatedAt(now);
+            authToken.setCreateTime(now);
+            authToken.setUpdateTime(now);
             authToken.setIsRevoked(false);
 
             // 记录客户端信息

@@ -81,7 +81,7 @@ public class ClusterServiceDashboardController {
      * 根据ID获取仪表盘信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterServiceDashboardVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceDashboardVO> info(@PathVariable("id") Long id) {
         ClusterServiceDashboardDTO dto = clusterServiceDashboardService.getByIdAsDto(id);
         if (dto == null) {
             return Result.error("仪表盘不存在");

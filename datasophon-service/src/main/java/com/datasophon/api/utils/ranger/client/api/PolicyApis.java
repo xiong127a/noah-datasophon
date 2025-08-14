@@ -52,7 +52,7 @@ public class PolicyApis {
         }
     }
 
-    public void updatePolicy(final int policyId, final Policy policy) throws RangerClientException {
+    public void updatePolicy(final Long policyId, final Policy policy) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/policy/" + policyId;
             restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(policy), Policy.class);
@@ -111,7 +111,7 @@ public class PolicyApis {
         }
     }
 
-    public void deletePolicy(final int policyId) throws RangerClientException {
+    public void deletePolicy(final Long policyId) throws RangerClientException {
         try {
             String url = baseUrl + "/service/public/v2/api/policy/" + policyId;
             restTemplate.delete(url);

@@ -100,7 +100,7 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
     /**
      * 根据ID查询单个实体
      */
-    default FrameServiceEntity selectById(Integer id) {
+    default FrameServiceEntity selectById(Long id) {
         return this.selectOneById(id);
     }
 

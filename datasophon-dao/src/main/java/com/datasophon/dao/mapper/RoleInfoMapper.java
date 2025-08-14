@@ -83,7 +83,7 @@ public interface RoleInfoMapper extends BaseMapper<RoleInfoEntity> {
      * @param excludeId 排除的角色ID（编辑时排除当前角色）
      * @return true表示存在，false表示不存在
      */
-    default boolean existsByRoleCode(String roleCode, Integer excludeId) {
+    default boolean existsByRoleCode(String roleCode, Long excludeId) {
         var queryChain = QueryChain.of(RoleInfoEntity.class)
                 .where(ROLE_INFO_ENTITY.ROLE_CODE.eq(roleCode));
         

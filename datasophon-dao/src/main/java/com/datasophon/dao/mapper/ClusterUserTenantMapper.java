@@ -24,8 +24,8 @@ public interface ClusterUserTenantMapper extends BaseMapper<ClusterUserTenantEnt
          */
         default List<ClusterUserTenantEntity> selectByClusterIdAndUserIdAndTenantIds(
                         @Param("clusterId") Long clusterId,
-                        @Param("userId") Integer userId,
-                        @Param("tenantIds") List<Integer> tenantIds) {
+                        @Param("userId") Long userId,
+                        @Param("tenantIds") List<Long> tenantIds) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterUserTenantEntity::getClusterId).eq(clusterId)
                                 .and(ClusterUserTenantEntity::getUserId).eq(userId)
@@ -38,7 +38,7 @@ public interface ClusterUserTenantMapper extends BaseMapper<ClusterUserTenantEnt
          */
         default List<ClusterUserTenantEntity> selectByClusterIdAndUserId(
                         @Param("clusterId") Long clusterId,
-                        @Param("userId") Integer userId) {
+                        @Param("userId") Long userId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterUserTenantEntity::getClusterId).eq(clusterId)
                                 .and(ClusterUserTenantEntity::getUserId).eq(userId);
@@ -50,8 +50,8 @@ public interface ClusterUserTenantMapper extends BaseMapper<ClusterUserTenantEnt
          */
         default int deleteByClusterIdAndUserIdAndTenantIds(
                         @Param("clusterId") Long clusterId,
-                        @Param("userId") Integer userId,
-                        @Param("tenantIds") List<Integer> tenantIds) {
+                        @Param("userId") Long userId,
+                        @Param("tenantIds") List<Long> tenantIds) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterUserTenantEntity::getClusterId).eq(clusterId)
                                 .and(ClusterUserTenantEntity::getUserId).eq(userId)
@@ -62,7 +62,7 @@ public interface ClusterUserTenantMapper extends BaseMapper<ClusterUserTenantEnt
         /**
          * 根据租户ID查询用户租户关系列表
          */
-        default List<ClusterUserTenantEntity> selectByTenantId(@Param("tenantId") Integer tenantId) {
+        default List<ClusterUserTenantEntity> selectByTenantId(@Param("tenantId") Long tenantId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterUserTenantEntity::getTenantId).eq(tenantId);
                 return this.selectListByQuery(query);

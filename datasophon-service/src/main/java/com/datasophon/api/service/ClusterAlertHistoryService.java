@@ -47,7 +47,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param serviceInstanceId 服务实例ID
      * @return 告警历史DTO列表
      */
-    List<ClusterAlertHistoryDTO> getAlertList(Integer serviceInstanceId);
+    List<ClusterAlertHistoryDTO> getAlertList(Long serviceInstanceId);
 
     /**
      * 分页查询所有告警历史
@@ -64,7 +64,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * 
      * @param ids 角色实例ID列表
      */
-    void removeAlertByRoleInstanceIds(List<Integer> ids);
+    void removeAlertByRoleInstanceIds(List<Long> ids);
 
     /**
      * 根据ID获取告警历史DTO
@@ -72,7 +72,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param id 告警历史ID
      * @return 告警历史DTO
      */
-    ClusterAlertHistoryDTO getByIdAsDto(Integer id);
+    ClusterAlertHistoryDTO getByIdAsDto(Long id);
 
     /**
      * 保存告警历史
@@ -94,7 +94,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param serviceInstanceId 服务实例 ID
      * @return 启用的告警数量
      */
-    long countEnabledByServiceInstanceId(Integer serviceInstanceId);
+    long countEnabledByServiceInstanceId(Long serviceInstanceId);
 
     /**
      * 获取停止状态的角色实例列表
@@ -102,7 +102,7 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param serviceInstanceId 服务实例 ID
      * @return 停止状态的角色实例列表
      */
-    List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Integer serviceInstanceId);
+    List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Long serviceInstanceId);
 
     /**
      * 获取告警状态的角色实例列表
@@ -110,5 +110,5 @@ public interface ClusterAlertHistoryService extends IService<ClusterAlertHistory
      * @param serviceInstanceId 服务实例 ID
      * @return 告警状态的角色实例列表
      */
-    List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Integer serviceInstanceId);
+    List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Long serviceInstanceId);
 }

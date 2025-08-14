@@ -103,7 +103,7 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param id 主键ID
      * @return 服务角色DTO
      */
-    FrameServiceRoleDTO getFrameServiceRoleById(Integer id);
+    FrameServiceRoleDTO getFrameServiceRoleById(Long id);
 
     /**
      * 保存服务角色
@@ -135,5 +135,5 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @param serviceId 服务ID
      * @return 是否删除成功
      */
-    boolean removeByServiceId(Integer serviceId);
+    boolean removeByServiceId(Long serviceId);
 }

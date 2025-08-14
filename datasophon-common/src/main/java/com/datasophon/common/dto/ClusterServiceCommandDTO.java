@@ -18,6 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -31,7 +32,7 @@ import java.util.Date;
 public record ClusterServiceCommandDTO(
         String commandId,
         String createBy,
-        Date createTime,
+        LocalDateTime createTime,
         String commandName,
         Integer commandState,
         Integer commandStateCode,
@@ -40,6 +41,6 @@ public record ClusterServiceCommandDTO(
         String serviceName,
         Integer commandType,
         String durationTime,
-        Date endTime,
-        Integer serviceInstanceId) implements Serializable {
+        LocalDateTime endTime,
+        Long serviceInstanceId) implements Serializable {
 }

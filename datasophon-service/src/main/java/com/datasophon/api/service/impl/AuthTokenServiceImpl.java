@@ -42,6 +42,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -83,7 +84,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthTokenDTO createToken(UserInfoEntity user, String token, String refreshToken,
-            HttpServletRequest request, Date expiresAt) {
+            HttpServletRequest request, LocalDateTime expiresAt) {
         // 清理超出限制的旧令牌
         this.getMapper().cleanupOldTokens(user.getId(), MAX_TOKENS_PER_USER);
 
@@ -99,12 +100,12 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
         authToken.setTokenType("Bearer");
         authToken.setClientIp(ip);
         authToken.setUserAgent(userAgent);
-        authToken.setIssuedAt(new Date());
+        authToken.setIssuedAt(LocalDateTime.now());
         authToken.setExpiresAt(expiresAt);
-        authToken.setLastAccessTime(new Date());
+        authToken.setLastAccessTime(LocalDateTime.now());
         authToken.setIsRevoked(false);
-        authToken.setCreatedAt(new Date());
-        authToken.setUpdatedAt(new Date());
+        authToken.setCreateTime(LocalDateTime.now());
+        authToken.setUpdateTime(LocalDateTime.now());
 
         // 保存到数据库
         this.save(authToken);
@@ -142,7 +143,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
      */
     @Override
     public boolean updateAccessTime(Long tokenId) {
-        return this.getMapper().updateLastAccessTime(tokenId, new Date());
+        return this.getMapper().updateLastAccessTime(tokenId, LocalDateTime.now());
     }
 
     /**
@@ -249,7 +250,7 @@ public class AuthTokenServiceImpl extends ServiceImpl<AuthTokenMapper, AuthToken
             String accessToken = tokenProvider.createToken(authentication, request);
 
             // 获取过期时间
-            Date expiresAt = tokenProvider.getExpirationDateFromToken(accessToken);
+            LocalDateTime expiresAt = tokenProvider.getExpirationDateFromToken(accessToken);
 
             // 记录令牌到数据库
             createToken(user, accessToken, refreshToken, request, expiresAt);

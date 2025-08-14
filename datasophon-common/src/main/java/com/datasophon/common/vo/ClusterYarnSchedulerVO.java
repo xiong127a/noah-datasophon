@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterYarnSchedulerVO(
-        Integer id,
+        Long id,
         Long clusterId,
         String scheduler,
         Integer inUse,

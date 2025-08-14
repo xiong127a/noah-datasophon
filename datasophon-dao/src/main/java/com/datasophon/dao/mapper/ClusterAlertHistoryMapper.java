@@ -40,7 +40,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
     /**
      * 根据服务实例ID查询启用的告警历史
      */
-    default List<ClusterAlertHistoryEntity> selectEnabledByServiceInstanceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectEnabledByServiceInstanceId(Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertHistoryEntity::getIsEnabled).eq(1);
 
@@ -79,7 +79,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
     /**
      * 根据角色实例ID列表删除启用的告警历史
      */
-    default int removeEnabledByRoleInstanceIds(List<Integer> ids) {
+    default int removeEnabledByRoleInstanceIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return 0;
         }
@@ -92,7 +92,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
     /**
      * 根据服务实例ID统计启用的告警数量
      */
-    default long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
+    default long countEnabledByServiceInstanceId(Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
                 .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1);
@@ -105,7 +105,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      * @param serviceInstanceId 服务实例ID
      * @return 停止状态的告警历史列表
      */
-    default List<ClusterAlertHistoryEntity> selectStoppedRolesByServiceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectStoppedRolesByServiceId(Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
                 .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1)
@@ -119,7 +119,7 @@ public interface ClusterAlertHistoryMapper extends BaseMapper<ClusterAlertHistor
      * @param serviceInstanceId 服务实例ID
      * @return 告警状态的告警历史列表
      */
-    default List<ClusterAlertHistoryEntity> selectAlarmRolesByServiceId(Integer serviceInstanceId) {
+    default List<ClusterAlertHistoryEntity> selectAlarmRolesByServiceId(Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterAlertHistoryEntity::getServiceInstanceId).eq(serviceInstanceId)
                 .and(ClusterAlertHistoryEntity::getIsEnabled).eq(1)

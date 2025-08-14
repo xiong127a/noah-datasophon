@@ -53,8 +53,8 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -100,7 +100,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
         }
 
         ClusterYarnQueueEntity entity = clusterYarnQueueConverter.dtoToEntity(clusterYarnQueueDTO);
-        entity.setCreateTime(new Date());
+        entity.setCreateTime(LocalDateTime.now());
         this.save(entity);
 
         return clusterYarnQueueConverter.entityToDto(entity);
@@ -192,7 +192,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public ClusterYarnQueueDTO getByIdAsDto(Integer id) {
+    public ClusterYarnQueueDTO getByIdAsDto(Long id) {
         ClusterYarnQueueEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterYarnQueueConverter.entityToDto(entity) : null;
     }
@@ -212,7 +212,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public boolean deleteQueue(Integer id) {
+    public boolean deleteQueue(Long id) {
         return removeById(id);
     }
 }

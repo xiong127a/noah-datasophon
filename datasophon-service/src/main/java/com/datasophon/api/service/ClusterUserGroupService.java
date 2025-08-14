@@ -41,14 +41,14 @@ public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity
      * @param groupId 组ID
      * @return 用户数量
      */
-    Long countGroupUserNum(Integer groupId);
+    Long countGroupUserNum(Long groupId);
 
     /**
      * 删除指定用户的所有组关联
      *
      * @param userId 用户ID
      */
-    void deleteByUser(Integer userId);
+    void deleteByUser(Long userId);
 
     /**
      * 查询指定用户的主用户组
@@ -56,7 +56,7 @@ public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity
      * @param userId 用户ID
      * @return 主用户组DTO
      */
-    ClusterGroupDTO queryMainGroup(Integer userId);
+    ClusterGroupDTO queryMainGroup(Long userId);
 
     /**
      * 查询指定用户的其他用户组列表
@@ -64,7 +64,7 @@ public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity
      * @param userId 用户ID
      * @return 其他用户组DTO列表
      */
-    List<ClusterGroupDTO> listOtherGroups(Integer userId);
+    List<ClusterGroupDTO> listOtherGroups(Long userId);
 
     /**
      * 查询指定组的所有用户列表
@@ -72,7 +72,7 @@ public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity
      * @param groupId 组ID
      * @return 用户DTO列表
      */
-    List<ClusterUserDTO> listClusterUsers(Integer groupId);
+    List<ClusterUserDTO> listClusterUsers(Long groupId);
 
     /**
      * 根据ID获取用户组关联DTO
@@ -80,7 +80,7 @@ public interface ClusterUserGroupService extends IService<ClusterUserGroupEntity
      * @param id 关联ID
      * @return 用户组关联DTO
      */
-    ClusterUserGroupDTO getByIdAsDto(Integer id);
+    ClusterUserGroupDTO getByIdAsDto(Long id);
 
     /**
      * 保存用户组关联

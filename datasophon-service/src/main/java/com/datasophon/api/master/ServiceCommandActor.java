@@ -43,6 +43,7 @@ import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -155,7 +156,7 @@ public class ServiceCommandActor extends AbstractActor {
                     logger.info("命令 {} 所有主机命令成功，状态设为成功", message.getCommandId());
                 }
 
-                commandService.updateCommandStateAndEndTime(message.getCommandId(), newCommandState, new Date());
+                commandService.updateCommandStateAndEndTime(message.getCommandId(), newCommandState, LocalDateTime.now());
 
                 String serviceName = command.serviceName();
                 ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(command.clusterId());
@@ -217,7 +218,7 @@ public class ServiceCommandActor extends AbstractActor {
         alertQuotaService.start(clusterId, alertQuotaIds);
     }
 
-    private void updateHDFSWebUi(Long clusterId, Integer serviceInstanceId) {
+    private void updateHDFSWebUi(Long clusterId, Long serviceInstanceId) {
         Map<String, String> variables = GlobalVariables.get(clusterId);
         if (variables.containsKey(ENABLE_HDFS_KERBEROS)) {
             ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil

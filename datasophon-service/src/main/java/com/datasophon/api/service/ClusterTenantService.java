@@ -30,12 +30,12 @@ public interface ClusterTenantService extends IService<ClusterTenantEntity> {
     /**
      * 根据ID删除租户
      */
-    boolean deleteTenantById(Integer id);
+    boolean deleteTenantById(Long id);
 
     /**
      * 根据ID获取租户DTO
      */
-    ClusterTenantDTO getByIdAsDto(Integer id);
+    ClusterTenantDTO getByIdAsDto(Long id);
 
     /**
      * 根据集群ID获取所有租户

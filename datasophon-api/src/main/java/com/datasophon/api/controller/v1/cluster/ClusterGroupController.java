@@ -21,7 +21,6 @@ import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.ClusterGroupConverter;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterGroupDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.model.PageResult;
@@ -74,7 +73,7 @@ public class ClusterGroupController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterGroupVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterGroupVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterGroupDTO dto = clusterGroupService.getByIdAsDto(id);
         // Controller层：DTO → VO转换
@@ -120,7 +119,7 @@ public class ClusterGroupController {
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@ClusterId Long clusterId, @RequestParam("id") Integer id) {
+    public Result<String> delete(@ClusterId Long clusterId, @RequestParam("id") Long id) {
         boolean success = ProcessUtils.getDepMode(clusterId)== ClusterType.PVM
                 ? clusterGroupService.deleteUserGroup(id)
                 : clusterGroupService.deleteUserGroupOnKubernetes(id);

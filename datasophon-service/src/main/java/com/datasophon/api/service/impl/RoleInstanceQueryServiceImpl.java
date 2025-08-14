@@ -53,7 +53,7 @@ public class RoleInstanceQueryServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleInstanceDTO getByIdAsDto(Integer id) {
+    public ClusterServiceRoleInstanceDTO getByIdAsDto(Long id) {
         ClusterServiceRoleInstanceEntity entity = this.getById(id);
         if (entity == null) {
             return null;
@@ -62,7 +62,7 @@ public class RoleInstanceQueryServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int serviceId) {
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(Long serviceId) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceId(serviceId);
         return converter.entityListToDtoList(entities);
     }

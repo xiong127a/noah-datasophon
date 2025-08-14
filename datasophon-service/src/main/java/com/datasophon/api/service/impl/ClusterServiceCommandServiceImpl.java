@@ -17,9 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.date.BetweenFormatter;
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
+import java.time.Duration;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import cn.hutool.core.util.EnumUtil;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
 import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
@@ -31,6 +30,7 @@ import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.datasophon.api.master.DAGBuildActor;
@@ -73,7 +73,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -247,13 +246,13 @@ public class ClusterServiceCommandServiceImpl
             // 设置状态码用于前端显示
             commandEntity.setCommandStateCode(commandEntity.getCommandState().getValue());
             // 计算实际时间
-            Date createTime = commandEntity.getCreateTime();
-            Date endTime = commandEntity.getEndTime();
+            LocalDateTime createTime = commandEntity.getCreateTime();
+            LocalDateTime endTime = commandEntity.getEndTime();
             if (Objects.isNull(endTime)) {
-                endTime = new Date();
+                endTime = LocalDateTime.now();
             }
-            long between = DateUtil.between(createTime, endTime, DateUnit.MS);
-            String durationTime = DateUtil.formatBetween(between, BetweenFormatter.Level.SECOND);
+            long between = Duration.between(createTime, endTime).toMillis();
+            String durationTime = DurationFormatUtils.formatDurationWords(between, true, true);
             commandEntity.setDurationTime(durationTime);
         }
 
@@ -358,7 +357,6 @@ public class ClusterServiceCommandServiceImpl
             boolean allCompleted = true;
             int failedCount = 0;
             int canceledCount = 0;
-            int successCount = 0;
             for (ClusterServiceCommandHostEntity hostCommand : hostCommands) {
                 // 实时聚合主机命令状态
                 commandHostService.calculateRealTimeHostCommandState(hostCommand, true);
@@ -368,8 +366,6 @@ public class ClusterServiceCommandServiceImpl
                     failedCount++;
                 } else if (CommandState.CANCEL.equals(hostCommand.getCommandState())) {
                     canceledCount++;
-                } else if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
-                    successCount++;
                 }
             }
 
@@ -393,7 +389,7 @@ public class ClusterServiceCommandServiceImpl
 
                 // 如果状态变为完成状态且endTime未设置，则设置endTime
                 if (stateChanged && commandEntity.getEndTime() == null) {
-                    commandEntity.setEndTime(new Date());
+                    commandEntity.setEndTime(LocalDateTime.now());
                     logger.info("命令 {} 状态变为 {}, 设置结束时间为 {}",
                             commandEntity.getCommandId(),
                             commandEntity.getCommandState(),
@@ -428,7 +424,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
         List<String> commandIds = new ArrayList<>();
         for (String serviceInstanceId : serviceInstanceIds) {
-            int id = Integer.parseInt(serviceInstanceId);
+            Long id = Long.parseLong(serviceInstanceId);
             // 查询服务对应的服务角色实例
             List<ClusterServiceRoleInstanceDTO> roleInstanceDtoList = roleInstanceQueryService
                     .getServiceRoleInstanceListByServiceId(id);
@@ -476,9 +472,9 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public String generateServiceRoleCommands(Long clusterId, CommandType commandType,
-                                              Map<Integer, List<String>> instanceIdMap) {
+                                              Map<Long, List<String>> instanceIdMap) {
         String result = null;
-        for (Map.Entry<Integer, List<String>> entry : instanceIdMap.entrySet()) {
+        for (Map.Entry<Long, List<String>> entry : instanceIdMap.entrySet()) {
             result = generateServiceRoleCommand(clusterId, commandType, entry.getKey(), entry.getValue(), null);
         }
         return result;
@@ -486,7 +482,7 @@ public class ClusterServiceCommandServiceImpl
 
     @Override
     public String generateServiceRoleCommand(Long clusterId, CommandType commandType,
-                                             Integer serviceInstanceId,
+                                             Long serviceInstanceId,
                                              List<String> serviceRoleInstanceIds, RollingRestartInfo rollingRestartInfo) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
@@ -503,7 +499,7 @@ public class ClusterServiceCommandServiceImpl
         // 查询服务对应的服务角色实例
         HashMap<String, ClusterServiceCommandHostEntity> map = new HashMap<>();
         for (String serviceRoleInstanceId : serviceRoleInstanceIds) {
-            int id = Integer.parseInt(serviceRoleInstanceId);
+            Long id = Long.parseLong(serviceRoleInstanceId);
             ClusterServiceRoleInstanceDTO roleInstanceDto = roleInstanceQueryService.getByIdAsDto(id);
             ClusterServiceRoleInstanceEntity roleInstance = convertServiceRoleInstanceToEntity(roleInstanceDto);
 
@@ -548,7 +544,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public ClusterServiceCommandDTO getLastRestartCommand(Integer serviceInstanceId) {
+    public ClusterServiceCommandDTO getLastRestartCommand(Long serviceInstanceId) {
         // 创建基础查询条件
         int restartValue = CommandType.RESTART_SERVICE.getValue();
         int installValue = CommandType.INSTALL_SERVICE.getValue();
@@ -638,7 +634,7 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime) {
+    public void updateCommandStateAndEndTime(String commandId, CommandState commandState, LocalDateTime endTime) {
         ClusterServiceCommandEntity entity = getById(commandId);
         if (entity != null) {
             entity.setCommandState(commandState);
@@ -657,7 +653,7 @@ public class ClusterServiceCommandServiceImpl
         command.setCommandType(commandType.getValue());
         command.setCommandName(commandName);
         command.setCommandState(CommandState.WAIT);
-        command.setCreateTime(new java.util.Date());
+        command.setCreateTime(LocalDateTime.now());
         command.setCommandProgress(0L);
         return command;
     }
@@ -671,7 +667,7 @@ public class ClusterServiceCommandServiceImpl
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.WAIT);
-        commandHost.setCreateTime(new java.util.Date());
+        commandHost.setCreateTime(LocalDateTime.now());
         commandHost.setCommandProgress(0L);
         return commandHost;
     }
@@ -693,8 +689,10 @@ public class ClusterServiceCommandServiceImpl
         hostCommand.setServiceRoleName(serviceRoleName);
         hostCommand.setServiceRoleType(roleType);
         hostCommand.setCommandState(CommandState.WAIT);
-        hostCommand.setCreateTime(new java.util.Date());
+        hostCommand.setCreateTime(LocalDateTime.now());
         hostCommand.setCommandProgress(0);
         return hostCommand;
     }
+
+
 }

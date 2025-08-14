@@ -41,7 +41,7 @@ public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterSe
     /**
      * 根据服务ID获取最新版本的服务配置
      */
-    default ClusterServiceInstanceConfigEntity selectLatestConfigByServiceId(Integer serviceId) {
+    default ClusterServiceInstanceConfigEntity selectLatestConfigByServiceId(Long serviceId) {
         return selectOneByQuery(QueryWrapper.create()
                 .where(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.SERVICE_ID.eq(serviceId))
                 .orderBy(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY.CONFIG_VERSION.desc())
@@ -53,7 +53,7 @@ public interface ClusterServiceInstanceConfigMapper extends BaseMapper<ClusterSe
      * 支持按集群ID和服务ID过滤
      */
     default Page<ClusterServiceInstanceConfigEntity> selectConfigPageByConditions(
-            Long clusterId, Integer serviceId, Integer page, Integer pageSize) {
+            Long clusterId, Long serviceId, Integer page, Integer pageSize) {
         var queryChain = QueryChain.of(ClusterServiceInstanceConfigEntity.class)
                 .from(CLUSTER_SERVICE_INSTANCE_CONFIG_ENTITY);
         

@@ -54,7 +54,7 @@ public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthT
     @Mapping(target = "issuedAtFormatted", source = "issuedAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "expiresAtFormatted", source = "expiresAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "lastAccessTimeFormatted", source = "lastAccessTime", qualifiedByName = "formatDateTime")
-    @Mapping(target = "createdAtFormatted", source = "createdAt", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "remainingTimeSeconds", source = "expiresAt", qualifiedByName = "calculateRemainingSeconds")
     @Mapping(target = "remainingTimeFormatted", source = "expiresAt", qualifiedByName = "formatRemainingTime")
     AuthTokenVO dtoToVo(AuthTokenDTO dto);
@@ -71,7 +71,7 @@ public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthT
     @Mapping(target = "issuedAtFormatted", source = "issuedAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "expiresAtFormatted", source = "expiresAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "lastAccessTimeFormatted", source = "lastAccessTime", qualifiedByName = "formatDateTime")
-    @Mapping(target = "createdAtFormatted", source = "createdAt", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "remainingTimeSeconds", source = "expiresAt", qualifiedByName = "calculateRemainingSeconds")
     @Mapping(target = "remainingTimeFormatted", source = "expiresAt", qualifiedByName = "formatRemainingTime")
     AuthTokenVO entityToVo(AuthTokenEntity entity);
@@ -89,7 +89,7 @@ public interface AuthTokenConverter extends BaseConverter<AuthTokenEntity, AuthT
     @Mapping(target = "issuedAtFormatted", source = "dto.issuedAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "expiresAtFormatted", source = "dto.expiresAt", qualifiedByName = "formatDateTime")
     @Mapping(target = "lastAccessTimeFormatted", source = "dto.lastAccessTime", qualifiedByName = "formatDateTime")
-    @Mapping(target = "createdAtFormatted", source = "dto.createdAt", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTimeFormatted", source = "dto.createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "remainingTimeSeconds", source = "dto.expiresAt", qualifiedByName = "calculateRemainingSeconds")
     @Mapping(target = "remainingTimeFormatted", source = "dto.expiresAt", qualifiedByName = "formatRemainingTime")
     AuthTokenVO dtoToVoWithUsername(AuthTokenDTO dto, String username);

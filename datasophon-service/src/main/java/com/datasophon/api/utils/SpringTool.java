@@ -40,7 +40,7 @@ import java.util.Map;
 public final class SpringTool  {
 
 
-    public static Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+    public static Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Long serviceInstanceId) {
         ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
                 .getBean(ClusterServiceInstanceRoleGroupService.class);
         ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil

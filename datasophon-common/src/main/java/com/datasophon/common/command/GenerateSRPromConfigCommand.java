@@ -24,7 +24,7 @@ import lombok.Data;
 @Data
 public class GenerateSRPromConfigCommand implements Serializable {
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
     private String clusterFrame;
 

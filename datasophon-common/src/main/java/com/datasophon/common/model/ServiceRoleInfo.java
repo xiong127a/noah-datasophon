@@ -29,7 +29,7 @@ import java.util.Objects;
 @Data
 public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo> {
 
-    private Integer id;
+    private Long id;
 
     private String name;
 
@@ -73,7 +73,7 @@ public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo
 
     private Boolean enableRangerPlugin;
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
     private RunAs runAs;
 

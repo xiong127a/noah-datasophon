@@ -240,7 +240,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public FrameServiceDTO getFrameServiceById(Integer id) {
+    public FrameServiceDTO getFrameServiceById(Long id) {
         if (id == null) {
             throw new BusinessException("服务ID不能为空");
         }
@@ -301,7 +301,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public boolean removeFrameServiceById(Integer id) {
+    public boolean removeFrameServiceById(Long id) {
         if (id == null) {
             throw new BusinessException("服务ID不能为空");
         }
@@ -310,7 +310,7 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
     }
 
     @Override
-    public boolean isServiceInUse(Integer serviceId) {
+    public boolean isServiceInUse(Long serviceId) {
         if (serviceId == null) {
             return false;
         }

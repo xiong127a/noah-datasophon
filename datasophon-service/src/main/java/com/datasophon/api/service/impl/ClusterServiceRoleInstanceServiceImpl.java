@@ -153,7 +153,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Integer serviceId,
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Long serviceId,
             ServiceRoleState stop) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceIdAndRoleState(serviceId, stop);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
@@ -263,7 +263,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int id) {
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(Long id) {
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceId(id);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
@@ -289,7 +289,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         boolean flag = false;
         Long clusterId = null;
         String ServiceName = null;
-        ArrayList<Integer> needRemoveList = new ArrayList<>();
+        ArrayList<Long> needRemoveList = new ArrayList<>();
         for (ClusterServiceRoleInstanceEntity instance : list) {
             if (clusterId == null) {
                 clusterId = instance.getClusterId();
@@ -351,7 +351,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Override
     public List<ClusterServiceRoleInstanceDTO> getRunningServiceRoleInstanceListByServiceId(
-            Integer serviceInstanceId) {
+            Long serviceInstanceId) {
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceIdAndState(serviceInstanceId,
                 ServiceRoleState.RUNNING);
@@ -359,7 +359,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public void restartObsoleteService(Integer roleGroupId) {
+    public void restartObsoleteService(Long roleGroupId) {
         ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupEntityService.getById(roleGroupId);
         // SQL逻辑已迁移到DAO层
         List<ClusterServiceRoleInstanceEntity> list = getMapper()
@@ -377,7 +377,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     @Override
     public String decommissionNode(String serviceRoleInstanceIds, String serviceName) {
         TreeSet<String> hosts = new TreeSet<>();
-        Integer serviceInstanceId = null;
+        Long serviceInstanceId = null;
         String serviceRoleName = "";
         for (String str : serviceRoleInstanceIds.split(",")) {
             int serviceRoleInstanceId = Integer.parseInt(str);
@@ -412,12 +412,12 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public void updateToNeedRestart(Integer roleGroupId, String serviceRoleName) {
+    public void updateToNeedRestart(Long roleGroupId, String serviceRoleName) {
         roleInstanceMapper.updateToNeedRestartByServiceRoleName(roleGroupId, serviceRoleName);
     }
 
     @Override
-    public void updateToNeedRestart(Integer roleGroupId) {
+    public void updateToNeedRestart(Long roleGroupId) {
         roleInstanceMapper.updateToNeedRestart(roleGroupId);
     }
 
@@ -427,7 +427,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceDTO> getObsoleteService(Integer serviceInstanceId) {
+    public List<ClusterServiceRoleInstanceDTO> getObsoleteService(Long serviceInstanceId) {
         List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectByServiceIdAndNeedRestart(serviceInstanceId,
                 NeedRestart.YES);
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
@@ -490,7 +490,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, ServiceRoleState serviceRoleState) {
+    public void updateServiceRoleInstanceState(Long serviceRoleInstanceId, ServiceRoleState serviceRoleState) {
         ClusterServiceRoleInstanceEntity entity = getById(serviceRoleInstanceId);
         if (entity != null) {
             entity.setServiceRoleState(serviceRoleState);

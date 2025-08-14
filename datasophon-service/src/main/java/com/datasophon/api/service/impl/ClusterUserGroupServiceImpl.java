@@ -69,17 +69,17 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     private ClusterUserConverter clusterUserConverter;
 
     @Override
-    public Long countGroupUserNum(Integer groupId) {
+    public Long countGroupUserNum(Long groupId) {
         return getMapper().countByGroupId(groupId);
     }
 
     @Override
-    public void deleteByUser(Integer userId) {
+    public void deleteByUser(Long userId) {
         getMapper().deleteByUserId(userId);
     }
 
     @Override
-    public ClusterGroupDTO queryMainGroup(Integer userId) {
+    public ClusterGroupDTO queryMainGroup(Long userId) {
         // 查询指定用户的主用户组
         List<ClusterUserGroupEntity> userGroups = getMapper().selectByUserIdAndType(userId, USER_GROUP_TYPE_MAIN);
 
@@ -88,13 +88,13 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
         }
 
         // 获取第一个组ID并查询组信息
-        Integer groupId = userGroups.getFirst().getGroupId();
+        Long groupId = userGroups.getFirst().getGroupId();
         ClusterGroupEntity clusterGroupEntity = clusterGroupService.getById(groupId);
         return clusterGroupConverter.entityToDto(clusterGroupEntity);
     }
 
     @Override
-    public List<ClusterGroupDTO> listOtherGroups(Integer userId) {
+    public List<ClusterGroupDTO> listOtherGroups(Long userId) {
         // 查询指定用户的其他用户组
         List<ClusterUserGroupEntity> userGroups = getMapper().selectByUserIdAndType(userId, USER_GROUP_TYPE_OTHER);
 
@@ -103,7 +103,7 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
         }
 
         // 提取组ID列表并查询组信息
-        List<Integer> groupIds = userGroups.stream()
+        List<Long> groupIds = userGroups.stream()
                 .map(ClusterUserGroupEntity::getGroupId)
                 .toList();
 
@@ -114,7 +114,7 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     }
 
     @Override
-    public List<ClusterUserDTO> listClusterUsers(Integer groupId) {
+    public List<ClusterUserDTO> listClusterUsers(Long groupId) {
         // 查询指定组的所有用户关联
         List<ClusterUserGroupEntity> userGroups = getMapper().selectByGroupId(groupId);
 
@@ -123,7 +123,7 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
         }
 
         // 提取用户ID列表并查询用户信息
-        List<Integer> userIds = userGroups.stream()
+        List<Long> userIds = userGroups.stream()
                 .map(ClusterUserGroupEntity::getUserId)
                 .toList();
 
@@ -134,7 +134,7 @@ public class ClusterUserGroupServiceImpl extends ServiceImpl<ClusterUserGroupMap
     }
 
     @Override
-    public ClusterUserGroupDTO getByIdAsDto(Integer id) {
+    public ClusterUserGroupDTO getByIdAsDto(Long id) {
         // Service层：Entity → DTO转换
         ClusterUserGroupEntity entity = this.getById(id);
         return clusterUserGroupConverter.entityToDto(entity);

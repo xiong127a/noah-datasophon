@@ -27,7 +27,6 @@ import lombok.experimental.SuperBuilder;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
-import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
 
 /**
@@ -49,8 +48,8 @@ public class AuthTokenEntity extends BaseEntity {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键ID
+    /*
+      主键ID
      */
 
 

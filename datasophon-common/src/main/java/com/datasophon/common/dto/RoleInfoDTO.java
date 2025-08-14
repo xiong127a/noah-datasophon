@@ -28,7 +28,7 @@ import java.time.LocalDateTime;
  * @date 2025-08-06
  */
 public record RoleInfoDTO(
-    Integer id,
+    Long id,
     String roleName,
     String roleCode,
     LocalDateTime createTime

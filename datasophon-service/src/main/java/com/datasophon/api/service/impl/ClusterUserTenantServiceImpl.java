@@ -50,6 +50,7 @@ import scala.concurrent.duration.Duration;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -67,8 +68,8 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     private ClusterTenantService clusterTenantService;
 
     @Override
-    public void addUserToTenant(Long clusterId, Integer userId, String tenantIds) {
-        List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).toList();
+    public void addUserToTenant(Long clusterId, Long userId, String tenantIds) {
+        List<Long> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toLong).toList();
 
         // SQL逻辑已迁移到DAO层
         List<ClusterUserTenantEntity> list = getMapper().selectByClusterIdAndUserIdAndTenantIds(clusterId, userId,
@@ -78,14 +79,14 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
         }
         List<ClusterUserTenantEntity> addUserTenant = tenantIdList.stream()
                 .map(t -> ClusterUserTenantEntity.builder().tenantId(t).clusterId(clusterId).userId(userId).build())
-                .toList();
+                .collect(Collectors.toList());
         this.saveOrUpdateBatch(addUserTenant);
         operateTenantUser(clusterId, userId, tenantIdList);
     }
 
     @Override
-    public void deleteUser(Long clusterId, Integer userId, String tenantIds) {
-        List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).toList();
+    public void deleteUser(Long clusterId, Long userId, String tenantIds) {
+        List<Long> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toLong).toList();
 
         // SQL逻辑已迁移到DAO层
         getMapper().deleteByClusterIdAndUserIdAndTenantIds(clusterId, userId, tenantIdList);
@@ -93,8 +94,8 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     }
 
     @Override
-    public List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Integer userId) {
-        Map<Integer, String> tenantMap = clusterTenantService.list()
+    public List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Long userId) {
+        Map<Long, String> tenantMap = clusterTenantService.list()
                 .stream()
                 .collect(Collectors.toMap(ClusterTenantEntity::getId, ClusterTenantEntity::getTenantName));
 
@@ -104,11 +105,11 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
         return userTenantList;
     }
 
-    private void operateTenantUser(Long clusterId, Integer userId, List<Integer> tenantIdList) {
+    private void operateTenantUser(Long clusterId, Long userId, List<Long> tenantIdList) {
         List<ClusterUserTenantEntity> allUserTenants = this.list();
         List<ClusterUserEntity> allUsers = clusterUserService.list();
         List<ClusterUserEntity> users = allUsers.stream()
-                .filter(t -> t.getClusterId().equals(clusterId) && t.getId().equals(userId))
+                .filter(t -> Objects.equals(t.getClusterId(), clusterId) && Objects.equals(t.getId(), userId))
                 .toList();
         if (CollUtil.isEmpty(users)) {
             logger.warn("用户不存在");
@@ -120,8 +121,8 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
 
         for (ClusterTenantEntity clusterTenantEntity : tenantList) {
-            List<Integer> exitsUserIds = allUserTenants.stream()
-                    .filter(t -> t.getClusterId().equals(clusterId) && t.getTenantId().equals(clusterTenantEntity.getId()))
+            List<Long> exitsUserIds = allUserTenants.stream()
+                    .filter(t -> Objects.equals(t.getClusterId(), clusterId) && Objects.equals(t.getTenantId(), clusterTenantEntity.getId()))
                     .map(ClusterUserTenantEntity::getUserId)
                     .toList();
             List<String> exitsUserNames = allUsers.stream()
@@ -153,7 +154,7 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     }
 
     @Override
-    public List<ClusterUserTenantEntity> getListByTenantId(Integer tenantId) {
+    public List<ClusterUserTenantEntity> getListByTenantId(Long tenantId) {
         return getMapper().selectByTenantId(tenantId);
     }
 

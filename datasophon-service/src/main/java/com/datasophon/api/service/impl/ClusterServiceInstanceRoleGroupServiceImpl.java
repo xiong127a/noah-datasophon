@@ -86,14 +86,14 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     @Override
-    public ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
+    public ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Long serviceInstanceId) {
         ClusterServiceInstanceRoleGroupEntity entity = getMapper().selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId,
                 DEFAULT);
         return clusterServiceInstanceRoleGroupConverter.entityToDto(entity);
     }
 
     @Override
-    public void saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName) {
+    public void saveRoleGroup(Long serviceInstanceId, Long roleGroupId, String roleGroupName) {
         // 通过Mapper直接查询服务实例信息
         ClusterServiceInstanceEntity serviceInstance = clusterServiceInstanceMapper.selectOneById(serviceInstanceId);
         if (serviceInstance == null) {
@@ -125,13 +125,13 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
         }
     }
 
-    private boolean isRepeatRoleGroupName(Integer serviceInstanceId, String roleGroupName) {
+    private boolean isRepeatRoleGroupName(Long serviceInstanceId, String roleGroupName) {
         return getMapper().countByServiceInstanceIdAndRoleGroupName(serviceInstanceId,
                 roleGroupName) > 0;
     }
 
     @Override
-    public boolean bind(String roleInstanceIds, Integer roleGroupId) {
+    public boolean bind(String roleInstanceIds, Long roleGroupId) {
         // 委托给roleGroupEntityService处理
         try {
             roleGroupEntityService.bindRoleInstances(roleInstanceIds, roleGroupId);
@@ -151,7 +151,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     @Override
-    public ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Integer serviceInstanceId) {
+    public ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Long serviceInstanceId) {
         ClusterServiceInstanceRoleGroupEntity instanceRoleGroup = getMapper()
                 .selectByServiceInstanceIdAndRoleGroupType(serviceInstanceId, "default");
 
@@ -197,13 +197,13 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     @Override
-    public List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Integer serviceInstanceId) {
+    public List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Long serviceInstanceId) {
         List<ClusterServiceInstanceRoleGroupEntity> entities = getMapper().selectByServiceInstanceId(serviceInstanceId);
         return clusterServiceInstanceRoleGroupConverter.entityListToDtoList(entities);
     }
 
     @Override
-    public void updateToNeedRestart(Integer roleGroupId) {
+    public void updateToNeedRestart(Long roleGroupId) {
         // 委托给roleGroupEntityService处理
         roleGroupEntityService.updateToNeedRestart(roleGroupId);
     }

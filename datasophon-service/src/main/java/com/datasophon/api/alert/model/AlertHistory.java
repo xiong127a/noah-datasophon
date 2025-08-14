@@ -2,13 +2,14 @@ package com.datasophon.api.alert.model;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 @Data
 public class AlertHistory {
     /**
      * 主键
      */
-    private Integer id;
+    private Long id;
     /**
      * 告警组
      */
@@ -48,11 +49,11 @@ public class AlertHistory {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
     /**
      * 更新时间
      */
-    private Date updateTime;
+    private LocalDateTime updateTime;
     /**
      * 集群id
      */

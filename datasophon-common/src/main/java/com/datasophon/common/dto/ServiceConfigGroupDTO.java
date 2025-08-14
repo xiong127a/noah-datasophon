@@ -31,10 +31,10 @@ import java.util.Map;
  * @since JDK21
  */
 public record ServiceConfigGroupDTO(
-        /**
-         * 分组键值映射
-         * key: 分组标识
-         * value: 分组详细信息
+        /*
+          分组键值映射
+          key: 分组标识
+          value: 分组详细信息
          */
         Map<String, GroupInfo> groups
 ) {
@@ -44,20 +44,20 @@ public record ServiceConfigGroupDTO(
      * 使用JDK21 record定义嵌套数据结构，支持子分组
      */
     public record GroupInfo(
-            /**
-             * 分组显示名称
+            /*
+              分组显示名称
              */
             String displayName,
             
-            /**
-             * 分组内的配置项列表
+            /*
+              分组内的配置项列表
              */
             List<ServiceConfig> configs,
             
-            /**
-             * 子分组映射（可选）
-             * key: 子分组标识  
-             * value: 子分组信息
+            /*
+              子分组映射（可选）
+              key: 子分组标识
+              value: 子分组信息
              */
             Map<String, GroupInfo> subGroups
     ) {

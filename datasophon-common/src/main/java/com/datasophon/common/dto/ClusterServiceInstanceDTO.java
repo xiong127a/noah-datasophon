@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务实例数据传输对象
@@ -29,14 +29,14 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterServiceInstanceDTO(
-        Integer id,
+        Long id,
         Long clusterId,
         String serviceName,
         String label,
         Integer serviceState,
         Integer serviceStateCode,
-        Date updateTime,
-        Date createTime,
+        LocalDateTime updateTime,
+        LocalDateTime createTime,
         Integer needRestart,
         Integer frameServiceId,
         String dashboardUrl,

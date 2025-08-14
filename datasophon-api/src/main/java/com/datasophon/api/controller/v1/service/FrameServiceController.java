@@ -95,7 +95,7 @@ public class FrameServiceController {
      */
 
     @GetMapping("/info/{id}")
-    public Result<FrameServiceVO> info(@PathVariable("id") Integer id) {
+    public Result<FrameServiceVO> info(@PathVariable("id") Long id) {
         FrameServiceDTO frameServiceDTO = frameServiceService.getFrameServiceById(id);
         FrameServiceVO frameServiceVO = frameServiceConverter.dtoToVo(frameServiceDTO);
         return Result.success(frameServiceVO);
@@ -128,7 +128,7 @@ public class FrameServiceController {
      */
 
     @DeleteMapping("/delete/{id}")
-    public Result<Boolean> delete(@PathVariable("id") Integer id) {
+    public Result<Boolean> delete(@PathVariable("id") Long id) {
         try {
             // 获取服务信息
             FrameServiceDTO serviceDTO = frameServiceService.getFrameServiceById(id);

@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,7 +30,7 @@ import java.util.Date;
  * @date 2025-08-04
  */
 public record ClusterAlertHistoryVO(
-        Integer id,
+        Long id,
         String alertGroupName,
         String alertTargetName,
         String alertInfo,
@@ -41,9 +42,9 @@ public record ClusterAlertHistoryVO(
         String isEnabledText,
         Integer serviceRoleInstanceId,
         Integer serviceInstanceId,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted,
-        Date updateTime,
+        LocalDateTime updateTime,
         String updateTimeFormatted,
         Long clusterId) implements Serializable {
 }

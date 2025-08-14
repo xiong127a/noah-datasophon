@@ -65,7 +65,7 @@ public class ClusterNodeLabelController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterNodeLabelVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterNodeLabelVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterNodeLabelDTO dto = nodeLabelService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

@@ -340,7 +340,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public Map<String, List<Map<String, Object>>> configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,
+    public Map<String, List<Map<String, Object>>> configVersionCompare(Long serviceInstanceId, Long roleGroupId,
             Boolean showOnlyDifferences) {
         // 获取最新的两个配置版本进行比较
         List<ClusterServiceRoleGroupConfigEntity> list = roleGroupConfigService.getLatestTwoConfigsByRoleGroupId(roleGroupId);
@@ -492,7 +492,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public boolean delServiceInstance(Integer serviceInstanceId) {
+    public boolean delServiceInstance(Long serviceInstanceId) {
         if (hasRunningRoleInstance(serviceInstanceId)) {
             throw new RuntimeException(Status.EXIT_RUNNING_ROLE_INSTANCE.getMsg());
         }
@@ -500,7 +500,7 @@ public class ClusterServiceInstanceServiceImpl
                 .listRoleGroupByServiceInstanceId(serviceInstanceId);
         List<ClusterServiceInstanceRoleGroupEntity> roleGroups = clusterServiceInstanceRoleGroupConverter
                 .dtoListToEntityList(roleGroupDTOList);
-        List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroupEntity::getId)
+        List<Long> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroupEntity::getId)
                 .toList();
         // List<ClusterServiceRoleGroupConfigEntity> roleGroupConfigList =
         // roleGroupConfigService
@@ -559,7 +559,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
+    public boolean hasRunningRoleInstance(Long serviceInstanceId) {
         // 检查是否有运行中的角色实例
         // return roleInstanceService.countByServiceId(serviceInstanceId) > 0;
         List<ClusterServiceRoleInstanceDTO> roleInstanceDTOList = roleInstanceService
@@ -608,7 +608,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer serviceInstanceId) {
+    public ConnectionInfo getConnectionInfo(Long serviceInstanceId) {
         // 构建缓存键，使用serviceInstanceId作为唯一标识
         String cacheKey = "connectionInfo:" + serviceInstanceId;
 
@@ -711,7 +711,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public void updateServiceInstanceState(Integer serviceInstanceId, ServiceState serviceState) {
+    public void updateServiceInstanceState(Long serviceInstanceId, ServiceState serviceState) {
         ClusterServiceInstanceEntity entity = getById(serviceInstanceId);
         if (entity != null) {
             entity.setServiceState(serviceState);
@@ -720,7 +720,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public boolean existsByFrameServiceId(Integer frameServiceId) {
+    public boolean existsByFrameServiceId(Long frameServiceId) {
         if (frameServiceId == null) {
             return false;
         }

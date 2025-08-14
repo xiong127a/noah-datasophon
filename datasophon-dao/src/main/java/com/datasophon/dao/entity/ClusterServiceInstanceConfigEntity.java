@@ -50,7 +50,7 @@ public class ClusterServiceInstanceConfigEntity extends BaseEntity {
     /**
      * 服务角色实例id
      */
-    private Integer serviceId;
+    private Long serviceId;
     /*
       创建时间
      */

@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务角色实例数据传输对象
@@ -29,18 +29,18 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterServiceRoleInstanceDTO(
-        Integer id,
+        Long id,
         String serviceRoleName,
         String hostname,
         Integer serviceRoleState,
         Integer serviceRoleStateCode,
-        Date updateTime,
-        Date createTime,
-        Integer serviceId,
+        LocalDateTime updateTime,
+        LocalDateTime createTime,
+        Long serviceId,
         Integer roleType,
         Long clusterId,
         String serviceName,
-        Integer roleGroupId,
+        Long roleGroupId,
         Integer needRestart,
         String roleGroupName
 ) implements Serializable {

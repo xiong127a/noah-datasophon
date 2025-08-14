@@ -19,6 +19,7 @@ package com.datasophon.common.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,20 +30,20 @@ import java.util.Date;
  * @date 2025-01-14
  */
 public record AlertGroupVO(
-        Integer id,
+        Long id,
         String alertGroupName,
         String alertGroupCategory,
         Long clusterId,
         String clusterName,
         Integer alertQuotaNum,
         String alertQuotaNumFormatted,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createTime,
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createTime,
         String createTimeFormatted) {
 
     /**
      * 创建简单的AlertGroupVO
      */
-    public static AlertGroupVO simple(Integer id, String alertGroupName) {
+    public static AlertGroupVO simple(Long id, String alertGroupName) {
         return new AlertGroupVO(
                 id,
                 alertGroupName,

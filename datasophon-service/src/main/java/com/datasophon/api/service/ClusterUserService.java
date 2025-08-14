@@ -42,7 +42,7 @@ public interface ClusterUserService extends IService<ClusterUserEntity> {
      * @param otherGroupIds 其他组ID
      * @return 创建的用户
      */
-    ClusterUserDTO createClusterUser(Long clusterId, String username, Integer mainGroupId, String otherGroupIds);
+    ClusterUserDTO createClusterUser(Long clusterId, String username, Long mainGroupId, String otherGroupIds);
 
     /**
      * 在Kubernetes上创建集群用户
@@ -53,7 +53,7 @@ public interface ClusterUserService extends IService<ClusterUserEntity> {
      * @param otherGroupIds 其他组ID
      * @return 创建的用户
      */
-    ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Integer mainGroupId,
+    ClusterUserDTO createClusterUserOnKubernetes(Long clusterId, String username, Long mainGroupId,
             String otherGroupIds);
 
     /**
@@ -73,7 +73,7 @@ public interface ClusterUserService extends IService<ClusterUserEntity> {
      * @param id 用户ID
      * @return 是否删除成功
      */
-    boolean deleteClusterUser(Integer id);
+    boolean deleteClusterUser(Long id);
 
     /**
      * 在Kubernetes上删除集群用户
@@ -81,7 +81,7 @@ public interface ClusterUserService extends IService<ClusterUserEntity> {
      * @param id 用户ID
      * @return 是否删除成功
      */
-    boolean deleteClusterUserOnKubernetes(Integer id);
+    boolean deleteClusterUserOnKubernetes(Long id);
 
     /**
      * 查询集群下所有用户
@@ -105,5 +105,5 @@ public interface ClusterUserService extends IService<ClusterUserEntity> {
      * @param userIds 用户ID列表
      * @return 用户名列表
      */
-    List<String> getUsernamesByIds(List<Integer> userIds);
+    List<String> getUsernamesByIds(List<Long> userIds);
 }

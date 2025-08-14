@@ -78,7 +78,7 @@ public class ClusterServiceDashboardServiceImpl
 
         // DTO相关的CRUD方法实现
         @Override
-        public ClusterServiceDashboardDTO getByIdAsDto(Integer id) {
+        public ClusterServiceDashboardDTO getByIdAsDto(Long id) {
                 ClusterServiceDashboardEntity entity = getById(id);
                 return entity != null ? converter.entityToDto(entity) : null;
         }

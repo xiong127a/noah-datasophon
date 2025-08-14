@@ -47,7 +47,7 @@ public interface AlertGroupService extends IService<AlertGroupEntity> {
     /**
      * 根据ID获取告警组
      */
-    AlertGroupDTO getAlertGroupById(Integer id);
+    AlertGroupDTO getAlertGroupById(Long id);
 
     /**
      * 更新告警组

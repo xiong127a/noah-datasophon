@@ -17,7 +17,7 @@
 
 package com.datasophon.common.dto;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 认证令牌数据传输对象
@@ -34,20 +34,20 @@ public record AuthTokenDTO(
         String tokenType,
         String clientIp,
         String userAgent,
-        Date issuedAt,
-        Date expiresAt,
-        Date lastAccessTime,
+        LocalDateTime issuedAt,
+        LocalDateTime expiresAt,
+        LocalDateTime lastAccessTime,
         Boolean isRevoked,
         String revokedReason,
-        Date createdAt,
-        Date updatedAt) {
+        LocalDateTime createTime,
+        LocalDateTime updateTime) {
 
     /**
      * 创建新的认证令牌DTO
      */
     public static AuthTokenDTO create(Integer userId, String token, String refreshToken,
-            String clientIp, String userAgent, Date expiresAt) {
-        Date now = new Date();
+            String clientIp, String userAgent, LocalDateTime expiresAt) {
+        LocalDateTime now = LocalDateTime.now();
         return new AuthTokenDTO(
                 null,
                 userId,
@@ -82,8 +82,8 @@ public record AuthTokenDTO(
                 this.lastAccessTime,
                 true,
                 reason,
-                this.createdAt,
-                new Date());
+                this.createTime,
+                LocalDateTime.now());
     }
 
     /**
@@ -100,18 +100,18 @@ public record AuthTokenDTO(
                 this.userAgent,
                 this.issuedAt,
                 this.expiresAt,
-                new Date(),
+                LocalDateTime.now(),
                 this.isRevoked,
                 this.revokedReason,
-                this.createdAt,
-                new Date());
+                this.createTime,
+                LocalDateTime.now());
     }
 
     /**
      * 检查令牌是否过期
      */
     public boolean isExpired() {
-        return expiresAt != null && expiresAt.before(new Date());
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
     }
 
     /**

@@ -52,7 +52,7 @@ public class ClusterServiceRoleInstanceConfigController {
      * 信息
      */
     @GetMapping("/info/{id}")
-    public Result<Object> info(@PathVariable("id") Integer id) {
+    public Result<Object> info(@PathVariable("id") Long id) {
         ClusterServiceRoleInstanceConfigEntity clusterServiceRoleInstanceConfig =
                 clusterServiceRoleInstanceConfigService.getById(id);
 

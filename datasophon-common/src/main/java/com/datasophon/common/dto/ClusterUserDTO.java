@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群用户数据传输对象
@@ -29,10 +29,10 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterUserDTO(
-        Integer id,
+        Long id,
         Long clusterId,
         String username,
         String mainGroup,
         String otherGroups,
-        Date createTime) implements Serializable {
+        LocalDateTime createTime) implements Serializable {
 }

@@ -63,8 +63,8 @@ public class ClusterServiceInstanceConfigController {
     @GetMapping("/getConfigVersion")
     @Timed(value = "config.version.list", description = "获取配置版本列表的时间")
     public Result<List<ConfigVersionDTO>> getConfigVersion(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId, 
-            @RequestParam("roleGroupId") Integer roleGroupId) {
+            @RequestParam("serviceInstanceId") Long serviceInstanceId,
+            @RequestParam("roleGroupId") Long roleGroupId) {
         
         var threadInfo = getCurrentThreadInfo();
         log.debug("获取配置版本列表: serviceInstanceId={}, roleGroupId={} - {}", 
@@ -82,7 +82,7 @@ public class ClusterServiceInstanceConfigController {
     @GetMapping("/info")
     @Timed(value = "config.instance.info", description = "获取服务实例配置信息的时间")
     public Result<Object> info(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId, 
+            @RequestParam("serviceInstanceId") Long serviceInstanceId,
             @RequestParam("version") Integer version, 
             @RequestParam("roleGroupId") Integer roleGroupId, 
             @RequestParam("page") Integer page,
@@ -105,7 +105,7 @@ public class ClusterServiceInstanceConfigController {
     @Timed(value = "config.instance.list", description = "分页查询服务实例配置列表的时间")
     public Result<Object> list(
             @RequestParam(value = "clusterId", required = false) Long clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
         
@@ -131,7 +131,7 @@ public class ClusterServiceInstanceConfigController {
      */
     @GetMapping("/info/{id}")
     @Timed(value = "config.instance.get", description = "获取服务实例配置信息的时间")
-    public Result<ClusterServiceInstanceConfigVO> getById(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceInstanceConfigVO> getById(@PathVariable("id") Long id) {
         log.debug("获取服务实例配置信息: {}", id);
         
         var configDTO = clusterServiceInstanceConfigService.getServiceInstanceConfigById(id);
@@ -175,7 +175,7 @@ public class ClusterServiceInstanceConfigController {
      */
     @DeleteMapping("/delete/{id}")
     @Timed(value = "config.instance.delete", description = "删除服务实例配置的时间")
-    public Result<Object> delete(@PathVariable("id") Integer id) {
+    public Result<Object> delete(@PathVariable("id") Long id) {
         log.debug("删除服务实例配置: {}", id);
         
         clusterServiceInstanceConfigService.removeById(id);

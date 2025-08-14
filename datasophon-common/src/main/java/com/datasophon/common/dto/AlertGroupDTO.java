@@ -17,7 +17,7 @@
 
 package com.datasophon.common.dto;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 告警组数据传输对象
@@ -27,12 +27,12 @@ import java.util.Date;
  * @date 2025-01-14
  */
 public record AlertGroupDTO(
-        Integer id,
+        Long id,
         String alertGroupName,
         String alertGroupCategory,
         Long clusterId,
         Integer alertQuotaNum,
-        Date createTime) {
+        LocalDateTime createTime) {
 
     /**
      * 创建新的AlertGroupDTO
@@ -44,7 +44,7 @@ public record AlertGroupDTO(
                 alertGroupCategory,
                 clusterId,
                 0,
-                new Date());
+                LocalDateTime.now());
     }
 
 }

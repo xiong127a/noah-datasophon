@@ -68,7 +68,7 @@ public interface UserInfoMapper extends BaseMapper<UserInfoEntity> {
      * @return 是否存在
      */
     default boolean existsByUsernameExcludeId(@Param("username") String username,
-            @Param("excludeId") Integer excludeId) {
+            @Param("excludeId") Long excludeId) {
         QueryChain<UserInfoEntity> query = QueryChain.of(UserInfoEntity.class)
                 .where(UserInfoEntity::getUsername).eq(username);
 

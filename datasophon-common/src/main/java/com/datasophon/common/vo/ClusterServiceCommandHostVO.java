@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -36,6 +37,6 @@ public record ClusterServiceCommandHostVO(
         Integer commandStateCode,
         Long commandProgress,
         String commandId,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted) implements Serializable {
 }

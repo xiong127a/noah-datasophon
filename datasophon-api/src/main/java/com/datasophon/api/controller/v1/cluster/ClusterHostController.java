@@ -98,7 +98,7 @@ public class ClusterHostController {
      * 信息
      */
     @GetMapping("/info/{id}")
-    public Result<ClusterHostEntity> info(@PathVariable("id") Integer id) {
+    public Result<ClusterHostEntity> info(@PathVariable("id") Long id) {
         ClusterHostEntity clusterHost = clusterHostService.getById(id);
 
         return Result.success(clusterHost);

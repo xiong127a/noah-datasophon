@@ -51,7 +51,7 @@ public class ClusterServiceRoleGroupConfigEntity extends BaseEntity {
     /**
      * 
      */
-    private Integer roleGroupId;
+    private Long roleGroupId;
     /**
      * 
      */

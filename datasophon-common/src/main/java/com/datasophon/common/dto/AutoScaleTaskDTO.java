@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 自动伸缩任务数据传输对象
@@ -21,7 +21,7 @@ public record AutoScaleTaskDTO(
 
         @NotNull(message = "集群ID不能为空") Long clusterId,
 
-        @NotNull(message = "服务ID不能为空") Integer serviceId,
+        @NotNull(message = "服务ID不能为空") Long serviceId,
 
         @NotBlank(message = "服务名称不能为空") String serviceName,
 
@@ -39,7 +39,7 @@ public record AutoScaleTaskDTO(
 
         String description,
 
-        Date createdAt,
+        LocalDateTime createTime,
 
-        Date updatedAt) {
+        LocalDateTime updateTime) {
 }

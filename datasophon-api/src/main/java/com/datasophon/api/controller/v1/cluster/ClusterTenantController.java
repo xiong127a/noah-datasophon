@@ -80,7 +80,7 @@ public class ClusterTenantController {
      * 删除租户
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@RequestParam("id") Integer id) {
+    public Result<String> delete(@RequestParam("id") Long id) {
         try {
             boolean deleted = clusterTenantService.deleteTenantById(id);
             if (deleted) {
@@ -97,7 +97,7 @@ public class ClusterTenantController {
      * 根据ID获取租户详情
      */
     @RequestMapping("/getById")
-    public Result<ClusterTenantVO> getById(@RequestParam("id") Integer id) {
+    public Result<ClusterTenantVO> getById(@RequestParam("id") Long id) {
         ClusterTenantDTO dto = clusterTenantService.getByIdAsDto(id);
         if (dto != null) {
             ClusterTenantVO vo = clusterTenantConverter.dtoToVo(dto);

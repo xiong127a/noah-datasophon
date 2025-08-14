@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 主机信息数据传输对象
@@ -47,12 +47,12 @@ public class HostInfoDTO implements Serializable {
     /**
      * 主键
      */
-    private Integer id;
+    private Long id;
 
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
 
     /**
      * 主机名
@@ -102,7 +102,7 @@ public class HostInfoDTO implements Serializable {
     /**
      * 检测时间
      */
-    private Date checkTime;
+    private LocalDateTime checkTime;
 
     /**
      * 集群ID

@@ -85,6 +85,6 @@ public class ClusterServiceCommandEntity extends BaseEntity {
 
     private LocalDateTime endTime;
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
 }

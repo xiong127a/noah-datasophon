@@ -28,10 +28,10 @@ import lombok.Getter;
  * @date 2025-08-06
  */
 public record ClusterServiceRoleInstanceWebuisVO(
-    Integer id,
-    Integer serviceRoleInstanceId,
+    Long id,
+    Long serviceRoleInstanceId,
     String webUrl,
-    Integer serviceInstanceId,
+    Long serviceInstanceId,
     String name,
     String displayName,
     boolean isValidUrl,

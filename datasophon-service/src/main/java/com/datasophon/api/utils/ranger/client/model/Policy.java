@@ -27,7 +27,7 @@ public class Policy {
     List<Object> dataMaskPolicyItems = Lists.newArrayList();
     @Builder.Default
     List<Object> rowFilterPolicyItems = Lists.newArrayList();
-    private Integer id;
+    private Long id;
     private String guid;
     private Boolean isEnabled;
     private Integer version;

@@ -115,7 +115,7 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
 
     // 新增DTO方法实现
     @Override
-    public ClusterRackDTO getByIdAsDto(Integer id) {
+    public ClusterRackDTO getByIdAsDto(Long id) {
         ClusterRackEntity entity = this.getById(id);
         return clusterRackConverter.entityToDto(entity);
     }

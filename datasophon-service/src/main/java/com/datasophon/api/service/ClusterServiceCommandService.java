@@ -26,6 +26,7 @@ import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.mybatisflex.core.service.IService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -58,12 +59,12 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
          * 生成服务角色命令集合
          */
         String generateServiceRoleCommands(Long clusterId, CommandType commandType,
-                        Map<Integer, List<String>> instanceIdMap);
+                        Map<Long, List<String>> instanceIdMap);
 
         /**
          * 生成服务角色命令
          */
-        String generateServiceRoleCommand(Long clusterId, CommandType command, Integer serviceIntanceId,
+        String generateServiceRoleCommand(Long clusterId, CommandType command, Long serviceIntanceId,
                         List<String> ids, RollingRestartInfo rollingRestartInfo);
 
         /**
@@ -79,7 +80,7 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 获取最后重启命令
          */
-        ClusterServiceCommandDTO getLastRestartCommand(Integer id);
+        ClusterServiceCommandDTO getLastRestartCommand(Long id);
 
         /**
          * 根据命令ID获取命令
@@ -109,5 +110,5 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 更新命令状态和结束时间
          */
-        void updateCommandStateAndEndTime(String commandId, CommandState commandState, java.util.Date endTime);
+        void updateCommandStateAndEndTime(String commandId, CommandState commandState, LocalDateTime endTime);
 }

@@ -33,6 +33,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -175,9 +177,10 @@ public class JwtTokenProviderBase implements TokenProvider {
     }
 
     @Override
-    public Date getExpirationDateFromToken(String token) {
+    public LocalDateTime getExpirationDateFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
-        return claims.getExpiration();
+        Date expirationDate = claims.getExpiration();
+        return expirationDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     @Override

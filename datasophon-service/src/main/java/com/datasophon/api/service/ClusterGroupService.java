@@ -56,7 +56,7 @@ public interface ClusterGroupService extends IService<ClusterGroupEntity> {
      * @param id 组ID
      * @return 是否删除成功
      */
-    boolean deleteUserGroup(Integer id);
+    boolean deleteUserGroup(Long id);
 
     /**
      * 在Kubernetes上删除用户组
@@ -64,7 +64,7 @@ public interface ClusterGroupService extends IService<ClusterGroupEntity> {
      * @param id 组ID
      * @return 是否删除成功
      */
-    boolean deleteUserGroupOnKubernetes(Integer id);
+    boolean deleteUserGroupOnKubernetes(Long id);
 
     /**
      * 分页查询集群组
@@ -108,7 +108,7 @@ public interface ClusterGroupService extends IService<ClusterGroupEntity> {
      * @param id 组ID
      * @return 集群组DTO
      */
-    ClusterGroupDTO getByIdAsDto(Integer id);
+    ClusterGroupDTO getByIdAsDto(Long id);
 
     /**
      * 保存集群组

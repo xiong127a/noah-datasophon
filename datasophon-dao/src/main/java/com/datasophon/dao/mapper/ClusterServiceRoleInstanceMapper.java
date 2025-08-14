@@ -83,7 +83,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          *
          * @param roleGroupId 角色组ID
          */
-        default void updateToNeedRestart(@Param("roleGroupId") Integer roleGroupId) {
+        default void updateToNeedRestart(@Param("roleGroupId") Long roleGroupId) {
                 UpdateChain.of(ClusterServiceRoleInstanceEntity.class)
                                 .set(ClusterServiceRoleInstanceEntity::getNeedRestart, NeedRestart.YES)
                                 .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId)
@@ -96,7 +96,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @param roleGroupId     角色组ID
          * @param serviceRoleName 服务角色名称
          */
-        default void updateToNeedRestartByServiceRoleName(@Param("roleGroupId") Integer roleGroupId,
+        default void updateToNeedRestartByServiceRoleName(@Param("roleGroupId") Long roleGroupId,
                         @Param("serviceRoleName") String serviceRoleName) {
                 UpdateChain.of(ClusterServiceRoleInstanceEntity.class)
                                 .set(ClusterServiceRoleInstanceEntity::getNeedRestart, NeedRestart.YES)
@@ -176,7 +176,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndRoleState(
-                        @Param("serviceId") Integer serviceId,
+                        @Param("serviceId") Long serviceId,
                         @Param("roleState") ServiceRoleState roleState) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
@@ -211,7 +211,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据服务ID和需要重启状态查询
          */
         default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndNeedRestart(
-                        @Param("serviceId") Integer serviceId, @Param("needRestart") NeedRestart needRestart) {
+                        @Param("serviceId") Long serviceId, @Param("needRestart") NeedRestart needRestart) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
                                 .and(ClusterServiceRoleInstanceEntity::getNeedRestart).eq(needRestart);
@@ -296,7 +296,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
         /**
          * 根据服务ID查询服务角色实例列表
          */
-        default List<ClusterServiceRoleInstanceEntity> selectByServiceId(@Param("serviceId") Integer serviceId) {
+        default List<ClusterServiceRoleInstanceEntity> selectByServiceId(@Param("serviceId") Long serviceId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId);
                 return this.selectListByQuery(query);
@@ -340,7 +340,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据服务ID和状态查询正在运行的服务角色实例
          */
         default List<ClusterServiceRoleInstanceEntity> selectByServiceIdAndState(
-                        @Param("serviceId") Integer serviceId, @Param("state") ServiceRoleState state) {
+                        @Param("serviceId") Long serviceId, @Param("state") ServiceRoleState state) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
                                 .and(ClusterServiceRoleInstanceEntity::getServiceRoleState).eq(state);
@@ -350,7 +350,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
         /**
          * 根据角色组ID查询服务角色实例
          */
-        default List<ClusterServiceRoleInstanceEntity> selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        default List<ClusterServiceRoleInstanceEntity> selectByRoleGroupId(@Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
                 return this.selectListByQuery(query);

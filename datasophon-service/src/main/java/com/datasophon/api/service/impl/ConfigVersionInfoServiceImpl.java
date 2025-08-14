@@ -43,24 +43,24 @@ public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoM
         private static final Logger logger = LoggerFactory.getLogger(ConfigVersionInfoServiceImpl.class);
 
         @Override
-        public List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Integer refId) {
+        public List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Long refId) {
                 return getMapper().selectVersionInfoList(refType, refId);
         }
 
         @Override
-        public ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Integer refId) {
+        public ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Long refId) {
                 return getMapper().selectVersionInfo(version, refType, refId);
         }
 
         @Override
-        public Integer getMaxVersion(String refType, Integer refId) {
+        public Integer getMaxVersion(String refType, Long refId) {
                 ConfigVersionInfoEntity latestVersion = getMapper().selectLatestVersion(refType, refId);
                 return latestVersion != null ? latestVersion.getVersion() : 0;
         }
 
         @Override
         @Transactional(rollbackFor = Exception.class)
-        public void updateCurrentVersion(Integer version, String refType, Integer refId) {
+        public void updateCurrentVersion(Integer version, String refType, Long refId) {
                 // 先将所有版本设置为非当前版本
                 getMapper().updateAllToNonCurrent(refType, refId);
 

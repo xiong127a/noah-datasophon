@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务命令主机数据传输对象
@@ -35,5 +35,5 @@ public record ClusterServiceCommandHostDTO(
         Integer commandStateCode,
         Long commandProgress,
         String commandId,
-        Date createTime) implements Serializable {
+        LocalDateTime createTime) implements Serializable {
 }

@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -156,7 +157,7 @@ public class OperationLogAspect {
             op = OperationLogEntity.builder()
                     .url(requestURI)
                     .ip(request.getRemoteAddr())
-                    .startTime(new Date()) // 设置开始时间
+                    .startTime(LocalDateTime.now()) // 设置开始时间
                     .build();
 
             //设置属性
@@ -191,7 +192,7 @@ public class OperationLogAspect {
         } finally {
             if (Objects.nonNull(op)) {
                 //设置结束时间
-                op.setEndTime(new Date());
+                op.setEndTime(LocalDateTime.now());
             }
             //将该对象insert到数据库中，这里使用log打印该对象数据
             log.debug("api-log :{}", JSONObject.toJSONString(op));

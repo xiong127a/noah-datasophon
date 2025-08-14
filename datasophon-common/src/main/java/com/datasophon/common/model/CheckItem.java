@@ -50,7 +50,7 @@ public class CheckItem implements Serializable {
     /**
      * 检查项ID
      */
-    private Integer id;
+    private Long id;
 
     private String itemCode;
 

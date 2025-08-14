@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,7 +30,7 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterServiceRoleGroupConfigVO(
-        Integer id,
+        Long id,
         Integer roleGroupId,
         String configJson,
         String configJsonMd5,
@@ -37,9 +38,9 @@ public record ClusterServiceRoleGroupConfigVO(
         String configFileJson,
         String configFileJsonMd5,
         Long clusterId,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted,
-        Date updateTime,
+        LocalDateTime updateTime,
         String updateTimeFormatted,
         String serviceName
 ) implements Serializable {

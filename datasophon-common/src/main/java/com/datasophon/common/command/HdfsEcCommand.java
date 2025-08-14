@@ -24,5 +24,5 @@ import lombok.Data;
 @Data
 public class HdfsEcCommand implements Serializable {
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 }

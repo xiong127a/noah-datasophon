@@ -90,7 +90,7 @@ public class UserInfoController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<UserInfoVO> info(@PathVariable("id") Integer id) {
+    public Result<UserInfoVO> info(@PathVariable("id") Long id) {
         // 通过Entity方法获取用户（保持兼容性）
         UserInfoEntity userInfo = userInfoService.getById(id);
 
@@ -118,7 +118,7 @@ public class UserInfoController {
     @Data
     public static class CheckUsernameRequest {
         private String username;
-        private Integer excludeId;
+        private Long excludeId;
 
     }
 

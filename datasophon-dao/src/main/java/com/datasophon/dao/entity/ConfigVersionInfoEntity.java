@@ -59,7 +59,7 @@ public class ConfigVersionInfoEntity extends BaseEntity {
     /**
      * 关联对象ID
      */
-    private Integer refId;
+    private Long refId;
 
     /**
      * 版本描述
@@ -86,5 +86,5 @@ public class ConfigVersionInfoEntity extends BaseEntity {
      */
     private String serviceCode;
 
-    private Integer userId;
+    private Long userId;
 }

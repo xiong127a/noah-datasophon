@@ -51,7 +51,7 @@ import org.springframework.stereotype.Service;
 
 import scala.concurrent.duration.FiniteDuration;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -239,7 +239,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
         commandEntity.setCommandProgress(0L);
         commandEntity.setCommandState(CommandState.RUNNING);
         commandEntity.setCommandType(commandType.getValue());
-        commandEntity.setCreateTime(new Date());
+        commandEntity.setCreateTime(LocalDateTime.now());
         commandEntity.setCreateBy("admin");
         commandEntity.setServiceName(serviceName);
         return commandEntity;
@@ -254,7 +254,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.RUNNING);
         commandHost.setCommandProgress(0L);
-        commandHost.setCreateTime(new Date());
+        commandHost.setCreateTime(LocalDateTime.now());
 
         return commandHost;
     }
@@ -278,7 +278,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
         hostCommand.setCommandId(commandId);
         hostCommand.setCommandType(commandType.getValue());
         hostCommand.setServiceRoleType(serviceRoleType);
-        hostCommand.setCreateTime(new Date());
+        hostCommand.setCreateTime(LocalDateTime.now());
         return hostCommand;
     }
 }

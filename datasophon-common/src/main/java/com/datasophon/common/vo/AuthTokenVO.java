@@ -18,6 +18,8 @@
 package com.datasophon.common.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -43,8 +45,8 @@ public record AuthTokenVO(
         Boolean isRevoked,
         String status,
         String revokedReason,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date createdAt,
-        String createdAtFormatted,
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createTime,
+        String createTimeFormatted,
         Long remainingTimeSeconds,
         String remainingTimeFormatted) {
 }

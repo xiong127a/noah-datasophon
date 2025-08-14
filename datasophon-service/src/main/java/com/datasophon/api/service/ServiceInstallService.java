@@ -69,7 +69,7 @@ public interface ServiceInstallService {
      * @return 是否创建了新版本
      */
     boolean saveServiceConfig(Long clusterId, String serviceName, List<ServiceConfig> configJson,
-            Integer roleGroupId, String description, Integer userId, String username);
+                              Long roleGroupId, String description, Long userId, String username);
 
     /**
      * 保存主机服务角色映射

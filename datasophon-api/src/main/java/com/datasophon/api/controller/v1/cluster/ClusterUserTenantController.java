@@ -46,7 +46,7 @@ public class ClusterUserTenantController {
     @PostMapping("/add")
     public Result<Void> addUserToTenant(
             @RequestParam Long clusterId,
-            @RequestParam Integer userId,
+            @RequestParam Long userId,
             @RequestParam String tenantIds) {
         try {
             clusterUserTenantService.addUserToTenant(clusterId, userId, tenantIds);
@@ -64,7 +64,7 @@ public class ClusterUserTenantController {
     @DeleteMapping("/delete")
     public Result<Void> deleteUser(
             @RequestParam Long clusterId,
-            @RequestParam Integer userId,
+            @RequestParam Long userId,
             @RequestParam String tenantIds) {
         try {
             clusterUserTenantService.deleteUser(clusterId, userId, tenantIds);
@@ -80,7 +80,7 @@ public class ClusterUserTenantController {
     @GetMapping("/list")
     public Result<List<ClusterUserTenantEntity>> getListByUserId(
             @RequestParam Long clusterId,
-            @RequestParam Integer userId) {
+            @RequestParam Long userId) {
         try {
             List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.getListByUserId(clusterId, userId);
             return Result.success(userTenantList);
@@ -93,7 +93,7 @@ public class ClusterUserTenantController {
      * 根据ID获取用户租户关系详情
      */
     @GetMapping("/{id}")
-    public Result<ClusterUserTenantEntity> getUserTenantById(@PathVariable Integer id) {
+    public Result<ClusterUserTenantEntity> getUserTenantById(@PathVariable Long id) {
         try {
             ClusterUserTenantEntity userTenant = clusterUserTenantService.getById(id);
             if (userTenant == null) {
@@ -127,7 +127,7 @@ public class ClusterUserTenantController {
      */
     @PutMapping("/{id}")
     public Result<ClusterUserTenantEntity> updateUserTenant(
-            @PathVariable Integer id, @RequestBody ClusterUserTenantEntity userTenant) {
+            @PathVariable Long id, @RequestBody ClusterUserTenantEntity userTenant) {
         try {
             userTenant.setId(id);
             boolean updated = clusterUserTenantService.updateById(userTenant);
@@ -145,7 +145,7 @@ public class ClusterUserTenantController {
      * 删除用户租户关系
      */
     @DeleteMapping("/{id}")
-    public Result<Void> deleteUserTenant(@PathVariable Integer id) {
+    public Result<Void> deleteUserTenant(@PathVariable Long id) {
         try {
             boolean deleted = clusterUserTenantService.removeById(id);
             if (deleted) {

@@ -61,7 +61,7 @@ public interface ClusterNodeLabelService extends IService<ClusterNodeLabelEntity
     /**
      * 根据ID获取节点标签DTO
      */
-    ClusterNodeLabelDTO getByIdAsDto(Integer id);
+    ClusterNodeLabelDTO getByIdAsDto(Long id);
 
     /**
      * 保存节点标签DTO

@@ -12,7 +12,7 @@ import java.util.Map;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Service {
-    private Integer id;
+    private Long id;
     private String guid;
     private Boolean isEnabled;
     private String createdBy;

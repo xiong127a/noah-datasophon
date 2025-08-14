@@ -52,7 +52,7 @@ public class ClusterServiceInstanceRoleGroupController {
      * 列表
      */
     @RequestMapping("/list")
-    public Result<List<ClusterServiceInstanceRoleGroupVO>> list(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result<List<ClusterServiceInstanceRoleGroupVO>> list(@RequestParam("serviceInstanceId") Long serviceInstanceId) {
         List<ClusterServiceInstanceRoleGroupDTO> dtoList = clusterServiceInstanceRoleGroupService.listRoleGroupByServiceInstanceId(serviceInstanceId);
         List<ClusterServiceInstanceRoleGroupVO> voList = clusterServiceInstanceRoleGroupConverter.dtoListToVoList(dtoList);
         return Result.success(voList);
@@ -62,7 +62,7 @@ public class ClusterServiceInstanceRoleGroupController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterServiceInstanceRoleGroupVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceInstanceRoleGroupVO> info(@PathVariable("id") Long id) {
         ClusterServiceInstanceRoleGroupEntity entity = clusterServiceInstanceRoleGroupService.getById(id);
         ClusterServiceInstanceRoleGroupVO vo = clusterServiceInstanceRoleGroupConverter.entityToVo(entity);
         return Result.success(vo);
@@ -72,8 +72,8 @@ public class ClusterServiceInstanceRoleGroupController {
      * 保存
      */
     @RequestMapping("/save")
-    public Result<Void> save(@RequestParam("serviceInstanceId") Integer serviceInstanceId,
-            @RequestParam("roleGroupId") Integer roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
+    public Result<Void> save(@RequestParam("serviceInstanceId") Long serviceInstanceId,
+            @RequestParam("roleGroupId") Long roleGroupId, @RequestParam("roleGroupName") String roleGroupName) {
         clusterServiceInstanceRoleGroupService.saveRoleGroup(serviceInstanceId, roleGroupId, roleGroupName);
         return Result.success();
     }
@@ -83,7 +83,7 @@ public class ClusterServiceInstanceRoleGroupController {
      */
     @RequestMapping("/bind")
     public Result<Boolean> bind(@RequestParam("serviceRoleInstancesIds") String serviceRoleInstancesIds,
-            @RequestParam("roleGroupId") Integer roleGroupId) {
+            @RequestParam("roleGroupId") Long roleGroupId) {
         return Result.success(clusterServiceInstanceRoleGroupService.bind(serviceRoleInstancesIds, roleGroupId));
     }
 

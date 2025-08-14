@@ -23,6 +23,7 @@ import com.datasophon.api.alert.model.AlertLabels;
 import com.datasophon.api.alert.model.AlertMessage;
 import com.datasophon.api.alert.model.Alerts;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -88,8 +89,8 @@ public class AlertActor extends AbstractActor {
                                     .clusterId(clusterId)
                                     .alertGroupName(labels.getJob())
                                     .alertTargetName(alertname)
-                                    .createTime(new Date())
-                                    .updateTime(new Date())
+                                    .createTime(LocalDateTime.now())
+                                    .updateTime(LocalDateTime.now())
                                     .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN
                                             : AlertLevel.EXCEPTION)
                                     .alertInfo(alertInfo.getAnnotations().getDescription())
@@ -121,8 +122,8 @@ public class AlertActor extends AbstractActor {
                                         .alertTargetName(alertname)
                                         .serviceInstanceId(serviceInstance.id())
                                         .serviceRoleInstanceId(roleInstance.id())
-                                        .createTime(new Date())
-                                        .updateTime(new Date())
+                                        .createTime(LocalDateTime.now())
+                                        .updateTime(LocalDateTime.now())
                                         .alertLevel(WARNING.equals(labels.getSeverity()) ? AlertLevel.WARN
                                                 : AlertLevel.EXCEPTION)
                                         .alertInfo(alertInfo.getAnnotations().getDescription())

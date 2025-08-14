@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterQueueCapacityVO(
-        Integer id,
+        Long id,
         Long clusterId,
         String queueName,
         String capacity,

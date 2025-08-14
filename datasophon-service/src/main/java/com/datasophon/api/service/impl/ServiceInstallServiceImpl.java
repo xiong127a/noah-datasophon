@@ -87,9 +87,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -239,7 +239,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     @Override
     public boolean saveServiceConfig(
             Long clusterId, String serviceName, List<ServiceConfig> list,
-            Integer roleGroupId, String description, Integer userId, String username) {
+            Long roleGroupId, String description, Long userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ServiceConfigMap.put(clusterInfo.getClusterCode() + UNDERLINE + serviceName + CONFIG,
                 list);
@@ -383,8 +383,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                     }
                 }
                 newRoleGroupConfig.setClusterId(clusterId);
-                newRoleGroupConfig.setCreateTime(new Date());
-                newRoleGroupConfig.setUpdateTime(new Date());
+                newRoleGroupConfig.setCreateTime(LocalDateTime.now());
+                newRoleGroupConfig.setUpdateTime(LocalDateTime.now());
                 newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
                 buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
 
@@ -403,7 +403,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 }
             }
             // update service instance
-            serviceInstanceEntity.setUpdateTime(new Date());
+            serviceInstanceEntity.setUpdateTime(LocalDateTime.now());
             serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
             serviceInstanceService.updateById(serviceInstanceEntity);
         }
@@ -653,14 +653,14 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             HashMap<Generators, List<ServiceConfig>> configFileMap,
             ClusterServiceInstanceRoleGroupEntity clusterServiceInstanceRoleGroupEntity,
             String description,
-            Integer userId,
+            Long userId,
             String username) {
         ClusterServiceRoleGroupConfigEntity roleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
         roleGroupConfig.setRoleGroupId(clusterServiceInstanceRoleGroupEntity.getId());
         roleGroupConfig.setClusterId(clusterId);
         roleGroupConfig.setServiceName(serviceName);
-        roleGroupConfig.setCreateTime(new Date());
-        roleGroupConfig.setUpdateTime(new Date());
+        roleGroupConfig.setCreateTime(LocalDateTime.now());
+        roleGroupConfig.setUpdateTime(LocalDateTime.now());
         buildConfig(list, configFileMap, roleGroupConfig, description);
         roleGroupConfig.setConfigVersion(1);
         boolean saveResult = groupConfigService.save(roleGroupConfig);
@@ -706,8 +706,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         serviceInstanceEntity.setServiceState(ServiceState.WAIT_INSTALL);
         serviceInstanceEntity.setServiceName(serviceName);
         serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
-        serviceInstanceEntity.setCreateTime(new Date());
-        serviceInstanceEntity.setUpdateTime(new Date());
+        serviceInstanceEntity.setCreateTime(LocalDateTime.now());
+        serviceInstanceEntity.setUpdateTime(LocalDateTime.now());
         serviceInstanceEntity.setNeedRestart(NeedRestart.NO);
         serviceInstanceEntity.setFrameServiceId(frameServiceEntity.getId());
         serviceInstanceEntity.setSortNum(frameServiceEntity.getSortNum());
@@ -876,8 +876,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param userId          用户ID
      * @param username        用户名
      */
-    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfigEntity roleGroupConfig, String refType, Integer refId,
-                                       Integer userId, String username, String description) {
+    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfigEntity roleGroupConfig, String refType, Long refId,
+                                       Long userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
@@ -887,7 +887,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         configVersionInfo.setDescription(description); // 使用传入的描述
         configVersionInfo.setEditor(username != null ? username : "system"); // 使用用户名作为编辑者，如果为空则使用默认值
         configVersionInfo.setUserId(userId); // 添加用户ID
-        configVersionInfo.setEditTime(new Date());
+        configVersionInfo.setEditTime(LocalDateTime.now());
         configVersionInfo.setIsCurrent(true);
         configVersionInfo.setServiceCode(roleGroupConfig.getServiceName());
         configVersionInfoService.save(configVersionInfo);

@@ -163,7 +163,7 @@ public class K8sToClusterHostConverter {
         HostInfoDTO hostInfoDTO = new HostInfoDTO();
         
         // 复制基础字段
-        hostInfoDTO.setId(clusterHost.getId() != null ? clusterHost.getId().intValue() : null);
+        hostInfoDTO.setId(clusterHost.getId() != null ? clusterHost.getId() : null);
         hostInfoDTO.setCreateTime(clusterHost.getCreateTime());
         hostInfoDTO.setHostname(clusterHost.getHostname());
         hostInfoDTO.setIp(clusterHost.getIp());

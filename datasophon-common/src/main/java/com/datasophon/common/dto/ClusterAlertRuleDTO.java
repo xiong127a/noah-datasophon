@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群告警规则数据传输对象
@@ -42,7 +42,7 @@ public record ClusterAlertRuleDTO(
         Long receiverGroupId,
         String state,
         String isDelete,
-        Date createTime,
-        Date updateTime,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
         Long clusterId) implements Serializable {
 }

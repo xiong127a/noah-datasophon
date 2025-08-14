@@ -67,7 +67,7 @@ public class ClusterQueueCapacityController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterQueueCapacityVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterQueueCapacityVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterQueueCapacityDTO dto = clusterQueueCapacityService.getByIdAsDto(id);
         // Controller层：DTO → VO转换
@@ -101,7 +101,7 @@ public class ClusterQueueCapacityController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@RequestParam("id") Integer id) {
+    public Result<String> delete(@RequestParam("id") Long id) {
         clusterQueueCapacityService.removeById(id);
         return Result.success("删除成功");
     }

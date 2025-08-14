@@ -75,7 +75,7 @@ public interface UserInfoService extends IService<UserInfoEntity> {
      * @param excludeId 排除的用户ID（编辑时排除当前用户）
      * @return true表示用户名已存在，false表示可用
      */
-    boolean checkUsernameExists(String username, Integer excludeId);
+    boolean checkUsernameExists(String username, Long excludeId);
 
     // ============ 内部使用的Entity方法（兼容现有代码） ============
 
@@ -93,5 +93,5 @@ public interface UserInfoService extends IService<UserInfoEntity> {
      * @param id 用户ID
      * @return 用户Entity
      */
-    UserInfoEntity getById(Integer id);
+    UserInfoEntity getById(Long id);
 }

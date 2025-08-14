@@ -67,7 +67,7 @@ public class ClusterAlertGroupMapController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterAlertGroupMapVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterAlertGroupMapVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterAlertGroupMapDTO dto = clusterAlertGroupMapService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

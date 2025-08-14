@@ -105,7 +105,7 @@ public class FrameServiceRoleController {
      * 根据ID获取服务角色信息
      */
     @GetMapping("/info/{id}")
-    public Result<FrameServiceRoleVO> info(@PathVariable("id") Integer id) {
+    public Result<FrameServiceRoleVO> info(@PathVariable("id") Long id) {
         try {
             FrameServiceRoleDTO frameServiceRoleDTO = frameServiceRoleService.getFrameServiceRoleById(id);
             FrameServiceRoleVO frameServiceRoleVO = frameServiceRoleConverter.dtoToVo(frameServiceRoleDTO);

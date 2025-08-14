@@ -79,11 +79,11 @@ public class ClusterAlertHistoryEntity extends BaseEntity {
     /**
      * 集群服务角色实例id
      */
-    private Integer serviceRoleInstanceId;
+    private Long serviceRoleInstanceId;
     /**
      * 集群服务实例id
      */
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
     /**
      * 集群id

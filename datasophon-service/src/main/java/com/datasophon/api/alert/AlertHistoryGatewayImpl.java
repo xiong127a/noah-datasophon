@@ -57,7 +57,7 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
     }
 
     @Override
-    public void updateAlertHistoryToDisabled(Integer id) {
+    public void updateAlertHistoryToDisabled(Long id) {
         ClusterAlertHistoryEntity alertHistory = QueryChain.of(ClusterAlertHistoryEntity.class)
                 .where(ClusterAlertHistoryEntity::getId).eq(id)
                 .one();
@@ -69,7 +69,7 @@ public class AlertHistoryGatewayImpl implements AlertHistoryGateway {
     }
 
     @Override
-    public boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Integer id) {
+    public boolean nodeHasWarnAlertList(String hostname, String serviceRoleName, Long id) {
         List<ClusterAlertHistoryEntity> alertHistories = QueryChain.of(ClusterAlertHistoryEntity.class)
                 .where(ClusterAlertHistoryEntity::getHostname).eq(hostname)
                 .and(ClusterAlertHistoryEntity::getAlertGroupName).eq(serviceRoleName.toLowerCase())

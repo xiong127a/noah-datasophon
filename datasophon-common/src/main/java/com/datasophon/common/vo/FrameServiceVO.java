@@ -31,7 +31,7 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FrameServiceVO(
-        Integer id,
+        Long id,
         Integer frameId,
         String serviceName,
         String label,
@@ -100,7 +100,7 @@ public record FrameServiceVO(
     /**
      * 创建基础FrameServiceVO
      */
-    public static FrameServiceVO of(Integer id, String serviceName, String serviceVersion, Boolean installed,
+    public static FrameServiceVO of(Long id, String serviceName, String serviceVersion, Boolean installed,
             Boolean isRequired) {
         String displayName = serviceName != null && serviceVersion != null
                 ? serviceName + " " + serviceVersion
@@ -116,7 +116,7 @@ public record FrameServiceVO(
     /**
      * 创建完整FrameServiceVO
      */
-    public static FrameServiceVO withAllFields(Integer id, Integer frameId, String serviceName, String label,
+    public static FrameServiceVO withAllFields(Long id, Integer frameId, String serviceName, String label,
             String serviceVersion, String serviceDesc, String packageName, String dependencies,
             String serviceJson, String serviceJsonMd5, String serviceConfig, String frameCode,
             String configFileJson, String configFileJsonMd5, String decompressPackageName,

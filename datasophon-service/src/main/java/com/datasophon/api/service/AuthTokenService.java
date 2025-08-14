@@ -24,7 +24,7 @@ import com.datasophon.common.model.PageResult;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -47,7 +47,7 @@ public interface AuthTokenService extends IService<AuthTokenEntity> {
      * @return 认证令牌DTO
      */
     AuthTokenDTO createToken(UserInfoEntity user, String token, String refreshToken,
-            HttpServletRequest request, Date expiresAt);
+            HttpServletRequest request, LocalDateTime expiresAt);
 
     /**
      * 根据令牌获取认证信息

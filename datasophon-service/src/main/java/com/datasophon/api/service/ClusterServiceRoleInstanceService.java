@@ -48,7 +48,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据服务ID和角色状态获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Integer id,
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceIdAndRoleState(Long id,
             ServiceRoleState stop);
 
     /**
@@ -71,7 +71,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 根据服务ID获取服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int id);
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(Long id);
 
     /**
      * 根据集群ID获取服务角色实例列表
@@ -92,12 +92,12 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 获取正在运行的服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceDTO> getRunningServiceRoleInstanceListByServiceId(Integer serviceInstanceId);
+    List<ClusterServiceRoleInstanceDTO> getRunningServiceRoleInstanceListByServiceId(Long serviceInstanceId);
 
     /**
      * 重启过时服务
      */
-    void restartObsoleteService(Integer roleGroupId);
+    void restartObsoleteService(Long roleGroupId);
 
     /**
      * 退役节点
@@ -107,12 +107,12 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 更新为需要重启状态
      */
-    void updateToNeedRestart(Integer roleGroupId);
+    void updateToNeedRestart(Long roleGroupId);
 
     /**
      * 更新为需要重启状态（指定服务角色名称）
      */
-    void updateToNeedRestart(Integer roleGroupId, String serviceRoleName);
+    void updateToNeedRestart(Long roleGroupId, String serviceRoleName);
 
     /**
      * 根据主机名更新为需要重启状态
@@ -122,7 +122,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 获取过时服务
      */
-    List<ClusterServiceRoleInstanceDTO> getObsoleteService(Integer id);
+    List<ClusterServiceRoleInstanceDTO> getObsoleteService(Long id);
 
     /**
      * 获取主机上停止的角色实例
@@ -172,7 +172,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * @param serviceRoleInstanceId 服务角色实例ID
      * @param serviceRoleState 新的服务角色状态
      */
-    void updateServiceRoleInstanceState(Integer serviceRoleInstanceId, ServiceRoleState serviceRoleState);
+    void updateServiceRoleInstanceState(Long serviceRoleInstanceId, ServiceRoleState serviceRoleState);
 
     /**
      * 根据服务名列表获取服务角色实例

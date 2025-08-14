@@ -19,8 +19,7 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.date.DateUnit;
-import cn.hutool.core.date.DateUtil;
+import java.time.temporal.ChronoUnit;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.common.enums.ClusterType;
@@ -73,6 +72,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -132,7 +132,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public InstallStepDTO getInstallStepById(Integer id) {
+    public InstallStepDTO getInstallStepById(Long id) {
         try {
             if (id == null) {
                 throw new RuntimeException("安装步骤ID不能为空");
@@ -1104,7 +1104,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setSshUser(sshUser);
         hostInfo.setSshPassword(sshPassword);
         hostInfo.setClusterId(clusterId);
-        hostInfo.setCreateTime(new Date());
+        hostInfo.setCreateTime(LocalDateTime.now());
 
         // 初始化错误信息字段
         hostInfo.setSshErrorMsg("");
@@ -1235,14 +1235,14 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
                             "dispatcherWorkerActor-" + hostInfo.getIp());
                     hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                    hostInfo.setCreateTime(new Date());
+                    hostInfo.setCreateTime(LocalDateTime.now());
                     hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
                             ActorRef.noSender());
                     // 保存主机agent分发历史
                     CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp(), true);
 
                 } else {
-                    long timeout = DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE);
+                    long timeout = ChronoUnit.MINUTES.between(hostInfo.getCreateTime(), LocalDateTime.now());
                     long timeOutPeriodOne = PropertyUtils.getLong("timeOutPeriodOne");
                     long timeOutPeriodTwo = PropertyUtils.getLong("timeOutPeriodTwo");
                     Integer progress = hostInfo.getProgress();
@@ -1426,7 +1426,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
             if (hostInfo.getProgress() == 75
-                    && DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE) > 1) {
+                    && ChronoUnit.MINUTES.between(hostInfo.getCreateTime(), LocalDateTime.now()) > 1) {
                 log.info("dispatcher host agent timeout");
                 hostInfo.setInstallState(InstallState.FAILED);
                 hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
@@ -1558,7 +1558,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 hostInfo.setSshUser("root"); // Kubernetes模式默认用户
                 hostInfo.setClusterCode(clusterCode);
                 hostInfo.setClusterId(clusterId);
-                hostInfo.setCreateTime(new Date());
+                hostInfo.setCreateTime(LocalDateTime.now());
 
                 // 重要：从Kubernetes API获取的CPU架构信息
                 String cpuArchitecture = kubernetesHost.getCpuArchitecture();

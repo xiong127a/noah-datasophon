@@ -56,7 +56,7 @@ public interface ClusterRackService extends IService<ClusterRackEntity> {
     /**
      * 根据ID获取机架DTO
      */
-    ClusterRackDTO getByIdAsDto(Integer id);
+    ClusterRackDTO getByIdAsDto(Long id);
 
     /**
      * 保存机架DTO

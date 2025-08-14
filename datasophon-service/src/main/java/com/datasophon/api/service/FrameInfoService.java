@@ -57,7 +57,7 @@ public interface FrameInfoService extends IService<FrameInfoEntity> {
     /**
      * 根据ID获取框架信息
      */
-    FrameInfoDTO getFrameInfoById(Integer id);
+    FrameInfoDTO getFrameInfoById(Long id);
 
     /**
      * 批量删除框架信息

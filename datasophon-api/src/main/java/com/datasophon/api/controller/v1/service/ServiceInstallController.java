@@ -86,9 +86,9 @@ public class ServiceInstallController {
     public Result<Boolean> saveServiceConfig(@ClusterId Long clusterId,
                                             @RequestParam("serviceName") String serviceName, 
                                             @RequestParam("serviceConfig") String serviceConfig, 
-                                            @RequestParam(name = "roleGroupId", required = false) Integer roleGroupId,
+                                            @RequestParam(name = "roleGroupId", required = false) Long roleGroupId,
                                             @RequestParam(name = "description", required = false) String description, 
-                                            @RequestParam(name = "userId", required = false) Integer userId, 
+                                            @RequestParam(name = "userId", required = false) Long userId,
                                             @RequestParam(name = "username", required = false) String username) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("保存服务配置: clusterId={}, serviceName={} - {}", 

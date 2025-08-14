@@ -60,7 +60,7 @@ public interface RoleInfoService extends IService<RoleInfoEntity> {
      * @return 角色信息DTO
      * @throws com.datasophon.common.exception.BusinessException 角色不存在
      */
-    RoleInfoDTO getRoleById(Integer id);
+    RoleInfoDTO getRoleById(Long id);
     
     /**
      * 分页查询角色列表
@@ -94,7 +94,7 @@ public interface RoleInfoService extends IService<RoleInfoEntity> {
      * @param excludeId 排除的角色ID（编辑时排除当前角色）
      * @return true表示角色编码已存在，false表示可用
      */
-    boolean checkRoleCodeExists(String roleCode, Integer excludeId);
+    boolean checkRoleCodeExists(String roleCode, Long excludeId);
     
     /**
      * 删除角色
@@ -102,5 +102,5 @@ public interface RoleInfoService extends IService<RoleInfoEntity> {
      * @param id 角色ID
      * @throws com.datasophon.common.exception.BusinessException 角色不存在或被使用中
      */
-    void deleteRole(Integer id);
+    void deleteRole(Long id);
 }

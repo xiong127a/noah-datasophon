@@ -19,6 +19,7 @@ package com.datasophon.common.model.kubernetes;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
 
@@ -70,7 +71,7 @@ public class DeploymentInfo {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
 
     /**
      * 选择器

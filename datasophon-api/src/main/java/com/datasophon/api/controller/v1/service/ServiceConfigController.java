@@ -62,7 +62,7 @@ public class ServiceConfigController {
     @PostMapping("/getConfigFiles")
     public Result getServiceConfigFiles(@RequestBody Map<String, Object> params) {
         try {
-            Integer serviceInstanceId = Integer.parseInt(params.get("serviceInstanceId").toString());
+            Long serviceInstanceId = Long.parseLong(params.get("serviceInstanceId").toString());
             List<ConfigFile> configFiles = serviceConfigFileService.getServiceConfigFiles(serviceInstanceId);
             return Result.success(configFiles);
         } catch (Exception e) {
@@ -76,7 +76,7 @@ public class ServiceConfigController {
      */
     @GetMapping("/downloadFile")
     public ResponseEntity<InputStreamResource> downloadServiceConfigFile(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId,
+            @RequestParam("serviceInstanceId") Long serviceInstanceId,
             @RequestParam("fileName") String fileName) {
         try {
             byte[] fileContent = serviceConfigFileService.getServiceConfigFileContent(serviceInstanceId, fileName);
@@ -108,7 +108,7 @@ public class ServiceConfigController {
      */
     @GetMapping("/downloadAllFiles")
     public ResponseEntity<InputStreamResource> downloadAllServiceConfigFiles(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId,
+            @RequestParam("serviceInstanceId") Long serviceInstanceId,
             @RequestParam(value = "format", defaultValue = "zip") String format,
             @RequestParam(value = "password", required = false) String password) {
         try {
@@ -162,7 +162,7 @@ public class ServiceConfigController {
      * 获取打包进度
      */
     @GetMapping("/getCompressProgress")
-    public Result getCompressProgress(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result getCompressProgress(@RequestParam("serviceInstanceId") Long serviceInstanceId) {
         try {
             Integer progress = serviceConfigFileService.getCompressProgress(serviceInstanceId);
             log.debug("获取服务ID[{}]的压缩进度: {}%", serviceInstanceId, progress);
@@ -179,7 +179,7 @@ public class ServiceConfigController {
     @PostMapping("/previewFile")
     public Result previewServiceConfigFile(@RequestBody Map<String, Object> params) {
         try {
-            Integer serviceInstanceId = Integer.parseInt(params.get("serviceInstanceId").toString());
+            Long serviceInstanceId = Long.parseLong(params.get("serviceInstanceId").toString());
             String fileName = params.get("fileName").toString();
 
             byte[] fileContent = serviceConfigFileService.getServiceConfigFileContent(serviceInstanceId, fileName);

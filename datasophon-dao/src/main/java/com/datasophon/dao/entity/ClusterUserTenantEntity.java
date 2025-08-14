@@ -36,9 +36,9 @@ public class ClusterUserTenantEntity extends BaseEntity {
      */
     private Long clusterId;
 
-    private Integer userId;
+    private Long userId;
 
-    private Integer tenantId;
+    private Long tenantId;
 
     @Column(ignore = true)
     private String tenantName;

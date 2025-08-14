@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -30,9 +31,9 @@ import java.util.List;
  * @date 2025-01-01
  */
 public record ClusterInfoVO(
-        Integer id,
+        Long id,
         String createBy,
-        Date createTime,
+        LocalDateTime createTime,
         String clusterName,
         String clusterCode,
         String clusterFrame,

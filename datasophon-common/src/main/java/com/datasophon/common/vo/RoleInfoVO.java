@@ -28,7 +28,7 @@ import lombok.Getter;
  * @date 2025-08-06
  */
 public record RoleInfoVO(
-    Integer id,
+    Long id,
     String roleName,
     String roleCode,
     String createTimeFormatted,

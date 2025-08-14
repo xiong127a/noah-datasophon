@@ -25,6 +25,7 @@ import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class HostInfo implements Serializable {
 
     private String message;
 
-    private Date createTime;
+    private LocalDateTime createTime;
 
     private String cpuArchitecture;
 

@@ -59,6 +59,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -139,7 +140,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             throw new RuntimeException(Status.CLUSTER_CODE_EXISTS.getMsg());
         }
 
-        clusterInfo.setCreateTime(new Date());
+        clusterInfo.setCreateTime(LocalDateTime.now());
         // 兼容未能从SecurityContext获取完整用户实体的场景：无法获取时直接报错，不再写死默认值
         String createdBy = null;
         var authUser = SecurityUtils.getAuthUser();

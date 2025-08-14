@@ -81,7 +81,7 @@ public class ClusterServiceRoleInstanceEntity extends BaseEntity {
     /**
      * 服务id
      */
-    private Integer serviceId;
+    private Long serviceId;
     /**
      * 角色类型 1:master2:worker3:client
      */
@@ -95,7 +95,7 @@ public class ClusterServiceRoleInstanceEntity extends BaseEntity {
      */
     private String serviceName;
 
-    private Integer roleGroupId;
+    private Long roleGroupId;
 
     private NeedRestart needRestart;
 

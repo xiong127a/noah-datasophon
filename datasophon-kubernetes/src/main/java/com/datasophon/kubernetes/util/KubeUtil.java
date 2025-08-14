@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -131,7 +131,7 @@ public class KubeUtil {
                     .usedDisk(ByteConverter.convertKBToGB(usedDisk))
                     .cpuArchitecture(architecture)
                     .status(status)
-                    .createTime(new Date())
+                    .createTime(LocalDateTime.now())
                     .allocatableCpu(String.valueOf(coreNum))
                     .allocatableMemory(ByteConverter.convertKBToGB(allowMemory) + "GB")
                     .allocatableStorage(ByteConverter.convertKBToGB(allowDisk) + "GB")

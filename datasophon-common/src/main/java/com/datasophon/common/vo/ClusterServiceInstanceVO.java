@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,16 +30,16 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterServiceInstanceVO(
-        Integer id,
+        Long id,
         Long clusterId,
         String serviceName,
         String label,
         Integer serviceState,
         String serviceStateText,
         Integer serviceStateCode,
-        Date updateTime,
+        LocalDateTime updateTime,
         String updateTimeFormatted,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted,
         Integer needRestart,
         String needRestartText,

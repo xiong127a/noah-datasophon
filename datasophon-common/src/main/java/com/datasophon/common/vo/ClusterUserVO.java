@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,11 +30,11 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterUserVO(
-        Integer id,
+        Long id,
         Long clusterId,
         String username,
         String mainGroup,
         String otherGroups,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted) implements Serializable {
 }

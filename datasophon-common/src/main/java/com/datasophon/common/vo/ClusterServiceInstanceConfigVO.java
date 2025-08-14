@@ -28,8 +28,8 @@ import lombok.Getter;
  * @date 2025-08-06
  */
 public record ClusterServiceInstanceConfigVO(
-    Integer id,
-    Integer serviceId,
+    Long id,
+    Long serviceId,
     String createTimeFormatted,
     String configJson,
     String updateTimeFormatted,

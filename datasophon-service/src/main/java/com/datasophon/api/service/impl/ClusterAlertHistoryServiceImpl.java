@@ -79,7 +79,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public List<ClusterAlertHistoryDTO> getAlertList(Integer serviceInstanceId) {
+        public List<ClusterAlertHistoryDTO> getAlertList(Long serviceInstanceId) {
                 try {
                         // DAO层：使用Mapper查询
                         List<ClusterAlertHistoryEntity> entities = getMapper()
@@ -118,7 +118,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public void removeAlertByRoleInstanceIds(List<Integer> ids) {
+        public void removeAlertByRoleInstanceIds(List<Long> ids) {
                 try {
                         if (ids == null || ids.isEmpty()) {
                                 return;
@@ -149,7 +149,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public ClusterAlertHistoryDTO getByIdAsDto(Integer id) {
+        public ClusterAlertHistoryDTO getByIdAsDto(Long id) {
                 // Service层：Entity → DTO转换
                 ClusterAlertHistoryEntity entity = this.getById(id);
                 return clusterAlertHistoryConverter.entityToDto(entity);
@@ -170,7 +170,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public long countEnabledByServiceInstanceId(Integer serviceInstanceId) {
+        public long countEnabledByServiceInstanceId(Long serviceInstanceId) {
                 try {
                         return getMapper().countEnabledByServiceInstanceId(serviceInstanceId);
                 } catch (Exception e) {
@@ -180,7 +180,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Integer serviceInstanceId) {
+        public List<ClusterAlertHistoryDTO> getStoppedRolesByServiceId(Long serviceInstanceId) {
                 try {
                         // 这里假设我们有一个mapper方法来查询停止状态的角色
                         // 实际实现时需要根据具体的数据模型来调整
@@ -196,7 +196,7 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
         }
 
         @Override
-        public List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Integer serviceInstanceId) {
+        public List<ClusterAlertHistoryDTO> getAlarmRolesByServiceId(Long serviceInstanceId) {
                 try {
                         // 这里假设我们有一个mapper方法来查询告警状态的角色
                         // 实际实现时需要根据具体的数据模型来调整

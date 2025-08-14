@@ -118,7 +118,7 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
          * @param serviceId 服务ID
          * @return 是否删除成功
          */
-        default boolean removeByServiceId(Integer serviceId) {
+        default boolean removeByServiceId(Long serviceId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceId).eq(serviceId);
                 return this.deleteByQuery(query) > 0;

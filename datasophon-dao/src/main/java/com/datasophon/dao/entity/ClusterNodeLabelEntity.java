@@ -27,7 +27,7 @@ import com.mybatisflex.annotation.Table;
 public class ClusterNodeLabelEntity {
 
     @Id
-    private Integer id;
+    private Long id;
 
     private Long clusterId;
 

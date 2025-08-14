@@ -2,7 +2,7 @@ package com.datasophon.dao.model;
 
 import lombok.Data;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 public class Host {
@@ -45,6 +45,6 @@ public class Host {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
 
 }

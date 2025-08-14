@@ -106,7 +106,7 @@ public interface ServiceRoleStrategy {
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息对象
      */
-    default ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
+    default ConnectionInfo getConnectionInfo(Long clusterId, Long serviceInstanceId, String serviceHome,
             Map<String, String> configMap) {
         // 默认返回空对象，具体组件在各自实现中提供连接信息
         return ConnectionInfo.builder().build();
@@ -214,7 +214,7 @@ public interface ServiceRoleStrategy {
         return execResult;
     }
 
-    default Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+    default Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Long serviceInstanceId) {
         return SpringTool.listServiceConfigByServiceInstance(serviceInstanceId);
     }
 
@@ -228,7 +228,7 @@ public interface ServiceRoleStrategy {
      * @param serviceInstanceId 服务实例ID
      * @return 包含服务主目录和配置Map的对象
      */
-    default Map.Entry<String, Map<String, String>> getServiceConfigMap(Integer serviceInstanceId) {
+    default Map.Entry<String, Map<String, String>> getServiceConfigMap(Long serviceInstanceId) {
         // 1. 获取服务配置
         Map.Entry<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
         List<ServiceConfig> serviceConfigs = pair.getValue();

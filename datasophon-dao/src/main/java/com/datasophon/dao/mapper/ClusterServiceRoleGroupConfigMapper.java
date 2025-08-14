@@ -42,13 +42,13 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupId 角色组ID
          * @return 配置实体
          */
-        default ClusterServiceRoleGroupConfigEntity selectByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        default ClusterServiceRoleGroupConfigEntity selectByRoleGroupId(@Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
                                 .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc()
                                 .limit(1);
                 List<ClusterServiceRoleGroupConfigEntity> results = this.selectListByQuery(query);
-                return results.isEmpty() ? null : results.get(0);
+                return results.isEmpty() ? null : results.getFirst();
         }
 
         /**
@@ -99,7 +99,7 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @return 配置版本列表
          */
         default List<ClusterServiceRoleGroupConfigEntity> selectConfigVersionsByRoleGroupId(
-                        @Param("roleGroupId") Integer roleGroupId) {
+                        @Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
                                 .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc();
@@ -113,7 +113,7 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @return 最新的两个配置版本列表
          */
         default List<ClusterServiceRoleGroupConfigEntity> selectLatestTwoConfigsByRoleGroupId(
-                        @Param("roleGroupId") Integer roleGroupId) {
+                        @Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
                                 .orderBy(ClusterServiceRoleGroupConfigEntity::getConfigVersion).desc()

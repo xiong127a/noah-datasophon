@@ -49,7 +49,7 @@ public interface RoleInstanceQueryService extends IService<ClusterServiceRoleIns
      * @param id 服务角色实例ID
      * @return 服务角色实例DTO
      */
-    ClusterServiceRoleInstanceDTO getByIdAsDto(Integer id);
+    ClusterServiceRoleInstanceDTO getByIdAsDto(Long id);
 
     /**
      * 根据服务ID获取服务角色实例列表
@@ -57,7 +57,7 @@ public interface RoleInstanceQueryService extends IService<ClusterServiceRoleIns
      * @param serviceId 服务ID
      * @return 服务角色实例DTO列表
      */
-    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(int serviceId);
+    List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceId(Long serviceId);
 
     /**
      * 根据服务角色名称、主机名和集群ID获取服务角色实例

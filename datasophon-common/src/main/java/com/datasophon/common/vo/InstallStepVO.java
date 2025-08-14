@@ -15,7 +15,7 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record InstallStepVO(
-        Integer id,
+        Long id,
         String stepName,
         String stepDesc,
         String installType,
@@ -33,7 +33,7 @@ public record InstallStepVO(
     /**
      * 创建基础InstallStepVO
      */
-    public static InstallStepVO of(Integer id, String stepName, String stepDesc, String installType) {
+    public static InstallStepVO of(Long id, String stepName, String stepDesc, String installType) {
         String displayStepName = stepName != null ? stepName : "未知步骤";
         String displayStepDesc = stepDesc != null && !stepDesc.trim().isEmpty() ? stepDesc : "暂无描述";
 
@@ -58,7 +58,7 @@ public record InstallStepVO(
     /**
      * 创建带步骤顺序的InstallStepVO
      */
-    public static InstallStepVO withOrder(Integer id, String stepName, String stepDesc,
+    public static InstallStepVO withOrder(Long id, String stepName, String stepDesc,
             String installType, Integer stepOrder) {
         InstallStepVO base = of(id, stepName, stepDesc, installType);
         return new InstallStepVO(base.id(), base.stepName(), base.stepDesc(), base.installType(),

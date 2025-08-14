@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -42,9 +43,9 @@ public record ClusterAlertRuleVO(
         Long receiverGroupId,
         String state,
         String isDelete,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted,
-        Date updateTime,
+        LocalDateTime updateTime,
         String updateTimeFormatted,
         Long clusterId) implements Serializable {
 }

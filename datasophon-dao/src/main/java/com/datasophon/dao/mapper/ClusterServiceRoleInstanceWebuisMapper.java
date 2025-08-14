@@ -40,7 +40,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
     /**
      * 根据服务实例ID查询WebUI列表
      */
-    default List<ClusterServiceRoleInstanceWebuisEntity> selectByServiceInstanceId(Integer serviceInstanceId) {
+    default List<ClusterServiceRoleInstanceWebuisEntity> selectByServiceInstanceId(Long serviceInstanceId) {
         return selectListByQuery(QueryWrapper.create()
                 .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
@@ -48,7 +48,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
     /**
      * 根据服务实例ID删除WebUI记录
      */
-    default int deleteByServiceInstanceId(Integer serviceInstanceId) {
+    default int deleteByServiceInstanceId(Long serviceInstanceId) {
         return deleteByQuery(QueryWrapper.create()
                 .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_INSTANCE_ID.eq(serviceInstanceId)));
     }
@@ -56,7 +56,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
     /**
      * 根据角色实例ID查询单个WebUI
      */
-    default ClusterServiceRoleInstanceWebuisEntity selectByServiceRoleInstanceId(Integer roleInstanceId) {
+    default ClusterServiceRoleInstanceWebuisEntity selectByServiceRoleInstanceId(Long roleInstanceId) {
         return selectOneByQuery(QueryWrapper.create()
                 .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }
@@ -64,7 +64,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
     /**
      * 根据角色实例ID列表删除WebUI记录
      */
-    default int deleteByServiceRoleInstanceIds(ArrayList<Integer> roleInstanceIds) {
+    default int deleteByServiceRoleInstanceIds(ArrayList<Long> roleInstanceIds) {
         if (roleInstanceIds == null || roleInstanceIds.isEmpty()) {
             return 0;
         }
@@ -75,7 +75,7 @@ public interface ClusterServiceRoleInstanceWebuisMapper extends BaseMapper<Clust
     /**
      * 根据角色实例ID查询WebUI列表（用于状态更新）
      */
-    default List<ClusterServiceRoleInstanceWebuisEntity> selectListByServiceRoleInstanceId(Integer roleInstanceId) {
+    default List<ClusterServiceRoleInstanceWebuisEntity> selectListByServiceRoleInstanceId(Long roleInstanceId) {
         return selectListByQuery(QueryWrapper.create()
                 .where(CLUSTER_SERVICE_ROLE_INSTANCE_WEBUIS_ENTITY.SERVICE_ROLE_INSTANCE_ID.eq(roleInstanceId)));
     }

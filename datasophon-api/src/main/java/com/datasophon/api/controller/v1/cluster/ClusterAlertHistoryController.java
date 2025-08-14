@@ -55,7 +55,7 @@ public class ClusterAlertHistoryController {
      */
     @RequestMapping("/getAlertList")
     public Result<List<ClusterAlertHistoryVO>> getAlertList(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+            @RequestParam("serviceInstanceId") Long serviceInstanceId) {
         try {
             // 调用Service层方法，获取DTO列表
             List<ClusterAlertHistoryDTO> dtoList = clusterAlertHistoryService.getAlertList(serviceInstanceId);
@@ -99,7 +99,7 @@ public class ClusterAlertHistoryController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterAlertHistoryVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterAlertHistoryVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterAlertHistoryDTO dto = clusterAlertHistoryService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

@@ -52,7 +52,7 @@ public class ClusterServiceInstanceRoleGroupEntity extends BaseEntity {
     /** */
     private String roleGroupName;
     /** */
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
     /** */
     private String serviceName;
     /** */

@@ -53,12 +53,12 @@ public class RoleEntityServiceImpl implements RoleEntityService {
     }
 
     @Override
-    public ClusterServiceRoleInstanceEntity getById(Integer id) {
+    public ClusterServiceRoleInstanceEntity getById(Long id) {
         return roleInstanceMapper.selectOneById(id);
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId) {
+    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(Long serviceId) {
         return roleInstanceMapper.selectByServiceId(serviceId);
     }
 
@@ -80,7 +80,7 @@ public class RoleEntityServiceImpl implements RoleEntityService {
     }
 
     @Override
-    public boolean updateRoleGroupId(Integer roleInstanceId, Integer roleGroupId, boolean needRestart) {
+    public boolean updateRoleGroupId(Long roleInstanceId, Long roleGroupId, boolean needRestart) {
         ClusterServiceRoleInstanceEntity roleInstance = getById(roleInstanceId);
         if (roleInstance != null) {
             roleInstance.setRoleGroupId(roleGroupId);

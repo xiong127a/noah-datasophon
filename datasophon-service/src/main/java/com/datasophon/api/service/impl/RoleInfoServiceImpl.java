@@ -91,7 +91,7 @@ public class RoleInfoServiceImpl extends ServiceImpl<RoleInfoMapper, RoleInfoEnt
     }
     
     @Override
-    public RoleInfoDTO getRoleById(Integer id) {
+    public RoleInfoDTO getRoleById(Long id) {
         log.debug("根据ID获取角色: {}", id);
         
         var roleEntity = getById(id);
@@ -140,7 +140,7 @@ public class RoleInfoServiceImpl extends ServiceImpl<RoleInfoMapper, RoleInfoEnt
     }
     
     @Override
-    public boolean checkRoleCodeExists(String roleCode, Integer excludeId) {
+    public boolean checkRoleCodeExists(String roleCode, Long excludeId) {
         log.debug("检查角色编码是否存在: roleCode={}, excludeId={}", roleCode, excludeId);
         
         // 调用DAO层方法，SQL逻辑在Mapper中处理
@@ -148,7 +148,7 @@ public class RoleInfoServiceImpl extends ServiceImpl<RoleInfoMapper, RoleInfoEnt
     }
     
     @Override
-    public void deleteRole(Integer id) {
+    public void deleteRole(Long id) {
         log.debug("删除角色: {}", id);
         
         // 检查角色是否存在

@@ -29,7 +29,7 @@ import java.util.Map;
  * @date 2025-08-04
  */
 public record ClusterTenantVO(
-        Integer id,
+        Long id,
         Long clusterId,
         String tenantName,
         Map<String, Object> hdfsResourceList,

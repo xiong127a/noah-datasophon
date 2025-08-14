@@ -21,7 +21,7 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 令牌提供者接口
@@ -83,7 +83,7 @@ public interface TokenProvider {
      * @param token JWT令牌
      * @return 过期时间
      */
-    Date getExpirationDateFromToken(String token);
+    LocalDateTime getExpirationDateFromToken(String token);
 
     /**
      * 从令牌中获取Claims

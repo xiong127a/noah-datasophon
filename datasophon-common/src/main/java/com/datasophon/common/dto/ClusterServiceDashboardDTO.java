@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterServiceDashboardDTO(
-        Integer id,
+        Long id,
         String serviceName,
         String dashboardUrl) implements Serializable {
 }

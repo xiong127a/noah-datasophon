@@ -32,7 +32,7 @@ import java.util.List;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FrameServiceRoleVO(
-        Integer id,
+        Long id,
         Integer serviceId,
         String serviceRoleName,
         Integer serviceRoleType,
@@ -163,7 +163,7 @@ public record FrameServiceRoleVO(
     /**
      * 创建基础FrameServiceRoleVO
      */
-    public static FrameServiceRoleVO of(Integer id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleVO of(Long id, Integer serviceId, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String frameCode) {
         String roleTypeText = getRoleTypeText(serviceRoleType);
         String cardinalityDesc = getCardinalityDesc(cardinality);
@@ -179,7 +179,7 @@ public record FrameServiceRoleVO(
     /**
      * 创建包含主机信息的FrameServiceRoleVO
      */
-    public static FrameServiceRoleVO withHosts(Integer id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleVO withHosts(Long id, Integer serviceId, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String serviceRoleJson, String serviceRoleJsonMd5,
             String frameCode, String jmxPort, String logFile, List<String> hosts) {
         String roleTypeText = getRoleTypeText(serviceRoleType);

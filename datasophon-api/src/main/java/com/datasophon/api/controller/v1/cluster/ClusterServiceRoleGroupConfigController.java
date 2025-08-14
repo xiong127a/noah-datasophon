@@ -60,7 +60,7 @@ public class ClusterServiceRoleGroupConfigController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterServiceRoleGroupConfigVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceRoleGroupConfigVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterServiceRoleGroupConfigDTO dto = clusterServiceRoleGroupConfigService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

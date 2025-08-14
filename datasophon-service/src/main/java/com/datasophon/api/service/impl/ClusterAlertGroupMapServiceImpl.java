@@ -54,7 +54,7 @@ public class ClusterAlertGroupMapServiceImpl extends ServiceImpl<ClusterAlertGro
     }
 
     @Override
-    public ClusterAlertGroupMapDTO getByIdAsDto(Integer id) {
+    public ClusterAlertGroupMapDTO getByIdAsDto(Long id) {
         // Service层：Entity → DTO转换
         ClusterAlertGroupMapEntity entity = this.getById(id);
         return clusterAlertGroupMapConverter.entityToDto(entity);

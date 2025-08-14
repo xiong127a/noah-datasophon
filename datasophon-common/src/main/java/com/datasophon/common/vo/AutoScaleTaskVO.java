@@ -1,5 +1,6 @@
 package com.datasophon.common.vo;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -27,8 +28,8 @@ public record AutoScaleTaskVO(
         Boolean enabled,
         String enabledDesc,
         String description,
-        Date createdAt,
-        Date updatedAt,
-        String createdAtFormatted,
-        String updatedAtFormatted) {
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createTimeFormatted,
+        String updateTimeFormatted) {
 }

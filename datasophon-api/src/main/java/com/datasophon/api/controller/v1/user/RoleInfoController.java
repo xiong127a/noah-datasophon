@@ -104,7 +104,7 @@ public class RoleInfoController {
      */
     @GetMapping("/info/{id}")
     @Timed(value = "role.info", description = "获取角色信息的时间")
-    public Result<RoleInfoVO> info(@PathVariable("id") Integer id) {
+    public Result<RoleInfoVO> info(@PathVariable("id") Long id) {
         log.debug("获取角色信息: {}", id);
         
         var roleDTO = roleInfoService.getRoleById(id);
@@ -146,7 +146,7 @@ public class RoleInfoController {
      */
     @DeleteMapping("/delete/{id}")
     @Timed(value = "role.delete", description = "删除角色的时间")
-    public Result<Object> delete(@PathVariable("id") Integer id) {
+    public Result<Object> delete(@PathVariable("id") Long id) {
         log.debug("删除角色: {}", id);
         
         roleInfoService.deleteRole(id);
@@ -159,7 +159,7 @@ public class RoleInfoController {
      */
     @DeleteMapping("/delete/batch")
     @Timed(value = "role.delete.batch", description = "批量删除角色的时间")
-    public Result<Object> deleteBatch(@RequestBody Integer[] ids) {
+    public Result<Object> deleteBatch(@RequestBody Long[] ids) {
         log.debug("批量删除角色: {}", List.of(ids)); // JDK21特性
         
         // 使用JDK21 switch表达式处理批量删除
@@ -191,7 +191,7 @@ public class RoleInfoController {
     @Timed(value = "role.check.code", description = "检查角色编码的时间")
     public Result<Boolean> checkRoleCode(
             @RequestParam("roleCode") String roleCode,
-            @RequestParam(value = "excludeId", required = false) Integer excludeId) {
+            @RequestParam(value = "excludeId", required = false) Long excludeId) {
         
         log.debug("检查角色编码是否存在: roleCode={}, excludeId={}", roleCode, excludeId);
         

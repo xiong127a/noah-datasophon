@@ -61,7 +61,7 @@ public class FrameInfoController {
      * 根据ID获取框架信息
      */
     @GetMapping("/info/{id}")
-    public Result<FrameInfoVO> info(@PathVariable("id") Integer id) {
+    public Result<FrameInfoVO> info(@PathVariable("id") Long id) {
         FrameInfoDTO frameInfoDTO = frameInfoService.getFrameInfoById(id);
         FrameInfoVO frameInfoVO = frameInfoConverter.dtoToVo(frameInfoDTO);
         return Result.success(frameInfoVO);

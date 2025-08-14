@@ -65,7 +65,7 @@ public class ClusterRackController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterRackVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterRackVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterRackDTO dto = clusterRackService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

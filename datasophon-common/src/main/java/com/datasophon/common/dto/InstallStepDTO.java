@@ -15,7 +15,7 @@ import java.io.Serializable;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record InstallStepDTO(
-        Integer id,
+        Long id,
         String stepName,
         String stepDesc,
         String installType) implements Serializable {
@@ -26,7 +26,7 @@ public record InstallStepDTO(
     /**
      * 创建基础InstallStepDTO
      */
-    public static InstallStepDTO of(Integer id, String stepName, String stepDesc, String installType) {
+    public static InstallStepDTO of(Long id, String stepName, String stepDesc, String installType) {
         return new InstallStepDTO(id, stepName, stepDesc, installType);
     }
 

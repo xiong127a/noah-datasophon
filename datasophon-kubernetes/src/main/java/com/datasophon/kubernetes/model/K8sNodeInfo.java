@@ -20,6 +20,7 @@ package com.datasophon.kubernetes.model;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -78,7 +79,7 @@ public class K8sNodeInfo {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
 
     /**
      * 节点标签

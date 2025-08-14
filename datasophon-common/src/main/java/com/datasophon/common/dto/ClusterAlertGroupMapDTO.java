@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterAlertGroupMapDTO(
-        Integer id,
+        Long id,
         Long clusterId,
         Integer alertGroupId) implements Serializable {
 }

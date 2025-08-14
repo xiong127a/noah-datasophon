@@ -40,7 +40,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +71,7 @@ public class ClusterServiceInstanceConfigServiceImpl
         private ConfigVersionInfoService configVersionInfoService;
 
         @Override
-        public ServiceInstanceConfigResultDTO getServiceInstanceConfig(Integer serviceInstanceId, Integer version,
+        public ServiceInstanceConfigResultDTO getServiceInstanceConfig(Long serviceInstanceId, Integer version,
                         Integer roleGroupId, Integer page, Integer pageSize) {
                 log.debug("获取服务实例配置: serviceInstanceId={}, version={}, roleGroupId={}", 
                          serviceInstanceId, version, roleGroupId);
@@ -99,7 +98,7 @@ public class ClusterServiceInstanceConfigServiceImpl
         }
 
         @Override
-        public ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Integer serviceId) {
+        public ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Long serviceId) {
                 log.debug("根据服务ID获取服务配置: {}", serviceId);
                 
                 var configEntity = getMapper().selectLatestConfigByServiceId(serviceId);
@@ -107,7 +106,7 @@ public class ClusterServiceInstanceConfigServiceImpl
         }
 
         @Override
-        public List<ConfigVersionDTO> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
+        public List<ConfigVersionDTO> getConfigVersion(Long serviceInstanceId, Long roleGroupId) {
                 log.debug("获取配置版本列表: serviceInstanceId={}, roleGroupId={}", serviceInstanceId, roleGroupId);
                 
                 // 获取角色组的所有配置版本
@@ -122,7 +121,7 @@ public class ClusterServiceInstanceConfigServiceImpl
                 var versionInfoList = configVersionInfoService.getVersionInfoList("ROLE_GROUP", roleGroupId);
 
                 // 创建版本详情Map (版本号 -> 版本详情) - JDK21特性
-                var versionInfoMap = versionInfoList != null && !versionInfoList.isEmpty() ?
+                Map<Integer, ConfigVersionInfoEntity> versionInfoMap = versionInfoList != null && !versionInfoList.isEmpty() ?
                         versionInfoList.stream()
                                 .collect(java.util.stream.Collectors.toMap(
                                         ConfigVersionInfoEntity::getVersion,
@@ -139,14 +138,12 @@ public class ClusterServiceInstanceConfigServiceImpl
                                         version,
                                         versionInfo != null ? versionInfo.getDescription() : null,
                                         versionInfo != null ? versionInfo.getEditor() : null,
-                                        versionInfo != null && versionInfo.getEditTime() != null ? 
-                                                LocalDateTime.ofInstant(versionInfo.getEditTime().toInstant(), 
-                                                        java.time.ZoneId.systemDefault()) : null,
+                                        versionInfo != null ? versionInfo.getEditTime() : null,
                                         versionInfo != null && versionInfo.getIsCurrent() != null ? 
                                                 versionInfo.getIsCurrent() : false
                                 );
                         })
-                        .toList(); // JDK21特性
+                        .collect(java.util.stream.Collectors.toList()); // 避免泛型推断问题
         }
         
         @Override
@@ -184,7 +181,7 @@ public class ClusterServiceInstanceConfigServiceImpl
         }
         
         @Override
-        public ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Integer id) {
+        public ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Long id) {
                 log.debug("根据ID获取服务实例配置: {}", id);
                 
                 var configEntity = getById(id);
@@ -197,17 +194,17 @@ public class ClusterServiceInstanceConfigServiceImpl
         
         @Override
         public PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
-                        Long clusterId, Integer serviceId, Integer page, Integer pageSize) {
+                        Long clusterId, Long serviceId, Integer page, Integer pageSize) {
                 log.debug("分页查询服务实例配置列表: clusterId={}, serviceId={}, page={}, pageSize={}", 
                          clusterId, serviceId, page, pageSize);
                 
                 // 调用DAO层方法，SQL逻辑在Mapper中处理
                 var pageResult = getMapper().selectConfigPageByConditions(clusterId, serviceId, page, pageSize);
                 
-                // Entity列表转DTO列表 - JDK21特性
+                // Entity列表转DTO列表 - 避免泛型推断问题
                 var dtoList = pageResult.getRecords().stream()
                         .map(configConverter::entityToDto)
-                        .toList();
+                        .collect(java.util.stream.Collectors.toList());
                 
                 return PageResult.of(dtoList, pageResult.getTotalRow(), page, pageSize);
         }

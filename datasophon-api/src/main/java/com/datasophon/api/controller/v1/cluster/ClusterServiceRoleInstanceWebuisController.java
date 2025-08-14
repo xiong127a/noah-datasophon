@@ -62,7 +62,7 @@ public class ClusterServiceRoleInstanceWebuisController {
     @GetMapping("/getWebUis")
     @Timed(value = "webuis.list", description = "获取WebUI列表的时间")
     public Result<List<ClusterServiceRoleInstanceWebuisVO>> getWebUis(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+            @RequestParam("serviceInstanceId") Long serviceInstanceId) {
         
         var threadInfo = getCurrentThreadInfo();
         log.debug("获取服务实例WebUI列表: serviceInstanceId={} - {}", serviceInstanceId, threadInfo);
@@ -83,7 +83,7 @@ public class ClusterServiceRoleInstanceWebuisController {
      */
     @GetMapping("/info/{id}")
     @Timed(value = "webuis.info", description = "获取WebUI信息的时间")
-    public Result<ClusterServiceRoleInstanceWebuisVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceRoleInstanceWebuisVO> info(@PathVariable("id") Long id) {
         log.debug("获取WebUI信息: {}", id);
         
         var webuisDTO = clusterServiceRoleInstanceWebuisService.getWebUIById(id);
@@ -127,7 +127,7 @@ public class ClusterServiceRoleInstanceWebuisController {
      */
     @DeleteMapping("/delete/{id}")
     @Timed(value = "webuis.delete", description = "删除WebUI的时间")
-    public Result<Object> delete(@PathVariable("id") Integer id) {
+    public Result<Object> delete(@PathVariable("id") Long id) {
         log.debug("删除WebUI: {}", id);
         
         clusterServiceRoleInstanceWebuisService.removeById(id);

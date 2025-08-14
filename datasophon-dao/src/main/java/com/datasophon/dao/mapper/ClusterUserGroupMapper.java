@@ -42,7 +42,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroupEntit
      * @param groupId 组ID
      * @return 用户数量
      */
-    default long countByGroupId(@Param("groupId") Integer groupId) {
+    default long countByGroupId(@Param("groupId") Long groupId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterUserGroupEntity::getGroupId).eq(groupId);
         return this.selectCountByQuery(query);
@@ -54,7 +54,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroupEntit
      * @param userId 用户ID
      * @return 删除的记录数
      */
-    default int deleteByUserId(@Param("userId") Integer userId) {
+    default int deleteByUserId(@Param("userId") Long userId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterUserGroupEntity::getUserId).eq(userId);
         return this.deleteByQuery(query);
@@ -68,7 +68,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroupEntit
      * @return 用户组关联列表
      */
     default List<ClusterUserGroupEntity> selectByUserIdAndType(
-            @Param("userId") Integer userId,
+            @Param("userId") Long userId,
             @Param("userGroupType") Integer userGroupType) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterUserGroupEntity::getUserId).eq(userId)
@@ -82,7 +82,7 @@ public interface ClusterUserGroupMapper extends BaseMapper<ClusterUserGroupEntit
      * @param groupId 组ID
      * @return 用户组关联列表
      */
-    default List<ClusterUserGroupEntity> selectByGroupId(@Param("groupId") Integer groupId) {
+    default List<ClusterUserGroupEntity> selectByGroupId(@Param("groupId") Long groupId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterUserGroupEntity::getGroupId).eq(groupId);
         return this.selectListByQuery(query);

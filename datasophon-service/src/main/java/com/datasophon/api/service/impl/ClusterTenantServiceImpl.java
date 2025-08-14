@@ -154,12 +154,12 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     @Override
-    public boolean deleteTenantById(Integer id) {
+    public boolean deleteTenantById(Long id) {
         // 检查是否有用户被授权到此租户
         List<ClusterUserTenantEntity> userTenantList = clusterUserTenantService.getListByTenantId(id);
 
         if (CollUtil.isNotEmpty(userTenantList)) {
-            List<Integer> userIds = userTenantList.stream()
+            List<Long> userIds = userTenantList.stream()
                     .map(ClusterUserTenantEntity::getUserId)
                     .toList(); // JDK21现代特性
 
@@ -182,7 +182,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     @Override
-    public ClusterTenantDTO getByIdAsDto(Integer id) {
+    public ClusterTenantDTO getByIdAsDto(Long id) {
         ClusterTenantEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterTenantConverter.entityToDto(entity) : null;
     }

@@ -11,7 +11,7 @@ import org.mapstruct.Named;
 
 /**
  * 自动伸缩任务对象转换器
- * 
+ *
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-08-01
@@ -32,8 +32,8 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
     @Mapping(target = "cronExpression", source = "cronExpression")
     @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "description", source = "description")
-    @Mapping(target = "createdAt", source = "createdAt")
-    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "createTime", source = "createTime")
+    @Mapping(target = "updateTime", source = "updateTime")
     AutoScaleTaskDTO entityToDto(AutoScaleTaskEntity entity);
 
     @Override
@@ -49,8 +49,8 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
     @Mapping(target = "cronExpression", source = "cronExpression")
     @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "description", source = "description")
-    @Mapping(target = "createdAt", source = "createdAt")
-    @Mapping(target = "updatedAt", source = "updatedAt")
+    @Mapping(target = "createTime", source = "createTime")
+    @Mapping(target = "updateTime", source = "updateTime")
     AutoScaleTaskEntity dtoToEntity(AutoScaleTaskDTO dto);
 
     @Override
@@ -71,10 +71,10 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
     @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "enabledDesc", source = "enabled", qualifiedByName = "formatEnabledStatus")
     @Mapping(target = "description", source = "description")
-    @Mapping(target = "createdAt", source = "createdAt")
-    @Mapping(target = "updatedAt", source = "updatedAt")
-    @Mapping(target = "createdAtFormatted", source = "createdAt", qualifiedByName = "formatDateTime")
-    @Mapping(target = "updatedAtFormatted", source = "updatedAt", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTime", source = "createTime")
+    @Mapping(target = "updateTime", source = "updateTime")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AutoScaleTaskVO entityToVo(AutoScaleTaskEntity entity);
 
     @Override
@@ -95,10 +95,10 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
     @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "enabledDesc", source = "enabled", qualifiedByName = "formatEnabledStatus")
     @Mapping(target = "description", source = "description")
-    @Mapping(target = "createdAt", source = "createdAt")
-    @Mapping(target = "updatedAt", source = "updatedAt")
-    @Mapping(target = "createdAtFormatted", source = "createdAt", qualifiedByName = "formatDateTime")
-    @Mapping(target = "updatedAtFormatted", source = "updatedAt", qualifiedByName = "formatDateTime")
+    @Mapping(target = "createTime", source = "createTime")
+    @Mapping(target = "updateTime", source = "updateTime")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AutoScaleTaskVO dtoToVo(AutoScaleTaskDTO dto);
 
     @Named("formatScaleType")

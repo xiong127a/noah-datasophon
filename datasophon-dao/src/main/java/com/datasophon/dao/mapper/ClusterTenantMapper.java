@@ -57,7 +57,7 @@ public interface ClusterTenantMapper extends BaseMapper<ClusterTenantEntity> {
     /**
      * 根据集群ID和租户ID列表查询租户
      */
-    default List<ClusterTenantEntity> selectByClusterIdAndIds(Long clusterId, List<Integer> tenantIds) {
+    default List<ClusterTenantEntity> selectByClusterIdAndIds(Long clusterId, List<Long> tenantIds) {
         return selectListByQuery(QueryWrapper.create()
                 .where(CLUSTER_TENANT_ENTITY.CLUSTER_ID.eq(clusterId))
                 .and(CLUSTER_TENANT_ENTITY.ID.in(tenantIds)));

@@ -49,6 +49,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -135,7 +136,7 @@ public class LoginController {
             }
             
             // 更新最后登录时间
-            user.setLastLoginTime(new Date());
+            user.setLastLoginTime(LocalDateTime.now());
 
             // 更新登录时间记录 - JDK21简化写法
             updateUserLoginTime(user, username);
@@ -178,7 +179,7 @@ public class LoginController {
      */
     private void updateUserLoginTime(UserInfoEntity user, String username) {
         try {
-            Date currentTime = new Date();
+            LocalDateTime currentTime = LocalDateTime.now();
             UserInfoEntity updateUser = new UserInfoEntity();
             updateUser.setId(user.getId());
             updateUser.setPreviousLoginTime(user.getLastLoginTime());

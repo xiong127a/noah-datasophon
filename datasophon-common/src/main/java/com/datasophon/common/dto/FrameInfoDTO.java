@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * 集群框架表数据传输对象
@@ -32,7 +31,7 @@ import java.util.List;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FrameInfoDTO(
-        Integer id,
+        Long id,
         String frameName,
         String frameCode,
         String frameVersion,
@@ -45,14 +44,14 @@ public record FrameInfoDTO(
     /**
      * 创建基础FrameInfoDTO，不包含服务列表
      */
-    public static FrameInfoDTO of(Integer id, String frameName, String frameCode, String frameVersion) {
+    public static FrameInfoDTO of(Long id, String frameName, String frameCode, String frameVersion) {
         return new FrameInfoDTO(id, frameName, frameCode, frameVersion, null);
     }
 
     /**
      * 创建完整FrameInfoDTO，包含服务列表
      */
-    public static FrameInfoDTO withServices(Integer id, String frameName, String frameCode, String frameVersion,
+    public static FrameInfoDTO withServices(Long id, String frameName, String frameCode, String frameVersion,
             Object frameServiceList) {
         return new FrameInfoDTO(id, frameName, frameCode, frameVersion, frameServiceList);
     }

@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 public class StartWorkerHandler implements DispatcherWorkerHandler {
@@ -190,7 +191,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             logger.info("服务状态: {}", result);
 
             hostInfo.setProgress(75);
-            hostInfo.setCreateTime(new Date());
+            hostInfo.setCreateTime(LocalDateTime.now());
         }
 
         logger.info("end dispatcher host agent :{}", hostInfo.getIp());

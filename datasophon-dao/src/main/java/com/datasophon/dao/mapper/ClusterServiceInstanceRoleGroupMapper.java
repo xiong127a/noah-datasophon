@@ -46,7 +46,7 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      * @return 角色组实体
      */
     default ClusterServiceInstanceRoleGroupEntity selectByServiceInstanceIdAndRoleGroupType(
-            @Param("serviceInstanceId") Integer serviceInstanceId,
+            @Param("serviceInstanceId") Long serviceInstanceId,
             @Param("roleGroupType") String roleGroupType) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId)
@@ -62,7 +62,7 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      * @param roleGroupName     角色组名称
      * @return 数量
      */
-    default long countByServiceInstanceIdAndRoleGroupName(@Param("serviceInstanceId") Integer serviceInstanceId,
+    default long countByServiceInstanceIdAndRoleGroupName(@Param("serviceInstanceId") Long serviceInstanceId,
             @Param("roleGroupName") String roleGroupName) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId)
@@ -78,7 +78,7 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      * @return 角色组列表
      */
     default List<ClusterServiceInstanceRoleGroupEntity> selectByServiceInstanceId(
-            @Param("serviceInstanceId") Integer serviceInstanceId) {
+            @Param("serviceInstanceId") Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId);
 
@@ -95,7 +95,7 @@ public interface ClusterServiceInstanceRoleGroupMapper extends BaseMapper<Cluste
      */
     default long countByRoleGroupTypeAndServiceInstanceId(
             @Param("roleGroupType") String roleGroupType,
-            @Param("serviceInstanceId") Integer serviceInstanceId) {
+            @Param("serviceInstanceId") Long serviceInstanceId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceInstanceRoleGroupEntity::getRoleGroupType).eq(roleGroupType)
                 .and(ClusterServiceInstanceRoleGroupEntity::getServiceInstanceId).eq(serviceInstanceId);

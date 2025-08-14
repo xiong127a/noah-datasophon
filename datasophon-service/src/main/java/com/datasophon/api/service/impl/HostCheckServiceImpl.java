@@ -225,7 +225,7 @@
 // CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname,
 // itemId);
 // cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
-// cacheLog.info("时间: " + formatDateToChinese(new Date()));
+// cacheLog.info("时间: " + formatDateToChinese(LocalDateTime.now()));
 //
 // // 将修复任务提交到专用队列
 // String taskId = hostCheckQueueManager.addFixTask(clusterId, hostInfo,
@@ -631,7 +631,7 @@
 // cacheLog.info("检查项ID: " + checkItem.getId());
 // cacheLog.debug("检查项代码: " + checkItem.getItemCode());
 // cacheLog.debug("集群ID: " + clusterId);
-// cacheLog.debug("执行时间: " + formatDateToChinese(new Date()));
+// cacheLog.debug("执行时间: " + formatDateToChinese(LocalDateTime.now()));
 // cacheLog.debug("执行线程: " + Thread.currentThread().getName());
 //
 // logger.debug("主机 {} 开始执行检查项 {}", hostInfo.getIp(), checkItem.getItemName());
@@ -1163,7 +1163,7 @@
 // LogEntry entry = new LogEntry();
 // entry.setMessage(line);
 // entry.setLevel(LogEntry.Level.INFO);
-// entry.setTimestamp(new Date());
+// entry.setTimestamp(LocalDateTime.now());
 // logEntries.add(entry);
 // }
 // }
@@ -1227,7 +1227,7 @@
 //
 // for (String itemId : itemNames) {
 // try {
-// Integer id = Integer.parseInt(itemId);
+// Long id = Integer.parseInt(itemId);
 //
 // // 找到检查项
 // Optional<CheckItem> optionalItem = checkItems.stream()
@@ -1394,7 +1394,7 @@
 //
 // // 添加日志头部
 // SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-// String timestamp = sdf.format(new Date());
+// String timestamp = sdf.format(LocalDateTime.now());
 // cacheLog.info("开始检查项: " + checkItem.getItemName());
 // cacheLog.info("主机: " + hostInfo.getIp());
 // cacheLog.info("检查项ID: " + checkItem.getId());
@@ -1433,7 +1433,7 @@
 // } finally {
 // cacheLog.info("===============================================");
 // cacheLog.info("检查项执行结束: " + checkItem.getItemName());
-// cacheLog.info("结束时间: " + sdf.format(new Date()));
+// cacheLog.info("结束时间: " + sdf.format(LocalDateTime.now()));
 // cacheLog.info("===============================================");
 //
 // // 重置运行状态

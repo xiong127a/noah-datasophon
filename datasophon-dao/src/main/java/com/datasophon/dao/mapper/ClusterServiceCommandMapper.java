@@ -50,7 +50,7 @@ public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCo
     /**
      * 根据服务实例ID和命令类型查询最新命令
      */
-    default ClusterServiceCommandEntity selectLatestByServiceInstanceIdAndCommandType(Integer serviceInstanceId,
+    default ClusterServiceCommandEntity selectLatestByServiceInstanceIdAndCommandType(Long serviceInstanceId,
             int commandType) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandEntity::getServiceInstanceId).eq(serviceInstanceId)

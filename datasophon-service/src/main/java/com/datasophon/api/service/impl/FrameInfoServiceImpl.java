@@ -138,7 +138,7 @@ public class FrameInfoServiceImpl extends ServiceImpl<FrameInfoMapper, FrameInfo
     }
 
     @Override
-    public FrameInfoDTO getFrameInfoById(Integer id) {
+    public FrameInfoDTO getFrameInfoById(Long id) {
         if (id == null) {
             throw new BusinessException("框架ID不能为空");
         }

@@ -50,11 +50,11 @@ public class ClusterUserGroupEntity extends BaseEntity {
     /**
      * 
      */
-    private Integer userId;
+    private Long userId;
     /**
      * 
      */
-    private Integer groupId;
+    private Long groupId;
 
     private Long clusterId;
 

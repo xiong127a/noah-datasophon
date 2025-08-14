@@ -22,11 +22,6 @@ import com.datasophon.common.dto.ClusterServiceInstanceConfigDTO;
 import com.datasophon.common.vo.ClusterServiceInstanceConfigVO;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
-
-import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 集群服务实例配置转换器
@@ -43,20 +38,16 @@ public interface ClusterServiceInstanceConfigConverter
     
     /**
      * Entity转DTO
-     * 处理Date到LocalDateTime的转换
+     * 直接映射，无需时间转换（都是LocalDateTime）
      */
     @Override
-    @Mapping(target = "createTime", source = "createTime", qualifiedByName = "dateToLocalDateTime")
-    @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "dateToLocalDateTime")
     ClusterServiceInstanceConfigDTO entityToDto(ClusterServiceInstanceConfigEntity entity);
     
     /**
      * DTO转Entity
-     * 处理LocalDateTime到Date的转换
+     * 直接映射，无需时间转换（都是LocalDateTime）
      */
     @Override
-    @Mapping(target = "createTime", source = "createTime", qualifiedByName = "localDateTimeToDate")
-    @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "localDateTimeToDate")
     ClusterServiceInstanceConfigEntity dtoToEntity(ClusterServiceInstanceConfigDTO dto);
     
     /**
@@ -75,21 +66,5 @@ public interface ClusterServiceInstanceConfigConverter
         return dtoToVo(entityToDto(entity));
     }
     
-    /**
-     * Date转LocalDateTime
-     */
-    @Named("dateToLocalDateTime")
-    default LocalDateTime dateToLocalDateTime(Date date) {
-        return date != null ? 
-            LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault()) : null;
-    }
-    
-    /**
-     * LocalDateTime转Date
-     */
-    @Named("localDateTimeToDate")
-    default Date localDateTimeToDate(LocalDateTime localDateTime) {
-        return localDateTime != null ? 
-            Date.from(localDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant()) : null;
-    }
+
 }

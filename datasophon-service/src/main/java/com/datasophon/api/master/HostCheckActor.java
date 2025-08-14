@@ -48,6 +48,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -172,7 +173,7 @@ public class HostCheckActor extends AbstractActor {
             // copy 一个新的，只更新状态
             ClusterHostEntity checkedHost = new ClusterHostEntity();
             checkedHost.setId(host.getId());
-            checkedHost.setCheckTime(new Date());
+            checkedHost.setCheckTime(LocalDateTime.now());
             try {
               // rpc 检测
               ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);

@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
  * @date 2025-08-06
  */
 public record ClusterServiceInstanceConfigDTO(
-    Integer id,
-    Integer serviceId,
+    Long id,
+    Long serviceId,
     LocalDateTime createTime,
     String configJson,
     LocalDateTime updateTime,
@@ -44,7 +44,7 @@ public record ClusterServiceInstanceConfigDTO(
      * 创建新配置DTO的静态工厂方法
      */
     public static ClusterServiceInstanceConfigDTO create(
-            Integer serviceId,
+            Long serviceId,
             Long clusterId,
             String configJson,
             String configFileJson) {

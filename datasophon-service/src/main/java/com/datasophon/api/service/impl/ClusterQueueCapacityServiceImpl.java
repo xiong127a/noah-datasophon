@@ -162,7 +162,7 @@ public class ClusterQueueCapacityServiceImpl extends ServiceImpl<ClusterQueueCap
 
     // 新增DTO方法实现
     @Override
-    public ClusterQueueCapacityDTO getByIdAsDto(Integer id) {
+    public ClusterQueueCapacityDTO getByIdAsDto(Long id) {
         ClusterQueueCapacityEntity entity = this.getById(id);
         return clusterQueueCapacityConverter.entityToDto(entity);
     }

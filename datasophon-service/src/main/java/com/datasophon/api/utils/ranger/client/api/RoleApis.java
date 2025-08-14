@@ -58,7 +58,7 @@ public class RoleApis {
         }
     }
 
-    public void addUserAndGroups(final Integer id, final Role role) throws RangerClientException {
+    public void addUserAndGroups(final Long id, final Role role) throws RangerClientException {
         try {
             String url = baseUrl + "/service/roles/roles/" + id;
             restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(role), Role.class);

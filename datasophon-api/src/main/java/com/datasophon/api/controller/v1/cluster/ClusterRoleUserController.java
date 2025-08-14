@@ -65,7 +65,7 @@ public class ClusterRoleUserController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterRoleUserVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterRoleUserVO> info(@PathVariable("id") Long id) {
         ClusterRoleUserEntity clusterRoleUser = clusterRoleUserService.getById(id);
         ClusterRoleUserVO clusterRoleUserVO = clusterRoleUserConverter.entityToVo(clusterRoleUser);
         return Result.success(clusterRoleUserVO);

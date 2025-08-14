@@ -45,7 +45,7 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     private ClusterServiceRoleGroupConfigConverter clusterServiceRoleGroupConfigConverter;
 
     @Override
-    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Integer roleGroupId) {
+    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Long roleGroupId) {
         ClusterServiceRoleGroupConfigEntity entity = getMapper().selectByRoleGroupId(roleGroupId);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
@@ -70,7 +70,7 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleGroupConfigDTO getByIdAsDto(Integer id) {
+    public ClusterServiceRoleGroupConfigDTO getByIdAsDto(Long id) {
         // Service层：Entity → DTO转换
         ClusterServiceRoleGroupConfigEntity entity = this.getById(id);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
@@ -91,12 +91,12 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Integer roleGroupId) {
+    public List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Long roleGroupId) {
         return getMapper().selectConfigVersionsByRoleGroupId(roleGroupId);
     }
 
     @Override
-    public List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId) {
+    public List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Long roleGroupId) {
         return getMapper().selectLatestTwoConfigsByRoleGroupId(roleGroupId);
     }
 }

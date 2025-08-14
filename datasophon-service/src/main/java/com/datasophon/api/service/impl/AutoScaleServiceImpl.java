@@ -40,7 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -119,9 +119,9 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
             AutoScaleTaskEntity entity = autoScaleTaskConverter.dtoToEntity(taskDTO);
 
             // 设置创建和更新时间
-            Date now = new Date();
-            entity.setCreatedAt(now);
-            entity.setUpdatedAt(now);
+            LocalDateTime now = LocalDateTime.now();
+            entity.setCreateTime(now);
+            entity.setUpdateTime(now);
 
             // 保存到数据库
             boolean success = this.save(entity);
@@ -158,7 +158,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
 
             // 转换DTO为Entity
             AutoScaleTaskEntity entity = autoScaleTaskConverter.dtoToEntity(taskDTO);
-            entity.setUpdatedAt(new Date());
+            entity.setUpdateTime(LocalDateTime.now());
 
             // 更新到数据库
             boolean success = this.updateById(entity);
@@ -250,7 +250,7 @@ public class AutoScaleServiceImpl extends ServiceImpl<AutoScaleTaskMapper, AutoS
             }
 
             entity.setEnabled(enabled);
-            entity.setUpdatedAt(new Date());
+            entity.setUpdateTime(LocalDateTime.now());
 
             boolean success = this.updateById(entity);
             if (!success) {

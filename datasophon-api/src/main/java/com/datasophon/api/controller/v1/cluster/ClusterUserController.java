@@ -72,7 +72,7 @@ public class ClusterUserController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterUserVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterUserVO> info(@PathVariable("id") Long id) {
         // 直接从Service获取Entity，然后转换为VO
         ClusterUserEntity clusterUserEntity = clusterUserService.getById(id);
         ClusterUserVO clusterUserVO = clusterUserConverter.entityToVo(clusterUserEntity);
@@ -86,7 +86,7 @@ public class ClusterUserController {
     @RequestMapping("/create")
     public Result<ClusterUserVO> save(@ClusterId Long clusterId,
             @RequestParam("username") String username,
-            @RequestParam("mainGroupId") Integer mainGroupId,
+            @RequestParam("mainGroupId") Long mainGroupId,
             @RequestParam("otherGroupIds") String otherGroupIds) {
         ClusterUserDTO clusterUserDTO = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.createClusterUser(clusterId, username, mainGroupId, otherGroupIds)
@@ -112,7 +112,7 @@ public class ClusterUserController {
      */
     @RequestMapping("/delete")
     public Result<String> delete(@ClusterId Long clusterId,
-            @RequestParam("id") Integer id) {
+            @RequestParam("id") Long id) {
         boolean success = getDepMode(clusterId) == ClusterType.PVM
                 ? clusterUserService.deleteClusterUser(id)
                 : clusterUserService.deleteClusterUserOnKubernetes(id);

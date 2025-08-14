@@ -40,21 +40,21 @@ public interface ClusterServiceRoleInstanceWebuisService extends IService<Cluste
      * @param serviceInstanceId 服务实例ID
      * @return WebUI DTO列表
      */
-    List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Integer serviceInstanceId);
+    List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Long serviceInstanceId);
 
     /**
      * 根据服务实例ID删除WebUI
      * 
      * @param serviceInstanceId 服务实例ID
      */
-    void removeByServiceInsId(Integer serviceInstanceId);
+    void removeByServiceInsId(Long serviceInstanceId);
 
     /**
      * 更新WebUI状态为活跃
      * 
      * @param roleInstanceId 角色实例ID
      */
-    void updateWebUiToActive(Integer roleInstanceId);
+    void updateWebUiToActive(Long roleInstanceId);
 
     /**
      * 根据角色实例ID获取WebUI
@@ -62,21 +62,21 @@ public interface ClusterServiceRoleInstanceWebuisService extends IService<Cluste
      * @param roleInstanceId 角色实例ID
      * @return WebUI DTO
      */
-    ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Integer roleInstanceId);
+    ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Long roleInstanceId);
 
     /**
      * 批量删除角色实例WebUI
      * 
      * @param roleInstanceIds 角色实例ID列表
      */
-    void removeByRoleInsIds(List<Integer> roleInstanceIds);
+    void removeByRoleInsIds(List<Long> roleInstanceIds);
 
     /**
      * 更新WebUI状态为待机
      * 
      * @param roleInstanceId 角色实例ID
      */
-    void updateWebUiToStandby(Integer roleInstanceId);
+    void updateWebUiToStandby(Long roleInstanceId);
 
     /**
      * 根据服务实例ID获取WebUI列表（别名方法）
@@ -84,7 +84,7 @@ public interface ClusterServiceRoleInstanceWebuisService extends IService<Cluste
      * @param serviceInstanceId 服务实例ID
      * @return WebUI DTO列表
      */
-    List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Integer serviceInstanceId);
+    List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Long serviceInstanceId);
     
     /**
      * 创建WebUI
@@ -109,5 +109,5 @@ public interface ClusterServiceRoleInstanceWebuisService extends IService<Cluste
      * @return WebUI DTO
      * @throws com.datasophon.common.exception.BusinessException WebUI不存在
      */
-    ClusterServiceRoleInstanceWebuisDTO getWebUIById(Integer id);
+    ClusterServiceRoleInstanceWebuisDTO getWebUIById(Long id);
 }

@@ -91,7 +91,7 @@ public class ClusterYarnQueueController {
      * 根据ID获取Yarn队列详情
      */
     @GetMapping("/{id}")
-    public Result<ClusterYarnQueueVO> getYarnQueueById(@PathVariable Integer id) {
+    public Result<ClusterYarnQueueVO> getYarnQueueById(@PathVariable Long id) {
         try {
             // 暂时简化实现，使用基础CRUD方法
             ClusterYarnQueueDTO dto = clusterYarnQueueConverter.entityToDto(clusterYarnQueueService.getById(id));
@@ -126,7 +126,7 @@ public class ClusterYarnQueueController {
      */
     @PutMapping("/{id}")
     public Result<ClusterYarnQueueVO> updateYarnQueue(
-            @PathVariable Integer id, @RequestBody ClusterYarnQueueVO queueVO) {
+            @PathVariable Long id, @RequestBody ClusterYarnQueueVO queueVO) {
         try {
             // 暂时简化实现，移除复杂功能
             logger.info("更新Yarn队列操作: {}", queueVO);
@@ -141,7 +141,7 @@ public class ClusterYarnQueueController {
      * 删除Yarn队列
      */
     @DeleteMapping("/{id}")
-    public Result<Void> deleteYarnQueue(@PathVariable Integer id) {
+    public Result<Void> deleteYarnQueue(@PathVariable Long id) {
         try {
             clusterYarnQueueService.removeById(id);
             return Result.success();

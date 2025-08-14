@@ -268,7 +268,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     // 基础CRUD方法实现
 
     @Override
-    public FrameServiceRoleDTO getFrameServiceRoleById(Integer id) {
+    public FrameServiceRoleDTO getFrameServiceRoleById(Long id) {
         if (id == null) {
             throw new RuntimeException("服务角色ID不能为空");
         }
@@ -329,7 +329,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     }
 
     @Override
-    public boolean removeByServiceId(Integer serviceId) {
+    public boolean removeByServiceId(Long serviceId) {
         if (serviceId == null) {
             return false;
         }

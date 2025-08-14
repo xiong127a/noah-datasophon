@@ -111,7 +111,7 @@ public interface ClusterUserMapper extends BaseMapper<ClusterUserEntity> {
      * @param userIds 用户ID列表
      * @return 用户名列表
      */
-    default List<String> selectUsernamesByIds(@Param("userIds") List<Integer> userIds) {
+    default List<String> selectUsernamesByIds(@Param("userIds") List<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return List.of();
         }

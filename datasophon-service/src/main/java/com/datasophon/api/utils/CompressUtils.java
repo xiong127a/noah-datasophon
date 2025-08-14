@@ -96,7 +96,7 @@ public class CompressUtils {
     /**
      * 压缩进度缓存,key为serviceInstanceId,value为进度值(0-100)
      */
-    private static final Map<Integer, Integer> COMPRESS_PROGRESS_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Long, Integer> COMPRESS_PROGRESS_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 获取压缩进度
@@ -104,7 +104,7 @@ public class CompressUtils {
      * @param serviceInstanceId 服务实例ID
      * @return 压缩进度(0-100)
      */
-    public static Integer getCompressProgress(Integer serviceInstanceId) {
+    public static Integer getCompressProgress(Long serviceInstanceId) {
         return COMPRESS_PROGRESS_CACHE.getOrDefault(serviceInstanceId, 0);
     }
 
@@ -114,7 +114,7 @@ public class CompressUtils {
      * @param serviceInstanceId 服务实例ID
      * @param progress          进度值(0-100)
      */
-    private static void updateCompressProgress(Integer serviceInstanceId, Integer progress) {
+    private static void updateCompressProgress(Long serviceInstanceId, Integer progress) {
         COMPRESS_PROGRESS_CACHE.put(serviceInstanceId, progress);
     }
 
@@ -123,7 +123,7 @@ public class CompressUtils {
      * 
      * @param serviceInstanceId 服务实例ID
      */
-    private static void clearCompressProgress(Integer serviceInstanceId) {
+    private static void clearCompressProgress(Long serviceInstanceId) {
         COMPRESS_PROGRESS_CACHE.remove(serviceInstanceId);
     }
 
@@ -137,7 +137,7 @@ public class CompressUtils {
      * @return 压缩后的字节数组
      */
     public static byte[] compress(Map<String, byte[]> files, CompressType type, String password,
-            Integer serviceInstanceId) {
+                                  Long serviceInstanceId) {
         if (files == null || files.isEmpty()) {
             log.warn("没有文件需要压缩");
             return new byte[0];
@@ -570,7 +570,7 @@ public class CompressUtils {
      * @return 压缩后的字节数组
      */
     public static byte[] getCompressedFiles(Map<String, byte[]> files, String format, String password,
-            Integer serviceInstanceId) {
+                                            Long serviceInstanceId) {
         CompressType type = CompressType.fromString(format);
         return compress(files, type, password, serviceInstanceId);
     }

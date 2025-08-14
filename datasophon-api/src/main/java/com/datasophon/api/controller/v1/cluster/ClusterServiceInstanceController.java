@@ -77,8 +77,8 @@ public class ClusterServiceInstanceController {
      */
     @RequestMapping("/configVersionCompare")
     public Result<Map<String, List<Map<String, Object>>>> configVersionCompare(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId,
-            @RequestParam("roleGroupId") Integer roleGroupId,
+            @RequestParam("serviceInstanceId") Long serviceInstanceId,
+            @RequestParam("roleGroupId") Long roleGroupId,
             @RequestParam("showOnlyDifferences") Boolean showOnlyDifferences) {
         Map<String, List<Map<String, Object>>> compareResult = clusterServiceInstanceService.configVersionCompare(
                 serviceInstanceId, roleGroupId, showOnlyDifferences);
@@ -89,7 +89,7 @@ public class ClusterServiceInstanceController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterServiceInstanceVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterServiceInstanceVO> info(@PathVariable("id") Long id) {
         ClusterServiceInstanceEntity clusterServiceInstance = clusterServiceInstanceService.getById(id);
         ClusterServiceInstanceVO clusterServiceInstanceVO = clusterServiceInstanceConverter
                 .entityToVo(clusterServiceInstance);
@@ -133,7 +133,7 @@ public class ClusterServiceInstanceController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<String> delete(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result<String> delete(@RequestParam("serviceInstanceId") Long serviceInstanceId) {
         boolean success = clusterServiceInstanceService.delServiceInstance(serviceInstanceId);
         return success ? Result.success("删除成功") : Result.error("删除失败");
     }
@@ -142,7 +142,7 @@ public class ClusterServiceInstanceController {
      * 获取服务连接信息
      */
     @RequestMapping("/getConnectionInfo")
-    public Result<Object> getConnectionInfo(@RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+    public Result<Object> getConnectionInfo(@RequestParam("serviceInstanceId") Long serviceInstanceId) {
         Object connectionInfo = clusterServiceInstanceService.getConnectionInfo(serviceInstanceId);
         return Result.success(connectionInfo);
     }

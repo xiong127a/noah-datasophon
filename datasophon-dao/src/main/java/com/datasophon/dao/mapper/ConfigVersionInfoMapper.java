@@ -40,7 +40,7 @@ public interface ConfigVersionInfoMapper extends BaseMapper<ConfigVersionInfoEnt
     /**
      * 根据引用类型和引用ID获取配置版本详情列表（按版本号降序）
      */
-    default List<ConfigVersionInfoEntity> selectVersionInfoList(String refType, Integer refId) {
+    default List<ConfigVersionInfoEntity> selectVersionInfoList(String refType, Long refId) {
         return selectListByQuery(QueryWrapper.create()
                 .where(CONFIG_VERSION_INFO_ENTITY.REF_TYPE.eq(refType))
                 .and(CONFIG_VERSION_INFO_ENTITY.REF_ID.eq(refId))
@@ -50,7 +50,7 @@ public interface ConfigVersionInfoMapper extends BaseMapper<ConfigVersionInfoEnt
     /**
      * 根据版本号、引用类型和引用ID获取配置版本详情
      */
-    default ConfigVersionInfoEntity selectVersionInfo(Integer version, String refType, Integer refId) {
+    default ConfigVersionInfoEntity selectVersionInfo(Integer version, String refType, Long refId) {
         return selectOneByQuery(QueryWrapper.create()
                 .where(CONFIG_VERSION_INFO_ENTITY.VERSION.eq(version))
                 .and(CONFIG_VERSION_INFO_ENTITY.REF_TYPE.eq(refType))
@@ -60,7 +60,7 @@ public interface ConfigVersionInfoMapper extends BaseMapper<ConfigVersionInfoEnt
     /**
      * 获取指定引用类型的最大版本号对应的版本信息
      */
-    default ConfigVersionInfoEntity selectLatestVersion(String refType, Integer refId) {
+    default ConfigVersionInfoEntity selectLatestVersion(String refType, Long refId) {
         return selectOneByQuery(QueryWrapper.create()
                 .where(CONFIG_VERSION_INFO_ENTITY.REF_TYPE.eq(refType))
                 .and(CONFIG_VERSION_INFO_ENTITY.REF_ID.eq(refId))
@@ -71,7 +71,7 @@ public interface ConfigVersionInfoMapper extends BaseMapper<ConfigVersionInfoEnt
     /**
      * 将指定引用类型和引用ID的所有版本设置为非当前版本
      */
-    default boolean updateAllToNonCurrent(String refType, Integer refId) {
+    default boolean updateAllToNonCurrent(String refType, Long refId) {
         return UpdateChain.of(ConfigVersionInfoEntity.class)
                 .set(ConfigVersionInfoEntity::getIsCurrent, false)
                 .where(ConfigVersionInfoEntity::getRefType).eq(refType)
@@ -82,7 +82,7 @@ public interface ConfigVersionInfoMapper extends BaseMapper<ConfigVersionInfoEnt
     /**
      * 将指定版本设置为当前版本
      */
-    default boolean updateToCurrent(Integer version, String refType, Integer refId) {
+    default boolean updateToCurrent(Integer version, String refType, Long refId) {
         return UpdateChain.of(ConfigVersionInfoEntity.class)
                 .set(ConfigVersionInfoEntity::getIsCurrent, true)
                 .where(ConfigVersionInfoEntity::getVersion).eq(version)

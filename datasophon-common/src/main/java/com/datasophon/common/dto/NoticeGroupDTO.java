@@ -17,7 +17,7 @@
 
 package com.datasophon.common.dto;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -31,7 +31,7 @@ public record NoticeGroupDTO(
         Long id,
         Long clusterId,
         String noticeGroupName,
-        Date createTime,
+        LocalDateTime createTime,
         List<Long> userIds) {
 
     /**
@@ -42,7 +42,7 @@ public record NoticeGroupDTO(
                 null,
                 clusterId,
                 noticeGroupName,
-                new Date(),
+                LocalDateTime.now(),
                 userIds);
     }
 

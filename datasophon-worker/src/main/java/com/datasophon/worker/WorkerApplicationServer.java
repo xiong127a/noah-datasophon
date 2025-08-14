@@ -193,7 +193,7 @@ public class WorkerApplicationServer {
 
         // 解析收集到的主机信息
         startWorkerMessage.setCpuArchitecture(cpuArchitecture);
-        startWorkerMessage.setClusterId(PropertyUtils.getInt("clusterId"));
+        startWorkerMessage.setClusterId(PropertyUtils.getLong("clusterId"));
         startWorkerMessage.setHostname(hostname);
 
         // 从配置文件中读取IP并设置
@@ -221,7 +221,7 @@ public class WorkerApplicationServer {
                 // 复制原消息作为心跳消息
                 StartWorkerMessage heartbeatMessage = new StartWorkerMessage();
                 heartbeatMessage.setHostname(hostname);
-                heartbeatMessage.setClusterId(PropertyUtils.getInt("clusterId"));
+                heartbeatMessage.setClusterId(PropertyUtils.getLong("clusterId"));
 
                 // 确保心跳消息也包含IP信息
                 heartbeatMessage.setIp(hostIp);

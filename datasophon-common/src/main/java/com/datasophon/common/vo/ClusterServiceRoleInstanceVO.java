@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -29,15 +30,15 @@ import java.util.Date;
  * @date 2025-01-01
  */
 public record ClusterServiceRoleInstanceVO(
-        Integer id,
+        Long id,
         String serviceRoleName,
         String hostname,
         Integer serviceRoleState,
         String serviceRoleStateText,
         Integer serviceRoleStateCode,
-        Date updateTime,
+        LocalDateTime updateTime,
         String updateTimeFormatted,
-        Date createTime,
+        LocalDateTime createTime,
         String createTimeFormatted,
         Integer serviceId,
         Integer roleType,

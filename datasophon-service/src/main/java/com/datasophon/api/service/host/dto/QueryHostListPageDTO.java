@@ -3,16 +3,17 @@ package com.datasophon.api.service.host.dto;
 import com.datasophon.common.enums.ManagementStatus;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
 public class QueryHostListPageDTO {
 
-    private Integer id;
+    private Long id;
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
     /**
      * 主机名
      */

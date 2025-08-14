@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群Yarn队列DTO
@@ -29,7 +29,7 @@ import java.util.Date;
  * @date 2025-08-04
  */
 public record ClusterYarnQueueDTO(
-        Integer id,
+        Long id,
         String queueName,
         Integer minCore,
         Integer minMem,
@@ -40,7 +40,7 @@ public record ClusterYarnQueueDTO(
         String schedulePolicy,
         Integer allowPreemption,
         Long clusterId,
-        Date createTime,
+        LocalDateTime createTime,
         String amShare,
         String minResources,
         String maxResources) implements Serializable {

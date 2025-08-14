@@ -35,7 +35,7 @@ public interface RoleGroupEntityService {
      * @param id 角色组ID
      * @return 角色组
      */
-    ClusterServiceInstanceRoleGroupEntity getById(Integer id);
+    ClusterServiceInstanceRoleGroupEntity getById(Long id);
 
     /**
      * 将角色实例绑定到角色组
@@ -44,7 +44,7 @@ public interface RoleGroupEntityService {
      * @param roleGroupId     角色组ID
      * @throws RuntimeException 绑定失败时抛出异常
      */
-    void bindRoleInstances(String roleInstanceIds, Integer roleGroupId);
+    void bindRoleInstances(String roleInstanceIds, Long roleGroupId);
 
     /**
      * 更新角色组的需要重启标志
@@ -52,5 +52,5 @@ public interface RoleGroupEntityService {
      * @param roleGroupId 角色组ID
      * @return 是否更新成功
      */
-    boolean updateToNeedRestart(Integer roleGroupId);
+    boolean updateToNeedRestart(Long roleGroupId);
 }

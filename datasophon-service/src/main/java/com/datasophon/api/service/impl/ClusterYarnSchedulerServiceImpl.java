@@ -68,7 +68,7 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
     }
 
     @Override
-    public ClusterYarnSchedulerDTO getByIdAsDto(Integer id) {
+    public ClusterYarnSchedulerDTO getByIdAsDto(Long id) {
         ClusterYarnSchedulerEntity entity = getById(id);
         return Objects.nonNull(entity) ? clusterYarnSchedulerConverter.entityToDto(entity) : null;
     }
@@ -88,7 +88,7 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
     }
 
     @Override
-    public boolean deleteScheduler(Integer id) {
+    public boolean deleteScheduler(Long id) {
         return removeById(id);
     }
 }

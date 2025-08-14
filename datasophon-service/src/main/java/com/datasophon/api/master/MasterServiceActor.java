@@ -93,7 +93,7 @@ public class MasterServiceActor extends AbstractActor {
                 }
                 new ExecResult();
                 ExecResult execResult;
-                Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
+                Long serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
                 ClusterServiceRoleInstanceDTO serviceRoleInstance = roleInstanceService.getOneServiceRole(
                         serviceRoleInfo.getName(),
                         serviceRoleInfo.getHostname(),
@@ -103,7 +103,7 @@ public class MasterServiceActor extends AbstractActor {
                         serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
                 boolean needReConfig = false;
                 if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
-                    Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
+                    Long roleGroupId = (Long) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                     ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
                     // 使用MapStruct Converter进行转换 - 符合架构规范
                     ClusterServiceRoleGroupConfigConverter converter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);

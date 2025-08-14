@@ -50,7 +50,7 @@ public interface ClusterQueueCapacityService extends IService<ClusterQueueCapaci
     /**
      * 根据ID获取队列容量DTO
      */
-    ClusterQueueCapacityDTO getByIdAsDto(Integer id);
+    ClusterQueueCapacityDTO getByIdAsDto(Long id);
 
     /**
      * 保存队列容量DTO

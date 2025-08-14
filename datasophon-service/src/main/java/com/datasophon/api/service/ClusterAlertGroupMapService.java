@@ -47,7 +47,7 @@ public interface ClusterAlertGroupMapService extends IService<ClusterAlertGroupM
      * @param id 告警组映射ID
      * @return 告警组映射DTO
      */
-    ClusterAlertGroupMapDTO getByIdAsDto(Integer id);
+    ClusterAlertGroupMapDTO getByIdAsDto(Long id);
 
     /**
      * 保存告警组映射

@@ -73,7 +73,7 @@ public class WorkerServiceActor extends AbstractActor {
 
                     ServiceRoleInfo serviceRoleInfo = executeServiceRoleCommand.getWorkerRole();
                     ExecResult execResult = new ExecResult();
-                    Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
+                    Long serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
                     ClusterServiceRoleInstanceDTO serviceRoleInstance = roleInstanceService.getOneServiceRole(
                             serviceRoleInfo.getName(),
                             serviceRoleInfo.getHostname(),
@@ -81,7 +81,7 @@ public class WorkerServiceActor extends AbstractActor {
                     Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
                     boolean needReConfig = false;
                     if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
-                        Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
+                        Long roleGroupId = (Long) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                         ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService
                                 .getConfigByRoleGroupId(roleGroupId);
                         ClusterServiceRoleGroupConfigEntity config = roleGroupConfigConverter.dtoToEntity(configDto);

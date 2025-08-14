@@ -41,7 +41,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param serviceInstanceId 服务实例ID
      * @return 角色组DTO
      */
-    ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Integer serviceInstanceId);
+    ClusterServiceInstanceRoleGroupDTO getRoleGroupByServiceInstanceId(Long serviceInstanceId);
 
     /**
      * 保存角色组
@@ -50,7 +50,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param roleGroupId       角色组ID
      * @param roleGroupName     角色组名称
      */
-    void saveRoleGroup(Integer serviceInstanceId, Integer roleGroupId, String roleGroupName);
+    void saveRoleGroup(Long serviceInstanceId, Long roleGroupId, String roleGroupName);
 
     /**
      * 绑定角色实例到角色组
@@ -59,7 +59,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param roleGroupId     角色组ID
      * @return 是否绑定成功
      */
-    boolean bind(String roleInstanceIds, Integer roleGroupId);
+    boolean bind(String roleInstanceIds, Long roleGroupId);
 
     /**
      * 根据服务ID获取角色组配置
@@ -67,7 +67,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param serviceId 服务ID
      * @return 角色组配置DTO
      */
-    ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Integer serviceId);
+    ClusterServiceRoleGroupConfigDTO getRoleGroupConfigByServiceId(Long serviceId);
 
     /**
      * 重命名角色组
@@ -92,14 +92,14 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param serviceInstanceId 服务实例ID
      * @return 角色组DTO列表
      */
-    List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Integer serviceInstanceId);
+    List<ClusterServiceInstanceRoleGroupDTO> listRoleGroupByServiceInstanceId(Long serviceInstanceId);
 
     /**
      * 更新角色组为需要重启状态
      * 
      * @param roleGroupId 角色组ID
      */
-    void updateToNeedRestart(Integer roleGroupId);
+    void updateToNeedRestart(Long roleGroupId);
 
     // 基础CRUD方法已由IService提供
 }

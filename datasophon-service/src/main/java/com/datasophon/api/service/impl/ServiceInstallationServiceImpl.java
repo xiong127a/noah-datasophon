@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -128,8 +128,8 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             clusterServiceInstance.setServiceName(serviceRoleInfo.getParentName());
             clusterServiceInstance.setServiceState(ServiceState.RUNNING);
             clusterServiceInstance.setServiceStateCode(ServiceState.RUNNING.getValue());
-            clusterServiceInstance.setCreateTime(new Date());
-            clusterServiceInstance.setUpdateTime(new Date());
+            clusterServiceInstance.setCreateTime(LocalDateTime.now());
+            clusterServiceInstance.setUpdateTime(LocalDateTime.now());
             serviceInstanceService.save(clusterServiceInstance);
 
             // save config - 使用Entity方式
@@ -143,15 +143,15 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             configEntity.setConfigJson(config);
             configEntity.setConfigJsonMd5(SecureUtil.md5(config));
             configEntity.setConfigVersion(1);
-            configEntity.setCreateTime(new Date());
-            configEntity.setUpdateTime(new Date());
+            configEntity.setCreateTime(LocalDateTime.now());
+            configEntity.setUpdateTime(LocalDateTime.now());
             serviceInstanceConfigService.save(configEntity);
         } else {
             // 更新现有服务实例 - 使用MapStruct转换器
             clusterServiceInstance = serviceInstanceConverter.dtoToEntity(clusterServiceInstanceDTO);
             clusterServiceInstance.setServiceState(ServiceState.RUNNING);
             clusterServiceInstance.setServiceStateCode(ServiceState.RUNNING.getValue());
-            clusterServiceInstance.setUpdateTime(new Date()); // JDK21特性
+            clusterServiceInstance.setUpdateTime(LocalDateTime.now()); // JDK21特性
             serviceInstanceService.updateById(clusterServiceInstance);
         }
 
@@ -165,12 +165,12 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             ClusterServiceRoleInstanceEntity roleInstance = new ClusterServiceRoleInstanceEntity();
             roleInstance.setServiceId(clusterServiceInstance.getId());
             roleInstance.setRoleType(CommonUtils.convertRoleType(serviceRoleInfo.getRoleType().getName()));
-            roleInstance.setCreateTime(new Date());
+            roleInstance.setCreateTime(LocalDateTime.now());
             roleInstance.setHostname(serviceRoleInfo.getHostname());
             roleInstance.setClusterId(serviceRoleInfo.getClusterId());
             roleInstance.setServiceRoleName(serviceRoleInfo.getName());
             roleInstance.setServiceRoleState(ServiceRoleState.RUNNING);
-            roleInstance.setUpdateTime(new Date());
+            roleInstance.setUpdateTime(LocalDateTime.now());
             roleInstance.setServiceName(serviceRoleInfo.getParentName());
             roleInstance.setRoleGroupId(roleGroup.getId());
             roleInstance.setNeedRestart(NeedRestart.NO);
@@ -199,10 +199,10 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         ClusterInfoEntity cluster = clusterInfoConverter.dtoToEntity(clusterDTO);
 
         clusterHostEntity.setClusterId(cluster.getId());
-        clusterHostEntity.setCheckTime(new Date());
+        clusterHostEntity.setCheckTime(LocalDateTime.now());
         clusterHostEntity.setRack("/default-rack");
         clusterHostEntity.setNodeLabel("default");
-        clusterHostEntity.setCreateTime(new Date());
+        clusterHostEntity.setCreateTime(LocalDateTime.now());
         clusterHostEntity.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostEntity.setHostState(HostState.RUNNING);
         clusterHostEntity.setManagementStatus(ManagementStatus.MANAGED);

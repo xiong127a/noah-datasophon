@@ -37,5 +37,5 @@ public interface RoleGroupQueryService extends IService<ClusterServiceInstanceRo
      * @param id 角色组ID
      * @return 角色组DTO
      */
-    ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Integer id);
+    ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Long id);
 }

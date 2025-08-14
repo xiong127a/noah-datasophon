@@ -39,7 +39,7 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param roleGroupId 角色组ID
      * @return 配置DTO
      */
-    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Integer roleGroupId);
+    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupId(Long roleGroupId);
 
     /**
      * 根据角色组ID和版本号获取配置
@@ -71,7 +71,7 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param id 配置ID
      * @return 配置DTO
      */
-    ClusterServiceRoleGroupConfigDTO getByIdAsDto(Integer id);
+    ClusterServiceRoleGroupConfigDTO getByIdAsDto(Long id);
 
     /**
      * 保存配置
@@ -93,7 +93,7 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param roleGroupId 角色组ID
      * @return 配置列表
      */
-    List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Integer roleGroupId);
+    List<ClusterServiceRoleGroupConfigEntity> getConfigVersionsByRoleGroupId(Long roleGroupId);
 
     /**
      * 根据角色组ID获取最新的两个配置版本（用于版本比较）
@@ -101,5 +101,5 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param roleGroupId 角色组ID
      * @return 最新的两个配置版本列表
      */
-    List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Integer roleGroupId);
+    List<ClusterServiceRoleGroupConfigEntity> getLatestTwoConfigsByRoleGroupId(Long roleGroupId);
 }

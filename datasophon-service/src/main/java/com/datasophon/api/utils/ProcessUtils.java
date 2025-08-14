@@ -231,7 +231,7 @@ public class ProcessUtils {
      * HDFS EC方法 - 临时保留，待进一步重构到专用Service
      * TODO: 将此方法迁移到HDFS相关的Service中
      */
-    public static void hdfsEcMethond(Integer serviceInstanceId, java.util.TreeSet<String> hosts,
+    public static void hdfsEcMethond(Long serviceInstanceId, java.util.TreeSet<String> hosts,
             String type, String roleName) {
         logger.warn("hdfsEcMethond called - this method needs to be migrated to HDFS service");
         logger.debug("Parameters: serviceInstanceId={}, hosts={}, type={}, roleName={}",

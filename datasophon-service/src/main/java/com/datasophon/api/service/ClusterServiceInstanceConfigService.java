@@ -48,7 +48,7 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @return 服务实例配置结果DTO
      */
     ServiceInstanceConfigResultDTO getServiceInstanceConfig(
-            Integer serviceInstanceId, Integer version, Integer roleGroupId,
+            Long serviceInstanceId, Integer version, Integer roleGroupId,
             Integer page, Integer pageSize);
 
     /**
@@ -57,7 +57,7 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @param serviceId 服务ID
      * @return 服务实例配置DTO
      */
-    ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Integer serviceId);
+    ClusterServiceInstanceConfigDTO getServiceConfigByServiceId(Long serviceId);
 
     /**
      * 获取配置版本列表
@@ -66,7 +66,7 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @param roleGroupId       角色组ID
      * @return 配置版本DTO列表
      */
-    List<ConfigVersionDTO> getConfigVersion(Integer serviceInstanceId, Integer roleGroupId);
+    List<ConfigVersionDTO> getConfigVersion(Long serviceInstanceId, Long roleGroupId);
     
     /**
      * 创建服务实例配置
@@ -91,7 +91,7 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @return 配置DTO
      * @throws com.datasophon.common.exception.BusinessException 配置不存在
      */
-    ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Integer id);
+    ClusterServiceInstanceConfigDTO getServiceInstanceConfigById(Long id);
     
     /**
      * 分页查询服务实例配置列表
@@ -103,5 +103,5 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @return 分页结果
      */
     PageResult<ClusterServiceInstanceConfigDTO> getServiceInstanceConfigListByPage(
-            Long clusterId, Integer serviceId, Integer page, Integer pageSize);
+            Long clusterId, Long serviceId, Integer page, Integer pageSize);
 }

@@ -81,7 +81,7 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
     /**
      * 根据ID获取服务信息
      */
-    FrameServiceDTO getFrameServiceById(Integer id);
+    FrameServiceDTO getFrameServiceById(Long id);
 
     /**
      * 保存服务信息
@@ -101,7 +101,7 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
     /**
      * 删除单个服务（包含文件清理）
      */
-    boolean removeFrameServiceById(Integer id);
+    boolean removeFrameServiceById(Long id);
 
     /**
      * 检查服务是否被集群实例使用
@@ -109,5 +109,5 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
      * @param serviceId 服务ID
      * @return 如果被使用返回true，否则返回false
      */
-    boolean isServiceInUse(Integer serviceId);
+    boolean isServiceInUse(Long serviceId);
 }

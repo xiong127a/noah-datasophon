@@ -230,7 +230,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     @Override
-    public boolean deleteUserGroup(Integer id) {
+    public boolean deleteUserGroup(Long id) {
         ClusterGroupEntity clusterGroupEntity = this.getById(id);
         if (clusterGroupEntity == null) {
             throw new RuntimeException("Group not found with id: " + id);
@@ -263,7 +263,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     @Override
-    public boolean deleteUserGroupOnKubernetes(Integer id) {
+    public boolean deleteUserGroupOnKubernetes(Long id) {
         ClusterGroupEntity clusterGroupEntity = this.getById(id);
         if (clusterGroupEntity == null) {
             throw new RuntimeException("Group not found with id: " + id);
@@ -373,7 +373,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     @Override
-    public ClusterGroupDTO getByIdAsDto(Integer id) {
+    public ClusterGroupDTO getByIdAsDto(Long id) {
         // Service层：Entity → DTO转换
         ClusterGroupEntity entity = this.getById(id);
         return clusterGroupConverter.entityToDto(entity);

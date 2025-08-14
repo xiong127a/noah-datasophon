@@ -71,7 +71,7 @@ public class AlertGroupController {
      * 获取告警组详情
      */
     @GetMapping("/info/{id}")
-    public Result<AlertGroupVO> info(@PathVariable("id") Integer id) {
+    public Result<AlertGroupVO> info(@PathVariable("id") Long id) {
         AlertGroupDTO alertGroupDTO = alertGroupService.getAlertGroupById(id);
 
         if (alertGroupDTO == null) {

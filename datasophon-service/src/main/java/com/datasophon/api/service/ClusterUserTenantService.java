@@ -18,20 +18,20 @@ public interface ClusterUserTenantService extends IService<ClusterUserTenantEnti
     /**
      * 租户策略授权给当前用户
      */
-    void addUserToTenant(Long clusterId, Integer userId, String tenantIds);
+    void addUserToTenant(Long clusterId, Long userId, String tenantIds);
 
     /**
      * 删除用户授权
      */
-    void deleteUser(Long clusterId, Integer userId, String tenantIds);
+    void deleteUser(Long clusterId, Long userId, String tenantIds);
 
     /**
      * 获取授权列表
      */
-    List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Integer userId);
+    List<ClusterUserTenantEntity> getListByUserId(Long clusterId, Long userId);
 
     /**
      * 根据租户ID获取用户租户关系列表
      */
-    List<ClusterUserTenantEntity> getListByTenantId(Integer tenantId);
+    List<ClusterUserTenantEntity> getListByTenantId(Long tenantId);
 }

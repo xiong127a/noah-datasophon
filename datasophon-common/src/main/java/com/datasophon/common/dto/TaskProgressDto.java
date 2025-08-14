@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 任务进度数据传输对象
@@ -71,12 +71,12 @@ public class TaskProgressDto implements Serializable {
     /**
      * 开始时间
      */
-    private Date startTime;
+    private LocalDateTime startTime;
 
     /**
      * 结束时间
      */
-    private Date endTime;
+    private LocalDateTime endTime;
 
     /**
      * 错误信息
@@ -106,7 +106,7 @@ public class TaskProgressDto implements Serializable {
                 .status("COMPLETED")
                 .progress(100)
                 .currentStep("任务完成")
-                .endTime(new Date())
+                .endTime(LocalDateTime.now())
                 .build();
     }
 
@@ -119,7 +119,7 @@ public class TaskProgressDto implements Serializable {
                 .status("FAILED")
                 .currentStep("任务失败")
                 .errorMessage(errorMessage)
-                .endTime(new Date())
+                .endTime(LocalDateTime.now())
                 .build();
     }
 }

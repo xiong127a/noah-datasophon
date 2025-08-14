@@ -41,7 +41,7 @@ public interface RoleEntityService {
      * @param id 服务角色实例ID
      * @return 服务角色实例
      */
-    ClusterServiceRoleInstanceEntity getById(Integer id);
+    ClusterServiceRoleInstanceEntity getById(Long id);
 
     /**
      * 根据服务ID获取服务角色实例列表
@@ -49,7 +49,7 @@ public interface RoleEntityService {
      * @param serviceId 服务ID
      * @return 服务角色实例列表
      */
-    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(int serviceId);
+    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceId(Long serviceId);
 
     /**
      * 根据服务角色名称、主机名和集群ID获取服务角色实例
@@ -78,7 +78,7 @@ public interface RoleEntityService {
      * @param needRestart    是否需要重启
      * @return 是否更新成功
      */
-    boolean updateRoleGroupId(Integer roleInstanceId, Integer roleGroupId, boolean needRestart);
+    boolean updateRoleGroupId(Long roleInstanceId, Long roleGroupId, boolean needRestart);
 
     /**
      * 更新角色实例信息

@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -277,7 +278,7 @@ public class ClusterAlertQuotaServiceImpl
     @Override
     public ClusterAlertQuotaEntity saveAlertQuota(ClusterAlertQuotaEntity clusterAlertQuotaEntity) {
         clusterAlertQuotaEntity.setQuotaState(QuotaState.STOPPED);
-        clusterAlertQuotaEntity.setCreateTime(new Date());
+        clusterAlertQuotaEntity.setCreateTime(LocalDateTime.now());
 
         // 获取告警组信息并设置服务类别
         AlertGroupEntity alertGroupEntity = alertGroupService.getById(clusterAlertQuotaEntity.getAlertGroupId());

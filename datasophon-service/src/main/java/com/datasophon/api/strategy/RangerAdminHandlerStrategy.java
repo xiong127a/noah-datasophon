@@ -188,7 +188,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 .toList();
 
         if (CollUtil.isNotEmpty(roleList)) {
-            Integer roleGroupId = roleList.getFirst().getRoleGroupId();
+            Long roleGroupId = roleList.getFirst().getRoleGroupId();
 
             ClusterServiceRoleGroupConfigDTO configDto = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
             ClusterServiceRoleGroupConfigConverter configConverter = SpringUtil.getBean(ClusterServiceRoleGroupConfigConverter.class);
@@ -243,7 +243,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             logger.info("Update hdfs enable ranger plugin");
             serviceInstallService.saveServiceConfig(clusterId, serviceInstance.getServiceName(), serviceConfigs,
-                    roleGroupId, "(AUTO) Update hdfs enable ranger plugin",-1,"system");
+                    roleGroupId, "(AUTO) Update hdfs enable ranger plugin",-1L,"system");
         }
     }
 }

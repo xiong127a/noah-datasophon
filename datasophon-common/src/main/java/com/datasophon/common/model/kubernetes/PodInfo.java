@@ -19,6 +19,7 @@ package com.datasophon.common.model.kubernetes;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class PodInfo {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private LocalDateTime createTime;
 
     /**
      * 容器列表

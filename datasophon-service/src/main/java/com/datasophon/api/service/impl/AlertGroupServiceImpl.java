@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -147,7 +148,7 @@ public class AlertGroupServiceImpl
 
         // 转换为Entity并设置创建时间
         AlertGroupEntity alertGroupEntity = alertGroupConverter.dtoToEntity(alertGroupDTO);
-        alertGroupEntity.setCreateTime(new Date());
+        alertGroupEntity.setCreateTime(LocalDateTime.now());
 
         // 保存告警组
         this.save(alertGroupEntity);
@@ -163,7 +164,7 @@ public class AlertGroupServiceImpl
     }
 
     @Override
-    public AlertGroupDTO getAlertGroupById(Integer id) {
+    public AlertGroupDTO getAlertGroupById(Long id) {
         AlertGroupEntity entity = this.getById(id);
         return entity != null ? alertGroupConverter.entityToDto(entity) : null;
     }

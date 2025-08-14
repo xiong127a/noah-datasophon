@@ -51,7 +51,7 @@ public class NoticeGroupUserController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result info(@PathVariable("id") Integer id) {
+    public Result info(@PathVariable("id") Long id) {
         NoticeGroupUserEntity noticeGroupUser = noticeGroupUserService.getById(id);
 
         return Result.success().put("noticeGroupUser", noticeGroupUser);

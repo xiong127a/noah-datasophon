@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-01-01
  */
 public record ClusterRoleUserVO(
-        Integer id,
+        Long id,
         Long clusterId,
         Integer userType,
         String userTypeText,

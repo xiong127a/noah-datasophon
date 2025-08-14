@@ -81,7 +81,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
         QueryWrapper query = QueryWrapper.create()
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
-                .and(AuthTokenEntity::getExpiresAt).gt(new Date())
+                .and(AuthTokenEntity::getExpiresAt).gt(LocalDateTime.now())
                 .orderBy(AuthTokenEntity::getIssuedAt, false);
         return this.selectListByQuery(query);
     }
@@ -149,7 +149,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
      * @param lastAccessTime 最后访问时间
      * @return 更新是否成功
      */
-    default boolean updateLastAccessTime(@Param("id") Long id, @Param("lastAccessTime") Date lastAccessTime) {
+    default boolean updateLastAccessTime(@Param("id") Long id, @Param("lastAccessTime") LocalDateTime lastAccessTime) {
         return UpdateChain.of(AuthTokenEntity.class)
                 .set(AuthTokenEntity::getLastAccessTime, lastAccessTime)
                 .set(AuthTokenEntity::getUpdateTime, LocalDateTime.now())
@@ -188,7 +188,7 @@ public interface AuthTokenMapper extends BaseMapper<AuthTokenEntity> {
         long count = QueryChain.of(AuthTokenEntity.class)
                 .where(AuthTokenEntity::getUserId).eq(userId)
                 .and(AuthTokenEntity::getIsRevoked).eq(false)
-                .and(AuthTokenEntity::getExpiresAt).gt(new Date())
+                .and(AuthTokenEntity::getExpiresAt).gt(LocalDateTime.now())
                 .count();
         return (int) count;
     }

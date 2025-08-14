@@ -81,7 +81,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @return 配置文件列表
      */
     @Override
-    public List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
+    public List<ConfigFile> getServiceConfigFiles(Long serviceInstanceId) {
         // 获取服务实例信息
         try {
             // 获取服务元数据信息
@@ -153,7 +153,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @param serviceInstanceId 服务实例ID
      * @return 服务元数据信息
      */
-    private ServiceMetaInfo getServiceMetaInfo(Integer serviceInstanceId) {
+    private ServiceMetaInfo getServiceMetaInfo(Long serviceInstanceId) {
         try {
             // 获取服务相关信息
             ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
@@ -228,7 +228,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @return 压缩文件内容
      */
     @Override
-    public byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format, String password) {
+    public byte[] getAllServiceConfigFiles(Long serviceInstanceId, String format, String password) {
         // 直接获取文件名和内容的映射
         Map<String, byte[]> configFilesWithContent = getServiceConfigFilesWithContent(serviceInstanceId);
 
@@ -248,7 +248,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @return 打包进度（0-100）
      */
     @Override
-    public Integer getCompressProgress(Integer serviceInstanceId) {
+    public Integer getCompressProgress(Long serviceInstanceId) {
         // 从CompressUtils获取进度
         return CompressUtils.getCompressProgress(serviceInstanceId);
     }
@@ -260,7 +260,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @return 服务名称
      */
     @Override
-    public String getServiceName(Integer serviceInstanceId) {
+    public String getServiceName(Long serviceInstanceId) {
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
         return serviceInstance != null ? serviceInstance.getServiceName() : "unknown";
     }
@@ -271,7 +271,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @param serviceInstanceId 服务实例ID
      * @return 配置文件名和内容的映射
      */
-    public Map<String, byte[]> getServiceConfigFilesWithContent(Integer serviceInstanceId) {
+    public Map<String, byte[]> getServiceConfigFilesWithContent(Long serviceInstanceId) {
         // 默认实现：基于已有方法获取配置文件列表，然后逐个获取内容
         Map<String, byte[]> result = new HashMap<>();
         List<ConfigFile> configFiles = getServiceConfigFiles(serviceInstanceId);
@@ -288,7 +288,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     }
 
     @Override
-    public byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName) {
+    public byte[] getServiceConfigFileContent(Long serviceInstanceId, String fileName) {
         // 生成缓存键
         String cacheKey = serviceInstanceId + "_" + fileName;
 
@@ -321,7 +321,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
      * @param fileName          文件名
      * @return 文件内容
      */
-    public byte[] generateConfigFileContent(Integer serviceInstanceId, String fileName) {
+    public byte[] generateConfigFileContent(Long serviceInstanceId, String fileName) {
         try {
             // 获取服务元数据信息
             ServiceMetaInfo metaInfo = getServiceMetaInfo(serviceInstanceId);

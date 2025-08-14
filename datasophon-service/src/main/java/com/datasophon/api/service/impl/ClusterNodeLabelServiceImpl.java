@@ -252,7 +252,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     // 新增DTO方法实现
     @Override
-    public ClusterNodeLabelDTO getByIdAsDto(Integer id) {
+    public ClusterNodeLabelDTO getByIdAsDto(Long id) {
         ClusterNodeLabelEntity entity = this.getById(id);
         return clusterNodeLabelConverter.entityToDto(entity);
     }

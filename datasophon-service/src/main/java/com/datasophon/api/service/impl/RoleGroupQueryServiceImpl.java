@@ -44,7 +44,7 @@ public class RoleGroupQueryServiceImpl
     private ClusterServiceInstanceRoleGroupConverter converter;
 
     @Override
-    public ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Integer id) {
+    public ClusterServiceInstanceRoleGroupDTO getByIdAsDto(Long id) {
         ClusterServiceInstanceRoleGroupEntity entity = this.getById(id);
         if (entity == null) {
             return null;

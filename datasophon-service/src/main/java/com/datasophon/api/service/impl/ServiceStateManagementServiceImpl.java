@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Objects;
 
@@ -94,8 +95,8 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
                     .clusterId(roleInstanceDto.clusterId())
                     .alertGroupName(roleInstanceDto.serviceName().toLowerCase())
                     .alertTargetName(alertTargetName)
-                    .createTime(new Date())
-                    .updateTime(new Date())
+                    .createTime(LocalDateTime.now())
+                    .updateTime(LocalDateTime.now())
                     .alertLevel(alertLevel)
                     .alertInfo("")
                     .alertAdvice(alertAdvice)

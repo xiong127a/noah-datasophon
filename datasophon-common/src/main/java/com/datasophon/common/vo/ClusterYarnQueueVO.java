@@ -28,7 +28,7 @@ import java.io.Serializable;
  * @date 2025-08-04
  */
 public record ClusterYarnQueueVO(
-        Integer id,
+        Long id,
         String queueName,
         Integer minCore,
         Integer minMem,

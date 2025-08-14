@@ -60,7 +60,7 @@ public class ClusterUserGroupController {
      * 信息
      */
     @RequestMapping("/info/{id}")
-    public Result<ClusterUserGroupVO> info(@PathVariable("id") Integer id) {
+    public Result<ClusterUserGroupVO> info(@PathVariable("id") Long id) {
         // 调用Service层方法，获取DTO
         ClusterUserGroupDTO dto = clusterUserGroupService.getByIdAsDto(id);
         // Controller层：DTO → VO转换

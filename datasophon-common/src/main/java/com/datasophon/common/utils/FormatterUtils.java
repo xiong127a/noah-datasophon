@@ -21,6 +21,7 @@ import lombok.experimental.UtilityClass;
 import org.mapstruct.Named;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -44,7 +45,7 @@ public class FormatterUtils {
      * @return 格式化后的日期字符串 "yyyy-MM-dd HH:mm:ss"
      */
     @Named("formatDateTime")
-    public static String formatDateTime(Date date) {
+    public static String formatDateTime(LocalDateTime date) {
         if (date == null) {
             return null;
         }

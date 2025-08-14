@@ -52,7 +52,7 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     private static final String STANDBY = "(Standby)";
 
     @Override
-    public List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Integer serviceInstanceId) {
+    public List<ClusterServiceRoleInstanceWebuisDTO> getWebUis(Long serviceInstanceId) {
         log.debug("根据服务实例ID获取WebUI列表: {}", serviceInstanceId);
         
         // 调用DAO层方法，获取Entity列表
@@ -65,17 +65,17 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     @Override
-    public void removeByServiceInsId(Integer serviceInstanceId) {
+    public void removeByServiceInsId(Long serviceInstanceId) {
         getMapper().deleteByServiceInstanceId(serviceInstanceId);
     }
 
     @Override
-    public void updateWebUiToActive(Integer roleInstanceId) {
+    public void updateWebUiToActive(Long roleInstanceId) {
         updateWebUiName(roleInstanceId, ACTIVE);
     }
 
     @Override
-    public ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Integer roleInstanceId) {
+    public ClusterServiceRoleInstanceWebuisDTO getRoleInstanceWebUi(Long roleInstanceId) {
         log.debug("根据角色实例ID获取WebUI: {}", roleInstanceId);
         
         var webuisEntity = getMapper().selectByServiceRoleInstanceId(roleInstanceId);
@@ -83,25 +83,25 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
 
     @Override
-    public void removeByRoleInsIds(List<Integer> roleInstanceIds) {
+    public void removeByRoleInsIds(List<Long> roleInstanceIds) {
         log.debug("批量删除角色实例WebUI: {}", roleInstanceIds);
         getMapper().deleteByServiceRoleInstanceIds(new java.util.ArrayList<>(roleInstanceIds));
     }
 
     @Override
-    public void updateWebUiToStandby(Integer roleInstanceId) {
+    public void updateWebUiToStandby(Long roleInstanceId) {
         updateWebUiName(roleInstanceId, STANDBY);
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Integer serviceInstanceId) {
+    public List<ClusterServiceRoleInstanceWebuisDTO> listWebUisByServiceInstanceId(Long serviceInstanceId) {
         log.debug("根据服务实例ID获取WebUI列表（别名方法）: {}", serviceInstanceId);
         
         // 复用getWebUis方法
         return getWebUis(serviceInstanceId);
     }
 
-    private void updateWebUiName(Integer roleInstanceId, String state) {
+    private void updateWebUiName(Long roleInstanceId, String state) {
         List<ClusterServiceRoleInstanceWebuisEntity> webuisList = getMapper()
                 .selectListByServiceRoleInstanceId(roleInstanceId);
 
@@ -171,7 +171,7 @@ public class ClusterServiceRoleInstanceWebuisServiceImpl
     }
     
     @Override
-    public ClusterServiceRoleInstanceWebuisDTO getWebUIById(Integer id) {
+    public ClusterServiceRoleInstanceWebuisDTO getWebUIById(Long id) {
         log.debug("根据ID获取WebUI: {}", id);
         
         var webuisEntity = getById(id);

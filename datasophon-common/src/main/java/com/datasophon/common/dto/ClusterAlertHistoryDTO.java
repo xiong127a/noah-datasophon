@@ -18,7 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 集群告警历史数据传输对象
@@ -29,7 +29,7 @@ import java.util.Date;
  * @date 2025-08-04
  */
 public record ClusterAlertHistoryDTO(
-        Integer id,
+        Long id,
         String alertGroupName,
         String alertTargetName,
         String alertInfo,
@@ -37,9 +37,9 @@ public record ClusterAlertHistoryDTO(
         String hostname,
         Integer alertLevel,
         Integer isEnabled,
-        Integer serviceRoleInstanceId,
-        Integer serviceInstanceId,
-        Date createTime,
-        Date updateTime,
+        Long serviceRoleInstanceId,
+        Long serviceInstanceId,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
         Long clusterId) implements Serializable {
 }
