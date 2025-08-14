@@ -114,7 +114,7 @@ export interface ServiceConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cluster: {
-    id: number
+    id: string
     clusterName: string
     depType?: string
   }

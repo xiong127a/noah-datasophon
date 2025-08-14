@@ -51,7 +51,7 @@ class DropdownManager {
 }
 
 export interface HostInfo {
-  id: string | number
+  id: string
   hostname: string
   ip: string
   cpuCore?: number

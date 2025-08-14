@@ -119,12 +119,12 @@ import Image from "next/image"
 
 // 集群类型定义
 interface ClusterManager {
-  id: string | number;
+  id: string;
   username: string;
 }
 
 interface ClusterItem {
-  id: string | number;
+  id: string;
   clusterName: string;
   clusterCode?: string;
   clusterFrame?: string;
@@ -592,7 +592,7 @@ export default function ClusterListEnhanced() {
     }
   };
 
-  const deleteCluster = async (clusterId: string | number) => {
+  const deleteCluster = async (clusterId: string) => {
     try {
       const response = await apiClient.post(API_PATHS.CLUSTER_DELETE, [clusterId]);
       
@@ -842,7 +842,7 @@ export default function ClusterListEnhanced() {
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -854,7 +854,7 @@ export default function ClusterListEnhanced() {
           open={setupDialogOpen}
           onOpenChange={setSetupDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -869,7 +869,7 @@ export default function ClusterListEnhanced() {
           open={hostValidationDialogOpen}
           onOpenChange={setHostValidationDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -888,7 +888,7 @@ export default function ClusterListEnhanced() {
           open={hostValidationDialogOpen}
           onOpenChange={setHostValidationDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -908,7 +908,7 @@ export default function ClusterListEnhanced() {
           open={agentDeploymentDialogOpen}
           onOpenChange={setAgentDeploymentDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -930,7 +930,7 @@ export default function ClusterListEnhanced() {
           open={serviceSelectionDialogOpen}
           onOpenChange={setServiceSelectionDialogOpen}
           cluster={setupCluster ? {
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || '',
             clusterCode: setupCluster.clusterCode || ''
@@ -955,7 +955,7 @@ export default function ClusterListEnhanced() {
           open={masterRoleAssignDialogOpen}
           onClose={() => setMasterRoleAssignDialogOpen(false)}
           cluster={{
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             name: setupCluster.clusterName,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || ''
@@ -981,7 +981,7 @@ export default function ClusterListEnhanced() {
           open={workerRoleAssignDialogOpen}
           onOpenChange={setWorkerRoleAssignDialogOpen}
           cluster={{
-            id: typeof setupCluster.id === 'string' ? parseInt(setupCluster.id) : setupCluster.id,
+            id: setupCluster.id,
             clusterName: setupCluster.clusterName,
             depType: setupCluster.depType || ''
           }}
@@ -1005,7 +1005,7 @@ export default function ClusterListEnhanced() {
           open={serviceConfigDialogOpen}
           onOpenChange={setServiceConfigDialogOpen}
           cluster={{
-            id: typeof setupCluster!.id === 'string' ? parseInt(setupCluster!.id) : setupCluster!.id,
+            id: setupCluster!.id,
             clusterName: setupCluster!.clusterName,
             depType: setupCluster!.depType || ''
           }}
@@ -1028,7 +1028,7 @@ export default function ClusterListEnhanced() {
           open={serviceInstallDialogOpen}
           onOpenChange={setServiceInstallDialogOpen}
           cluster={{
-            id: typeof setupCluster!.id === 'string' ? parseInt(setupCluster!.id) : setupCluster!.id,
+            id: setupCluster!.id,
             clusterName: setupCluster!.clusterName,
             depType: setupCluster!.depType || ''
           }}

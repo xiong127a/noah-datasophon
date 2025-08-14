@@ -73,7 +73,7 @@ export interface AgentDeploymentDialogProps {
   onOpenChange: (open: boolean) => void
   /** 集群信息 */
   cluster: {
-    id: number
+    id: string
     clusterName: string
     depType: string
     clusterCode: string

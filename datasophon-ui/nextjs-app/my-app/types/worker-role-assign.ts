@@ -3,7 +3,7 @@ import type { HostInfo } from './step5'
 export interface WorkerRoleAssignDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  cluster: { id: number; clusterName: string; depType?: string } | null
+  cluster: { id: string; clusterName: string; depType?: string } | null
   clusterType: string
   step4Data: Step4Data | null
   onComplete: (step6Data: Step6Data) => void

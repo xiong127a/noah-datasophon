@@ -47,7 +47,7 @@ interface ClusterAuthorizationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   clusterName?: string
-  clusterId?: string | number
+  clusterId?: string
 }
 
 export default function ClusterAuthorizationDialogSuper({

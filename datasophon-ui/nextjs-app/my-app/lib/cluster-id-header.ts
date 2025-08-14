@@ -9,13 +9,13 @@ export const CLUSTER_ID_HEADER = 'X-Cluster-Id'
  * 当前活动的集群ID
  * 可以通过 setCurrentClusterId 设置，通过 getCurrentClusterId 获取
  */
-let currentClusterId: number | null = null
+let currentClusterId: string | null = null
 
 /**
  * 设置当前活动的集群ID
  * @param clusterId 集群ID
  */
-export function setCurrentClusterId(clusterId: number | null) {
+export function setCurrentClusterId(clusterId: string | null) {
   currentClusterId = clusterId
   // 可选：将集群ID保存到localStorage或sessionStorage
   if (typeof window !== 'undefined') {
@@ -31,12 +31,12 @@ export function setCurrentClusterId(clusterId: number | null) {
  * 获取当前活动的集群ID
  * @returns 集群ID或null
  */
-export function getCurrentClusterId(): number | null {
+export function getCurrentClusterId(): string | null {
   // 如果内存中没有，尝试从sessionStorage恢复
   if (currentClusterId === null && typeof window !== 'undefined') {
     const stored = sessionStorage.getItem('currentClusterId')
     if (stored) {
-      currentClusterId = parseInt(stored, 10)
+      currentClusterId = stored
     }
   }
   return currentClusterId
@@ -49,7 +49,7 @@ export function getCurrentClusterId(): number | null {
  * @returns 包含集群ID的请求头对象
  */
 export function createClusterHeaders(
-  clusterId?: number | null,
+  clusterId?: string | null,
   additionalHeaders: Record<string, string> = {}
 ): Record<string, string> {
   const clusterIdToUse = clusterId ?? getCurrentClusterId()
@@ -70,7 +70,7 @@ export function createClusterHeaders(
  * @param clusterId 可选的集群ID，如果不提供则使用当前活动的集群ID
  * @returns 仅包含集群ID的请求头对象
  */
-export function getClusterIdHeader(clusterId?: number | null): Record<string, string> {
+export function getClusterIdHeader(clusterId?: string | null): Record<string, string> {
   const clusterIdToUse = clusterId ?? getCurrentClusterId()
   
   if (clusterIdToUse === null) {
@@ -87,9 +87,9 @@ export function getClusterIdHeader(clusterId?: number | null): Record<string, st
  * @param clusterId 可选的集群ID，如果不提供则检查当前活动的集群ID
  * @returns 是否设置了有效的集群ID
  */
-export function hasValidClusterId(clusterId?: number | null): boolean {
+export function hasValidClusterId(clusterId?: string | null): boolean {
   const clusterIdToUse = clusterId ?? getCurrentClusterId()
-  return clusterIdToUse !== null && clusterIdToUse > 0
+  return clusterIdToUse !== null && clusterIdToUse.trim() !== '' && clusterIdToUse !== '-1'
 }
 
 /**
@@ -97,7 +97,7 @@ export function hasValidClusterId(clusterId?: number | null): boolean {
  * @param clusterId 可选的集群ID，如果不提供则检查当前活动的集群ID
  * @throws Error 如果没有设置有效的集群ID
  */
-export function ensureClusterId(clusterId?: number | null): number {
+export function ensureClusterId(clusterId?: string | null): string {
   const clusterIdToUse = clusterId ?? getCurrentClusterId()
   
   if (!hasValidClusterId(clusterIdToUse)) {
@@ -122,10 +122,7 @@ export function extractAndSetClusterIdFromUrl(searchParams: URLSearchParams | st
   
   const clusterIdStr = params.get('clusterId')
   if (clusterIdStr) {
-    const clusterId = parseInt(clusterIdStr, 10)
-    if (!isNaN(clusterId)) {
-      setCurrentClusterId(clusterId)
-    }
+    setCurrentClusterId(clusterIdStr)
   }
 }
 
@@ -144,7 +141,7 @@ export function clearCurrentClusterId() {
  */
 export function createApiConfig<T extends { headers?: Record<string, string> }>(
   config: T = {} as T,
-  clusterId?: number | null
+  clusterId?: string | null
 ): T {
   const clusterHeaders = getClusterIdHeader(clusterId)
   

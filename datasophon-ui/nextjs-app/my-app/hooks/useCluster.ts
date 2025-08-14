@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 
 export interface ClusterInfo {
-  id: number
+  id: string
   name: string
   clusterName: string
   isK8s?: boolean
@@ -27,7 +27,7 @@ export const useCluster = () => {
     }
 
     return {
-      id: Number(clusterId),
+      id: clusterId,
       name: clusterName,
       clusterName: clusterName,
       // 这里可以从localStorage获取更多集群详细信息
