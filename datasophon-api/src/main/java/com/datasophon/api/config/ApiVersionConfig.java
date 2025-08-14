@@ -55,6 +55,8 @@ public class ApiVersionConfig implements WebMvcConfigurer {
                             // 移除原有定义并注册新定义
                             registry.removeBeanDefinition(beanName);
                             registry.registerBeanDefinition(beanName, customDefinition);
+                            
+                            System.out.println("=== 已替换RequestMappingHandlerMapping为VersionedRequestMappingHandlerMapping ===");
                         }
                         break;
                     }
@@ -77,16 +79,32 @@ public class ApiVersionConfig implements WebMvcConfigurer {
     
     /**
      * 配置资源处理器
-     * 确保API路径不被静态资源处理器拦截
+     * 明确排除/api/**路径被ResourceHttpRequestHandler处理
+     * 确保API路径优先被Controller处理而不是静态资源处理器
      */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 确保/api/**路径不被当作静态资源处理
-        // 这样可以避免API请求被ResourceHttpRequestHandler拦截
+        // 明确配置静态资源路径，避免与API路径冲突
+        // 静态资源只处理明确指定的路径，不处理/api/**
         registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static/");
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true);
         
         registry.addResourceHandler("/public/**")
-                .addResourceLocations("classpath:/public/");
+                .addResourceLocations("classpath:/public/")
+                .resourceChain(true);
+                
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/")
+                .resourceChain(true);
+        
+        // 明确配置根路径下的静态文件，但排除/api/**
+        registry.addResourceHandler("/*.html", "/*.ico", "/*.css", "/*.js")
+                .addResourceLocations("classpath:/static/", "classpath:/public/")
+                .resourceChain(true);
+        
+        // 关键：设置资源处理器的优先级低于API HandlerMapping
+        // 这样API请求会优先被Controller处理
+        registry.setOrder(Integer.MAX_VALUE);
     }
 }

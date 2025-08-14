@@ -2,6 +2,8 @@ package com.datasophon.api.config;
 
 import com.datasophon.api.annotation.ApiVersion;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
@@ -17,13 +19,19 @@ import java.lang.reflect.Method;
  */
 public class VersionedRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
     
+    private static final Logger logger = LoggerFactory.getLogger(VersionedRequestMappingHandlerMapping.class);
     private static final String API_PREFIX = "api";
     
     @Override
     public void afterPropertiesSet() {
         // 设置最高优先级，确保在ResourceHttpRequestHandler之前被处理
+        // ResourceHttpRequestHandler的默认优先级通常是Integer.MAX_VALUE - 1
+        // 我们设置为最高优先级确保API请求优先处理
         setOrder(Ordered.HIGHEST_PRECEDENCE);
         super.afterPropertiesSet();
+        
+        // 添加调试信息
+        logger.info("VersionedRequestMappingHandlerMapping initialized with order: {}", getOrder());
     }
     
     @Override
