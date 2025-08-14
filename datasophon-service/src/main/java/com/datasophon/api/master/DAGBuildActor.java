@@ -109,7 +109,7 @@ public class DAGBuildActor extends AbstractActor {
                     ServiceNode serviceNode = new ServiceNode();
 
                     List<ClusterServiceCommandHostCommandDTO> hostCommandList = hostCommandService
-                            .getHostCommandListByCommandId(command.commandId());
+                            .getHostCommandListByCommandId(command.id());
 
                     FrameServiceDTO serviceDto = frameService.getServiceByFrameCodeAndServiceName(
                             clusterInfo.clusterFrame(), command.serviceName());
@@ -118,7 +118,7 @@ public class DAGBuildActor extends AbstractActor {
                     FrameServiceEntity serviceEntity = serviceConverter.dtoToEntity(serviceDto);
                     frameServiceList.add(serviceEntity);
 
-                    serviceNode.setCommandId(command.commandId());
+                    serviceNode.setCommandId(command.id());
                     for (ClusterServiceCommandHostCommandDTO hostCommand : hostCommandList) {
                         logger.info("service role is {}", hostCommand.serviceRoleName());
                         FrameServiceRoleDTO frameServiceRoleDto = frameServiceRoleService
