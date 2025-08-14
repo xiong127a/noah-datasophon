@@ -112,7 +112,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     const params: Record<string, any> = {
       pageSize: pagination.pageSize,
       page: pagination.current,
-      clusterId: cluster.id,
+      // 注意：clusterId从请求头传递，不需要在params中
     }
     
     if (currentPage === 2) params.commandId = commandId
@@ -129,7 +129,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
     try {
       const headers = createClusterHeaders(cluster.id)
-      const response = await apiV1.post(apiPath, params, { headers })
+      
+      // 根据不同页面使用不同的HTTP方法
+      const response = currentPage === 1
+        ? await apiV1.get(apiPath, { headers, params }) // GET方法，参数作为查询参数
+        : await apiV1.post(apiPath, params, { headers }) // 其他页面仍使用POST方法
       
       if (response.data?.code === 200) {
         setDataSource(response.data.data || [])

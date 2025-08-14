@@ -49,8 +49,8 @@ public class FormatterUtils {
         if (date == null) {
             return null;
         }
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return formatter.format(date);
+        // 使用LocalDateTime的格式化器，而不是SimpleDateFormat
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**
