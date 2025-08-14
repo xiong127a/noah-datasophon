@@ -17,6 +17,7 @@
 
 package com.datasophon.api.converter;
 
+import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.common.vo.FrameServiceRoleVO;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
@@ -30,7 +31,7 @@ import java.util.List;
 
 /**
  * 框架服务角色转换器
- * 负责FrameServiceRoleEntity、FrameServiceRoleDTO、FrameServiceRoleVO之间的转换
+ * 继承BaseConverter，提供标准转换能力
  * 特别处理RoleType枚举和运行时计算的hosts字段
  *
  * @author 任相鹏
@@ -40,23 +41,26 @@ import java.util.List;
 @Mapper(componentModel = "spring",
         unmappedSourcePolicy = ReportingPolicy.IGNORE,
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface FrameServiceRoleConverter {
+public interface FrameServiceRoleConverter extends BaseConverter<FrameServiceRoleEntity, FrameServiceRoleDTO, FrameServiceRoleVO> {
 
     /**
-     * Entity转换为DTO
+     * Entity转换为DTO - 重写BaseConverter方法以添加特殊映射
      */
+    @Override
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
     FrameServiceRoleDTO entityToDto(FrameServiceRoleEntity entity);
 
     /**
-     * DTO转换为Entity
+     * DTO转换为Entity - 重写BaseConverter方法以添加特殊映射
      */
+    @Override
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "integerToRoleType")
     FrameServiceRoleEntity dtoToEntity(FrameServiceRoleDTO dto);
 
     /**
-     * DTO转换为VO，添加前端展示优化字段
+     * DTO转换为VO - 重写BaseConverter方法，添加前端展示优化字段
      */
+    @Override
     @Mapping(target = "serviceRoleTypeText", source = "serviceRoleType", qualifiedByName = "getRoleTypeText")
     @Mapping(target = "cardinalityDescription", source = "cardinality", qualifiedByName = "getCardinalityDescription")
     @Mapping(target = "hostsCount", source = "hosts", qualifiedByName = "getHostsCount")
@@ -68,25 +72,18 @@ public interface FrameServiceRoleConverter {
     FrameServiceRoleVO dtoToVo(FrameServiceRoleDTO dto);
 
     /**
+     * Entity转换为VO - 重写BaseConverter方法，通过DTO中转以复用映射逻辑
+     */
+    @Override
+    default FrameServiceRoleVO entityToVo(FrameServiceRoleEntity entity) {
+        return dtoToVo(entityToDto(entity));
+    }
+
+    /**
      * VO转换为DTO
      */
     @Mapping(target = "hosts", source = "hosts")
     FrameServiceRoleDTO voToDto(FrameServiceRoleVO vo);
-
-    /**
-     * Entity列表转换为DTO列表
-     */
-    List<FrameServiceRoleDTO> entityListToDtoList(List<FrameServiceRoleEntity> entities);
-
-    /**
-     * DTO列表转换为VO列表
-     */
-    List<FrameServiceRoleVO> dtoListToVoList(List<FrameServiceRoleDTO> dtos);
-
-    /**
-     * DTO列表转换为Entity列表
-     */
-    List<FrameServiceRoleEntity> dtoListToEntityList(List<FrameServiceRoleDTO> dtos);
 
     /**
      * RoleType枚举转换为Integer
@@ -144,14 +141,12 @@ public interface FrameServiceRoleConverter {
         if (cardinality == null || cardinality.isEmpty()) {
             return "未指定";
         }
-        if ("1".equals(cardinality)) {
-            return "单实例";
-        } else if ("1+".equals(cardinality)) {
-            return "一个或多个实例";
-        } else if ("0+".equals(cardinality)) {
-            return "零个或多个实例";
-        }
-        return cardinality;
+        return switch (cardinality) {
+            case "1" -> "单实例";
+            case "1+" -> "一个或多个实例";
+            case "0+" -> "零个或多个实例";
+            default -> cardinality;
+        };
     }
 
     /**
@@ -171,9 +166,9 @@ public interface FrameServiceRoleConverter {
             return "暂无主机";
         }
         if (hosts.size() == 1) {
-            return hosts.get(0);
+            return hosts.getFirst();
         }
-        return hosts.get(0) + " 等 " + hosts.size() + " 台主机";
+        return hosts.getFirst() + " 等 " + hosts.size() + " 台主机";
     }
 
     /**
