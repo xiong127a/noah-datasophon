@@ -83,12 +83,12 @@ export interface SaveServiceRoleHostMappingResponse {
 
 // API 请求参数类型
 export interface GetServiceRoleListParams {
-  clusterId: number
+  clusterId: string
   serviceIds: string
   /** 1: Master角色, 2: Worker角色, 3: Client角色 */
   serviceRoleType: number
 }
 
 export interface GetAllHostParams {
-  clusterId: number
+  clusterId: string
 }

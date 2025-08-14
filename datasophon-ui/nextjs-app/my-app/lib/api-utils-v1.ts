@@ -80,7 +80,7 @@ export const clusterApiV1 = {
   // 集群信息
   info: {
     runningList: () => apiV1.post(API_PATHS_V1.CLUSTER_RUNNING_LIST, {}),
-    detail: (clusterId: number) => apiV1.get(`${API_PATHS_V1.CLUSTER_DETAIL}/${clusterId}`),
+    detail: (clusterId: string) => apiV1.get(`${API_PATHS_V1.CLUSTER_DETAIL}/${clusterId}`),
   },
 
   // 集群配置
@@ -90,7 +90,7 @@ export const clusterApiV1 = {
       return apiV1.post(API_PATHS_V1.CLUSTER_NAMESPACES, { kubeConfigContent })
     },
     // 保存Kubernetes配置
-    saveKubeConfig: (clusterId: number, kubeConfigContent: string, namespace: string, customNamespace?: string) => {
+    saveKubeConfig: (clusterId: string, kubeConfigContent: string, namespace: string, customNamespace?: string) => {
       const config = { headers: createClusterHeaders(clusterId) };
       return apiV1.post(API_PATHS_V1.CLUSTER_KUBE_CONFIG, { 
         kubeConfig: kubeConfigContent, 
@@ -180,7 +180,7 @@ export const clusterApiV1 = {
     // 重试主机环境校验
     retry: (params: {
       hostnames: string
-      clusterId: number
+      clusterId: string
       sshUser: string
       sshPort: string
     }) => apiV1.post(API_PATHS_V1.REHOST_CHECK, params),
@@ -309,13 +309,14 @@ export const clusterApiV1 = {
     },
 
     /** 保存服务角色主机映射 */
-    saveMapping: async (clusterId: number, mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
-      const response = await apiV1.post(`${API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2}/${clusterId}`, mappings)
+    saveMapping: async (clusterId: string, mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2, mappings, { headers })
       return response.data
     },
 
     /** 获取非Master角色列表 (Step6) */
-    getNonMasterRoleList: async (clusterId: number, serviceIds: string): Promise<any> => {
+    getNonMasterRoleList: async (clusterId: string, serviceIds: string): Promise<any> => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.get(API_PATHS_V1.GET_NON_MASTER_ROLE_LIST, {
         serviceIds
@@ -327,14 +328,14 @@ export const clusterApiV1 = {
   // Agent分发相关 API (Step3)
   agent: {
     /** 开始Agent分发 */
-    startDistribution: async (clusterId: number, hostIds: number[]) => {
+    startDistribution: async (clusterId: string, hostIds: number[]) => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.START_AGENT_DISTRIBUTION, { hostIds }, { headers })
       return response.data
     },
 
     /** 获取Agent分发状态 */
-    getDistributionStatus: async (clusterId: number, taskId?: string) => {
+    getDistributionStatus: async (clusterId: string, taskId?: string) => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.get(API_PATHS_V1.GET_AGENT_DISTRIBUTION_STATUS, 
         taskId ? { taskId } : {}, { headers })
@@ -342,14 +343,14 @@ export const clusterApiV1 = {
     },
 
     /** 重试失败的Agent分发 */
-    retryDistribution: async (clusterId: number, hostIds: number[]) => {
+    retryDistribution: async (clusterId: string, hostIds: number[]) => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.RETRY_AGENT_DISTRIBUTION, { hostIds }, { headers })
       return response.data
     },
 
     /** 取消Agent分发 */
-    cancelDistribution: async (clusterId: number, taskId: string) => {
+    cancelDistribution: async (clusterId: string, taskId: string) => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.CANCEL_AGENT_DISTRIBUTION, { taskId }, { headers })
       return response.data
