@@ -104,10 +104,10 @@ public class ServiceInstallController {
     /**
      * 保存服务角色与主机对应关系
      */
-    @PostMapping("/saveServiceRoleHostMapping/{clusterId}")
+    @PostMapping("/saveServiceRoleHostMapping")
     @Timed(value = "service.install.role.host.mapping.save", description = "保存服务角色主机映射的时间")
-    public Result<Boolean> saveServiceRoleHostMapping(@RequestBody List<ServiceRoleHostMapping> list,
-                                                     @PathVariable("clusterId") Long clusterId) {
+    public Result<Boolean> saveServiceRoleHostMapping(@ClusterId Long clusterId,
+                                                     @RequestBody List<ServiceRoleHostMapping> list) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("保存服务角色主机映射: clusterId={}, mappingCount={} - {}", 
                  clusterId, list.size(), threadInfo);
@@ -133,9 +133,9 @@ public class ServiceInstallController {
     /**
      * 保存主机与服务角色对应关系
      */
-    @PostMapping("/saveHostServiceRoleMapping/{clusterId}")
+    @PostMapping("/saveHostServiceRoleMapping")
     @Timed(value = "service.install.host.role.mapping.save", description = "保存主机服务角色映射的时间")
-    public Result<String> saveHostServiceRoleMapping(@PathVariable("clusterId") Long clusterId,
+    public Result<String> saveHostServiceRoleMapping(@ClusterId Long clusterId,
                                                     @RequestBody List<HostServiceRoleMapping> list) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("保存主机服务角色映射: clusterId={}, mappingCount={} - {}", 

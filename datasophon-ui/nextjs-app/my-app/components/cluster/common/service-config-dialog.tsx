@@ -264,6 +264,76 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
   }
 
+  // 保存服务角色主机映射（修复缺失步骤）
+  const saveServiceRoleHostMapping = async (): Promise<void> => {
+    if (!cluster?.id) {
+      throw new Error('缺少集群ID')
+    }
+
+    // 从 step6Data 中提取角色主机映射数据
+    const stepData = typedStep6Data as unknown as Record<string, unknown>
+    const roleHostMappings = stepData?.roleHostMappings as Array<{
+      serviceName?: string
+      serviceRole: string
+      hostname: string
+      [key: string]: unknown
+    }> || []
+
+    if (!roleHostMappings || roleHostMappings.length === 0) {
+      console.warn('未找到角色主机映射数据，可能影响服务安装')
+      return
+    }
+
+    // 转换数据格式：将角色主机映射转换为API期望的格式
+    const mappingMap = new Map<string, string[]>()
+    
+    roleHostMappings.forEach(mapping => {
+      const serviceRole = mapping.serviceRole
+      const hostname = mapping.hostname
+      
+      if (serviceRole && hostname) {
+        if (!mappingMap.has(serviceRole)) {
+          mappingMap.set(serviceRole, [])
+        }
+        const hosts = mappingMap.get(serviceRole)!
+        if (!hosts.includes(hostname)) {
+          hosts.push(hostname)
+        }
+      }
+    })
+
+    // 构建API请求数据
+    const requestData = Array.from(mappingMap.entries()).map(([serviceRole, hosts]) => ({
+      serviceRole,
+      hosts
+    }))
+
+    if (requestData.length === 0) {
+      console.warn('转换后的映射数据为空，可能影响服务安装')
+      return
+    }
+
+    try {
+      const headers = createClusterHeaders(cluster.id)
+      const response = await apiV1.post(
+        API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2, 
+        requestData, 
+        { headers }
+      )
+      
+      if (response.data?.code === 200) {
+        console.log('服务角色主机映射保存成功')
+      } else {
+        throw new Error(response.data?.message || '保存服务角色主机映射失败')
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      const errorMsg = err.response?.data?.message || err.message || '保存服务角色主机映射失败'
+      console.error('保存服务角色主机映射失败:', errorMsg)
+      throw new Error(errorMsg)
+    }
+  }
+
   // 生成安装命令
   const generateInstallCommand = async (): Promise<string> => {
     if (!cluster?.id) {
@@ -299,6 +369,9 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       
       // 保存所有配置
       await saveAllConfigurations()
+      
+      // 保存服务角色主机映射（修复缺失步骤）
+      await saveServiceRoleHostMapping()
       
       // 生成安装命令
       const commandIds = await generateInstallCommand()
