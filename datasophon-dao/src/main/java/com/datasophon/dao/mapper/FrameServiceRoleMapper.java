@@ -41,7 +41,7 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
          * @param serviceRoleType 服务角色类型，可为null
          * @return 服务角色列表
          */
-        default List<FrameServiceRoleEntity> selectByServiceIdsAndRoleType(@Param("serviceIds") List<Integer> serviceIds,
+        default List<FrameServiceRoleEntity> selectByServiceIdsAndRoleType(@Param("serviceIds") List<Long> serviceIds,
                         @Param("serviceRoleType") Integer serviceRoleType) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceId).in(serviceIds);
@@ -91,7 +91,7 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
          * @param serviceIds 服务ID列表
          * @return 非MASTER角色列表
          */
-        default List<FrameServiceRoleEntity> selectNonMasterRoles(@Param("serviceIds") List<Integer> serviceIds) {
+        default List<FrameServiceRoleEntity> selectNonMasterRoles(@Param("serviceIds") List<Long> serviceIds) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceRoleType).ne(1)
                                 .and(FrameServiceRoleEntity::getServiceId).in(serviceIds);

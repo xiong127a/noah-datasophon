@@ -74,11 +74,11 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         }
 
         // 分割服务ID字符串为列表并转换为Integer
-        List<Integer> ids = Arrays.stream(serviceIds.split(","))
+        List<Long> ids = Arrays.stream(serviceIds.split(","))
                 .filter(id -> !id.trim().isEmpty())
                 .map(id -> {
                     try {
-                        return Integer.parseInt(id.trim());
+                        return Long.parseLong(id.trim());
                     } catch (NumberFormatException e) {
                         log.warn("无效的服务ID: {}", id);
                         return null;
@@ -203,11 +203,11 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         }
 
         // 分割服务ID字符串为列表并转换为Integer
-        List<Integer> ids = Arrays.stream(serviceIds.split(","))
+        List<Long> ids = Arrays.stream(serviceIds.split(","))
                 .filter(id -> !id.trim().isEmpty())
                 .map(id -> {
                     try {
-                        return Integer.parseInt(id.trim());
+                        return Long.parseLong(id.trim());
                     } catch (NumberFormatException e) {
                         log.warn("无效的服务ID: {}", id);
                         return null;
