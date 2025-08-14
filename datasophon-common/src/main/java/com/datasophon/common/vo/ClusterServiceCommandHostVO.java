@@ -30,7 +30,7 @@ import java.util.Date;
  * @date 2025-08-04
  */
 public record ClusterServiceCommandHostVO(
-        String commandHostId,
+        Long commandHostId,
         String hostname,
         Integer commandState,
         String commandStateText,

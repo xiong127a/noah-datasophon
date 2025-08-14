@@ -42,7 +42,6 @@ public interface ClusterServiceCommandConverter extends
     /**
      * Entity转换为DTO时，枚举转换为Integer，include ignore字段
      */
-    @Mapping(target = "commandId", source = "id")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
     @Override
     ClusterServiceCommandDTO entityToDto(ClusterServiceCommandEntity entity);
@@ -50,7 +49,6 @@ public interface ClusterServiceCommandConverter extends
     /**
      * DTO转换为Entity时，Integer转换为枚举，exclude ignore字段
      */
-    @Mapping(target = "id", source = "commandId")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
     @Mapping(target = "commandStateCode", ignore = true)
     @Mapping(target = "durationTime", ignore = true)
@@ -72,6 +70,7 @@ public interface ClusterServiceCommandConverter extends
     /**
      * DTO转换为VO时，添加格式化字段和枚举文本
      */
+    @Mapping(target = "commandId", source = "id")
     @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapIntegerCommandStateText")
     @Mapping(target = "commandTypeText", source = "commandType", qualifiedByName = "mapIntegerCommandTypeText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")

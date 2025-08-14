@@ -44,6 +44,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
     /**
      * Entity转换为DTO时，枚举转换为Integer
      */
+    @Mapping(target = "hostCommandId", source = "id")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
     @Override
@@ -52,6 +53,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
     /**
      * DTO转换为Entity时，Integer转换为枚举
      */
+    @Mapping(target = "id", source = "hostCommandId")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "integerToRoleType")
     @Override
@@ -60,6 +62,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
     /**
      * Entity转换为VO时，添加格式化字段和枚举文本
      */
+    @Mapping(target = "hostCommandId", source = "id")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
     @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapCommandStateText")
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
