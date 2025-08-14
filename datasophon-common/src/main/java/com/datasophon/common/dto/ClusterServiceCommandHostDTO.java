@@ -29,11 +29,11 @@ import java.time.LocalDateTime;
  * @date 2025-08-04
  */
 public record ClusterServiceCommandHostDTO(
-        String commandHostId,
+        Long commandHostId,
         String hostname,
         Integer commandState,
         Integer commandStateCode,
         Long commandProgress,
-        String commandId,
+        Long commandId,
         LocalDateTime createTime) implements Serializable {
 }

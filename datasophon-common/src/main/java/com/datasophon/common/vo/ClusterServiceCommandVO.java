@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
  * @date 2025-08-04
  */
 public record ClusterServiceCommandVO(
-        String commandId,
+        Long commandId,
         String createBy,
         LocalDateTime createTime,
         String createTimeFormatted,
@@ -45,5 +45,5 @@ public record ClusterServiceCommandVO(
         String durationTime,
         LocalDateTime endTime,
         String endTimeFormatted,
-        Integer serviceInstanceId) implements Serializable {
+        Long serviceInstanceId) implements Serializable {
 }

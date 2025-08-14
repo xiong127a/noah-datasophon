@@ -30,7 +30,7 @@ import java.util.Date;
  * @date 2025-08-04
  */
 public record ClusterServiceCommandDTO(
-        Long commandId,
+        Long id,
         String createBy,
         LocalDateTime createTime,
         String commandName,

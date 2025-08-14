@@ -24,6 +24,6 @@ import lombok.Data;
 @Data
 public class UpdateCommandMessage implements Serializable {
 
-    private String commandId;
+    private Long commandId;
 
 }

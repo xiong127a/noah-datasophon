@@ -130,10 +130,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     try {
       const headers = createClusterHeaders(cluster.id)
       
-      // 根据不同页面使用不同的HTTP方法
-      const response = currentPage === 1
-        ? await apiV1.get(apiPath, { headers, params }) // GET方法，参数作为查询参数
-        : await apiV1.post(apiPath, params, { headers }) // 其他页面仍使用POST方法
+      // 所有页面都使用GET方法，参数作为查询参数
+      // 第1页: /cluster/service/command/list
+      // 第2页: /cluster/service/command/host/list  
+      // 第3页: /cluster/service/command/host/command/list
+      const response = await apiV1.get(apiPath, { headers, params })
       
       if (response.data?.code === 200) {
         // API返回的数据结构：{ code: 200, data: { records: [...], total: "4", ... } }
