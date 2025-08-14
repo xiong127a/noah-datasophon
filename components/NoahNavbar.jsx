@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   ChevronDown, 
@@ -16,9 +16,34 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
+import HistoryOperationsDialog from "./cluster/common/history-operations-dialog";
 
 export default function NoahNavbar() {
   const [notifications] = useState(3);
+  
+  // 从localStorage获取当前集群ID（与旧项目保持一致）
+  const [clusterId, setClusterId] = useState(null);
+
+  // 在组件挂载后获取clusterId
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedClusterId = localStorage.getItem('clusterId')
+      console.log('从localStorage获取的clusterId:', storedClusterId);
+      setClusterId(storedClusterId)
+      
+      // 监听localStorage变化
+      const handleStorageChange = () => {
+        const newClusterId = localStorage.getItem('clusterId')
+        console.log('localStorage变化，新的clusterId:', newClusterId);
+        setClusterId(newClusterId)
+      }
+      
+      window.addEventListener('storage', handleStorageChange)
+      return () => {
+        window.removeEventListener('storage', handleStorageChange)
+      }
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -93,15 +118,21 @@ export default function NoahNavbar() {
 
             {/* 功能图标区域 */}
             <div className="flex items-center space-x-3">
-              {/* 历史操作 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-12 w-12 rounded-2xl p-0 transition-all duration-200 hover:bg-slate-100"
+              {/* 测试按钮：设置clusterId */}
+              <button
+                onClick={() => {
+                  localStorage.setItem('clusterId', '313499261352448000');
+                  setClusterId('313499261352448000');
+                  console.log('已设置测试clusterId');
+                }}
+                className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                title="设置测试集群ID"
               >
-                <History className="h-5 w-5 text-slate-600" />
-                <span className="sr-only">历史操作</span>
-              </Button>
+                设置测试ID
+              </button>
+              
+              {/* 历史操作 */}
+              <HistoryOperationsDialog clusterId={clusterId} />
 
               {/* 告警通知 */}
               <Button
