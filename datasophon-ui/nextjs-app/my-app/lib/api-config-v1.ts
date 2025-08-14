@@ -158,10 +158,12 @@ apiClientV1.interceptors.request.use(config => {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // 添加集群ID到请求头
-    const clusterId = localStorage.getItem('clusterId');
-    if (clusterId && clusterId !== '-1') {
-      config.headers['X-Cluster-Id'] = clusterId;
+    // 添加集群ID到请求头（优先使用已设置的，避免覆盖组件传递的clusterId）
+    if (!config.headers['X-Cluster-Id']) {
+      const clusterId = localStorage.getItem('clusterId');
+      if (clusterId && clusterId !== '-1') {
+        config.headers['X-Cluster-Id'] = clusterId;
+      }
     }
     
     // 添加API版本头（可选）
