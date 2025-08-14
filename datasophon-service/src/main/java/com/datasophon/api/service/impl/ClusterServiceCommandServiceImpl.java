@@ -247,13 +247,27 @@ public class ClusterServiceCommandServiceImpl
             calculateRealTimeCommandState(commandEntity);
             // 设置状态码用于前端显示
             commandEntity.setCommandStateCode(commandEntity.getCommandState().getValue());
-            // 计算实际时间
+            // 计算实际时间（安全处理，避免负数持续时间）
             LocalDateTime createTime = commandEntity.getCreateTime();
             LocalDateTime endTime = commandEntity.getEndTime();
+            
+            // 安全检查：如果创建时间为null，设置默认持续时间
+            if (Objects.isNull(createTime)) {
+                commandEntity.setDurationTime("0 seconds");
+                continue;
+            }
+            
             if (Objects.isNull(endTime)) {
                 endTime = LocalDateTime.now();
             }
+            
+            // 计算持续时间，确保不为负数
             long between = Duration.between(createTime, endTime).toMillis();
+            if (between < 0) {
+                // 如果持续时间为负数，说明数据异常，设置为0
+                between = 0;
+            }
+            
             String durationTime = DurationFormatUtils.formatDurationWords(between, true, true);
             commandEntity.setDurationTime(durationTime);
         }

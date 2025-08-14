@@ -136,10 +136,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         : await apiV1.post(apiPath, params, { headers }) // 其他页面仍使用POST方法
       
       if (response.data?.code === 200) {
-        setDataSource(response.data.data || [])
+        // API返回的数据结构：{ code: 200, data: { records: [...], total: "4", ... } }
+        const responseData = response.data.data || {}
+        setDataSource(responseData.records || [])
         setPagination(prev => ({
           ...prev,
-          total: response.data.total || 0
+          total: parseInt(responseData.total) || 0
         }))
       } else {
         throw new Error(response.data?.message || '获取数据失败')
