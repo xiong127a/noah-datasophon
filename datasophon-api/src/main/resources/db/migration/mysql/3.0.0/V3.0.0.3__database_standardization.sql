@@ -487,12 +487,16 @@ ALTER TABLE `t_ddh_cluster_service_role_instance`
 ADD COLUMN `create_by` VARCHAR(128) DEFAULT NULL COMMENT '创建人' AFTER `update_time`,
 ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人' AFTER `create_by`;
 
--- 5.4 t_ddh_auth_token表（已有BIGINT主键和自己的时间字段）补充标准审计字段  
--- 注意：该表已有created_at和updated_at，不添加create_time和update_time以避免冲突
--- 该表已在V3.0.0中重建，具备完整结构，跳过字段添加
--- ALTER TABLE `t_ddh_auth_token` 
--- ADD COLUMN `create_by` VARCHAR(128) DEFAULT NULL COMMENT '创建人',
--- ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人';
+-- 5.4 t_ddh_auth_token表字段标准化
+-- 该表需要将非标准字段名称修改为标准审计字段名称
+-- 步骤1：重命名现有时间字段为标准名称
+ALTER TABLE `t_ddh_auth_token` CHANGE COLUMN `created_at` `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+ALTER TABLE `t_ddh_auth_token` CHANGE COLUMN `updated_at` `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间';
+
+-- 步骤2：添加缺失的审计字段
+ALTER TABLE `t_ddh_auth_token` 
+ADD COLUMN `create_by` VARCHAR(128) DEFAULT NULL COMMENT '创建人' AFTER `update_time`,
+ADD COLUMN `update_by` VARCHAR(128) DEFAULT NULL COMMENT '更新人' AFTER `create_by`;
 
 -- 6. 索引优化 - 为重要审计字段添加索引（提升查询性能）
 CREATE INDEX `idx_create_time` ON `t_ddh_cluster_alert_history` (`create_time`);
