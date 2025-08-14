@@ -47,7 +47,7 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
      * @param commandId 命令ID
      * @return 总进度
      */
-    default Integer getCommandHostTotalProgressByCommandId(@Param("commandId") String commandId) {
+    default Integer getCommandHostTotalProgressByCommandId(@Param("commandId") Long commandId) {
         // SQL逻辑迁移到DAO层，使用QueryWrapper
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
@@ -87,7 +87,7 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
     /**
      * 根据命令ID统计数量
      */
-    default Long countByCommandId(String commandId) {
+    default Long countByCommandId(Long commandId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
         return this.selectCountByQuery(query);
@@ -96,7 +96,7 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
     /**
      * 根据命令ID和状态查询
      */
-    default List<ClusterServiceCommandHostEntity> selectByCommandIdAndState(String commandId,
+    default List<ClusterServiceCommandHostEntity> selectByCommandIdAndState(Long commandId,
             CommandState commandState) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId)
@@ -107,7 +107,7 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
     /**
      * 根据命令ID查询所有主机命令
      */
-    default List<ClusterServiceCommandHostEntity> selectByCommandId(String commandId) {
+    default List<ClusterServiceCommandHostEntity> selectByCommandId(Long commandId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterServiceCommandHostEntity::getCommandId).eq(commandId);
         return this.selectListByQuery(query);
@@ -116,16 +116,16 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
     /**
      * 根据命令主机ID获取命令主机实体
      */
-    default ClusterServiceCommandHostEntity getCommandHostByCommandHostId(String commandHostId) {
+    default ClusterServiceCommandHostEntity getCommandHostByCommandHostId(Long commandHostId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceCommandHostEntity::getCommandHostId).eq(commandHostId);
+                .where(ClusterServiceCommandHostEntity::getId).eq(commandHostId);
         return this.selectOneByQuery(query);
     }
 
     /**
      * 更新命令主机进度
      */
-    default void updateCommandHostProgress(String commandHostId, long progress) {
+    default void updateCommandHostProgress(Long commandHostId, Long progress) {
         ClusterServiceCommandHostEntity entity = getCommandHostByCommandHostId(commandHostId);
         if (entity != null) {
             entity.setCommandProgress(progress);
@@ -136,7 +136,7 @@ public interface ClusterServiceCommandHostMapper extends BaseMapper<ClusterServi
     /**
      * 更新命令主机状态
      */
-    default void updateCommandHostState(String commandHostId, CommandState commandState) {
+    default void updateCommandHostState(Long commandHostId, CommandState commandState) {
         ClusterServiceCommandHostEntity entity = getCommandHostByCommandHostId(commandHostId);
         if (entity != null) {
             entity.setCommandState(commandState);

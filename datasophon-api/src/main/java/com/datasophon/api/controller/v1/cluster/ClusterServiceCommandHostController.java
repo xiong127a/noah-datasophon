@@ -176,7 +176,7 @@ public class ClusterServiceCommandHostController {
     @GetMapping("/failed")
     @Timed(value = "command.host.failed", description = "获取失败命令主机的时间")
     public Result<List<ClusterServiceCommandHostVO>> getFailedCommandHosts(
-            @RequestParam("commandId") String commandId) {
+            @RequestParam("commandId") Long commandId) {
         log.debug("获取失败的命令主机: commandId={}", commandId);
         
         var dtos = clusterServiceCommandHostService.findFailedCommandHost(commandId);
@@ -190,7 +190,7 @@ public class ClusterServiceCommandHostController {
     @GetMapping("/canceled")
     @Timed(value = "command.host.canceled", description = "获取取消命令主机的时间")
     public Result<List<ClusterServiceCommandHostVO>> getCanceledCommandHosts(
-            @RequestParam("commandId") String commandId) {
+            @RequestParam("commandId") Long commandId) {
         log.debug("获取取消的命令主机: commandId={}", commandId);
         
         var dtos = clusterServiceCommandHostService.findCanceledCommandHost(commandId);

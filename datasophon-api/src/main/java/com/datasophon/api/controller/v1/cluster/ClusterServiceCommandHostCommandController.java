@@ -93,7 +93,7 @@ public class ClusterServiceCommandHostCommandController {
     @Timed(value = "command.host.command.log", description = "获取主机命令日志的时间")
     public Result<String> getHostCommandLog(
             @ClusterId Long clusterId,
-            @RequestParam("hostCommandId") String hostCommandId) throws Exception {
+            @RequestParam("hostCommandId") Long hostCommandId) throws Exception {
         
         log.debug("获取主机命令日志: clusterId={}, hostCommandId={}", clusterId, hostCommandId);
         
@@ -177,7 +177,7 @@ public class ClusterServiceCommandHostCommandController {
     @Timed(value = "command.host.command.failed", description = "获取失败主机命令的时间")
     public Result<List<ClusterServiceCommandHostCommandVO>> getFailedHostCommands(
             @RequestParam("hostname") String hostname,
-            @RequestParam("commandHostId") String commandHostId) {
+            @RequestParam("commandHostId") Long commandHostId) {
         log.debug("获取失败的主机命令: hostname={}, commandHostId={}", hostname, commandHostId);
         
         var dtos = clusterServiceCommandHostCommandService.findFailedHostCommand(hostname, commandHostId);
@@ -192,7 +192,7 @@ public class ClusterServiceCommandHostCommandController {
     @Timed(value = "command.host.command.canceled", description = "获取取消主机命令的时间")
     public Result<List<ClusterServiceCommandHostCommandVO>> getCanceledHostCommands(
             @RequestParam("hostname") String hostname,
-            @RequestParam("commandHostId") String commandHostId) {
+            @RequestParam("commandHostId") Long commandHostId) {
         log.debug("获取取消的主机命令: hostname={}, commandHostId={}", hostname, commandHostId);
         
         var dtos = clusterServiceCommandHostCommandService.findCanceledHostCommand(hostname, commandHostId);

@@ -44,12 +44,12 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
     /**
      * 根据命令ID获取主机命令列表
      */
-    List<ClusterServiceCommandHostCommandDTO> getHostCommandListByCommandId(String id);
+    List<ClusterServiceCommandHostCommandDTO> getHostCommandListByCommandId(Long id);
 
     /**
      * 根据主机命令ID获取命令
      */
-    ClusterServiceCommandHostCommandDTO getByHostCommandId(String hostCommandId);
+    ClusterServiceCommandHostCommandDTO getByHostCommandId(Long hostCommandId);
 
     /**
      * 根据主机命令ID更新命令
@@ -60,27 +60,27 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
     /**
      * 获取主机命令大小
      */
-    Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId);
+    Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, Long commandHostId);
 
     /**
      * 获取主机命令总进度
      */
-    Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, String commandHostId);
+    Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, Long commandHostId);
 
     /**
      * 获取主机命令日志
      */
-    String getHostCommandLog(Long clusterId, String hostCommandId) throws Exception;
+    String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception;
 
     /**
      * 查找失败的主机命令
      */
-    List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, String commandHostId);
+    List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, Long commandHostId);
 
     /**
      * 查找取消的主机命令
      */
-    List<ClusterServiceCommandHostCommandDTO> findCanceledHostCommand(String hostname, String commandHostId);
+    List<ClusterServiceCommandHostCommandDTO> findCanceledHostCommand(String hostname, Long commandHostId);
 
     /**
      * 根据ID获取主机命令DTO

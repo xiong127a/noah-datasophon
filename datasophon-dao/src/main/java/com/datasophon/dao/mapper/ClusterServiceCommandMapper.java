@@ -43,7 +43,7 @@ public interface ClusterServiceCommandMapper extends BaseMapper<ClusterServiceCo
      */
     default ClusterServiceCommandEntity selectByCommandId(String commandId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceCommandEntity::getCommandId).eq(commandId);
+                .where(ClusterServiceCommandEntity::getId).eq(commandId);
         return this.selectOneByQuery(query);
     }
 

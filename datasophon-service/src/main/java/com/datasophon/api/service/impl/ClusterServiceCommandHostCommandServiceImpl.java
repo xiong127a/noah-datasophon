@@ -123,7 +123,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public List<ClusterServiceCommandHostCommandDTO> getHostCommandListByCommandId(String commandId) {
+    public List<ClusterServiceCommandHostCommandDTO> getHostCommandListByCommandId(Long commandId) {
         // 使用Mapper查询并转换为DTO
         List<ClusterServiceCommandHostCommandEntity> entities = getMapper().selectByCommandId(commandId);
         return entities.stream()
@@ -132,26 +132,26 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public ClusterServiceCommandHostCommandDTO getByHostCommandId(String hostCommandId) {
+    public ClusterServiceCommandHostCommandDTO getByHostCommandId(Long hostCommandId) {
         // 使用Mapper查询
         ClusterServiceCommandHostCommandEntity entity = getMapper().selectByHostCommandId(hostCommandId);
         return entity != null ? converter.entityToDto(entity) : null;
     }
 
     @Override
-    public Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId) {
+    public Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, Long commandHostId) {
         // 调用Mapper方法统计数量
         return getMapper().countByCommandHostId(commandHostId);
     }
 
     @Override
-    public Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, String commandHostId) {
+    public Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, Long commandHostId) {
         // 调用Mapper方法获取总进度
         return getMapper().getHostCommandTotalProgressByHostnameAndCommandHostId(hostname, commandHostId);
     }
 
     @Override
-    public String getHostCommandLog(Long clusterId, String hostCommandId) throws Exception {
+    public String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ClusterServiceCommandHostCommandEntity hostCommand = getMapper().selectByHostCommandId(hostCommandId);
 
@@ -193,7 +193,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, String commandHostId) {
+    public List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, Long commandHostId) {
         // 调用Mapper方法查询失败的主机命令
         List<ClusterServiceCommandHostCommandEntity> entities = 
                 getMapper().selectByCommandHostIdAndState(commandHostId, CommandState.FAILED);
@@ -203,7 +203,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
-    public List<ClusterServiceCommandHostCommandDTO> findCanceledHostCommand(String hostname, String commandHostId) {
+    public List<ClusterServiceCommandHostCommandDTO> findCanceledHostCommand(String hostname, Long commandHostId) {
         // 调用Mapper方法查询取消的主机命令
         List<ClusterServiceCommandHostCommandEntity> entities = 
                 getMapper().selectByCommandHostIdAndState(commandHostId, CommandState.CANCEL);

@@ -18,6 +18,9 @@
 package com.datasophon.api.service.impl;
 
 import java.time.Duration;
+
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import cn.hutool.core.util.EnumUtil;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
@@ -31,7 +34,6 @@ import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import com.datasophon.api.master.DAGBuildActor;
 import com.datasophon.api.service.ClusterInfoService;
@@ -137,7 +139,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<>();
+        List<Long> commandIds = new ArrayList<>();
 
         Map<String, List<String>> serviceRoleHostMap = CacheOperateUtils
                 .getGeneric(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING,
@@ -153,7 +155,7 @@ public class ClusterServiceCommandServiceImpl
                     serviceName);
             commandEntity.setServiceInstanceId(serviceInstance.getId());
             list.add(commandEntity);
-            String commandId = commandEntity.getCommandId();
+            Long commandId = commandEntity.getId();
             commandIds.add(commandId);
 
             // 查询服务的服务角色 - 使用正确的Service方法
@@ -211,7 +213,7 @@ public class ClusterServiceCommandServiceImpl
         commandHostService.saveBatch(commandHostList);
         hostCommandService.saveBatch(hostCommandList);
 
-        return String.join(",", commandIds);
+        return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
 
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Long clusterId) {
@@ -275,21 +277,21 @@ public class ClusterServiceCommandServiceImpl
                 commandEntity.setCommandProgress(100L);
                 if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
-                    logger.info("命令 {} 状态已成功，进度设为100%并更新数据库", commandEntity.getCommandId());
+                    logger.info("命令 {} 状态已成功，进度设为100%并更新数据库", commandEntity.getId());
                 }
                 return;
             } else if (CommandState.FAILED.equals(commandEntity.getCommandState())) {
                 commandEntity.setCommandProgress(100L);
                 if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
-                    logger.info("命令 {} 状态已失败，进度设为100%并更新数据库", commandEntity.getCommandId());
+                    logger.info("命令 {} 状态已失败，进度设为100%并更新数据库", commandEntity.getId());
                 }
                 return;
             } else if (CommandState.CANCEL.equals(commandEntity.getCommandState())) {
                 commandEntity.setCommandProgress(100L);
                 if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
-                    logger.info("命令 {} 状态已取消，进度设为100%并更新数据库", commandEntity.getCommandId());
+                    logger.info("命令 {} 状态已取消，进度设为100%并更新数据库", commandEntity.getId());
                 }
                 return;
             }
@@ -297,13 +299,13 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceCommandHostMapper hostMapper = (ClusterServiceCommandHostMapper) commandHostService
                     .getMapper();
             List<ClusterServiceCommandHostEntity> hostCommands = hostMapper
-                    .selectByCommandId(commandEntity.getCommandId());
+                    .selectByCommandId(commandEntity.getId());
 
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandEntity.setCommandProgress(0L);
                 if ((oldProgress == null || oldProgress != 0L)) {
                     this.updateById(commandEntity);
-                    logger.info("命令 {} 无主机命令，进度设为0%并更新数据库", commandEntity.getCommandId());
+                    logger.info("命令 {} 无主机命令，进度设为0%并更新数据库", commandEntity.getId());
                 }
                 return;
             }
@@ -328,7 +330,7 @@ public class ClusterServiceCommandServiceImpl
             // 如果需要更新数据库且进度有变化
             if ((oldProgress == null || oldProgress != finalProgress)) {
                 this.updateById(commandEntity);
-                logger.info("命令 {} 进度更新为 {}% 并更新数据库", commandEntity.getCommandId(), finalProgress);
+                logger.info("命令 {} 进度更新为 {}% 并更新数据库", commandEntity.getId(), finalProgress);
             }
         } catch (Exception e) {
             logger.error("计算命令进度时出错: {}", e.getMessage(), e);
@@ -347,7 +349,7 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceCommandHostMapper hostMapper = (ClusterServiceCommandHostMapper) commandHostService
                     .getMapper();
             List<ClusterServiceCommandHostEntity> hostCommands = hostMapper
-                    .selectByCommandId(commandEntity.getCommandId());
+                    .selectByCommandId(commandEntity.getId());
 
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandEntity.setCommandState(CommandState.RUNNING);
@@ -391,7 +393,7 @@ public class ClusterServiceCommandServiceImpl
                 if (stateChanged && commandEntity.getEndTime() == null) {
                     commandEntity.setEndTime(LocalDateTime.now());
                     logger.info("命令 {} 状态变为 {}, 设置结束时间为 {}",
-                            commandEntity.getCommandId(),
+                            commandEntity.getId(),
                             commandEntity.getCommandState(),
                             commandEntity.getEndTime());
                 }
@@ -404,7 +406,7 @@ public class ClusterServiceCommandServiceImpl
             if ((stateChanged || allCompleted)) {
                 this.updateById(commandEntity);
                 logger.trace("命令 {} 实时计算状态后更新数据库，状态: {}",
-                        commandEntity.getCommandId(), commandEntity.getCommandState());
+                        commandEntity.getId(), commandEntity.getCommandState());
             }
         } catch (Exception e) {
             logger.error("实时计算命令状态出错: {}", e.getMessage(), e);
@@ -422,7 +424,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<>();
+        List<Long> commandIds = new ArrayList<>();
         for (String serviceInstanceId : serviceInstanceIds) {
             Long id = Long.parseLong(serviceInstanceId);
             // 查询服务对应的服务角色实例
@@ -436,7 +438,7 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(id);
             ClusterServiceCommandEntity commandEntity = generateCommandEntity(clusterId, commandType,
                     serviceInstance.getServiceName());
-            String commandId = commandEntity.getCommandId();
+            Long commandId = commandEntity.getId();
             commandEntity.setServiceInstanceId(id);
             commandIds.add(commandId);
             list.add(commandEntity);
@@ -467,7 +469,7 @@ public class ClusterServiceCommandServiceImpl
                     ActorUtils.getActorRefName(DAGBuildActor.class));
             dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType), ActorRef.noSender());
         }
-        return String.join(",", commandIds);
+        return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
 
     @Override
@@ -487,12 +489,12 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<>();
+        List<Long> commandIds = new ArrayList<>();
 
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
         ClusterServiceCommandEntity commandEntity = generateCommandEntity(clusterId, commandType,
                 serviceInstance.getServiceName());
-        String commandId = commandEntity.getCommandId();
+        Long commandId = commandEntity.getId();
         commandEntity.setServiceInstanceId(serviceInstanceId);
         commandIds.add(commandId);
         list.add(commandEntity);
@@ -524,12 +526,12 @@ public class ClusterServiceCommandServiceImpl
                 ActorUtils.getActorRefName(DAGBuildActor.class));
         dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType, rollingRestartInfo),
                 ActorRef.noSender());
-        return String.join(",", commandIds);
+        return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
 
     @Override
     public void startExecuteCommand(Long clusterId, String commandType, String commandIds) {
-        List<String> list = Arrays.asList(commandIds.split(","));
+        List<Long> list = Arrays.stream(StrUtil.splitToLong(commandIds,",")).boxed().toList();
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         // 通知commandActor执行命令
         ActorRef dagBuildActor = ActorUtils.getLocalActor(DAGBuildActor.class,
@@ -568,16 +570,18 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public ClusterServiceCommandDTO getCommandById(String commandId) {
-        // SQL逻辑已迁移到DAO层
-        ClusterServiceCommandEntity entity = getMapper().selectByCommandId(commandId);
+    public ClusterServiceCommandDTO getCommandById(Long commandId) {
+        // 将String类型的commandId转换为Long
+        ClusterServiceCommandEntity entity = getById(commandId);
         return entity != null ? converter.entityToDto(entity) : null;
     }
 
     // DTO相关的CRUD方法实现
     @Override
     public ClusterServiceCommandDTO getByIdAsDto(String id) {
-        ClusterServiceCommandEntity entity = getById(id);
+        // 将String类型的id转换为Long
+        Long longId = Long.parseLong(id);
+        ClusterServiceCommandEntity entity = getById(longId);
         return entity != null ? converter.entityToDto(entity) : null;
     }
 
@@ -625,7 +629,8 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public void updateCommandProgress(String commandId, long progress) {
+    public void updateCommandProgress(Long commandId, long progress) {
+        // 将String类型的commandId转换为Long
         ClusterServiceCommandEntity entity = getById(commandId);
         if (entity != null) {
             entity.setCommandProgress(progress);
@@ -634,7 +639,8 @@ public class ClusterServiceCommandServiceImpl
     }
 
     @Override
-    public void updateCommandStateAndEndTime(String commandId, CommandState commandState, LocalDateTime endTime) {
+    public void updateCommandStateAndEndTime(Long commandId, CommandState commandState, LocalDateTime endTime) {
+        // 将String类型的commandId转换为Long
         ClusterServiceCommandEntity entity = getById(commandId);
         if (entity != null) {
             entity.setCommandState(commandState);
@@ -648,7 +654,7 @@ public class ClusterServiceCommandServiceImpl
      */
     private ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType, String commandName) {
         ClusterServiceCommandEntity command = new ClusterServiceCommandEntity();
-        command.setCommandId(UUID.randomUUID().toString());
+        command.setId(IdUtil.getSnowflakeNextId());
         command.setClusterId(clusterId);
         command.setCommandType(commandType.getValue());
         command.setCommandName(commandName);
@@ -661,9 +667,9 @@ public class ClusterServiceCommandServiceImpl
     /**
      * 生成命令主机实体
      */
-    private ClusterServiceCommandHostEntity generateCommandHostEntity(String commandId, String hostname) {
+    private ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname) {
         ClusterServiceCommandHostEntity commandHost = new ClusterServiceCommandHostEntity();
-        commandHost.setCommandHostId(UUID.randomUUID().toString());
+        commandHost.setId(IdUtil.getSnowflakeNextId());
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.WAIT);
@@ -677,14 +683,15 @@ public class ClusterServiceCommandServiceImpl
      */
     private ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(
             CommandType commandType,
-            String commandName,
+            Long commandId,
             String serviceRoleName,
             RoleType roleType,
             ClusterServiceCommandHostEntity commandHost) {
 
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
-        hostCommand.setCommandHostId(commandHost.getCommandHostId());
-        hostCommand.setCommandName(commandName);
+        hostCommand.setCommandHostId(commandHost.getId());
+        hostCommand.setCommandId(commandId);
+        hostCommand.setCommandName(commandType.name());
         hostCommand.setCommandType(commandType.getValue());
         hostCommand.setServiceRoleName(serviceRoleName);
         hostCommand.setServiceRoleType(roleType);

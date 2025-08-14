@@ -49,7 +49,7 @@ public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo
 
     private String hostname;
 
-    private String hostCommandId;
+    private Long hostCommandId;
 
     private Long clusterId;
 

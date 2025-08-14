@@ -28,7 +28,7 @@ import lombok.Data;
 @Data
 public class StartExecuteCommandCommand implements Serializable {
 
-    private List<String> commandIds;
+    private List<Long> commandIds;
 
     private Long clusterId;
 
@@ -36,13 +36,13 @@ public class StartExecuteCommandCommand implements Serializable {
 
     private RollingRestartInfo rollingRestartInfo;
 
-    public StartExecuteCommandCommand(List<String> list, Long clusterId, CommandType commandType) {
+    public StartExecuteCommandCommand(List<Long> list, Long clusterId, CommandType commandType) {
         this.commandIds = list;
         this.clusterId = clusterId;
         this.commandType = commandType;
     }
 
-    public StartExecuteCommandCommand(List<String> commandIds, Long clusterId, CommandType commandType, RollingRestartInfo rollingRestartInfo) {
+    public StartExecuteCommandCommand(List<Long> commandIds, Long clusterId, CommandType commandType, RollingRestartInfo rollingRestartInfo) {
         this.commandIds = commandIds;
         this.clusterId = clusterId;
         this.commandType = commandType;

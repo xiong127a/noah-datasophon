@@ -48,10 +48,7 @@ public class ClusterServiceCommandEntity extends BaseEntity {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 命令标识（原主键字段，保留作为业务标识）
-     */
-    private String commandId;
+
     /**
      * 命令名称
      */

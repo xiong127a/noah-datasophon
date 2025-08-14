@@ -26,7 +26,7 @@ import lombok.Data;
 @Data
 public class UpdateCommandHostMessage implements Serializable {
 
-    private String commandHostId;
+    private Long commandHostId;
 
     private String hostname;
 
@@ -34,5 +34,5 @@ public class UpdateCommandHostMessage implements Serializable {
 
     private ServiceRoleType serviceRoleType;
 
-    private String commandId;
+    private Long commandId;
 }

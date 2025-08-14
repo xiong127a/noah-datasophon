@@ -497,7 +497,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         for (ClusterServiceCommandEntity command : commands) {
             // Service层：获取DTO列表后转换为Entity列表
             List<ClusterServiceCommandHostCommandDTO> commandHostDTOList = hostCommandService
-                    .getHostCommandListByCommandId(command.getCommandId());
+                    .getHostCommandListByCommandId(command.getId());
             List<ClusterServiceCommandHostCommandEntity> commandHostList = hostCommandConverter
                     .dtoListToEntityList(commandHostDTOList);
             List<ServiceRoleInfo> masterRoles = new ArrayList<>();
@@ -513,7 +513,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + hostCommand.getServiceRoleName();
                 ServiceRoleInfo serviceRoleInfo = ServiceRoleMap.get(key);
                 serviceRoleInfo.setHostname(hostCommand.getHostname());
-                serviceRoleInfo.setHostCommandId(hostCommand.getHostCommandId());
+                serviceRoleInfo.setHostCommandId(hostCommand.getId());
                 serviceRoleInfo.setClusterId(clusterId);
                 serviceRoleInfo.setParentName(command.getServiceName());
                 if (MASTER.equals(serviceRoleInfo.getRoleType().getName())) {

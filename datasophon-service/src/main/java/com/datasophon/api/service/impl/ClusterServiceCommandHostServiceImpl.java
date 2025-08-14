@@ -111,14 +111,14 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 获取该主机命令下的所有子命令
             List<ClusterServiceCommandHostCommandEntity> hostCommands = getHostCommands(
-                    commandHostEntity.getCommandHostId());
+                    commandHostEntity.getId());
 
             // 如果没有子命令，设置进度为0%
-            if (hostCommands == null || hostCommands.isEmpty()) {
+            if (hostCommands.isEmpty()) {
                 commandHostEntity.setCommandProgress(PROGRESS_INITIAL);
                 if (shouldUpdateProgress(updateDb, oldProgress, PROGRESS_INITIAL)) {
                     updateById(commandHostEntity);
-                    logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getCommandHostId());
+                    logger.info("主机命令 {} 无子命令，进度设为0%并更新数据库", commandHostEntity.getId());
                 }
                 return;
             }
@@ -148,7 +148,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (shouldUpdateProgress(updateDb, oldProgress, finalProgress)) {
                 updateById(commandHostEntity);
                 logger.info("主机命令 {} 进度更新为 {}% 并更新数据库",
-                        commandHostEntity.getCommandHostId(), finalProgress);
+                        commandHostEntity.getId(), finalProgress);
             }
         } catch (Exception e) {
             logger.error("计算主机命令进度时出错: {}", e.getMessage(), e);
@@ -164,9 +164,9 @@ public class ClusterServiceCommandHostServiceImpl
 
             // 获取该主机命令下的所有子命令
             List<ClusterServiceCommandHostCommandEntity> subCommands = getHostCommands(
-                    hostCommandEntity.getCommandHostId());
+                    hostCommandEntity.getId());
 
-            if (subCommands == null || subCommands.isEmpty()) {
+            if (subCommands.isEmpty()) {
                 updateEntityState(hostCommandEntity, CommandState.RUNNING);
                 return;
             }
@@ -216,7 +216,7 @@ public class ClusterServiceCommandHostServiceImpl
             if (updateDb && stateChanged) {
                 updateById(hostCommandEntity);
                 logger.info("主机命令 {} 状态从 {} 变为 {}，已更新数据库",
-                        hostCommandEntity.getCommandHostId(), oldState, newState);
+                        hostCommandEntity.getId(), oldState, newState);
             }
         } catch (Exception e) {
             logger.error("实时计算主机命令状态出错: {}", e.getMessage(), e);
@@ -224,24 +224,24 @@ public class ClusterServiceCommandHostServiceImpl
     }
 
     @Override
-    public Long getCommandHostSizeByCommandId(String commandId) {
+    public Long getCommandHostSizeByCommandId(Long commandId) {
         return getMapper().countByCommandId(commandId);
     }
 
     @Override
-    public Integer getCommandHostTotalProgressByCommandId(String commandId) {
+    public Integer getCommandHostTotalProgressByCommandId(Long commandId) {
         return getMapper().getCommandHostTotalProgressByCommandId(commandId);
     }
 
     @Override
-    public List<ClusterServiceCommandHostDTO> findFailedCommandHost(String commandId) {
+    public List<ClusterServiceCommandHostDTO> findFailedCommandHost(Long commandId) {
         List<ClusterServiceCommandHostEntity> entities = getMapper().selectByCommandIdAndState(commandId,
                 CommandState.FAILED);
         return converter.entityListToDtoList(entities);
     }
 
     @Override
-    public List<ClusterServiceCommandHostDTO> findCanceledCommandHost(String commandId) {
+    public List<ClusterServiceCommandHostDTO> findCanceledCommandHost(Long commandId) {
         List<ClusterServiceCommandHostEntity> entities = getMapper().selectByCommandIdAndState(commandId,
                 CommandState.CANCEL);
         return converter.entityListToDtoList(entities);
@@ -270,20 +270,20 @@ public class ClusterServiceCommandHostServiceImpl
      */
     private void logProgressUpdate(ClusterServiceCommandHostEntity entity, String state) {
         logger.info("主机命令 {} 状态为{}，进度设为100%并更新数据库",
-                entity.getCommandHostId(), state);
+                entity.getId(), state);
     }
 
     /**
      * 获取主机命令的所有子命令
      */
-    private List<ClusterServiceCommandHostCommandEntity> getHostCommands(String commandHostId) {
+    private List<ClusterServiceCommandHostCommandEntity> getHostCommands(Long commandHostId) {
         // hostCommandService现在返回DTO，需要转换为Entity以保持现有业务逻辑兼容性
         List<ClusterServiceCommandHostCommandDTO> dtos = hostCommandService
                 .getHostCommandListByCommandId(commandHostId);
         return dtos.stream()
                 .map(dto -> {
                     ClusterServiceCommandHostCommandEntity entity = new ClusterServiceCommandHostCommandEntity();
-                    entity.setHostCommandId(dto.hostCommandId());
+                    entity.setId(dto.hostCommandId());
                     entity.setCommandProgress(dto.commandProgress());
                     entity.setCommandState(integerToCommandState(dto.commandState()));
                     return entity;
@@ -357,18 +357,18 @@ public class ClusterServiceCommandHostServiceImpl
     }
 
     @Override
-    public ClusterServiceCommandHostDTO getCommandHostByCommandHostId(String commandHostId) {
+    public ClusterServiceCommandHostDTO getCommandHostByCommandHostId(Long commandHostId) {
         ClusterServiceCommandHostEntity entity = getMapper().getCommandHostByCommandHostId(commandHostId);
         return entity != null ? converter.entityToDto(entity) : null;
     }
 
     @Override
-    public void updateCommandHostProgress(String commandHostId, long progress) {
+    public void updateCommandHostProgress(Long commandHostId, Long progress) {
         getMapper().updateCommandHostProgress(commandHostId, progress);
     }
 
     @Override
-    public void updateCommandHostState(String commandHostId, CommandState commandState) {
+    public void updateCommandHostState(Long commandHostId, CommandState commandState) {
         getMapper().updateCommandHostState(commandHostId, commandState);
     }
 }

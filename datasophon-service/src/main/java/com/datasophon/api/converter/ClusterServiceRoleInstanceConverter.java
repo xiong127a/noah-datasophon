@@ -47,6 +47,8 @@ public interface ClusterServiceRoleInstanceConverter extends BaseConverter<Clust
     @Mapping(target = "serviceRoleState", source = "serviceRoleState", qualifiedByName = "serviceRoleStateToInteger")
     @Mapping(target = "roleType", source = "roleType", qualifiedByName = "roleTypeToInteger")
     @Mapping(target = "needRestart", source = "needRestart", qualifiedByName = "needRestartToInteger")
+    @Mapping(target = "serviceRoleStateCode", source = "serviceRoleStateCode")
+    @Mapping(target = "roleGroupName", source = "roleGroupName")
     @Override
     ClusterServiceRoleInstanceDTO entityToDto(ClusterServiceRoleInstanceEntity entity);
 
@@ -56,6 +58,10 @@ public interface ClusterServiceRoleInstanceConverter extends BaseConverter<Clust
     @Mapping(target = "serviceRoleState", source = "serviceRoleState", qualifiedByName = "integerToServiceRoleState")
     @Mapping(target = "roleType", source = "roleType", qualifiedByName = "integerToRoleType")
     @Mapping(target = "needRestart", source = "needRestart", qualifiedByName = "integerToNeedRestart")
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
+    @Mapping(target = "serviceRoleStateCode", ignore = true)
+    @Mapping(target = "roleGroupName", ignore = true)
     @Override
     ClusterServiceRoleInstanceEntity dtoToEntity(ClusterServiceRoleInstanceDTO dto);
 

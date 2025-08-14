@@ -44,22 +44,22 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
     /**
      * 根据命令ID获取命令主机大小
      */
-    Long getCommandHostSizeByCommandId(String commandId);
+    Long getCommandHostSizeByCommandId(Long commandId);
 
     /**
      * 根据命令ID获取命令主机总进度
      */
-    Integer getCommandHostTotalProgressByCommandId(String commandId);
+    Integer getCommandHostTotalProgressByCommandId(Long commandId);
 
     /**
      * 查找失败的命令主机
      */
-    List<ClusterServiceCommandHostDTO> findFailedCommandHost(String commandId);
+    List<ClusterServiceCommandHostDTO> findFailedCommandHost(Long commandId);
 
     /**
      * 查找取消的命令主机
      */
-    List<ClusterServiceCommandHostDTO> findCanceledCommandHost(String commandId);
+    List<ClusterServiceCommandHostDTO> findCanceledCommandHost(Long commandId);
 
     /**
      * 计算主机命令的实际进度
@@ -95,15 +95,15 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
     /**
      * 根据命令主机ID获取命令主机信息
      */
-    ClusterServiceCommandHostDTO getCommandHostByCommandHostId(String commandHostId);
+    ClusterServiceCommandHostDTO getCommandHostByCommandHostId(Long commandHostId);
 
     /**
      * 更新命令主机进度
      */
-    void updateCommandHostProgress(String commandHostId, long progress);
+    void updateCommandHostProgress(Long commandHostId, Long progress);
 
     /**
      * 更新命令主机状态
      */
-    void updateCommandHostState(String commandHostId, CommandState commandState);
+    void updateCommandHostState(Long commandHostId, CommandState commandState);
 }

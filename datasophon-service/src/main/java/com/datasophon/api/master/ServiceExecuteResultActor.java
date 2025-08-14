@@ -79,7 +79,7 @@ public class ServiceExecuteResultActor extends AbstractActor {
                     // cancel all next node
                     logger.info("{} master roles failed , cancel all next node by commandId {}", node,
                             servicNode.getCommandId());
-                    List<String> commandIds = new ArrayList<>();
+                    List<Long> commandIds = new ArrayList<>();
                     commandIds.add(servicNode.getCommandId());
                     listCancelCommand(dag, node, commandIds);
                     CommandExecutionService commandExecutionService = SpringUtil.getBean(CommandExecutionService.class);
@@ -124,7 +124,7 @@ public class ServiceExecuteResultActor extends AbstractActor {
         }
     }
 
-    public void listCancelCommand(DAGGraph<String, ServiceNode, String> dag, String node, List<String> commandIds) {
+    public void listCancelCommand(DAGGraph<String, ServiceNode, String> dag, String node, List<Long> commandIds) {
         if (dag.getSubsequentNodes(node).isEmpty()) {
             return;
         }

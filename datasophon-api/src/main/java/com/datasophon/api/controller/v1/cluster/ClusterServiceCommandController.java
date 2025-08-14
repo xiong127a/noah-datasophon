@@ -179,7 +179,7 @@ public class ClusterServiceCommandController {
      * 根据命令ID获取命令详情
      */
     @GetMapping("/{commandId}")
-    public Result<ClusterServiceCommandVO> getCommandById(@PathVariable String commandId) {
+    public Result<ClusterServiceCommandVO> getCommandById(@PathVariable Long commandId) {
         try {
             ClusterServiceCommandDTO dto = clusterServiceCommandService.getCommandById(commandId);
             if (dto == null) {

@@ -49,7 +49,7 @@ public interface CommandExecutionService {
      *
      * @param commandIds 命令ID列表
      */
-    void updateCommandStateToFailed(List<String> commandIds);
+    void updateCommandStateToFailed(List<Long> commandIds);
 
     /**
      * 处理命令执行结果
@@ -59,7 +59,7 @@ public interface CommandExecutionService {
      * @param execResult    执行结果
      * @param execOut       执行输出
      */
-    void handleCommandResult(String hostCommandId, Boolean execResult, String execOut);
+    void handleCommandResult(Long hostCommandId, Boolean execResult, String execOut);
 
     /**
      * 通知命令执行结果
@@ -122,7 +122,7 @@ public interface CommandExecutionService {
      * @param hostname  主机名
      * @return 命令主机实体
      */
-    ClusterServiceCommandHostEntity generateCommandHostEntity(String commandId, String hostname);
+    ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname);
 
     /**
      * 生成命令主机命令实体
@@ -135,7 +135,7 @@ public interface CommandExecutionService {
      * @return 命令主机命令实体
      */
     ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(CommandType commandType,
-                                                                           String commandId,
+                                                                            Long commandId,
                                                                            String serviceRoleName,
                                                                            RoleType serviceRoleType,
                                                                            ClusterServiceCommandHostEntity commandHost);

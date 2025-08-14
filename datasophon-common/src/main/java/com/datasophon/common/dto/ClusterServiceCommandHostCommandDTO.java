@@ -29,13 +29,13 @@ import java.time.LocalDateTime;
  * @date 2025-08-04
  */
 public record ClusterServiceCommandHostCommandDTO(
-        String hostCommandId,
+        Long hostCommandId,
         String commandName,
         Integer commandState,
         Integer commandStateCode,
         Integer commandProgress,
-        String commandHostId,
-        String commandId,
+        Long commandHostId,
+        Long commandId,
         String hostname,
         String serviceRoleName,
         Integer serviceRoleType,

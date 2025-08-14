@@ -85,7 +85,7 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 根据命令ID获取命令
          */
-        ClusterServiceCommandDTO getCommandById(String commandId);
+        ClusterServiceCommandDTO getCommandById(Long commandId);
 
         /**
          * 根据ID获取命令DTO
@@ -105,10 +105,10 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
         /**
          * 更新命令进度
          */
-        void updateCommandProgress(String commandId, long progress);
+        void updateCommandProgress(Long commandId, long progress);
 
         /**
          * 更新命令状态和结束时间
          */
-        void updateCommandStateAndEndTime(String commandId, CommandState commandState, LocalDateTime endTime);
+        void updateCommandStateAndEndTime(Long commandId, CommandState commandState, LocalDateTime endTime);
 }

@@ -93,7 +93,7 @@ public class DAGBuildActor extends AbstractActor {
             // 获取命令列表
             ClusterServiceCommandService clusterServiceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
             List<ClusterServiceCommandDTO> commandList = new ArrayList<>();
-            for (String commandId : executeCommandCommand.getCommandIds()) {
+            for (Long commandId : executeCommandCommand.getCommandIds()) {
                 ClusterServiceCommandDTO command = clusterServiceCommandService.getCommandById(commandId);
                 if (command != null) {
                     commandList.add(command);

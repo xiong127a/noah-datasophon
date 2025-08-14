@@ -47,10 +47,7 @@ public class ClusterServiceCommandHostEntity extends BaseEntity {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 业务主键 - 命令主机ID
-     */
-    private String commandHostId;
+
     /**
      * 主机
      */
@@ -67,9 +64,9 @@ public class ClusterServiceCommandHostEntity extends BaseEntity {
      */
     private Long commandProgress;
     /**
-     * 操作指令id
+     * 操作指令id（逻辑外键，关联t_ddh_cluster_service_command表的id）
      */
-    private String commandId;
+    private Long commandId;
 
 
 

@@ -29,7 +29,6 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.io.Serial;
-import java.util.Date;
 
 /**
  * 集群服务命令主机命令实体类
@@ -49,10 +48,7 @@ public class ClusterServiceCommandHostCommandEntity extends BaseEntity {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主机命令标识（原主键字段，保留作为业务标识）
-     */
-    private String hostCommandId;
+
     /**
      * 指令名称
      */
@@ -69,11 +65,14 @@ public class ClusterServiceCommandHostCommandEntity extends BaseEntity {
      */
     private Integer commandProgress;
     /**
-     * 主机id
+     * 主机id（逻辑外键，关联t_ddh_cluster_service_command_host表的id）
      */
-    private String commandHostId;
+    private Long commandHostId;
 
-    private String commandId;
+    /**
+     * 命令id（逻辑外键，关联t_ddh_cluster_service_command表的id）
+     */
+    private Long commandId;
 
     private String hostname;
     /**

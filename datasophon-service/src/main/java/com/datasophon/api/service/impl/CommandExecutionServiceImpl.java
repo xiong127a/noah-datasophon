@@ -74,8 +74,8 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     // hostCommandConverter已移除，因为现在直接使用DTO操作
 
     @Override
-    public void updateCommandStateToFailed(List<String> commandIds) {
-        for (String commandId : commandIds) {
+    public void updateCommandStateToFailed(List<Long> commandIds) {
+        for (Long commandId : commandIds) {
             logger.info("command id is {}", commandId);
             // cancel worker and sub node
             ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
@@ -125,7 +125,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     }
 
     @Override
-    public void handleCommandResult(String hostCommandId, Boolean execResult, String execOut) {
+    public void handleCommandResult(Long hostCommandId, Boolean execResult, String execOut) {
         var hostCommandDTO = hostCommandService.getByHostCommandId(hostCommandId); // JDK21特性
 
         // 创建更新后的DTO - JDK21 Record特性
@@ -231,8 +231,8 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     public ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType,
             String serviceName) {
         ClusterServiceCommandEntity commandEntity = new ClusterServiceCommandEntity();
-        String commandId = IdUtil.simpleUUID();
-        commandEntity.setCommandId(commandId);
+        Long commandId = IdUtil.getSnowflakeNextId();
+        commandEntity.setId(commandId);
         commandEntity.setClusterId(clusterId);
         commandEntity.setCommandName(commandType.getCommandName(PropertyUtils.getString(Constants.LOCALE_LANGUAGE))
                 + Constants.SPACE + serviceName);
@@ -246,10 +246,10 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     }
 
     @Override
-    public ClusterServiceCommandHostEntity generateCommandHostEntity(String commandId, String hostname) {
+    public ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname) {
         ClusterServiceCommandHostEntity commandHost = new ClusterServiceCommandHostEntity();
-        String commandHostId = IdUtil.simpleUUID();
-        commandHost.setCommandHostId(commandHostId);
+        Long commandHostId = IdUtil.getSnowflakeNextId();
+        commandHost.setId(commandHostId);
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.RUNNING);
@@ -261,15 +261,15 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
     @Override
     public ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(CommandType commandType,
-            String commandId,
+                                                                                   Long commandId,
             String serviceRoleName,
             RoleType serviceRoleType,
             ClusterServiceCommandHostEntity commandHost) {
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
-        String hostCommandId = IdUtil.simpleUUID();
-        hostCommand.setHostCommandId(hostCommandId);
+        Long hostCommandId = IdUtil.getSnowflakeNextId();
+        hostCommand.setId(hostCommandId);
         hostCommand.setServiceRoleName(serviceRoleName);
-        hostCommand.setCommandHostId(commandHost.getCommandHostId());
+        hostCommand.setCommandHostId(commandHost.getId());
         hostCommand.setCommandState(CommandState.RUNNING);
         hostCommand.setCommandProgress(0);
         hostCommand.setHostname(commandHost.getHostname());

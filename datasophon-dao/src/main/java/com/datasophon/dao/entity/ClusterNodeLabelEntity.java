@@ -17,19 +17,41 @@
 
 package com.datasophon.dao.entity;
 
-import lombok.Data;
-
-import com.mybatisflex.annotation.Id;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.annotation.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+import java.io.Serial;
+
+/**
+ * 集群节点标签实体类
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-31
+ */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table("t_ddh_cluster_node_label")
-public class ClusterNodeLabelEntity {
+public class ClusterNodeLabelEntity extends BaseEntity {
 
-    @Id
-    private Long id;
+    @Serial
+    private static final long serialVersionUID = 1L;
 
+    /**
+     * 集群ID
+     */
     private Long clusterId;
 
+    /**
+     * 节点标签
+     */
     private String nodeLabel;
 }

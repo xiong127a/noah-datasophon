@@ -28,8 +28,8 @@ public class ServiceNode {
     private List<ServiceRoleInfo> masterRoles;
     private List<ServiceRoleInfo> elseRoles;
 
-    private String commandId;
+    private Long commandId;
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
 }
