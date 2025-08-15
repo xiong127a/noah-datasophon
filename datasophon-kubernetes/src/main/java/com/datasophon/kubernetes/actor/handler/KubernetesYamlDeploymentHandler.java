@@ -431,7 +431,7 @@ public class KubernetesYamlDeploymentHandler {
         if ("GRAFANA".equals(serviceName)) {
             String url = "http://%s:%s/ddh/api/cluster/grafana/kerberos/";
 
-            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_Kubernetes", false);
+            boolean isRunningInKubernetes = SystemUtil.getBoolean("RUNNING_IN_KUBERNETES", false);
 
             // 使用三元运算符简化主机名选择
             String hostOrService = isRunningInKubernetes ? "datasophon-api-service" : NetUtil.getLocalHostName();
