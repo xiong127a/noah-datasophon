@@ -116,11 +116,26 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       // 注意：clusterId从请求头传递，不需要在params中
     }
     
-    if (currentPage === 2) params.commandId = commandId
+    if (currentPage === 2) {
+      if (!commandId) {
+        console.warn('第2页缺少commandId参数，跳过API调用');
+        setLoading(false);
+        return;
+      }
+      params.commandId = commandId
+    }
+    
     if (currentPage === 3) {
       console.log('=== 第3页API调用参数 ===');
       console.log('hostname:', hostname);
       console.log('commandHostId:', commandHostId);
+      
+      if (!hostname || !commandHostId) {
+        console.warn('第3页缺少必需参数，跳过API调用', { hostname, commandHostId });
+        setLoading(false);
+        return;
+      }
+      
       params.hostname = hostname
       params.commandHostId = commandHostId
     }
@@ -494,7 +509,28 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   // 初始化和清理
   useEffect(() => {
     if (open) {
-      pollingSearch()
+      // 每次打开对话框时重置到第1页，去除记忆功能
+      setCurrentPage(1)
+      setTitle("安装并启动服务")
+      setDataSource([])
+      setSelectedRowKeys([])
+      setCommandId("")
+      setHostname("")
+      setCommandHostId("")
+      setCommandName("")
+      setLogData("")
+      setError(null)
+      setRenderTimestamp(Date.now())
+      setPagination(prev => ({
+        ...prev,
+        current: 1,
+        total: 0
+      }))
+      
+      // 延迟一点再开始轮询，确保状态已重置
+      setTimeout(() => {
+        pollingSearch()
+      }, 100)
     }
     
     return () => {
@@ -507,16 +543,35 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   // 当currentPage变化时重新开始轮询
   useEffect(() => {
     if (open && currentPage > 0) {
-      pollingSearch()
+      // 第3页需要等待必需参数设置完成后才能调用API
+      if (currentPage === 3) {
+        if (hostname && commandHostId) {
+          console.log('第3页参数已准备好，开始轮询:', { hostname, commandHostId });
+          pollingSearch()
+        } else {
+          console.log('第3页参数尚未准备好，等待设置:', { hostname, commandHostId });
+        }
+      } else {
+        pollingSearch()
+      }
     }
-  }, [currentPage, open, pollingSearch])
+  }, [currentPage, open, pollingSearch, hostname, commandHostId])
 
   // 分页变化时重新获取数据
   useEffect(() => {
     if (open) {
-      pollingSearch()
+      // 第3页需要等待必需参数设置完成后才能调用API
+      if (currentPage === 3) {
+        if (hostname && commandHostId) {
+          pollingSearch()
+        } else {
+          console.log('第3页分页变化但参数未准备好，跳过调用');
+        }
+      } else {
+        pollingSearch()
+      }
     }
-  }, [pagination.current, pagination.pageSize, open, pollingSearch])
+  }, [pagination.current, pagination.pageSize, open, pollingSearch, currentPage, hostname, commandHostId])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -526,7 +581,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         onClose={handleCancel}
         clusterName={cluster?.clusterName}
         stepTitle="安装并启动服务"
-        stepDescription="监控服务安装和启动进度"
+        stepDescription=""
         dialogTitle={`服务安装 - ${cluster?.clusterName}`}
         currentStep={currentStepNumber}
         actionBar={actionBar}
@@ -550,9 +605,6 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
                   {title}
                 </h1>
-                {currentPage === 1 && (
-                  <p className="text-sm text-slate-600 mt-1">监控服务安装和启动进度</p>
-                )}
               </div>
             </div>
             
