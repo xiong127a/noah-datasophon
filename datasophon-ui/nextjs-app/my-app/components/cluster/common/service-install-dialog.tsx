@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { 
-  ChevronLeft, X, ChevronRight, AlertTriangle, 
+  ChevronLeft, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
   Activity, ArrowRight,
   Eye, Terminal, Cpu
@@ -12,7 +12,7 @@ import { Dialog, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import ServiceIcon from '@/components/ui/service-icon'
 
@@ -146,7 +146,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   const [commandId, setCommandId] = useState("") // 第二个列表请求页面需要的参数
   const [hostname, setHostname] = useState("") // 第三个列表请求页面需要的参数
   const [commandHostId, setCommandHostId] = useState("") // 第三个列表请求页面需要的参数
-  const [commandName, setCommandName] = useState("")
+
   const [logData, setLogData] = useState("")
   const [error, setError] = useState<string | null>(null)
 
@@ -163,6 +163,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   // 获取服务列表（对应原Vue2的getServiceList方法）
   const getServiceList = useCallback(async (flag?: boolean) => {
+    // 第4页是纯日志查看页面，不需要调用任何API
+    if (currentPage === 4) {
+      console.log('第4页是日志查看页面，跳过API调用');
+      return;
+    }
+    
     if (!flag) setLoading(true)
     setError(null)
     
@@ -241,38 +247,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
 
 
-  // 返回上一级（对应原Vue2的goBack方法）
-  const goBack = useCallback(() => {
-    // 清除定时器
-    if (timer1.current) clearInterval(timer1.current)
-    if (timer2.current) clearInterval(timer2.current)
-    if (timer3.current) clearInterval(timer3.current)
-    
-    setCurrentPage(prev => {
-      const newPage = prev - 1
-      setLoading(true)
-      
-      if (newPage === 2) {
-        setTitle(commandName)
-      }
-      if (newPage === 1) {
-        setTitle("安装并启动服务")
-      }
-      if (newPage === 3) {
-        setTitle(hostname)
-      }
-      
-      setDataSource([])
 
-      setPagination(prev => ({
-        ...prev,
-        total: 0,
-        current: 1
-      }))
-      
-      return newPage
-    })
-  }, [commandName, hostname])
 
   // 查看详情（对应原Vue2的seeDetail方法）
   const seeDetail = useCallback(async (row: DataItem) => {
@@ -330,7 +305,6 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (newPage === 2) {
       console.log('=== 进入第2页 ===');
       console.log('设置commandId:', row.commandId);
-        setCommandName(row.commandName || "")
         setTitle(`${row.commandName || '服务'} - 主机列表`)
         setCommandId(row.commandId || "")
       setCurrentPage(2)
@@ -406,7 +380,6 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       setCommandId("")
       setHostname("")
       setCommandHostId("")
-      setCommandName("")
       setLogData("")
       setError(null)
 
@@ -436,6 +409,15 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   // 页面切换完成后的数据加载（不依赖pollingSearch避免循环）
   useEffect(() => {
     if (open && currentPage > 0) {
+      // 第4页是纯日志查看页面，清除所有定时器，不需要任何数据加载
+      if (currentPage === 4) {
+        console.log('第4页是日志查看页面，清除所有定时器');
+        if (timer1.current) clearInterval(timer1.current)
+        if (timer2.current) clearInterval(timer2.current)
+        if (timer3.current) clearInterval(timer3.current)
+        return;
+      }
+      
       // 检查是否有必需的参数
       let canLoad = true
       if (currentPage === 2 && !commandId) {
@@ -470,6 +452,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   // 分页变化时重新获取数据
   useEffect(() => {
     if (open && currentPage > 0) {
+      // 第4页是纯日志查看页面，不需要分页功能
+      if (currentPage === 4) {
+        return;
+      }
+      
       // 只有真正的分页操作（不是初始化）才触发数据重新加载
       const isPaginationChange = pagination.current !== 1 || pagination.pageSize !== 10
       
@@ -535,31 +522,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 
                 {/* 标题 */}
                 <div className="flex items-center gap-3">
-                  {currentPage !== 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={goBack}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-7 px-2"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                      返回
-                    </Button>
-                  )}
                   <h1 className="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
                     {title}
                   </h1>
                 </div>
               </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancel}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
@@ -705,12 +672,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                                         return (
                               <div
                                 key={stableKey}
-                                className={`group flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
+                                className={`group flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:shadow-sm cursor-pointer ${
                                   isSelected 
                                     ? 'border-blue-300 bg-blue-50/50' 
                                     : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/20'
-                                } ${currentPage !== 3 ? 'hover:shadow-sm cursor-pointer' : ''}`}
-                                onClick={() => currentPage !== 3 && seeDetail(item)}
+                                }`}
+                                onClick={() => seeDetail(item)}
                               >
                                 {/* 选择框 (仅第1页) */}
                                 {currentPage === 1 && (
@@ -752,9 +719,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                       <span className="font-medium text-slate-800 truncate">
                                         {currentPage === 1 ? item.commandName : currentPage === 2 ? item.hostname : item.commandName}
                                       </span>
-                                      {currentPage !== 3 && (
-                                        <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                                      )}
+                                      <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                     </div>
                                     
                                     {/* 状态标签 */}
@@ -789,17 +754,10 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                     <div className="flex items-center gap-2">
                                       <span>{item.commandProgress || 0}%</span>
                                       {currentPage === 3 && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            seeDetail(item)
-                                          }}
-                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
-                                        >
+                                        <div className="flex items-center gap-1 text-blue-600">
                                           <Eye className="h-3 w-3" />
-                                          <span>日志</span>
-                                        </button>
+                                          <span>查看日志</span>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -854,27 +812,49 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 </CardContent>
               </Card>
             ) : (
-                            /* 日志查看器 */
-              <Card className="h-full bg-white border shadow-sm">
-                <CardHeader className="pb-2 border-b">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="h-4 w-4 text-slate-600" />
-                    <h3 className="text-sm font-medium text-slate-800">执行日志</h3>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="p-0 h-full">
-                  <div className="h-full bg-slate-900 p-3 overflow-auto">
-                    {logData ? (
-                      <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap leading-relaxed">
-                        {logData}
-                      </pre>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <Terminal className="h-6 w-6 mb-2" />
-                        <p className="text-sm">暂无日志数据</p>
+              /* 第4页：日志查看器 - 保持卡片风格 */
+              <Card className="h-full bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <CardContent className="p-0 h-full flex flex-col">
+                  <div className="p-3 space-y-2">
+                    {/* 日志信息卡片 */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                      <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-50 border border-blue-200 flex-shrink-0">
+                        <Terminal className="h-4 w-4 text-blue-700" />
                       </div>
-                    )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-slate-800 truncate">
+                            执行日志详情
+                          </span>
+                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-0 text-xs flex-shrink-0">
+                            <Terminal className="h-3 w-3 mr-1" />
+                            实时日志
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-xs text-slate-500">
+                          主机命令执行的详细日志输出
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 日志内容区域 */}
+                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200">
+                    <div className="h-full bg-slate-900 p-4 overflow-auto">
+                      {logData ? (
+                        <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap leading-relaxed">
+                          {logData}
+                        </pre>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                          <Terminal className="h-8 w-8 mb-3 opacity-50" />
+                          <p className="text-sm">暂无日志数据</p>
+                          <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
