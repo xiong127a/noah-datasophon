@@ -88,42 +88,46 @@ public class MybatisFlexConfig {
     }
     
     /**
-     * 配置审计字段自动填充
+     * 配置审计字段自动填充 - 正确的实现方式
      */
     private void configureAuditFields() {
-        // 使用FlexGlobalConfig配置审计字段自动填充
-        FlexGlobalConfig globalConfig = FlexGlobalConfig.getDefaultConfig();
-        
-        // 注册插入监听器
-        globalConfig.registerInsertListener((entity) -> {
+        // 配置审计字段自动填充 - 使用静态配置确保在应用启动时生效
+        FlexGlobalConfig.getDefaultConfig().registerInsertListener(entity -> {
             if (entity instanceof BaseEntity baseEntity) {
                 LocalDateTime now = LocalDateTime.now();
                 String currentUser = getCurrentUser();
                 
+                // 只设置null的审计字段，不覆盖已有值
                 if (baseEntity.getCreateTime() == null) {
                     baseEntity.setCreateTime(now);
                 }
                 if (baseEntity.getCreateBy() == null) {
                     baseEntity.setCreateBy(currentUser);
                 }
-                // 插入时也设置更新时间和更新人
-                baseEntity.setUpdateTime(now);
-                baseEntity.setUpdateBy(currentUser);
+                if (baseEntity.getUpdateTime() == null) {
+                    baseEntity.setUpdateTime(now);
+                }
+                if (baseEntity.getUpdateBy() == null) {
+                    baseEntity.setUpdateBy(currentUser);
+                }
                 
-                log.debug("Insert audit: user={}, time={}", currentUser, now);
+                log.debug("Insert audit filled: entity={}, user={}, time={}", 
+                    entity.getClass().getSimpleName(), currentUser, now);
             }
         }, BaseEntity.class);
         
         // 注册更新监听器
-        globalConfig.registerUpdateListener((entity) -> {
+        FlexGlobalConfig.getDefaultConfig().registerUpdateListener(entity -> {
             if (entity instanceof BaseEntity baseEntity) {
                 LocalDateTime now = LocalDateTime.now();
                 String currentUser = getCurrentUser();
                 
+                // 更新时总是更新这两个字段
                 baseEntity.setUpdateTime(now);
                 baseEntity.setUpdateBy(currentUser);
                 
-                log.debug("Update audit: user={}, time={}", currentUser, now);
+                log.debug("Update audit filled: entity={}, user={}, time={}", 
+                    entity.getClass().getSimpleName(), currentUser, now);
             }
         }, BaseEntity.class);
         

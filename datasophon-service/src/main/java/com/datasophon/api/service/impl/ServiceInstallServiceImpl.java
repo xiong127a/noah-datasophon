@@ -435,6 +435,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             }
         }
 
+
+
         // 缓存zookeeper节点数量
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);

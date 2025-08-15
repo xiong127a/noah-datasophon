@@ -209,9 +209,22 @@ public class ClusterServiceCommandServiceImpl
         }
 
         // 保存命令数据
+        logger.info("保存命令数据: commands={}, hosts={}, hostCommands={}", 
+            list.size(), commandHostList.size(), hostCommandList.size());
+        
+        // 调试：保存前检查commandId
+        commandHostList.forEach(host -> 
+            logger.debug("保存前 CommandHost: id={}, commandId={}, hostname={}", 
+                host.getId(), host.getCommandId(), host.getHostname()));
+        
         commandService.saveBatch(list);
         commandHostService.saveBatch(commandHostList);
         hostCommandService.saveBatch(hostCommandList);
+        
+        // 调试：保存后检查commandId
+        commandHostList.forEach(host -> 
+            logger.debug("保存后 CommandHost: id={}, commandId={}, hostname={}", 
+                host.getId(), host.getCommandId(), host.getHostname()));
 
         return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
@@ -670,8 +683,8 @@ public class ClusterServiceCommandServiceImpl
         // 使用DTO构建，符合框架规范
         ClusterServiceCommandDTO commandDto = new ClusterServiceCommandDTO(
                 null,                           // id - 由MyBatis-Flex自动生成
-                null,                           // createBy - 由MyBatis-Flex审计功能自动填充
-                null,                           // createTime - 由MyBatis-Flex审计功能自动填充
+                null,                           // createBy - 由审计监听器自动填充
+                null,                           // createTime - 由审计监听器自动填充
                 serviceName,                    // commandName
                 CommandState.WAIT.getValue(),   // commandState
                 null,                           // commandStateCode - ignore字段，不需要设置
@@ -693,7 +706,7 @@ public class ClusterServiceCommandServiceImpl
      */
     private ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname) {
         ClusterServiceCommandHostEntity commandHost = new ClusterServiceCommandHostEntity();
-        // 不手动设置ID和审计字段，由MyBatis-Flex自动处理
+        // 只设置业务字段，审计字段由监听器自动填充
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.WAIT);
@@ -712,7 +725,7 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceCommandHostEntity commandHost) {
 
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
-        // 不手动设置ID和审计字段，由MyBatis-Flex自动处理
+        // 只设置业务字段，审计字段由监听器自动填充
         hostCommand.setCommandHostId(commandHost.getId());
         hostCommand.setCommandId(commandId);
         hostCommand.setCommandName(commandType.name());
