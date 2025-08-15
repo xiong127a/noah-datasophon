@@ -87,6 +87,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   })
   const [dataSource, setDataSource] = useState<DataItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [renderTimestamp, setRenderTimestamp] = useState(Date.now())
   const [currentPage, setCurrentPage] = useState(1)
   const [commandId, setCommandId] = useState("") // 第二个列表请求页面需要的参数
   const [hostname, setHostname] = useState("") // 第三个列表请求页面需要的参数
@@ -117,6 +118,9 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     
     if (currentPage === 2) params.commandId = commandId
     if (currentPage === 3) {
+      console.log('=== 第3页API调用参数 ===');
+      console.log('hostname:', hostname);
+      console.log('commandHostId:', commandHostId);
       params.hostname = hostname
       params.commandHostId = commandHostId
     }
@@ -128,7 +132,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       : API_PATHS_V1.GET_SERVICE_ROLE_ORDER_LIST
 
     try {
-      const headers = createClusterHeaders(cluster.id)
+      const headers = createClusterHeaders(cluster.id.toString())
       
       // 所有页面都使用GET方法，参数作为查询参数
       // 第1页: /cluster/service/command/list
@@ -139,7 +143,9 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (response.data?.code === 200) {
         // API返回的数据结构：{ code: 200, data: { records: [...], total: "4", ... } }
         const responseData = response.data.data || {}
+        // 前端只负责展示，不修改后端数据
         setDataSource(responseData.records || [])
+        setRenderTimestamp(Date.now()) // 数据更新时生成新的时间戳
         setPagination(prev => ({
           ...prev,
           total: parseInt(responseData.total) || 0
@@ -180,6 +186,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       }
       
       setDataSource([])
+      setRenderTimestamp(Date.now()) // 返回上一页时更新时间戳
       setPagination(prev => ({
         ...prev,
         total: 0,
@@ -202,15 +209,15 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     if (currentPage === 3) {
       setLoading(true)
       setHostname(row.hostname || "")
-      setCommandHostId(row.hostCommandId || "")
+      setCommandHostId(row.commandHostId || "")
       
       // 获取日志
       try {
-        const headers = createClusterHeaders(cluster.id)
-        const response = await apiV1.post(API_PATHS_V1.GET_HOST_COMMAND_LOG, {
-          hostCommandId: row.hostCommandId,
-          clusterId: cluster.id,
-        }, { headers })
+        const headers = createClusterHeaders(cluster.id.toString())
+        const response = await apiV1.get(
+          `${API_PATHS_V1.GET_HOST_COMMAND_LOG}?hostCommandId=${row.commandHostId}`,
+          { headers }
+        )
         
         if (response.data?.code === 200) {
           setLogData(response.data.data || "")
@@ -229,6 +236,16 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       return
     }
     
+    // 立即清理数据，避免key重复
+    setDataSource([])
+    setSelectedRowKeys([])
+    setRenderTimestamp(Date.now()) // 页面切换时更新时间戳
+    setPagination(prev => ({
+      ...prev,
+      current: 1,
+      total: 0
+    }))
+    
     setCurrentPage(prev => {
       const newPage = prev + 1
       setLoading(true)
@@ -239,16 +256,14 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         setCommandId(row.commandId || "")
       }
       if (newPage === 3) {
+        console.log('=== 设置第3页参数 ===');
+        console.log('row数据:', row);
+        console.log('row.commandHostId:', row.commandHostId);
+        console.log('row.hostname:', row.hostname);
         setTitle(row.hostname || "")
-        setCommandHostId(row.hostCommandId || "")
+        setCommandHostId(row.commandHostId || "")
         setHostname(row.hostname || "")
       }
-      
-      setDataSource([])
-      setPagination(prev => ({
-        ...prev,
-        total: 0
-      }))
       
       return newPage
     })
@@ -283,15 +298,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       commandIds = row.commandId || ""
     }
     
-    const params = {
+    const queryParams = new URLSearchParams({
       commandIds,
       commandType: "INSTALL_SERVICE", // 固定值，对应原Vue2的steps.commandType
-      clusterId: cluster.id,
-    }
+    })
     
     try {
-      const headers = createClusterHeaders(cluster.id)
-      const response = await apiV1.post(API_PATHS_V1.START_EXECUTE_COMMAND, params, { headers })
+      const headers = createClusterHeaders(cluster.id.toString())
+      const response = await apiV1.post(
+        `${API_PATHS_V1.START_EXECUTE_COMMAND}?${queryParams.toString()}`,
+        {}, // 空的请求体
+        { headers }
+      )
       
       if (response.data?.code === 200) {
         setSelectedRowKeys([])
@@ -628,7 +646,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                           ) : (
                             dataSource.map((item, index) => (
                               <tr 
-                                key={item.commandId || item.hostCommandId || index}
+                                key={`page-${currentPage}-time-${renderTimestamp}-index-${index}`}
                                 className="hover:bg-slate-50/80 transition-colors border-b border-slate-100"
                               >
                                 {currentPage === 1 && (
