@@ -253,9 +253,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       const errorMsg = error.response?.data?.message || error.message || '启动服务安装失败';
       
       // 清除所有定时器，防止无限重试
-      if (timer1.current) clearInterval(timer1.current);
-      if (timer2.current) clearInterval(timer2.current);
-      if (timer3.current) clearInterval(timer3.current);
+      if (timer1.current) {
+        clearInterval(timer1.current);
+        timer1.current = null;
+      }
+      if (timer2.current) {
+        clearInterval(timer2.current);
+        timer2.current = null;
+      }
+      if (timer3.current) {
+        clearInterval(timer3.current);
+        timer3.current = null;
+      }
       
       setError(errorMsg);
       setInstallStatus({
@@ -365,9 +374,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   // 查看详情（对应原Vue2的seeDetail方法）
   const seeDetail = useCallback(async (row: DataItem) => {
     // 清除定时器
-    if (timer1.current) clearInterval(timer1.current)
-    if (timer2.current) clearInterval(timer2.current)
-    if (timer3.current) clearInterval(timer3.current)
+    if (timer1.current) {
+      clearInterval(timer1.current);
+      timer1.current = null;
+    }
+    if (timer2.current) {
+      clearInterval(timer2.current);
+      timer2.current = null;
+    }
+    if (timer3.current) {
+      clearInterval(timer3.current);
+      timer3.current = null;
+    }
     
     setPagination(prev => ({ ...prev, current: 1 }))
     
@@ -518,12 +536,38 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       return () => {
         clearTimeout(timeoutId)
       }
+    } else {
+      // 🔧 修复：对话框关闭时立即清理所有定时器
+      console.log('对话框关闭（open=false），清理定时器...');
+      if (timer1.current) {
+        clearInterval(timer1.current);
+        timer1.current = null;
+      }
+      if (timer2.current) {
+        clearInterval(timer2.current);
+        timer2.current = null;
+      }
+      if (timer3.current) {
+        clearInterval(timer3.current);
+        timer3.current = null;
+      }
     }
     
+    // 🔧 加强：组件卸载时的最终清理
     return () => {
-      if (timer1.current) clearInterval(timer1.current)
-      if (timer2.current) clearInterval(timer2.current)
-      if (timer3.current) clearInterval(timer3.current)
+      console.log('组件卸载，最终清理定时器...');
+      if (timer1.current) {
+        clearInterval(timer1.current);
+        timer1.current = null;
+      }
+      if (timer2.current) {
+        clearInterval(timer2.current);
+        timer2.current = null;
+      }
+      if (timer3.current) {
+        clearInterval(timer3.current);
+        timer3.current = null;
+      }
     }
   }, [open]) // 移除状态依赖，避免无限循环
 
@@ -549,9 +593,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         const timer1Ref = timer1.current;
         const timer2Ref = timer2.current;
         const timer3Ref = timer3.current;
-        if (timer1Ref) clearInterval(timer1Ref)
-        if (timer2Ref) clearInterval(timer2Ref)
-        if (timer3Ref) clearInterval(timer3Ref)
+        if (timer1Ref) {
+          clearInterval(timer1Ref);
+          timer1.current = null;
+        }
+        if (timer2Ref) {
+          clearInterval(timer2Ref);
+          timer2.current = null;
+        }
+        if (timer3Ref) {
+          clearInterval(timer3Ref);
+          timer3.current = null;
+        }
         
         // 立即加载一次数据
         getServiceListRef.current()
