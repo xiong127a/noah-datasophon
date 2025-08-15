@@ -178,6 +178,8 @@ public class KubernetesYamlDeploymentHandler {
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
 
+        logger.info("K8s模块开始处理 {} 角色，namespace: {}", serviceRoleName, namespace);
+
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         try {
             Set<ServiceConfigVolume> volumePathSet = new HashSet<>();
@@ -358,6 +360,8 @@ public class KubernetesYamlDeploymentHandler {
         data.put("volumeConfigMapSet", new ArrayList<>(volumeConfigMapSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
         data.put("serviceName", serviceName);
+        // 🔧 增强：确保namespace正确传递到模板，添加调试日志
+        logger.info("向FreeMarker模板传递namespace: {}", namespace);
         data.put("namespace", namespace);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         if (StrUtil.equals(serviceRoleFullName, "starrocks-srcn")) {

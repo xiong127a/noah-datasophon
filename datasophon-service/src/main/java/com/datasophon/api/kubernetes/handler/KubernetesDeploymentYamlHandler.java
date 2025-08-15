@@ -62,6 +62,14 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
 
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
+        // 🔧 修复：设置namespace到命令对象，添加日志排查
+        String namespace = clusterInfo.getNamespace();
+        log.info("集群ID: {}, 获取到的namespace: {}", serviceRoleInfo.getClusterId(), namespace);
+        if (namespace == null || namespace.trim().isEmpty()) {
+            log.warn("集群 {} 的namespace为空，使用默认值 'default'", serviceRoleInfo.getClusterId());
+            namespace = "default";
+        }
+        kubernetesGenerateDeploymentYamlCommand.setNamespace(namespace);
         String hostMapKey =
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
