@@ -73,6 +73,14 @@ const formatDuration = (durationText: string): { text: string; color: string } =
 
 import { Step7Data } from '@/types/service-config'
 
+// 安装状态类型定义
+interface InstallStatus {
+  isInstalling: boolean
+  hasStarted: boolean
+  commandIds?: string
+  error?: string
+}
+
 // 类型定义（保持与原API一致）
 interface DataItem {
   commandId?: string
@@ -124,7 +132,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   onOpenChange,
   cluster,
   clusterType,
-
+  serviceConfigData,
   onComplete,
   onPrevious
 }) => {
@@ -149,6 +157,10 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   const [logData, setLogData] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [installStatus, setInstallStatus] = useState<InstallStatus>({
+    isInstalling: false,
+    hasStarted: false
+  })
 
   // 定时器引用
   const timer1 = useRef<NodeJS.Timeout | null>(null)
@@ -156,10 +168,104 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   const timer3 = useRef<NodeJS.Timeout | null>(null)
   // 保存最新的getServiceList函数引用，避免useEffect依赖问题
   const getServiceListRef = useRef<(flag?: boolean) => Promise<void>>(async () => {})
+  // 保存最新的启动安装函数引用
+  const startInstallationRef = useRef<() => Promise<void>>(async () => {})
 
   // 计算步骤信息
   const isK8s = clusterType?.toLowerCase() === 'kubernetes'
   const currentStepNumber = isK8s ? 7 : 8
+
+  // 启动服务安装（对应Vue2的submitAllServices逻辑）
+  const startInstallation = useCallback(async () => {
+    if (installStatus.isInstalling || installStatus.hasStarted) {
+      console.log('安装已在进行中，跳过重复启动');
+      return;
+    }
+
+    console.log('开始启动服务安装流程');
+    setInstallStatus(prev => ({ ...prev, isInstalling: true }));
+    setError(null);
+
+    try {
+      // 从serviceConfigData获取服务名称列表  
+      const serviceNames = Object.keys(serviceConfigData?.serviceConfigs || {});
+      console.log('准备安装的服务:', serviceNames);
+
+      if (serviceNames.length === 0) {
+        throw new Error('没有找到要安装的服务');
+      }
+
+      const headers = createClusterHeaders(cluster.id.toString());
+
+      // 1. 生成安装命令
+      console.log('正在生成安装命令...');
+      const generateResponse = await apiV1.post(
+        `${API_PATHS_V1.GENERATE_SERVICE_INSTALL_COMMAND}?commandType=INSTALL_SERVICE`,
+        serviceNames, // 直接传递数组，不用包装成对象
+        { headers }
+      );
+
+      if (generateResponse.data?.code !== 200) {
+        throw new Error(generateResponse.data?.msg || '生成安装命令失败');
+      }
+
+      const commandIds = generateResponse.data.data;
+      console.log('生成的命令ID:', commandIds);
+
+      // 2. 启动执行命令
+      console.log('正在启动执行命令...');
+      const executeResponse = await apiV1.post(
+        API_PATHS_V1.START_EXECUTE_COMMAND,
+        {
+          commandType: 'INSTALL_SERVICE',
+          commandIds
+        },
+        { headers }
+      );
+
+      if (executeResponse.data?.code !== 200) {
+        throw new Error(executeResponse.data?.msg || '启动执行命令失败');
+      }
+
+      console.log('服务安装已成功启动');
+      setInstallStatus({
+        isInstalling: false,
+        hasStarted: true,
+        commandIds
+      });
+
+      // 启动成功后开始监控
+      setTimeout(() => {
+        getServiceListRef.current();
+        timer1.current = setInterval(() => {
+          getServiceListRef.current(true);
+        }, 3000);
+      }, 500);
+
+    } catch (err: unknown) {
+      console.error('启动服务安装失败:', err);
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const errorMsg = error.response?.data?.message || error.message || '启动服务安装失败';
+      
+      // 清除所有定时器，防止无限重试
+      if (timer1.current) clearInterval(timer1.current);
+      if (timer2.current) clearInterval(timer2.current);
+      if (timer3.current) clearInterval(timer3.current);
+      
+      setError(errorMsg);
+      setInstallStatus({
+        isInstalling: false,
+        hasStarted: false,
+        error: errorMsg
+      });
+      toast.error(errorMsg);
+    }
+  }, [cluster.id, installStatus.isInstalling, installStatus.hasStarted, serviceConfigData?.serviceConfigs]);
+
+  // 更新启动安装函数引用
+  useEffect(() => {
+    startInstallationRef.current = startInstallation;
+  }, [startInstallation]);
 
   // 获取服务列表（对应原Vue2的getServiceList方法）
   const getServiceList = useCallback(async (flag?: boolean) => {
@@ -238,7 +344,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     } finally {
       setLoading(false)
     }
-  }, [pagination.pageSize, pagination.current, cluster.id, currentPage, commandId, hostname, commandHostId])
+  }, [cluster.id, currentPage, commandId, hostname, commandHostId, pagination])
 
   // 更新函数引用
   useEffect(() => {
@@ -382,6 +488,10 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       setCommandHostId("")
       setLogData("")
       setError(null)
+      setInstallStatus({
+        isInstalling: false,
+        hasStarted: false
+      })
 
       setPagination(prev => ({
         ...prev,
@@ -389,14 +499,16 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         total: 0
       }))
       
-      // 延迟一点再开始轮询，确保状态已重置
-      setTimeout(() => {
-        // 启动第1页的轮询
-        getServiceListRef.current()
-        timer1.current = setInterval(() => {
-          getServiceListRef.current(true)
-        }, 3000)
+      // 延迟一点再检查并启动安装流程
+      const timeoutId = setTimeout(() => {
+        // 直接启动安装，不先检查状态（避免重复调用）
+        console.log('对话框打开，直接启动安装流程');
+        startInstallationRef.current();
       }, 100)
+    
+      return () => {
+        clearTimeout(timeoutId)
+      }
     }
     
     return () => {
@@ -404,20 +516,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (timer2.current) clearInterval(timer2.current)
       if (timer3.current) clearInterval(timer3.current)
     }
-  }, [open])
+  }, [open, dataSource.length, installStatus.isInstalling, installStatus.hasStarted])
 
-  // 页面切换完成后的数据加载（不依赖pollingSearch避免循环）
+  // 页面切换完成后的数据加载（只在安装已经开始后才进行）
   useEffect(() => {
-    if (open && currentPage > 0) {
-      // 第4页是纯日志查看页面，清除所有定时器，不需要任何数据加载
-      if (currentPage === 4) {
-        console.log('第4页是日志查看页面，清除所有定时器');
-        if (timer1.current) clearInterval(timer1.current)
-        if (timer2.current) clearInterval(timer2.current)
-        if (timer3.current) clearInterval(timer3.current)
-        return;
-      }
-      
+    // 只有在安装已经开始且不是第4页时才进行数据加载
+    if (open && installStatus.hasStarted && currentPage > 0 && currentPage < 4) {
       // 检查是否有必需的参数
       let canLoad = true
       if (currentPage === 2 && !commandId) {
@@ -433,21 +537,31 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         console.log(`第${currentPage}页参数就绪，开始加载数据`);
         
         // 清除之前的定时器
-        if (timer1.current) clearInterval(timer1.current)
-        if (timer2.current) clearInterval(timer2.current)
-        if (timer3.current) clearInterval(timer3.current)
+        const timer1Ref = timer1.current;
+        const timer2Ref = timer2.current;
+        const timer3Ref = timer3.current;
+        if (timer1Ref) clearInterval(timer1Ref)
+        if (timer2Ref) clearInterval(timer2Ref)
+        if (timer3Ref) clearInterval(timer3Ref)
         
         // 立即加载一次数据
         getServiceListRef.current()
         
         // 启动对应的定时器
-        const currentTimer = currentPage === 1 ? timer1 : currentPage === 2 ? timer2 : timer3
-        currentTimer.current = setInterval(() => {
+        const newTimer = setInterval(() => {
           getServiceListRef.current(true) // flag=true表示静默刷新
         }, 3000)
+        
+        if (currentPage === 1) {
+          timer1.current = newTimer
+        } else if (currentPage === 2) {
+          timer2.current = newTimer
+        } else {
+          timer3.current = newTimer
+        }
       }
     }
-  }, [currentPage, open, commandId, hostname, commandHostId])
+  }, [currentPage, open, commandId, hostname, commandHostId, installStatus.hasStarted])
 
   // 分页变化时重新获取数据
   useEffect(() => {
@@ -466,7 +580,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         getServiceListRef.current()
       }
     }
-  }, [pagination.current, pagination.pageSize, open, currentPage])
+  }, [pagination.pageSize, open, currentPage, pagination])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -608,8 +722,21 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                       ) : dataSource.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-slate-500">
                           <Activity className="h-12 w-12 mb-4 text-slate-300" />
-                          <p className="text-lg font-medium mb-2">暂无数据</p>
-                          <p className="text-sm">等待服务安装命令...</p>
+                          <p className="text-lg font-medium mb-2">
+                            {installStatus.isInstalling ? '正在启动安装...' : '暂无数据'}
+                          </p>
+                          <p className="text-sm">
+                            {installStatus.isInstalling 
+                              ? '正在生成和启动安装命令，请稍候...' 
+                              : installStatus.hasStarted 
+                              ? '等待安装任务生成...' 
+                              : '准备启动服务安装...'}
+                          </p>
+                          {installStatus.isInstalling && (
+                            <div className="mt-4">
+                              <div className="animate-spin h-8 w-8 border-4 rounded-full border-blue-600 border-t-transparent"></div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                                                 <div className="p-3 space-y-2">
