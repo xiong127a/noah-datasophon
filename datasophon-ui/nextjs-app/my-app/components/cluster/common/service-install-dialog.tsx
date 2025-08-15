@@ -161,6 +161,8 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     isInstalling: false,
     hasStarted: false
   })
+  // 添加一个锁，确保安装只启动一次
+  const installationStartedRef = useRef(false)
 
   // 定时器引用
   const timer1 = useRef<NodeJS.Timeout | null>(null)
@@ -177,10 +179,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   // 启动服务安装（对应Vue2的submitAllServices逻辑）
   const startInstallation = useCallback(async () => {
-    if (installStatus.isInstalling || installStatus.hasStarted) {
-      console.log('安装已在进行中，跳过重复启动');
+    // 使用ref锁来防止重复调用
+    if (installationStartedRef.current) {
+      console.log('安装已经启动过，跳过重复启动');
       return;
     }
+    
+    installationStartedRef.current = true; // 设置锁
 
     console.log('开始启动服务安装流程');
     setInstallStatus(prev => ({ ...prev, isInstalling: true }));
@@ -258,9 +263,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         hasStarted: false,
         error: errorMsg
       });
+      // 重置锁，允许重新尝试
+      installationStartedRef.current = false;
       toast.error(errorMsg);
     }
-  }, [cluster.id, installStatus.isInstalling, installStatus.hasStarted, serviceConfigData?.serviceConfigs]);
+  }, [cluster.id, serviceConfigData?.serviceConfigs]);
 
   // 更新启动安装函数引用
   useEffect(() => {
@@ -492,6 +499,8 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         isInstalling: false,
         hasStarted: false
       })
+      // 重置安装锁
+      installationStartedRef.current = false
 
       setPagination(prev => ({
         ...prev,
@@ -516,7 +525,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (timer2.current) clearInterval(timer2.current)
       if (timer3.current) clearInterval(timer3.current)
     }
-  }, [open, dataSource.length, installStatus.isInstalling, installStatus.hasStarted])
+  }, [open]) // 移除状态依赖，避免无限循环
 
   // 页面切换完成后的数据加载（只在安装已经开始后才进行）
   useEffect(() => {
