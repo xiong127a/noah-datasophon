@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { ScrollArea } from '@/components/ui/scroll-area' // 暂时注释，使用div代替
-import Image from 'next/image'
+import ServiceIcon from '@/components/ui/service-icon'
 
 interface ServiceConfigNavigationProps {
   services: string[]
@@ -28,37 +28,7 @@ const ServiceConfigNavigation: React.FC<ServiceConfigNavigationProps> = ({
   onServiceChange,
   loading
 }) => {
-  // 获取服务图标
-  const getServiceIcon = (serviceName: string) => {
-    const service = serviceName.toLowerCase()
-    
-    const iconMap: Record<string, string> = {
-      'hdfs': '/icons/hdfs.svg',
-      'yarn': '/icons/yarn.svg', 
-      'hive': '/icons/hive.svg',
-      'hbase': '/icons/hbase.svg',
-      'kafka': '/icons/kafka.svg',
-      'zookeeper': '/icons/zookeeper.svg',
-      'spark': '/icons/spark3.svg',
-      'flink': '/icons/flink.svg',
-      'elasticsearch': '/icons/elasticsearch.svg',
-      'kibana': '/icons/kibana.svg',
-      'prometheus': '/icons/prometheus.svg',
-      'grafana': '/icons/grafana.svg',
-      'redis': '/icons/redis.svg',
-      'doris': '/icons/doris.svg',
-      'clickhouse': '/icons/clickhouse.svg',
-      'trino': '/icons/trino.svg'
-    }
-    
-    for (const [component, icon] of Object.entries(iconMap)) {
-      if (service.includes(component)) {
-        return icon
-      }
-    }
-    
-    return '/icons/service-default.svg'
-  }
+
 
 
 
@@ -104,11 +74,9 @@ const ServiceConfigNavigation: React.FC<ServiceConfigNavigationProps> = ({
                           ? 'bg-gradient-to-br from-white/80 to-blue-50/60 shadow-lg ring-1 ring-blue-200/40' 
                           : 'bg-gradient-to-br from-white/60 to-gray-50/40 group-hover:bg-gradient-to-br group-hover:from-white/80 group-hover:to-blue-50/40 group-hover:shadow-md'
                       }`}>
-                        <Image
-                          src={getServiceIcon(serviceName)}
-                          alt={serviceName}
-                          width={24}
-                          height={24}
+                        <ServiceIcon
+                          serviceName={serviceName}
+                          size={24}
                           className="w-full h-full object-contain filter transition-all duration-300"
                         />
                       </div>

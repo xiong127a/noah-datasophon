@@ -1,4 +1,5 @@
 import React from 'react'
+import { getServiceIconPath } from '@/lib/service-icon-utils'
 
 interface SvgIconProps {
   name: string
@@ -11,9 +12,8 @@ export const SvgIcon: React.FC<SvgIconProps> = ({
   className,
   size = 24 
 }) => {
-  // 服务名称标准化处理：转为小写
-  const iconFileName = name.toUpperCase().trim().toLowerCase()
-  const iconPath = `/icons/${iconFileName}.svg`
+  // 使用统一的图标路径工具函数
+  const iconPath = getServiceIconPath(name)
   
   return (
     <img

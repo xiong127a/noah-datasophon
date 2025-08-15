@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
 import SuperHostSelector, { type HostInfo } from './super-host-selector'
-import Image from "next/image"
+import ServiceIcon from '@/components/ui/service-icon'
 import { ClusterTypeUtil } from '@/types'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 
@@ -52,7 +52,20 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
   // 表单项生成
   const formItems = useMemo(() => {
-    return roles.map(role => ({
+    // 调试：检查重复数据
+    const roleNames = roles.map(role => role.serviceRoleName)
+    const uniqueRoleNames = [...new Set(roleNames)]
+    if (roleNames.length !== uniqueRoleNames.length) {
+      console.warn('⚠️ Worker角色数据重复:', roleNames)
+      console.warn('去重后:', uniqueRoleNames)
+    }
+    
+    // 去重处理：基于serviceRoleName去重
+    const uniqueRoles = roles.filter((role, index, self) => 
+      index === self.findIndex(r => r.serviceRoleName === role.serviceRoleName)
+    )
+    
+    return uniqueRoles.map((role, index) => ({
       name: role.serviceRoleName,
       label: role.serviceRoleName,
       value: formData[role.serviceRoleName] || [],
@@ -60,67 +73,12 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       selectValue: availableHosts,
       type: 'multipleSelect' as const, // Worker/Client角色支持多选
       isHidden: false,
-      required: false
+      required: false,
+      uniqueKey: `${role.serviceRoleName}-${index}` // 添加唯一key
     }))
   }, [roles, availableHosts, formData])
 
-  // 获取大数据组件图标
-  const getComponentIcon = (serviceName: string = '') => {
-    const service = serviceName.toLowerCase()
-    
-    // 大数据组件图标映射
-    const iconMap: Record<string, string> = {
-      'hdfs': '/icons/hdfs.svg',
-      'yarn': '/icons/yarn.svg', 
-      'hive': '/icons/hive.svg',
-      'hbase': '/icons/hbase.svg',
-      'kafka': '/icons/kafka.svg',
-      'zookeeper': '/icons/zookeeper.svg',
-      'spark': '/icons/spark3.svg',
-      'flink': '/icons/flink.svg',
-      'elasticsearch': '/icons/elasticsearch.svg',
-      'kibana': '/icons/kibana.svg',
-      'logstash': '/icons/logstash.svg',
-      'prometheus': '/icons/prometheus.svg',
-      'grafana': '/icons/grafana.svg',
-      'alertmanager': '/icons/alertmanager.svg',
-      'redis': '/icons/redis.svg',
-      'doris': '/icons/doris.svg',
-      'clickhouse': '/icons/clickhouse.svg',
-      'trino': '/icons/trino.svg',
-      'presto': '/icons/presto.svg',
-      'alluxio': '/icons/alluxio.svg',
-      'juicefs': '/icons/juicefs.svg',
-      'minio': '/icons/minio.svg',
-      'ranger': '/icons/ranger.svg',
-      'kerberos': '/icons/kerberos.svg',
-      'flume': '/icons/flume.svg',
-      'kyuubi': '/icons/kyuubi.svg',
-      'hue': '/icons/hue.svg',
-      'zeppelin': '/icons/zeppelin.svg',
-      'streampark': '/icons/streampark.svg',
-      'seatunnel': '/icons/seatunnel.svg',
-      'starrocks': '/icons/starrocks.svg',
-      'postgresql': '/icons/postgresql.svg',
-      'neo4j': '/icons/neo4j.svg',
-      'nebulagraph': '/icons/nebulagraph.svg',
-      'iceberg': '/icons/iceberg.svg',
-      'hudi': '/icons/hudi.svg',
-      'paimon': '/icons/paimon.svg',
-      'tez': '/icons/tez.svg',
-      'openldap': '/icons/openldap.svg'
-    }
-    
-    // 从服务名称中提取主要组件名
-    for (const [component, icon] of Object.entries(iconMap)) {
-      if (service.includes(component)) {
-        return icon
-      }
-    }
-    
-    // 默认图标
-    return '/icons/service-default.svg'
-  }
+
 
   // 表单数据处理
   const handleFormChange = useCallback((name: string, value: string[]) => {
@@ -170,8 +128,27 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
           }
         }))
         
-        setAvailableHosts(hostsWithResources)
-        return hostsWithResources.map(h => h.hostname)
+        // 调试：检查主机数据重复
+        const hostnames = hostsWithResources.map(h => h.hostname)
+        const uniqueHostnames = [...new Set(hostnames)]
+        if (hostnames.length !== uniqueHostnames.length) {
+          console.warn('⚠️ 主机数据重复:', hostnames)
+          console.warn('去重后:', uniqueHostnames)
+        }
+        
+        // 去重处理：基于hostname去重
+        const uniqueHosts = hostsWithResources.filter((host, index, self) => 
+          index === self.findIndex(h => h.hostname === host.hostname)
+        )
+        
+        console.log('🏠 主机数据加载:', {
+          originalCount: hostsWithResources.length,
+          uniqueCount: uniqueHosts.length,
+          hostnames: uniqueHosts.map(h => h.hostname)
+        })
+        
+        setAvailableHosts(uniqueHosts)
+        return uniqueHosts.map(h => h.hostname)
       } else {
         throw new Error(response?.message || '获取主机列表失败')
       }
@@ -206,6 +183,14 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       
       if (response?.success && response?.data) {
         const roleData = response.data
+        
+        // 调试：检查API返回的角色数据
+        console.log('🔍 Worker角色API响应:', {
+          roleCount: roleData.length,
+          roles: roleData.map((r: any) => r.serviceRoleName),
+          availableHostsCount: availableHosts.length,
+          availableHostnames: availableHosts.map(h => h.hostname)
+        })
         
         // API响应数据处理
         
@@ -401,18 +386,14 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
             <div className="flex-1 overflow-y-auto overflow-x-visible">
               <div className="space-y-3">
                 {formItems.map((item) => (
-                  <div key={item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
+                  <div key={item.uniqueKey || item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
-                      <div className="w-4 h-4 flex-shrink-0">
-                        <Image
-                          src={getComponentIcon(item.name)}
-                          alt={item.name}
-                          width={16}
-                          height={16}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+                      <ServiceIcon
+                        serviceName={item.name}
+                        size={16}
+                        className="w-4 h-4 flex-shrink-0"
+                      />
                       <span className="font-medium text-gray-900 truncate">{item.label}</span>
                       {item.required && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">必需</Badge>
@@ -432,6 +413,9 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
                         hosts={item.selectValue || []}
                         selectedHosts={formData[item.name] || []}
                         onSelectionChange={(hostnames) => {
+                          console.log(`🔄 Worker角色[${item.name}]选择变化:`, hostnames)
+                          console.log(`   当前formData[${item.name}]:`, formData[item.name])
+                          console.log(`   可用主机数量:`, (item.selectValue || []).length)
                           handleFormChange(item.name, hostnames)
                         }}
                         placeholder="选择多台主机"

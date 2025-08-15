@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
-import { Package } from 'lucide-react'
+import { getServiceIconPath } from '@/lib/service-icon-utils'
 
 interface ServiceIconProps {
   /** 服务名称 */
@@ -26,9 +26,8 @@ const ServiceIcon: React.FC<ServiceIconProps> = ({
   size = 32, 
   className = "" 
 }) => {
-  // 将服务名称转换为图标文件名（小写）
-  const iconName = serviceName.toLowerCase()
-  const iconPath = `/icons/${iconName}.svg`
+  // 使用统一的图标路径工具函数
+  const iconPath = getServiceIconPath(serviceName)
   
   // 错误处理：如果图标加载失败，显示默认图标
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {

@@ -10,7 +10,7 @@ import type { ClusterInfo } from '@/hooks/useCluster'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type StatusBadge } from './cluster-wizard-action-bar'
 import SuperHostSelector, { type HostInfo } from './super-host-selector'
-import Image from "next/image"
+import ServiceIcon from '@/components/ui/service-icon'
 
 /**
  * Step5 Dialog组件 - 分配服务Master角色
@@ -184,63 +184,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // 获取大数据组件图标
-  const getComponentIcon = (serviceName: string = '') => {
-    const service = serviceName.toLowerCase()
-    
-    // 大数据组件图标映射
-    const iconMap: Record<string, string> = {
-      'hdfs': '/icons/hdfs.svg',
-      'yarn': '/icons/yarn.svg', 
-      'hive': '/icons/hive.svg',
-      'hbase': '/icons/hbase.svg',
-      'kafka': '/icons/kafka.svg',
-      'zookeeper': '/icons/zookeeper.svg',
-      'spark': '/icons/spark3.svg',
-      'flink': '/icons/flink.svg',
-      'elasticsearch': '/icons/elasticsearch.svg',
-      'kibana': '/icons/kibana.svg',
-      'logstash': '/icons/logstash.svg',
-      'prometheus': '/icons/prometheus.svg',
-      'grafana': '/icons/grafana.svg',
-      'alertmanager': '/icons/alertmanager.svg',
-      'redis': '/icons/redis.svg',
-      'doris': '/icons/doris.svg',
-      'clickhouse': '/icons/clickhouse.svg',
-      'trino': '/icons/trino.svg',
-      'presto': '/icons/presto.svg',
-      'alluxio': '/icons/alluxio.svg',
-      'juicefs': '/icons/juicefs.svg',
-      'minio': '/icons/minio.svg',
-      'ranger': '/icons/ranger.svg',
-      'kerberos': '/icons/kerberos.svg',
-      'flume': '/icons/flume.svg',
-      'kyuubi': '/icons/kyuubi.svg',
-      'hue': '/icons/hue.svg',
-      'zeppelin': '/icons/zeppelin.svg',
-      'streampark': '/icons/streampark.svg',
-      'seatunnel': '/icons/seatunnel.svg',
-      'starrocks': '/icons/starrocks.svg',
-      'postgresql': '/icons/postgresql.svg',
-      'neo4j': '/icons/neo4j.svg',
-      'nebulagraph': '/icons/nebulagraph.svg',
-      'iceberg': '/icons/iceberg.svg',
-      'hudi': '/icons/hudi.svg',
-      'paimon': '/icons/paimon.svg',
-      'tez': '/icons/tez.svg',
-      'openldap': '/icons/openldap.svg'
-    }
-    
-    // 从服务名称中提取主要组件名
-    for (const [component, icon] of Object.entries(iconMap)) {
-      if (service.includes(component)) {
-        return icon
-      }
-    }
-    
-    // 默认图标
-    return '/icons/service-default.svg'
-  }
+
 
   // 表单值变更处理
   const handleFormChange = useCallback((name: string, value: string | string[]) => {
@@ -409,15 +353,11 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                   <div key={item.name} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-lg hover:shadow-md transition-all duration-200">
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
-                      <div className="w-4 h-4 flex-shrink-0">
-                        <Image
-                          src={getComponentIcon(item.name)}
-                          alt={item.name}
-                          width={16}
-                          height={16}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+                      <ServiceIcon
+                        serviceName={item.name}
+                        size={16}
+                        className="w-4 h-4 flex-shrink-0"
+                      />
                       <span className="font-medium text-gray-900 truncate">{item.label}</span>
                       {item.required && (
                         <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">必需</Badge>
