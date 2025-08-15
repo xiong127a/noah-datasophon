@@ -489,14 +489,32 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 {/* 面包屑导航 */}
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <span className={`transition-colors ${currentPage === 1 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`} 
-                        onClick={() => currentPage > 1 && setCurrentPage(1)}>
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            // 清理数据状态，避免页面间数据混乱
+                            setDataSource([])
+                            setSelectedRowKeys([])
+                            setPagination(prev => ({ ...prev, current: 1, total: 0 }))
+                            setCurrentPage(1)
+                            setTitle("服务安装状态")
+                          }
+                        }}>
                     服务列表
                   </span>
                   {currentPage > 1 && (
                     <>
                       <ChevronRight className="h-3 w-3 text-gray-400" />
                       <span className={`transition-colors ${currentPage === 2 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`}
-                            onClick={() => currentPage > 2 && setCurrentPage(2)}>
+                            onClick={() => {
+                              if (currentPage > 2) {
+                                // 清理数据状态，避免页面间数据混乱
+                                setDataSource([])
+                                setSelectedRowKeys([])
+                                setPagination(prev => ({ ...prev, current: 1, total: 0 }))
+                                setCurrentPage(2)
+                                setTitle(`${commandId ? '主机列表' : '服务'} - 主机列表`)
+                              }
+                            }}>
                         主机详情
                       </span>
                     </>
@@ -505,7 +523,16 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                     <>
                       <ChevronRight className="h-3 w-3 text-gray-400" />
                       <span className={`transition-colors ${currentPage === 3 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`}
-                            onClick={() => currentPage > 3 && setCurrentPage(3)}>
+                            onClick={() => {
+                              if (currentPage > 3) {
+                                // 清理数据状态，避免页面间数据混乱
+                                setDataSource([])
+                                setSelectedRowKeys([])
+                                setPagination(prev => ({ ...prev, current: 1, total: 0 }))
+                                setCurrentPage(3)
+                                setTitle(`${hostname ? hostname : '主机'} - 执行日志`)
+                              }
+                            }}>
                         命令日志
                       </span>
                     </>
@@ -613,8 +640,8 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                           {/* 卡片列表 */}
                           {dataSource.map((item, index) => {
                             const isSelected = selectedRowKeys.includes(item.commandId || "")
-                            // 稳定的key，避免图标闪烁
-                            const stableKey = `${currentPage}-${item.commandId || item.commandName || index}`
+                            // 稳定的key，避免图标闪烁 - 添加index确保唯一性
+                            const stableKey = `${currentPage}-${index}-${item.commandId || item.commandName || 'unknown'}`
                             
                             const getStatusConfig = (stateCode: number) => {
                               switch (stateCode) {
