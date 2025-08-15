@@ -100,6 +100,8 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   const timer1 = useRef<NodeJS.Timeout | null>(null)
   const timer2 = useRef<NodeJS.Timeout | null>(null)
   const timer3 = useRef<NodeJS.Timeout | null>(null)
+  // 保存最新的getServiceList函数引用，避免useEffect依赖问题
+  const getServiceListRef = useRef<(flag?: boolean) => Promise<void>>(async () => {})
 
   // 计算步骤信息
   const isK8s = clusterType?.toLowerCase() === 'kubernetes'
@@ -176,6 +178,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       setLoading(false)
     }
   }, [pagination.pageSize, pagination.current, cluster.id, currentPage, commandId, hostname, commandHostId])
+
+  // 更新函数引用
+  useEffect(() => {
+    getServiceListRef.current = getServiceList
+  }, [getServiceList])
 
 
 
@@ -261,43 +268,30 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       total: 0
     }))
     
-    setCurrentPage(prev => {
-      const newPage = prev + 1
-      setLoading(true)
-      
-      if (newPage === 2) {
-        setCommandName(row.commandName || "")
-        setTitle(row.commandName || "")
-        setCommandId(row.commandId || "")
-      }
-      if (newPage === 3) {
-        console.log('=== 设置第3页参数 ===');
-        console.log('row数据:', row);
-        console.log('row.commandHostId:', row.commandHostId);
-        console.log('row.hostname:', row.hostname);
-        setTitle(row.hostname || "")
-        setCommandHostId(row.commandHostId || "")
-        setHostname(row.hostname || "")
-      }
-      
-      return newPage
-    })
-  }, [currentPage, cluster.id])
-
-  // 轮询搜索（对应原Vue2的pollingSearch方法）
-  const pollingSearch = useCallback(() => {
-    getServiceList() // 先立马刷一次
+    const newPage = currentPage + 1
     
-    const currentTimer = currentPage === 1 ? timer1 : currentPage === 2 ? timer2 : timer3
-    
-    if (currentTimer.current) {
-      clearInterval(currentTimer.current)
+    // 同步设置页面状态和必需参数
+    if (newPage === 2) {
+      console.log('=== 进入第2页 ===');
+      console.log('设置commandId:', row.commandId);
+      setCommandName(row.commandName || "")
+      setTitle(row.commandName || "")
+      setCommandId(row.commandId || "")
+      setCurrentPage(2)
+    } else if (newPage === 3) {
+      console.log('=== 进入第3页 ===');
+      console.log('设置hostname:', row.hostname);
+      console.log('设置commandHostId:', row.commandHostId);
+      setTitle(row.hostname || "")
+      setCommandHostId(row.commandHostId || "")
+      setHostname(row.hostname || "")
+      setCurrentPage(3)
     }
     
-    currentTimer.current = setInterval(() => {
-      getServiceList(true)
-    }, 3000) // 3秒间隔
-  }, [getServiceList, currentPage])
+    // useEffect会自动检测参数变化并触发数据加载
+  }, [currentPage, cluster.id])
+
+
 
   // 重试主机（对应原Vue2的retryHost方法）
   const retryHost = useCallback(async (row: DataItem | "all") => {
@@ -329,7 +323,16 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (response.data?.code === 200) {
         setSelectedRowKeys([])
         toast.success("操作成功")
-        pollingSearch()
+        // 重新启动轮询
+        if (timer1.current) clearInterval(timer1.current)
+        if (timer2.current) clearInterval(timer2.current)
+        if (timer3.current) clearInterval(timer3.current)
+        
+        getServiceListRef.current()
+        const currentTimer = currentPage === 1 ? timer1 : currentPage === 2 ? timer2 : timer3
+        currentTimer.current = setInterval(() => {
+          getServiceListRef.current(true)
+        }, 3000)
       } else {
         throw new Error(response.data?.message || '重试失败')
       }
@@ -338,7 +341,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       setError(errorMsg)
       toast.error(errorMsg)
     }
-  }, [selectedRowKeys, cluster.id, pollingSearch])
+  }, [selectedRowKeys, cluster.id, currentPage])
 
   // 表格分页变化
   const tableChange = useCallback((newPagination: { current: number; pageSize: number }) => {
@@ -529,7 +532,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       
       // 延迟一点再开始轮询，确保状态已重置
       setTimeout(() => {
-        pollingSearch()
+        // 启动第1页的轮询
+        getServiceListRef.current()
+        timer1.current = setInterval(() => {
+          getServiceListRef.current(true)
+        }, 3000)
       }, 100)
     }
     
@@ -538,40 +545,55 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       if (timer2.current) clearInterval(timer2.current)
       if (timer3.current) clearInterval(timer3.current)
     }
-  }, [open, pollingSearch])
+  }, [open])
 
-  // 当currentPage变化时重新开始轮询
+  // 页面切换完成后的数据加载（不依赖pollingSearch避免循环）
   useEffect(() => {
     if (open && currentPage > 0) {
-      // 第3页需要等待必需参数设置完成后才能调用API
-      if (currentPage === 3) {
-        if (hostname && commandHostId) {
-          console.log('第3页参数已准备好，开始轮询:', { hostname, commandHostId });
-          pollingSearch()
-        } else {
-          console.log('第3页参数尚未准备好，等待设置:', { hostname, commandHostId });
-        }
-      } else {
-        pollingSearch()
+      // 检查是否有必需的参数
+      let canLoad = true
+      if (currentPage === 2 && !commandId) {
+        console.log('第2页等待commandId设置');
+        canLoad = false
+      }
+      if (currentPage === 3 && (!hostname || !commandHostId)) {
+        console.log('第3页等待hostname和commandHostId设置');
+        canLoad = false
+      }
+      
+      if (canLoad) {
+        console.log(`第${currentPage}页参数就绪，开始加载数据`);
+        
+        // 清除之前的定时器
+        if (timer1.current) clearInterval(timer1.current)
+        if (timer2.current) clearInterval(timer2.current)
+        if (timer3.current) clearInterval(timer3.current)
+        
+        // 立即加载一次数据
+        getServiceListRef.current()
+        
+        // 启动对应的定时器
+        const currentTimer = currentPage === 1 ? timer1 : currentPage === 2 ? timer2 : timer3
+        currentTimer.current = setInterval(() => {
+          getServiceListRef.current(true) // flag=true表示静默刷新
+        }, 3000)
       }
     }
-  }, [currentPage, open, pollingSearch, hostname, commandHostId])
+  }, [currentPage, open, commandId, hostname, commandHostId])
 
   // 分页变化时重新获取数据
   useEffect(() => {
-    if (open) {
-      // 第3页需要等待必需参数设置完成后才能调用API
-      if (currentPage === 3) {
-        if (hostname && commandHostId) {
-          pollingSearch()
-        } else {
-          console.log('第3页分页变化但参数未准备好，跳过调用');
-        }
-      } else {
-        pollingSearch()
+    if (open && currentPage > 0) {
+      // 只有真正的分页操作（不是初始化）才触发数据重新加载
+      const isPaginationChange = pagination.current !== 1 || pagination.pageSize !== 10
+      
+      if (isPaginationChange) {
+        console.log('分页参数变化，重新加载数据:', pagination);
+        // 直接重新加载数据，不需要重启轮询
+        getServiceListRef.current()
       }
     }
-  }, [pagination.current, pagination.pageSize, open, pollingSearch, currentPage, hostname, commandHostId])
+  }, [pagination.current, pagination.pageSize, open, currentPage])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
