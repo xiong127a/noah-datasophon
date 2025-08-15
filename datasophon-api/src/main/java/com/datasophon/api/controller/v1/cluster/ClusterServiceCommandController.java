@@ -19,6 +19,7 @@ package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.dto.ExecuteCommandRequest;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.converter.ClusterServiceCommandConverter;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
@@ -152,10 +153,9 @@ public class ClusterServiceCommandController {
     @PostMapping("/execute")
     public Result<Void> startExecuteCommand(
             @ClusterId Long clusterId,
-            @RequestParam String commandType,
-            @RequestParam String commandIds) {
+            @RequestBody ExecuteCommandRequest request) {
         try {
-            clusterServiceCommandService.startExecuteCommand(clusterId, commandType, commandIds);
+            clusterServiceCommandService.startExecuteCommand(clusterId, request.getCommandType(), request.getCommandIds());
             return Result.success();
         } catch (Exception e) {
             return Result.error("启动执行命令失败: " + e.getMessage());
