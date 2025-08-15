@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   ChevronLeft, X, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
-  Activity, Timer,
+  Activity, ArrowRight,
   Eye, Terminal, Cpu
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -141,7 +141,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   })
   const [dataSource, setDataSource] = useState<DataItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [renderTimestamp, setRenderTimestamp] = useState(Date.now())
+
   const [currentPage, setCurrentPage] = useState(1)
   const [commandId, setCommandId] = useState("") // 第二个列表请求页面需要的参数
   const [hostname, setHostname] = useState("") // 第三个列表请求页面需要的参数
@@ -216,7 +216,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         const responseData = response.data.data || {}
         // 前端只负责展示，不修改后端数据
         setDataSource(responseData.records || [])
-        setRenderTimestamp(Date.now()) // 数据更新时生成新的时间戳
+
         setPagination(prev => ({
           ...prev,
           total: parseInt(responseData.total) || 0
@@ -263,7 +263,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       }
       
       setDataSource([])
-      setRenderTimestamp(Date.now()) // 返回上一页时更新时间戳
+
       setPagination(prev => ({
         ...prev,
         total: 0,
@@ -317,7 +317,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     // 立即清理数据，避免key重复
     setDataSource([])
     setSelectedRowKeys([])
-    setRenderTimestamp(Date.now()) // 页面切换时更新时间戳
+
     setPagination(prev => ({
       ...prev,
       current: 1,
@@ -331,14 +331,14 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       console.log('=== 进入第2页 ===');
       console.log('设置commandId:', row.commandId);
         setCommandName(row.commandName || "")
-        setTitle(row.commandName || "")
+        setTitle(`${row.commandName || '服务'} - 主机列表`)
         setCommandId(row.commandId || "")
       setCurrentPage(2)
     } else if (newPage === 3) {
       console.log('=== 进入第3页 ===');
       console.log('设置hostname:', row.hostname);
       console.log('设置commandHostId:', row.commandHostId);
-        setTitle(row.hostname || "")
+        setTitle(`${row.hostname || '主机'} - 执行日志`)
       setCommandHostId(String(row.commandHostId || ""))
         setHostname(row.hostname || "")
       setCurrentPage(3)
@@ -400,7 +400,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     if (open) {
       // 每次打开对话框时重置到第1页，去除记忆功能
       setCurrentPage(1)
-      setTitle("安装并启动服务")
+      setTitle("服务安装状态")
       setDataSource([])
       setSelectedRowKeys([])
       setCommandId("")
@@ -409,7 +409,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       setCommandName("")
       setLogData("")
       setError(null)
-      setRenderTimestamp(Date.now())
+
       setPagination(prev => ({
         ...prev,
         current: 1,
@@ -494,37 +494,79 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         currentStep={currentStepNumber}
         actionBar={actionBar}
       >
-        <div className="flex-1 flex flex-col min-h-0 p-6 bg-gradient-to-br from-slate-50/30 via-white/50 to-blue-50/20">
-          {/* 标题区域 */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
-            <div className="flex items-center gap-4">
-              {currentPage !== 1 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={goBack}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  返回
-                </Button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
-                  {title}
-                </h1>
+        {/* 顶栏描述区域 - 与其他步骤页面保持一致 */}
+        <div className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+          <div className="w-full px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                {/* 面包屑导航 */}
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className={`transition-colors ${currentPage === 1 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`} 
+                        onClick={() => currentPage > 1 && setCurrentPage(1)}>
+                    服务列表
+                  </span>
+                  {currentPage > 1 && (
+                    <>
+                      <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <span className={`transition-colors ${currentPage === 2 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`}
+                            onClick={() => currentPage > 2 && setCurrentPage(2)}>
+                        主机详情
+                      </span>
+                    </>
+                  )}
+                  {currentPage > 2 && (
+                    <>
+                      <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <span className={`transition-colors ${currentPage === 3 ? 'text-blue-600 font-medium' : 'cursor-pointer hover:text-blue-600'}`}
+                            onClick={() => currentPage > 3 && setCurrentPage(3)}>
+                        命令日志
+                      </span>
+                    </>
+                  )}
+                  {currentPage > 3 && (
+                    <>
+                      <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <span className="text-blue-600 font-medium">
+                        查看日志
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                {/* 标题 */}
+                <div className="flex items-center gap-3">
+                  {currentPage !== 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goBack}
+                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 h-7 px-2"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      返回
+                    </Button>
+                  )}
+                  <h1 className="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
+                    {title}
+                  </h1>
+                </div>
               </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancel}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
+        </div>
+
+        {/* 主要内容区域 */}
+        <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-y-auto">
+          <div className="p-6">
 
           {/* 错误提示 */}
           {error && (
@@ -576,10 +618,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                           <p className="text-sm">等待服务安装命令...</p>
                         </div>
                       ) : (
-                        <div className="p-4 space-y-3">
+                                                <div className="p-3 space-y-2">
                           {/* 全选控制器 (仅第1页) */}
                           {currentPage === 1 && dataSource.length > 0 && (
-                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-sm text-slate-600">
+                                共 {dataSource.length} 个服务
+                              </span>
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   checked={selectedRowKeys.length === dataSource.length}
@@ -591,21 +636,19 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                     }
                                   }}
                                 />
-                                <span className="text-sm font-medium text-slate-700">
-                                  全选 ({dataSource.length} 项)
+                                <span className="text-xs text-slate-600">
+                                  全选
                                 </span>
                               </div>
-                              {selectedRowKeys.length > 0 && (
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                                  已选 {selectedRowKeys.length} 项
-                                </Badge>
-                              )}
-                                </div>
+                            </div>
                           )}
                           
                           {/* 卡片列表 */}
                           {dataSource.map((item, index) => {
                             const isSelected = selectedRowKeys.includes(item.commandId || "")
+                            // 稳定的key，避免图标闪烁
+                            const stableKey = `${currentPage}-${item.commandId || item.commandName || index}`
+                            
                             const getStatusConfig = (stateCode: number) => {
                               switch (stateCode) {
                                 case 1: return { 
@@ -659,19 +702,21 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                             const statusConfig = getStatusConfig(item.commandStateCode)
                             const duration = formatDuration(item.durationTime || '')
                             
-                            return (
-                              <Card 
-                                key={`page-${currentPage}-time-${renderTimestamp}-index-${index}`}
-                                className={`transition-colors duration-150 ${
-                                  isSelected ? 'border-blue-300 bg-blue-50/50' : 'border-slate-200 hover:border-slate-300'
-                                }`}
+                                                        return (
+                              <div
+                                key={stableKey}
+                                className={`group flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
+                                  isSelected 
+                                    ? 'border-blue-300 bg-blue-50/50' 
+                                    : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/20'
+                                } ${currentPage !== 3 ? 'hover:shadow-sm cursor-pointer' : ''}`}
+                                onClick={() => currentPage !== 3 && seeDetail(item)}
                               >
-                                <CardContent className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    {/* 选择框 (仅第1页) */}
+                                {/* 选择框 (仅第1页) */}
                                 {currentPage === 1 && (
+                                  <div onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
-                                        checked={isSelected}
+                                      checked={isSelected}
                                       onCheckedChange={(checked) => {
                                         const commandId = item.commandId || ""
                                         if (checked) {
@@ -681,96 +726,85 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                         }
                                       }}
                                     />
-                                    )}
-                                    
-                                    {/* 服务图标 */}
-                                    <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${statusConfig.bg} ${statusConfig.border} border`}>
-                                      {currentPage === 1 ? (
-                                        <ServiceIcon
-                                          serviceName={item.commandName || ''}
-                                          size={20}
-                                          className="w-5 h-5"
-                                        />
-                                      ) : currentPage === 2 ? (
-                                        <Cpu className={`h-5 w-5 ${statusConfig.text}`} />
-                                      ) : (
-                                        <Terminal className={`h-5 w-5 ${statusConfig.text}`} />
+                                  </div>
+                                )}
+                                
+                                {/* 服务图标 */}
+                                <div className={`flex items-center justify-center w-8 h-8 rounded ${statusConfig.bg} ${statusConfig.border} border flex-shrink-0`}>
+                                  {currentPage === 1 ? (
+                                    <ServiceIcon
+                                      serviceName={item.commandName || ''}
+                                      size={16}
+                                      className="w-4 h-4"
+                                    />
+                                  ) : currentPage === 2 ? (
+                                    <Cpu className={`h-4 w-4 ${statusConfig.text}`} />
+                                  ) : (
+                                    <Terminal className={`h-4 w-4 ${statusConfig.text}`} />
+                                  )}
+                                </div>
+                                
+                                {/* 主要内容 */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1">
+                                    {/* 标题 */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="font-medium text-slate-800 truncate">
+                                        {currentPage === 1 ? item.commandName : currentPage === 2 ? item.hostname : item.commandName}
+                                      </span>
+                                      {currentPage !== 3 && (
+                                        <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                       )}
                                     </div>
                                     
-                                    {/* 主要内容 */}
-                                    <div className="flex-1 space-y-2">
-                                      {/* 标题和状态 */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          {currentPage !== 3 ? (
-                                            <button
-                                              type="button"
-                                              onClick={() => seeDetail(item)}
-                                              className="font-medium text-slate-800 hover:text-blue-600 transition-colors"
-                                            >
-                                              {currentPage === 1 ? item.commandName : currentPage === 2 ? item.hostname : item.commandName}
-                                            </button>
-                                          ) : (
-                                            <span className="font-medium text-slate-800">
-                                              {item.commandName}
-                                            </span>
-                                          )}
-                                        </div>
-                                        
-                                        {/* 状态标签 */}
-                                        <Badge 
-                                          variant="secondary" 
-                                          className={`${statusConfig.bg} ${statusConfig.text} border-0 text-xs ${statusConfig.pulse ? 'animate-pulse' : ''}`}
+                                    {/* 状态标签 */}
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={`${statusConfig.bg} ${statusConfig.text} border-0 text-xs flex-shrink-0 ${statusConfig.pulse ? 'animate-pulse' : ''}`}
+                                    >
+                                      {statusConfig.icon}
+                                      <span className="ml-1">{statusConfig.status}</span>
+                                    </Badge>
+                                  </div>
+                                  
+                                  {/* 进度条 */}
+                                  <div className="mb-1">
+                                    <Progress 
+                                      value={item.commandProgress || 0} 
+                                      className="h-1 bg-slate-100"
+                                    />
+                                  </div>
+                                  
+                                  {/* 底部信息 */}
+                                  <div className="flex items-center justify-between text-xs text-slate-500">
+                                    <div className="flex items-center gap-2">
+                                      {item.createTime && (
+                                        <span>{formatRelativeTime(String(item.createTimeFormatted || item.createTime || ''))}</span>
+                                      )}
+                                      {currentPage === 1 && item.durationTime && (
+                                        <span className={duration.color}>• {duration.text}</span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <span>{item.commandProgress || 0}%</span>
+                                      {currentPage === 3 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            seeDetail(item)
+                                          }}
+                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
                                         >
-                                          {statusConfig.icon}
-                                          <span className="ml-1">{statusConfig.status}</span>
-                                        </Badge>
-                                      </div>
-                                      
-                                      {/* 进度条 */}
-                                      <div className="space-y-1">
-                                        <div className="flex items-center justify-between text-xs text-slate-600">
-                                          <span>进度</span>
-                                          <span>{item.commandProgress || 0}%</span>
-                                        </div>
-                                        <Progress 
-                                          value={item.commandProgress || 0} 
-                                          className="h-1.5 bg-slate-100"
-                                        />
-                                      </div>
-                                      
-                                      {/* 时间信息 */}
-                                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                                        {item.createTime && (
-                                          <div className="flex items-center gap-1">
-                                            <Clock className="h-3 w-3" />
-                                            <span>{formatRelativeTime(String(item.createTimeFormatted || item.createTime || ''))}</span>
-                                          </div>
-                                        )}
-                                        
-                                        {currentPage === 1 && item.durationTime && (
-                                          <div className="flex items-center gap-1">
-                                            <Timer className={`h-3 w-3 ${duration.color}`} />
-                                            <span className={duration.color}>{duration.text}</span>
-                                          </div>
-                                        )}
-                                        
-                                        {currentPage === 3 && (
-                                          <button
-                                            type="button"
-                                            onClick={() => seeDetail(item)}
-                                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 ml-auto"
-                                          >
-                                            <Eye className="h-3 w-3" />
-                                            <span>查看日志</span>
-                                          </button>
-                                        )}
-                                      </div>
+                                          <Eye className="h-3 w-3" />
+                                          <span>日志</span>
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
-                                </CardContent>
-                              </Card>
+                                </div>
+                              </div>
                             )
                           })}
                         </div>
@@ -780,37 +814,39 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                   
                   {/* 分页 */}
                   {pagination.total > 0 && (
-                    <div className="p-4 border-t bg-slate-50 flex items-center justify-between">
-                      <span className="text-sm text-slate-600">
-                        总计 {pagination.total} 项，第 {pagination.current} / {Math.ceil(pagination.total / pagination.pageSize)} 页
+                    <div className="p-2 border-t bg-slate-50/50 flex items-center justify-between text-sm">
+                      <span className="text-slate-600">
+                        {pagination.total} 项
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           disabled={pagination.current <= 1}
                           onClick={() => tableChange({ 
                             current: pagination.current - 1, 
                             pageSize: pagination.pageSize 
                           })}
-                          className="h-8 px-3"
+                          className="h-7 px-2"
                         >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          上一页
+                          <ChevronLeft className="h-3 w-3" />
                         </Button>
                         
+                        <span className="px-2 text-xs text-slate-600">
+                          {pagination.current} / {Math.ceil(pagination.total / pagination.pageSize)}
+                        </span>
+                        
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           disabled={pagination.current >= Math.ceil(pagination.total / pagination.pageSize)}
                           onClick={() => tableChange({ 
                             current: pagination.current + 1, 
                             pageSize: pagination.pageSize 
                           })}
-                          className="h-8 px-3"
+                          className="h-7 px-2"
                         >
-                          下一页
-                          <ChevronRight className="h-4 w-4 ml-1" />
+                          <ChevronRight className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
@@ -818,24 +854,24 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 </CardContent>
               </Card>
             ) : (
-              /* 日志查看器 */
+                            /* 日志查看器 */
               <Card className="h-full bg-white border shadow-sm">
-                <CardHeader className="pb-3 border-b">
+                <CardHeader className="pb-2 border-b">
                   <div className="flex items-center gap-2">
                     <Terminal className="h-4 w-4 text-slate-600" />
-                    <h3 className="font-medium text-slate-800">执行日志</h3>
+                    <h3 className="text-sm font-medium text-slate-800">执行日志</h3>
                   </div>
                 </CardHeader>
                 
                 <CardContent className="p-0 h-full">
-                  <div className="h-full bg-slate-900 p-4 overflow-auto">
+                  <div className="h-full bg-slate-900 p-3 overflow-auto">
                     {logData ? (
-                    <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap">
+                      <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap leading-relaxed">
                         {logData}
-                    </pre>
+                      </pre>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <Terminal className="h-8 w-8 mb-2" />
+                        <Terminal className="h-6 w-6 mb-2" />
                         <p className="text-sm">暂无日志数据</p>
                       </div>
                     )}
@@ -844,6 +880,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
               </Card>
             )}
           </div>
+        </div>
         </div>
       </ClusterWizardLayout>
     </Dialog>

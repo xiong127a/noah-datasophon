@@ -21,7 +21,7 @@ interface ServiceIconProps {
  * 邮箱：635887935@qq.com
  * 日期：2024-01-20
  */
-const ServiceIcon: React.FC<ServiceIconProps> = ({ 
+const ServiceIcon: React.FC<ServiceIconProps> = React.memo(({ 
   serviceName, 
   size = 32, 
   className = "" 
@@ -47,12 +47,19 @@ const ServiceIcon: React.FC<ServiceIconProps> = ({
         // 如果SVG加载失败，显示默认图标
         onLoadingComplete={(result) => {
           if (result.naturalWidth === 0) {
-            handleImageError(result as any)
+            // 创建一个模拟的错误事件
+            const mockEvent = {
+              currentTarget: result,
+              target: result
+            } as unknown as React.SyntheticEvent<HTMLImageElement>
+            handleImageError(mockEvent)
           }
         }}
       />
     </div>
   )
-}
+})
+
+ServiceIcon.displayName = 'ServiceIcon'
 
 export default ServiceIcon
