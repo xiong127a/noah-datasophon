@@ -770,45 +770,150 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                     </div>
                   </div>
                   
-                  {/* 分页 */}
-                  {pagination.total > 0 && (
-                    <div className="p-2 border-t bg-slate-50/50 flex items-center justify-between text-sm">
-                      <span className="text-slate-600">
-                        {pagination.total} 项
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={pagination.current <= 1}
-                          onClick={() => tableChange({ 
-                            current: pagination.current - 1, 
-                            pageSize: pagination.pageSize 
-                          })}
-                          className="h-7 px-2"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                        </Button>
-                        
-                        <span className="px-2 text-xs text-slate-600">
-                          {pagination.current} / {Math.ceil(pagination.total / pagination.pageSize)}
-                        </span>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={pagination.current >= Math.ceil(pagination.total / pagination.pageSize)}
-                          onClick={() => tableChange({ 
-                            current: pagination.current + 1, 
-                            pageSize: pagination.pageSize 
-                          })}
-                          className="h-7 px-2"
-                        >
-                          <ChevronRight className="h-3 w-3" />
-                        </Button>
+                  {/* 现代化分页器 */}
+                  {pagination.total > 0 && (() => {
+                    const totalPages = Math.ceil(pagination.total / pagination.pageSize)
+                    const currentPage = pagination.current
+                    
+                    // 生成页码数组（显示当前页前后各2页）
+                    const getPageNumbers = () => {
+                      const pages = []
+                      const start = Math.max(1, currentPage - 2)
+                      const end = Math.min(totalPages, currentPage + 2)
+                      
+                      // 如果开始页不是1，添加1和省略号
+                      if (start > 1) {
+                        pages.push(1)
+                        if (start > 2) pages.push('...')
+                      }
+                      
+                      // 添加中间页码
+                      for (let i = start; i <= end; i++) {
+                        pages.push(i)
+                      }
+                      
+                      // 如果结束页不是最后一页，添加省略号和最后一页
+                      if (end < totalPages) {
+                        if (end < totalPages - 1) pages.push('...')
+                        pages.push(totalPages)
+                      }
+                      
+                      return pages
+                    }
+                    
+                    const pageNumbers = getPageNumbers()
+                    
+                    return (
+                      <div className="border-t bg-gradient-to-r from-white via-slate-50/50 to-white">
+                        <div className="px-4 py-3">
+                          {/* 分页信息 */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-sm text-slate-600">
+                              <span className="font-medium">
+                                共 <span className="text-blue-600 font-semibold">{pagination.total}</span> 项
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span>
+                                第 <span className="text-blue-600 font-semibold">{currentPage}</span> / {totalPages} 页
+                              </span>
+                            </div>
+                            
+                            {/* 分页控件 */}
+                            <div className="flex items-center gap-1">
+                              {/* 上一页 */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage <= 1}
+                                onClick={() => tableChange({ 
+                                  current: currentPage - 1, 
+                                  pageSize: pagination.pageSize 
+                                })}
+                                className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              
+                              {/* 页码按钮 */}
+                              <div className="flex items-center gap-1 mx-2">
+                                {pageNumbers.map((page, index) => {
+                                  if (page === '...') {
+                                    return (
+                                      <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400 text-sm">
+                                        •••
+                                      </span>
+                                    )
+                                  }
+                                  
+                                  const isActive = page === currentPage
+                                  return (
+                                    <Button
+                                      key={page}
+                                      variant={isActive ? "default" : "ghost"}
+                                      size="sm"
+                                      onClick={() => tableChange({ 
+                                        current: page as number, 
+                                        pageSize: pagination.pageSize 
+                                      })}
+                                      className={`h-8 w-8 p-0 transition-all duration-200 ${
+                                        isActive 
+                                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm' 
+                                          : 'hover:bg-blue-50 hover:text-blue-600 border-0'
+                                      }`}
+                                    >
+                                      {page}
+                                    </Button>
+                                  )
+                                })}
+                              </div>
+                              
+                              {/* 下一页 */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={currentPage >= totalPages}
+                                onClick={() => tableChange({ 
+                                  current: currentPage + 1, 
+                                  pageSize: pagination.pageSize 
+                                })}
+                                className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* 每页显示数量选择 */}
+                          <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100">
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <span>每页显示:</span>
+                              <div className="flex items-center gap-1">
+                                {[10, 20, 50].map(size => (
+                                  <Button
+                                    key={size}
+                                    variant={pagination.pageSize === size ? "default" : "ghost"}
+                                    size="sm"
+                                    onClick={() => tableChange({ 
+                                      current: 1, 
+                                      pageSize: size 
+                                    })}
+                                    className={`h-7 px-3 text-xs transition-all duration-200 ${
+                                      pagination.pageSize === size 
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm' 
+                                        : 'hover:bg-blue-50 hover:text-blue-600 border-0'
+                                    }`}
+                                  >
+                                    {size}
+                                  </Button>
+                                ))}
+                              </div>
+                              <span className="text-slate-400">条/页</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </CardContent>
               </Card>
             ) : (

@@ -162,7 +162,12 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         ClusterServiceCommandDTO commandDto = commandService.getCommandById(hostCommand.getCommandId());
 
         ExecResult logResult = new ExecResult();
+        // 获取服务名称，优先使用serviceName字段，如果为空则使用commandName作为备选
         String serviceName = commandDto.serviceName();
+        if (serviceName == null || serviceName.trim().isEmpty()) {
+            serviceName = commandDto.commandName();
+            logger.warn("Command ID {} serviceName is null, using commandName: {}", hostCommand.getCommandId(), serviceName);
+        }
         String serviceRoleName = hostCommand.getServiceRoleName();
         String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
 

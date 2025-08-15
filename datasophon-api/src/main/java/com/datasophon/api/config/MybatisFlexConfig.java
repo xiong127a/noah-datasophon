@@ -18,6 +18,7 @@
 package com.datasophon.api.config;
 
 import com.datasophon.common.enums.handler.ClusterTypeHandler;
+import com.datasophon.dao.entity.base.BaseEntity;
 import com.mybatisflex.core.FlexGlobalConfig;
 import com.mybatisflex.core.keygen.KeyGeneratorFactory;
 import com.mybatisflex.core.keygen.impl.SnowFlakeIDKeyGenerator;
@@ -26,8 +27,11 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.annotation.PostConstruct;
+import java.time.LocalDateTime;
 
 /**
   MyBatisFlex配置类
@@ -76,6 +80,73 @@ public class MybatisFlexConfig {
         FlexGlobalConfig config = new FlexGlobalConfig();
         // 设置打印banner为true
         config.setPrintBanner(true);
+        
+        // 配置审计字段自动填充
+        configureAuditFields();
+        
         return config;
+    }
+    
+    /**
+     * 配置审计字段自动填充
+     */
+    private void configureAuditFields() {
+        // 使用FlexGlobalConfig配置审计字段自动填充
+        FlexGlobalConfig globalConfig = FlexGlobalConfig.getDefaultConfig();
+        
+        // 注册插入监听器
+        globalConfig.registerInsertListener((entity) -> {
+            if (entity instanceof BaseEntity baseEntity) {
+                LocalDateTime now = LocalDateTime.now();
+                String currentUser = getCurrentUser();
+                
+                if (baseEntity.getCreateTime() == null) {
+                    baseEntity.setCreateTime(now);
+                }
+                if (baseEntity.getCreateBy() == null) {
+                    baseEntity.setCreateBy(currentUser);
+                }
+                // 插入时也设置更新时间和更新人
+                baseEntity.setUpdateTime(now);
+                baseEntity.setUpdateBy(currentUser);
+                
+                log.debug("Insert audit: user={}, time={}", currentUser, now);
+            }
+        }, BaseEntity.class);
+        
+        // 注册更新监听器
+        globalConfig.registerUpdateListener((entity) -> {
+            if (entity instanceof BaseEntity baseEntity) {
+                LocalDateTime now = LocalDateTime.now();
+                String currentUser = getCurrentUser();
+                
+                baseEntity.setUpdateTime(now);
+                baseEntity.setUpdateBy(currentUser);
+                
+                log.debug("Update audit: user={}, time={}", currentUser, now);
+            }
+        }, BaseEntity.class);
+        
+        log.info("已配置MyBatis-Flex审计字段自动填充");
+    }
+    
+    /**
+     * 获取当前登录用户
+     */
+    private String getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                // 排除匿名用户
+                if (!"anonymousUser".equals(username)) {
+                    return username;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取当前用户失败: {}", e.getMessage());
+        }
+        // 默认返回系统用户
+        return "system";
     }
 }

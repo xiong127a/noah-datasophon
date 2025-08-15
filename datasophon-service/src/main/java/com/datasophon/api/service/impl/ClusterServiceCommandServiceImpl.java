@@ -19,7 +19,7 @@ package com.datasophon.api.service.impl;
 
 import java.time.Duration;
 
-import cn.hutool.core.util.IdUtil;
+
 import cn.hutool.core.util.StrUtil;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import cn.hutool.core.util.EnumUtil;
@@ -664,18 +664,28 @@ public class ClusterServiceCommandServiceImpl
     }
 
     /**
-     * 生成命令实体
+     * 生成命令实体 - 使用DTO转换规范
      */
-    private ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType, String commandName) {
-        ClusterServiceCommandEntity command = new ClusterServiceCommandEntity();
-        command.setId(IdUtil.getSnowflakeNextId());
-        command.setClusterId(clusterId);
-        command.setCommandType(commandType.getValue());
-        command.setCommandName(commandName);
-        command.setCommandState(CommandState.WAIT);
-        command.setCreateTime(LocalDateTime.now());
-        command.setCommandProgress(0L);
-        return command;
+    private ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType, String serviceName) {
+        // 使用DTO构建，符合框架规范
+        ClusterServiceCommandDTO commandDto = new ClusterServiceCommandDTO(
+                null,                           // id - 由MyBatis-Flex自动生成
+                null,                           // createBy - 由MyBatis-Flex审计功能自动填充
+                null,                           // createTime - 由MyBatis-Flex审计功能自动填充
+                serviceName,                    // commandName
+                CommandState.WAIT.getValue(),   // commandState
+                null,                           // commandStateCode - ignore字段，不需要设置
+                0L,                            // commandProgress
+                clusterId,                     // clusterId
+                serviceName,                   // serviceName
+                commandType.getValue(),        // commandType
+                null,                          // durationTime - 计算字段，ignore字段
+                null,                          // endTime
+                null                           // serviceInstanceId - 后续设置
+        );
+        
+        // 使用MapStruct转换器，确保字段映射正确
+        return converter.dtoToEntity(commandDto);
     }
 
     /**
@@ -683,11 +693,10 @@ public class ClusterServiceCommandServiceImpl
      */
     private ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname) {
         ClusterServiceCommandHostEntity commandHost = new ClusterServiceCommandHostEntity();
-        commandHost.setId(IdUtil.getSnowflakeNextId());
+        // 不手动设置ID和审计字段，由MyBatis-Flex自动处理
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.WAIT);
-        commandHost.setCreateTime(LocalDateTime.now());
         commandHost.setCommandProgress(0L);
         return commandHost;
     }
@@ -703,6 +712,7 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceCommandHostEntity commandHost) {
 
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
+        // 不手动设置ID和审计字段，由MyBatis-Flex自动处理
         hostCommand.setCommandHostId(commandHost.getId());
         hostCommand.setCommandId(commandId);
         hostCommand.setCommandName(commandType.name());
@@ -710,7 +720,6 @@ public class ClusterServiceCommandServiceImpl
         hostCommand.setServiceRoleName(serviceRoleName);
         hostCommand.setServiceRoleType(roleType);
         hostCommand.setCommandState(CommandState.WAIT);
-        hostCommand.setCreateTime(LocalDateTime.now());
         hostCommand.setCommandProgress(0);
         return hostCommand;
     }

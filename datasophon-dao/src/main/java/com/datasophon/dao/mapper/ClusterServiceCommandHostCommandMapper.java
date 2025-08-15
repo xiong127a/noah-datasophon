@@ -96,7 +96,7 @@ public interface ClusterServiceCommandHostCommandMapper extends BaseMapper<Clust
      */
     default ClusterServiceCommandHostCommandEntity selectByHostCommandId(Long hostCommandId) {
         QueryWrapper query = QueryWrapper.create()
-                .where(ClusterServiceCommandHostCommandEntity::getId).eq(hostCommandId);
+                .where(ClusterServiceCommandHostCommandEntity::getCommandHostId).eq(hostCommandId);
         return this.selectOneByQuery(query);
     }
 
