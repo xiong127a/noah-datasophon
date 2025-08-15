@@ -19,7 +19,7 @@ package com.datasophon.api.service.impl;
 
 import java.time.Duration;
 
-
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import cn.hutool.core.util.EnumUtil;
@@ -209,22 +209,9 @@ public class ClusterServiceCommandServiceImpl
         }
 
         // 保存命令数据
-        logger.info("保存命令数据: commands={}, hosts={}, hostCommands={}", 
-            list.size(), commandHostList.size(), hostCommandList.size());
-        
-        // 调试：保存前检查commandId
-        commandHostList.forEach(host -> 
-            logger.debug("保存前 CommandHost: id={}, commandId={}, hostname={}", 
-                host.getId(), host.getCommandId(), host.getHostname()));
-        
         commandService.saveBatch(list);
         commandHostService.saveBatch(commandHostList);
         hostCommandService.saveBatch(hostCommandList);
-        
-        // 调试：保存后检查commandId
-        commandHostList.forEach(host -> 
-            logger.debug("保存后 CommandHost: id={}, commandId={}, hostname={}", 
-                host.getId(), host.getCommandId(), host.getHostname()));
 
         return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
@@ -677,28 +664,19 @@ public class ClusterServiceCommandServiceImpl
     }
 
     /**
-     * 生成命令实体 - 使用DTO转换规范
+     * 生成命令实体
      */
     private ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType, String serviceName) {
-        // 使用DTO构建，符合框架规范
-        ClusterServiceCommandDTO commandDto = new ClusterServiceCommandDTO(
-                null,                           // id - 由MyBatis-Flex自动生成
-                null,                           // createBy - 由审计监听器自动填充
-                null,                           // createTime - 由审计监听器自动填充
-                serviceName,                    // commandName
-                CommandState.WAIT.getValue(),   // commandState
-                null,                           // commandStateCode - ignore字段，不需要设置
-                0L,                            // commandProgress
-                clusterId,                     // clusterId
-                serviceName,                   // serviceName
-                commandType.getValue(),        // commandType
-                null,                          // durationTime - 计算字段，ignore字段
-                null,                          // endTime
-                null                           // serviceInstanceId - 后续设置
-        );
-        
-        // 使用MapStruct转换器，确保字段映射正确
-        return converter.dtoToEntity(commandDto);
+        ClusterServiceCommandEntity command = new ClusterServiceCommandEntity();
+        command.setId(IdUtil.getSnowflakeNextId()); // 手动生成ID，确保后续可以正确引用
+        command.setClusterId(clusterId);
+        command.setCommandType(commandType.getValue());
+        command.setCommandName(serviceName);
+        command.setServiceName(serviceName);
+        command.setCommandState(CommandState.WAIT);
+        command.setCommandProgress(0L);
+        // 审计字段由监听器自动填充
+        return command;
     }
 
     /**
@@ -706,11 +684,12 @@ public class ClusterServiceCommandServiceImpl
      */
     private ClusterServiceCommandHostEntity generateCommandHostEntity(Long commandId, String hostname) {
         ClusterServiceCommandHostEntity commandHost = new ClusterServiceCommandHostEntity();
-        // 只设置业务字段，审计字段由监听器自动填充
+        commandHost.setId(IdUtil.getSnowflakeNextId()); // 手动生成ID，确保后续可以正确引用
         commandHost.setCommandId(commandId);
         commandHost.setHostname(hostname);
         commandHost.setCommandState(CommandState.WAIT);
         commandHost.setCommandProgress(0L);
+        // 审计字段由监听器自动填充
         return commandHost;
     }
 
@@ -725,7 +704,7 @@ public class ClusterServiceCommandServiceImpl
             ClusterServiceCommandHostEntity commandHost) {
 
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
-        // 只设置业务字段，审计字段由监听器自动填充
+        hostCommand.setId(IdUtil.getSnowflakeNextId()); // 手动生成ID
         hostCommand.setCommandHostId(commandHost.getId());
         hostCommand.setCommandId(commandId);
         hostCommand.setCommandName(commandType.name());
@@ -734,6 +713,7 @@ public class ClusterServiceCommandServiceImpl
         hostCommand.setServiceRoleType(roleType);
         hostCommand.setCommandState(CommandState.WAIT);
         hostCommand.setCommandProgress(0);
+        // 审计字段由监听器自动填充
         return hostCommand;
     }
 
