@@ -713,6 +713,8 @@ public class ClusterServiceCommandServiceImpl
         hostCommand.setServiceRoleType(roleType);
         hostCommand.setCommandState(CommandState.WAIT);
         hostCommand.setCommandProgress(0);
+        // 🔧 修复：设置hostname字段
+        hostCommand.setHostname(commandHost.getHostname());
         // 审计字段由监听器自动填充
         return hostCommand;
     }
