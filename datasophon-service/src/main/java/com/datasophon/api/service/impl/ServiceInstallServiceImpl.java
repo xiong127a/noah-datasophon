@@ -46,8 +46,9 @@ import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
+
 import com.datasophon.common.dto.ServiceConfigGroupDTO;
+
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.common.Constants;
@@ -87,7 +88,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.time.LocalDateTime;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -97,6 +98,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 import static com.datasophon.common.Constants.CONFIG;
@@ -437,16 +440,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
 
 
-        // 缓存zookeeper节点数量
-        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
-                .getBean(ClusterServiceRoleInstanceService.class);
-        // Service层：获取DTO列表后转换为Entity列表
-        List<ClusterServiceRoleInstanceDTO> zookeeperNodeDTOs = clusterServiceRoleInstanceService
+        // 缓存zookeeper节点数量 - 使用JDK21的var特性
+        var clusterServiceRoleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+        var zookeeperNodeDTOs = clusterServiceRoleInstanceService
                 .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ZkServer");
-        List<ClusterServiceRoleInstanceEntity> zookeeperNodes = roleInstanceConverter
-                .dtoListToEntityList(zookeeperNodeDTOs);
-        int zkNodeCount = CollUtil.size(zookeeperNodes);
-        String zkNodeCountKey = "zookeeper_node_count";
+        var zookeeperNodes = roleInstanceConverter.dtoListToEntityList(zookeeperNodeDTOs);
+        var zkNodeCount = CollUtil.size(zookeeperNodes);
+        var zkNodeCountKey = "zookeeper_node_count";
         CacheUtils.put(clusterId + UNDERLINE + zkNodeCountKey, zkNodeCount);
         logger.info("已缓存 Zookeeper 节点数量: {}，集群ID: {}", zkNodeCount, clusterId);
 

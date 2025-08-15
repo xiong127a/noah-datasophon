@@ -103,7 +103,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         @Override
         public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
                 Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
-                if (hostname.equals(globalVariables.get("${nn2}"))) {
+                if (hostname != null && hostname.equals(globalVariables.get("${nn2}"))) {
                         log.info("set to slave namenode");
                         serviceRoleInfo.setSlave(true);
                         serviceRoleInfo.setSortNum(5);

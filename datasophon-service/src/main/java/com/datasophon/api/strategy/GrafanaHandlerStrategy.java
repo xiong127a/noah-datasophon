@@ -51,7 +51,7 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
         Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
         String key = "${grafanaHost}";
         if (globalVariables.containsKey(key)
-                && !hostname.equals(globalVariables.get(key))) {
+                && hostname != null && !hostname.equals(globalVariables.get(key))) {
             log.info("set to slave Grafana");
             serviceRoleInfo.setSlave(true);
         }
