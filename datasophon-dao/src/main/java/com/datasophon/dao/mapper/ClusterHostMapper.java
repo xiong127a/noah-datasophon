@@ -183,4 +183,34 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostEntity> {
                 .where(ClusterHostEntity::getClusterId).eq(clusterId);
         this.deleteByQuery(query);
     }
+
+    /**
+     * 根据集群ID和IP查询主机（用于重复检查）
+     */
+    default ClusterHostEntity selectByClusterIdAndIp(@Param("clusterId") Long clusterId, 
+                                                      @Param("ip") String ip) {
+        if (clusterId == null || ip == null) {
+            return null;
+        }
+        
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getIp).eq(ip);
+        return this.selectOneByQuery(query);
+    }
+
+    /**
+     * 根据集群ID和主机名查询主机（用于重复检查）
+     */
+    default ClusterHostEntity selectByClusterIdAndHostname(@Param("clusterId") Long clusterId, 
+                                                           @Param("hostname") String hostname) {
+        if (clusterId == null || hostname == null) {
+            return null;
+        }
+        
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getHostname).eq(hostname);
+        return this.selectOneByQuery(query);
+    }
 }

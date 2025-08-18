@@ -51,10 +51,20 @@ public class ClusterHostController {
     @Timed(value = "cluster.host.all", description = "获取集群所有主机的时间")
     public Result<List<ClusterHostEntity>> all(@ClusterId Long clusterId) {
         var threadInfo = getCurrentThreadInfo();
-        log.debug("查询集群{}的所有主机 - {}", clusterId, threadInfo);
+        log.info("🔍 [调试] 查询集群所有主机 - 集群ID: {}, 线程: {}", clusterId, threadInfo);
         
         // 将Integer类型的clusterId转换为String传递给Service层
         List<ClusterHostEntity> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+        
+        log.info("🔍 [调试] 查询结果 - 集群ID: {}, 主机数量: {}", clusterId, list.size());
+        if (list.isEmpty()) {
+            log.warn("🔍 [调试] 未找到任何主机 - 集群ID: {}", clusterId);
+        } else {
+            log.info("🔍 [调试] 找到主机列表 - 集群ID: {}, 主机名: {}", 
+                clusterId, 
+                list.stream().map(ClusterHostEntity::getHostname).toList());
+        }
+        
         return Result.success(list);
     }
 

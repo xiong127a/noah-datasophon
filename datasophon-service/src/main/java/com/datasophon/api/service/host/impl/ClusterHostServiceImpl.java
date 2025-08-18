@@ -22,6 +22,7 @@ import com.datasophon.dao.entity.ClusterHostEntity;
 import org.apache.pekko.actor.ActorRef;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
@@ -113,7 +114,13 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public List<ClusterHostEntity> getAllManagedHostsByClusterId(Long clusterId) {
-        return clusterHostMapper.selectManagedHostsByClusterIdOrderByHostname(clusterId);
+        logger.info("🔍 [Service调试] 查询受管主机 - 集群ID: {}", clusterId);
+        
+        List<ClusterHostEntity> result = clusterHostMapper.selectManagedHostsByClusterIdOrderByHostname(clusterId);
+        
+        logger.info("🔍 [Service调试] DAO查询结果 - 集群ID: {}, 返回数量: {}", clusterId, result.size());
+        
+        return result;
     }
 
     @Override
@@ -202,7 +209,70 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public void saveHost(ClusterHostEntity clusterHostEntity) {
+        // 添加重复主机检查逻辑
+        if (clusterHostEntity.getClusterId() != null) {
+            checkForDuplicateHost(clusterHostEntity);
+        }
         this.save(clusterHostEntity);
+    }
+
+    /**
+     * 检查重复主机
+     * 如果主机IP和hostname已存在：
+     * - 未受管状态：跳过添加（抛出特殊异常标识跳过）
+     * - 已受管状态：抛出异常
+     * - 配置中状态：抛出异常
+     * 
+     * @param newHost 待添加的主机信息
+     * @throws BusinessException 当主机已存在时
+     */
+    private void checkForDuplicateHost(ClusterHostEntity newHost) {
+        // 检查IP重复 - 使用DAO层方法
+        if (newHost.getIp() != null) {
+            ClusterHostEntity existingHostByIp = clusterHostMapper
+                    .selectByClusterIdAndIp(newHost.getClusterId(), newHost.getIp());
+            
+            if (existingHostByIp != null) {
+                handleDuplicateHost(existingHostByIp, "IP", newHost.getIp());
+            }
+        }
+
+        // 检查主机名重复 - 使用DAO层方法
+        if (newHost.getHostname() != null) {
+            ClusterHostEntity existingHostByName = clusterHostMapper
+                    .selectByClusterIdAndHostname(newHost.getClusterId(), newHost.getHostname());
+            
+            if (existingHostByName != null) {
+                handleDuplicateHost(existingHostByName, "主机名", newHost.getHostname());
+            }
+        }
+    }
+
+    /**
+     * 处理重复主机的逻辑
+     * 根据用户需求：
+     * - 如果主机未受管：不再添加，抛出特殊异常
+     * - 如果主机已受管或配置中：报错
+     * 
+     * @param existingHost 已存在的主机
+     * @param type 重复类型（IP或主机名）
+     * @param value 重复的值
+     * @throws BusinessException 在所有情况下都抛出异常
+     */
+    private void handleDuplicateHost(ClusterHostEntity existingHost, String type, String value) {
+        var managementStatus = existingHost.getManagementStatus();
+        
+        if (managementStatus == ManagementStatus.UNMANAGED) {
+            // 未受管状态：记录日志，抛出提示异常
+            logger.info("主机{}[{}]已存在且为未受管状态，跳过添加", type, value);
+            throw new BusinessException("主机" + type + "[" + value + "]已存在且为未受管状态，跳过添加");
+        } else if (managementStatus == ManagementStatus.MANAGED || 
+                   managementStatus == ManagementStatus.CONFIGURING) {
+            // 已受管或配置中状态：抛出错误异常
+            String statusText = managementStatus == ManagementStatus.MANAGED ? "受管" : "配置中";
+            logger.error("主机{}[{}]已存在且为{}状态，无法重复添加", type, value, statusText);
+            throw new BusinessException("主机" + type + "[" + value + "]已存在且为" + statusText + "状态，无法重复添加");
+        }
     }
 
     @Override

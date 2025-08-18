@@ -89,45 +89,48 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   // 获取所有主机（完整信息）
   const fetchAllHosts = useCallback(async () => {
     try {
+      // 添加调试日志
+
+      
       const response = await clusterApiV1.serviceRole.getAllHosts({
         clusterId: cluster.id
       })
       
+
+      
       if (response.success && response.data) {
-        // 构建完整的主机信息，包含资源数据
-        const hostsWithResources = response.data.map((host: {
-          id?: number;
-          hostname: string;
-          ip?: string;
-          cpuCore?: number;
-          memory?: number;
-          disk?: number;
-          cpuArchitecture?: string;
-          osType?: string;
-          osVersion?: string;
-          [key: string]: unknown;
-        }) => ({
-          id: (host.id || Math.random()).toString(),
-          hostname: host.hostname,
-          ip: host.ip || '未知',
-          cpuCore: host.cpuCore || Math.floor(Math.random() * 16 + 4), // 4-20核
-          memory: host.memory || Math.floor(Math.random() * 64 + 8),   // 8-72GB
-          disk: host.disk || Math.floor(Math.random() * 500 + 100),    // 100-600GB
-          cpuArchitecture: host.cpuArchitecture || 'x86_64',
-          osInfo: {
-            system: host.osType || 'Linux',
-            version: host.osVersion || 'Ubuntu 20.04'
-          },
-          // 模拟资源使用率
-          used: {
-            cpu: Math.floor(Math.random() * 80 + 10),    // 10-90%
-            memory: Math.floor(Math.random() * 70 + 15), // 15-85%
-            disk: Math.floor(Math.random() * 60 + 20)    // 20-80%
-          }
-        }))
+        // 构建完整的主机信息，使用后端返回的真实字段
+        console.log('🔍 [调试] 后端返回的原始数据:', response.data[0])
+        
+        const hostsWithResources = response.data
+          .filter((host: Record<string, unknown>) => host.id && host.hostname && host.ip) // 过滤掉必须字段为空的数据
+          .map((host: Record<string, unknown>) => {
+            const mappedHost = {
+              id: String(host.id),
+              hostname: String(host.hostname),
+              ip: String(host.ip),
+              cpuCore: typeof host.coreNum === 'number' ? host.coreNum : undefined,
+              memory: typeof host.totalMem === 'number' ? host.totalMem : undefined,
+              disk: typeof host.totalDisk === 'number' ? host.totalDisk : undefined,
+              cpuArchitecture: typeof host.cpuArchitecture === 'string' ? host.cpuArchitecture : undefined,
+              osInfo: host.osType || host.osVersion ? {
+                system: typeof host.osType === 'string' ? host.osType : undefined,
+                version: typeof host.osVersion === 'string' ? host.osVersion : undefined
+              } : undefined
+              // 移除used字段，因为后端返回的不是使用率而是绝对值
+            }
+            
+            console.log('🔍 [调试] 映射后的主机数据:', {
+              原始: { coreNum: host.coreNum, totalMem: host.totalMem, totalDisk: host.totalDisk, ip: host.ip },
+              映射: { cpuCore: mappedHost.cpuCore, memory: mappedHost.memory, disk: mappedHost.disk, ip: mappedHost.ip }
+            })
+            
+            return mappedHost
+          })
+        
         
         setAvailableHosts(hostsWithResources)
-        return hostsWithResources.map(h => h.hostname)
+        return hostsWithResources // 返回完整的主机对象，而不是只返回主机名
       } else {
         throw new Error(response.message || '获取主机列表失败')
       }
@@ -187,9 +190,11 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
     const serviceIds = Array.isArray(step4Data?.serviceIds) ? step4Data.serviceIds : []
     if (open && serviceIds.length > 0) {
       const init = async () => {
-        const hosts = await fetchAllHosts()
-        if (hosts.length > 0) {
-          await fetchServiceRoles(availableHosts)
+        const hostsWithResources = await fetchAllHosts() // 现在返回完整的主机对象
+        
+        // 直接使用完整的主机对象
+        if (hostsWithResources.length > 0) {
+          await fetchServiceRoles(hostsWithResources) // 传递完整的主机数据
         }
       }
       init()
@@ -392,6 +397,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
 
                     {/* 超级主机选择器 */}
                     <div className="flex-1 min-w-0">
+
                       <SuperHostSelector
                         hosts={availableHosts}
                         selectedHosts={

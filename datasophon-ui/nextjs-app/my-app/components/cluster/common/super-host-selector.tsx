@@ -125,6 +125,21 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
 
   // 过滤主机列表
   const filteredHosts = useMemo(() => {
+    // 临时调试：查看主机数据
+    if (hosts.length > 0) {
+      console.log('🔍 [SuperHostSelector] 主机数据检查:', {
+        总数: hosts.length,
+        第一个主机: hosts[0],
+        主机字段: Object.keys(hosts[0] || {}),
+        资源字段检查: {
+          cpuCore: hosts[0]?.cpuCore,
+          memory: hosts[0]?.memory, 
+          disk: hosts[0]?.disk,
+          ip: hosts[0]?.ip
+        }
+      })
+    }
+    
     if (!searchTerm) return hosts
     return hosts.filter(host => 
       host.hostname.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -252,7 +267,7 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
                       )}
                       onClick={() => handleHostSelect(host.hostname)}
                     >
-                      {/* 主机信息 - 简化版 */}
+                      {/* 主机信息 - 恢复原有简洁样式 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={cn(
@@ -263,9 +278,19 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
                           )}>
                             {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                           </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900">{host.hostname}</h4>
-                            <p className="text-xs text-gray-500 font-mono">{host.ip}</p>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">{host.hostname}</h4>
+                            {host.ip && (
+                              <p className="text-xs text-gray-500 font-mono truncate">{host.ip}</p>
+                            )}
+                            {/* 资源信息 - 简洁显示 */}
+                            {(host.cpuCore !== undefined || host.memory !== undefined || host.disk !== undefined) && (
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {host.cpuCore !== undefined ? `${host.cpuCore}C ` : ''}
+                                {host.memory !== undefined ? `${host.memory}G ` : ''}
+                                {host.disk !== undefined ? `${host.disk}GB` : ''}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

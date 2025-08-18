@@ -32,10 +32,15 @@ export function setCurrentClusterId(clusterId: string | null) {
  * @returns 集群ID或null
  */
 export function getCurrentClusterId(): string | null {
-  // 如果内存中没有，尝试从sessionStorage恢复
+  // 如果内存中没有，尝试从存储恢复
   if (currentClusterId === null && typeof window !== 'undefined') {
-    const stored = sessionStorage.getItem('currentClusterId')
-    if (stored) {
+    // 优先从localStorage获取（与useCluster保持一致）
+    let stored = localStorage.getItem('clusterId')
+    if (!stored || stored === '-1') {
+      // 备用方案：从sessionStorage获取
+      stored = sessionStorage.getItem('currentClusterId')
+    }
+    if (stored && stored !== '-1') {
       currentClusterId = stored
     }
   }
