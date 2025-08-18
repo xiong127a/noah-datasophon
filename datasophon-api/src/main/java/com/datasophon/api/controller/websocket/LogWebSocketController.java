@@ -114,7 +114,7 @@ public class LogWebSocketController {
                 
                 if (!historyLog.isEmpty()) {
                     messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
-                        new LogMessage("log", historyLog, "INFO"));
+                        new LogMessage("history", historyLog, "INFO")); // 标记为历史日志
                 }
                 
                 // 启动实时跟踪（使用Commons IO Tailer）
@@ -122,9 +122,9 @@ public class LogWebSocketController {
                     sessionKey, 
                     username, 
                     logInfo.fullPath(),
-                    // 新内容回调 - 只推送增量内容
+                    // 新内容回调 - 推送增量内容
                     newContent -> messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
-                        new LogMessage("log", newContent, "INFO"))
+                        new LogMessage("increment", newContent, "INFO")) // 标记为增量日志
                 );
                 
                 logTailService.startTailing(session);
@@ -143,8 +143,9 @@ public class LogWebSocketController {
                         if (!newLogContent.equals(lastContent)) {
                             lastLogContent.put(sessionKey, newLogContent);
                             if (!newLogContent.isEmpty() && !"can not find log file".equals(newLogContent)) {
+                                // 非K8s模式发送完整日志内容，标记为full
                                 messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
-                                    new LogMessage("log", newLogContent, "INFO"));
+                                    new LogMessage("full", newLogContent, "INFO"));
                             }
                         }
                     } catch (Exception e) {

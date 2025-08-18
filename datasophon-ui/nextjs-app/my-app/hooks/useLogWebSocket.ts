@@ -77,9 +77,20 @@ export const useLogWebSocket = ({
               const logMessage: LogMessage = JSON.parse(message.body)
               
               switch (logMessage.type) {
-                case 'log':
+                case 'history':
+                case 'full':
+                  // 历史日志或完整日志 - 直接覆盖
                   setLogContent(logMessage.data)
                   onLogUpdateRef.current?.(logMessage.data)
+                  break
+                case 'increment':
+                case 'log':
+                  // 增量日志 - 追加模式
+                  setLogContent(prevContent => {
+                    const newContent = prevContent + logMessage.data
+                    onLogUpdateRef.current?.(newContent)
+                    return newContent
+                  })
                   break
                 case 'error':
                   console.error('服务器错误:', logMessage.data)
