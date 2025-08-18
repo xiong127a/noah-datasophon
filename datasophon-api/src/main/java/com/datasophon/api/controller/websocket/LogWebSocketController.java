@@ -293,12 +293,12 @@ public class LogWebSocketController {
     record LogFileInfo(ClusterInfoEntity clusterInfo, ClusterServiceCommandHostCommandEntity hostCommand, 
                       String fullPath, String relativePath) {}
 
-    // JDK21 record简化请求类 - Spring自动处理字符串到Long转换
-    public record LogStartRequest(Long clusterId, Long hostCommandId) {}
-    public record LogStopRequest(Long clusterId, Long hostCommandId) {}
+    // JDK21 static record - 解决Jackson序列化问题
+    public static record LogStartRequest(Long clusterId, Long hostCommandId) {}
+    public static record LogStopRequest(Long clusterId, Long hostCommandId) {}
     
-    // JDK21 record简化响应类
-    public record LogMessage(String type, String data, String level, long timestamp) {
+    // JDK21 static record简化响应类
+    public static record LogMessage(String type, String data, String level, long timestamp) {
         public LogMessage(String type, String data, String level) {
             this(type, data, level, System.currentTimeMillis());
         }
